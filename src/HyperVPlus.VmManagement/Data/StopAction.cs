@@ -1,0 +1,9 @@
+﻿namespace HyperVPlus.Agent.Management.Data
+{
+    public enum StopAction
+    {
+        TurnOff = 2,
+        Save = 3,
+        ShutDown = 4,
+    }
+}

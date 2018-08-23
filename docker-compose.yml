@@ -1,0 +1,54 @@
+version: '3.4'
+
+networks:
+  internal:
+
+services:
+  rabbit:
+    command:
+      - rabbitmq-server
+    container_name: rabbitmq
+    hostname: rabbit
+    image: rabbitmq:3-management
+    ports:
+      - 8080:15672/tcp
+      - 5672:5672/tcp
+    networks:
+      - internal
+  mariadb:
+    image: mariadb
+    container_name: test-mariadb
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: "password"
+      MYSQL_DATABASE: "rebus"
+    #volumes:  
+      #- ./store/mysql:/var/lib/mysql
+    networks:
+      - internal
+    #volumes:
+    #  - /storage/docker/mysql-datadir:/var/lib/mysql
+
+  hypervplus.controller:
+    image: ${DOCKER_REGISTRY}hypervpluscontroller
+    build:
+      context: .
+      dockerfile: src/HyperVPlus.Controller/Dockerfile
+    depends_on:
+      - rabbit
+      - mariadb
+    networks:
+      - internal
+
+
+  hypervplus.api:
+    image: ${DOCKER_REGISTRY}hypervplusapi
+    build:
+      context: .
+      dockerfile: src/HyperVPlus.Api/Dockerfile
+    depends_on:
+      - rabbit
+      - mariadb
+    networks:
+      - internal

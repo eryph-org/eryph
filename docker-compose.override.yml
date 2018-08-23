@@ -1,0 +1,11 @@
+version: '3.4'
+
+services:
+  hypervplus.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+
+    ports:
+      - "64667:80"
+

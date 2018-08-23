@@ -1,0 +1,55 @@
+{
+	"vms" : [
+		{
+			"host": {			
+				"hostname": "localhost"			
+			},			
+			"vm": {
+				"name" : "basic2",
+				"hostname" : "basic",
+				"path" : "t:\\openstack\\vms",
+				"cpu" : {
+						"count" : 2
+					},
+				"memory" : {
+					"startup": 1024,
+					"minimum": 512,
+					"maximum": 4096 
+				},
+				"disks" : [
+					{
+                        "name": "os",                   
+                        "size": 20,
+                        "template": "t:\\openstack\\ubuntu-xenial.vhdx"
+                    }
+				],
+				
+				"networks" : [
+					{
+						"name" : "eth0",
+						"switch": "Standardswitch",
+						"subnets" : [
+							{
+								"type" : "dhcp"
+							}
+						]
+					}
+				],
+				"provisioning" : {
+						"userdata" : {
+						"system_info" : {
+							  "default_user": {
+    								"name": "world"
+							  }
+						},
+						"chpasswd": {
+							"expire": "False"
+						}
+		
+					}
+				}
+					
+			}
+		}
+	]
+}

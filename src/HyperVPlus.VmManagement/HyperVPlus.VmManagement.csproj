@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{1CF6A5E7-3796-4704-A527-94A3936B14B4}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>HyperVPlus.VmManagement</RootNamespace>
+    <AssemblyName>HyperVPlus.VmManagement</AssemblyName>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Contiva.CloudInit.ConfigDrive">
+      <HintPath>D:\Source\Repos\CloudInit.ConfigDrive\src\CloudInit.ConfigDrive\bin\Debug\Contiva.CloudInit.ConfigDrive.dll</HintPath>
+    </Reference>
+    <Reference Include="LanguageExt.Core, Version=3.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\LanguageExt.Core.3.0.22\lib\net45\LanguageExt.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Management.Automation, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.PowerShell.5.ReferenceAssemblies.1.1.0\lib\net4\System.Management.Automation.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="PowershellFailure.cs" />
+    <Compile Include="Converge.cs" />
+    <Compile Include="Data\AttachedDiskType.cs" />
+    <Compile Include="Data\CacheAttributes.cs" />
+    <Compile Include="Data\CheckpointType.cs" />
+    <Compile Include="Data\ControllerType.cs" />
+    <Compile Include="Data\CriticalErrorAction.cs" />
+    <Compile Include="Data\DriveInfo.cs" />
+    <Compile Include="Data\DriveInfoBase.cs" />
+    <Compile Include="Data\DvdDriveInfo.cs" />
+    <Compile Include="Data\DvdMediaType.cs" />
+    <Compile Include="Data\GroupType.cs" />
+    <Compile Include="Data\HardDiskDriveInfo.cs" />
+    <Compile Include="Data\OnOffState.cs" />
+    <Compile Include="Data\StartAction.cs" />
+    <Compile Include="Data\StopAction.cs" />
+    <Compile Include="Data\VirtualMachineDeviceInfo.cs" />
+    <Compile Include="Data\VirtualMachineInfo.cs" />
+    <Compile Include="Data\VirtualMachineIntegrationComponentInfo.cs" />
+    <Compile Include="Data\VirtualMachineOperationalStatus.cs" />
+    <Compile Include="Data\VirtualMachineState.cs" />
+    <Compile Include="Data\VirtualMachineSubType.cs" />
+    <Compile Include="Data\VirtualMachineType.cs" />
+    <Compile Include="Data\VMComPortInfo.cs" />
+    <Compile Include="Data\VMFibreChannelHbaInfo.cs" />
+    <Compile Include="Data\VMFloppyDiskDriveInfo.cs" />
+    <Compile Include="Data\VMGroupInfo.cs" />
+    <Compile Include="Data\VMHeartbeatStatus.cs" />
+    <Compile Include="Data\VMIntegrationComponentOperationalStatus.cs" />
+    <Compile Include="Data\VMRemoteFx3DVideoAdapterInfo.cs" />
+    <Compile Include="Data\VMReplicationHealthState.cs" />
+    <Compile Include="Data\VMReplicationMode.cs" />
+    <Compile Include="Data\VMReplicationState.cs" />
+    <Compile Include="PowershellEngine.cs" />
+    <Compile Include="TypedPsObject.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\HyperVPlus.VmConfig.Primitives\HyperVPlus.VmConfig.Primitives.csproj">
+      <Project>{D041968F-FC23-4777-9243-D8114B016FE8}</Project>
+      <Name>HyperVPlus.VmConfig.Primitives</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
