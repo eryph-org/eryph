@@ -2,9 +2,8 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
-using HyperVPlus.Agent.Management;
-using HyperVPlus.Agent.Management.Data;
 using HyperVPlus.VmManagement;
+using HyperVPlus.VmManagement.Data;
 using LanguageExt;
 
 using static LanguageExt.Prelude;

@@ -4,12 +4,11 @@ using System.Threading.Tasks;
 using HyperVPlus.Messages;
 using HyperVPlus.StateDb;
 using HyperVPlus.StateDb.Model;
-using HyperVPlus.StateDb.MySql;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
-namespace HyperVPlus.ConfigConsole
+namespace HyperVPlus.Controller
 {
 
     internal class ConvergeVirtualMachineSaga : Saga<CollectLegalInfoSagaData>,

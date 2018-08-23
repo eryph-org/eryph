@@ -7,17 +7,13 @@ using System.Threading.Tasks;
 using Contiva.CloudInit.ConfigDrive.Generator;
 using Contiva.CloudInit.ConfigDrive.NoCloud;
 using Contiva.CloudInit.ConfigDrive.Processing;
-using HyperVPlus.Agent.Management;
-using HyperVPlus.Agent.Management.Data;
-using HyperVPlus.Messages;
-using HyperVPlus.VmManagement;
+using HyperVPlus.VmConfig;
+using HyperVPlus.VmManagement.Data;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
 using Newtonsoft.Json.Linq;
 
-using static LanguageExt.Prelude;
-
-namespace HyperVPlus.Agent
+namespace HyperVPlus.VmManagement
 {
     public static class Converge
     {
@@ -175,7 +171,7 @@ namespace HyperVPlus.Agent
 
             from diskConfig in optionalDiskConfig
             from vmConfig in optionalVmConfig
-            select fun(() =>
+            select Prelude.fun(() =>
             {
                 var vhdPathRoot = diskConfig.Path;
                 if (String.IsNullOrWhiteSpace(vhdPathRoot))

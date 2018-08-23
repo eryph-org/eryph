@@ -1,8 +1,8 @@
 ﻿using System;
-using HyperVPlus.Messages;
+using HyperVPlus.VmConfig;
 using Rebus.Sagas;
 
-namespace HyperVPlus.ConfigConsole
+namespace HyperVPlus.Controller
 {
     public class CollectLegalInfoSagaData : ISagaData
     {

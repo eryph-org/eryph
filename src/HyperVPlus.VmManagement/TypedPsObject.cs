@@ -7,7 +7,7 @@ using System.Management.Automation;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HyperVPlus.Agent.Management
+namespace HyperVPlus.VmManagement
 {
     public class TypedPsObject<T>
     {

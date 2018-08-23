@@ -7,7 +7,7 @@ using LanguageExt;
 
 // ReSharper disable UnusedMember.Global
 
-namespace HyperVPlus.Agent.Management.Data
+namespace HyperVPlus.VmManagement.Data
 {
     public sealed class VirtualMachineInfo : Record<VirtualMachineInfo>
     {

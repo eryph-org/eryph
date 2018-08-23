@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace HyperVPlus.Messages
+namespace HyperVPlus.VmConfig
 {
     public class VirtualMachineCpuConfig
     {

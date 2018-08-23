@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace HyperVPlus.Agent.Management.Data
+namespace HyperVPlus.VmManagement.Data
 {
     public sealed class VMGroupInfo
     {

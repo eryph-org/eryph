@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using HyperVPlus.Agent.Management;
-using HyperVPlus.Agent.Management.Data;
 using HyperVPlus.VmManagement;
+using HyperVPlus.VmManagement.Data;
 using LanguageExt;
 
 namespace HyperVPlus.Agent

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using HyperVPlus.Agent.Management;
 using HyperVPlus.Messages;
+using HyperVPlus.VmManagement;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Transport;

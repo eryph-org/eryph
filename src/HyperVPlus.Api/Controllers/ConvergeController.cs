@@ -5,6 +5,7 @@ using HyperVPlus.Messages;
 using HyperVPlus.StateDb;
 using HyperVPlus.StateDb.Model;
 using HyperVPlus.StateDb.MySql;
+using HyperVPlus.VmConfig;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Rebus.Bus;

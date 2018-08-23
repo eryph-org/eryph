@@ -1,8 +1,8 @@
 ﻿using System;
 using AutoMapper;
-using HyperVPlus.Agent.Management;
 using HyperVPlus.Messages;
 using HyperVPlus.Rebus;
+using HyperVPlus.VmManagement;
 using Newtonsoft.Json;
 using Rebus.Bus;
 using Rebus.Config;

@@ -1,4 +1,4 @@
-﻿namespace HyperVPlus.Agent.Management.Data
+﻿namespace HyperVPlus.VmManagement.Data
 {
     public enum VMIntegrationComponentOperationalStatus
     {

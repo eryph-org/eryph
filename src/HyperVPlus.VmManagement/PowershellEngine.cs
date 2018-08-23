@@ -4,13 +4,11 @@ using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Threading.Tasks;
-using HyperVPlus.VmManagement;
 using LanguageExt;
 
-using static LanguageExt.Prelude;
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
-namespace HyperVPlus.Agent.Management
+namespace HyperVPlus.VmManagement
 {
     public interface IPowershellEngine
     {
@@ -234,10 +232,10 @@ namespace HyperVPlus.Agent.Management
             InvokeGetObjects(ps, await ps.InvokeTypedAsync<T>().ConfigureAwait(false));
 
         public static Either<PowershellFailure, Unit> Run(this PowerShell ps) =>
-            Invoke(ps, Try(ps.Invoke().AsEnumerable()));
+            Invoke(ps, Prelude.Try(ps.Invoke().AsEnumerable()));
 
         public static async Task<Either<PowershellFailure, Unit>> RunAsync(this PowerShell ps) =>
-            Invoke(ps, Try(
+            Invoke(ps, Prelude.Try(
                 (await Task.Factory.FromAsync(ps.BeginInvoke(), ps.EndInvoke).ConfigureAwait(false)).AsEnumerable()));
 
         private static Either<PowershellFailure, Unit> Invoke(this PowerShell ps, Try<IEnumerable<PSObject>> invokeFunc) =>
@@ -254,7 +252,7 @@ namespace HyperVPlus.Agent.Management
                     Some: r =>
                     {
                         var resultArray = r.ToArray();
-                        return Try(resultArray.SingleOrDefault()).Try().Match<Either<PowershellFailure, TypedPsObject<T>>>(
+                        return Prelude.Try(resultArray.SingleOrDefault()).Try().Match<Either<PowershellFailure, TypedPsObject<T>>>(
                             Succ: sr => sr,
                             Fail: ex => new PowershellFailure { Message = $"Expected one result, but received {resultArray.Count()}" });
                     },
@@ -265,7 +263,7 @@ namespace HyperVPlus.Agent.Management
             HandlePowershellErrors(ps,
                 invokeFunc.Try().Match<Either<PowershellFailure, IEnumerable<TypedPsObject<T>>>>(
                     None: () => new PowershellFailure { Message = "Empty result" },
-                    Some: r => Right(r),
+                    Some: r => Prelude.Right(r),
                     Fail: ex => ExceptionToPowershellFailure(ex)));
 
 
@@ -280,12 +278,12 @@ namespace HyperVPlus.Agent.Management
             : result;
 
         public static TryOption<IEnumerable<TypedPsObject<T>>> InvokeTyped<T>(this PowerShell ps) => 
-            TryOption(
+            Prelude.TryOption(
                 ps.Invoke()
                     ?.Map(r => new TypedPsObject<T>(r)));
 
         public static async Task<TryOption<IEnumerable<TypedPsObject<T>>>> InvokeTypedAsync<T>(this PowerShell ps) => 
-            TryOption(
+            Prelude.TryOption(
                 (await Task.Factory.FromAsync(ps.BeginInvoke(), ps.EndInvoke).ConfigureAwait(false))
                     ?.Map(r => new TypedPsObject<T>(r)));
     }

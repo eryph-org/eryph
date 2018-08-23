@@ -1,8 +1,10 @@
-﻿using JetBrains.Annotations;
+﻿using HyperVPlus.StateDb;
+using HyperVPlus.StateDb.MySql;
+using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace HyperVPlus.StateDb.MySql
+namespace HyperVPlus.Controller
 {
     [UsedImplicitly]
     public class DesignTimeStateStoreContextFactory : IDesignTimeDbContextFactory<StateStoreContext>

@@ -1,4 +1,5 @@
 ﻿using System;
+using HyperVPlus.VmConfig;
 
 namespace HyperVPlus.Messages
 {
