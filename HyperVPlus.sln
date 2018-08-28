@@ -9,8 +9,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperVPlus.Messages", "src\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperVPlus.Controller", "src\HyperVPlus.Controller\HyperVPlus.Controller.csproj", "{FEEF6B45-ACCE-4680-8E93-8A2EF3141C64}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperVPlus.Api", "src\HyperVPlus.Api\HyperVPlus.Api.csproj", "{E6306980-62A3-4992-92FF-CB25C97187A9}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperVPlus.Rebus", "src\HyperVPlus.Rebus\HyperVPlus.Rebus.csproj", "{2CE556B7-6820-4EFF-905E-B6EA0B0533A0}"
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{8FEDA44A-CCBF-4B47-838E-7FA6FEE688D4}"
@@ -24,6 +22,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HyperVPlus.VmManagement", "src\HyperVPlus.VmManagement\HyperVPlus.VmManagement.csproj", "{1CF6A5E7-3796-4704-A527-94A3936B14B4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperVPlus.VmConfig.Primitives", "src\HyperVPlus.VmConfig.Primitives\HyperVPlus.VmConfig.Primitives.csproj", "{D041968F-FC23-4777-9243-D8114B016FE8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperVPlus.ApiEndpoint", "src\HyperVPlus.ApiEndpoint\HyperVPlus.ApiEndpoint.csproj", "{CD61938D-2539-4AF1-838E-16A4CC3BB225}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,10 +43,6 @@ Global
 		{FEEF6B45-ACCE-4680-8E93-8A2EF3141C64}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FEEF6B45-ACCE-4680-8E93-8A2EF3141C64}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FEEF6B45-ACCE-4680-8E93-8A2EF3141C64}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E6306980-62A3-4992-92FF-CB25C97187A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E6306980-62A3-4992-92FF-CB25C97187A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E6306980-62A3-4992-92FF-CB25C97187A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E6306980-62A3-4992-92FF-CB25C97187A9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2CE556B7-6820-4EFF-905E-B6EA0B0533A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2CE556B7-6820-4EFF-905E-B6EA0B0533A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2CE556B7-6820-4EFF-905E-B6EA0B0533A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -74,6 +70,10 @@ Global
 		{D041968F-FC23-4777-9243-D8114B016FE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D041968F-FC23-4777-9243-D8114B016FE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D041968F-FC23-4777-9243-D8114B016FE8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CD61938D-2539-4AF1-838E-16A4CC3BB225}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CD61938D-2539-4AF1-838E-16A4CC3BB225}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CD61938D-2539-4AF1-838E-16A4CC3BB225}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CD61938D-2539-4AF1-838E-16A4CC3BB225}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

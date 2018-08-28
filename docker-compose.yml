@@ -42,11 +42,11 @@ services:
       - internal
 
 
-  hypervplus.api:
-    image: ${DOCKER_REGISTRY}hypervplusapi
+  hypervplus.ApiEndpoint:
+    image: ${DOCKER_REGISTRY}hypervplusApiEndpoint
     build:
       context: .
-      dockerfile: src/HyperVPlus.Api/Dockerfile
+      dockerfile: src/HyperVPlus.ApiEndpoint/Dockerfile
     depends_on:
       - rabbit
       - mariadb
