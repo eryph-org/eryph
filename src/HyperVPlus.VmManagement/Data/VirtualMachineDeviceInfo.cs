@@ -1,6 +1,8 @@
-﻿namespace HyperVPlus.VmManagement.Data
+﻿using LanguageExt;
+
+namespace HyperVPlus.VmManagement.Data
 {
-    public abstract class VirtualMachineDeviceInfo
+    public abstract class VirtualMachineDeviceInfo : Record<VirtualMachineDeviceInfo>
     {
         public virtual string Name { get; set; }
 

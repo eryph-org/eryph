@@ -2,15 +2,13 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
-using HyperVPlus.VmManagement;
 using HyperVPlus.VmManagement.Data;
 using LanguageExt;
-
 using static LanguageExt.Prelude;
 
-namespace HyperVPlus.Agent
+namespace HyperVPlus.VmManagement
 {
-    internal class VirtualMachineInfoProvider : IVirtualMachineInfoProvider
+    public class VirtualMachineInfoProvider : IVirtualMachineInfoProvider
     {
 
         private readonly IPowershellEngine _engine;
@@ -23,20 +21,30 @@ namespace HyperVPlus.Agent
 
         public async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> GetInfoAsync(string vmName) => 
             (await _engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
-                .AddCommand("get-vm").AddArgument(vmName)).ConfigureAwait(false)).Bind(
-                vmList =>
+                .AddCommand("get-vm").AddArgument(vmName)).ConfigureAwait(false))
+            .Apply(
+                queryResult =>
                 {
-                    var vmArray = vmList.ToArray();
+                    return queryResult.Match(
+                        Left: l => l,
+                        Right: r =>
+                        {
+                            var vmArray = r.ToArray();
 
-                    if (vmArray.Length  > 1)
-                        return Left<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(new PowershellFailure{ Message =  $"VM name '{vmName}' is not unique." });
+                            if (vmArray.Length > 1)
+                                return Left<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(
+                                    new PowershellFailure { Message = $"VM name '{vmName}' is not unique." });
 
-                    var vmInfo = vmArray.SingleOrDefault();
+                            if (vmArray.Length == 0)
+                                return Left<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(
+                                    new PowershellFailure { Message = $"VM name '{vmName}' not found" });
 
-                    SetInfo(vmInfo);
+                            var vmInfo = vmArray[0];
 
-                    return Right<PowershellFailure,TypedPsObject<VirtualMachineInfo>>(vmInfo);
-
+                            SetInfo(vmInfo);
+                            return vmInfo;
+                        }
+                    );
                 });
 
         public async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> GetInfoAsync(Guid id)
@@ -44,12 +52,12 @@ namespace HyperVPlus.Agent
             if (_buffer.TryGetValue(id, out var vmInfo))
                 return vmInfo;
 
-           return (await _engine.GetObjectAsync<VirtualMachineInfo>(
+           return (await _engine.GetObjectsAsync<VirtualMachineInfo>(
                 PsCommandBuilder.Create()
                     .AddCommand("get-vm").AddParameter("Id", id)).ConfigureAwait(false)).Map(newVmInfo =>
             {
-                SetInfo(newVmInfo);
-                return newVmInfo;
+                SetInfo(newVmInfo.Head);
+                return newVmInfo.Head;
 
             });
             

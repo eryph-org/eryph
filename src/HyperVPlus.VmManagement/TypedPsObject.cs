@@ -1,23 +1,25 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Management.Automation;
-using System.Threading;
-using System.Threading.Tasks;
+using AutoMapper;
+using LanguageExt;
+using static LanguageExt.Prelude;
 
 namespace HyperVPlus.VmManagement
 {
-    public class TypedPsObject<T>
+    public class TypedPsObject<T> : Record<TypedPsObject<T>>
     {
-        public T Value { get; private set; }
+        public T Value { get;  }
         public PSObject PsObject { get; }
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1,1);
+
 
         public TypedPsObject(PSObject psObject)
         {
             PsObject = psObject;
+            Value = TypedPsObjectMapping.Map<T>(psObject);
         }
 
         public static implicit operator T(TypedPsObject<T> typed)
@@ -25,58 +27,52 @@ namespace HyperVPlus.VmManagement
             return typed.Value;
         }
 
-
-        public async Task<TypedPsObjectSynchronization> AquireLockAsync()
+        public TypedPsObject<T> Recreate()
         {
-            await _semaphore.WaitAsync().ConfigureAwait(false);
-            return new TypedPsObjectSynchronization(_semaphore);
+            return new TypedPsObject<T>(PsObject);
         }
 
-        public IEnumerable<TypedPsObject<TSub>> GetList<TSub>(
-            Expression<Func<T,IList<TSub>>> listProperty,
-            Func<TSub, bool> predicateFunc)
-        {
-            var getExpression = listProperty.Compile();
+        public Seq<TypedPsObject<TSub>> GetList<TSub>(
+            Expression<Func<T, IList<TSub>>> listProperty,
+            Func<TSub, bool> predicateFunc) => GetList(listProperty).Where(y => predicateFunc(y.Value));
 
-            var paramType = listProperty.Parameters[0].Type;  // first parameter of expression
+        public Seq<TypedPsObject<TSub>> GetList<TSub>(
+            Expression<Func<T, IList<TSub>>> listProperty)
+        {
+            var paramType = listProperty.Parameters[0].Type; // first parameter of expression
             var property = paramType.GetMember((listProperty.Body as MemberExpression)?.Member.Name)[0];
 
-            var list = getExpression(this);
-            var psList = PsObject.Properties[property.Name].Value as IList;
-
-            //if (psList?.Count != list.Count)
-            //{
-            //    Refresh();
-            //    list = getExpression(this);         
-            //}
-
-            for (var index = 0; index < list.Count; index++)
-            {
-                var entry = list[index];
-
-                if (!predicateFunc(entry)) continue;
-                Debug.Assert(psList != null, nameof(psList) + " != null");
-                var psSubObject = new PSObject(psList[index]);
-
-                yield return new TypedPsObject<TSub>(psSubObject);
-            }
+            return
+                TryOption(((PsObject.Properties[property.Name].Value as IEnumerable)?.Cast<object>().
+                    Map(x => new TypedPsObject<TSub>(new PSObject(x)))))
+                .Match(
+                    Fail: () => new TypedPsObject<TSub>[] { },
+                    Some: x => x
+                ).ToSeq();
         }
 
     }
 
-    public class TypedPsObjectSynchronization : IDisposable
+    
+
+    internal static class TypedPsObjectMapping
     {
-        private readonly SemaphoreSlim _semaphore;
+        private static readonly IMapper Mapper;
 
-        public TypedPsObjectSynchronization(SemaphoreSlim semaphore)
+        static TypedPsObjectMapping()
         {
-            _semaphore = semaphore;
+            var config = new MapperConfiguration(cfg => {
+                
+            });
+
+            Mapper = new Mapper(config);
         }
 
-
-        public void Dispose()
+        public static T Map<T>(object psObject)
         {
-            _semaphore.Release(1);
+            return Mapper.Map<T>(psObject);
         }
     }
+
+
 }

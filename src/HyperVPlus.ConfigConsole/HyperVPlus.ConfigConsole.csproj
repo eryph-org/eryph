@@ -22,6 +22,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <LangVersion>latest</LangVersion>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,9 +33,15 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>HyperVPlus.ConfigConsole.Program</StartupObject>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Contiva.CloudInit.ConfigDrive">
       <HintPath>D:\Source\Repos\CloudInit.ConfigDrive\src\CloudInit.ConfigDrive\bin\Debug\Contiva.CloudInit.ConfigDrive.dll</HintPath>
+    </Reference>
+    <Reference Include="LanguageExt.Core, Version=3.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\LanguageExt.Core.3.0.22\lib\net45\LanguageExt.Core.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Diagnostics.Tracing.EventSource, Version=1.1.28.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Microsoft.Diagnostics.Tracing.EventSource.Redist.1.1.28\lib\net46\Microsoft.Diagnostics.Tracing.EventSource.dll</HintPath>
@@ -63,6 +70,9 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Management.Automation, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.PowerShell.5.ReferenceAssemblies.1.1.0\lib\net4\System.Management.Automation.dll</HintPath>
+    </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ValueTuple">
       <HintPath>..\..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
@@ -76,6 +86,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -86,6 +97,14 @@
     <ProjectReference Include="..\HyperVPlus.Messages\HyperVPlus.Messages.csproj">
       <Project>{6A5229F6-AD2D-46F6-8729-4621D0683155}</Project>
       <Name>HyperVPlus.Messages</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\HyperVPlus.VmConfig.Primitives\HyperVPlus.VmConfig.Primitives.csproj">
+      <Project>{D041968F-FC23-4777-9243-D8114B016FE8}</Project>
+      <Name>HyperVPlus.VmConfig.Primitives</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\HyperVPlus.VmManagement\HyperVPlus.VmManagement.csproj">
+      <Project>{1CF6A5E7-3796-4704-A527-94A3936B14B4}</Project>
+      <Name>HyperVPlus.VmManagement</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

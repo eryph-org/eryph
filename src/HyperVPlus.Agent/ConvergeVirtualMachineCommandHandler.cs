@@ -33,25 +33,25 @@ namespace HyperVPlus.Agent
         {
             _correlationid = command.CorellationId;
 
-            await _infoProvider.GetInfoAsync(command.Config.Name).MapAsync(async (vmInfo) =>
-            {
-                await Converge.Definition(_engine, vmInfo, command.Config, ProgressMessage).ConfigureAwait(false);
+            //await _infoProvider.GetInfoAsync(command.Config.Name).MapAsync(async (vmInfo) =>
+            //{
+            //    await Converge.Definition(_engine, vmInfo, command.Config, ProgressMessage).ConfigureAwait(false);
 
-                command.Config.Disks.Iter(async (disk) =>
-                    await Converge.Disk(_engine, vmInfo, disk, command.Config, ProgressMessage).ConfigureAwait(false));
-                command.Config.Networks.Iter(async (network) =>
-                    await Converge.Network(_engine, vmInfo, network, command.Config, ProgressMessage)
-                        .ConfigureAwait(false));
+            //    command.Config.Disks.Iter(async (disk) =>
+            //        await Converge.Disk(_engine, vmInfo, disk, command.Config, ProgressMessage).ConfigureAwait(false));
+            //    command.Config.Networks.Iter(async (network) =>
+            //        await Converge.Network(_engine, vmInfo, network, command.Config, ProgressMessage)
+            //            .ConfigureAwait(false));
 
-                await ProgressMessage("Generate Virtual Machine provisioning disk").ConfigureAwait(false);
+            //    await ProgressMessage("Generate Virtual Machine provisioning disk").ConfigureAwait(false);
 
-                await Converge.CloudInit(
-                    _engine, command.Config.Path,
-                    command.Config.Hostname,
-                    command.Config.Provisioning.UserData,
-                    vmInfo).ConfigureAwait(false);
+            //    await Converge.CloudInit(
+            //        _engine, command.Config.Path,
+            //        command.Config.Hostname,
+            //        command.Config.Provisioning.UserData,
+            //        vmInfo).ConfigureAwait(false);
 
-            }).ConfigureAwait(false);
+            //}).ConfigureAwait(false);
             
             await ProgressMessage("Converged").ConfigureAwait(false);
 

@@ -9,7 +9,13 @@ namespace HyperVPlus.StateDb.Model
         public virtual List<OperationLog> LogEntries { get; set; }
     }
 
-    // Press
+    public class Machine
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+   
+    }
+
     public class OperationLog
     {
         public Guid Id { get; set; }

@@ -13,6 +13,9 @@ namespace HyperVPlus.StateDb
         public DbSet<Operation> Operations { get; set; }
         public DbSet<OperationLog> Logs { get; set; }
 
+        public DbSet<Machine> Machines { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Operation>().HasMany(c => c.LogEntries);

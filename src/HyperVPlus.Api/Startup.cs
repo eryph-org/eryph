@@ -125,6 +125,7 @@ namespace HyperVPlus.Api
 
             builder.EntitySet<Operation>("OperationSet");
             builder.EntitySet<OperationLog>("OperationLogSet");
+            builder.EntitySet<Machine>("MachineSet");
 
             return builder.GetEdmModel();
 

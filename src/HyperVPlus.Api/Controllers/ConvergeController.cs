@@ -46,12 +46,12 @@ namespace HyperVPlus.Api.Controllers
             //var config = JsonConvert.DeserializeObject<Config>(value);
 
             var operation = new Operation{Id = Guid.NewGuid()};
-            _dbContext.Add(operation);
-            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+            //_dbContext.Add(operation);
+            //await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
 
-            await _bus.Send(new InitiateVirtualMachineConvergeCommand {Config = config.Configurations[0], ConvergeProcessId = operation.Id })
-                .ConfigureAwait(false);
+            //await _bus.Send(new InitiateVirtualMachineConvergeCommand {Config = config.Configurations[0], ConvergeProcessId = operation.Id })
+            //    .ConfigureAwait(false);
 
             return operation;
         }

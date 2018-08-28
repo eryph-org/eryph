@@ -5,6 +5,7 @@ using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Threading.Tasks;
 using LanguageExt;
+using static LanguageExt.Prelude;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
@@ -12,17 +13,14 @@ namespace HyperVPlus.VmManagement
 {
     public interface IPowershellEngine
     {
-        Either<PowershellFailure, IEnumerable<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder, Action<int> reportProgress = null);
+        Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder, Action<int> reportProgress = null);
         Either<PowershellFailure, Unit> Run(PsCommandBuilder builder,  Action<int> reportProgress = null);
-        Task<Either<PowershellFailure, IEnumerable<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder, Func<int, Task> reportProgress = null);
+        Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder, Func<int, Task> reportProgress = null);
         Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder, Func<int, Task> reportProgress = null);
-
-        Either<PowershellFailure, TypedPsObject<T>> GetObject<T>(PsCommandBuilder builder, Action<int> reportProgress = null);
-        Task<Either<PowershellFailure, TypedPsObject<T>>> GetObjectAsync<T>(PsCommandBuilder builder, Func<int, Task> reportProgress = null);
 
     }
 
-    public class PowershellEngine :  IPowershellEngine
+    public class PowershellEngine :  IPowershellEngine, IDisposable
     {
         private readonly RunspacePool _runspace;
 
@@ -49,7 +47,7 @@ namespace HyperVPlus.VmManagement
             return ps;
         }
 
-        public Either<PowershellFailure, IEnumerable<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder, Action<int> reportProgress= null)
+        public Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder, Action<int> reportProgress= null)
         {
             using (var ps = CreateShell())
             {
@@ -60,7 +58,7 @@ namespace HyperVPlus.VmManagement
             }
         }
 
-        public async Task<Either<PowershellFailure, IEnumerable<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder, Func<int, Task> reportProgress = null)
+        public async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder, Func<int, Task> reportProgress = null)
         {
             using (var ps = CreateShell())
             {
@@ -68,28 +66,6 @@ namespace HyperVPlus.VmManagement
                 InitializeAsyncProgressReporting(ps, reportProgress);
 
                 return await ps.GetObjectsAsync<T>().ConfigureAwait(false);
-            }
-        }
-
-        public Either<PowershellFailure, TypedPsObject<T>> GetObject<T>(PsCommandBuilder builder, Action<int> reportProgress = null)
-        {
-            using (var ps = CreateShell())
-            {
-                builder.Build(ps);
-
-                InitializeProgressReporting(ps, reportProgress);
-                return ps.GetObject<T>();
-            }
-        }
-
-        public async Task<Either<PowershellFailure, TypedPsObject<T>>> GetObjectAsync<T>(PsCommandBuilder builder, Func<int, Task> reportProgress = null)
-        {
-            using (var ps = CreateShell())
-            {
-                builder.Build(ps);
-                InitializeAsyncProgressReporting(ps, reportProgress);
-
-                return await ps.GetObjectAsync<T>().ConfigureAwait(false);
             }
         }
 
@@ -143,6 +119,10 @@ namespace HyperVPlus.VmManagement
 
         }
 
+        public void Dispose()
+        {
+            _runspace?.Dispose();
+        }
     }
 
     public class PsCommandBuilder
@@ -154,9 +134,6 @@ namespace HyperVPlus.VmManagement
 
         private readonly List<Tuple<DataType,object,string>> _dataChain = new List<Tuple<DataType, object, string>>();
 
-        public PsCommandBuilder()
-        {
-        }
 
         public PsCommandBuilder AddCommand(string command)
         {
@@ -216,55 +193,45 @@ namespace HyperVPlus.VmManagement
     }
 
 
-    static class PowerShellInvokeExtensions
+    internal static class PowerShellInvokeExtensions
     {
 
-        public static async Task<Either<PowershellFailure, TypedPsObject<T>>> GetObjectAsync<T>(this PowerShell ps) => 
-            InvokeGetObject(ps, await ps.InvokeTypedAsync<T>().ConfigureAwait(false));
-        
-        public static Either<PowershellFailure, TypedPsObject<T>> GetObject<T>(this PowerShell ps) =>
-            InvokeGetObject(ps, ps.InvokeTyped<T>());
-
-        public static Either<PowershellFailure, IEnumerable<TypedPsObject<T>>> GetObjects<T>(this PowerShell ps) =>
+        public static Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(this PowerShell ps) =>
             InvokeGetObjects(ps, ps.InvokeTyped<T>());
 
-        public static async Task<Either<PowershellFailure, IEnumerable<TypedPsObject<T>>>> GetObjectsAsync<T>(this PowerShell ps) =>
-            InvokeGetObjects(ps, await ps.InvokeTypedAsync<T>().ConfigureAwait(false));
+        public static async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(this PowerShell ps)
+        {
+            var tryResult = await
+                    TryAsync(Task.Factory.FromAsync(ps.BeginInvoke(), ps.EndInvoke)).Try().ConfigureAwait(false);
+
+            var result = tryResult.Match<Either<PowershellFailure, Seq<TypedPsObject<T>>>>(
+                    Succ: s => s.Map(x => new TypedPsObject<T>(x)).ToSeq(),
+                    Fail: ex => ExceptionToPowershellFailure(ex));
+      
+            return HandlePowershellErrors(ps, result);
+        }
 
         public static Either<PowershellFailure, Unit> Run(this PowerShell ps) =>
-            Invoke(ps, Prelude.Try(ps.Invoke().AsEnumerable()));
-
-        public static async Task<Either<PowershellFailure, Unit>> RunAsync(this PowerShell ps) =>
-            Invoke(ps, Prelude.Try(
-                (await Task.Factory.FromAsync(ps.BeginInvoke(), ps.EndInvoke).ConfigureAwait(false)).AsEnumerable()));
-
-        private static Either<PowershellFailure, Unit> Invoke(this PowerShell ps, Try<IEnumerable<PSObject>> invokeFunc) =>
             HandlePowershellErrors(ps,
-                invokeFunc.Try().Match<Either<PowershellFailure, Unit>>(
+                Try(ps.Invoke).Try().Match<Either<PowershellFailure, Unit>>(
                     Succ: s => Unit.Default,
                     Fail: ex => ExceptionToPowershellFailure(ex)));
 
+        public static async Task<Either<PowershellFailure, Unit>> RunAsync(this PowerShell ps)
+        {
+            var tryResult = await
+                TryAsync(Task.Factory.FromAsync(ps.BeginInvoke(), ps.EndInvoke)).Try().ConfigureAwait(false);
 
-        private static Either<PowershellFailure, TypedPsObject<T>> InvokeGetObject<T>(this PowerShell ps, TryOption<IEnumerable<TypedPsObject<T>>> invokeFunc) =>
-            HandlePowershellErrors(ps,
-                invokeFunc.Try().Match(
-                    None: () => new PowershellFailure { Message = "Empty result" },
-                    Some: r =>
-                    {
-                        var resultArray = r.ToArray();
-                        return Prelude.Try(resultArray.SingleOrDefault()).Try().Match<Either<PowershellFailure, TypedPsObject<T>>>(
-                            Succ: sr => sr,
-                            Fail: ex => new PowershellFailure { Message = $"Expected one result, but received {resultArray.Count()}" });
-                    },
-                    Fail: ex => ExceptionToPowershellFailure(ex)));
+            var result = tryResult.Match<Either<PowershellFailure, Unit>>(
+                    Succ: s => Unit.Default,
+                    Fail: ex => ExceptionToPowershellFailure(ex));
 
+            return HandlePowershellErrors(ps, result);
+        }
 
-        private static Either<PowershellFailure, IEnumerable<TypedPsObject<T>>> InvokeGetObjects<T>(this PowerShell ps, TryOption<IEnumerable<TypedPsObject<T>>> invokeFunc) =>
-            HandlePowershellErrors(ps,
-                invokeFunc.Try().Match<Either<PowershellFailure, IEnumerable<TypedPsObject<T>>>>(
-                    None: () => new PowershellFailure { Message = "Empty result" },
-                    Some: r => Prelude.Right(r),
-                    Fail: ex => ExceptionToPowershellFailure(ex)));
+        private static Either<PowershellFailure, Seq<TypedPsObject<T>>> InvokeGetObjects<T>(this PowerShell ps,
+            Try<Seq<TypedPsObject<T>>> invokeFunc) =>
+            HandlePowershellErrors(ps, invokeFunc.ToEither(ExceptionToPowershellFailure));
 
 
         private static PowershellFailure ExceptionToPowershellFailure(Exception ex)
@@ -273,18 +240,12 @@ namespace HyperVPlus.VmManagement
         }
 
         private static Either<PowershellFailure, TResult> HandlePowershellErrors<TResult>(PowerShell ps, Either<PowershellFailure, TResult> result)
-            => result.IsRight && ps.HadErrors
+            => result.IsRight && ps.Streams.Error.Count > 0
             ? new PowershellFailure {Message = ps.Streams.Error.FirstOrDefault()?.ToString()}
             : result;
 
-        public static TryOption<IEnumerable<TypedPsObject<T>>> InvokeTyped<T>(this PowerShell ps) => 
-            Prelude.TryOption(
-                ps.Invoke()
-                    ?.Map(r => new TypedPsObject<T>(r)));
-
-        public static async Task<TryOption<IEnumerable<TypedPsObject<T>>>> InvokeTypedAsync<T>(this PowerShell ps) => 
-            Prelude.TryOption(
-                (await Task.Factory.FromAsync(ps.BeginInvoke(), ps.EndInvoke).ConfigureAwait(false))
-                    ?.Map(r => new TypedPsObject<T>(r)));
+        public static Try<Seq<TypedPsObject<T>>> InvokeTyped<T>(this PowerShell ps) => 
+            Try(ps.Invoke().Map(x=>new TypedPsObject<T>(x)).ToSeq());
+        
     }
 }
