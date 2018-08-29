@@ -74,7 +74,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConvergeVirtualMachineCommandHandler.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -95,10 +94,6 @@
     <ProjectReference Include="..\HyperVPlus.VmConfig.Primitives\HyperVPlus.VmConfig.Primitives.csproj">
       <Project>{d041968f-fc23-4777-9243-d8114b016fe8}</Project>
       <Name>HyperVPlus.VmConfig.Primitives</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\HyperVPlus.VmManagement\HyperVPlus.VmManagement.csproj">
-      <Project>{1cf6a5e7-3796-4704-a527-94a3936b14b4}</Project>
-      <Name>HyperVPlus.VmManagement</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

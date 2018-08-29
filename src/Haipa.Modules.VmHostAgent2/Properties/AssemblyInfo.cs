@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("HyperVPlus.VmManagement")]
+[assembly: AssemblyTitle("Haipa.VmHostAgent")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("HyperVPlus.VmManagement")]
+[assembly: AssemblyProduct("Haipa.VmHostAgent")]
 [assembly: AssemblyCopyright("Copyright ©  2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("1cf6a5e7-3796-4704-a527-94a3936b14b4")]
+[assembly: Guid("5200cb95-ff23-4008-a763-785dec856baa")]
 
 // Version information for an assembly consists of the following four values:
 //

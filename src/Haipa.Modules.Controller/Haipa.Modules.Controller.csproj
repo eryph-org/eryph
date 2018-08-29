@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="2.1.2" />
+    <PackageReference Include="Rebus" Version="4.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
+    <ProjectReference Include="..\HyperVPlus.Messages\HyperVPlus.Messages.csproj" />
+    <ProjectReference Include="..\HyperVPlus.Rebus\HyperVPlus.Rebus.csproj" />
+    <ProjectReference Include="..\HyperVPlus.StateDb\HyperVPlus.StateDb.csproj" />
+    <ProjectReference Include="..\HyperVPlus.VmConfig.Primitives\HyperVPlus.VmConfig.Primitives.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -102,10 +102,6 @@
       <Project>{D041968F-FC23-4777-9243-D8114B016FE8}</Project>
       <Name>HyperVPlus.VmConfig.Primitives</Name>
     </ProjectReference>
-    <ProjectReference Include="..\HyperVPlus.VmManagement\HyperVPlus.VmManagement.csproj">
-      <Project>{1CF6A5E7-3796-4704-A527-94A3936B14B4}</Project>
-      <Name>HyperVPlus.VmManagement</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

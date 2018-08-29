@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net471</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="7.0.1" />
+    <PackageReference Include="LanguageExt.Core" Version="3.0.22" />
+    <PackageReference Include="Microsoft.PowerShell.5.ReferenceAssemblies" Version="1.1.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HyperVPlus.VmConfig.Primitives\HyperVPlus.VmConfig.Primitives.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Contiva.CloudInit.ConfigDrive">
+      <HintPath>D:\Source\Repos\CloudInit.ConfigDrive\src\CloudInit.ConfigDrive\bin\Debug\Contiva.CloudInit.ConfigDrive.dll</HintPath>
+    </Reference>
+    <Reference Include="Contiva.Windows.ImagingApi">
+      <HintPath>D:\Source\Repos\CloudInit.ConfigDrive\src\CloudInit.ConfigDrive\bin\Debug\Contiva.Windows.ImagingApi.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

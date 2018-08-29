@@ -19,11 +19,23 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperVPlus.StateDb.MySql", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HyperVPlus.ConfigConsole", "src\HyperVPlus.ConfigConsole\HyperVPlus.ConfigConsole.csproj", "{560DE2F5-5B60-439B-BB25-2D246FEB5ECC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HyperVPlus.VmManagement", "src\HyperVPlus.VmManagement\HyperVPlus.VmManagement.csproj", "{1CF6A5E7-3796-4704-A527-94A3936B14B4}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperVPlus.VmConfig.Primitives", "src\HyperVPlus.VmConfig.Primitives\HyperVPlus.VmConfig.Primitives.csproj", "{D041968F-FC23-4777-9243-D8114B016FE8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HyperVPlus.ApiEndpoint", "src\HyperVPlus.ApiEndpoint\HyperVPlus.ApiEndpoint.csproj", "{CD61938D-2539-4AF1-838E-16A4CC3BB225}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5161FD3F-5E58-4C46-9EC5-DC275266583A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "haipa-zero", "src\haipa-zero\haipa-zero.csproj", "{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Abstractions", "src\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj", "{8E0FE0D3-3818-4131-AC31-3B5C804E4FE8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Api", "src\Haipa.Modules.Api\Haipa.Modules.Api.csproj", "{B8A556E4-4A1A-4A40-B564-F50D2A584F24}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Controller", "src\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj", "{D407363B-27CE-4180-BB8A-986A619941CD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.VmManagement", "src\Haipa.VmManagement\Haipa.VmManagement.csproj", "{B55118C0-8D29-4079-A291-62383B857EEA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.Modules.VmHostAgent", "src\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj", "{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -62,10 +74,6 @@ Global
 		{560DE2F5-5B60-439B-BB25-2D246FEB5ECC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{560DE2F5-5B60-439B-BB25-2D246FEB5ECC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{560DE2F5-5B60-439B-BB25-2D246FEB5ECC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1CF6A5E7-3796-4704-A527-94A3936B14B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1CF6A5E7-3796-4704-A527-94A3936B14B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1CF6A5E7-3796-4704-A527-94A3936B14B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1CF6A5E7-3796-4704-A527-94A3936B14B4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D041968F-FC23-4777-9243-D8114B016FE8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D041968F-FC23-4777-9243-D8114B016FE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D041968F-FC23-4777-9243-D8114B016FE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -74,6 +82,30 @@ Global
 		{CD61938D-2539-4AF1-838E-16A4CC3BB225}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CD61938D-2539-4AF1-838E-16A4CC3BB225}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CD61938D-2539-4AF1-838E-16A4CC3BB225}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8E0FE0D3-3818-4131-AC31-3B5C804E4FE8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E0FE0D3-3818-4131-AC31-3B5C804E4FE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E0FE0D3-3818-4131-AC31-3B5C804E4FE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E0FE0D3-3818-4131-AC31-3B5C804E4FE8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D407363B-27CE-4180-BB8A-986A619941CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D407363B-27CE-4180-BB8A-986A619941CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D407363B-27CE-4180-BB8A-986A619941CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D407363B-27CE-4180-BB8A-986A619941CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B55118C0-8D29-4079-A291-62383B857EEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B55118C0-8D29-4079-A291-62383B857EEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B55118C0-8D29-4079-A291-62383B857EEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B55118C0-8D29-4079-A291-62383B857EEA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

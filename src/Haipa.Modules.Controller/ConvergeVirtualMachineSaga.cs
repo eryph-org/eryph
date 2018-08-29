@@ -4,13 +4,15 @@ using System.Threading.Tasks;
 using HyperVPlus.Messages;
 using HyperVPlus.StateDb;
 using HyperVPlus.StateDb.Model;
+using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
-namespace HyperVPlus.Controller
+namespace Haipa.Modules.Controller
 {
 
+    [UsedImplicitly]
     internal class ConvergeVirtualMachineSaga : Saga<CollectLegalInfoSagaData>,
         IAmInitiatedBy<InitiateVirtualMachineConvergeCommand>,
         IHandleMessages<TimeoutMessage>,
@@ -28,7 +30,7 @@ namespace HyperVPlus.Controller
 
         protected override void CorrelateMessages(ICorrelationConfig<CollectLegalInfoSagaData> config)
         {
-            // ensure idempotency by setting up correlation for this one in addition to
+            // ensure impotency by setting up correlation for this one in addition to
             // allowing CustomerCreated to initiate a new saga instance
             config.Correlate<InitiateVirtualMachineConvergeCommand>(m => m.ConvergeProcessId, d => d.CorrelationId);
 
@@ -46,7 +48,7 @@ namespace HyperVPlus.Controller
             //await _bus.DeferLocal(new TimeSpan(0, 0, 10),
             //    new TimeoutMessage {CorrelationId = message.ConvergeProcessId});
 
-            await _bus.Advanced.Topics.Publish("topic.agent.localhost",
+            await _bus.Advanced.Routing.Send("haipa.agent.localhost",
                 new ConvergeVirtualMachineRequestedEvent
                 {
                     Config = message.Config.VirtualMachine,

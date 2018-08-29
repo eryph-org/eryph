@@ -2,7 +2,7 @@
 using HyperVPlus.VmConfig;
 using Rebus.Sagas;
 
-namespace HyperVPlus.Controller
+namespace Haipa.Modules.Controller
 {
     public class CollectLegalInfoSagaData : ISagaData
     {

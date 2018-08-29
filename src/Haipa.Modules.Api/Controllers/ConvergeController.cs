@@ -4,13 +4,12 @@ using System.Threading.Tasks;
 using HyperVPlus.Messages;
 using HyperVPlus.StateDb;
 using HyperVPlus.StateDb.Model;
-using HyperVPlus.StateDb.MySql;
 using HyperVPlus.VmConfig;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Rebus.Bus;
 
-namespace HyperVPlus.Api.Controllers
+namespace Haipa.Api.Controllers
 {
     [Route("api/[controller]")]
     public class ConvergeController : Controller
@@ -43,15 +42,17 @@ namespace HyperVPlus.Api.Controllers
         public async Task<Operation> Post([FromBody] Config config)
         {
 
-            //var config = JsonConvert.DeserializeObject<Config>(value);
-
             var operation = new Operation{Id = Guid.NewGuid()};
-            //_dbContext.Add(operation);
-            //await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+            _dbContext.Add(operation);
+            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
 
-            //await _bus.Send(new InitiateVirtualMachineConvergeCommand {Config = config.Configurations[0], ConvergeProcessId = operation.Id })
-            //    .ConfigureAwait(false);
+            await _bus.Send(new InitiateVirtualMachineConvergeCommand
+                {
+                    Config = config.Configurations[0],
+                    ConvergeProcessId = operation.Id
+                })
+                .ConfigureAwait(false);
 
             return operation;
         }

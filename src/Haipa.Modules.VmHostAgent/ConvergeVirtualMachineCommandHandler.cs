@@ -5,12 +5,11 @@ using HyperVPlus.VmManagement;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Transport;
-using static LanguageExt.Prelude;
 
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
-namespace HyperVPlus.Agent
+namespace Haipa.VmHostAgent
 {
     internal class ConvergeTaskRequestedEventHandler : IHandleMessages<ConvergeVirtualMachineRequestedEvent>
     {

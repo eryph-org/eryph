@@ -1,9 +1,9 @@
 ﻿using System;
+using Haipa.Modules.Abstractions;
 using HyperVPlus.Messages;
 using HyperVPlus.Rebus;
 using HyperVPlus.StateDb;
 using HyperVPlus.StateDb.Model;
-using HyperVPlus.StateDb.MySql;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -21,30 +21,41 @@ using Rebus.Handlers;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
+using Rebus.Transport;
 using SimpleInjector;
 using SimpleInjector.Integration.AspNetCore.Mvc;
 using SimpleInjector.Lifestyles;
 using LogLevel = Rebus.Logging.LogLevel;
 
-namespace HyperVPlus.Api
+namespace Haipa.Modules.Api
 {
-    public class Startup
+    public class Startup : StartupBase
     {
+        private readonly Container _globalContainer;
         private readonly Container _container = new Container();
 
-        public Startup(IConfiguration configuration)
+        public Startup(IConfiguration configuration, Container globalContainer)
         {
             Configuration = configuration;
+            _globalContainer = globalContainer;
         }
 
         public IConfiguration Configuration { get; }
 
+
+
         // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+
+        public override void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<StateStoreContext>(options => options.UseMySql());
+
+            services.AddDbContext<StateStoreContext>(options => 
+                _globalContainer.GetInstance<IDbContextConfigurer<StateStoreContext>>().Configure(options));
+
             services.AddOData();
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
+                .AddApplicationPart(typeof(Startup).Assembly);
+
             IntegrateSimpleInjector(services);
         }
 
@@ -63,6 +74,11 @@ namespace HyperVPlus.Api
             services.UseSimpleInjectorAspNetRequestScoping(_container);
         }
 
+        public override void Configure(IApplicationBuilder app)
+        {
+            var env = app.ApplicationServices.GetService<IHostingEnvironment>();
+            Configure(app, env);
+        }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
@@ -89,14 +105,13 @@ namespace HyperVPlus.Api
 
         private void InitializeContainer(IApplicationBuilder app)
         {
-            _container.Collection.Register(typeof(IHandleMessages<>), typeof(Program).Assembly);
+            _container.Collection.Register(typeof(IHandleMessages<>), typeof(Startup).Assembly);
 
-            RabbitMqConnectionCheck.WaitForRabbitMq(new TimeSpan(0, 0, 10)).Wait();
 
-            _container.ConfigureRebus(configurer => configurer
-                .Transport(t => t.UseRabbitMqAsOneWayClient(RabbitMqConnectionCheck.ConnectionString))
-                .Routing(x => x.TypeBased()
-                    .Map<InitiateVirtualMachineConvergeCommand>("hypervplus.controller"))
+            _container.ConfigureRebus(configurer => configurer                
+                .Transport(t => _globalContainer.GetInstance<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
+                    .Routing(x => x.TypeBased()
+                    .Map<InitiateVirtualMachineConvergeCommand>("haipa.controller"))
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy();
@@ -130,5 +145,7 @@ namespace HyperVPlus.Api
             return builder.GetEdmModel();
 
         }
+
     }
+
 }

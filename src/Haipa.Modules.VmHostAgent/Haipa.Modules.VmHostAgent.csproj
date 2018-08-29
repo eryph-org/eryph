@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net471</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" />
+    <PackageReference Include="Rebus" Version="4.2.1" />
+    <PackageReference Include="SimpleInjector" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
+    <ProjectReference Include="..\Haipa.VmManagement\Haipa.VmManagement.csproj" />
+    <ProjectReference Include="..\HyperVPlus.Messages\HyperVPlus.Messages.csproj" />
+    <ProjectReference Include="..\HyperVPlus.Rebus\HyperVPlus.Rebus.csproj" />
+  </ItemGroup>
+
+</Project>

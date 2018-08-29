@@ -1,25 +1,41 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Haipa.Modules.Abstractions;
+using Haipa.Modules.Api;
+using HyperVPlus.Rebus;
+using HyperVPlus.StateDb;
+using HyperVPlus.StateDb.MySql;
 using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+using Rebus.Persistence.InMem;
+using Rebus.Transport.InMem;
+using SimpleInjector;
 
-namespace HyperVPlus.Api
+namespace HyperVPlus.ApiEndpoint
 {
     public class Program
     {
-        public static void Main(string[] args)
+
+        public static Task Main(string[] args)
         {
-            BuildWebHost(args).Run();
+            var container = new Container();
+
+            container.Register<IWebModule, ApiModule>();
+            container.RegisterInstance<IWebModuleHostBuilderFactory>(
+                new PassThroughWebHostBuilderFactory(() => WebHost.CreateDefaultBuilder(args)));
+
+            container.Register<IDbContextConfigurer<StateStoreContext>, MySqlDbContextConfigurer<StateStoreContext>>();
+
+            container.RegisterInstance(new InMemNetwork(true));
+            container.RegisterInstance(new InMemorySubscriberStore());
+            container.Register<IRebusTransportConfigurer, InMemoryTransportConfigurer>();
+            container.Register<IRebusSagasConfigurer, InMemorySagasConfigurer>();
+            container.Register<IRebusSubscriptionConfigurer, InMemorySubscriptionConfigurer>();
+            container.Register<IRebusTimeoutConfigurer, InMemoryTimeoutConfigurer>();
+
+            container.Verify();
+
+            return container.GetInstance<IWebModule>().RunAsync();
+
         }
 
-        public static IWebHost BuildWebHost(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>()
-                .Build();
     }
 }
