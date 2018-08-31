@@ -1,6 +1,4 @@
-﻿using System;
-using Haipa.Modules.Abstractions;
-using HyperVPlus.Messages;
+﻿using HyperVPlus.Messages;
 using HyperVPlus.Rebus;
 using HyperVPlus.StateDb;
 using HyperVPlus.StateDb.Model;
@@ -16,12 +14,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OData.Edm;
 using Newtonsoft.Json;
-using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
-using Rebus.Transport;
 using SimpleInjector;
 using SimpleInjector.Integration.AspNetCore.Mvc;
 using SimpleInjector.Lifestyles;
@@ -85,10 +81,10 @@ namespace Haipa.Modules.Api
         {
             InitializeContainer(app);
 
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
+            //if (env.IsDevelopment())
+            //{
+            //    app.UseDeveloperExceptionPage();
+            //}
 
             _container.Verify();
 

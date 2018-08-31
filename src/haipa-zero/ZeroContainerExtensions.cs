@@ -5,6 +5,8 @@ using Haipa.Modules.Controller;
 using HyperVPlus.Rebus;
 using HyperVPlus.StateDb;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore.Storage;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;
@@ -19,7 +21,7 @@ namespace Haipa.Runtime.Zero
             {
                 typeof(ApiModule),
                 typeof(ControllerModule),
-                //typeof(VmHostAgentModule)
+                typeof(VmHostAgentModule)
             };
 
             container.Collection.Register<IModule>(
@@ -34,7 +36,7 @@ namespace Haipa.Runtime.Zero
         public static Container HostAspNetCore(this Container container, string[] args)
         {
             container.RegisterInstance<IWebModuleHostBuilderFactory>(
-                new PassThroughWebHostBuilderFactory(() => WebHost.CreateDefaultBuilder(args)));
+                new PassThroughWebHostBuilderFactory(() => WebHost.CreateDefaultBuilder(args).UseUrls("http://localhost:62189")));
             return container;
         }
 
@@ -50,6 +52,7 @@ namespace Haipa.Runtime.Zero
 
         public static Container UseInMemoryDb(this Container container)
         {
+            container.RegisterInstance(new InMemoryDatabaseRoot());
             container.Register<IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
 
             return container;

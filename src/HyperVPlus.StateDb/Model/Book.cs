@@ -22,6 +22,7 @@ namespace HyperVPlus.StateDb.Model
         
         public string Message { get; set; }
         public Operation Operation { get; set; }
+        public DateTimeOffset Timestamp { get; set; }
     }
 
 

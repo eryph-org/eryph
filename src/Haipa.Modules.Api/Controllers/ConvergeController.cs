@@ -6,10 +6,9 @@ using HyperVPlus.StateDb;
 using HyperVPlus.StateDb.Model;
 using HyperVPlus.VmConfig;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Rebus.Bus;
 
-namespace Haipa.Api.Controllers
+namespace Haipa.Modules.Api.Controllers
 {
     [Route("api/[controller]")]
     public class ConvergeController : Controller

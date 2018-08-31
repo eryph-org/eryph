@@ -73,7 +73,11 @@ namespace Haipa.Modules.Controller
             {
 
                 var opLogEntry =
-                    new OperationLog {Id = Guid.NewGuid(), Message = message.Message, Operation = operation};
+                    new OperationLog
+                    {
+                        Id = Guid.NewGuid(), Message = message.Message, Operation = operation,
+                        Timestamp = DateTime.Now
+                    };
 
                 _stateStoreContext.Add(opLogEntry);
                 _stateStoreContext.SaveChanges();

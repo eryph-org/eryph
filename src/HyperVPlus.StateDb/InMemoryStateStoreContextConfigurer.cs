@@ -1,13 +1,20 @@
-﻿using HyperVPlus.StateDb;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Haipa.Runtime.Zero
+namespace HyperVPlus.StateDb
 {
     public class InMemoryStateStoreContextConfigurer : IDbContextConfigurer<StateStoreContext> 
     {
+        private readonly InMemoryDatabaseRoot _dbRoot;
+
+        public InMemoryStateStoreContextConfigurer(InMemoryDatabaseRoot dbRoot)
+        {
+            _dbRoot = dbRoot;
+        }
+
         public void Configure(DbContextOptionsBuilder options)
         {
-            options.UseInMemoryDatabase("StateDb");
+            options.UseInMemoryDatabase("StateDb", _dbRoot);
         }
     }
 }

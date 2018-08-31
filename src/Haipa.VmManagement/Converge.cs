@@ -376,7 +376,7 @@ namespace HyperVPlus.VmManagement
                     .SwapFile()
                     .UserData(userdata)
                     .Processing()
-                    .ImageFile(configDriveIsoPath)
+                    .Image().ImageFile(configDriveIsoPath)
                     .Generate();
 
             }
