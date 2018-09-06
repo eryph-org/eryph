@@ -1,4 +1,6 @@
-﻿using HyperVPlus.Messages;
+﻿using Haipa.Modules.Api.Controllers;
+using Haipa.Modules.Api.Services;
+using HyperVPlus.Messages;
 using HyperVPlus.Rebus;
 using HyperVPlus.StateDb;
 using HyperVPlus.StateDb.Model;
@@ -102,12 +104,13 @@ namespace Haipa.Modules.Api
         private void InitializeContainer(IApplicationBuilder app)
         {
             _container.Collection.Register(typeof(IHandleMessages<>), typeof(Startup).Assembly);
+            _container.Register<IOperationManager, OperationManager>(Lifestyle.Scoped);
 
 
             _container.ConfigureRebus(configurer => configurer                
                 .Transport(t => _globalContainer.GetInstance<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
                     .Routing(x => x.TypeBased()
-                    .Map<InitiateVirtualMachineConvergeCommand>("haipa.controller"))
+                    .MapAssemblyOf<InitiateVirtualMachineConvergeCommand>("haipa.controller"))
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy();
@@ -133,10 +136,24 @@ namespace Haipa.Modules.Api
         {
 
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
+            builder.Namespace = "Haipa";
 
             builder.EntitySet<Operation>("OperationSet");
             builder.EntitySet<OperationLog>("OperationLogSet");
             builder.EntitySet<Machine>("MachineSet");
+            builder.EntitySet<Agent>("AgentSet");
+            builder.EntitySet<IpV4Address>("IpV4AddressSet");
+
+            builder.EntityType<IpV4Address>().HasKey(t => new {t.MachineId, t.Address});
+            builder.EntityType<IpV6Address>().HasKey(t => new { t.MachineId, t.Address });
+            builder.EntityType<Agent>().HasKey(t => t.Name);
+
+            builder.EntityType<Machine>().HasRequired(np => np.Agent);
+            builder.EntityType<Machine>().HasMany(x => x.IpV4Addresses);
+            builder.EntityType<Machine>().HasMany(x => x.IpV6Addresses);
+
+            builder.EntityType<Machine>().Action("Start").ReturnsFromEntitySet<Operation>("OperationSet");
+            builder.EntityType<Machine>().Action("Stop").ReturnsFromEntitySet<Operation>("OperationSet");
 
             return builder.GetEdmModel();
 

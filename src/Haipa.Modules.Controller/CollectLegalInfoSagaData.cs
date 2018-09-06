@@ -15,6 +15,9 @@ namespace Haipa.Modules.Controller
         public VirtualMachineConfig Config { get; set; }
 
         public Guid VirtualMaschineId { get; set; }
+        public string AgentName { get; set; }
+
+        public bool InventoryReceived { get; set; }
 
     }
 }

@@ -33,9 +33,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Api", "src\Ha
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Controller", "src\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj", "{D407363B-27CE-4180-BB8A-986A619941CD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.VmManagement", "src\Haipa.VmManagement\Haipa.VmManagement.csproj", "{B55118C0-8D29-4079-A291-62383B857EEA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.VmManagement", "src\Haipa.VmManagement\Haipa.VmManagement.csproj", "{B55118C0-8D29-4079-A291-62383B857EEA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.Modules.VmHostAgent", "src\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj", "{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.VmHostAgent", "src\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj", "{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,7 +44,6 @@ Global
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{77BF0E75-4B4C-48C7-93B1-E06B762808FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{77BF0E75-4B4C-48C7-93B1-E06B762808FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{77BF0E75-4B4C-48C7-93B1-E06B762808FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{77BF0E75-4B4C-48C7-93B1-E06B762808FF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6A5229F6-AD2D-46F6-8729-4621D0683155}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -71,7 +70,6 @@ Global
 		{3877B77E-EB0D-44B4-8325-2AAEB35D1A8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3877B77E-EB0D-44B4-8325-2AAEB35D1A8D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{560DE2F5-5B60-439B-BB25-2D246FEB5ECC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{560DE2F5-5B60-439B-BB25-2D246FEB5ECC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{560DE2F5-5B60-439B-BB25-2D246FEB5ECC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{560DE2F5-5B60-439B-BB25-2D246FEB5ECC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D041968F-FC23-4777-9243-D8114B016FE8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU

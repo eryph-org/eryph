@@ -1,5 +1,6 @@
 ﻿using System;
 using HyperVPlus.VmConfig;
+using Newtonsoft.Json;
 
 namespace HyperVPlus.Messages
 {

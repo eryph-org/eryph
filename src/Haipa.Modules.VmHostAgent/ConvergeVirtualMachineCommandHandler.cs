@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using HyperVPlus.Messages;
 using HyperVPlus.VmConfig;
@@ -38,6 +42,8 @@ namespace Haipa.Modules.VmHostAgent
             Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> BindableTaskEnsureCreated(
                 Seq<TypedPsObject<VirtualMachineInfo>> list) => EnsureCreated(list, config, _engine);
 
+            Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> BindableAttachToOperation(
+                TypedPsObject<VirtualMachineInfo> vmInfo) => AttachToOperation(vmInfo, _bus, _correlationid);
 
             //Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> BindableConvergeVm(
             //    TypedPsObject<VirtualMachineInfo> vmInfo) => ConvergeVm(vmInfo, config, engine);
@@ -46,17 +52,27 @@ namespace Haipa.Modules.VmHostAgent
             var result = await GetVmInfo(config.Name, _engine)
                 .BindAsync(BindableEnsureUnique)
                 .BindAsync(BindableTaskEnsureCreated)
+                .BindAsync(BindableAttachToOperation)
                 .BindAsync(vmInfo => ConvergeVm(vmInfo, config, _engine)).ConfigureAwait(false);
 
             await result.MatchAsync(
                 LeftAsync: HandleError,
-                Right: r => r
-            ).ConfigureAwait(false);
+                RightAsync: async vmInfo =>
+                {
+                    await _bus.Send(new VirtualMachineConvergedEvent
+                    {
+                        CorellationId = _correlationid,
+                        Inventory = VmToInventory(vmInfo.Recreate())
 
-            await ProgressMessage("Converged").ConfigureAwait(false);
+                    }).ConfigureAwait(false);
+
+                    return Unit.Default;
+                }).ConfigureAwait(false);
 
 
-                //await _bus.SendLocal(result.ToEvent(command.CorellationId));
+
+
+            //await _bus.SendLocal(result.ToEvent(command.CorellationId));
 
         }
 
@@ -77,7 +93,7 @@ namespace Haipa.Modules.VmHostAgent
 
         }
 
-        private async Task<Either<PowershellFailure, Unit>> ConvergeVm(TypedPsObject<VirtualMachineInfo> vmInfo, VirtualMachineConfig config, IPowershellEngine engine)
+        private async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> ConvergeVm(TypedPsObject<VirtualMachineInfo> vmInfo, VirtualMachineConfig config, IPowershellEngine engine)
         {
             var result = await Converge.Firmware(vmInfo, config, engine, ProgressMessage)
                 .BindAsync(info => Converge.Cpu(info, config.Cpu, engine, ProgressMessage))
@@ -94,18 +110,95 @@ namespace Haipa.Modules.VmHostAgent
 
             //await ProgressMessage("Generate Virtual Machine provisioning disk").ConfigureAwait(false);
 
-            //await Converge.CloudInit(
-            //    engine, config.Path,
-            //    config.Hostname,
-            //    config.Provisioning.UserData,
-            //    vmInfo).ConfigureAwait(false);
-
-            //}).ConfigureAwait(false);
-
-            await ProgressMessage("Converged").ConfigureAwait(false);
 
             return result;
         }
+
+        private static VmInventoryInfo VmToInventory(TypedPsObject<VirtualMachineInfo> vm)
+        {
+            return new VmInventoryInfo
+            {
+                Id = vm.Value.Id,
+                Status = MapVmInfoStatusToVmStatus(vm.Value.State),
+                Name = vm.Value.Name,
+                IpV4Addresses = GetAddressesByFamily(vm, AddressFamily.InterNetwork),
+                IpV6Addresses = GetAddressesByFamily(vm, AddressFamily.InterNetworkV6),
+            };
+        }
+
+        private static VmStatus MapVmInfoStatusToVmStatus(VirtualMachineState valueState)
+        {
+            switch (valueState)
+            {
+                case VirtualMachineState.Other:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.Running:
+                    return VmStatus.Running;
+                case VirtualMachineState.Off:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.Stopping:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.Saved:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.Paused:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.Starting:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.Reset:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.Saving:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.Pausing:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.Resuming:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.FastSaved:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.FastSaving:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.ForceShutdown:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.ForceReboot:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.RunningCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.OffCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.StoppingCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.SavedCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.PausedCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.StartingCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.ResetCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.SavingCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.PausingCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.ResumingCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.FastSavedCritical:
+                    return VmStatus.Stopped;
+                case VirtualMachineState.FastSavingCritical:
+                    return VmStatus.Stopped;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(valueState), valueState, null);
+            }
+        }
+
+        private static List<string> GetAddressesByFamily(TypedPsObject<VirtualMachineInfo> vm, AddressFamily family)
+        {
+            return vm.Value.NetworkAdapters.Bind(adapter => adapter.IPAddresses.Where(a =>
+            {
+                var ipAddress = IPAddress.Parse(a);
+                return ipAddress.AddressFamily == family;
+            })).ToList();
+        }
+
+
 
         private Either<PowershellFailure, Seq<TypedPsObject<VirtualMachineInfo>>> EnsureUnique(Seq<TypedPsObject<VirtualMachineInfo>> list, string vmName)
         {
@@ -123,6 +216,24 @@ namespace Haipa.Modules.VmHostAgent
                     config.Path,
                     config.Memory.Startup),
                 Some: s => s
+            );
+
+        }
+
+        private static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> AttachToOperation(Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>> vmInfo, IBus bus, Guid operationId)
+        {
+            return vmInfo.MapAsync( async
+                info =>
+                {
+                    await bus.Send(new AttachMachineToOperationCommand
+                    {
+                        OperationId = operationId,
+                        AgentName = Environment.MachineName,
+                        MachineId = info.Value.Id,
+                    }).ConfigureAwait(false);
+                    return info;
+                }
+
             );
 
         }

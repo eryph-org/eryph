@@ -8,4 +8,5 @@ namespace HyperVPlus.Messages
         public string Message { get; set; }
 
     }
+
 }

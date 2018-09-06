@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
+using HyperVPlus.Messages;
 using HyperVPlus.StateDb;
+using HyperVPlus.StateDb.Model;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Mvc;
 
@@ -37,6 +39,8 @@ namespace Haipa.Modules.Api.Controllers
 
             return Ok(_db.Logs.Where(x => x.Operation == op));
         }
+
+
 
     }
 }

@@ -272,7 +272,7 @@ namespace HyperVPlus.VmManagement.Data
 
         //public string TestReplicaSwitchName { get; private set; }
 
-        public string SwitchName { get; private set; }
+        //public string SwitchName { get; private set; }
 
         public string AdapterId { get; private set; }
 
@@ -286,7 +286,7 @@ namespace HyperVPlus.VmManagement.Data
 
         //public bool IsExternalAdapter { get; private set; }
 
-        public Guid? SwitchId { get; private set; }
+        //public Guid? SwitchId { get; private set; }
 
 
         public VMNetworkAdapterAclSetting[] AclList { get; private set; }

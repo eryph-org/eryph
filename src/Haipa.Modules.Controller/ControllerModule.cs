@@ -1,9 +1,12 @@
-﻿using Haipa.Modules.Abstractions;
+﻿using System.Threading.Tasks;
+using Haipa.Modules.Abstractions;
+using HyperVPlus.Messages;
 using HyperVPlus.Rebus;
 using HyperVPlus.StateDb;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Logging;
 using Rebus.Retry.Simple;
@@ -31,6 +34,7 @@ namespace Haipa.Modules.Controller
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
 
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
+            //container.Collection.Append(typeof(IHandleMessages<>), typeof(DispatchOperationHandler<>));
 
             container.Register(() =>
             {
@@ -55,6 +59,12 @@ namespace Haipa.Modules.Controller
 
             container.StartBus();
 
+            Task.Run(async () =>
+            {
+                await Task.Delay(500);
+                await container.GetInstance<IBus>().Advanced.Topics.Publish("agent.all", new InventoryRequestedEvent());
+
+            });
         }
 
         public void Stop()

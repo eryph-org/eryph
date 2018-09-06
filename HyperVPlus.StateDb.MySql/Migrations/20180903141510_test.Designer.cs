@@ -3,14 +3,16 @@ using System;
 using HyperVPlus.StateDb;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace HyperVPlus.StateDb.MySql.Migrations
 {
     [DbContext(typeof(StateStoreContext))]
-    partial class StateStoreContextModelSnapshot : ModelSnapshot
+    [Migration("20180903141510_test")]
+    partial class test
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,11 +24,7 @@ namespace HyperVPlus.StateDb.MySql.Migrations
                     b.Property<string>("Name")
                         .ValueGeneratedOnAdd();
 
-                    b.Property<Guid?>("MachineId");
-
                     b.HasKey("Name");
-
-                    b.HasIndex("MachineId");
 
                     b.ToTable("Agents");
                 });
@@ -95,13 +93,6 @@ namespace HyperVPlus.StateDb.MySql.Migrations
                     b.HasIndex("OperationId");
 
                     b.ToTable("Logs");
-                });
-
-            modelBuilder.Entity("HyperVPlus.StateDb.Model.Agent", b =>
-                {
-                    b.HasOne("HyperVPlus.StateDb.Model.Machine", "Machine")
-                        .WithMany()
-                        .HasForeignKey("MachineId");
                 });
 
             modelBuilder.Entity("HyperVPlus.StateDb.Model.IpV4Address", b =>

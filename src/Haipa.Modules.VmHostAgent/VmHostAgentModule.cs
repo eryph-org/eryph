@@ -1,9 +1,14 @@
-﻿using Haipa.Modules.Abstractions;
+﻿using System;
+using System.Runtime.Remoting.Contexts;
+using System.Threading.Tasks;
+using Haipa.Modules.Abstractions;
+using Haipa.Modules.VmHostAgent;
 using HyperVPlus.Messages;
 using HyperVPlus.Rebus;
 using HyperVPlus.VmManagement;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
+using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Logging;
 using Rebus.Retry.Simple;
@@ -35,23 +40,25 @@ namespace Haipa.Modules.Controller
             container.RegisterSingleton<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>();
 
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);
+            container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationHandler<>));
 
             container.ConfigureRebus(configurer => configurer
-                .Transport(t => _globalContainer.GetInstance<IRebusTransportConfigurer>().Configure(t, "haipa.agent.localhost"))
+                .Transport(t => _globalContainer.GetInstance<IRebusTransportConfigurer>().Configure(t, "haipa.agent." + Environment.MachineName ))
                 .Routing(x => x.TypeBased()
-                    .Map<ConvergeVirtualMachineResponse>("haipa.controller")
-                    .Map<ConvergeVirtualMachineProgressEvent>("haipa.controller"))
+                    .MapAssemblyOf<ConvergeVirtualMachineResponse>("haipa.controller"))
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy();
                     x.SetNumberOfWorkers(5);
                 })
-                .Subscriptions(s => _globalContainer.GetInstance<IRebusSubscriptionConfigurer>().Configure(s))
+                .Subscriptions(s => _globalContainer.GetInstance<IRebusSubscriptionConfigurer>().Configure(s) )
 
                 .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None }))
                 .Logging(x => x.ColoredConsole(LogLevel.Debug)).Start());
 
             container.StartBus();
+            container.GetInstance<IBus>().Advanced.Topics.Subscribe("agent.all");
+
 
         }
 

@@ -3,14 +3,16 @@ using System;
 using HyperVPlus.StateDb;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace HyperVPlus.StateDb.MySql.Migrations
 {
     [DbContext(typeof(StateStoreContext))]
-    partial class StateStoreContextModelSnapshot : ModelSnapshot
+    [Migration("20180903142304_test2")]
+    partial class test2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

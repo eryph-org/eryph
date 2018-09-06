@@ -2,9 +2,9 @@
 
 namespace HyperVPlus.Messages
 {
-    public class TimeoutMessage
+    public class OperationTimeoutMessage
     {
-        public Guid CorrelationId { get; set; }
+        public Guid OperationId { get; set; }
     }
 
 }

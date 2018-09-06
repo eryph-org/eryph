@@ -207,18 +207,18 @@ namespace HyperVPlus.VmManagement
 
                 }).ConfigureAwait(false);
 
-            optionalAdapter.Map(async (adapter) =>
-            {
-                if (!adapter.Value.Connected || adapter.Value.SwitchName != networkConfig.SwitchName)
-                {
-                    await reportProgress($"Connect Network Adapter {adapter.Value.Name} to switch {networkConfig.SwitchName}").ConfigureAwait(false);
-                    await engine.RunAsync(
-                        PsCommandBuilder.Create().AddCommand("Connect-VmNetworkAdapter")
-                            .AddParameter("VMNetworkAdapter", adapter.PsObject)
-                            .AddParameter("SwitchName", networkConfig.SwitchName)).ConfigureAwait(false);
+            //optionalAdapter.Map(async (adapter) =>
+            //{
+            //    if (!adapter.Value.Connected || adapter.Value.SwitchName != networkConfig.SwitchName)
+            //    {
+            //        await reportProgress($"Connect Network Adapter {adapter.Value.Name} to switch {networkConfig.SwitchName}").ConfigureAwait(false);
+            //        await engine.RunAsync(
+            //            PsCommandBuilder.Create().AddCommand("Connect-VmNetworkAdapter")
+            //                .AddParameter("VMNetworkAdapter", adapter.PsObject)
+            //                .AddParameter("SwitchName", networkConfig.SwitchName)).ConfigureAwait(false);
 
-                }
-            });
+            //    }
+            //});
 
 
         }
@@ -388,7 +388,7 @@ namespace HyperVPlus.VmManagement
             return Unit.Default;
         }
 
-        public static async Task<Either<PowershellFailure, Unit>> CloudInit(
+        public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> CloudInit(
             TypedPsObject<VirtualMachineInfo> vmInfo,
             string vmConfigPath,
             string hostname,
@@ -414,7 +414,7 @@ namespace HyperVPlus.VmManagement
                         return InsertConfigDriveDisk(configDriveIsoPath, info, engine);
                     }).ConfigureAwait(false);
 
-            return res;
+            return res.Return(vmInfo);
         }
     }
 }
