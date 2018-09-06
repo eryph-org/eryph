@@ -12,6 +12,8 @@ namespace HyperVPlus.StateDb.Model
 
         public OperationStatus Status { get; set; }
         public string AgentName { get; set; }
+        public string StatusMessage { get; set; }
+        public string Name { get; set; }
     }
 
     public class Machine

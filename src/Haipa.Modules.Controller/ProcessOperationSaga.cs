@@ -42,6 +42,15 @@ namespace Haipa.Modules.Controller
         {
             var command = JsonConvert.DeserializeObject(message.CommandData, Type.GetType(message.CommandType));
 
+            var op = await _dbContext.Operations.FindAsync(message.OperationId).ConfigureAwait(false);
+            if (op == null)
+            {
+                MarkAsComplete();
+                return;
+            }
+
+            op.Name = command.GetType().Name;
+
             if (command is IMachineCommand machineCommand)
             {
                 var machine = await _dbContext.Machines.FindAsync(machineCommand.MachineId).ConfigureAwait(false);
@@ -68,6 +77,7 @@ namespace Haipa.Modules.Controller
                 return;
 
             op.Status = OperationStatus.Running;
+            op.StatusMessage = OperationStatus.Completed.ToString();
             op.AgentName = message.AgentName;
 
             await _dbContext.SaveChangesAsync();
@@ -82,7 +92,7 @@ namespace Haipa.Modules.Controller
                 return;
 
             op.Status = OperationStatus.Completed;
-
+            op.StatusMessage = OperationStatus.Completed.ToString();
             await _dbContext.SaveChangesAsync();
 
             MarkAsComplete();
@@ -96,6 +106,7 @@ namespace Haipa.Modules.Controller
                 return;
 
             op.Status = OperationStatus.Failed;
+            op.StatusMessage = message.ErrorMessage;
 
             await _dbContext.SaveChangesAsync();
 

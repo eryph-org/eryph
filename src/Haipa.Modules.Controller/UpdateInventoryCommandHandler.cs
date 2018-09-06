@@ -39,12 +39,12 @@ namespace Haipa.Modules.Controller
                     Name = x.Name,
                     Status = MapVmStatusToMachineStatus(x.Status),
                     Agent = agentData,
-                    IpV4Addresses = x.IpV4Addresses.Select(
+                    IpV4Addresses = x.IpV4Addresses?.Select(
                         a => new IpV4Address
                         {
                             Address = a
                         }).ToList(),
-                    IpV6Addresses = x.IpV6Addresses.Select(
+                    IpV6Addresses = x.IpV6Addresses?.Select(
                         a => new IpV6Address
                         {
                             Address = a

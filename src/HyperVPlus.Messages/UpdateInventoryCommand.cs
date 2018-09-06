@@ -28,6 +28,6 @@ namespace HyperVPlus.Messages
     public class OperationFailedEvent
     {
         public Guid OperationId { get; set; }
-
+        public string ErrorMessage { get; set; }
     }
 }

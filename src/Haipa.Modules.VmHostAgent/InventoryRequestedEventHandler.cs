@@ -27,21 +27,25 @@ namespace Haipa.Modules.VmHostAgent
             _engine = engine;
         }
 
+
         public Task Handle(InventoryRequestedEvent message) => 
-            _engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
+            _engine.GetObjectsAsync<LightVirtualMachineInfo>(PsCommandBuilder.Create()
                     .AddCommand("get-vm"))
                 .ToAsync()
                 .IfRightAsync(vms => _bus.Send(VmsToInventory(vms)));
-
-        private static UpdateInventoryCommand VmsToInventory(ISeq<TypedPsObject<VirtualMachineInfo>> vms)
+                    
+        private static UpdateInventoryCommand VmsToInventory(ISeq<TypedPsObject<LightVirtualMachineInfo>> vms)
         {
-            var inventory = vms.Map(vm => new VmInventoryInfo
+            
+            var inventory = vms.Map(vm =>
             {
-                Id = vm.Value.Id,
-                Status = MapVmInfoStatusToVmStatus(vm.Value.State),
-                Name = vm.Value.Name,
-                IpV4Addresses = GetAddressesByFamily(vm, AddressFamily.InterNetwork),
-                IpV6Addresses = GetAddressesByFamily(vm, AddressFamily.InterNetworkV6),
+                var info = new VmInventoryInfo();
+                info.Id = vm.Value.Id;
+                info.Status = MapVmInfoStatusToVmStatus(vm.Value.State);
+                info.Name = vm.Value.Name;
+                info.IpV4Addresses = GetAddressesByFamily(vm, AddressFamily.InterNetwork);
+                info.IpV6Addresses = GetAddressesByFamily(vm, AddressFamily.InterNetworkV6);
+                return info;
             }).ToList();
 
             return new UpdateInventoryCommand
@@ -115,16 +119,32 @@ namespace Haipa.Modules.VmHostAgent
             }
         }
 
-        private static List<string> GetAddressesByFamily(TypedPsObject<VirtualMachineInfo> vm, AddressFamily family)
+        private static List<string> GetAddressesByFamily(TypedPsObject<LightVirtualMachineInfo> vm, AddressFamily family)
         {
-            return vm.Value.NetworkAdapters.Bind(adapter => adapter.IPAddresses.Where(a =>
-            {               
+
+            return vm.GetList(x=>x.NetworkAdapters).Bind(adapter => adapter.Value.IPAddresses.Where(a =>
+            {
                 var ipAddress = IPAddress.Parse(a);
                 return ipAddress.AddressFamily == family;
             })).ToList();
         }
 
+        private class LightVirtualMachineInfo
+        {
+            public Guid Id { get; private set; }
+            public string Name { get; private set; }
+            public VirtualMachineState State { get; private set; }
 
+            public LightVmNetworkAdapter[] NetworkAdapters { get; private set; }
+        }
+
+        [UsedImplicitly]
+        private class LightVmNetworkAdapter : VirtualMachineDeviceInfo
+        {
+
+            public string[] IPAddresses { get; private set; }
+
+        }
 
     }
 }

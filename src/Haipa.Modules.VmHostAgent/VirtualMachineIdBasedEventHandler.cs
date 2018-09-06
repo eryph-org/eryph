@@ -29,9 +29,9 @@ namespace Haipa.Modules.VmHostAgent
 
             var result = await GetVmInfo(command.MachineId, _engine)
                 .BindAsync(vmInfo => HandleCommand(vmInfo, command, _engine)).ConfigureAwait(false);
-
+            
             await result.MatchAsync(
-                LeftAsync: HandleError,
+                LeftAsync: f => HandleError(f,command),
                 RightAsync: async vmInfo =>
                 {
                     await _bus.Send(new OperationCompletedEvent
@@ -44,8 +44,14 @@ namespace Haipa.Modules.VmHostAgent
                 }).ConfigureAwait(false);
         }
 
-        private static async Task<Unit> HandleError(PowershellFailure failure)
+        private async Task<Unit> HandleError(PowershellFailure failure, OperationCommand command)
         {
+            await _bus.Send(new OperationFailedEvent(){
+                OperationId = command.OperationId,
+                ErrorMessage = failure.Message
+
+            }).ConfigureAwait(false);
+
             return Unit.Default;
         }
 
