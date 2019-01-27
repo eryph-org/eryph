@@ -142,7 +142,7 @@ namespace Haipa.Modules.Controller
             op.Status = OperationStatus.Completed;
             op.StatusMessage = OperationStatus.Completed.ToString();
             await _dbContext.SaveChangesAsync();
-
+            await _bus.Advanced.Topics.Publish("agent.all", new InventoryRequestedEvent()).ConfigureAwait(false);
             MarkAsComplete();
         }
 
@@ -184,6 +184,7 @@ namespace Haipa.Modules.Controller
                     Agent = agent,
                     AgentName = agent.Name,
                     Id = message.MachineId,
+                    VM = new VirtualMachine{ Id = message.MachineId}
                 };
                 await _dbContext.AddAsync(machine).ConfigureAwait(false);
 

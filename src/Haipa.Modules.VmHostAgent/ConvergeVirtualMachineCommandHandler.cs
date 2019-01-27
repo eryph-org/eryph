@@ -139,8 +139,15 @@ namespace Haipa.Modules.VmHostAgent
             );
         }
 
-        private static async Task<Unit> HandleError(PowershellFailure failure)
+        private async Task<Unit> HandleError(PowershellFailure failure)
         {
+
+            await _bus.Send(new OperationFailedEvent()
+            {
+                OperationId = _operationId,
+                ErrorMessage = failure.Message,
+            }).ConfigureAwait(false);
+
             return Unit.Default;
         }
 

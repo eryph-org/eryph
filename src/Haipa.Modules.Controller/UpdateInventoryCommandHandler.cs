@@ -42,12 +42,14 @@ namespace Haipa.Modules.Controller
                     {
                         NetworkAdapters = x.NetworkAdapters.Select(a => new VirtualMachineNetworkAdapter
                         {
+                            MachineId = x.MachineId,
                             Name = a.AdapterName,
                             SwitchName = a.VirtualSwitchName                        
                         }).ToList(),                      
                     },
                     Networks = x.Networks?.Select( mn=> new MachineNetwork
                     {
+                        MachineId = x.MachineId,
                         AdapterName = mn.AdapterName,
                         DnsServerAddresses = mn.DnsServers,                       
                         IpV4Addresses = mn.IPAddresses.Select(IPAddress.Parse).Where(n=>n.AddressFamily == AddressFamily.InterNetwork )
@@ -66,7 +68,11 @@ namespace Haipa.Modules.Controller
 
             foreach (var newMachine in newMachines)
             {
-                var existingMachine = _stateStoreContext.Find<Machine>(newMachine.Id);
+                var existingMachine = await _stateStoreContext.Machines.Where(x=>x.Id == newMachine.Id)
+                    .Include(x => x.VM)
+                    .ThenInclude(x => x.NetworkAdapters)
+                    .Include(x => x.Networks).FirstOrDefaultAsync().ConfigureAwait(false);
+
                 if (existingMachine == null)
                 {
                     _stateStoreContext.Add(newMachine);
@@ -76,6 +82,10 @@ namespace Haipa.Modules.Controller
                 existingMachine.Name = newMachine.Name;
                 existingMachine.Status = newMachine.Status;
                 existingMachine.Agent = agentData;
+
+                if(existingMachine.VM== null)
+                    existingMachine.VM = new VirtualMachine();
+
                 existingMachine.VM.NetworkAdapters = newMachine.VM.NetworkAdapters;
                 existingMachine.Networks = newMachine.Networks;
             }

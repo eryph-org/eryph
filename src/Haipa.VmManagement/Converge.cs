@@ -245,12 +245,15 @@ namespace Haipa.VmManagement
                     await reportProgress($"Add Network Adapter: {networkAdapterConfig.Name}").ConfigureAwait(false);
                     return await engine.GetObjectsAsync<VMNetworkAdapter>(PsCommandBuilder.Create()
                         .AddCommand("Add-VmNetworkAdapter")
+                        .AddParameter("Passthru")
                         .AddParameter("VM", vmInfo.PsObject)
                         .AddParameter("Name", networkAdapterConfig.Name)
                         .AddParameter("StaticMacAddress", UseOrGenerateMacAddress(networkAdapterConfig, vmInfo))
                         .AddParameter("SwitchName", networkAdapterConfig.SwitchName)).ConfigureAwait(false);
 
                 }).ConfigureAwait(false);
+
+                return optionalAdapter.Map(_ => vmInfo.Recreate());
 
             //optionalAdapter.Map(async (adapter) =>
             //{
