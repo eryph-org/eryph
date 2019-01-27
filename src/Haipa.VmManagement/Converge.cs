@@ -3,25 +3,72 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.Remoting.Messaging;
+using System.Text;
 using System.Threading.Tasks;
 using Contiva.CloudInit.ConfigDrive.Generator;
 using Contiva.CloudInit.ConfigDrive.NoCloud;
 using Contiva.CloudInit.ConfigDrive.Processing;
-using HyperVPlus.VmConfig;
-using HyperVPlus.VmManagement.Data;
+using Haipa.VmConfig;
+using Haipa.VmManagement.Data;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
 using Newtonsoft.Json.Linq;
 
-using static LanguageExt.Prelude;
-
-namespace HyperVPlus.VmManagement
+namespace Haipa.VmManagement
 {
     public static class Converge
     {
+#pragma warning disable 1998
+        public static async Task<Either<PowershellFailure, MachineConfig>> NormalizeMachineConfig(
+#pragma warning restore 1998
+            TypedPsObject<VirtualMachineInfo> vmInfo,
+            MachineConfig config, IPowershellEngine engine, Func<string, Task> reportProgress)
+        {
+            var machineConfig = config;
+
+            if(machineConfig.VM== null)
+                machineConfig.VM = new VirtualMachineConfig();
+
+            if (machineConfig.VM.Cpu == null)
+                machineConfig.VM.Cpu = new VirtualMachineCpuConfig {Count = 1};
+
+            if (machineConfig.VM.Memory == null)
+                machineConfig.VM.Memory = new VirtualMachineMemoryConfig() { Startup = 1024 };
+
+            if (machineConfig.VM.Disks == null)
+                machineConfig.VM.Disks = new List<VirtualMachineDiskConfig>();
+
+            if (machineConfig.VM.NetworkAdapters == null)
+                machineConfig.VM.NetworkAdapters = new List<VirtualMachineNetworkAdapterConfig>();
+
+            for (var index = 0; index < machineConfig.VM.Disks.Count; index++)
+            {
+                var diskConfig = machineConfig.VM.Disks[index];
+                if (string.IsNullOrWhiteSpace(diskConfig.Name))
+                    diskConfig.Name = $"disk-{index}";
+            }
+
+            foreach (var adapterConfig in machineConfig.VM.NetworkAdapters)
+            {
+                if (adapterConfig.MacAddress != null)
+                {
+                    adapterConfig.MacAddress = adapterConfig.MacAddress.Replace("-", "");
+                    adapterConfig.MacAddress = adapterConfig.MacAddress.Replace(":", "");
+                    adapterConfig.MacAddress = adapterConfig.MacAddress.ToLowerInvariant();
+                }
+                else
+                {
+                    adapterConfig.MacAddress = "";
+                }
+            }
+
+            return machineConfig;
+        }
+
+
+
         public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Firmware(TypedPsObject<VirtualMachineInfo> vmInfo,
-            VirtualMachineConfig config, IPowershellEngine engine, Func<string, Task> reportProgress)
+            MachineConfig config, IPowershellEngine engine, Func<string, Task> reportProgress)
         {
             if (vmInfo.Value.Generation < 2)
                 return vmInfo;
@@ -86,7 +133,7 @@ namespace HyperVPlus.VmManagement
         public static async Task Definition(
             IPowershellEngine engine,
             TypedPsObject<VirtualMachineInfo> vmInfo,
-            VirtualMachineConfig vmConfig,
+            MachineConfig vmConfig,
             Func<string, Task> reportProgress)
         {
 
@@ -112,21 +159,21 @@ namespace HyperVPlus.VmManagement
             }
 
 
-            if (vmInfo.Value.ProcessorCount != vmConfig.Cpu.Count)
+            if (vmInfo.Value.ProcessorCount != vmConfig.VM.Cpu.Count)
             {
-                await reportProgress($"Configure VM Processor: Count: {vmConfig.Cpu.Count}").ConfigureAwait(false);
+                await reportProgress($"Configure VM Processor: Count: {vmConfig.VM.Cpu.Count}").ConfigureAwait(false);
 
                 await engine.RunAsync(PsCommandBuilder.Create()
                     .AddCommand("Set-VMProcessor")
                     .AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("Count", vmConfig.Cpu.Count)).ConfigureAwait(false);
+                    .AddParameter("Count", vmConfig.VM.Cpu.Count)).ConfigureAwait(false);
             }
 
-            var memoryStartupBytes = vmConfig.Memory.Startup * 1024L * 1024;
+            var memoryStartupBytes = vmConfig.VM.Memory.Startup * 1024L * 1024;
 
             if (vmInfo.Value.MemoryStartup != memoryStartupBytes)
             {
-                await reportProgress($"Configure VM Memory: Startup: {vmConfig.Memory.Startup} MB").ConfigureAwait(false);
+                await reportProgress($"Configure VM Memory: Startup: {vmConfig.VM.Memory.Startup} MB").ConfigureAwait(false);
 
                 await engine.RunAsync(PsCommandBuilder.Create()
                     .AddCommand("Set-VMMemory")
@@ -136,26 +183,23 @@ namespace HyperVPlus.VmManagement
             }
         }
 
-        public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Disks(TypedPsObject<VirtualMachineInfo> vmInfo,
-            Option<Seq<VirtualMachineDiskConfig>> diskConfig, VirtualMachineConfig vmConfig, IPowershellEngine engine, Func<string, Task> reportProgress)
+        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Disks(TypedPsObject<VirtualMachineInfo> vmInfo,
+            Seq<VirtualMachineDiskConfig> diskConfig, MachineConfig vmConfig, IPowershellEngine engine, Func<string, Task> reportProgress)
         {
-            return await diskConfig.MatchAsync(
-                None: () => vmInfo,
-                Some: async config =>
-                {
-                    var res = (await config.Map(disk => Disk(disk, engine, vmInfo, vmConfig, reportProgress))
-                        .Traverse(x => x).ConfigureAwait(false)).Traverse(x => x);
+            return diskConfig.Map(disk => Disk(disk, engine, vmInfo, vmConfig, reportProgress)).Last;
+        }
 
-                    return res.Map(infoList=> infoList.Last());
-
-                }).ConfigureAwait(false);
+        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> NetworkAdapters(TypedPsObject<VirtualMachineInfo> vmInfo,
+            Seq<VirtualMachineNetworkAdapterConfig> adapterConfig, MachineConfig vmConfig, IPowershellEngine engine, Func<string, Task> reportProgress)
+        {
+            return adapterConfig.Map(adapter => NetworkAdapter(adapter, engine, vmInfo, vmConfig, reportProgress)).Last;
         }
 
         public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Disk(
             VirtualMachineDiskConfig diskConfig,
             IPowershellEngine engine,
             TypedPsObject<VirtualMachineInfo> vmInfo,
-            VirtualMachineConfig vmConfig,
+            MachineConfig vmConfig,
             Func<string,Task> reportProgress)
         {
             var vhdPath = GetVhdPath(diskConfig, vmConfig);
@@ -185,25 +229,26 @@ namespace HyperVPlus.VmManagement
             return vmInfo.Recreate();
         }
 
-        public static async Task Network(
+        public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> NetworkAdapter(
+            VirtualMachineNetworkAdapterConfig networkAdapterConfig,
             IPowershellEngine engine,
             TypedPsObject<VirtualMachineInfo> vmInfo,
-            VirtualMachineNetworkConfig networkConfig,
-            VirtualMachineConfig vmConfig,
+            MachineConfig machineConfig,
             Func<string, Task> reportProgress)
         {
 
             var optionalAdapter = await GetOrCreateInfoAsync(vmInfo,
                 i => i.NetworkAdapters,
-                adapter => networkConfig.Name.Equals(adapter.Name, StringComparison.OrdinalIgnoreCase),
+                adapter => networkAdapterConfig.Name.Equals(adapter.Name, StringComparison.OrdinalIgnoreCase),
                 async () =>
                 {
-                    await reportProgress($"Add Network Adapter: {networkConfig.Name}").ConfigureAwait(false);
+                    await reportProgress($"Add Network Adapter: {networkAdapterConfig.Name}").ConfigureAwait(false);
                     return await engine.GetObjectsAsync<VMNetworkAdapter>(PsCommandBuilder.Create()
                         .AddCommand("Add-VmNetworkAdapter")
                         .AddParameter("VM", vmInfo.PsObject)
-                        .AddParameter("Name", networkConfig.Name)
-                        .AddParameter("SwitchName", networkConfig.SwitchName)).ConfigureAwait(false);
+                        .AddParameter("Name", networkAdapterConfig.Name)
+                        .AddParameter("StaticMacAddress", UseOrGenerateMacAddress(networkAdapterConfig, vmInfo))
+                        .AddParameter("SwitchName", networkAdapterConfig.SwitchName)).ConfigureAwait(false);
 
                 }).ConfigureAwait(false);
 
@@ -219,9 +264,39 @@ namespace HyperVPlus.VmManagement
 
             //    }
             //});
+            return vmInfo.Recreate();
 
 
         }
+
+        private static string UseOrGenerateMacAddress(VirtualMachineNetworkAdapterConfig adapterConfig, TypedPsObject<VirtualMachineInfo> vmInfo)
+        {
+            var result = adapterConfig.MacAddress;
+            if (string.IsNullOrWhiteSpace(result))
+                result = GenerateMacAddress(vmInfo.Value.Id, adapterConfig.Name);
+            return result;
+        }
+
+        private static string GenerateMacAddress(Guid valueId, string adapterName)
+        {
+            var id = $"{valueId}_{adapterName}";
+            var crc = new Crc32();
+
+            string result = null;
+
+            var arrayData = Encoding.ASCII.GetBytes(id);
+            var arrayResult = crc.ComputeHash(arrayData);
+            foreach (var t in arrayResult)
+            {
+                var temp = Convert.ToString(t, 16);
+                if (temp.Length == 1)
+                    temp = $"0{temp}";
+                result += temp;
+            }
+            return "d2ab" + result;
+        }
+
+ 
 
         private static async Task<Either<PowershellFailure, TypedPsObject<TSub>>> GetOrCreateInfoAsync<T, TSub>(TypedPsObject<T> parentInfo,
             Expression<Func<T, IList<TSub>>> listProperty,
@@ -231,16 +306,16 @@ namespace HyperVPlus.VmManagement
             var result = parentInfo.GetList(listProperty, predicateFunc).ToArray();
 
             if (result.Length() != 0)
-                return Try(result.Single()).Try().Match<Either<PowershellFailure, TypedPsObject<TSub>>>(
-                    Fail: ex => Left(new PowershellFailure {Message = ex.Message}),
-                    Succ: x => Right(x)
+                return Prelude.Try(result.Single()).Try().Match<Either<PowershellFailure, TypedPsObject<TSub>>>(
+                    Fail: ex => Prelude.Left(new PowershellFailure {Message = ex.Message}),
+                    Succ: x => Prelude.Right(x)
                 );
 
 
             var creatorResult = await creatorFunc().ConfigureAwait(false);
             var res = creatorResult.Bind(
                 seq => seq.HeadOrNone().ToEither(() =>
-                    new PowershellFailure {Message = "Object creation was succesful, but no result was returned."}));
+                    new PowershellFailure {Message = "Object creation was successful, but no result was returned."}));
 
             return res;
         }
@@ -248,15 +323,15 @@ namespace HyperVPlus.VmManagement
 
         private static string GetVhdPath(
             Option<VirtualMachineDiskConfig> optionalDiskConfig,
-            Option<VirtualMachineConfig> optionalVmConfig) => (
+            Option<MachineConfig> optionalMachineConfig) => (
 
             from diskConfig in optionalDiskConfig
-            from vmConfig in optionalVmConfig
-            select fun(() =>
+            from machineConfig in optionalMachineConfig
+            select Prelude.fun(() =>
             {
                 var vhdPathRoot = diskConfig.Path;
                 if (string.IsNullOrWhiteSpace(vhdPathRoot))
-                    vhdPathRoot = Path.Combine(vmConfig.Path, $"{vmConfig.Name}\\Virtual Hard Disks");
+                    vhdPathRoot = Path.Combine(machineConfig.VM.Path, $"{machineConfig.Name}\\Virtual Hard Disks");
 
                 return Path.Combine(vhdPathRoot, $"{diskConfig.Name}.vhdx");
             })()).ValueUnsafe();
@@ -307,7 +382,7 @@ namespace HyperVPlus.VmManagement
         {
             if (Directory.Exists(configDrivePath)) return Unit.Default;
 
-            var tryResult = Try(Directory.CreateDirectory(configDrivePath)).Try();
+            var tryResult = Prelude.Try(Directory.CreateDirectory(configDrivePath)).Try();
 
             if (tryResult.IsFaulted)
                 return new PowershellFailure { Message = $"Failed to create directory {configDrivePath}" };
@@ -364,8 +439,7 @@ namespace HyperVPlus.VmManagement
         }
 
 
-        private static Either<PowershellFailure, Unit> GenerateConfigDriveDisk(
-            string configDriveIsoPath,
+        private static void GenerateConfigDriveDisk(string configDriveIsoPath,
             string hostname,
             JObject userdata)
         {
@@ -382,10 +456,10 @@ namespace HyperVPlus.VmManagement
             }
             catch (Exception ex)
             {
-                return new PowershellFailure {Message = ex.Message};
+                return;
             }
 
-            return Unit.Default;
+            return;
         }
 
         public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> CloudInit(
@@ -405,8 +479,7 @@ namespace HyperVPlus.VmManagement
 
             var res = await CreateConfigDriveDirectory(configDrivePath)
                 .Bind(_ => EjectConfigDriveDisk(configDriveIsoPath, vmInfo, engine))
-                .ToAsync()  // could be better => but I don't know how to pass info without nesting
-                
+                .ToAsync()              
                 .IfRightAsync(
                     info =>
                     {

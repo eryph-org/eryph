@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using HyperVPlus.Messages;
+using Haipa.Messages;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Pipeline;

@@ -1,4 +1,4 @@
-﻿namespace HyperVPlus.VmManagement.Data
+﻿namespace Haipa.VmManagement.Data
 {
     public abstract class DriveInfo : DriveInfoBase
     {
@@ -10,11 +10,5 @@
         public ControllerType ControllerType { get; set; }
 
 
-    }
-
-    public class VhdInfo
-    {
-        public string Path { get; set; }
-        public long Size { get; set; }
     }
 }

@@ -6,9 +6,8 @@ using System.Linq.Expressions;
 using System.Management.Automation;
 using AutoMapper;
 using LanguageExt;
-using static LanguageExt.Prelude;
 
-namespace HyperVPlus.VmManagement
+namespace Haipa.VmManagement
 {
     public class TypedPsObject<T> : Record<TypedPsObject<T>>
     {
@@ -43,7 +42,7 @@ namespace HyperVPlus.VmManagement
             var property = paramType.GetMember((listProperty.Body as MemberExpression)?.Member.Name)[0];
 
             return
-                TryOption(((PsObject.Properties[property.Name].Value as IEnumerable)?.Cast<object>().
+                Prelude.TryOption(((PsObject.Properties[property.Name].Value as IEnumerable)?.Cast<object>().
                     Map(x => new TypedPsObject<TSub>(new PSObject(x)))))
                 .Match(
                     Fail: () => new TypedPsObject<TSub>[] { },

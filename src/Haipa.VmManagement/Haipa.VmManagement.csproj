@@ -5,17 +5,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="7.0.1" />
+    <PackageReference Include="AutoMapper" Version="8.0.0" />
     <PackageReference Include="Contiva.CloudInit.ConfigDrive" Version="0.2.1" />
     <PackageReference Include="Contiva.CloudInit.ConfigDrive.NoCloud" Version="0.2.1" />
     <PackageReference Include="Contiva.CloudInit.ConfigDrive.WindowsImaging" Version="0.2.1" />
-    <PackageReference Include="LanguageExt.Core" Version="3.0.22" />
+    <PackageReference Include="LanguageExt.Core" Version="3.1.14" />
     <PackageReference Include="Microsoft.PowerShell.5.ReferenceAssemblies" Version="1.1.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HyperVPlus.VmConfig.Primitives\HyperVPlus.VmConfig.Primitives.csproj" />
+    <ProjectReference Include="..\Haipa.VmConfig.Primitives\Haipa.VmConfig.Primitives.csproj" />
   </ItemGroup>
 
 </Project>

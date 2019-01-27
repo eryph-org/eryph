@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -10,11 +10,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Haipa.Messages\Haipa.Messages.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
-    <ProjectReference Include="..\HyperVPlus.Messages\HyperVPlus.Messages.csproj" />
-    <ProjectReference Include="..\HyperVPlus.Rebus\HyperVPlus.Rebus.csproj" />
-    <ProjectReference Include="..\HyperVPlus.StateDb\HyperVPlus.StateDb.csproj" />
-    <ProjectReference Include="..\HyperVPlus.VmConfig.Primitives\HyperVPlus.VmConfig.Primitives.csproj" />
+    <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
+    <ProjectReference Include="..\Haipa.StateDb.MySql\Haipa.StateDb.MySql.csproj" />
   </ItemGroup>
 
 </Project>

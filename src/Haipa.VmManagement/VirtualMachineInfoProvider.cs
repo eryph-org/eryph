@@ -2,11 +2,10 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
-using HyperVPlus.VmManagement.Data;
+using Haipa.VmManagement.Data;
 using LanguageExt;
-using static LanguageExt.Prelude;
 
-namespace HyperVPlus.VmManagement
+namespace Haipa.VmManagement
 {
     public class VirtualMachineInfoProvider : IVirtualMachineInfoProvider
     {
@@ -32,11 +31,11 @@ namespace HyperVPlus.VmManagement
                             var vmArray = r.ToArray();
 
                             if (vmArray.Length > 1)
-                                return Left<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(
+                                return Prelude.Left<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(
                                     new PowershellFailure { Message = $"VM name '{vmName}' is not unique." });
 
                             if (vmArray.Length == 0)
-                                return Left<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(
+                                return Prelude.Left<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(
                                     new PowershellFailure { Message = $"VM name '{vmName}' not found" });
 
                             var vmInfo = vmArray[0];

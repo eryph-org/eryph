@@ -1,6 +1,6 @@
 ﻿using LanguageExt;
 
-namespace HyperVPlus.VmManagement.Data
+namespace Haipa.VmManagement.Data
 {
     public abstract class VirtualMachineDeviceInfo : Record<VirtualMachineDeviceInfo>
     {

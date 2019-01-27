@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using HyperVPlus.VmManagement.Data;
+using Haipa.VmManagement.Data;
 using LanguageExt;
 
-namespace HyperVPlus.VmManagement
+namespace Haipa.VmManagement
 {
     public interface IVirtualMachineInfoProvider
     {

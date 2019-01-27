@@ -1,9 +1,10 @@
-﻿using Haipa.Modules.Api.Controllers;
+﻿using System.Xml.Schema;
+using Haipa.Messages;
+using Haipa.Modules.Api.Controllers;
 using Haipa.Modules.Api.Services;
-using HyperVPlus.Messages;
-using HyperVPlus.Rebus;
-using HyperVPlus.StateDb;
-using HyperVPlus.StateDb.Model;
+using Haipa.Rebus;
+using Haipa.StateDb;
+using Haipa.StateDb.Model;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -110,7 +111,7 @@ namespace Haipa.Modules.Api
             _container.ConfigureRebus(configurer => configurer                
                 .Transport(t => _globalContainer.GetInstance<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
                     .Routing(x => x.TypeBased()
-                    .MapAssemblyOf<InitiateVirtualMachineConvergeCommand>("haipa.controller"))
+                    .MapAssemblyOf<ConvergeVirtualMachineCommand>("haipa.controller"))
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy();
@@ -138,22 +139,48 @@ namespace Haipa.Modules.Api
             ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
             builder.Namespace = "Haipa";
 
-            builder.EntitySet<Operation>("OperationSet");
-            builder.EntitySet<OperationLog>("OperationLogSet");
-            builder.EntitySet<Machine>("MachineSet");
-            builder.EntitySet<Agent>("AgentSet");
-            builder.EntitySet<IpV4Address>("IpV4AddressSet");
+            builder.EntitySet<Operation>("Operations");
+            builder.EntitySet<OperationLog>("OperationLogs");
+            builder.EntitySet<Machine>("Machines");
+            builder.EntitySet<Agent>("Agents");
+            builder.EntitySet<Network>("Networks");
+            //builder.EntitySet<Subnet>("Subnets");
 
-            builder.EntityType<IpV4Address>().HasKey(t => new {t.MachineId, t.Address});
-            builder.EntityType<IpV6Address>().HasKey(t => new { t.MachineId, t.Address });
+            //builder.EntityType<Network>().HasOptional(np => np.Subnets);
+            //builder.EntityType<Network>().HasOptional(np => np.AgentNetworks);
+
+            builder.EntityType<Subnet>().HasRequired(np => np.Network);
+            builder.EntityType<Subnet>().Ignore(x => x.DnsServersInternal);
+            builder.EntityType<Subnet>().CollectionProperty(x => x.DnsServerAddresses);
+            
             builder.EntityType<Agent>().HasKey(t => t.Name);
 
             builder.EntityType<Machine>().HasRequired(np => np.Agent);
-            builder.EntityType<Machine>().HasMany(x => x.IpV4Addresses);
-            builder.EntityType<Machine>().HasMany(x => x.IpV6Addresses);
+            builder.EntityType<Machine>().HasOptional(x => x.VM);
+            builder.EntityType<Machine>().HasMany(x => x.Networks);
 
-            builder.EntityType<Machine>().Action("Start").ReturnsFromEntitySet<Operation>("OperationSet");
-            builder.EntityType<Machine>().Action("Stop").ReturnsFromEntitySet<Operation>("OperationSet");
+            builder.EntitySet<MachineNetwork>("MachineNetworks");
+            builder.EntityType<MachineNetwork>().HasKey(x => x.MachineId).HasKey(x => x.AdapterName);
+            builder.EntityType<MachineNetwork>().Ignore(x=>x.IpV4AddressesInternal);
+            builder.EntityType<MachineNetwork>().Ignore(x => x.IpV6AddressesInternal);
+            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV6Addresses);
+            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV4Addresses);
+            builder.EntityType<MachineNetwork>().Ignore(x=>x.IpV4SubnetsInternal);
+            builder.EntityType<MachineNetwork>().Ignore(x => x.IpV6SubnetsInternal);
+            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV4Subnets);
+            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV6Subnets);
+            builder.EntityType<MachineNetwork>().Ignore(x=>x.DnsServersInternal);
+            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.DnsServerAddresses);
+
+
+            builder.EntityType<VirtualMachine>().HasMany(x => x.NetworkAdapters);
+
+            builder.EntitySet<VirtualMachineNetworkAdapter>("VirtualMachineNetworkAdapters");
+            builder.EntityType<VirtualMachineNetworkAdapter>().HasKey(x => x.MachineId).HasKey(x => x.Name);
+
+
+            builder.EntityType<Machine>().Action("Start").ReturnsFromEntitySet<Operation>("Operations");
+            builder.EntityType<Machine>().Action("Stop").ReturnsFromEntitySet<Operation>("Operations");
 
             return builder.GetEdmModel();
 

@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using HyperVPlus.Messages;
-using HyperVPlus.VmManagement;
-using HyperVPlus.VmManagement.Data;
+using Haipa.Messages;
+using Haipa.VmManagement;
+using Haipa.VmManagement.Data;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;

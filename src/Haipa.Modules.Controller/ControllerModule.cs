@@ -1,8 +1,8 @@
 ﻿using System.Threading.Tasks;
+using Haipa.Messages;
 using Haipa.Modules.Abstractions;
-using HyperVPlus.Messages;
-using HyperVPlus.Rebus;
-using HyperVPlus.StateDb;
+using Haipa.Rebus;
+using Haipa.StateDb;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -59,12 +59,8 @@ namespace Haipa.Modules.Controller
 
             container.StartBus();
 
-            Task.Run(async () =>
-            {
-                await Task.Delay(500);
-                await container.GetInstance<IBus>().Advanced.Topics.Publish("agent.all", new InventoryRequestedEvent());
+            container.GetInstance<IBus>().Advanced.Topics.Publish("agent.all", new InventoryRequestedEvent());
 
-            });
         }
 
         public void Stop()

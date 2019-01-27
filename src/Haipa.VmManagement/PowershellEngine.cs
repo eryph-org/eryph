@@ -5,11 +5,10 @@ using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Threading.Tasks;
 using LanguageExt;
-using static LanguageExt.Prelude;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
-namespace HyperVPlus.VmManagement
+namespace Haipa.VmManagement
 {
     public interface IPowershellEngine
     {
@@ -147,6 +146,12 @@ namespace HyperVPlus.VmManagement
             return this;
         }
 
+        public PsCommandBuilder AddParameter(string parameter)
+        {
+            _dataChain.Add(new Tuple<DataType, object, string>(DataType.SwitchParameter, null,parameter));
+            return this;
+        }
+
         public PsCommandBuilder AddArgument(object statement)
         {
             _dataChain.Add(new Tuple<DataType, object, string>(DataType.AddArgument, statement, null));
@@ -163,6 +168,7 @@ namespace HyperVPlus.VmManagement
         {
             Command, 
             Parameter,
+            SwitchParameter,
             AddArgument,
             Script,
         }
@@ -179,11 +185,14 @@ namespace HyperVPlus.VmManagement
                     case DataType.Parameter:
                         ps.AddParameter(data.Item3, data.Item2);
                         break;
+                    case DataType.SwitchParameter:
+                        ps.AddParameter(data.Item3);
+                        break;
                     case DataType.AddArgument:
                         ps.AddArgument(data.Item2);
                         break;
                     case DataType.Script:
-                        ps.AddScript(data.Item3);
+                        ps.AddScript(data.Item3);                        
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -202,7 +211,7 @@ namespace HyperVPlus.VmManagement
         public static async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(this PowerShell ps)
         {
             var tryResult = await
-                    TryAsync(Task.Factory.FromAsync(ps.BeginInvoke(), ps.EndInvoke)).Try().ConfigureAwait(false);
+                    Prelude.TryAsync(Task.Factory.FromAsync(ps.BeginInvoke(), ps.EndInvoke)).Try().ConfigureAwait(false);
 
             var result = tryResult.Match<Either<PowershellFailure, Seq<TypedPsObject<T>>>>(
                     Succ: s => s.Map(x => new TypedPsObject<T>(x)).ToSeq(),
@@ -213,14 +222,14 @@ namespace HyperVPlus.VmManagement
 
         public static Either<PowershellFailure, Unit> Run(this PowerShell ps) =>
             HandlePowershellErrors(ps,
-                Try(ps.Invoke).Try().Match<Either<PowershellFailure, Unit>>(
+                Prelude.Try(ps.Invoke).Try().Match<Either<PowershellFailure, Unit>>(
                     Succ: s => Unit.Default,
                     Fail: ex => ExceptionToPowershellFailure(ex)));
 
         public static async Task<Either<PowershellFailure, Unit>> RunAsync(this PowerShell ps)
         {
             var tryResult = await
-                TryAsync(Task.Factory.FromAsync(ps.BeginInvoke(), ps.EndInvoke)).Try().ConfigureAwait(false);
+                Prelude.TryAsync(Task.Factory.FromAsync(ps.BeginInvoke(), ps.EndInvoke)).Try().ConfigureAwait(false);
 
             var result = tryResult.Match<Either<PowershellFailure, Unit>>(
                     Succ: s => Unit.Default,
@@ -245,7 +254,7 @@ namespace HyperVPlus.VmManagement
             : result;
 
         public static Try<Seq<TypedPsObject<T>>> InvokeTyped<T>(this PowerShell ps) => 
-            Try(ps.Invoke().Map(x=>new TypedPsObject<T>(x)).ToSeq());
+            Prelude.Try(ps.Invoke().Map(x=>new TypedPsObject<T>(x)).ToSeq());
         
     }
 }

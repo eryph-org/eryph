@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Runtime.Remoting.Contexts;
-using System.Threading.Tasks;
+using Haipa.Messages;
 using Haipa.Modules.Abstractions;
-using Haipa.Modules.VmHostAgent;
-using HyperVPlus.Messages;
-using HyperVPlus.Rebus;
-using HyperVPlus.VmManagement;
+using Haipa.Rebus;
+using Haipa.VmManagement;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Rebus.Bus;
@@ -17,7 +14,7 @@ using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
     public class VmHostAgentModule : IModule
@@ -25,6 +22,7 @@ namespace Haipa.Modules.Controller
         public string Name => "Haipa.VmHostAgent";
 
         private readonly Container _globalContainer;
+        private WmiWatcher _wmiWatcher;
 
         public VmHostAgentModule(Container globalContainer)
         {
@@ -52,20 +50,21 @@ namespace Haipa.Modules.Controller
                     x.SetNumberOfWorkers(5);
                 })
                 .Subscriptions(s => _globalContainer.GetInstance<IRebusSubscriptionConfigurer>().Configure(s) )
-
                 .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None }))
                 .Logging(x => x.ColoredConsole(LogLevel.Debug)).Start());
 
             container.StartBus();
-            container.GetInstance<IBus>().Advanced.Topics.Subscribe("agent.all");
+            var bus = container.GetInstance<IBus>();
+            bus.Advanced.Topics.Subscribe("agent.all");
 
-
+            _wmiWatcher = new WmiWatcher(bus);
+            _wmiWatcher.StartWatching();
         }
 
         public void Stop()
         {
+            _wmiWatcher.Dispose();
+            _wmiWatcher = null;
         }
     }
-
-
 }

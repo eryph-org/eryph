@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Management.Automation;
 using System.Threading.Tasks;
-using HyperVPlus.Messages;
-using HyperVPlus.VmManagement;
-using HyperVPlus.VmManagement.Data;
+using Haipa.Messages;
+using Haipa.VmManagement;
+using Haipa.VmManagement.Data;
 using LanguageExt;
 using Rebus.Bus;
 using Rebus.Handlers;
+// ReSharper disable ArgumentsStyleAnonymousFunction
 
 namespace Haipa.Modules.VmHostAgent
 {
@@ -28,7 +30,12 @@ namespace Haipa.Modules.VmHostAgent
             var command = message.Command;
 
             var result = await GetVmInfo(command.MachineId, _engine)
-                .BindAsync(vmInfo => HandleCommand(vmInfo, command, _engine)).ConfigureAwait(false);
+                .BindAsync(optVmInfo =>
+                {
+                    return optVmInfo.MatchAsync(
+                        Some: s => HandleCommand(s, command, _engine),
+                        None: () => new TypedPsObject<VirtualMachineInfo>(new PSObject(new {Id = message.Command.MachineId})));
+                }).ConfigureAwait(false);
             
             await result.MatchAsync(
                 LeftAsync: f => HandleError(f,command),
@@ -55,11 +62,16 @@ namespace Haipa.Modules.VmHostAgent
             return Unit.Default;
         }
 
-        private static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> GetVmInfo(Guid vmId,
+        private Task<Either<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>>> GetVmInfo(Guid vmId,
             IPowershellEngine engine)
         {
-            return engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
-                .AddCommand("get-vm").AddParameter("Id", vmId)).MapAsync(seq => seq.Head);
+            return engine.GetObjectsAsync<VirtualMachineInfo>(CreateGetVMCommand(vmId)).MapAsync(seq => seq.HeadOrNone());
+        }
+
+        protected virtual PsCommandBuilder CreateGetVMCommand(Guid vmId)
+        {
+            return PsCommandBuilder.Create()
+                .AddCommand("get-vm").AddParameter("Id", vmId);
         }
     }
 }

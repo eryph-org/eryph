@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace HyperVPlus.VmManagement.Data
+namespace Haipa.VmManagement.Data
 {
     public sealed class VMGroupInfo
     {

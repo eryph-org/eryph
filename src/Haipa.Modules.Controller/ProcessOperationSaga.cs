@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
-using HyperVPlus.Messages;
-using HyperVPlus.StateDb;
-using HyperVPlus.StateDb.Model;
+using Haipa.Messages;
+using Haipa.StateDb;
+using Haipa.StateDb.Model;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Rebus.Bus;
@@ -17,7 +18,9 @@ namespace Haipa.Modules.Controller
         IHandleMessages<OperationAcceptedEvent>,
         IHandleMessages<OperationCompletedEvent>,
         IHandleMessages<OperationFailedEvent>,
-        IHandleMessages<OperationTimeoutMessage>
+        IHandleMessages<OperationTimeoutMessage>,
+        IHandleMessages<ConvergeVirtualMachineProgressEvent>,
+        IHandleMessages<AttachMachineToOperationCommand>
     {
         private readonly StateStoreContext _dbContext;
         private readonly IBus _bus;
@@ -36,6 +39,9 @@ namespace Haipa.Modules.Controller
             config.Correlate<OperationAcceptedEvent>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationCompletedEvent>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationFailedEvent>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<ConvergeVirtualMachineProgressEvent>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<AttachMachineToOperationCommand>(m => m.OperationId, d => d.OperationId);
+
         }
 
         public async Task Handle(StartOperation message)
@@ -54,13 +60,31 @@ namespace Haipa.Modules.Controller
             if (command is IMachineCommand machineCommand)
             {
                 var machine = await _dbContext.Machines.FindAsync(machineCommand.MachineId).ConfigureAwait(false);
+
+                if (machine == null)
+                {
+                    if (command is IOptionalMachineCommand)
+                    {
+                        await Handle(new OperationCompletedEvent {OperationId = message.OperationId});
+                    }
+                    else
+                    {
+                        await Handle(new OperationFailedEvent()
+                        {
+                            OperationId = message.OperationId, ErrorMessage = "Machine not found"
+                        });
+
+                    }
+                    return;
+                }
+
                 await _bus.Advanced.Routing.Send($"haipa.agent.{machine.AgentName}", command).ConfigureAwait(false);
                 await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
                 return;
             }
 
-            await _bus.Advanced.Topics.Publish("haipa.agent.all", command) .ConfigureAwait(false);
+            await _bus.Advanced.Topics.Publish("agent.all", command) .ConfigureAwait(false);
 
         }
 
@@ -68,6 +92,30 @@ namespace Haipa.Modules.Controller
         public async Task Handle(OperationTimeoutMessage message)
         {
         }
+
+        public Task Handle(ConvergeVirtualMachineProgressEvent message)
+        {
+            var operation = _dbContext.Operations.FirstOrDefault(op => op.Id == message.OperationId);
+            if (operation != null)
+            {
+
+                var opLogEntry =
+                    new OperationLog
+                    {
+                        Id = Guid.NewGuid(),
+                        Message = message.Message,
+                        Operation = operation,
+                        Timestamp = DateTime.Now
+                    };
+
+                _dbContext.Add(opLogEntry);
+                _dbContext.SaveChanges();
+            }
+
+            Console.WriteLine(message.Message);
+            return Task.CompletedTask;
+        }
+
 
         public async Task Handle(OperationAcceptedEvent message)
         {
@@ -77,7 +125,7 @@ namespace Haipa.Modules.Controller
                 return;
 
             op.Status = OperationStatus.Running;
-            op.StatusMessage = OperationStatus.Completed.ToString();
+            op.StatusMessage = OperationStatus.Running.ToString();
             op.AgentName = message.AgentName;
 
             await _dbContext.SaveChangesAsync();
@@ -112,5 +160,38 @@ namespace Haipa.Modules.Controller
 
             MarkAsComplete();
         }
+
+        public async Task Handle(AttachMachineToOperationCommand message)
+        {
+            var operation = _dbContext.Operations.FirstOrDefault(op => op.Id == message.OperationId);
+            if (operation != null)
+            {
+                operation.MachineGuid = message.MachineId;
+            }
+
+            var agent = _dbContext.Agents.FirstOrDefault(op => op.Name == message.AgentName);
+            if (agent == null)
+            {
+                agent = new Agent { Name = message.AgentName };
+                await _dbContext.AddAsync(agent).ConfigureAwait(false);
+            }
+
+            var machine = _dbContext.Machines.FirstOrDefault(op => op.Id == message.MachineId);
+            if (machine == null)
+            {
+                machine = new Machine
+                {
+                    Agent = agent,
+                    AgentName = agent.Name,
+                    Id = message.MachineId,
+                };
+                await _dbContext.AddAsync(machine).ConfigureAwait(false);
+
+            }
+
+            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+
+        }
+
     }
 }

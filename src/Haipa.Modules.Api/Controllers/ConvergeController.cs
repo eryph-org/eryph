@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using HyperVPlus.Messages;
-using HyperVPlus.StateDb;
-using HyperVPlus.StateDb.Model;
-using HyperVPlus.VmConfig;
+using Haipa.StateDb;
+using Haipa.StateDb.Model;
+using Haipa.VmConfig;
 using Microsoft.AspNetCore.Mvc;
 using Rebus.Bus;
 
@@ -46,12 +45,12 @@ namespace Haipa.Modules.Api.Controllers
             await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
 
-            await _bus.Send(new InitiateVirtualMachineConvergeCommand
-                {
-                    Config = config.Configurations[0],
-                    ConvergeProcessId = operation.Id
-                })
-                .ConfigureAwait(false);
+            //await _bus.Send(new InitiateVirtualMachineConvergeCommand
+            //    {
+            //        Config = config.Configurations[0],
+            //        ConvergeProcessId = operation.Id
+            //    })
+            //    .ConfigureAwait(false);
 
             return operation;
         }

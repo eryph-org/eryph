@@ -30,11 +30,11 @@ services:
     #volumes:
     #  - /storage/docker/mysql-datadir:/var/lib/mysql
 
-  hypervplus.controller:
-    image: ${DOCKER_REGISTRY}hypervpluscontroller
+  haipa.controller:
+    image: ${DOCKER_REGISTRY}haipacontroller
     build:
       context: .
-      dockerfile: src/HyperVPlus.Controller/Dockerfile
+      dockerfile: src/Haipa.Controller/Dockerfile
     depends_on:
       - rabbit
       - mariadb
@@ -42,11 +42,11 @@ services:
       - internal
 
 
-  hypervplus.ApiEndpoint:
-    image: ${DOCKER_REGISTRY}hypervplusApiEndpoint
+  Haipa.ApiEndpoint:
+    image: ${DOCKER_REGISTRY}HaipaApiEndpoint
     build:
       context: .
-      dockerfile: src/HyperVPlus.ApiEndpoint/Dockerfile
+      dockerfile: src/Haipa.ApiEndpoint/Dockerfile
     depends_on:
       - rabbit
       - mariadb

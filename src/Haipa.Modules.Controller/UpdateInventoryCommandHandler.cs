@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
-using HyperVPlus.Messages;
-using HyperVPlus.StateDb;
-using HyperVPlus.StateDb.Model;
+using Haipa.Messages;
+using Haipa.StateDb;
+using Haipa.StateDb.Model;
+using Microsoft.EntityFrameworkCore;
 using Rebus.Handlers;
 
 namespace Haipa.Modules.Controller
@@ -19,38 +22,64 @@ namespace Haipa.Modules.Controller
 
         public async Task Handle(UpdateInventoryCommand message)
         {
-            var agentData = _stateStoreContext.Agents.FirstOrDefault(x=> x.Name == message.AgentName);
+            var agentData = await _stateStoreContext.Agents
+                .Include(a=> a.Machines).FirstOrDefaultAsync(x=> x.Name == message.AgentName).ConfigureAwait(false);
 
             if (agentData == null)
             {
-                agentData = new Agent{ Name= message.AgentName };
-            }
-            else
-            {
-                _stateStoreContext.RemoveRange(agentData.Machines);
+                agentData = new Agent { Name = message.AgentName };
             }
 
-            
-            await _stateStoreContext.AddRangeAsync(message.Inventory.Select(x=>
+            var newMachines = message.Inventory.Select(x =>
             {
                 return new Machine
                 {
-                    Id = x.Id,
+                    Id = x.MachineId,
                     Name = x.Name,
                     Status = MapVmStatusToMachineStatus(x.Status),
                     Agent = agentData,
-                    IpV4Addresses = x.IpV4Addresses?.Select(
-                        a => new IpV4Address
+                    VM = new VirtualMachine
+                    {
+                        NetworkAdapters = x.NetworkAdapters.Select(a => new VirtualMachineNetworkAdapter
                         {
-                            Address = a
-                        }).ToList(),
-                    IpV6Addresses = x.IpV6Addresses?.Select(
-                        a => new IpV6Address
-                        {
-                            Address = a
-                        }).ToList()
+                            Name = a.AdapterName,
+                            SwitchName = a.VirtualSwitchName                        
+                        }).ToList(),                      
+                    },
+                    Networks = x.Networks?.Select( mn=> new MachineNetwork
+                    {
+                        AdapterName = mn.AdapterName,
+                        DnsServerAddresses = mn.DnsServers,                       
+                        IpV4Addresses = mn.IPAddresses.Select(IPAddress.Parse).Where(n=>n.AddressFamily == AddressFamily.InterNetwork )
+                                .Select(n=>n.ToString()).ToArray(),
+                        IpV6Addresses = mn.IPAddresses.Select(IPAddress.Parse).Where(n=>n.AddressFamily == AddressFamily.InterNetworkV6 )
+                            .Select(n=>n.ToString()).ToArray(),
+                        IPv4DefaultGateway = mn.DefaultGateways.Select(IPAddress.Parse).FirstOrDefault(n=>n.AddressFamily == AddressFamily.InterNetwork)?.ToString(),
+                        IPv6DefaultGateway = mn.DefaultGateways.Select(IPAddress.Parse).FirstOrDefault(n=>n.AddressFamily == AddressFamily.InterNetworkV6)?.ToString(),
+                        IpV4Subnets = mn.IPAddresses.Select(IPNetwork.Parse).Where(n=>n.AddressFamily == AddressFamily.InterNetwork )
+                            .Select(n=>n.ToString()).ToArray(),
+                        IpV6Subnets = mn.IPAddresses.Select(IPNetwork.Parse).Where(n=>n.AddressFamily == AddressFamily.InterNetworkV6 )
+                            .Select(n=>n.ToString()).ToArray(),
+                    }).ToList()
                 };
-            })).ConfigureAwait(false);
+            });
+
+            foreach (var newMachine in newMachines)
+            {
+                var existingMachine = _stateStoreContext.Find<Machine>(newMachine.Id);
+                if (existingMachine == null)
+                {
+                    _stateStoreContext.Add(newMachine);
+                    continue;
+                }
+
+                existingMachine.Name = newMachine.Name;
+                existingMachine.Status = newMachine.Status;
+                existingMachine.Agent = agentData;
+                existingMachine.VM.NetworkAdapters = newMachine.VM.NetworkAdapters;
+                existingMachine.Networks = newMachine.Networks;
+            }
+
 
             await _stateStoreContext.SaveChangesAsync().ConfigureAwait(false);
         }
@@ -63,6 +92,11 @@ namespace Haipa.Modules.Controller
                     return MachineStatus.Stopped;
                 case VmStatus.Running:
                     return MachineStatus.Running;
+                case VmStatus.Pending:
+                    return MachineStatus.Pending;
+                case VmStatus.Error:
+                    return MachineStatus.Error;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(status), status, null);
             }

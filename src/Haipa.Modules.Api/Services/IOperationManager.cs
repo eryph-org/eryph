@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using HyperVPlus.Messages;
-using HyperVPlus.StateDb.Model;
+using Haipa.Messages;
+using Haipa.StateDb.Model;
 
 namespace Haipa.Modules.Api.Services
 {

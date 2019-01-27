@@ -1,7 +1,7 @@
 version: '3.4'
 
 services:
-  hypervplus.ApiEndpoint:
+  Haipa.ApiEndpoint:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80

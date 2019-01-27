@@ -1,4 +1,4 @@
-﻿namespace HyperVPlus.VmManagement.Data
+﻿namespace Haipa.VmManagement.Data
 {
     public sealed class VMRemoteFx3DVideoAdapterInfo : VirtualMachineDeviceInfo
     {

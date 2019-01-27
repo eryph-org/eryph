@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Management;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using HyperVPlus.Messages;
-using HyperVPlus.VmManagement;
-using HyperVPlus.VmManagement.Data;
+using Haipa.Messages;
+using Haipa.Modules.VmHostAgent.Inventory;
+using Haipa.VmManagement;
+using Haipa.VmManagement.Data;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;
@@ -15,7 +19,7 @@ using Rebus.Handlers;
 namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class InventoryRequestedEventHandler : IHandleMessages<InventoryRequestedEvent>
+    internal partial class InventoryRequestedEventHandler : IHandleMessages<InventoryRequestedEvent>
     {
 
         private readonly IPowershellEngine _engine;
@@ -29,22 +33,31 @@ namespace Haipa.Modules.VmHostAgent
 
 
         public Task Handle(InventoryRequestedEvent message) => 
-            _engine.GetObjectsAsync<LightVirtualMachineInfo>(PsCommandBuilder.Create()
+            _engine.GetObjectsAsync<MinimizedVirtualMachineInfo>(PsCommandBuilder.Create()
                     .AddCommand("get-vm"))
                 .ToAsync()
                 .IfRightAsync(vms => _bus.Send(VmsToInventory(vms)));
-                    
-        private static UpdateInventoryCommand VmsToInventory(ISeq<TypedPsObject<LightVirtualMachineInfo>> vms)
+
+        private static UpdateInventoryCommand VmsToInventory(ISeq<TypedPsObject<MinimizedVirtualMachineInfo>> vms)
         {
             
             var inventory = vms.Map(vm =>
             {
-                var info = new VmInventoryInfo();
-                info.Id = vm.Value.Id;
-                info.Status = MapVmInfoStatusToVmStatus(vm.Value.State);
-                info.Name = vm.Value.Name;
-                info.IpV4Addresses = GetAddressesByFamily(vm, AddressFamily.InterNetwork);
-                info.IpV6Addresses = GetAddressesByFamily(vm, AddressFamily.InterNetworkV6);
+                var info = new MachineInfo
+                {
+                    MachineId = vm.Value.Id,
+                    Status = InventoryConverter.MapVmInfoStatusToVmStatus(vm.Value.State),
+                    Name = vm.Value.Name,
+                    NetworkAdapters = vm.Value.NetworkAdapters?.Map(a => new VirtualMachineNetworkAdapterInfo
+                    {
+                        AdapterName = a.Name, 
+                        VirtualSwitchName = a.SwitchName
+                    }).ToArray(),
+                    Networks = GetNetworksByAdapters(vm.Value.Id,vm.Value.NetworkAdapters)
+                };
+
+                //info.IpV4Addresses = GetAddressesByFamily(vm, AddressFamily.InterNetwork);
+                //info.IpV6Addresses = GetAddressesByFamily(vm, AddressFamily.InterNetworkV6);
                 return info;
             }).ToList();
 
@@ -52,99 +65,80 @@ namespace Haipa.Modules.VmHostAgent
             {
                 AgentName = Environment.MachineName,
                 Inventory = inventory
-               
+
             };
         }
 
-        private static VmStatus MapVmInfoStatusToVmStatus(VirtualMachineState valueState)
+        private static VirtualMachineNetworkInfo[] GetNetworksByAdapters(Guid vmId, MinimizedVMNetworkAdapter[] networkAdapters)
         {
-            switch (valueState)
+            var scope = new ManagementScope(@"\\.\root\virtualization\v2");
+            var resultList = new List<VirtualMachineNetworkInfo>();
+
+            foreach (var networkAdapter in networkAdapters)
             {
-                case VirtualMachineState.Other:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.Running:
-                    return VmStatus.Running;
-                case VirtualMachineState.Off:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.Stopping:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.Saved:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.Paused:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.Starting:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.Reset:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.Saving:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.Pausing:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.Resuming:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.FastSaved:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.FastSaving:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.ForceShutdown:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.ForceReboot:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.RunningCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.OffCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.StoppingCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.SavedCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.PausedCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.StartingCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.ResetCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.SavingCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.PausingCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.ResumingCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.FastSavedCritical:
-                    return VmStatus.Stopped;
-                case VirtualMachineState.FastSavingCritical:
-                    return VmStatus.Stopped;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(valueState), valueState, null);
+                var guestNetworkId = networkAdapter.Id.Replace("Microsoft:", "Microsoft:GuestNetwork\\").Replace("\\", "\\\\");
+                var obj = new ManagementObject();
+                var path = new ManagementPath(scope.Path + $":Msvm_GuestNetworkAdapterConfiguration.InstanceID=\"{guestNetworkId}\"");
+
+                obj.Path = path;
+                obj.Get();
+               
+                var info = new VirtualMachineNetworkInfo
+                {
+                    AdapterName = networkAdapter.Name,
+                    IPAddresses = ObjectToStringArray(obj.GetPropertyValue("IPAddresses")),
+                    DefaultGateways = ObjectToStringArray(obj.GetPropertyValue("DefaultGateways")),
+                    DnsServers = ObjectToStringArray(obj.GetPropertyValue("DNSServers")),
+                    DhcpEnabled = (bool) obj.GetPropertyValue("DHCPEnabled") 
+
+                };
+                info.Subnets = AddressesAndSubnetsToSubnets(info.IPAddresses,
+                    ObjectToStringArray(obj.GetPropertyValue("Subnets"))).ToArray();
+
+                resultList.Add(info);
+            }
+
+            return resultList.ToArray();
+
+        }
+
+        private static IEnumerable<string> AddressesAndSubnetsToSubnets(IReadOnlyList<string> ipAddresses, IReadOnlyList<string> netmasks)
+        {
+            for (var i = 0; i < ipAddresses.Count; i++)
+            {
+                var address = ipAddresses[i];
+                var netmask = netmasks[i];
+                if (netmask.StartsWith("/"))
+                {
+                    yield return IPNetwork.Parse(address + netmask).ToString();
+                }
+                else
+                    yield return IPNetwork.Parse(address,netmask).ToString();
             }
         }
 
-        private static List<string> GetAddressesByFamily(TypedPsObject<LightVirtualMachineInfo> vm, AddressFamily family)
+        private static string[] ObjectToStringArray(object value)
         {
-
-            return vm.GetList(x=>x.NetworkAdapters).Bind(adapter => adapter.Value.IPAddresses.Where(a =>
+            if (value != null && value is IEnumerable enumerable)
             {
-                var ipAddress = IPAddress.Parse(a);
-                return ipAddress.AddressFamily == family;
-            })).ToList();
+                return enumerable.Cast<string>().ToArray();
+            }
+
+            return new string[0];
         }
 
-        private class LightVirtualMachineInfo
-        {
-            public Guid Id { get; private set; }
-            public string Name { get; private set; }
-            public VirtualMachineState State { get; private set; }
 
-            public LightVmNetworkAdapter[] NetworkAdapters { get; private set; }
-        }
+        //private static string[] GetAddressesByFamily(TypedPsObject<MinimizedVirtualMachineInfo> vm, AddressFamily family)
+        //{
 
-        [UsedImplicitly]
-        private class LightVmNetworkAdapter : VirtualMachineDeviceInfo
-        {
+        //    return vm.GetList(x => x.NetworkAdapters).Bind(adapter => adapter.Value.IPAddresses.Where(a =>
+        //    {
+        //        var ipAddress = IPAddress.Parse(a);
+        //        return ipAddress.AddressFamily == family;
+        //    })).ToArray();
+        //}
 
-            public string[] IPAddresses { get; private set; }
 
-        }
 
     }
 }

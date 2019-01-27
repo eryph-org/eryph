@@ -2,8 +2,9 @@
 using Haipa.Modules.Abstractions;
 using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
-using HyperVPlus.Rebus;
-using HyperVPlus.StateDb;
+using Haipa.Modules.VmHostAgent;
+using Haipa.Rebus;
+using Haipa.StateDb;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -20,8 +21,8 @@ namespace Haipa.Runtime.Zero
             var modules = new[]
             {
                 typeof(ApiModule),
+                typeof(VmHostAgentModule),
                 typeof(ControllerModule),
-                typeof(VmHostAgentModule)
             };
 
             container.Collection.Register<IModule>(

@@ -1,5 +1,5 @@
 ﻿using System;
-using HyperVPlus.VmConfig;
+using Haipa.VmConfig;
 using Rebus.Sagas;
 
 namespace Haipa.Modules.Controller
@@ -12,7 +12,7 @@ namespace Haipa.Modules.Controller
 
         // add your own fields and objects down here:
         public Guid CorrelationId { get; set; }
-        public VirtualMachineConfig Config { get; set; }
+        public MachineConfig Config { get; set; }
 
         public Guid VirtualMaschineId { get; set; }
         public string AgentName { get; set; }

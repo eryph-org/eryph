@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using HyperVPlus.Messages;
-using HyperVPlus.StateDb;
-using HyperVPlus.StateDb.Model;
+using Haipa.Messages;
+using Haipa.StateDb;
+using Haipa.StateDb.Model;
 using Newtonsoft.Json;
 using Rebus.Bus;
 
