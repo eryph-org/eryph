@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Management.Automation;
 using System.Text;
 using System.Threading.Tasks;
 using Contiva.CloudInit.ConfigDrive.Generator;
@@ -21,13 +22,18 @@ namespace Haipa.VmManagement
 #pragma warning disable 1998
         public static async Task<Either<PowershellFailure, MachineConfig>> NormalizeMachineConfig(
 #pragma warning restore 1998
-            TypedPsObject<VirtualMachineInfo> vmInfo,
-            MachineConfig config, IPowershellEngine engine, Func<string, Task> reportProgress)
+            MachineConfig config, HostSettings hostSettings,
+            IPowershellEngine engine, Func<string, Task> reportProgress)
         {
             var machineConfig = config;
 
             if(machineConfig.VM== null)
                 machineConfig.VM = new VirtualMachineConfig();
+
+            if (string.IsNullOrWhiteSpace(machineConfig.VM.Path))
+            {
+                machineConfig.VM.Path = Path.Combine(hostSettings.DefaultDataPath, machineConfig.Name);
+            }
 
             if (machineConfig.VM.Cpu == null)
                 machineConfig.VM.Cpu = new VirtualMachineCpuConfig {Count = 1};
@@ -46,6 +52,13 @@ namespace Haipa.VmManagement
                 var diskConfig = machineConfig.VM.Disks[index];
                 if (string.IsNullOrWhiteSpace(diskConfig.Name))
                     diskConfig.Name = $"disk-{index}";
+
+                if (string.IsNullOrWhiteSpace(diskConfig.Path))
+                {
+                    var diskRoot = hostSettings.DefaultVirtualHardDiskPath;
+                    diskRoot = Path.Combine(diskRoot, machineConfig.Name);
+                    diskConfig.Path = Path.Combine(diskRoot, $"{diskConfig.Name}.vhdx");
+                }
             }
 
             foreach (var adapterConfig in machineConfig.VM.NetworkAdapters)
@@ -64,7 +77,6 @@ namespace Haipa.VmManagement
 
             return machineConfig;
         }
-
 
 
         public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Firmware(TypedPsObject<VirtualMachineInfo> vmInfo,
@@ -202,27 +214,25 @@ namespace Haipa.VmManagement
             MachineConfig vmConfig,
             Func<string,Task> reportProgress)
         {
-            var vhdPath = GetVhdPath(diskConfig, vmConfig);
-
-            if (!File.Exists(vhdPath))
+            if (!File.Exists(diskConfig.Path))
             {
                 await reportProgress($"Create VHD: {diskConfig.Name}").ConfigureAwait(false);
 
                 await engine.RunAsync(PsCommandBuilder.Create().Script(
-                        $"New-VHD -Path \"{vhdPath}\" -ParentPath \"{diskConfig.Template}\" -Differencing"),
+                        $"New-VHD -Path \"{diskConfig.Path}\" -ParentPath \"{diskConfig.Template}\" -Differencing"),
                     reportProgress: p => ReportPowershellProgress($"Create VHD {diskConfig.Name}", p, reportProgress)).ConfigureAwait(false);
             }
 
             await GetOrCreateInfoAsync(vmInfo,
                 i => i.HardDrives,
-                disk => vhdPath.Equals(disk.Path, StringComparison.OrdinalIgnoreCase),
+                disk => diskConfig.Path.Equals(disk.Path, StringComparison.OrdinalIgnoreCase),
                 async () =>
                 {
                     await reportProgress($"Add VHD: {diskConfig.Name}").ConfigureAwait(false);
                     return (await engine.GetObjectsAsync<HardDiskDriveInfo>(PsCommandBuilder.Create()
                         .AddCommand("Add-VMHardDiskDrive")
                         .AddParameter("VM", vmInfo.PsObject)
-                        .AddParameter("Path", vhdPath)).ConfigureAwait(false));
+                        .AddParameter("Path", diskConfig.Path)).ConfigureAwait(false));
 
                 }).ConfigureAwait(false);
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Management;
 using System.Threading.Tasks;
 using Haipa.Messages;
 using Haipa.VmConfig;
@@ -35,18 +36,21 @@ namespace Haipa.Modules.VmHostAgent
             var config = command.Config;
             _operationId = command.OperationId;
 
-            return GetVmInfo(config.Name, _engine)
-                .BindAsync(l => EnsureUnique(l, config.Name))
-                .BindAsync(l => EnsureCreated(l, config, _engine))
-                .BindAsync(vmInfo => AttachToOperation(vmInfo, _bus, command.OperationId))
-                .BindAsync(vmInfo => ConvergeVm(vmInfo, config, _engine))
-                .ToAsync()
-                .MatchAsync(
-                    LeftAsync: HandleError,
-                    RightAsync: vmInfo => _bus.Send(new OperationCompletedEvent
-                    {
-                        OperationId = command.OperationId,
-                    }).ToUnit());
+            var chain = 
+                from machineConfig in Converge.NormalizeMachineConfig(config, GetHostSettings(), _engine, ProgressMessage)
+                from vmList in GetVmInfo(machineConfig.Name, _engine)
+                from optionalVmInfo in EnsureUnique(vmList, machineConfig.Name)
+                from vmInfo in EnsureCreated(optionalVmInfo, machineConfig, _engine) 
+                from _ in AttachToOperation(vmInfo, _bus, command.OperationId)
+                from vmInfoConverged in ConvergeVm(vmInfo, machineConfig, _engine)
+                select vmInfoConverged;
+
+            return chain.ToAsync().MatchAsync(
+                LeftAsync: HandleError,
+                RightAsync: vmInfo2 => _bus.Send(new OperationCompletedEvent
+                {
+                    OperationId = command.OperationId,
+                }).ToUnit());
 
         }
 
@@ -70,12 +74,11 @@ namespace Haipa.Modules.VmHostAgent
         private Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> ConvergeVm(TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig machineConfig, IPowershellEngine engine)
         {
             return
-                from config in Converge.NormalizeMachineConfig(vmInfo, machineConfig, engine, ProgressMessage)
-                from infoFirmware in Converge.Firmware(vmInfo, config, engine, ProgressMessage)
-                from infoCpu in Converge.Cpu(infoFirmware, config.VM.Cpu, engine, ProgressMessage)
-                from infoDisks in Converge.Disks(infoCpu, config.VM.Disks.ToSeq(), machineConfig, engine, ProgressMessage)
-                from infoNetworks in Converge.NetworkAdapters(infoDisks, config.VM.NetworkAdapters.ToSeq(), machineConfig, engine, ProgressMessage)
-                from infoCloudInit in Converge.CloudInit(infoNetworks, config.VM.Path, machineConfig.Provisioning.Hostname, machineConfig.Provisioning?.UserData, engine, ProgressMessage)
+                from infoFirmware in Converge.Firmware(vmInfo, machineConfig, engine, ProgressMessage)
+                from infoCpu in Converge.Cpu(infoFirmware, machineConfig.VM.Cpu, engine, ProgressMessage)
+                from infoDisks in Converge.Disks(infoCpu, machineConfig.VM.Disks.ToSeq(), machineConfig, engine, ProgressMessage)
+                from infoNetworks in Converge.NetworkAdapters(infoDisks, machineConfig.VM.NetworkAdapters.ToSeq(), machineConfig, engine, ProgressMessage)
+                from infoCloudInit in Converge.CloudInit(infoNetworks, machineConfig.VM.Path, machineConfig.Provisioning.Hostname, machineConfig.Provisioning?.UserData, engine, ProgressMessage)
                 select infoCloudInit;
                 
                 //Converge.Firmware(vmInfo, machineConfig, engine, ProgressMessage)
@@ -90,18 +93,18 @@ namespace Haipa.Modules.VmHostAgent
 
         }
 
-        private Either<PowershellFailure, Seq<TypedPsObject<VirtualMachineInfo>>> EnsureUnique(Seq<TypedPsObject<VirtualMachineInfo>> list, string vmName)
+        private async Task<Either<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>>> EnsureUnique(Seq<TypedPsObject<VirtualMachineInfo>> list, string vmName)
         {
 
             if (list.Count > 1)
                 return Prelude.Left(new PowershellFailure { Message = $"VM name '{vmName}' is not unique." });
 
-            return Prelude.Right(list);
+            return Prelude.Right(list.HeadOrNone());
         }
 
-        private static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> EnsureCreated(Seq<TypedPsObject<VirtualMachineInfo>> list, MachineConfig machineConfig, IPowershellEngine engine)
+        private static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> EnsureCreated(Option<TypedPsObject<VirtualMachineInfo>> vmInfo, MachineConfig machineConfig, IPowershellEngine engine)
         {
-            return list.HeadOrNone().MatchAsync(
+            return vmInfo.MatchAsync(
                 None: () => Converge.CreateVirtualMachine(engine, machineConfig.Name,
                     machineConfig.VM.Path,
                     machineConfig.VM.Memory.Startup),
@@ -151,6 +154,28 @@ namespace Haipa.Modules.VmHostAgent
             return Unit.Default;
         }
 
+        public HostSettings GetHostSettings()
+        {
+
+            var scope = new ManagementScope(@"\\.\root\virtualization\v2");
+            var query = new ObjectQuery("select DefaultExternalDataRoot,DefaultVirtualHardDiskPath from Msvm_VirtualSystemManagementServiceSettingData");
+
+
+            var searcher = new ManagementObjectSearcher (scope, query );
+            var settingsCollection = searcher.Get ( );
+            
+            foreach (var hostSettings in settingsCollection)
+            {
+                return new HostSettings
+                {
+                    DefaultVirtualHardDiskPath = hostSettings.GetPropertyValue("DefaultVirtualHardDiskPath")?.ToString(),
+                    DefaultDataPath = hostSettings.GetPropertyValue("DefaultExternalDataRoot")?.ToString(),
+                };
+            }
+
+            throw new Exception("failed to query for hyper-v host settings");
+
+        }
 
     }
 }
