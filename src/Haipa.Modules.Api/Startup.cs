@@ -51,9 +51,11 @@ namespace Haipa.Modules.Api
 
             services.AddMvc(op =>
                 {
-                    op.EnableEndpointRouting = false;
-                }).SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
-                .AddApplicationPart(typeof(Startup).Assembly);
+                    op.EnableEndpointRouting = false; 
+                })
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
+                .AddApplicationPart(typeof(Startup).Assembly)
+                .AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
             services.AddApiVersioning(options =>
             {
