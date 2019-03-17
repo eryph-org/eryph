@@ -1,10 +1,9 @@
-﻿using System.Xml.Schema;
+﻿using System.Linq;
 using Haipa.Messages;
-using Haipa.Modules.Api.Controllers;
 using Haipa.Modules.Api.Services;
 using Haipa.Rebus;
 using Haipa.StateDb;
-using Haipa.StateDb.Model;
+using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -15,7 +14,6 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.ViewComponents;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OData.Edm;
 using Newtonsoft.Json;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
@@ -51,9 +49,18 @@ namespace Haipa.Modules.Api
             services.AddDbContext<StateStoreContext>(options => 
                 _globalContainer.GetInstance<IDbContextConfigurer<StateStoreContext>>().Configure(options));
 
-            services.AddOData();
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
+            services.AddMvc(op =>
+                {
+                    op.EnableEndpointRouting = false;
+                }).SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
                 .AddApplicationPart(typeof(Startup).Assembly);
+
+            services.AddApiVersioning(options =>
+            {
+                options.ReportApiVersions = true;
+                options.AssumeDefaultVersionWhenUnspecified = true;
+            });
+            services.AddOData().EnableApiVersioning();
 
             IntegrateSimpleInjector(services);
         }
@@ -76,11 +83,15 @@ namespace Haipa.Modules.Api
         public override void Configure(IApplicationBuilder app)
         {
             var env = app.ApplicationServices.GetService<IHostingEnvironment>();
-            Configure(app, env);
+            var modelBuilder = app.ApplicationServices.GetService<VersionedODataModelBuilder>();
+
+            Configure(app, env,modelBuilder);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, 
+            IHostingEnvironment env, 
+            VersionedODataModelBuilder modelBuilder)
         {
             InitializeContainer(app);
 
@@ -95,10 +106,14 @@ namespace Haipa.Modules.Api
 
             {
                 b.Select().Expand().Filter().OrderBy().MaxTop(100).Count();
-                b.MapODataServiceRoute("odata", "odata", GetEdmModel());
-
+                var models = modelBuilder.GetEdmModels().ToArray();
+                app.UseMvc( routes =>
+                {
+                    routes.MapVersionedODataRoutes("odata", "odata", models);
+                    routes.MapVersionedODataRoutes( "odata-bypath", "odata/v{version:apiVersion}", models );
+                });
+                
             });
-
 
         }
 
@@ -131,61 +146,7 @@ namespace Haipa.Modules.Api
             // Allow Simple Injector to resolve services from ASP.NET Core.
             _container.AutoCrossWireAspNetComponents(app);
         }
-
-
-        private static IEdmModel GetEdmModel()
-        {
-
-            ODataConventionModelBuilder builder = new ODataConventionModelBuilder();
-            builder.Namespace = "Haipa";
-
-            builder.EntitySet<Operation>("Operations");
-            builder.EntitySet<OperationLog>("OperationLogs");
-            builder.EntitySet<Machine>("Machines");
-            builder.EntitySet<Agent>("Agents");
-            builder.EntitySet<Network>("Networks");
-            //builder.EntitySet<Subnet>("Subnets");
-
-            //builder.EntityType<Network>().HasOptional(np => np.Subnets);
-            //builder.EntityType<Network>().HasOptional(np => np.AgentNetworks);
-
-            builder.EntityType<Subnet>().HasRequired(np => np.Network);
-            builder.EntityType<Subnet>().Ignore(x => x.DnsServersInternal);
-            builder.EntityType<Subnet>().CollectionProperty(x => x.DnsServerAddresses);
-            
-            builder.EntityType<Agent>().HasKey(t => t.Name);
-
-            builder.EntityType<Machine>().HasRequired(np => np.Agent);
-            builder.EntityType<Machine>().HasOptional(x => x.VM);
-            builder.EntityType<Machine>().HasMany(x => x.Networks);
-
-            builder.EntitySet<MachineNetwork>("MachineNetworks");
-            builder.EntityType<MachineNetwork>().HasKey(x => x.MachineId).HasKey(x => x.AdapterName);
-            builder.EntityType<MachineNetwork>().Ignore(x=>x.IpV4AddressesInternal);
-            builder.EntityType<MachineNetwork>().Ignore(x => x.IpV6AddressesInternal);
-            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV6Addresses);
-            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV4Addresses);
-            builder.EntityType<MachineNetwork>().Ignore(x=>x.IpV4SubnetsInternal);
-            builder.EntityType<MachineNetwork>().Ignore(x => x.IpV6SubnetsInternal);
-            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV4Subnets);
-            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV6Subnets);
-            builder.EntityType<MachineNetwork>().Ignore(x=>x.DnsServersInternal);
-            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.DnsServerAddresses);
-
-
-            builder.EntityType<VirtualMachine>().HasMany(x => x.NetworkAdapters);
-
-            builder.EntitySet<VirtualMachineNetworkAdapter>("VirtualMachineNetworkAdapters");
-            builder.EntityType<VirtualMachineNetworkAdapter>().HasKey(x => x.MachineId).HasKey(x => x.Name);
-
-
-            builder.EntityType<Machine>().Action("Start").ReturnsFromEntitySet<Operation>("Operations");
-            builder.EntityType<Machine>().Action("Stop").ReturnsFromEntitySet<Operation>("Operations");
-
-            return builder.GetEdmModel();
-
-        }
-
     }
+
 
 }

@@ -4,14 +4,19 @@ using System.Threading.Tasks;
 using Haipa.Messages;
 using Haipa.Modules.Api.Services;
 using Haipa.StateDb;
+using Haipa.StateDb.Model;
 using Haipa.VmConfig;
 using JetBrains.Annotations;
 using Microsoft.AspNet.OData;
+using Microsoft.AspNet.OData.Routing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using static Microsoft.AspNet.OData.Query.AllowedQueryOptions;
+using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Haipa.Modules.Api.Controllers
 {
+    [ApiVersion( "1.0" )]
     public class MachinesController : ODataController
     {
         private readonly StateStoreContext _db;
@@ -23,6 +28,9 @@ namespace Haipa.Modules.Api.Controllers
             _operationManager = operationManager;
         }
 
+        [Produces( "application/json" )]
+        [ProducesResponseType( typeof( DbSet<Machine> ), Status200OK )]
+        [ProducesResponseType( Status404NotFound )]
         [EnableQuery]
         public IActionResult Get()
         {
@@ -30,6 +38,14 @@ namespace Haipa.Modules.Api.Controllers
             return Ok(_db.Machines);
         }
 
+        /// <summary>
+        /// Gets a single order.
+        /// </summary>
+        /// <response code="200">The order was successfully retrieved.</response>
+        /// <response code="404">The order does not exist.</response>
+        [Produces( "application/json" )]
+        [ProducesResponseType( typeof( Machine), Status200OK )]
+        [ProducesResponseType( Status404NotFound )]
         [EnableQuery]
         public IActionResult Get(Guid key)
         {

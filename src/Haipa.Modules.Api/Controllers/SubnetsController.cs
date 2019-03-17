@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Haipa.Modules.Api.Controllers
 {
+    [ApiVersion( "1.0" )]
     public class SubnetsController : ODataController
     {
         private readonly StateStoreContext _db;

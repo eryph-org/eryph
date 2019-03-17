@@ -8,6 +8,7 @@ using Haipa.StateDb;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;
@@ -37,7 +38,9 @@ namespace Haipa.Runtime.Zero
         public static Container HostAspNetCore(this Container container, string[] args)
         {
             container.RegisterInstance<IWebModuleHostBuilderFactory>(
-                new PassThroughWebHostBuilderFactory(() => WebHost.CreateDefaultBuilder(args).UseUrls("http://localhost:62189")));
+                new PassThroughWebHostBuilderFactory(
+                    () => WebHost.CreateDefaultBuilder(args).UseUrls("http://localhost:62189")
+                        .ConfigureLogging(lc=>lc.SetMinimumLevel(LogLevel.Trace))));
             return container;
         }
 
