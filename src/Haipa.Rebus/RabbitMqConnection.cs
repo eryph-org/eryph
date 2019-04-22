@@ -18,8 +18,8 @@ namespace Haipa.Rebus
 
             var factory = new ConnectionFactory {Uri = new Uri(ConnectionString)};
 
-            var cancelationSource = new CancellationTokenSource(timeout);
-            while (!cancelationSource.IsCancellationRequested)
+            var cancellationSource = new CancellationTokenSource(timeout);
+            while (!cancellationSource.IsCancellationRequested)
             {
                 try
                 {

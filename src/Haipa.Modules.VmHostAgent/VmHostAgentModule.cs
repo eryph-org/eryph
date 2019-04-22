@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Modules.Abstractions;
 using Haipa.Rebus;
 using Haipa.VmManagement;
 using JetBrains.Annotations;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -12,27 +14,23 @@ using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
 using SimpleInjector;
-using SimpleInjector.Lifestyles;
 
 namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    public class VmHostAgentModule : IModule
+    public class VmHostAgentModule : ModuleBase
     {
-        public string Name => "Haipa.VmHostAgent";
+        public override string Name => "Haipa.VmHostAgent";
 
-        private readonly Container _globalContainer;
-        private WmiWatcher _wmiWatcher;
-
-        public VmHostAgentModule(Container globalContainer)
+        protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
-            _globalContainer = globalContainer;
+            services.AddModuleHandler<StartBusModuleHandler>();
+            services.AddModuleService<WmiWatcherModuleService>();
+
         }
-        
-        public void Start()
+
+        protected override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
-            var container = new Container();
-            container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
 
             container.RegisterSingleton<IPowershellEngine, PowershellEngine>();
             container.RegisterSingleton<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>();
@@ -41,7 +39,7 @@ namespace Haipa.Modules.VmHostAgent
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationHandler<>));
 
             container.ConfigureRebus(configurer => configurer
-                .Transport(t => _globalContainer.GetInstance<IRebusTransportConfigurer>().Configure(t, "haipa.agent." + Environment.MachineName ))
+                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, "haipa.agent." + Environment.MachineName))
                 .Routing(x => x.TypeBased()
                     .MapAssemblyOf<ConvergeVirtualMachineResponse>("haipa.controller"))
                 .Options(x =>
@@ -49,22 +47,27 @@ namespace Haipa.Modules.VmHostAgent
                     x.SimpleRetryStrategy();
                     x.SetNumberOfWorkers(5);
                 })
-                .Subscriptions(s => _globalContainer.GetInstance<IRebusSubscriptionConfigurer>().Configure(s) )
+                .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>().Configure(s))
                 .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None }))
                 .Logging(x => x.ColoredConsole(LogLevel.Debug)).Start());
 
-            container.StartBus();
-            var bus = container.GetInstance<IBus>();
-            bus.Advanced.Topics.Subscribe("agent.all");
-
-            _wmiWatcher = new WmiWatcher(bus);
-            _wmiWatcher.StartWatching();
+           
         }
 
-        public void Stop()
+    }
+
+    public class StartBusModuleHandler : IModuleHandler
+    {
+        private readonly IBus _bus;
+
+        public StartBusModuleHandler(IBus bus)
         {
-            _wmiWatcher.Dispose();
-            _wmiWatcher = null;
+            _bus = bus;
+        }
+
+        public Task Execute(CancellationToken stoppingToken)
+        {
+            return _bus.Advanced.Topics.Subscribe("agent.all");
         }
     }
 }

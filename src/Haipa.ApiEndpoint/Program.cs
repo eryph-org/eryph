@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Haipa.Modules.Abstractions;
+using Haipa.Modules;
 using Haipa.Modules.Api;
+using Haipa.Modules.Hosting;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using Haipa.StateDb.MySql;
@@ -18,9 +19,8 @@ namespace Haipa.ApiEndpoint
         {
             var container = new Container();
 
-            container.Register<IWebModule, ApiModule>();
-            container.RegisterInstance<IWebModuleHostBuilderFactory>(
-                new PassThroughWebHostBuilderFactory(() => WebHost.CreateDefaultBuilder(args)));
+            container.HostAspNetCore((path) => WebHost.CreateDefaultBuilder(args));
+            container.HostModule<ApiModule>();
 
             container.Register<IDbContextConfigurer<StateStoreContext>, MySqlDbContextConfigurer<StateStoreContext>>();
 

@@ -1,22 +1,27 @@
 ﻿using System.Collections.Generic;
-using Haipa.Modules.Abstractions;
+using System.Linq;
+using SimpleInjector;
 
-namespace Haipa.Runtime.Zero
+namespace Haipa.Modules.Hosting
 {
-    public class ModuleHostService
+    public class ModuleHost
     {
         private readonly IEnumerable<IModule> _modules;
+        private readonly Container _container;
 
-        public ModuleHostService(IEnumerable<IModule> modules)
+        public ModuleHost(IEnumerable<IModule> modules, Container container)
         {
             _modules = modules;
+            _container = container;
         }
 
         public bool Start()
         {
+            _modules.AsParallel().ForAll((m => m.Bootstrap(_container)));
+
             foreach (var module in _modules)
             {
-                module.Start();
+                module.Start().GetAwaiter().GetResult();
             }
 
             return true;
@@ -26,7 +31,7 @@ namespace Haipa.Runtime.Zero
         {
             foreach (var module in _modules)
             {
-                module.Stop();
+                module.Stop().GetAwaiter().GetResult();
             }
 
             return true;

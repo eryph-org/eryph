@@ -11,16 +11,18 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="2.2.1" />
-    <PackageReference Include="SimpleInjector" Version="4.4.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" Version="2.2.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="2.2.3" />
+    <PackageReference Include="SimpleInjector" Version="4.5.1" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.1" />
-    <PackageReference Include="Topshelf" Version="4.1.0" />
-    <PackageReference Include="Topshelf.SimpleInjector" Version="1.0.0.20" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj" />
+    <ProjectReference Include="..\Haipa.Modules.Hosting.Topshelf\Haipa.Modules.Hosting.Topshelf.csproj" />
+    <ProjectReference Include="..\Haipa.Modules.Hosting\Haipa.Modules.Hosting.csproj" />
+    <ProjectReference Include="..\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj" />
     <ProjectReference Include="..\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj" />
   </ItemGroup>
   <PropertyGroup>
