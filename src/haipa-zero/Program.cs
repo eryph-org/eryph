@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using Haipa.Modules.Hosting;
 using SimpleInjector;
-using Topshelf;
-using Topshelf.SimpleInjector;
 
 namespace Haipa.Runtime.Zero
 {

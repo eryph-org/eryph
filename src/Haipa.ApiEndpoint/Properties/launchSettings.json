@@ -23,6 +23,7 @@
       "launchBrowser": true,
       "launchUrl": "api/values",
       "environmentVariables": {
+        "MYSQL_CONNECTIONSTRING": "Server=localhost;Database=myDataBase",
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "applicationUrl": "http://localhost:62189/"

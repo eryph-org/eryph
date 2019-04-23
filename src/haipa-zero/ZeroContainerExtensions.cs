@@ -1,4 +1,5 @@
 ﻿using Haipa.IdentityDb;
+using Haipa.IdentityDb.Sqlite;
 using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
 using Haipa.Modules.Hosting;
@@ -32,7 +33,7 @@ namespace Haipa.Runtime.Zero
                     return WebHost.CreateDefaultBuilder(args)
                         .UseHttpSys()
                         .UseUrls($"http://localhost:62189/{path}")
-                        .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Information));
+                        .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Debug));
                 });
 
             container
@@ -54,7 +55,7 @@ namespace Haipa.Runtime.Zero
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
             container.Register<StateDb.IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
-            container.Register<IdentityDb.IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
+            container.Register<IdentityDb.IDbContextConfigurer<IdentityDbContext>, SqliteDbContextConfigurer<IdentityDbContext>>();
 
             return container;
         }

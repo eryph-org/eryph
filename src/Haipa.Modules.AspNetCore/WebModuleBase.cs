@@ -23,7 +23,7 @@ namespace Haipa.Modules
             Host = new WebHostAsHost(
                 serviceProvider.GetRequiredService<IWebModuleHostBuilderFactory>().CreateWebHostBuilder(Name, Path)
                 .ConfigureServices(sc => ConfigureServicesAndAppContainer(serviceProvider, sc))
-                .Configure(ConfigureAppAndContainer)
+                .Configure(ConfigureAppAndContainer)           
                 .Build());
 
         }

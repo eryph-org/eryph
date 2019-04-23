@@ -12,7 +12,6 @@ namespace Haipa.Modules.Hosting
             var rc = HostFactory.Run(config =>
             {
                 config.UseSimpleInjector(container);
-
                 config.Service<ModuleHost>(s =>
                 {
                     s.ConstructUsingSimpleInjector();

@@ -12,11 +12,14 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" Version="2.2.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="2.2.3" />
     <PackageReference Include="SimpleInjector" Version="4.5.1" />
+    <PackageReference Include="SQLitePCLRaw.bundle_green" Version="1.1.13" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.1" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Haipa.IdentityDb.Sqlite\Haipa.IdentityDb.Sqlite.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj" />

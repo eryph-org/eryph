@@ -6,6 +6,8 @@ using Haipa.Rebus;
 using Haipa.StateDb;
 using Haipa.StateDb.MySql;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;
@@ -33,7 +35,8 @@ namespace Haipa.ApiEndpoint
 
             container.Verify();
 
-            return container.GetInstance<IWebModule>().RunAsync();
+            return container.RunModule<ApiModule>();
+
 
         }
 

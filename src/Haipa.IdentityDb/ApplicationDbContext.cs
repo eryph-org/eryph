@@ -1,13 +1,16 @@
 ﻿
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Haipa.IdentityDb
 {
-    public class IdentityDbContext : DbContext
+    public class IdentityDbContext : IdentityDbContext<ApplicationUser>
     {
         public IdentityDbContext(DbContextOptions options)
             : base(options) { }
 
-        protected override void OnModelCreating(ModelBuilder builder) { }
     }
+
+    public class ApplicationUser : IdentityUser { }
 }
