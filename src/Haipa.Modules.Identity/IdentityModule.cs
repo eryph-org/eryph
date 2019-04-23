@@ -65,10 +65,14 @@ namespace Haipa.Modules.Identity
                     options.UseJsonWebTokens();
                     options.AddEphemeralSigningKey();
                 });
+
+            services.AddTenant();
         }
 
         protected override void Configure(IApplicationBuilder app)
         {
+            app.UseTenant();
+
             app.UseAuthentication();
             app.UseMvc(b =>
             {
@@ -78,6 +82,4 @@ namespace Haipa.Modules.Identity
         }
 
     }
-
-
 }

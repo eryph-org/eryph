@@ -8,12 +8,13 @@ namespace Haipa.IdentityDb.Sqlite
 
         public static DbContextOptionsBuilder UseSqlite(this DbContextOptionsBuilder optionsBuilder)
         {
-            var connectionString = $"Data Source=identity.db";
+            //Most likely haipa-zero will never have multi tenant support 
+            //but to keep it consistent we already add the tenant name
+            var connectionString = $"Data Source=identity-default.db";
 
-            return optionsBuilder.UseSqlite(connectionString, // replace with your Connection String
+            return optionsBuilder.UseSqlite(connectionString,
                 options =>
-                {
-                    
+                {                 
                     options.MigrationsAssembly(typeof(IdentityDbContextOptionsBuilder).Assembly.GetName().Name);
                 });
         }

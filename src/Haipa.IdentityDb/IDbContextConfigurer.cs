@@ -7,5 +7,8 @@ namespace Haipa.IdentityDb
         void Configure(DbContextOptionsBuilder options);
     }
 
-
+    public interface ITenantProvider
+    {
+        string GetCurrentTenant();
+    }
 }
