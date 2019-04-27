@@ -28,7 +28,7 @@ namespace Haipa.Modules.Api
     [UsedImplicitly]
     public class ApiModule : WebModuleBase
     {
-        public override string Name => "Haipa.Api";
+        public override string Name => "Haipa.Modules.Api";
         public override string Path => "api";
 
 

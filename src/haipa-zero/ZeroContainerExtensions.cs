@@ -9,6 +9,7 @@ using Haipa.Rebus;
 using Haipa.StateDb;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.HttpSys;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
@@ -32,7 +33,7 @@ namespace Haipa.Runtime.Zero
                 {
                     return WebHost.CreateDefaultBuilder(args)
                         .UseHttpSys()
-                        .UseUrls($"http://localhost:62189/{path}")
+                        .UseUrls($"https://localhost:62189/{path}")
                         .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Debug));
                 });
 
