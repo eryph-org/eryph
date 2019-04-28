@@ -13,8 +13,6 @@ namespace Haipa.Controller
         {
             var optionsBuilder = new DbContextOptionsBuilder<IdentityDbContext>();
             optionsBuilder.UseSqlite();
-            optionsBuilder.UseOpenIddict();
-
             return new IdentityDbContext(optionsBuilder.Options);
         }
     }

@@ -39,7 +39,7 @@ namespace Identity.TestClient
         private static async Task SignInAsync()
         {
             // create an HttpListener to listen for requests on that redirect URI.
-            string redirectUri = string.Format("http://127.0.0.1:7890/");
+            string redirectUri = string.Format("http://127.0.0.1:7890");
 
             WebListenerSettings settings = new WebListenerSettings();
             settings.UrlPrefixes.Add(redirectUri);
@@ -52,9 +52,9 @@ namespace Identity.TestClient
                 Authority = "https://localhost:62189/identity",
                 RedirectUri = redirectUri,
                 ClientId = "console",
-                //ClientSecret = "388D45FA-B36B-4988-BA59-B187D329C207",
-                Scope = "openid identity:apps:read:all identity:apps:write:all",
-                Flow = OidcClientOptions.AuthenticationFlow.AuthorizationCode
+                //ClientSecret = "peng",
+                Scope = "openid offline_access",
+                Flow = OidcClientOptions.AuthenticationFlow.Hybrid
             };
 
             OidcClient client = new OidcClient(options);
@@ -187,8 +187,8 @@ namespace Identity.TestClient
             {
                 ["grant_type"] = "client_credentials",
                 ["client_id"] = "console",
-                ["client_secret"] = "388D45FA-B36B-4988-BA59-B187D329C207",
-                ["scope"] = "identity:apps:read:all identity:apps:write:all"
+                ["client_secret"] = "peng",
+                //["scope"] = "identity:apps:read:all"
             });
 
             HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead);
@@ -205,7 +205,7 @@ namespace Identity.TestClient
 
         public static async Task<string> GetResourceAsync(HttpClient client, string token)
         {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost:62189/identity/default/adminapi/v1/applications");
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost:62189/identity/userinfo");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead);

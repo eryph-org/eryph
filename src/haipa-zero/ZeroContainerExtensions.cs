@@ -32,8 +32,9 @@ namespace Haipa.Runtime.Zero
                 .HostAspNetCore((path) =>
                 {
                     return WebHost.CreateDefaultBuilder(args)
-                        .UseHttpSys()
-                        .UseUrls($"https://localhost:62189/{path}")
+            .UseHttpSys()
+            .UseUrls($"https://localhost:62189/{path}")
+                        .UseEnvironment("Development")
                         .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Debug));
                 });
 

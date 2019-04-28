@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
+using Container = SimpleInjector.Container;
 
 namespace Haipa.Modules
 {
@@ -44,7 +45,6 @@ namespace Haipa.Modules
 
             services.EnableSimpleInjectorCrossWiring(_container);
 
-
         }
 
         protected virtual void WireUpServicesAndContainer(IServiceProvider serviceProvider, IServiceCollection services, Container container)
@@ -68,6 +68,9 @@ namespace Haipa.Modules
 
         public virtual Task Stop()
         {
+            var container = Host.Services.GetRequiredService<Container>();
+            container.Dispose();
+
             return Host.StopAsync();
         }
 
