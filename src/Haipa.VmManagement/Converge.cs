@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Management.Automation;
 using System.Text;
 using System.Threading.Tasks;
-using Contiva.CloudInit.ConfigDrive.Generator;
-using Contiva.CloudInit.ConfigDrive.NoCloud;
-using Contiva.CloudInit.ConfigDrive.Processing;
+using Haipa.CloudInit.ConfigDrive.Generator;
+using Haipa.CloudInit.ConfigDrive.NoCloud;
+using Haipa.CloudInit.ConfigDrive.Processing;
 using Haipa.VmConfig;
 using Haipa.VmManagement.Data;
 using LanguageExt;
@@ -22,18 +21,19 @@ namespace Haipa.VmManagement
 #pragma warning disable 1998
         public static async Task<Either<PowershellFailure, MachineConfig>> NormalizeMachineConfig(
 #pragma warning restore 1998
-            MachineConfig config, HostSettings hostSettings,
-            IPowershellEngine engine, Func<string, Task> reportProgress)
+            MachineConfig config,  IPowershellEngine engine, Func<string, Task> reportProgress)
         {
             var machineConfig = config;
 
-            if(machineConfig.VM== null)
+            if (machineConfig.VM== null)
                 machineConfig.VM = new VirtualMachineConfig();
 
-            if (string.IsNullOrWhiteSpace(machineConfig.VM.Path))
+            if (string.IsNullOrWhiteSpace(machineConfig.Name) && string.IsNullOrWhiteSpace(machineConfig.Id))
             {
-                machineConfig.VM.Path = Path.Combine(hostSettings.DefaultDataPath, machineConfig.Name);
+                //TODO generate a random name here
+                machineConfig.Name = "haipa-machine";
             }
+
 
             if (machineConfig.VM.Cpu == null)
                 machineConfig.VM.Cpu = new VirtualMachineCpuConfig {Count = 1};
@@ -47,18 +47,18 @@ namespace Haipa.VmManagement
             if (machineConfig.VM.NetworkAdapters == null)
                 machineConfig.VM.NetworkAdapters = new List<VirtualMachineNetworkAdapterConfig>();
 
+            if (machineConfig.Provisioning == null)
+                machineConfig.Provisioning = new VirtualMachineProvisioningConfig();
+
+            if (string.IsNullOrWhiteSpace(machineConfig.Provisioning.Hostname))
+                machineConfig.Provisioning.Hostname = machineConfig.Name;
+
             for (var index = 0; index < machineConfig.VM.Disks.Count; index++)
             {
                 var diskConfig = machineConfig.VM.Disks[index];
                 if (string.IsNullOrWhiteSpace(diskConfig.Name))
                     diskConfig.Name = $"disk-{index}";
 
-                if (string.IsNullOrWhiteSpace(diskConfig.Path))
-                {
-                    var diskRoot = hostSettings.DefaultVirtualHardDiskPath;
-                    diskRoot = Path.Combine(diskRoot, machineConfig.Name);
-                    diskConfig.Path = Path.Combine(diskRoot, $"{diskConfig.Name}.vhdx");
-                }
             }
 
             foreach (var adapterConfig in machineConfig.VM.NetworkAdapters)
@@ -195,16 +195,26 @@ namespace Haipa.VmManagement
             }
         }
 
-        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Disks(TypedPsObject<VirtualMachineInfo> vmInfo,
+        public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Disks(TypedPsObject<VirtualMachineInfo> vmInfo,
             Seq<VirtualMachineDiskConfig> diskConfig, MachineConfig vmConfig, IPowershellEngine engine, Func<string, Task> reportProgress)
         {
-            return diskConfig.Map(disk => Disk(disk, engine, vmInfo, vmConfig, reportProgress)).Last;
+           var seq= diskConfig.Map(disk => Disk(disk, engine, vmInfo, vmConfig, reportProgress));
+           
+           if (seq.IsEmpty)
+               return vmInfo;
+
+           return await seq.Last;
         }
 
-        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> NetworkAdapters(TypedPsObject<VirtualMachineInfo> vmInfo,
+        public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> NetworkAdapters(TypedPsObject<VirtualMachineInfo> vmInfo,
             Seq<VirtualMachineNetworkAdapterConfig> adapterConfig, MachineConfig vmConfig, IPowershellEngine engine, Func<string, Task> reportProgress)
         {
-            return adapterConfig.Map(adapter => NetworkAdapter(adapter, engine, vmInfo, vmConfig, reportProgress)).Last;
+            var seq = adapterConfig.Map(adapter => NetworkAdapter(adapter, engine, vmInfo, vmConfig, reportProgress));
+
+            if (seq.IsEmpty)
+                return vmInfo;
+
+            return await seq.Last;
         }
 
         public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Disk(
@@ -362,6 +372,7 @@ namespace Haipa.VmManagement
         public static Task<Either<PowershellFailure,TypedPsObject<VirtualMachineInfo>>> CreateVirtualMachine(
             IPowershellEngine engine,
             string vmName,
+            string storageIdentifier,
             string vmPath,
             int startupMemory)
         {
@@ -369,19 +380,34 @@ namespace Haipa.VmManagement
 
 
             return engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
-                        .AddCommand("New-VM")
-                        .AddParameter("Name", vmName)
-                        .AddParameter("Path", vmPath)
-                        .AddParameter("MemoryStartupBytes", memoryStartupBytes)
-                        .AddParameter("Generation", 2))          
+                    .AddCommand("New-VM")
+                    .AddParameter("Name", storageIdentifier)
+                    .AddParameter("Path", vmPath)
+                    .AddParameter("MemoryStartupBytes", memoryStartupBytes)
+                    .AddParameter("Generation", 2))
                 .MapAsync(x => x.Head).MapAsync(
-                result =>
-                {         
-                    engine.RunAsync(PsCommandBuilder.Create().AddCommand("Get-VMNetworkAdapter")
+                    result =>
+                    {
+
+                        engine.RunAsync(PsCommandBuilder.Create().AddCommand("Get-VMNetworkAdapter")
                             .AddParameter("VM", result.PsObject).AddCommand("Remove-VMNetworkAdapter"));
 
-                    return result;
-                });
+                        return result;
+                    })
+                .BindAsync(info => RenameVirtualMachine(engine, info, vmName));
+
+        }
+
+        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> RenameVirtualMachine(
+            IPowershellEngine engine,
+            TypedPsObject<VirtualMachineInfo> vmInfo,
+            string newName)
+        {
+            return engine.RunAsync(PsCommandBuilder.Create()
+                .AddCommand("Rename-VM")
+                .AddParameter("VM", vmInfo.PsObject)
+                .AddParameter("NewName", newName)
+            ).MapAsync(u => vmInfo.Recreate());
 
         }
 
@@ -478,6 +504,7 @@ namespace Haipa.VmManagement
         public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> CloudInit(
             TypedPsObject<VirtualMachineInfo> vmInfo,
             string vmConfigPath,
+            string storageIdentifier,
             string hostname,
             JObject userdata, 
             IPowershellEngine engine,
@@ -485,12 +512,12 @@ namespace Haipa.VmManagement
             )
         {
 
-            var configDrivePath = Path.Combine(vmConfigPath, $"{vmInfo.Value.Name}\\Config");
-            var configDriveIsoPath = Path.Combine(configDrivePath, "configdrive.iso");
+            var vmPath = Path.Combine(vmConfigPath, storageIdentifier);
+            var configDriveIsoPath = Path.Combine(vmPath, "configdrive.iso");
 
             await reportProgress("Updating configdrive disk").ConfigureAwait(false);
 
-            var res = await CreateConfigDriveDirectory(configDrivePath)
+            var res = await CreateConfigDriveDirectory(vmPath)
                 .Bind(_ => EjectConfigDriveDisk(configDriveIsoPath, vmInfo, engine))
                 .ToAsync()              
                 .IfRightAsync(
@@ -503,4 +530,5 @@ namespace Haipa.VmManagement
             return res.Return(vmInfo);
         }
     }
+
 }

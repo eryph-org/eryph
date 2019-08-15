@@ -1,17 +1,17 @@
 ﻿using System;
 using SimpleInjector;
 using Topshelf;
-using Topshelf.SimpleInjector;
 
 namespace Haipa.Modules.Hosting
 {
     public static class TopshelfHostingExtensions
     {
-        public static void RunModuleHostService(this Container container)
+        public static void RunModuleHostService(this Container container, string name)
         {
             var rc = HostFactory.Run(config =>
             {
                 config.UseSimpleInjector(container);
+                config.SetServiceName(name);
                 config.Service<ModuleHost>(s =>
                 {
                     s.ConstructUsingSimpleInjector();
@@ -22,6 +22,7 @@ namespace Haipa.Modules.Hosting
             var exitCode = (int)Convert.ChangeType(rc, rc.GetTypeCode());
             Environment.ExitCode = exitCode;
         }
+
 
     }
 }

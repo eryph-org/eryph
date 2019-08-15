@@ -27,7 +27,7 @@ namespace Haipa.Runtime.Zero
             var container = new Container();
             container.Bootstrap(args);
 
-            container.RunModuleHostService();
+            container.RunModuleHostService("haipa-zero");
 
             File.Delete(Path.Combine(configPath, "zero_info"));
         }

@@ -74,6 +74,7 @@ namespace Haipa.VmConfig
     public class MachineConfig
     {
         public string Name { get; set; }
+        public string Id { get; set; }
 
         public VirtualMachineConfig VM { get; set; }
 

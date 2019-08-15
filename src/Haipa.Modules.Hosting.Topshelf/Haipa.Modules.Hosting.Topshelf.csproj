@@ -1,13 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net471</TargetFramework>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
     <RootNamespace>Haipa.Modules.Hosting</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Topshelf" Version="4.1.0" />
-    <PackageReference Include="Topshelf.SimpleInjector" Version="1.0.0.20" />
   </ItemGroup>
 
   <ItemGroup>

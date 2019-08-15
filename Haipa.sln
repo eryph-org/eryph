@@ -37,8 +37,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.VmConfig.Primitives",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Identity", "src\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj", "{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.IdentityDb", "src\Haipa.IdentityDb\Haipa.IdentityDb.csproj", "{ACC0D679-2D25-42D1-B913-F55B7070E0F4}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.TestClient", "test\Identity.TestClient\Identity.TestClient.csproj", "{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}"
@@ -52,8 +50,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting", "src\Haipa.Modules.Hosting\Haipa.Modules.Hosting.csproj", "{3824EE94-9D2C-47D5-99B7-BE275ADF6B73}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting.Topshelf", "src\Haipa.Modules.Hosting.Topshelf\Haipa.Modules.Hosting.Topshelf.csproj", "{93E945F0-31E6-488F-A4B0-23C2D7CE5977}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.IdentityDb.Sqlite", "src\Haipa.IdentityDb.Sqlite\Haipa.IdentityDb.Sqlite.csproj", "{8CEE7C2E-EC28-4728-93AB-7A6A39E58C4C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -124,10 +120,6 @@ Global
 		{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{ACC0D679-2D25-42D1-B913-F55B7070E0F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{ACC0D679-2D25-42D1-B913-F55B7070E0F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{ACC0D679-2D25-42D1-B913-F55B7070E0F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{ACC0D679-2D25-42D1-B913-F55B7070E0F4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -152,10 +144,6 @@ Global
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8CEE7C2E-EC28-4728-93AB-7A6A39E58C4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8CEE7C2E-EC28-4728-93AB-7A6A39E58C4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8CEE7C2E-EC28-4728-93AB-7A6A39E58C4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8CEE7C2E-EC28-4728-93AB-7A6A39E58C4C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

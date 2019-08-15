@@ -6,12 +6,10 @@ using Haipa.Modules.Api.Services;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Haipa.VmConfig;
-using JetBrains.Annotations;
 using Microsoft.AspNet.OData;
-using Microsoft.AspNet.OData.Routing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using static Microsoft.AspNet.OData.Query.AllowedQueryOptions;
+using Swashbuckle.AspNetCore.Annotations;
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Haipa.Modules.Api.Controllers
@@ -28,8 +26,10 @@ namespace Haipa.Modules.Api.Controllers
             _operationManager = operationManager;
         }
 
+        [HttpGet]
+        [SwaggerOperation( OperationId  = "Machines_List")]
         [Produces( "application/json" )]
-        [ProducesResponseType( typeof( DbSet<Machine> ), Status200OK )]
+        [ProducesResponseType( typeof(ODataValue<DbSet<Machine>> ), Status200OK )]
         [ProducesResponseType( Status404NotFound )]
         [EnableQuery]
         public IActionResult Get()
@@ -39,11 +39,13 @@ namespace Haipa.Modules.Api.Controllers
         }
 
         /// <summary>
-        /// Gets a single order.
+        /// Gets a single machine.
         /// </summary>
-        /// <response code="200">The order was successfully retrieved.</response>
-        /// <response code="404">The order does not exist.</response>
-        [Produces( "application/json" )]
+        /// <response code="200">The machine was successfully retrieved.</response>
+        /// <response code="404">The machine does not exist.</response>
+        [HttpGet]
+        [SwaggerOperation(OperationId = "Machines_Get")]
+        [Produces("application/json")]
         [ProducesResponseType( typeof( Machine), Status200OK )]
         [ProducesResponseType( Status404NotFound )]
         [EnableQuery]
@@ -52,11 +54,19 @@ namespace Haipa.Modules.Api.Controllers
             return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == key)));
         }
 
+        [HttpDelete]
+        [SwaggerOperation(OperationId = "Machines_Delete")]
+        [ProducesResponseType(typeof(Operation), Status200OK)]
+        [Produces("application/json")]
         public async Task<IActionResult> Delete(Guid key)
         {
             return Ok(await _operationManager.StartNew<DestroyMachineCommand>(key).ConfigureAwait(false));
         }
 
+        [HttpPost]
+        [SwaggerOperation(OperationId = "Machines_UpdateOrCreate")]
+        [ProducesResponseType(typeof(Operation), Status200OK)]
+        [Produces("application/json")]
         public async Task<IActionResult> Post([FromBody] MachineConfig config)
         {
 
@@ -69,12 +79,18 @@ namespace Haipa.Modules.Api.Controllers
         }
 
         [HttpPost]
+        [SwaggerOperation(OperationId = "Machines_Start")]
+        [ProducesResponseType(typeof(Operation), Status200OK)]
+        [Produces("application/json")]
         public async Task<IActionResult> Start([FromODataUri] Guid key)
         {
            return Ok(await _operationManager.StartNew<StartMachineCommand>(key).ConfigureAwait(false));
         }
 
         [HttpPost]
+        [SwaggerOperation(OperationId = "Machines_Stop")]
+        [ProducesResponseType(typeof(Operation), Status200OK)]
+        [Produces("application/json")]
         public async Task<IActionResult> Stop([FromODataUri] Guid key)
         {
             return Ok(await _operationManager.StartNew<StopMachineCommand>(key).ConfigureAwait(false));

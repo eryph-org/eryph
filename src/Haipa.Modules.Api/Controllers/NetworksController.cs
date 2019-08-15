@@ -6,6 +6,7 @@ using Haipa.StateDb.Model;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Haipa.Modules.Api.Controllers
 {
@@ -25,6 +26,7 @@ namespace Haipa.Modules.Api.Controllers
         }
 
         [EnableQuery]
+        [SwaggerOperation(OperationId = "Networks_List")]
         public IActionResult Get()
         {
 
@@ -33,11 +35,13 @@ namespace Haipa.Modules.Api.Controllers
         
 
         [EnableQuery]
+        [SwaggerOperation(OperationId = "Networks_Get")]
         public IActionResult Get(Guid key)
         {
             return Ok(SingleResult.Create(_db.Networks.Where(c => c.Id == key)));
         }
 
+        [SwaggerOperation(OperationId = "Networks_Create")]
         public async Task<IActionResult> Post([FromBody] Network network)
         {
             if (!ModelState.IsValid)
@@ -48,8 +52,8 @@ namespace Haipa.Modules.Api.Controllers
             await _db.SaveChangesAsync();
             return Created(network);
         }
-        
 
+        [SwaggerOperation(OperationId = "Networks_Patch")]
         public async Task<IActionResult> Patch([FromODataUri] Guid key, Delta<Network> product)
         {
             if (!ModelState.IsValid)
@@ -79,6 +83,8 @@ namespace Haipa.Modules.Api.Controllers
             }
             return Updated(entity);
         }
+
+        [SwaggerOperation(OperationId = "Networks_Update")]
         public async Task<IActionResult> Put([FromODataUri] Guid key, [FromBody] Network update)
         {
             if (!ModelState.IsValid)

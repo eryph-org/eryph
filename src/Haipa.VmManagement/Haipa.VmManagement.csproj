@@ -1,22 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.2;net471</TargetFrameworks>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="8.0.0" />
-    <PackageReference Include="Contiva.CloudInit.ConfigDrive" Version="0.2.1" />
-    <PackageReference Include="Contiva.CloudInit.ConfigDrive.NoCloud" Version="0.2.1" />
-    <PackageReference Include="Contiva.CloudInit.ConfigDrive.WindowsImaging" Version="0.2.1" />
+    <PackageReference Include="Haipa.CloudInit.ConfigDrive" Version="0.5.0" />
+    <PackageReference Include="Haipa.CloudInit.ConfigDrive.NoCloud" Version="0.5.0" />
+    <PackageReference Include="Haipa.CloudInit.ConfigDrive.WindowsImaging" Version="0.5.0" />
     <PackageReference Include="LanguageExt.Core" Version="3.1.14" />
-    <PackageReference Include="Microsoft.PowerShell.5.ReferenceAssemblies" Version="1.1.0" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="2.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.VmConfig.Primitives\Haipa.VmConfig.Primitives.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp2.2'">
+    <PackageReference Include="Microsoft.PowerShell.SDK">
+      <Version>6.2.0</Version>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

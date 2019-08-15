@@ -1,6 +1,4 @@
-﻿using Haipa.IdentityDb;
-using Haipa.IdentityDb.Sqlite;
-using Haipa.Modules.Api;
+﻿using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
 using Haipa.Modules.Hosting;
 using Haipa.Modules.Identity;
@@ -15,7 +13,6 @@ using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;
-using IdentityDbContext = Haipa.IdentityDb.IdentityDbContext;
 
 namespace Haipa.Runtime.Zero
 {
@@ -56,8 +53,7 @@ namespace Haipa.Runtime.Zero
         public static Container UseInMemoryDb(this Container container)
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
-            container.Register<StateDb.IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
-            container.Register<IdentityDb.IDbContextConfigurer<IdentityDbContext>, SqliteDbContextConfigurer<IdentityDbContext>>();
+            container.Register<IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
 
             return container;
         }

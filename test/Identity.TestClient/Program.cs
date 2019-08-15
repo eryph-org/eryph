@@ -4,12 +4,16 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
+using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Identity.TestClient
 {
@@ -19,7 +23,7 @@ namespace Identity.TestClient
         //public static void Main(string[] args) => MainAsync(args).GetAwaiter().GetResult();
         public static void Main(string[] args)
         {
-            MainAsync2().GetAwaiter().GetResult();
+            MainAsync(args).GetAwaiter().GetResult();
         }
 
         public static async Task MainAsync2()
@@ -51,8 +55,8 @@ namespace Identity.TestClient
             {
                 Authority = "https://localhost:62189/identity",
                 RedirectUri = redirectUri,
-                ClientId = "console",
-                //ClientSecret = "peng",
+                ClientId = "console",                
+                ClientSecret = "peng",
                 Scope = "openid offline_access",
                 Flow = OidcClientOptions.AuthenticationFlow.Hybrid
             };
@@ -182,13 +186,16 @@ namespace Identity.TestClient
 
         public static async Task<string> GetTokenAsync(HttpClient client)
         {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "http://localhost:62189/identity/connect/token");
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "https://localhost:62189/identity/connect/token");
+            var jwt = CreateClientAuthJwt();
+
             request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "client_credentials",
                 ["client_id"] = "console",
-                ["client_secret"] = "peng",
-                //["scope"] = "identity:apps:read:all"
+                ["client_assertion_type"] = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+                ["client_assertion"] = jwt,
+                ["scopes"] = "openid,identity:apps:read:all"
             });
 
             HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead);
@@ -205,7 +212,7 @@ namespace Identity.TestClient
 
         public static async Task<string> GetResourceAsync(HttpClient client, string token)
         {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "http://localhost:62189/identity/userinfo");
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "https://localhost:62189/identity/connect/userinfo");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead);
@@ -214,6 +221,31 @@ namespace Identity.TestClient
             return await response.Content.ReadAsStringAsync();
         }
 
+
+        public static string CreateClientAuthJwt()
+        {
+            // set exp to 5 minutes
+            var tokenHandler = new JwtSecurityTokenHandler { TokenLifetimeInMinutes = 5 };
+            X509Store store = new X509Store(StoreLocation.CurrentUser);
+            store.Open(OpenFlags.ReadOnly);
+            var certs = store.Certificates.Find(X509FindType.FindByThumbprint, "572AF80CDB97DCFF85C616E3831197C315F66EF4", false);
+            var cert = certs[0];
+
+            var securityToken = tokenHandler.CreateJwtSecurityToken(
+                // iss must be the client_id of our application
+                issuer: "console",
+                // aud must be the identity provider (token endpoint)
+                audience: "https://localhost:62189/identity/connect/token",
+                // sub must be the client_id of our application
+                subject: new ClaimsIdentity(
+                    new List<Claim> { new Claim("sub", "console") }),
+                // sign with the private key (using RS256 for IdentityServer)
+                signingCredentials: new SigningCredentials(
+                    new X509SecurityKey(cert), "RS256")
+            );
+
+            return tokenHandler.WriteToken(securityToken);
+        }
     }
 
 

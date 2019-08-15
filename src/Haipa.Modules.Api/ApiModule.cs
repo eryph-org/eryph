@@ -13,8 +13,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Rebus.Handlers;
 using Rebus.Logging;
@@ -22,6 +24,7 @@ using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
 using SimpleInjector;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Haipa.Modules.Api
 {
@@ -30,7 +33,6 @@ namespace Haipa.Modules.Api
     {
         public override string Name => "Haipa.Modules.Api";
         public override string Path => "api";
-
 
         protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
@@ -56,8 +58,8 @@ namespace Haipa.Modules.Api
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
-                    options.Authority = "http://localhost:62189/identity";
-                    options.Audience = "resource_server";
+                    options.Authority = "https://localhost:62189/identity";
+                    options.Audience = "compute_api";
                     options.RequireHttpsMetadata = false;
                 });
 
@@ -65,15 +67,43 @@ namespace Haipa.Modules.Api
             services.AddApiVersioning(options =>
             {
                 options.ReportApiVersions = true;
-                options.AssumeDefaultVersionWhenUnspecified = true;
+                options.AssumeDefaultVersionWhenUnspecified = false;
             });
             services.AddOData().EnableApiVersioning();
+
+            services.AddODataApiExplorer(
+                options =>
+                {
+                    // add the versioned api explorer, which also adds IApiVersionDescriptionProvider service
+                    // note: the specified format code will format the version as "'v'major[.minor][-status]"
+                    options.GroupNameFormat = "'v'VVV";
+
+                    // note: this option is only necessary when versioning by url segment. the SubstitutionFormat
+                    // can also be used to control the format of the API version in route templates
+                    options.SubstituteApiVersionInUrl = true;
+
+
+                });
+            services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
+            services.AddSwaggerGen(
+                options =>
+                {
+                    // add a custom operation filter which sets default values
+                    options.OperationFilter<SwaggerDefaultValues>();
+
+                    //// integrate xml comments
+                    //options.IncludeXmlComments(XmlCommentsFilePath);
+
+                    options.ResolveConflictingActions(app => app.First());
+                    options.EnableAnnotations();
+                    options.DescribeAllEnumsAsStrings();
+                });
         }
 
         protected override void Configure(IApplicationBuilder app)
         {
             var modelBuilder = app.ApplicationServices.GetService<VersionedODataModelBuilder>();
-
+            var provider = app.ApplicationServices.GetService<IApiVersionDescriptionProvider>();
 
             app.UseAuthentication();
 
@@ -84,11 +114,25 @@ namespace Haipa.Modules.Api
                 var models = modelBuilder.GetEdmModels().ToArray();
                 app.UseMvc(routes =>
                 {
-                    routes.MapVersionedODataRoutes("odata", "odata", models);
+                    //routes.MapVersionedODataRoutes("odata", "odata", models);
                     routes.MapVersionedODataRoutes("odata-bypath", "odata/v{version:apiVersion}", models);
                 });
 
             });
+
+            app.UseSwagger();
+            app.UseSwaggerUI(
+                options =>
+                {
+                    options.DisplayOperationId();
+
+                    // build a swagger endpoint for each discovered API version
+                    foreach (var description in provider.ApiVersionDescriptions)
+                    {
+                        options.SwaggerEndpoint($"/api/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+                        
+                    }
+                });
         }
 
         protected override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
@@ -114,6 +158,4 @@ namespace Haipa.Modules.Api
             });
         }
     }
-
-
 }
