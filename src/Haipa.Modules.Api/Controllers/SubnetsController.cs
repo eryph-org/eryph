@@ -5,9 +5,11 @@ using Haipa.StateDb;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Haipa.Modules.Api.Controllers
 {
+    [ApiVersion( "1.0" )]
     public class SubnetsController : ODataController
     {
         private readonly StateStoreContext _db;
@@ -23,6 +25,7 @@ namespace Haipa.Modules.Api.Controllers
         }
 
         [EnableQuery]
+        [SwaggerOperation(OperationId = "Subnets_List")]
         public IActionResult Get()
         {
 
@@ -31,6 +34,7 @@ namespace Haipa.Modules.Api.Controllers
 
 
         [EnableQuery]
+        [SwaggerOperation(OperationId = "Subnets_Get")]
         public IActionResult Get(Guid key)
         {
             return Ok(SingleResult.Create(_db.Subnets.Where(c => c.Id == key)));

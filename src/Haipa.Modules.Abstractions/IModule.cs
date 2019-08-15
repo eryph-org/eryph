@@ -1,21 +1,16 @@
 ﻿using System;
 using System.Threading.Tasks;
-using SimpleInjector;
 
-namespace Haipa.Modules.Abstractions
+namespace Haipa.Modules
 {
     public interface IModule
     {
         string Name { get; }
-        void Start();
-        void Stop();
 
-    }
-
-
-    public interface IWebModule : IModule
-    {
-        Task RunAsync();
+        void Bootstrap(IServiceProvider serviceProvider);
+        Task Start();
+        Task Stop();
+        Task WaitForShutdownAsync();
 
     }
 }

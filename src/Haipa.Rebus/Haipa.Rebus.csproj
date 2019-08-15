@@ -7,7 +7,7 @@
   <ItemGroup>
     <PackageReference Include="Rebus" Version="5.2.1" />
     <PackageReference Include="Rebus.RabbitMq" Version="4.4.2" />
-    <PackageReference Include="SimpleInjector" Version="4.4.3" />
+    <PackageReference Include="SimpleInjector" Version="4.5.1" />
   </ItemGroup>
 
 </Project>

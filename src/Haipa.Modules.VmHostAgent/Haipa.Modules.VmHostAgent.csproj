@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net471</TargetFramework>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Messages\Haipa.Messages.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
+    <ProjectReference Include="..\Haipa.Modules\Haipa.Modules.csproj" />
     <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
     <ProjectReference Include="..\Haipa.VmManagement\Haipa.VmManagement.csproj" />
   </ItemGroup>

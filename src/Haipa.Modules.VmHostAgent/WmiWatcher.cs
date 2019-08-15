@@ -3,24 +3,34 @@ using System.Collections;
 using System.Linq;
 using System.Management;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
+using Microsoft.Extensions.Hosting;
 using Rebus.Bus;
 
 namespace Haipa.Modules.VmHostAgent
 {
-    internal class WmiWatcher : IDisposable
+    internal class WmiWatcherModuleService : IHostedService
     {
         private readonly IBus _bus;
         private ManagementEventWatcher _networkWatcher;
         private ManagementEventWatcher _statusWatcher;
 
-        public WmiWatcher(IBus bus)
+        public WmiWatcherModuleService(IBus bus)
         {
             _bus = bus;
         }
 
-        public void Dispose()
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            StartWatching();
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
         {
             _networkWatcher?.Dispose();
             _networkWatcher = null;
@@ -28,6 +38,7 @@ namespace Haipa.Modules.VmHostAgent
             _statusWatcher?.Dispose();
             _statusWatcher = null;
 
+            return Task.CompletedTask;
         }
 
         public void StartWatching()
@@ -106,6 +117,7 @@ namespace Haipa.Modules.VmHostAgent
         {
             return e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
         }
+
     }
 
     internal class VirtualMachineStateChangedEvent

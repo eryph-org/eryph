@@ -11,6 +11,7 @@ namespace Haipa.StateDb.Model
         public Agent Agent { get; set; }
         public string AgentName { get; set; }
 
+        
         public MachineStatus Status { get; set; }
 
 

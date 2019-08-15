@@ -4,19 +4,34 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile></DocumentationFile>
+  </PropertyGroup>
+
   <ItemGroup>
+    <PackageReference Include="AspNet.Security.OpenIdConnect.Primitives" Version="2.0.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.OData" Version="7.1.0" />
-    <PackageReference Include="SimpleInjector.Integration.AspNetCore.Mvc.Core" Version="4.4.3" />
+    <PackageReference Include="Microsoft.AspNetCore.OData.Versioning.ApiExplorer" Version="3.2.0" />
+    <PackageReference Include="SimpleInjector.Integration.AspNetCore.Mvc.Core" Version="4.5.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="4.0.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="4.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Messages\Haipa.Messages.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
+    <ProjectReference Include="..\Haipa.Modules.AspNetCore\Haipa.Modules.AspNetCore.csproj" />
     <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
     <ProjectReference Include="..\Haipa.StateDb.MySql\Haipa.StateDb.MySql.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Configuration\ModelConfiguration.cs">
+      <SubType>Component</SubType>
+    </Compile>
   </ItemGroup>
 
 </Project>

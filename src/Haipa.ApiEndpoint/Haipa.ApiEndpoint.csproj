@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
     <DockerComposeProjectPath>..\..\docker-compose.dcproj</DockerComposeProjectPath>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
@@ -11,9 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.1.2" />
-    <PackageReference Include="SimpleInjector" Version="4.4.3" />
-    <PackageReference Include="SimpleInjector.Integration.AspNetCore.Mvc" Version="4.4.3" />
+    <PackageReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="SimpleInjector" Version="4.5.1" />
+    <PackageReference Include="SimpleInjector.Integration.AspNetCore.Mvc" Version="4.5.1" />
 
   </ItemGroup>
 
@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
+    <ProjectReference Include="..\Haipa.Modules.Hosting\Haipa.Modules.Hosting.csproj" />
   </ItemGroup>
 
 </Project>
