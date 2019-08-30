@@ -21,9 +21,6 @@ namespace Haipa.VmConfig
     {
         public string Name { get; set; }
 
-        public string Path { get; set; }
-
-
         public string Template { get; set; }
 
         public int Size { get; set; }
@@ -59,8 +56,6 @@ namespace Haipa.VmConfig
 
     public class VirtualMachineConfig
     {
-        public string Path { get; set; }
-
         public VirtualMachineCpuConfig Cpu { get; set; }
 
         public VirtualMachineMemoryConfig Memory { get; set; }
@@ -78,7 +73,6 @@ namespace Haipa.VmConfig
 
         public VirtualMachineConfig VM { get; set; }
 
-        
         public List<MachineNetworkConfig> Networks { get; set; }
 
         public VirtualMachineProvisioningConfig Provisioning { get; set; }
@@ -90,6 +84,14 @@ namespace Haipa.VmConfig
         public string Hostname { get; set; }
 
         public JObject UserData { get; set; }
+
+        public ProvisioningMethod Method { get; set; }
+    }
+
+    public enum ProvisioningMethod
+    {
+        None = 0,
+        CloudInit = 1
 
     }
 

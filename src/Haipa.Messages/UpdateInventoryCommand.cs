@@ -11,6 +11,7 @@ namespace Haipa.Messages
 
 
     }
+    
 
     public class VirtualMachineConvergedEvent
     {
@@ -38,5 +39,15 @@ namespace Haipa.Messages
     {
         public Guid OperationId { get; set; }
         public string ErrorMessage { get; set; }
+    }
+
+    public class GenerateIdCommand
+    {
+    }
+
+    public class GenerateIdReply
+    {
+        public long GeneratedId { get; set; }
+
     }
 }

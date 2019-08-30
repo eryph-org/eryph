@@ -8,6 +8,7 @@ using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 
 namespace Haipa.Modules.Controller
 {
