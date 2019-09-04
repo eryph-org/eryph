@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Management;
 using System.Numerics;
 using System.Text;
@@ -40,16 +38,25 @@ namespace Haipa.Modules.VmHostAgent
             var command = message.Command;
             var config = command.Config;
             _operationId = command.OperationId;
+            var hostSettings = GetHostSettings();
 
             var chain = 
+
                 from normalizedVMConfig in Converge.NormalizeMachineConfig(config, _engine, ProgressMessage)
                 from vmList in GetVmInfo(normalizedVMConfig.Id, _engine)
                 from optionalVmInfo in EnsureUnique(vmList, normalizedVMConfig.Id)
-                from storageSettings in DetectStorageSettings(optionalVmInfo, GetHostSettings())
-                from vmInfoCreated in EnsureCreated(optionalVmInfo, config, storageSettings, _engine)
+                                
+                from currentStorageSettings in Storage.DetectVMStorageSettings(optionalVmInfo, hostSettings, ProgressMessage)
+                from plannedStorageSettings in Storage.PlanVMStorageSettings(normalizedVMConfig, currentStorageSettings, hostSettings, GenerateId)
+                
+                from vmInfoCreated in EnsureCreated(optionalVmInfo, config, plannedStorageSettings, _engine)
+                from _ in AttachToOperation(vmInfoCreated, _bus, command.OperationId)
                 from vmInfo in EnsureNameConsistent(vmInfoCreated, config, _engine)
-                from _ in AttachToOperation(vmInfo, _bus, command.OperationId)
-                from vmInfoConverged in ConvergeVm(vmInfo, config, storageSettings, _engine)
+
+                from currentDiskStorageSettings in Storage.DetectDiskStorageSettings(vmInfo.Value.HardDrives, hostSettings, _engine)
+                from plannedDiskStorageSettings in Storage.PlanDiskStorageSettings(config, plannedStorageSettings, currentDiskStorageSettings, hostSettings)
+
+                from vmInfoConverged in ConvergeVm(vmInfo, config, plannedStorageSettings, plannedDiskStorageSettings, _engine)
                 select vmInfoConverged;
 
             return chain.ToAsync().MatchAsync(
@@ -78,12 +85,17 @@ namespace Haipa.Modules.VmHostAgent
 
         }
 
-        private Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> ConvergeVm(TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig machineConfig, VMStorageSettings storageSettings, IPowershellEngine engine)
+        private Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> ConvergeVm(
+            TypedPsObject<VirtualMachineInfo> vmInfo, 
+            MachineConfig machineConfig, 
+            VMStorageSettings storageSettings, 
+            Seq<VMDiskStorageSettings> diskStorageSettings, 
+            IPowershellEngine engine)
         {
             return
                 from infoFirmware in Converge.Firmware(vmInfo, machineConfig, engine, ProgressMessage)
                 from infoCpu in Converge.Cpu(infoFirmware, machineConfig.VM.Cpu, engine, ProgressMessage)
-                from infoDisks in Converge.Disks(infoCpu, machineConfig.VM.Disks.ToSeq(), machineConfig, storageSettings, engine, ProgressMessage)
+                from infoDisks in Converge.Disks(infoCpu, diskStorageSettings, engine, ProgressMessage)
                 from infoNetworks in Converge.NetworkAdapters(infoDisks, machineConfig.VM.NetworkAdapters.ToSeq(), machineConfig, engine, ProgressMessage)
                 from infoCloudInit in Converge.CloudInit(infoNetworks, storageSettings.VMPath,machineConfig.Provisioning.Hostname, machineConfig.Provisioning?.UserData, engine, ProgressMessage)
                 select infoCloudInit;
@@ -108,9 +120,14 @@ namespace Haipa.Modules.VmHostAgent
             return Prelude.Right(list.HeadOrNone());
         }
 
-        private Task<string> GenerateId()
+        private Task<Either<PowershellFailure, string>> GenerateId()
         {
-            return _bus.SendRequest<GenerateIdReply>(new GenerateIdCommand(), null,TimeSpan.FromMinutes(5)).Map(r => LongToString(r.GeneratedId, 36));
+            return Prelude.TryAsync(() =>
+                _bus.SendRequest<GenerateIdReply>(new GenerateIdCommand(), null, TimeSpan.FromMinutes(5))
+                    .Map(r => LongToString(r.GeneratedId, 36)))
+                
+                .ToEither(ex => new PowershellFailure{Message = ex.Message});
+
         }
 
         public const string DefaultDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -141,98 +158,14 @@ namespace Haipa.Modules.VmHostAgent
             return (result.ToString());
         }
 
-        public static BigInteger StringToLong(string subject, int @base, string digits = DefaultDigits)
-        {
-            if (subject == null) { throw (new ArgumentNullException(nameof(subject), "Subject must not be null")); }
-            if (@base < 2) { throw (new ArgumentException("Base must not be less than 2", nameof(@base))); }
-            if (digits.Length < @base) { throw (new ArgumentException("Not enough Digits for the base", nameof(digits))); }
-
-            BigInteger result = 0;
-            var sign = 0;
-
-            var digitsUpper = digits.ToUpper();
-
-            foreach (var ch in subject)
-            {
-                var offset = digits.IndexOf(ch);
-
-                if ((offset == -1) || (offset >= @base))
-                {
-                    offset = digitsUpper.IndexOf(char.ToUpper(ch));
-                }
-
-                if ((offset != -1) && (offset < @base))
-                {
-                    result = result * @base + offset;
-
-                    if (sign == 0)
-                    {
-                        sign = 1;
-                    }
-                }
-                else
-                {
-                    if ((sign == 0) && (ch == '-'))
-                    {
-                        sign = -1;
-                    }
-                }
-            }
-
-            return (result * sign);
-        }
-
-
-        private Task<Either<PowershellFailure, VMStorageSettings>> DetectStorageSettings(
-            Option<TypedPsObject<VirtualMachineInfo>> optionalVmInfo, HostSettings hostSettings) =>
-            Prelude.Try(
-                () => optionalVmInfo.MatchAsync(
-                    None: () => GenerateId().Map(
-                        id =>
-                        {
-                            return new VMStorageSettings
-                            {
-                                StorageIdentifier = id.ToString(),
-                                VMPath = hostSettings.DefaultDataPath,
-                                DefaultDiskPath = hostSettings.DefaultVirtualHardDiskPath,
-                            };
-                        }),
-
-                    Some: (vmInfo) =>
-                    {
-                        return SplitVMPath(vmInfo.Value.Path).Match(
-                            None: () => throw new Exception(
-                                "Invalid vm path. For haipa all VMs have be in folders at least one folder after disk root"),
-                            Some:
-                            s => new VMStorageSettings
-                            {
-                                StorageIdentifier = s.DirectoryName,
-                                VMPath = s.ParentPath,
-                                DefaultDiskPath = hostSettings.DefaultVirtualHardDiskPath,
-                            }).AsTask();
-
-                    }).GetAwaiter().GetResult())
-                ().Match(
-                    Succ: r => r,
-                    Fail: ex => Prelude.Left<PowershellFailure, VMStorageSettings>(new PowershellFailure{Message = ex.Message})).ToAsync().ToEither();
-
-
-        private static Option<(string ParentPath, string DirectoryName)> SplitVMPath(string path)
-        {
-            var directoryInfo = new DirectoryInfo(path);
-
-            if (directoryInfo.Parent == null)
-                return Prelude.None;
-
-            return (ParentPath: directoryInfo.Parent.FullName, DirectoryName: directoryInfo.Name);
-        }
-
         private static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> EnsureCreated(Option<TypedPsObject<VirtualMachineInfo>> vmInfo, MachineConfig config, VMStorageSettings storageSettings, IPowershellEngine engine)
         {
             return vmInfo.MatchAsync(
-                None: () => Converge.CreateVirtualMachine(engine, config.Name, storageSettings.StorageIdentifier,
-                    storageSettings.VMPath,
-                    config.VM.Memory.Startup),
+                None: () =>
+                    storageSettings.StorageIdentifier.ToEither(new PowershellFailure{Message = "Unknown storage identifier, cannot create new virtual machine"})
+                        .BindAsync(storageIdentifier => Converge.CreateVirtualMachine(engine, config.Name, storageIdentifier,
+                            storageSettings.VMPath,
+                            config.VM.Memory.Startup)),                            
                 Some: s => s
             );
 
