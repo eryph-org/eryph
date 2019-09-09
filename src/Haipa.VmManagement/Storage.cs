@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Modules.VmHostAgent;
 using Haipa.VmConfig;
@@ -110,44 +111,115 @@ namespace Haipa.VmManagement
 
         }
 
-        public static Task<Either<PowershellFailure, Seq<VMDiskStorageSettings>>> DetectDiskStorageSettings(
+        public static async Task<Either<PowershellFailure, Seq<CurrentVMDiskStorageSettings>>> DetectDiskStorageSettings(
             IEnumerable<HardDiskDriveInfo> hdInfos, HostSettings hostSettings, IPowershellEngine engine)
         {
-            return hdInfos.ToSeq().MapToEitherAsync(hdInfo => 
+            var r = await hdInfos.Where(x=>!string.IsNullOrWhiteSpace(x.Path))
+                .ToSeq().MapToEitherAsync(hdInfo =>
+            {
+                var res =
+                    (
+                    from vhdInfo in GetVhdInfo(hdInfo.Path, engine).ToAsync()
+                    from snapshotInfo in GetSnapshotAndActualVhd(vhdInfo, engine).ToAsync()
+                    let vhdPath = snapshotInfo.ActualVhd.Map(vhd => vhd.Value.Path).IfNone(hdInfo.Path)
+                    let parentPath = snapshotInfo.ActualVhd.Map(vhd => vhd.Value.ParentPath)
+                    let snapshotPath = snapshotInfo.SnapshotVhd.Map(vhd => vhd.Value.Path)
+                    from nameAndId in PathToStorageNames(Path.GetDirectoryName(vhdPath), hostSettings.DefaultVirtualHardDiskPath).ToAsync()
+                    let diskSize = vhdInfo.Map(v => v.Value.Size).IfNone(0)
+                    select
+                        new CurrentVMDiskStorageSettings
+                        {
+                            Path = Path.GetDirectoryName(vhdPath),
+                            Name = Path.GetFileNameWithoutExtension(vhdPath),
+                            AttachPath = snapshotPath.IsSome? snapshotPath: vhdPath,
+                            ParentPath = parentPath,
+                            StorageNames = nameAndId.Names,
+                            StorageIdentifier = nameAndId.StorageIdentifier,
+                            SizeBytes = diskSize,
+                            Frozen = snapshotPath.IsSome,
+                            AttachedVMId = hdInfo.Id,
+                        }).ToEither();
+                return res;
+            });
 
-                    from nameAndId in PathToStorageNames(Path.GetDirectoryName(hdInfo.Path), hostSettings.DefaultVirtualHardDiskPath)
-                    from parentPath in GetParentPath(hdInfo.Path, engine)
-                    select (hdInfo, nameAndId.Names, nameAndId.StorageIdentifier, parentPath))    
-                    
-                .MapAsync(seq=> seq.Map(t =>
-                {
-                    var (hardDiskDriveInfo, storageNames, option, parentPath) = t;
-                    return new VMDiskStorageSettings
-                    {
-                        Path = Path.GetDirectoryName(hardDiskDriveInfo.Path),
-                        Name = Path.GetFileName(hardDiskDriveInfo.Path),
-                        ParentPath = parentPath,
-                        StorageNames = storageNames,
-                        StorageIdentifier = option,
-                    };
-                }).ToSeq());
-
+            return r;
         }
 
         public static Task<Either<PowershellFailure, Seq<VMDiskStorageSettings>>> PlanDiskStorageSettings(
-            MachineConfig config, VMStorageSettings storageSettings, Seq<VMDiskStorageSettings> currentDiskStorageSettings, HostSettings hostSettings)
+            MachineConfig config, VMStorageSettings storageSettings, HostSettings hostSettings, IPowershellEngine engine)
         {
-            if (storageSettings.Frozen)
-                return Prelude.RightAsync<PowershellFailure, Seq<VMDiskStorageSettings>>(currentDiskStorageSettings).ToEither();
-            
-            return config.VM.Disks.ToSeq().MapToEitherAsync(c => DiskConfigToDiskStorageSettings(c, storageSettings, hostSettings));
+            return config.VM.Disks.ToSeq().MapToEitherAsync(c =>
+                    DiskConfigToDiskStorageSettings(c, storageSettings, hostSettings));
+
         }
 
-        private static async Task<Either<PowershellFailure, Option<string>>> GetParentPath(string path, IPowershellEngine engine)
+        public static async Task<Either<PowershellFailure, Option<TypedPsObject<VhdInfo>>>> GetVhdInfo(string path, IPowershellEngine engine)
         {
-            var res = await engine.GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path))
-                .MapAsync(s => s.HeadOrNone().MapAsync(h => h.Value.ParentPath).ToOption());
+            if (string.IsNullOrWhiteSpace(path))
+                return Option<TypedPsObject<VhdInfo>>.None;
+
+            var res = await engine.GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path)).MapAsync(s => s.HeadOrNone());
             return res;
+        }
+
+        public static Task<Either<PowershellFailure, (Option<TypedPsObject<VhdInfo>> SnapshotVhd, Option<TypedPsObject<VhdInfo>> ActualVhd)>> GetSnapshotAndActualVhd(Option<TypedPsObject<VhdInfo>> vhdInfo, IPowershellEngine engine)
+        {
+            return vhdInfo.MapAsync(async (info) =>
+            {
+
+                var firstSnapshotVhdOption = Option<TypedPsObject<VhdInfo>>.None;
+                var snapshotVhdOption = Option<TypedPsObject<VhdInfo>>.None;
+                var actualVhdOption = Option<TypedPsObject<VhdInfo>>.None;
+
+                // check for snapshots, return parent path if it is not a snapshot
+                if (string.Equals(Path.GetExtension(info.Value.Path), ".avhdx", StringComparison.OrdinalIgnoreCase))
+                {
+                    snapshotVhdOption = vhdInfo;
+                    firstSnapshotVhdOption = vhdInfo;
+                }
+                else
+                {
+                    actualVhdOption = vhdInfo;
+                }
+
+                while (actualVhdOption.IsNone)
+                {
+
+                    var eitherVhdInfo = await snapshotVhdOption.ToEither(new PowershellFailure
+                            {Message = "Storage failure: Missing snapshot "})
+
+                        .Map(snapshotVhd => string.IsNullOrWhiteSpace(snapshotVhd?.Value?.ParentPath)
+                            ? Option<string>.None
+                            : Option<string>.Some(snapshotVhd.Value.ParentPath))
+                        .Bind(o => o.ToEither(new PowershellFailure
+                            {Message = "Storage failure: Missing snapshot parent path"}))
+                        .BindAsync(path => GetVhdInfo(path, engine))
+                        .BindAsync(o => o.ToEither(new PowershellFailure
+                            {Message = "Storage failure: Missing snapshot parent"}))
+                        .ConfigureAwait(false);
+
+
+                    if (eitherVhdInfo.IsLeft)
+                        return Prelude
+                            .Left<PowershellFailure, (Option<TypedPsObject<VhdInfo>> SnapshotVhd,
+                                Option<TypedPsObject<VhdInfo>> ActualVhd)>(eitherVhdInfo.LeftAsEnumerable()
+                                .FirstOrDefault());
+
+                    info = eitherVhdInfo.IfLeft(new TypedPsObject<VhdInfo>(null));
+
+
+                    if (string.Equals(Path.GetExtension(info.Value.Path), ".avhdx", StringComparison.OrdinalIgnoreCase))
+                        snapshotVhdOption = info;
+                    else
+                        actualVhdOption = info;
+
+                }
+
+                return Prelude.Right((firstSnapshotVhdOption, actualVhdOption));
+
+            }).IfNone(Prelude.Right((Option<TypedPsObject<VhdInfo>>.None, Option<TypedPsObject<VhdInfo>>.None)));
+
+
         }
 
 
@@ -156,9 +228,9 @@ namespace Haipa.VmManagement
             return storageIdentifier.ToEither(new PowershellFailure {Message = "unknown VM storage identifier"})
                 .BindAsync(id =>
                 {
-                    var fullPath = Path.Combine(secondPath, id);
+                    var fullPath = Path.Combine(firstPath, id);
 
-                    if (!firstPath.Equals(fullPath, StringComparison.InvariantCultureIgnoreCase))
+                    if (!secondPath.Equals(fullPath, StringComparison.InvariantCultureIgnoreCase))
                     {
                         return Prelude
                             .LeftAsync<PowershellFailure, string>(new PowershellFailure { Message = "Path calculation failure" })
@@ -174,7 +246,8 @@ namespace Haipa.VmManagement
 
         }
 
-        private static Task<Either<PowershellFailure, VMDiskStorageSettings>> DiskConfigToDiskStorageSettings(VirtualMachineDiskConfig diskConfig, VMStorageSettings storageSettings, HostSettings hostSettings)
+        private static Task<Either<PowershellFailure, VMDiskStorageSettings>> DiskConfigToDiskStorageSettings(
+            VirtualMachineDiskConfig diskConfig, VMStorageSettings storageSettings, HostSettings hostSettings)
         {
             var projectName = Prelude.Some("default");
             var environmentName = Prelude.Some("default");
@@ -193,18 +266,27 @@ namespace Haipa.VmManagement
             if (storageIdentifier.IsNone)
                 storageIdentifier = storageSettings.StorageIdentifier;
 
-            return                                
-                from resolvedPath in ResolveStorageBasePath(names, hostSettings.DefaultVirtualHardDiskPath)
-                from identifier in storageIdentifier.ToEither(new PowershellFailure{ Message = $"Unexpected missing storage identifier for disk '{diskConfig.Name}'."}).ToAsync().ToEither()
-                select new VMDiskStorageSettings
-                {
-                    StorageNames = names,
-                    StorageIdentifier = storageIdentifier,
-                    ParentPath = diskConfig.Template,
-                    Path = Path.Combine(resolvedPath,identifier),
-                    // ReSharper disable once StringLiteralTypo
-                    Name = $"{diskConfig.Name}.vhdx"
-                };
+            return
+                (from resolvedPath in ResolveStorageBasePath(names, hostSettings.DefaultVirtualHardDiskPath).ToAsync()
+                    from identifier in storageIdentifier.ToEither(new PowershellFailure
+                            {Message = $"Unexpected missing storage identifier for disk '{diskConfig.Name}'."})
+                        .ToAsync()
+                        .ToEither().ToAsync()
+
+                    let planned = new VMDiskStorageSettings
+                    {
+                        StorageNames = names,
+                        StorageIdentifier = storageIdentifier,
+                        ParentPath = diskConfig.Template,
+                        Path = Path.Combine(resolvedPath, identifier),
+                        AttachPath = Path.Combine(Path.Combine(resolvedPath, identifier), $"{diskConfig.Name}.vhdx"),
+                        // ReSharper disable once StringLiteralTypo
+                        Name = diskConfig.Name,
+                        SizeBytes = diskConfig.Size * 1024L * 1024 * 1024
+                    }
+                    select planned).ToEither();
+
+
 
         }
 

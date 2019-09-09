@@ -53,10 +53,9 @@ namespace Haipa.Modules.VmHostAgent
                 from _ in AttachToOperation(vmInfoCreated, _bus, command.OperationId)
                 from vmInfo in EnsureNameConsistent(vmInfoCreated, config, _engine)
 
-                from currentDiskStorageSettings in Storage.DetectDiskStorageSettings(vmInfo.Value.HardDrives, hostSettings, _engine)
-                from plannedDiskStorageSettings in Storage.PlanDiskStorageSettings(config, plannedStorageSettings, currentDiskStorageSettings, hostSettings)
+                from plannedDiskStorageSettings in Storage.PlanDiskStorageSettings(config, plannedStorageSettings, hostSettings, _engine)
 
-                from vmInfoConverged in ConvergeVm(vmInfo, config, plannedStorageSettings, plannedDiskStorageSettings, _engine)
+                from vmInfoConverged in ConvergeVm(vmInfo, config, plannedStorageSettings, plannedDiskStorageSettings, hostSettings, _engine)
                 select vmInfoConverged;
 
             return chain.ToAsync().MatchAsync(
@@ -89,13 +88,14 @@ namespace Haipa.Modules.VmHostAgent
             TypedPsObject<VirtualMachineInfo> vmInfo, 
             MachineConfig machineConfig, 
             VMStorageSettings storageSettings, 
-            Seq<VMDiskStorageSettings> diskStorageSettings, 
+            Seq<VMDiskStorageSettings> plannedDiskStorageSettings,
+            HostSettings hostSettings,
             IPowershellEngine engine)
         {
             return
                 from infoFirmware in Converge.Firmware(vmInfo, machineConfig, engine, ProgressMessage)
                 from infoCpu in Converge.Cpu(infoFirmware, machineConfig.VM.Cpu, engine, ProgressMessage)
-                from infoDisks in Converge.Disks(infoCpu, diskStorageSettings, engine, ProgressMessage)
+                from infoDisks in Converge.Disks(infoCpu, plannedDiskStorageSettings, hostSettings, engine, ProgressMessage)
                 from infoNetworks in Converge.NetworkAdapters(infoDisks, machineConfig.VM.NetworkAdapters.ToSeq(), machineConfig, engine, ProgressMessage)
                 from infoCloudInit in Converge.CloudInit(infoNetworks, storageSettings.VMPath,machineConfig.Provisioning.Hostname, machineConfig.Provisioning?.UserData, engine, ProgressMessage)
                 select infoCloudInit;

@@ -32,7 +32,7 @@ namespace Haipa.Runtime.Zero
             .UseHttpSys()
             .UseUrls($"https://localhost:62189/{path}")
                         .UseEnvironment("Development")
-                        .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Debug));
+                        .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Warning));
                 });
 
             container

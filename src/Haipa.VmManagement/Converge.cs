@@ -190,104 +190,156 @@ namespace Haipa.VmManagement
         }
 
         public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Disks(TypedPsObject<VirtualMachineInfo> vmInfo,
-            Seq<VMDiskStorageSettings> diskStorageSettings,  IPowershellEngine engine, Func<string, Task> reportProgress)
+            Seq<VMDiskStorageSettings> plannedDiskStorageSettings, HostSettings hostSettings, IPowershellEngine engine, Func<string, Task> reportProgress)
         {
             return
-                from vmInfoAfterDetach in DetachUndefinedDisks(engine, vmInfo, diskStorageSettings, reportProgress)
-                let convergeDisk = fun(((VMDiskStorageSettings e) => Disk(e, engine, vmInfoAfterDetach, reportProgress)))
-                from res in diskStorageSettings.MapToEitherAsync(convergeDisk).LastOrNone()
+                from currentDiskSettingsList in Storage.DetectDiskStorageSettings(vmInfo.Value.HardDrives, hostSettings, engine)
+                from vmInfoAfterDetach in DetachUndefinedDisks(engine, vmInfo, plannedDiskStorageSettings, currentDiskSettingsList, reportProgress)
+                let convergeDisk = fun(((VMDiskStorageSettings e) => Disk(e, engine, vmInfoAfterDetach, currentDiskSettingsList, reportProgress)))
+                from res in plannedDiskStorageSettings.MapToEitherAsync(convergeDisk).LastOrNone()
                 select res.IfNone(vmInfo);
 
         }
 
         
-        private static Task<Either<PowershellFailure, Seq<VMDiskStorageSettings>>> ToStorageSettings(
-            this Seq<VirtualMachineDiskConfig> diskConfig, VMStorageSettings storageSettings, TypedPsObject<VirtualMachineInfo> vmInfo)
+        //private static Task<Either<PowershellFailure, Seq<VMDiskStorageSettings>>> ToStorageSettings(
+        //    this Seq<VirtualMachineDiskConfig> diskConfig, VMStorageSettings storageSettings, TypedPsObject<VirtualMachineInfo> vmInfo)
+        //{
+        //    return Try(
+        //            from dc in diskConfig
+        //            let existingDisk = FindVMDiskByName(vmInfo, dc)
+        //            select dc.ToDiskStorageSettings(existingDisk, storageSettings)
+        //            )
+        //        .ToEither(ex => new PowershellFailure {Message = ex.Message})
+        //        .ToAsync().ToEither();
+
+        //}
+
+        //private static Option<HardDiskDriveInfo> FindVMDiskByName(this TypedPsObject<VirtualMachineInfo> vmInfo, VirtualMachineDiskConfig config)
+        //{
+        //    return vmInfo.Value.HardDrives.Find(d => Path.GetFileNameWithoutExtension(d.Path) == config.Name);
+        //}
+
+        //private static VMDiskStorageSettings ToDiskStorageSettings(this VirtualMachineDiskConfig diskConfig, Option<HardDiskDriveInfo> optionalInfo, VMStorageSettings storageSettings)
+        //{
+        //    return optionalInfo.Match(
+        //        None: () => new VMDiskStorageSettings
+        //        {
+        //            Name = diskConfig.Name,
+        //            Path = Path.Combine(
+        //                Path.Combine(storageSettings.VMPath, storageSettings.StorageIdentifier.ValueUnsafe()),
+        //                $"{diskConfig.Name}.vhdx"),
+        //            ParentPath = diskConfig.Template
+        //        },
+        //        Some: (diskInfo) => new VMDiskStorageSettings { Name = diskConfig.Name, Path = diskInfo.Path});
+        //}
+
+        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> DetachUndefinedDisks(IPowershellEngine engine, TypedPsObject<VirtualMachineInfo> vmInfo, Seq<VMDiskStorageSettings> plannedStorageSettings, Seq<CurrentVMDiskStorageSettings> currentStorageSettings,  Func<string, Task> reportProgress)
         {
-            return Try(
-                    from dc in diskConfig
-                    let existingDisk = FindVMDiskByName(vmInfo, dc)
-                    select dc.ToDiskStorageSettings(existingDisk, storageSettings)
-                    )
-                .ToEither(ex => new PowershellFailure {Message = ex.Message})
-                .ToAsync().ToEither();
+            var diskPaths = plannedStorageSettings.Map(x => x.AttachPath).MapT(y => y.ToLowerInvariant()).Somes();
+            var frozenDiskIds = currentStorageSettings.Where(x => x.Frozen).Map(x=>x.AttachedVMId);
 
-        }
+            return FindAndApply(vmInfo,
+                    i => i.HardDrives,
+                    hd =>
+                    {
 
-        private static Option<HardDiskDriveInfo> FindVMDiskByName(this TypedPsObject<VirtualMachineInfo> vmInfo, VirtualMachineDiskConfig config)
-        {
-            return vmInfo.Value.HardDrives.Find(d => Path.GetFileNameWithoutExtension(d.Path) == config.Name);
-        }
+                        var path = hd.Path?.ToLowerInvariant();
+                        var detach = !diskPaths.Contains(path) && !frozenDiskIds.Contains(hd.Id);
+                        return detach;
+                    },
+                    i => engine.RunAsync(PsCommandBuilder.Create().AddCommand("Remove-VMHardDiskDrive")
+                        .AddParameter("VMHardDiskDrive", i.PsObject))).Map(x => x.Lefts().HeadOrNone())
+                .MatchAsync(
+                    Some: l => LeftAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(l).ToEither(),
+                    None: () => RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo.Recreate())
+                        .ToEither());
 
-        private static VMDiskStorageSettings ToDiskStorageSettings(this VirtualMachineDiskConfig diskConfig, Option<HardDiskDriveInfo> optionalInfo, VMStorageSettings storageSettings)
-        {
-            return optionalInfo.Match(
-                None: () => new VMDiskStorageSettings
-                {
-                    Name = diskConfig.Name,
-                    Path = Path.Combine(
-                        Path.Combine(storageSettings.VMPath, storageSettings.StorageIdentifier.ValueUnsafe()),
-                        $"{diskConfig.Name}.vhdx"),
-                    ParentPath = diskConfig.Template
-                },
-                Some: (diskInfo) => new VMDiskStorageSettings { Name = diskConfig.Name, Path = diskInfo.Path});
-        }
-
-
-        public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> DetachUndefinedDisks(IPowershellEngine engine, TypedPsObject<VirtualMachineInfo> vmInfo, Seq<VMDiskStorageSettings> storageSettings, Func<string, Task> reportProgress)
-        {
-            var diskNames = storageSettings.Select(x => x.Name);
-
-            var res = await FindAndApply(vmInfo,
-                i => i.HardDrives,
-                hd => !diskNames.Contains(Path.GetFileName(hd.Path)),
-                i => engine.RunAsync(PsCommandBuilder.Create().AddCommand("Remove-VMHardDiskDrive")
-                    .AddParameter("VMHardDiskDrive", i.PsObject)));
-
-            return vmInfo.Recreate();
         }
 
         public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Disk(    
                 VMDiskStorageSettings diskSettings,
                 IPowershellEngine engine,
                 TypedPsObject<VirtualMachineInfo> vmInfo,
+                Seq<CurrentVMDiskStorageSettings> currentStorageSettings,
                 Func<string,Task> reportProgress)
         {
-            var vhdPath = Path.Combine(diskSettings.Path, diskSettings.Name);
 
-            if (!File.Exists(vhdPath))
+            var currentSettings =
+                currentStorageSettings.Find(x => diskSettings.Path.Equals(x.Path, StringComparison.OrdinalIgnoreCase) 
+                && diskSettings.Name.Equals(x.Name, StringComparison.InvariantCultureIgnoreCase) );
+            var frozenOptional = currentSettings.Map(x => x.Frozen);
+
+            if (frozenOptional.IsSome && frozenOptional.ValueUnsafe())
             {
-                await reportProgress($"Create VHD: {diskSettings.Name}").ConfigureAwait(false);
-
-                var createDiskResult = await diskSettings.ParentPath.Match(Some: parentPath =>
-                    {
-                        return engine.RunAsync(PsCommandBuilder.Create().Script(
-                            $"New-VHD -Path \"{vhdPath}\" -ParentPath \"{parentPath}\" -Differencing"));
-                    },
-                    None: () =>
-                    {
-                        return engine.RunAsync(PsCommandBuilder.Create().Script(
-                            $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {1024L * 1024* 1024 * 3}"));
-                    });
-
-                if (createDiskResult.IsLeft)
-                    return createDiskResult.LeftAsEnumerable().FirstOrDefault();
+                await reportProgress($"Skipping disk '{diskSettings.Name}': storage management is disabled for this disk.").ConfigureAwait(false);
+                return vmInfo;
             }
 
-            await GetOrCreateInfoAsync(vmInfo,
-                i => i.HardDrives,
-                disk => disk.Path.Equals(Path.Combine(diskSettings.Path, diskSettings.Name), StringComparison.OrdinalIgnoreCase),
-                async () =>
+
+
+            return await diskSettings.AttachPath.Map(async (vhdPath) =>
+            {
+
+                if (!File.Exists(vhdPath))
                 {
-                    await reportProgress($"Add VHD: {diskSettings.Name}").ConfigureAwait(false);
-                    return (await engine.GetObjectsAsync<HardDiskDriveInfo>(PsCommandBuilder.Create()
-                        .AddCommand("Add-VMHardDiskDrive")
-                        .AddParameter("VM", vmInfo.PsObject)
-                        .AddParameter("Path", vhdPath)).ConfigureAwait(false));
+                    await reportProgress($"Create VHD: {diskSettings.Name}").ConfigureAwait(false);
 
-                }).ConfigureAwait(false);
+                    var createDiskResult = await diskSettings.ParentPath.Match(Some: parentPath =>
+                        {
+                            return engine.RunAsync(PsCommandBuilder.Create().Script(
+                                $"New-VHD -Path \"{vhdPath}\" -ParentPath \"{parentPath}\" -Differencing"));
+                        },
+                        None: () =>
+                        {
+                            return engine.RunAsync(PsCommandBuilder.Create().Script(
+                                $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {diskSettings.SizeBytes}"));
+                        });
 
-            return vmInfo.Recreate();
+                    if (createDiskResult.IsLeft)
+                        return Prelude.Left(createDiskResult.LeftAsEnumerable().FirstOrDefault());
+                }
+
+                var sizeResult = await engine
+                    .GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("get-vhd").AddArgument(vhdPath))
+                    .BindAsync(x => x.HeadOrLeft(new PowershellFailure())).BindAsync(async (vhdInfo) =>
+                    {
+                        if (vhdInfo.Value.Size != diskSettings.SizeBytes && diskSettings.SizeBytes > 0)
+                        {
+                            await reportProgress(
+                                $"Resizing disk {diskSettings.Name} to {diskSettings.SizeBytes} bytes");
+                            return await engine.RunAsync(PsCommandBuilder.Create().AddCommand("Resize-VHD")
+                                .AddArgument(vhdPath)
+                                .AddParameter("Size", diskSettings.SizeBytes));
+
+                        }
+
+                        return Unit.Default;
+                    });
+
+                if (sizeResult.IsLeft)
+                    return Prelude.Left(sizeResult.LeftAsEnumerable().FirstOrDefault());
+
+
+                //use a local copy of VMInfo, as in parallel other disk updates may change vmInfo
+                var localVMInfo = vmInfo.Recreate();
+
+                await GetOrCreateInfoAsync(localVMInfo,
+                    i => i.HardDrives,
+                    disk => currentSettings.Map(x=>x.AttachedVMId) == disk.Id,
+                    async () =>
+                    {
+                        await reportProgress($"Add VHD: {diskSettings.Name}").ConfigureAwait(false);
+                        return (await engine.GetObjectsAsync<HardDiskDriveInfo>(PsCommandBuilder.Create()
+                            .AddCommand("Add-VMHardDiskDrive")
+                            .AddParameter("VM", vmInfo.PsObject)
+                            .AddParameter("Path", vhdPath)).ConfigureAwait(false));
+
+                    }).ConfigureAwait(false);
+
+                return Prelude.Right<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(localVMInfo.Recreate());
+            }).IfNone(Prelude.RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo.Recreate()).ToEither);
+
         }
 
 
@@ -587,10 +639,17 @@ namespace Haipa.VmManagement
         public string Name { get; set; }
         public string Path { get; set; }
         public Option<string> ParentPath { get; set; }
+        public Option<string> AttachPath { get; set; }
 
         public Option<string> StorageIdentifier { get; set; }
         public StorageNames StorageNames { get; set; }
+        public long SizeBytes { get; set; }
+    }
 
+    public class CurrentVMDiskStorageSettings : VMDiskStorageSettings
+    {
+        public bool Frozen { get; set; }
+        public string AttachedVMId { get; set; }
     }
 
 }
