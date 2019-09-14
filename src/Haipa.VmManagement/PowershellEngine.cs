@@ -31,7 +31,7 @@ namespace Haipa.VmManagement
 
             using (var ps = CreateShell())
             {
-                ps.AddScript("import-module Hyper-V -RequiredVersion 1.1");
+                ps.AddScript("import-module Hyper-V -RequiredVersion 2.0");
                 ps.Invoke();
             }
 

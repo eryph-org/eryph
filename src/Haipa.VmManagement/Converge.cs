@@ -189,19 +189,41 @@ namespace Haipa.VmManagement
             }
         }
 
-        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Disks(TypedPsObject<VirtualMachineInfo> vmInfo,
+        public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Disks(TypedPsObject<VirtualMachineInfo> vmInfo,
             Seq<VMDiskStorageSettings> plannedDiskStorageSettings, HostSettings hostSettings, IPowershellEngine engine, Func<string, Task> reportProgress)
         {
-            return
-                from currentDiskSettingsList in Storage.DetectDiskStorageSettings(vmInfo.Value.HardDrives, hostSettings, engine)
-                from vmInfoAfterDetach in DetachUndefinedDisks(engine, vmInfo, plannedDiskStorageSettings, currentDiskSettingsList, reportProgress)
-                let convergeDisk = fun(((VMDiskStorageSettings e) => Disk(e, engine, vmInfoAfterDetach, currentDiskSettingsList, reportProgress)))
-                from res in plannedDiskStorageSettings.MapToEitherAsync(convergeDisk).LastOrNone()
-                select res.IfNone(vmInfo);
+            var currentCheckpointType = vmInfo.Value.CheckpointType;
+            try
+            {
+                return await (
+                    from _ in SetVMCheckpointType(vmInfo, CheckpointType.Disabled, engine).ToAsync()
+                    from currentDiskSettingsList in Storage.DetectDiskStorageSettings(vmInfo.Value.HardDrives,
+                        hostSettings, engine).ToAsync()
+                    from vmInfoAfterDetach in DetachUndefinedDisks(engine, vmInfo, plannedDiskStorageSettings,
+                        currentDiskSettingsList, reportProgress).ToAsync()
+                    let convergeDisk = fun(((VMDiskStorageSettings e) =>
+                        Disk(e, engine, vmInfoAfterDetach, currentDiskSettingsList, reportProgress)))
+                    from res in plannedDiskStorageSettings.MapToEitherAsync(convergeDisk).LastOrNone().ToAsync()
+                    select res.IfNone(vmInfo)).ToEither().ConfigureAwait(false);
+            }
+            finally
+            {
+                await SetVMCheckpointType(vmInfo, currentCheckpointType, engine).ConfigureAwait(false);
+            }
+
 
         }
 
-        
+
+        public static Task<Either<PowershellFailure, Unit>> SetVMCheckpointType(TypedPsObject<VirtualMachineInfo> vmInfo, CheckpointType checkpointType, IPowershellEngine engine)
+        {
+            return engine.RunAsync(new PsCommandBuilder()
+                .AddCommand("Set-VM")
+                .AddParameter("VM", vmInfo.PsObject)
+                .AddParameter("CheckpointType", checkpointType));
+
+        }
+
         //private static Task<Either<PowershellFailure, Seq<VMDiskStorageSettings>>> ToStorageSettings(
         //    this Seq<VirtualMachineDiskConfig> diskConfig, VMStorageSettings storageSettings, TypedPsObject<VirtualMachineInfo> vmInfo)
         //{
