@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Management.Automation;
 using System.Threading.Tasks;
 using Haipa.Messages;
 using Haipa.VmManagement;
@@ -22,24 +21,24 @@ namespace Haipa.Modules.VmHostAgent
             _engine = engine;
         }
 
-        protected abstract Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> HandleCommand(
+        protected abstract Task<Either<PowershellFailure, Unit>> HandleCommand(
             TypedPsObject<VirtualMachineInfo> vmInfo, T command, IPowershellEngine engine);
 
         public async Task Handle(AcceptedOperation<T> message)
         {
             var command = message.Command;
 
-            var result = await GetVmInfo(command.MachineId, _engine)
+            var result = await GetVmInfo(command.MachineId, _engine)            
                 .BindAsync(optVmInfo =>
                 {
                     return optVmInfo.MatchAsync(
                         Some: s => HandleCommand(s, command, _engine),
-                        None: () => new TypedPsObject<VirtualMachineInfo>(new PSObject(new {Id = message.Command.MachineId})));
+                        None: () => Unit.Default);
                 }).ConfigureAwait(false);
             
             await result.MatchAsync(
                 LeftAsync: f => HandleError(f,command),
-                RightAsync: async vmInfo =>
+                RightAsync: async _ =>
                 {
                     await _bus.Send(new OperationCompletedEvent
                     {

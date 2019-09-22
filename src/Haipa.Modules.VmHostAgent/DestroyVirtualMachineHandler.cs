@@ -4,9 +4,10 @@ using Haipa.Messages;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
 using JetBrains.Annotations;
+using LanguageExt;
 using Rebus.Bus;
 
-using PsVMResult = LanguageExt.Either<Haipa.VmManagement.PowershellFailure, Haipa.VmManagement.TypedPsObject<Haipa.VmManagement.Data.VirtualMachineInfo>>;
+using PsVMResult = LanguageExt.Either<Haipa.VmManagement.PowershellFailure, LanguageExt.Unit>;
 
 namespace Haipa.Modules.VmHostAgent
 {
@@ -22,7 +23,7 @@ namespace Haipa.Modules.VmHostAgent
         {
             return vmInfo
                 .StopIfRunning(engine)
-                .BindAsync(v => v.Remove(engine));
+                .BindAsync(v => v.Remove(engine).MapAsync(_ => Unit.Default));
         }
 
         protected override PsCommandBuilder CreateGetVMCommand(Guid vmId)

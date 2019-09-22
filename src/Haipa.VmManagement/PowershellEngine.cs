@@ -31,8 +31,12 @@ namespace Haipa.VmManagement
 
             using (var ps = CreateShell())
             {
-                ps.AddScript("import-module Hyper-V -RequiredVersion 2.0");
+                ps.AddScript("import-module Hyper-V -RequiredVersion 2.0.0.0");
                 ps.Invoke();
+                ps.AddScript("disable-vmeventing");
+                ps.Invoke();
+
+
             }
 
         }
@@ -248,10 +252,15 @@ namespace Haipa.VmManagement
             return new PowershellFailure {Message = ex.Message};
         }
 
-        private static Either<PowershellFailure, TResult> HandlePowershellErrors<TResult>(PowerShell ps, Either<PowershellFailure, TResult> result)
-            => result.IsRight && ps.Streams.Error.Count > 0
-            ? new PowershellFailure {Message = ps.Streams.Error.FirstOrDefault()?.ToString()}
-            : result;
+        private static Either<PowershellFailure, TResult> HandlePowershellErrors<TResult>(PowerShell ps,
+            Either<PowershellFailure, TResult> result)
+        {
+            if (result.IsRight && ps.Streams.Error.Count > 0)
+            {
+                return new PowershellFailure {Message = $" Command: {ps.Streams.Error.FirstOrDefault().InvocationInfo.MyCommand}, Error: {ps.Streams.Error.FirstOrDefault()}, Exception: {ps.Streams.Error.FirstOrDefault().Exception}"};
+            }
+            return result;
+        }
 
         public static Try<Seq<TypedPsObject<T>>> InvokeTyped<T>(this PowerShell ps) => 
             Prelude.Try(ps.Invoke().Map(x=>new TypedPsObject<T>(x)).ToSeq());

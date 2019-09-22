@@ -1,4 +1,8 @@
-﻿using System;
+﻿// source: https://github.com/pbolduc/FlakeGen/blob/master/src/FlakeGen/Id64Generator.cs
+// created by https://github.com/pbolduc for https://github.com/pbolduc/FlakeGen
+// and licensed under Microsoft Public License (MS-PL)
+
+using System;
 using System.Collections.Generic;
 using System.Threading;
 

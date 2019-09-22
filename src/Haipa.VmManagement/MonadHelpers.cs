@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LanguageExt;
@@ -15,14 +17,33 @@ namespace Haipa.Modules.VmHostAgent
 
         }
 
+        public static Task<Either<TL, Seq<TR>>> MapToEitherAsync<TL, TR, TEntry>(this ISeq<TEntry> sequence, Func<int, TEntry, Task<Either<TL, TR>>> mapperFunc)
+        {
+            return sequence.Map(mapperFunc).ToImmutableArray()
+                .Traverse(l => l)
+                .Bind(e =>
+                {
+                    var enumerable = e as Either<TL, TR>[] ?? e.ToArray();
+                    return enumerable.Lefts().HeadOrNone()
+                        .MatchAsync(
+                            Some: s => LeftAsync<TL, Seq<TR>>(s).ToEither(),
+                            None: () => RightAsync<TL, Seq<TR>>(enumerable.Rights().ToSeq()).ToEither());
+                });
+
+        }
+
         public static Task<Either<TL, Seq<TR>>> MapToEitherAsync<TL, TR, TEntry>(this ISeq<TEntry> sequence, Func<TEntry, Task<Either<TL, TR>>> mapperFunc)
         {
-            return sequence.Map(mapperFunc)
+            return sequence.Map(mapperFunc).ToImmutableArray()
                 .Traverse(l => l)
-                .Bind(e => e.Lefts().HeadOrNone()
-                    .MatchAsync(
-                        Some: s => LeftAsync<TL, Seq<TR>>(s).ToEither(),
-                        None: () => RightAsync<TL, Seq<TR>>(e.Rights()).ToEither()));
+                .Bind(e =>
+                {
+                    var enumerable = e as Either<TL, TR>[] ?? e.ToArray();
+                    return enumerable.Lefts().HeadOrNone()
+                        .MatchAsync(
+                            Some: s => LeftAsync<TL, Seq<TR>>(s).ToEither(),
+                            None: () => RightAsync<TL, Seq<TR>>(enumerable.Rights().ToSeq()).ToEither());
+                });
 
         }
     }

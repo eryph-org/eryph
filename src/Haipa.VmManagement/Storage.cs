@@ -15,46 +15,51 @@ namespace Haipa.VmManagement
 {
     public static class Storage
     {
-
-
-
-        public static Task<Either<PowershellFailure, Option<VMStorageSettings>>> DetectVMStorageSettings(Option<TypedPsObject<VirtualMachineInfo>> optionalVmInfo, HostSettings hostSettings, Func<string, Task> reportProgress)
+        public static Task<Either<PowershellFailure, Option<VMStorageSettings>>> DetectVMStorageSettings(
+            Option<TypedPsObject<VirtualMachineInfo>> optionalVmInfo, HostSettings hostSettings,
+            Func<string, Task> reportProgress)
         {
             return optionalVmInfo
-                    .MatchAsync(
-                        Some: s => from namesAndId in PathToStorageNames(s.Value.Path, hostSettings.DefaultDataPath)
-                            from resolvedPath in ResolveStorageBasePath(namesAndId.Names, hostSettings.DefaultDataPath)
-                            from storageSettings in ComparePath(resolvedPath, s.Value.Path,
+                .MatchAsync(
+                    Some: s =>
+                    {
+                        var namesAndId = PathToStorageNames(s.Value.Path, hostSettings.DefaultDataPath);
+
+                        var settings =
+                            (from resolvedPath in ResolveStorageBasePath(namesAndId.Names, hostSettings.DefaultDataPath)
+                                from storageSettings in ComparePath(resolvedPath, s.Value.Path,
                                     namesAndId.StorageIdentifier)
-                                .Apply(e => e.Match(
-                                    Right: matchedPath => Prelude.RightAsync<PowershellFailure, VMStorageSettings>(
-                                        new VMStorageSettings
-                                        {
-                                            StorageNames = namesAndId.Names,
-                                            StorageIdentifier = namesAndId.StorageIdentifier,
-                                            VMPath = matchedPath,
-                                        }).ToEither(),
-                                    Left: async (l) =>
+                                select storageSettings);
+
+                        return settings.Bind(e => e.Match(
+                            Right: matchedPath => Prelude.RightAsync<PowershellFailure, VMStorageSettings>(
+                                new VMStorageSettings
+                                {
+                                    StorageNames = namesAndId.Names,
+                                    StorageIdentifier = namesAndId.StorageIdentifier,
+                                    VMPath = matchedPath,
+                                }).ToEither(),
+                            Left: async (l) =>
+                            {
+                                //current behaviour is to soft fail by disabling storage changes
+                                //however later we should add a option to strictly fail on all operations
+                                await reportProgress(
+                                    "Invalid machine storage settings. Storage management is disabled.");
+
+                                return Prelude.Right<PowershellFailure, VMStorageSettings>(
+                                    new VMStorageSettings
                                     {
-                                        //current behaviour is to soft fail by disabling storage changes
-                                        //however later we should add a option to strictly fail on all operations
-                                        await reportProgress(
-                                            "Invalid machine storage settings. Storage management is disabled.");
+                                        StorageNames = namesAndId.Names,
+                                        StorageIdentifier = namesAndId.StorageIdentifier,
+                                        VMPath = s.Value.Path,
+                                        Frozen = true
+                                    }
+                                );
 
-                                        return Prelude.Right<PowershellFailure, VMStorageSettings>(
-                                            new VMStorageSettings
-                                            {
-                                                StorageNames = namesAndId.Names,
-                                                StorageIdentifier = namesAndId.StorageIdentifier,
-                                                VMPath = s.Value.Path,
-                                                Frozen = true
-                                            }
-                                        );
-                                    }))
+                            })).MapAsync(r => r.ToSome().ToOption());
+                    },
+                    None: () => Option<VMStorageSettings>.None);    
 
-                            select storageSettings.Apply(r => r.ToSome().ToOption()),
-                        None: () =>
-                            Option<VMStorageSettings>.None);
         }
 
         public static Task<Either<PowershellFailure, VMStorageSettings>> PlanVMStorageSettings(MachineConfig config, Option<VMStorageSettings> currentStorageSettings, HostSettings hostSettings, Func<Task<Either<PowershellFailure, string>>> idGeneratorFunc)
@@ -67,7 +72,7 @@ namespace Haipa.VmManagement
         }
 
 
-        public static Task<Either<PowershellFailure, (StorageNames Names, Option<string> StorageIdentifier)>> PathToStorageNames(string path, string defaultPath)
+        public static (StorageNames Names, Option<string> StorageIdentifier) PathToStorageNames(string path, string defaultPath)
         {
             var projectName = Prelude.Some("default");
             var environmentName = Prelude.Some("default");
@@ -107,7 +112,7 @@ namespace Haipa.VmManagement
                 EnvironmentName = environmentName
             };
 
-            return Prelude.RightAsync<PowershellFailure, (StorageNames Names, Option<string> StorageIdentifier)>((names, storageIdentifier)).ToEither();
+            return (names, storageIdentifier);
 
         }
 
@@ -124,11 +129,12 @@ namespace Haipa.VmManagement
                     let vhdPath = snapshotInfo.ActualVhd.Map(vhd => vhd.Value.Path).IfNone(hdInfo.Path)
                     let parentPath = snapshotInfo.ActualVhd.Map(vhd => vhd.Value.ParentPath)
                     let snapshotPath = snapshotInfo.SnapshotVhd.Map(vhd => vhd.Value.Path)
-                    from nameAndId in PathToStorageNames(Path.GetDirectoryName(vhdPath), hostSettings.DefaultVirtualHardDiskPath).ToAsync()
+                    let nameAndId = PathToStorageNames(Path.GetDirectoryName(vhdPath), hostSettings.DefaultVirtualHardDiskPath)
                     let diskSize = vhdInfo.Map(v => v.Value.Size).IfNone(0)
                     select
                         new CurrentVMDiskStorageSettings
                         {
+                            Type = VirtualMachineDriveType.VHD,
                             Path = Path.GetDirectoryName(vhdPath),
                             Name = Path.GetFileNameWithoutExtension(vhdPath),
                             AttachPath = snapshotPath.IsSome? snapshotPath: vhdPath,
@@ -138,6 +144,8 @@ namespace Haipa.VmManagement
                             SizeBytes = diskSize,
                             Frozen = snapshotPath.IsSome,
                             AttachedVMId = hdInfo.Id,
+                            ControllerNumber = hdInfo.ControllerNumber,
+                            ControllerLocation = hdInfo.ControllerLocation,
                         }).ToEither();
                 return res;
             });
@@ -145,11 +153,12 @@ namespace Haipa.VmManagement
             return r;
         }
 
-        public static Task<Either<PowershellFailure, Seq<VMDiskStorageSettings>>> PlanDiskStorageSettings(
+        public static Task<Either<PowershellFailure, Seq<VMDriveStorageSettings>>> PlanDriveStorageSettings(
             MachineConfig config, VMStorageSettings storageSettings, HostSettings hostSettings, IPowershellEngine engine)
         {
-            return config.VM.Disks.ToSeq().MapToEitherAsync(c =>
-                    DiskConfigToDiskStorageSettings(c, storageSettings, hostSettings));
+            return config.VM.Drives
+                .ToSeq().MapToEitherAsync((index, c) =>
+                    DriveConfigToDriveStorageSettings(index,c, storageSettings, hostSettings));
 
         }
 
@@ -246,9 +255,43 @@ namespace Haipa.VmManagement
 
         }
 
-        private static Task<Either<PowershellFailure, VMDiskStorageSettings>> DiskConfigToDiskStorageSettings(
-            VirtualMachineDiskConfig diskConfig, VMStorageSettings storageSettings, HostSettings hostSettings)
+        private static Task<Either<PowershellFailure, VMDriveStorageSettings>> DriveConfigToDriveStorageSettings(int index,
+            VirtualMachineDriveConfig driveConfig, VMStorageSettings storageSettings, HostSettings hostSettings)
         {
+
+            const int controllerNumber = 0;  //currently this will not be configurable, but keep it here at least as constant
+            var controllerLocation = index;  //later, when adding controller config support, we will have to add a logic to 
+            //set location relative to the free slots for each controller                   
+
+
+            //if it is not a vhd, we only need controller settings
+            if (driveConfig.Type != VirtualMachineDriveType.VHD)
+            {
+                VMDriveStorageSettings result;
+                if (driveConfig.Type == VirtualMachineDriveType.DVD)
+                {
+                    result = new VMDVdStorageSettings
+                    {
+                        ControllerNumber = controllerNumber,
+                        ControllerLocation = controllerLocation,
+                        Type = VirtualMachineDriveType.DVD
+                    };
+                }
+                else
+                {
+                    result = new VMDriveStorageSettings
+                    {
+                        ControllerNumber = controllerNumber,
+                        ControllerLocation = controllerLocation,
+                        Type = driveConfig.Type.GetValueOrDefault(VirtualMachineDriveType.PHD)
+                    };
+                }
+
+                return Prelude.RightAsync<PowershellFailure, VMDriveStorageSettings>(result).ToEither();
+            }
+
+            //so far for the simple part, now the complicated case - a vhd disk...
+
             var projectName = Prelude.Some("default");
             var environmentName = Prelude.Some("default");
             var dataStoreName = Prelude.Some("default");
@@ -263,30 +306,34 @@ namespace Haipa.VmManagement
             };
 
 
+
             if (storageIdentifier.IsNone)
                 storageIdentifier = storageSettings.StorageIdentifier;
+
 
             return
                 (from resolvedPath in ResolveStorageBasePath(names, hostSettings.DefaultVirtualHardDiskPath).ToAsync()
                     from identifier in storageIdentifier.ToEither(new PowershellFailure
-                            {Message = $"Unexpected missing storage identifier for disk '{diskConfig.Name}'."})
+                            {Message = $"Unexpected missing storage identifier for disk '{driveConfig.Name}'."})
                         .ToAsync()
                         .ToEither().ToAsync()
 
                     let planned = new VMDiskStorageSettings
                     {
+                        Type = driveConfig.Type.Value,
                         StorageNames = names,
                         StorageIdentifier = storageIdentifier,
-                        ParentPath = diskConfig.Template,
+                        ParentPath = driveConfig.Template,
                         Path = Path.Combine(resolvedPath, identifier),
-                        AttachPath = Path.Combine(Path.Combine(resolvedPath, identifier), $"{diskConfig.Name}.vhdx"),
+                        AttachPath = Path.Combine(Path.Combine(resolvedPath, identifier), $"{driveConfig.Name}.vhdx"),
                         // ReSharper disable once StringLiteralTypo
-                        Name = diskConfig.Name,
-                        SizeBytes = diskConfig.Size * 1024L * 1024 * 1024
+                        Name = driveConfig.Name,
+                        SizeBytes = driveConfig.Size.ToOption().Match( None: () => 1 * 1024L * 1024 * 1024,
+                                                                      Some: s => s * 1024L * 1024 * 1024),
+                        ControllerNumber = controllerNumber,
+                        ControllerLocation = controllerLocation
                     }
-                    select planned).ToEither();
-
-
+                    select planned as VMDriveStorageSettings).ToEither();
 
         }
 
@@ -296,7 +343,7 @@ namespace Haipa.VmManagement
             var projectName = Prelude.Some("default");
             var environmentName = Prelude.Some("default");
             var dataStoreName = Prelude.Some("default");
-            var storageIdentifier = Prelude.None;
+            var storageIdentifier = Option<string>.None;
 
             var names = new StorageNames()
             {
@@ -305,6 +352,9 @@ namespace Haipa.VmManagement
                 DataStoreName = dataStoreName,
 
             };
+
+            if (!string.IsNullOrWhiteSpace(config.VM.Slug))
+                storageIdentifier = Prelude.Some(config.VM.Slug);
 
             return ResolveStorageBasePath(names, hostSettings.DefaultDataPath).MapAsync(path => new VMStorageSettings
             {

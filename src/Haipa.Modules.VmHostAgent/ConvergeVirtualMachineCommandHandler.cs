@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Management;
 using System.Numerics;
 using System.Text;
@@ -53,17 +54,20 @@ namespace Haipa.Modules.VmHostAgent
                 from _ in AttachToOperation(vmInfoCreated, _bus, command.OperationId)
                 from vmInfo in EnsureNameConsistent(vmInfoCreated, config, _engine)
 
-                from plannedDiskStorageSettings in Storage.PlanDiskStorageSettings(config, plannedStorageSettings, hostSettings, _engine)
-
-                from vmInfoConverged in ConvergeVm(vmInfo, config, plannedStorageSettings, plannedDiskStorageSettings, hostSettings, _engine)
+                from vmInfoConverged in ConvergeVm(vmInfo, config, plannedStorageSettings, hostSettings, _engine)
                 select vmInfoConverged;
 
             return chain.ToAsync().MatchAsync(
                 LeftAsync: HandleError,
-                RightAsync: vmInfo2 => _bus.Send(new OperationCompletedEvent
+                RightAsync: async vmInfo2 =>
                 {
-                    OperationId = command.OperationId,
-                }).ToUnit());
+                    await ProgressMessage($"Virtual machine '{vmInfo2.Value.Name}' has been converged.").ConfigureAwait(false);
+
+                    return await _bus.Send(new OperationCompletedEvent
+                    {
+                        OperationId = command.OperationId,
+                    }).ToUnit().ConfigureAwait(false);
+                });
 
         }
 
@@ -88,28 +92,17 @@ namespace Haipa.Modules.VmHostAgent
             TypedPsObject<VirtualMachineInfo> vmInfo, 
             MachineConfig machineConfig, 
             VMStorageSettings storageSettings, 
-            Seq<VMDiskStorageSettings> plannedDiskStorageSettings,
             HostSettings hostSettings,
             IPowershellEngine engine)
         {
             return
                 from infoFirmware in Converge.Firmware(vmInfo, machineConfig, engine, ProgressMessage)
                 from infoCpu in Converge.Cpu(infoFirmware, machineConfig.VM.Cpu, engine, ProgressMessage)
-                from infoDisks in Converge.Disks(infoCpu, plannedDiskStorageSettings, hostSettings, engine, ProgressMessage)
-                from infoNetworks in Converge.NetworkAdapters(infoDisks, machineConfig.VM.NetworkAdapters.ToSeq(), machineConfig, engine, ProgressMessage)
-                from infoCloudInit in Converge.CloudInit(infoNetworks, storageSettings.VMPath,machineConfig.Provisioning.Hostname, machineConfig.Provisioning?.UserData, engine, ProgressMessage)
+                from infoDrives in Converge.Drives(infoCpu, machineConfig, storageSettings, hostSettings, engine, ProgressMessage)
+                from infoNetworks in Converge.NetworkAdapters(infoDrives, machineConfig.VM.NetworkAdapters.ToSeq(), machineConfig, engine, ProgressMessage)
+                from infoCloudInit in Converge.CloudInit(infoNetworks, storageSettings.VMPath,machineConfig.Provisioning, engine, ProgressMessage)
                 select infoCloudInit;
                 
-                //Converge.Firmware(vmInfo, machineConfig, engine, ProgressMessage)
-                //.BindAsync(info => Converge.Cpu(info, machineConfig.VMConfig.Cpu, engine, ProgressMessage))
-                //.BindAsync(info => Converge.Disks(info, machineConfig.VMConfig.Disks?.ToSeq(), machineConfig, engine, ProgressMessage))
-
-                //.BindAsync(info => Converge.CloudInit(
-                //    info, machineConfig.VMConfig.Path, machineConfig.Provisioning.Hostname, machineConfig.Provisioning?.UserData, engine, ProgressMessage)).ConfigureAwait(false);
-
-            //await Converge.Definition(engine, vmInfo, config, ProgressMessage).ConfigureAwait(false);
-            //await ProgressMessage("Generate Virtual Machine provisioning disk").ConfigureAwait(false);
-
         }
 
         private async Task<Either<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>>> EnsureUnique(Seq<TypedPsObject<VirtualMachineInfo>> list, string id)
@@ -241,8 +234,8 @@ namespace Haipa.Modules.VmHostAgent
             {
                 return new HostSettings
                 {
-                    DefaultVirtualHardDiskPath = hostSettings.GetPropertyValue("DefaultVirtualHardDiskPath")?.ToString(),
-                    DefaultDataPath = hostSettings.GetPropertyValue("DefaultExternalDataRoot")?.ToString(),
+                    DefaultVirtualHardDiskPath = Path.Combine(hostSettings.GetPropertyValue("DefaultVirtualHardDiskPath")?.ToString(), "Haipa"),
+                    DefaultDataPath = Path.Combine(hostSettings.GetPropertyValue("DefaultExternalDataRoot")?.ToString(), "Haipa")
                 };
             }
 

@@ -18,8 +18,13 @@ namespace Haipa.Modules.VmHostAgent
 
         protected abstract string TransitionPowerShellCommand { get; }
 
-        protected override Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> HandleCommand(TypedPsObject<VirtualMachineInfo> vmInfo, T command, IPowershellEngine engine) =>
-            engine.RunAsync(new PsCommandBuilder().AddCommand(TransitionPowerShellCommand).AddParameter("VM", vmInfo.PsObject))
-                .MapAsync(u => vmInfo.Recreate());
+        protected override async Task<Either<PowershellFailure, Unit>> HandleCommand(TypedPsObject<VirtualMachineInfo> vmInfo,
+            T command, IPowershellEngine engine)
+        {
+            var result = await engine.RunAsync(new PsCommandBuilder().AddCommand(TransitionPowerShellCommand)
+                .AddParameter("VM", vmInfo.PsObject)).ConfigureAwait(false);
+
+            return result;
+        }
     }
 }
