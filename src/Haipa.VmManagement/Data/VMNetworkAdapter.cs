@@ -1,4 +1,6 @@
-﻿namespace Haipa.VmManagement.Data
+﻿using System;
+
+namespace Haipa.VmManagement.Data
 {
     public class VMNetworkAdapter : VirtualMachineDeviceInfo
     {
@@ -49,17 +51,17 @@
 
         public string AdapterId { get; private set; }
 
-        public string[] StatusDescription { get; private set; }
+        //public string[] StatusDescription { get; private set; }
 
 
-        public VMNetworkAdapterOperationalStatus[] Status { get; private set; }
+        //public VMNetworkAdapterOperationalStatus[] Status { get; private set; }
 
 
         //public bool IsManagementOs { get; private set; }
 
         //public bool IsExternalAdapter { get; private set; }
 
-        //public Guid? SwitchId { get; private set; }
+        public Guid? SwitchId { get; private set; }
 
 
         public VMNetworkAdapterAclSetting[] AclList { get; private set; }

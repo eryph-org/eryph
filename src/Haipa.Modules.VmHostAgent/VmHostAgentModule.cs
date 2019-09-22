@@ -8,6 +8,7 @@ using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Rebus.Bus;
+using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Logging;
 using Rebus.Retry.Simple;
@@ -46,6 +47,7 @@ namespace Haipa.Modules.VmHostAgent
                 {
                     x.SimpleRetryStrategy();
                     x.SetNumberOfWorkers(5);
+                    x.EnableSynchronousRequestReply();
                 })
                 .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>().Configure(s))
                 .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None }))

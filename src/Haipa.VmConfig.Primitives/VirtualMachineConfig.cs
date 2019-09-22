@@ -17,16 +17,27 @@ namespace Haipa.VmConfig
         public int Maximum { get; set; }
     }
 
-    public class VirtualMachineDiskConfig
+    public class VirtualMachineDriveConfig
     {
         public string Name { get; set; }
-
-        public string Path { get; set; }
-
+        public string ShareSlug { get; set; }
+        public string DataStore { get; set; }
 
         public string Template { get; set; }
 
-        public int Size { get; set; }
+        public int? Size { get; set; }
+        public VirtualMachineDriveType? Type { get; set; }
+    }
+
+    public enum VirtualMachineDriveType
+    {
+        // ReSharper disable InconsistentNaming
+        VHD = 0,
+        SharedVHD = 1,
+        PHD = 2,
+        DVD = 3,
+        // ReSharper restore InconsistentNaming
+
     }
 
     public class MachineSubnetConfig
@@ -59,13 +70,14 @@ namespace Haipa.VmConfig
 
     public class VirtualMachineConfig
     {
-        public string Path { get; set; }
+        public string Slug { get; set; }
+        public string DataStore { get; set; }
 
         public VirtualMachineCpuConfig Cpu { get; set; }
 
         public VirtualMachineMemoryConfig Memory { get; set; }
 
-        public List<VirtualMachineDiskConfig> Disks { get; set; }
+        public List<VirtualMachineDriveConfig> Drives { get; set; }
 
         public List<VirtualMachineNetworkAdapterConfig> NetworkAdapters { get; set; }
 
@@ -75,10 +87,11 @@ namespace Haipa.VmConfig
     {
         public string Name { get; set; }
         public string Id { get; set; }
+        public string Environment { get; set; }
+        public string Project { get; set; }
 
         public VirtualMachineConfig VM { get; set; }
 
-        
         public List<MachineNetworkConfig> Networks { get; set; }
 
         public VirtualMachineProvisioningConfig Provisioning { get; set; }
@@ -90,6 +103,14 @@ namespace Haipa.VmConfig
         public string Hostname { get; set; }
 
         public JObject UserData { get; set; }
+
+        public ProvisioningMethod Method { get; set; }
+    }
+
+    public enum ProvisioningMethod
+    {
+        None = 0,
+        CloudInit = 1
 
     }
 

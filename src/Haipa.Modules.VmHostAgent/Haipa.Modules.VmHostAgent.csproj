@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" />
+    <PackageReference Include="Rebus.Async" Version="6.0.2" />
   </ItemGroup>
 
   <ItemGroup>

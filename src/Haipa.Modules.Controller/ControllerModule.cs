@@ -28,6 +28,8 @@ namespace Haipa.Modules.Controller
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
             //container.Collection.Append(typeof(IHandleMessages<>), typeof(DispatchOperationHandler<>));
 
+            container.RegisterSingleton( () => new Id64Generator());
+
             container.Register(() =>
             {
                 var optionsBuilder = new DbContextOptionsBuilder<StateStoreContext>();
@@ -55,6 +57,9 @@ namespace Haipa.Modules.Controller
             services.AddModuleService<InventoryModuleService>();
 
         }
+
+
+
 
     }
 }
