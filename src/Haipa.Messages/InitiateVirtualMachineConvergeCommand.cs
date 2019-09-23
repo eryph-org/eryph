@@ -3,6 +3,12 @@ using Haipa.VmConfig;
 
 namespace Haipa.Messages
 {
+
+    public class CreateOrUpdateMachineCommand : OperationCommand
+    {
+        public MachineConfig Config { get; set; }
+    }
+
     public class ConvergeVirtualMachineCommand : OperationCommand
     {
         public MachineConfig Config { get; set; }

@@ -71,7 +71,7 @@ namespace Haipa.Modules.Api.Controllers
         {
 
             return Ok(await _operationManager.StartNew(
-                new ConvergeVirtualMachineCommand
+                new CreateOrUpdateMachineCommand
                 {
                     Config = config,
                 }
