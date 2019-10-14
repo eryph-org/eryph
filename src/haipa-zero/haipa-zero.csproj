@@ -25,9 +25,11 @@
     <ProjectReference Include="..\Haipa.Modules.Hosting.Topshelf\Haipa.Modules.Hosting.Topshelf.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Hosting\Haipa.Modules.Hosting.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj" />
+    <ProjectReference Include="..\Haipa.Modules.SSL\Haipa.Modules.SSL.csproj" />
     <ProjectReference Include="..\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj" />
   </ItemGroup>
   <PropertyGroup>
     <PostBuildEvent>REM Eazfuscator.NET is integrated with this project at MSBuild level: https://www.gapotchenko.com/eazfuscator.net/kb/100036</PostBuildEvent>
+    <PackageTags>9412ee86-c21b-4eb8-bd89-f650fbf44931</PackageTags>
   </PropertyGroup>
 </Project>

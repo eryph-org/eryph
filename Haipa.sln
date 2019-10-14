@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27428.2015
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29326.143
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{8FEDA44A-CCBF-4B47-838E-7FA6FEE688D4}"
 EndProject
@@ -50,6 +50,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting", "src\Haipa.Modules.Hosting\Haipa.Modules.Hosting.csproj", "{3824EE94-9D2C-47D5-99B7-BE275ADF6B73}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting.Topshelf", "src\Haipa.Modules.Hosting.Topshelf\Haipa.Modules.Hosting.Topshelf.csproj", "{93E945F0-31E6-488F-A4B0-23C2D7CE5977}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.Modules.SSL", "src\Haipa.Modules.SSL\Haipa.Modules.SSL.csproj", "{9AE5D176-B3C0-4957-88F5-9CFB4EDFCC08}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -144,6 +146,10 @@ Global
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9AE5D176-B3C0-4957-88F5-9CFB4EDFCC08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9AE5D176-B3C0-4957-88F5-9CFB4EDFCC08}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9AE5D176-B3C0-4957-88F5-9CFB4EDFCC08}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9AE5D176-B3C0-4957-88F5-9CFB4EDFCC08}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
