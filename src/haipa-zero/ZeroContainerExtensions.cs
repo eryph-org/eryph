@@ -2,7 +2,6 @@
 using Haipa.Modules.Controller;
 using Haipa.Modules.Hosting;
 using Haipa.Modules.Identity;
-using Haipa.Modules.SSL;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Rebus;
 using Haipa.StateDb;
@@ -26,20 +25,7 @@ namespace Haipa.Runtime.Zero
             container.HostModule<ApiModule>();
             container.HostModule<IdentityModule>();
             container.HostModule<VmHostAgentModule>();
-            container.HostModule<ControllerModule>();
-
-            container.CreateSsl(certOptions =>
-            {
-                certOptions.Issuer = Network.FQDN;
-                certOptions.FriendlyName= "Haipa Zero Management Certificate";
-                certOptions.ValidStartDate = DateTime.UtcNow;
-                certOptions.ValidEndDate = certOptions.ValidStartDate.AddYears(5);
-                certOptions.Password = "password";
-                certOptions.ExportDirectory = Directory.GetCurrentDirectory();
-                certOptions.URL = "https://localhost:62189/";
-                certOptions.AppID = "9412ee86-c21b-4eb8-bd89-f650fbf44931";
-            });
-            
+            container.HostModule<ControllerModule>();           
             container
                 .HostAspNetCore((path) =>
                 {
@@ -52,7 +38,6 @@ namespace Haipa.Runtime.Zero
                         .UseEnvironment("Development")
                         .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Warning));
                 });
-
             container
                 .UseInMemoryBus()
                 .UseInMemoryDb();
@@ -73,16 +58,6 @@ namespace Haipa.Runtime.Zero
 
             return container;
         }
-        public static Container CreateSsl(this Container container, Action<CertificateOptions> options)
-        {
-            var certOptions = new CertificateOptions();
-            options(certOptions);
-            if(!CertHelper.IsInMyStore(certOptions.Issuer))
-            {
-                certOptions.Thumbprint = CreateCertificate.Create(certOptions).Thumbprint;
-                Command.RegisterSSLToUrl(certOptions);
-            }
-            return container;
-        }
+       
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
 
-namespace Haipa.Modules.SSL
+namespace Haipa.Security.Cryptography
 {
     public static class Network
     {

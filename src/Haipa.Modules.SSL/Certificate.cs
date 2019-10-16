@@ -3,9 +3,9 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-namespace Haipa.Modules.SSL
+namespace Haipa.Security.Cryptography
 {
-    public static class CreateCertificate
+    public static class Certificate
     {
         public static X509Certificate2 Create(CertificateOptions options)
         {
@@ -41,15 +41,15 @@ namespace Haipa.Modules.SSL
 
                 X509Certificate2 cert = req.Create(
                     CreateCA(options),
-                    new DateTimeOffset(options.ValidStartDate), 
-                    new DateTimeOffset(options.ValidEndDate), 
+                    new DateTimeOffset(options.ValidStartDate),
+                    new DateTimeOffset(options.ValidEndDate),
                    CertHelper.SerialNumber.ToByteArray());
 
                 X509Certificate2 certWithPK = cert.CopyWithPrivateKey(rsa);
                 certWithPK.FriendlyName = options.FriendlyName;
 
                 X509Certificate2 certificate = new X509Certificate2(certWithPK.Export(X509ContentType.Pfx, options.Password), options.Password, X509KeyStorageFlags.MachineKeySet);
-                
+
                 CertHelper.AddToMyStore(certificate);
 
                 return certificate;
@@ -78,9 +78,21 @@ namespace Haipa.Modules.SSL
                 X509Certificate2 caCert = parentReq.CreateSelfSigned(new DateTimeOffset(options.ValidStartDate), new DateTimeOffset(options.ValidEndDate));
                 caCert.FriendlyName = string.Concat(options.FriendlyName, suffix);
 
-                CertHelper.AddToRootStore(caCert);
+                //Create CA if not exists
+                if (!CertHelper.IsInCAStore(options.Issuer))
+                {
+                    CertHelper.AddToRootStore(caCert);
+                }
 
                 return new X509Certificate2(caCert.Export(X509ContentType.Pfx, options.Password), options.Password, X509KeyStorageFlags.MachineKeySet);
+            }
+        }
+        public static void CreateSSL(CertificateOptions options)
+        {
+            if (!CertHelper.IsInMyStore(options.Issuer))
+            {
+                options.Thumbprint = Certificate.Create(options).Thumbprint;
+                Command.RegisterSSLToUrl(options);
             }
         }
     }

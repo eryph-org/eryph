@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 
-namespace Haipa.Modules.SSL
+namespace Haipa.Security.Cryptography
 {
     public class CertificateOptions
     {

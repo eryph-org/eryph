@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace Haipa.Modules.SSL
+namespace Haipa.Security.Cryptography
 {
     public static class Command
     {

@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-namespace Haipa.Modules.SSL
+namespace Haipa.Security.Cryptography
 {
     public static class CertHelper
     {
@@ -19,6 +19,12 @@ namespace Haipa.Modules.SSL
         private static X509Store ReturnStore()
         {
             var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            store.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
+            return store;
+        }
+        private static X509Store ReturnCAStore()
+        {
+            var store = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
             store.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
             return store;
         }
@@ -39,7 +45,14 @@ namespace Haipa.Modules.SSL
         {
             X509Store store = ReturnStore();
             X509Certificate2Collection certCollection = store.Certificates.Find(X509FindType.FindBySubjectName,
-                                                                                            subjectName, false);
+                                                                                            subjectName, true);
+            return certCollection.Count > 0;
+        }
+        public static bool IsInCAStore(string subjectName)
+        {
+            X509Store store = ReturnCAStore();
+            X509Certificate2Collection certCollection = store.Certificates.Find(X509FindType.FindBySubjectName,
+                                                                                            subjectName, true);
             return certCollection.Count > 0;
         }
         public static X509Certificate2 AddToRootStore(X509Certificate2 certCA)
