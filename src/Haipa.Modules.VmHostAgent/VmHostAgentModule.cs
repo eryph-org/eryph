@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Haipa.Messages;
+using Haipa.Messages.Operations;
 using Haipa.Rebus;
 using Haipa.VmManagement;
 using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using Rebus.Bus;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Logging;
@@ -42,7 +40,9 @@ namespace Haipa.Modules.VmHostAgent
             container.ConfigureRebus(configurer => configurer
                 .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, "haipa.agent." + Environment.MachineName))
                 .Routing(x => x.TypeBased()
-                    .MapAssemblyOf<ConvergeVirtualMachineResponse>("haipa.controller"))
+                    .Map(MessageTypes.ByOwner(MessageOwner.Controllers), "haipa.controllers")
+                    .Map(MessageTypes.ByOwner(MessageOwner.TaskQueue), "haipa.taskqueue")
+                )                
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy();
@@ -56,20 +56,5 @@ namespace Haipa.Modules.VmHostAgent
            
         }
 
-    }
-
-    public class StartBusModuleHandler : IModuleHandler
-    {
-        private readonly IBus _bus;
-
-        public StartBusModuleHandler(IBus bus)
-        {
-            _bus = bus;
-        }
-
-        public Task Execute(CancellationToken stoppingToken)
-        {
-            return _bus.Advanced.Topics.Subscribe("agent.all");
-        }
     }
 }

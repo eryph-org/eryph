@@ -2,6 +2,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using Haipa.Messages;
+using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Modules.Api.Services;
 using Haipa.Rebus;
 using Haipa.StateDb;
@@ -146,7 +147,7 @@ namespace Haipa.Modules.Api
                     .Transport(t =>
                         serviceProvider.GetRequiredService<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
                     .Routing(x => x.TypeBased()
-                        .MapAssemblyOf<ConvergeVirtualMachineCommand>("haipa.controller"))
+                        .Map(MessageTypes.ByOwner(MessageOwner.Controllers), "haipa.controllers"))                        
                     .Options(x =>
                     {
                         x.SimpleRetryStrategy();

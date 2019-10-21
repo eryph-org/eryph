@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Haipa.Messages;
+using Haipa.Messages.Commands;
+using Haipa.Messages.Operations;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Newtonsoft.Json;
 using Rebus.Bus;
+using OperationTask = Haipa.StateDb.Model.OperationTask;
 
 namespace Haipa.Modules.Api.Services
 {
@@ -20,12 +24,12 @@ namespace Haipa.Modules.Api.Services
             _bus = bus;
         }
 
-        public Task<Operation> StartNew<T>() where T : OperationCommand
+        public Task<Operation> StartNew<T>() where T : OperationTaskCommand
         {
             return StartNew<T>(Guid.Empty);
         }
 
-        public Task<Operation> StartNew<T>(Guid vmId) where T : OperationCommand
+        public Task<Operation> StartNew<T>(Guid vmId) where T : OperationTaskCommand
         {
             return StartNew(Activator.CreateInstance<T>(), vmId);
         }
@@ -37,40 +41,46 @@ namespace Haipa.Modules.Api.Services
 
         public Task<Operation> StartNew(Type operationCommandType, Guid vmId)
         {
-            return StartNew(Activator.CreateInstance(operationCommandType) as OperationCommand, vmId);
+            return StartNew(Activator.CreateInstance(operationCommandType) as OperationTaskCommand, vmId);
         }
 
-        public Task<Operation> StartNew(OperationCommand operationCommand)
+        public Task<Operation> StartNew(OperationTaskCommand operationCommand)
         {
             return StartNew(operationCommand, Guid.Empty);
         }
 
-        public async Task<Operation> StartNew(OperationCommand operationCommand, Guid vmId)
+        public async Task<Operation> StartNew(OperationTaskCommand taskCommand, Guid vmId)
         {
-            if(operationCommand == null)
-                throw new ArgumentNullException(nameof(operationCommand));
+            if(taskCommand == null)
+                throw new ArgumentNullException(nameof(taskCommand));
           
             var operation = new Operation
             {
                 Id = Guid.NewGuid(),
-                MachineGuid = vmId,
-                Status = OperationStatus.Queued
+                Status = OperationStatus.Queued,
+                MachineGuid = vmId
             };
+
             _db.Add(operation);
 
             await _db.SaveChangesAsync().ConfigureAwait(false);
         
-            if (vmId != Guid.Empty && (operationCommand is IMachineCommand machineCommand) 
+            if (vmId != Guid.Empty && (taskCommand is IMachineCommand machineCommand) 
                                    && machineCommand.MachineId != vmId)
                 machineCommand.MachineId = vmId;
 
 
-            operationCommand.OperationId = operation.Id;
-            var commandJson = JsonConvert.SerializeObject(operationCommand);
+            taskCommand.OperationId = operation.Id;
+            taskCommand.TaskId = Guid.NewGuid();
+            var commandJson = JsonConvert.SerializeObject(taskCommand);
 
             await _bus.Send(
-                new StartOperation(operationCommand.GetType().AssemblyQualifiedName, commandJson, operation.Id)
-                ).ConfigureAwait(false);
+                new CreateOperationCommand{ 
+                    TaskMessage = new CreateNewOperationTaskCommand(
+                        taskCommand.GetType().AssemblyQualifiedName, 
+                        commandJson, operation.Id,
+                        taskCommand.TaskId) })
+                .ConfigureAwait(false);
 
             return operation;
         }

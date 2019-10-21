@@ -1,7 +1,9 @@
 ﻿using System;
-using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Haipa.Messages;
+using Haipa.Messages.Commands;
+using Haipa.Messages.Operations;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;
@@ -14,13 +16,11 @@ namespace Haipa.Modules.Controller
 {
     [UsedImplicitly]
     internal class ProcessOperationSaga : Saga<OperationSagaData>,
-        IAmInitiatedBy<StartOperation>,
-        IHandleMessages<OperationAcceptedEvent>,
-        IHandleMessages<OperationCompletedEvent>,
-        IHandleMessages<OperationFailedEvent>,
-        IHandleMessages<OperationTimeoutMessage>,
-        IHandleMessages<ConvergeVirtualMachineProgressEvent>,
-        IHandleMessages<AttachMachineToOperationCommand>
+        IAmInitiatedBy<CreateOperationCommand>,
+        IHandleMessages<CreateNewOperationTaskCommand>,
+        IHandleMessages<OperationTaskAcceptedEvent>,
+        IHandleMessages<OperationTaskStatusEvent>,
+        IHandleMessages<OperationTimeoutEvent>
     {
         private readonly StateStoreContext _dbContext;
         private readonly IBus _bus;
@@ -29,22 +29,27 @@ namespace Haipa.Modules.Controller
         {
             _dbContext = dbContext;
             _bus = bus;
+
         }
 
 
         protected override void CorrelateMessages(ICorrelationConfig<OperationSagaData> config)
         {
-            config.Correlate<StartOperation>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationTimeoutMessage>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationAcceptedEvent>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationCompletedEvent>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationFailedEvent>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<ConvergeVirtualMachineProgressEvent>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<AttachMachineToOperationCommand>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<CreateOperationCommand>(m => m.TaskMessage.OperationId, d => d.OperationId);
+            config.Correlate<CreateNewOperationTaskCommand>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTimeoutEvent>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskAcceptedEvent>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent>(m => m.OperationId, d => d.OperationId);
 
         }
 
-        public async Task Handle(StartOperation message)
+        public Task Handle(CreateOperationCommand message)
+        {
+            Data.PrimaryTaskId = message.TaskMessage.TaskId;
+            return Handle(message.TaskMessage);
+        }
+
+        public async Task Handle(CreateNewOperationTaskCommand message)
         {
             var command = JsonConvert.DeserializeObject(message.CommandData, Type.GetType(message.CommandType));
 
@@ -55,144 +60,178 @@ namespace Haipa.Modules.Controller
                 return;
             }
 
-            op.Name = command.GetType().Name;
-
-            if (command is IMachineCommand machineCommand)
+            var task = await _dbContext.OperationTasks.FindAsync(message.TaskId).ConfigureAwait(false);
+            if (task == null)
             {
-                var machine = await _dbContext.Machines.FindAsync(machineCommand.MachineId).ConfigureAwait(false);
-
-                if (machine == null)
+                task = new OperationTask
                 {
-                    if (command is IOptionalMachineCommand)
+                    Id = message.TaskId,
+                    Operation = op,
+                };
+
+                _dbContext.Add(task);
+            }
+
+            task.Name = command.GetType().Name;
+            Data.Tasks.Add(message.TaskId, command.GetType().AssemblyQualifiedName);
+
+            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+
+            var sendCommandAttribute = command.GetType().GetCustomAttribute<MessageAttribute>();
+
+            switch (sendCommandAttribute.Owner)
+            {
+                case MessageOwner.VMAgent:
+                {
+                    if (command is IMachineCommand machineCommand)
                     {
-                        await Handle(new OperationCompletedEvent {OperationId = message.OperationId});
-                    }
-                    else
-                    {
-                        await Handle(new OperationFailedEvent()
+
+                        var machine = await _dbContext.Machines.FindAsync(machineCommand.MachineId).ConfigureAwait(false);
+
+                        if (machine == null)
                         {
-                            OperationId = message.OperationId, ErrorMessage = "Machine not found"
-                        });
+
+                            if (command.GetType().GetCustomAttribute(typeof(MachineMayNotExistsAttribute)) != null)
+                            {
+                                await Handle(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId));
+                            }
+                            else
+                            {
+                                await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
+                                    new ErrorData {ErrorMessage = "Machine not found"}));
+
+                            }
+
+                            return;
+                        }
+
+                        await _bus.Advanced.Routing.Send($"haipa.agent.{machine.AgentName}", command)
+                            .ConfigureAwait(false);
+
+                        return;
+
 
                     }
+
+                    await _bus.Advanced.Topics.Publish("agent.all", command).ConfigureAwait(false);
                     return;
                 }
 
-                await _bus.Advanced.Routing.Send($"haipa.agent.{machine.AgentName}", command).ConfigureAwait(false);
-                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+                case MessageOwner.Controllers :
+                    await _bus.Send(command);
+                    return;
 
-                return;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
-
-            await _bus.Advanced.Topics.Publish("agent.all", command) .ConfigureAwait(false);
-
         }
 
-
-        public async Task Handle(OperationTimeoutMessage message)
+        public async Task Handle(OperationTimeoutEvent message)
         {
         }
 
-        public Task Handle(ConvergeVirtualMachineProgressEvent message)
-        {
-            var operation = _dbContext.Operations.FirstOrDefault(op => op.Id == message.OperationId);
-            if (operation != null)
-            {
 
-                var opLogEntry =
-                    new OperationLog
-                    {
-                        Id = Guid.NewGuid(),
-                        Message = message.Message,
-                        Operation = operation,
-                        Timestamp = DateTime.Now
-                    };
-
-                _dbContext.Add(opLogEntry);
-                _dbContext.SaveChanges();
-            }
-
-            Console.WriteLine(message.Message);
-            return Task.CompletedTask;
-        }
-
-
-        public async Task Handle(OperationAcceptedEvent message)
+        public async Task Handle(OperationTaskAcceptedEvent message)
         {
             var op = await _dbContext.Operations.FindAsync(message.OperationId).ConfigureAwait(false);
 
-            if (op == null)
+            var task = await _dbContext.OperationTasks.FindAsync(message.TaskId).ConfigureAwait(false);
+
+            if (op == null || task == null)
                 return;
 
             op.Status = OperationStatus.Running;
             op.StatusMessage = OperationStatus.Running.ToString();
-            op.AgentName = message.AgentName;
+
+            task.Status = OperationTaskStatus.Running;
+            task.AgentName = message.AgentName;
 
             await _dbContext.SaveChangesAsync();
 
         }
 
-        public async Task Handle(OperationCompletedEvent message)
+        public async Task Handle(OperationTaskStatusEvent message)
         {
             var op = await _dbContext.Operations.FindAsync(message.OperationId).ConfigureAwait(false);
+            var task = await _dbContext.OperationTasks.FindAsync(message.TaskId).ConfigureAwait(false);
 
-            if (op == null)
+            if (op == null || task == null)
                 return;
 
-            op.Status = OperationStatus.Completed;
-            op.StatusMessage = OperationStatus.Completed.ToString();
+            if (task.Status == OperationTaskStatus.Queued || task.Status == OperationTaskStatus.Running)
+            {
+                var taskCommandTypeName = Data.Tasks[message.TaskId];
+
+                var genericType = typeof(OperationTaskStatusEvent<>);
+                var wrappedCommandType = genericType.MakeGenericType(Type.GetType(taskCommandTypeName));
+                var commandInstance = Activator.CreateInstance(wrappedCommandType, message);
+                await _bus.SendLocal(commandInstance);
+
+            }
+
+            task.Status = message.OperationFailed ? OperationTaskStatus.Failed : OperationTaskStatus.Completed;
+
+            if (message.TaskId == Data.PrimaryTaskId)
+            {
+                
+                op.Status = message.OperationFailed ? OperationStatus.Failed : OperationStatus.Completed;
+                string errorMessage = null;
+                if (message.GetMessage() is ErrorData errorData)
+                    errorMessage = errorData.ErrorMessage;
+
+                op.StatusMessage = string.IsNullOrWhiteSpace(errorMessage) ? op.Status.ToString() : errorMessage;
+                MarkAsComplete();
+            }
+
+
             await _dbContext.SaveChangesAsync();
-            await _bus.Advanced.Topics.Publish("agent.all", new InventoryRequestedEvent()).ConfigureAwait(false);
-            MarkAsComplete();
-        }
-
-        public async Task Handle(OperationFailedEvent message)
-        {
-            var op = await _dbContext.Operations.FindAsync(message.OperationId).ConfigureAwait(false);
-
-            if (op == null)
-                return;
-
-            op.Status = OperationStatus.Failed;
-            op.StatusMessage = message.ErrorMessage;
-
-            await _dbContext.SaveChangesAsync();
-
-            MarkAsComplete();
-        }
-
-        public async Task Handle(AttachMachineToOperationCommand message)
-        {
-            var operation = _dbContext.Operations.FirstOrDefault(op => op.Id == message.OperationId);
-            if (operation != null)
-            {
-                operation.MachineGuid = message.MachineId;
-            }
-
-            var agent = _dbContext.Agents.FirstOrDefault(op => op.Name == message.AgentName);
-            if (agent == null)
-            {
-                agent = new Agent { Name = message.AgentName };
-                await _dbContext.AddAsync(agent).ConfigureAwait(false);
-            }
-
-            var machine = _dbContext.Machines.FirstOrDefault(op => op.Id == message.MachineId);
-            if (machine == null)
-            {
-                machine = new Machine
-                {
-                    Agent = agent,
-                    AgentName = agent.Name,
-                    Id = message.MachineId,
-                    VM = new VirtualMachine{ Id = message.MachineId}
-                };
-                await _dbContext.AddAsync(machine).ConfigureAwait(false);
-
-            }
-
-            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
         }
+
+        //public async Task Handle(OperationCompletedEvent message)
+        //{
+        //    var op = await _dbContext.Operations.FindAsync(message.OperationId).ConfigureAwait(false);
+
+        //    if (op == null)
+        //        return;
+
+        //    op.Status = message.Failed ? OperationStatus.Failed : OperationStatus.Completed;
+        //    op.StatusMessage = !string.IsNullOrWhiteSpace(message.Message) ? message.Message : op.Status.ToString();
+
+        //    await _dbContext.SaveChangesAsync();
+
+        //    MarkAsComplete();
+        //}
+
+
 
     }
+
+    //[UsedImplicitly]
+    //public class DefaultOperationTaskStatusEventHandler<T> : IHandleMessages<OperationTaskStatusEvent<T>> where T: OperationTaskMessage
+    //{
+    //    private readonly IBus _bus;
+
+    //    public DefaultOperationTaskStatusEventHandler(IBus bus)
+    //    {
+    //        _bus = bus;
+    //    }
+
+
+    //    public async Task Handle(OperationTaskStatusEvent<T> message)
+    //    {
+
+    //        string statusMessage = null;
+
+    //        if (message.GetMessage() is ErrorData errorData)
+    //            statusMessage = errorData.ErrorMessage;
+
+    //        await _bus.SendLocal(new OperationCompletedEvent
+    //        {
+    //            Failed = message.OperationFailed,
+    //            Message = statusMessage,
+    //            OperationId = message.OperationId
+    //        }).ConfigureAwait(false);
+    //    }
+    //}
 }

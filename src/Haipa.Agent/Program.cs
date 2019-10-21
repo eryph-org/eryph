@@ -1,6 +1,7 @@
 ﻿using System;
 using AutoMapper;
 using Haipa.Messages;
+using Haipa.Messages.Operations;
 using Haipa.Rebus;
 using Haipa.VmManagement;
 using Newtonsoft.Json;
@@ -31,8 +32,7 @@ namespace Haipa.Agent
             container.ConfigureRebus(configurer => configurer
                 .Transport(t => t.UseRabbitMq("amqp://guest:guest@localhost", "agent.localhost"))
                 .Routing(x => x.TypeBased()
-                    .Map<ConvergeVirtualMachineResponse>("Haipa.controller")
-                    .Map<ConvergeVirtualMachineProgressEvent>("Haipa.controller"))
+                    .Map<OperationTaskProgressEvent>("Haipa.controller"))
                 //.Routing(x => x.AddTransportMessageForwarder(message =>
                 //{
                 //    if (!message.Headers.ContainsKey("agent-hostname"))

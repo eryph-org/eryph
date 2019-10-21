@@ -8,6 +8,8 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Haipa.Messages;
+using Haipa.Messages.Commands;
+using Haipa.Messages.Events;
 using Haipa.Modules.VmHostAgent.Inventory;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;

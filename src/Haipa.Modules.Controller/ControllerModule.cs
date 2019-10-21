@@ -1,4 +1,6 @@
 ﻿using System;
+using Haipa.Messages;
+using Haipa.Messages.Operations;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using JetBrains.Annotations;
@@ -8,6 +10,7 @@ using Newtonsoft.Json;
 using Rebus.Handlers;
 using Rebus.Logging;
 using Rebus.Retry.Simple;
+using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
@@ -26,9 +29,10 @@ namespace Haipa.Modules.Controller
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
 
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
-            //container.Collection.Append(typeof(IHandleMessages<>), typeof(DispatchOperationHandler<>));
+            container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationTaskHandler<>));
 
             container.RegisterSingleton( () => new Id64Generator());
+            container.Register<IOperationTaskDispatcher, OperationTaskDispatcher>();
 
             container.Register(() =>
             {
@@ -38,7 +42,10 @@ namespace Haipa.Modules.Controller
             }, Lifestyle.Scoped);
 
             container.ConfigureRebus(configurer => configurer
-                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, "haipa.controller"))
+                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, "haipa.controllers"))
+                .Routing(r => r.TypeBased()
+                    .Map(MessageTypes.ByOwner(MessageOwner.Controllers), "haipa.controllers")
+                    .Map(MessageTypes.ByOwner(MessageOwner.TaskQueue), "haipa.taskqueue"))
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy();
@@ -54,6 +61,7 @@ namespace Haipa.Modules.Controller
 
         protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
+            services.AddModuleHandler<StartBusModuleHandler>();
             services.AddModuleService<InventoryModuleService>();
 
         }
