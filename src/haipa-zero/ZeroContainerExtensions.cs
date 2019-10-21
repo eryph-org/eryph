@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;
+using System;
+using System.IO;
 
 namespace Haipa.Runtime.Zero
 {
@@ -23,23 +25,23 @@ namespace Haipa.Runtime.Zero
             container.HostModule<ApiModule>();
             container.HostModule<IdentityModule>();
             container.HostModule<VmHostAgentModule>();
-            container.HostModule<ControllerModule>();
-
+            container.HostModule<ControllerModule>();           
             container
                 .HostAspNetCore((path) =>
                 {
                     return WebHost.CreateDefaultBuilder(args)
-            .UseHttpSys()
-            .UseUrls($"https://localhost:62189/{path}")
+                        .UseHttpSys(options =>
+                        {
+                            options.UrlPrefixes.Add($"https://localhost:62189/{path}");
+                        })
+                        .UseUrls($"https://localhost:62189/{path}")
                         .UseEnvironment("Development")
                         .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Warning));
                 });
-
             container
                 .UseInMemoryBus()
                 .UseInMemoryDb();
         }
-
         public static Container UseInMemoryBus(this Container container)
         {
             container.RegisterInstance(new InMemNetwork(true));
@@ -49,7 +51,6 @@ namespace Haipa.Runtime.Zero
             container.Register<IRebusSubscriptionConfigurer, InMemorySubscriptionConfigurer>();
             container.Register<IRebusTimeoutConfigurer, InMemoryTimeoutConfigurer>(); return container;
         }
-
         public static Container UseInMemoryDb(this Container container)
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
@@ -57,5 +58,6 @@ namespace Haipa.Runtime.Zero
 
             return container;
         }
+       
     }
 }
