@@ -4,6 +4,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Haipa.Messages;
+using Haipa.Messages.Commands;
+using Haipa.Messages.Events;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Microsoft.EntityFrameworkCore;

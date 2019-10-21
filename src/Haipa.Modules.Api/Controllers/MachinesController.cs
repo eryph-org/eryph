@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages;
+using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Modules.Api.Services;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;

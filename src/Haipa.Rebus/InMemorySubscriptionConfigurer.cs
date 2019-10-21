@@ -14,9 +14,9 @@ namespace Haipa.Rebus
             _store = store;
         }
         
-        public void Configure(StandardConfigurer<ISubscriptionStorage> timeoutManager)
+        public void Configure(StandardConfigurer<ISubscriptionStorage> subscriberStore)
         {
-            timeoutManager.StoreInMemory(_store);
+            subscriberStore.StoreInMemory(_store);
         }
     }
 }

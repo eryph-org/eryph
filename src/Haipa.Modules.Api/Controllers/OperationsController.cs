@@ -44,7 +44,7 @@ namespace Haipa.Modules.Api.Controllers
 
         [EnableQuery]
         [SwaggerOperation(OperationId = "Operations_GetLogEntries")]
-        [ProducesResponseType(typeof(ODataValue<DbSet<OperationLog>>), Status200OK)]
+        [ProducesResponseType(typeof(ODataValue<DbSet<OperationLogEntry>>), Status200OK)]
         [Produces("application/json")]
         public IActionResult GetLogEntries([FromODataUri] Guid key)
         {

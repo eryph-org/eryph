@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Haipa.Messages;
+using Haipa.Messages.Commands.OperationTasks;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
 using JetBrains.Annotations;

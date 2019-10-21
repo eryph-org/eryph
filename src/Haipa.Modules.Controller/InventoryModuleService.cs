@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Haipa.Messages;
+using Haipa.Messages.Events;
 using Microsoft.Extensions.Hosting;
 using Rebus.Bus;
 
@@ -16,7 +17,7 @@ namespace Haipa.Modules.Controller
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
-        {
+        {            
             return _bus.Advanced.Topics.Publish("agent.all", new InventoryRequestedEvent());
         }
 

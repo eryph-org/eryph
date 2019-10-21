@@ -1,4 +1,5 @@
 ﻿using Haipa.Messages;
+using Haipa.Messages.Commands.OperationTasks;
 using Haipa.VmManagement;
 using JetBrains.Annotations;
 using Rebus.Bus;
