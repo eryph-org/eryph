@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
@@ -22,12 +23,6 @@ namespace Haipa.Security.Cryptography
             store.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
             return store;
         }
-        private static X509Store ReturnCAStore()
-        {
-            var store = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
-            store.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
-            return store;
-        }
         public static X509Certificate2 AddToMyStore(X509Certificate2 cert)
         {
             X509Store store = ReturnStore();
@@ -41,27 +36,39 @@ namespace Haipa.Security.Cryptography
             store.Remove(certificate2);
             store.Close();
         }
-        public static bool IsInMyStore(string subjectName)
+        public static bool IsInMyStore(string IssuerName)
         {
             X509Store store = ReturnStore();
-            X509Certificate2Collection certCollection = store.Certificates.Find(X509FindType.FindBySubjectName,
-                                                                                            subjectName, true);
+            X509Certificate2Collection certCollection = store.Certificates.Find(X509FindType.FindByIssuerName,
+                                                                                            IssuerName, false);
             return certCollection.Count > 0;
         }
-        public static bool IsInCAStore(string subjectName)
+        public static bool ExistsValidCert(string IssuerName)
         {
-            X509Store store = ReturnCAStore();
-            X509Certificate2Collection certCollection = store.Certificates.Find(X509FindType.FindBySubjectName,
-                                                                                            subjectName, true);
-            return certCollection.Count > 0;
+            X509Store store = ReturnStore();
+            X509Certificate2Collection certCollection = store.Certificates.Find(X509FindType.FindByIssuerName,
+                                                                                            IssuerName, false);
+            if ( certCollection.Count > 0)
+            {
+                foreach (var item in certCollection)
+                {
+                   if (IsExpired(item) == false)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            else { return false; }
         }
-        public static X509Certificate2 AddToRootStore(X509Certificate2 certCA)
+        public static bool IsExpired(X509Certificate2 cert)
         {
-            var store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
-            store.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadWrite);
-            store.Add(certCA);
-            store.Close();
-            return certCA;
+            DateTime expireDate = System.Convert.ToDateTime(cert.GetExpirationDateString());
+            if (DateTime.Now > expireDate)
+            {
+                return true;
+            }
+            else { return false; }
         }
        
     }
