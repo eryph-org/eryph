@@ -54,6 +54,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting", "sr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting.Topshelf", "src\Haipa.Modules.Hosting.Topshelf\Haipa.Modules.Hosting.Topshelf.csproj", "{93E945F0-31E6-488F-A4B0-23C2D7CE5977}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.Identity", "src\Haipa.Identity\Haipa.Identity.csproj", "{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Security.Cryptography", "src\Haipa.Security.Cryptography\Haipa.Security.Cryptography.csproj", "{4908D4F4-3545-4FF1-B37F-E3E237B05C54}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.Identity", "src\Haipa.Identity\Haipa.Identity.csproj", "{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}"
@@ -151,6 +153,10 @@ Global
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
