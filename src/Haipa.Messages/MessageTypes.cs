@@ -9,14 +9,14 @@ namespace Haipa.Messages
 {
     public static class MessageTypes
     {
-        public static IEnumerable<Type> BySubscribers(MessageSubscribers subscriber)
+        public static IEnumerable<Type> BySubscriber(MessageSubscriber subscriber)
         {
-            return MessageTypesWithAttributeValues<SubscribeEventAttribute>( a => a.Subscribers == subscriber);
+            return MessageTypesWithAttributeValues<SubscribesMessageAttribute>( a => a.Subscriber == subscriber);
         }
 
-        public static IEnumerable<Type> ByOwner(MessageOwner owner)
+        public static IEnumerable<Type> ByRecipient(MessageRecipient recipient)
         {
-            return MessageTypesWithAttributeValues<MessageAttribute>(a => a.Owner == owner);
+            return MessageTypesWithAttributeValues<SendMessageToAttribute>(a => a.Recipient == recipient);
         }
 
         private static IEnumerable<Type> MessageTypesWithAttributeValues<TAttribute>(Func<TAttribute, bool> predicateFunc)
@@ -31,10 +31,11 @@ namespace Haipa.Messages
 
         private static IEnumerable<Type> GetTypesWithMessageAttribute()
         {
-            var assembly = typeof(MessageAttribute).Assembly;
+            var assembly = typeof(SendMessageToAttribute).Assembly;
 
             return assembly.GetExportedTypes().Where(x =>
-                x.GetCustomAttributes<MessageAttribute>().Any());
+                x.GetCustomAttributes<SendMessageToAttribute>().Any() || 
+                x.GetCustomAttributes<SubscribesMessageAttribute>().Any());
         }
     }
 

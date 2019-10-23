@@ -3,8 +3,7 @@ using Newtonsoft.Json;
 
 namespace Haipa.Messages.Operations
 {
-    [SubscribeEvent(MessageSubscribers.ControllerModules)]
-    [Message(MessageOwner.TaskQueue)]
+    [SubscribesMessage(MessageSubscriber.Controllers)]
     public class OperationTaskStatusEvent : IOperationTaskMessage
     {
         public Guid OperationId { get; set; }

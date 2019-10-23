@@ -1,7 +1,7 @@
 ﻿namespace Haipa.Messages.Commands
 {
 
-    [Message(MessageOwner.Controllers)]
+    [SendMessageTo(MessageRecipient.Controllers)]
     public class GenerateIdCommand
     {
     }

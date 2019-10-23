@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Haipa.Messages;
 using Haipa.Messages.Commands;
 using Haipa.Messages.Operations;
+using Haipa.Rebus;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;
@@ -77,11 +78,11 @@ namespace Haipa.Modules.Controller
 
             await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
-            var sendCommandAttribute = command.GetType().GetCustomAttribute<MessageAttribute>();
+            var sendCommandAttribute = command.GetType().GetCustomAttribute<SendMessageToAttribute>();
 
-            switch (sendCommandAttribute.Owner)
+            switch (sendCommandAttribute.Recipient)
             {
-                case MessageOwner.VMAgent:
+                case MessageRecipient.VMAgent:
                 {
                     if (command is IMachineCommand machineCommand)
                     {
@@ -105,7 +106,7 @@ namespace Haipa.Modules.Controller
                             return;
                         }
 
-                        await _bus.Advanced.Routing.Send($"haipa.agent.{machine.AgentName}", command)
+                        await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{machine.AgentName}", command)
                             .ConfigureAwait(false);
 
                         return;
@@ -113,11 +114,11 @@ namespace Haipa.Modules.Controller
 
                     }
 
-                    await _bus.Advanced.Topics.Publish("agent.all", command).ConfigureAwait(false);
+                    await _bus.Advanced.Topics.Publish($"broadcast_{QueueNames.VMHostAgent}", command).ConfigureAwait(false);
                     return;
                 }
 
-                case MessageOwner.Controllers :
+                case MessageRecipient.Controllers :
                     await _bus.Send(command);
                     return;
 
@@ -126,8 +127,9 @@ namespace Haipa.Modules.Controller
             }
         }
 
-        public async Task Handle(OperationTimeoutEvent message)
+        public Task Handle(OperationTimeoutEvent message)
         {
+            return Task.CompletedTask;
         }
 
 

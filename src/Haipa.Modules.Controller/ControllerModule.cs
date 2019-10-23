@@ -42,10 +42,10 @@ namespace Haipa.Modules.Controller
             }, Lifestyle.Scoped);
 
             container.ConfigureRebus(configurer => configurer
-                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, "haipa.controllers"))
+                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, QueueNames.Controllers))
                 .Routing(r => r.TypeBased()
-                    .Map(MessageTypes.ByOwner(MessageOwner.Controllers), "haipa.controllers")
-                    //.Map(MessageTypes.ByOwner(MessageOwner.TaskQueue), "haipa.taskqueue")
+                    .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers)
+                    // agent routing is not registered here by design. Agent commands will be routed by agent name
                     )
                 .Options(x =>
                 {

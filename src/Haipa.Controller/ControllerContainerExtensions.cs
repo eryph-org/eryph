@@ -4,11 +4,6 @@ using Haipa.Modules.Hosting;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using Haipa.StateDb.MySql;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Logging;
-using Rebus.Persistence.InMem;
-using Rebus.RabbitMq;
-using Rebus.Transport.InMem;
 using SimpleInjector;
 
 namespace Haipa.Controller

@@ -2,8 +2,7 @@
 
 namespace Haipa.Messages.Operations
 {
-    [Message(MessageOwner.TaskQueue)]
-    [SubscribeEvent(MessageSubscribers.ControllerModules)]
+    [SubscribesMessage(MessageSubscriber.Controllers)]
     public class OperationTaskAcceptedEvent : IOperationTaskMessage
     {
         public Guid OperationId { get; set; }

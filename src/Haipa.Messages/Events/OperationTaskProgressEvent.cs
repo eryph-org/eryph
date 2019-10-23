@@ -2,8 +2,7 @@
 
 namespace Haipa.Messages.Operations
 {
-    [SubscribeEvent(MessageSubscribers.ControllerModules)]
-    [Message(MessageOwner.TaskQueue)]
+    [SubscribesMessage(MessageSubscriber.Controllers)]
     public class OperationTaskProgressEvent
     {
         public Guid Id { get; set; }

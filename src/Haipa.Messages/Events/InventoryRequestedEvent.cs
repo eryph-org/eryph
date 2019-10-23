@@ -1,7 +1,6 @@
 ﻿namespace Haipa.Messages.Events
 {
-    [SubscribeEvent(MessageSubscribers.VMAgentModules)]
-    [Message(MessageOwner.Controllers)]
+    [SubscribesMessage(MessageSubscriber.VMHostAgents)]
     public class InventoryRequestedEvent
     {
 

@@ -3,7 +3,7 @@ using Haipa.Messages.Events;
 
 namespace Haipa.Messages.Commands
 {
-    [Message(MessageOwner.Controllers)]
+    [SendMessageTo(MessageRecipient.Controllers)]
     public class UpdateInventoryCommand
     {
         public string AgentName { get; set; }

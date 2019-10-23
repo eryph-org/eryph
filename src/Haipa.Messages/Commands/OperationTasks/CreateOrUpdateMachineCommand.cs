@@ -4,7 +4,7 @@ using Haipa.VmConfig;
 namespace Haipa.Messages.Commands.OperationTasks
 {
 
-    [Message(MessageOwner.Controllers)]
+    [SendMessageTo(MessageRecipient.Controllers)]
     public class CreateOrUpdateMachineCommand : OperationTaskCommand
     {
         public MachineConfig Config { get; set; }

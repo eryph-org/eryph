@@ -1,6 +1,5 @@
 ﻿using System;
 using Haipa.Messages;
-using Haipa.Messages.Operations;
 using Haipa.Rebus;
 using Haipa.VmManagement;
 using JetBrains.Annotations;
@@ -38,10 +37,9 @@ namespace Haipa.Modules.VmHostAgent
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationHandler<>));
 
             container.ConfigureRebus(configurer => configurer
-                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, "haipa.agent." + Environment.MachineName))
+                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, $"{QueueNames.VMHostAgent}.{Environment.MachineName}"))
                 .Routing(x => x.TypeBased()
-                    .Map(MessageTypes.ByOwner(MessageOwner.Controllers), "haipa.controllers")
-                    //.Map(MessageTypes.ByOwner(MessageOwner.TaskQueue), "haipa.taskqueue")
+                    .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers)
                 )                
                 .Options(x =>
                 {
