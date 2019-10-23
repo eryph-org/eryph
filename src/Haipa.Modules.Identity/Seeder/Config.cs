@@ -2,7 +2,7 @@
 using IdentityServer4.Models;
 using System.Collections.Generic;
 
-namespace Haipa.Modules.Identity.Demo
+namespace Haipa.Modules.Identity.Seeder
 {
     public class Config
     {
