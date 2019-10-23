@@ -3,7 +3,7 @@ using Haipa.VmConfig;
 
 namespace Haipa.Messages.Commands.OperationTasks
 {
-    [Message(MessageOwner.VMAgent)]
+    [SendMessageTo(MessageRecipient.VMAgent)]
     public class ConvergeVirtualMachineCommand : OperationTaskCommand
     {
         public MachineConfig Config { get; set; }

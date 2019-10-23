@@ -3,7 +3,7 @@ using Haipa.Messages.Operations;
 
 namespace Haipa.Messages.Commands.OperationTasks
 {
-    [Message(MessageOwner.VMAgent)]
+    [SendMessageTo(MessageRecipient.VMAgent)]
     [MachineMayNotExists]
     public class DestroyMachineCommand : OperationTaskCommand, IMachineCommand
     {

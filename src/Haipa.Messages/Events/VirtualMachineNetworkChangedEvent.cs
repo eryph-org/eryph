@@ -2,8 +2,7 @@
 
 namespace Haipa.Messages.Events
 {
-    [SubscribeEvent(MessageSubscribers.ControllerModules)]
-    [Message(MessageOwner.VMAgent)]
+    [SubscribesMessage(MessageSubscriber.Controllers)]
     public class VirtualMachineNetworkChangedEvent
     {
         public Guid MachineId { get; set; }

@@ -2,8 +2,7 @@
 
 namespace Haipa.Messages.Events
 {
-    [SubscribeEvent(MessageSubscribers.ControllerModules)]
-    [Message(MessageOwner.TaskQueue)]
+    [SubscribesMessage(MessageSubscriber.Controllers)]
     public class MachineStateChangedEvent
     {
         public Guid MachineId { get; set; }

@@ -112,7 +112,9 @@ namespace Haipa.Modules.VmHostAgent
                 
         }
 
+#pragma warning disable 1998
         private async Task<Either<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>>> EnsureUnique(Seq<TypedPsObject<VirtualMachineInfo>> list, string id)
+#pragma warning restore 1998
         {
             if (list.Count > 1)
                 return Prelude.Left(new PowershellFailure { Message = $"VM id '{id}' is not unique." });

@@ -2,7 +2,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using Haipa.Messages;
-using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Modules.Api.Services;
 using Haipa.Rebus;
 using Haipa.StateDb;
@@ -59,7 +58,7 @@ namespace Haipa.Modules.Api
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
-                    options.Authority = "https://localhost:44349";
+                    options.Authority = "https://localhost:62189/identity";
                     options.Audience = "compute_api";
                     options.RequireHttpsMetadata = false;
                 });
@@ -147,7 +146,7 @@ namespace Haipa.Modules.Api
                     .Transport(t =>
                         serviceProvider.GetRequiredService<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
                     .Routing(x => x.TypeBased()
-                        .Map(MessageTypes.ByOwner(MessageOwner.Controllers), "haipa.controllers"))                        
+                        .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers))                        
                     .Options(x =>
                     {
                         x.SimpleRetryStrategy();

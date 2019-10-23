@@ -2,7 +2,7 @@
 
 namespace Haipa.Messages.Operations
 {
-    [Message(MessageOwner.Controllers)]
+    [SendMessageTo(MessageRecipient.Controllers)]
     public class CreateNewOperationTaskCommand : IOperationTaskMessage
     {
         public string CommandData { get; set; }

@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using Haipa.Rebus;
 using Rebus.Bus;
 
 namespace Haipa.Modules.VmHostAgent
@@ -15,7 +16,7 @@ namespace Haipa.Modules.VmHostAgent
 
         public Task Execute(CancellationToken stoppingToken)
         {
-            return _bus.Advanced.Topics.Subscribe("agent.all");
+            return _bus.Advanced.Topics.Subscribe($"broadcast_{QueueNames.VMHostAgent}");
         }
     }
 }
