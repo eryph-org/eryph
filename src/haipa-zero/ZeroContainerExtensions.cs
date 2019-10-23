@@ -3,7 +3,7 @@ using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
 using Haipa.Modules.Hosting;
 using Haipa.Modules.Identity;
-using Haipa.Modules.Identity.Demo;
+using Haipa.Modules.Identity.Seeder;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Rebus;
 using Haipa.StateDb;
@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.HttpSys;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
@@ -30,7 +31,7 @@ namespace Haipa.Runtime.Zero
                 .AddModule<IdentityModule>()
                 .AddModule<VmHostAgentModule>()
                 .AddModule<ControllerModule>();
-            
+
             container
                 .HostAspNetCore((path) =>
                 {
@@ -64,12 +65,9 @@ namespace Haipa.Runtime.Zero
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
             container.Register<StateDb.IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
-            //container.Register<IdentityDb.IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
             container.Register<IdentityDb.IDbContextConfigurer<ConfigurationStoreContext>, InMemoryConfigurationStoreContextConfigurer>();
-                 
-
             return container;
         }
-       
+
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNet.OData.Builder;
+﻿using Haipa.IdentityDb.Models;
+using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ namespace Haipa.Modules.Identity.Configuration
     {
         private static void ConfigureV1(ODataModelBuilder builder)
         {
-            builder.EntitySet<HaipaClient>("HaipaClient");
+            builder.EntitySet<ClientEntity>("ClientEntity");
         }
         public void Apply(ODataModelBuilder builder, ApiVersion apiVersion)
         {
