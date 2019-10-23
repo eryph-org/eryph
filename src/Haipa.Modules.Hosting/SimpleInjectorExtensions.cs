@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using SimpleInjector;
+using SimpleInjector.Lifestyles;
 
 namespace Haipa.Modules.Hosting
 {
@@ -20,12 +21,19 @@ namespace Haipa.Modules.Hosting
             container.Collection.Append<IModule, TModule>(Lifestyle.Singleton);
         }
 
-        public static async Task RunModule<TModule>(this Container container) where TModule: class, IModule
+        public static async Task RunModule<TModule>(this Container container, Func<IServiceProvider,Task> prepareStartFunc = null) where TModule: class, IModule
         {
-            container.GetInstance<TModule>().Bootstrap(container);
-            await container.GetInstance<TModule>().Start().ConfigureAwait(false);
-            await container.GetInstance<TModule>().WaitForShutdownAsync().ConfigureAwait(false);
-            await container.GetInstance<TModule>().Stop().ConfigureAwait(false);
+            var module = container.GetInstance<TModule>();
+                
+            var sp = module.Bootstrap(container);
+            if (prepareStartFunc != null)
+            {
+                await prepareStartFunc(sp).ConfigureAwait(false);
+            }
+
+            await module.Start().ConfigureAwait(false);
+            await module.WaitForShutdownAsync().ConfigureAwait(false);
+            await module.Stop().ConfigureAwait(false);
 
         }
 

@@ -45,7 +45,8 @@ namespace Haipa.Modules.Controller
                 .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, "haipa.controllers"))
                 .Routing(r => r.TypeBased()
                     .Map(MessageTypes.ByOwner(MessageOwner.Controllers), "haipa.controllers")
-                    .Map(MessageTypes.ByOwner(MessageOwner.TaskQueue), "haipa.taskqueue"))
+                    //.Map(MessageTypes.ByOwner(MessageOwner.TaskQueue), "haipa.taskqueue")
+                    )
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy();

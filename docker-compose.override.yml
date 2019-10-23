@@ -1,11 +1,11 @@
 version: '3.4'
 
-services:
-  Haipa.ApiEndpoint:
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:80
+#services:
+#  Haipa.ApiEndpoint:
+#    environment:
+#      - ASPNETCORE_ENVIRONMENT=Development
+#      - ASPNETCORE_URLS=http://+:80
 
-    ports:
-      - "64667:80"
+#   ports:
+#      - "64667:80"
 

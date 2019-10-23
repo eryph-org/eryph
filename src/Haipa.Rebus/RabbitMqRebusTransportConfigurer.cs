@@ -4,7 +4,7 @@ using Rebus.Transport;
 
 namespace Haipa.Rebus
 {
-    class RabbitMqRebusTransportConfigurer : IRebusTransportConfigurer
+    public class RabbitMqRebusTransportConfigurer : IRebusTransportConfigurer
     {
         void WaitForConnection()
         {

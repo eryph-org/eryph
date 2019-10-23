@@ -186,7 +186,7 @@ namespace Identity.TestClient
 
         public static async Task<string> GetTokenAsync(HttpClient client)
         {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "https://localhost:62189/identity/connect/token");
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "https://localhost:44349/connect/token");
             var jwt = CreateClientAuthJwt();
 
             request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -212,7 +212,7 @@ namespace Identity.TestClient
 
         public static async Task<string> GetResourceAsync(HttpClient client, string token)
         {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "https://localhost:62189/identity/connect/userinfo");
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, "https://localhost:44349/connect/userinfo");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead);
@@ -235,7 +235,7 @@ namespace Identity.TestClient
                 // iss must be the client_id of our application
                 issuer: "console",
                 // aud must be the identity provider (token endpoint)
-                audience: "https://localhost:62189/identity/connect/token",
+                audience: "https://localhost:44349/connect/token",
                 // sub must be the client_id of our application
                 subject: new ClaimsIdentity(
                     new List<Claim> { new Claim("sub", "console") }),

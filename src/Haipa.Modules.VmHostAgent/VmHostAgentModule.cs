@@ -41,7 +41,7 @@ namespace Haipa.Modules.VmHostAgent
                 .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, "haipa.agent." + Environment.MachineName))
                 .Routing(x => x.TypeBased()
                     .Map(MessageTypes.ByOwner(MessageOwner.Controllers), "haipa.controllers")
-                    .Map(MessageTypes.ByOwner(MessageOwner.TaskQueue), "haipa.taskqueue")
+                    //.Map(MessageTypes.ByOwner(MessageOwner.TaskQueue), "haipa.taskqueue")
                 )                
                 .Options(x =>
                 {
@@ -49,7 +49,7 @@ namespace Haipa.Modules.VmHostAgent
                     x.SetNumberOfWorkers(5);
                     x.EnableSynchronousRequestReply();
                 })
-                .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>().Configure(s))
+                .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>()?.Configure(s))
                 .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None }))
                 .Logging(x => x.ColoredConsole(LogLevel.Debug)).Start());
 

@@ -81,6 +81,7 @@ namespace Haipa.Modules.VmHostAgent
             {
                 await _bus.Publish(new OperationTaskProgressEvent
                 {
+                    Id = Guid.NewGuid(),
                     OperationId = _operationId,
                     TaskId = _taskId,
                     Message = message,
