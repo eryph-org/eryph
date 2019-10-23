@@ -1,13 +1,16 @@
-﻿using Haipa.Modules.Api;
+﻿using Haipa.IdentityDb;
+using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
 using Haipa.Modules.Hosting;
 using Haipa.Modules.Identity;
+using Haipa.Modules.Identity.Demo;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.HttpSys;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
@@ -53,7 +56,10 @@ namespace Haipa.Runtime.Zero
         public static Container UseInMemoryDb(this Container container)
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
-            container.Register<IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
+            container.Register<StateDb.IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
+            //container.Register<IdentityDb.IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
+            container.Register<IdentityDb.IDbContextConfigurer<ConfigurationStoreContext>, InMemoryConfigurationStoreContextConfigurer>();
+                 
 
             return container;
         }

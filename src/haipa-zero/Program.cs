@@ -30,6 +30,8 @@ namespace Haipa.Runtime.Zero
             container.RunModuleHostService("haipa-zero");
 
             File.Delete(Path.Combine(configPath, "zero_info"));
+
+
         }
     }
 }

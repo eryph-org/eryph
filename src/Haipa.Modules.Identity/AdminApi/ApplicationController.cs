@@ -1,4 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNet.OData;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Haipa.Modules.Identity.Controller
 {
@@ -9,12 +15,14 @@ namespace Haipa.Modules.Identity.Controller
     public class ApplicationController : ControllerBase
     {
 
-        //    [Authorize("identity:apps:read:all")]
-        //    public async Task<IActionResult> Get()
-        //    {
-        //        //var r = await _manager.ListAsync(q => q.Include(x=>x.Authorizations));          
-        //        //return new JsonResult(r.Select(MapReadModel));
-        //    }
+        //[Authorize("identity:apps:read:all")]
+        //public async Task<IActionResult> Get()
+        //{
+        //    //var r = await _manager.ListAsync(q => q.Include(x => x.Authorizations));
+        //    //return new JsonResult(r.Select(MapReadModel));
+
+        //    return new JsonResult(null);
+        //}
 
 
         //    [Route("{id}")]
@@ -60,4 +68,26 @@ namespace Haipa.Modules.Identity.Controller
         //}
     }
 
+    //[ApiVersion("1.0")]
+
+    //public class PersonsController : ControllerBase
+    //{
+    //    [EnableQuery]
+    //    [HttpGet]
+    //    public IQueryable<Person> Get()
+    //    {
+    //        return new string[] { "Alice", "Bob", "Chloe", "Dorothy", "Emma", "Fabian", "Garry", "Hannah" }
+    //            .Select(v => new Person { Name = v, ClientId = Guid.NewGuid() })
+    //            .AsQueryable();
+    //    }
+
+    //    public class Person
+    //    {
+    //        [Key]
+    //        public int Id { get; set; }
+    //        public Guid ClientId { get; set; }
+    //        public string Name { get; set; }
+    //    }
+    //}
+    
 }
