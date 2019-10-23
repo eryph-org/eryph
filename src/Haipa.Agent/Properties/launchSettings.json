@@ -1,9 +1,8 @@
 {
   "profiles": {
-    "Haipa.Controller": {
+    "Haipa.Agent": {
       "commandName": "Project",
       "environmentVariables": {
-        "MYSQL_CONNECTIONSTRING": "Server=localhost;Port=3306;Database=rebus;Uid=root;Pwd=password;SslMode=none;",
         "RABBITMQ_CONNECTIONSTRING": "amqp://guest:guest@localhost"
       }
     }

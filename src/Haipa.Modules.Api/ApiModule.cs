@@ -59,7 +59,7 @@ namespace Haipa.Modules.Api
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
-                    options.Authority = "https://localhost:62189/identity";
+                    options.Authority = "https://localhost:44349";
                     options.Audience = "compute_api";
                     options.RequireHttpsMetadata = false;
                 });

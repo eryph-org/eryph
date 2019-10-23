@@ -3,35 +3,30 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:62188/",
-      "sslPort": 44392
+      "applicationUrl": "http://localhost:58692",
+      "sslPort": 44349
     }
   },
   "profiles": {
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "api/values",
       "environmentVariables": {
-        "MYSQL_CONNECTIONSTRING": "Server=localhost;Port=3306;Database=rebus;Uid=root;Pwd=password;SslMode=none;;",
-        "RABBITMQ_CONNECTIONSTRING": "amqp://guest:guest@localhost",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
-    "Haipa.Api": {
+    "Haipa.Identity": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "api/values",
       "environmentVariables": {
-        "MYSQL_CONNECTIONSTRING": "Server=localhost;Database=myDataBase",
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "http://localhost:62189/"
+      "applicationUrl": "http://localhost:5000"
     },
     "Docker": {
       "commandName": "Docker",
       "launchBrowser": true,
-      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/api/values"
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}"
     }
   }
 }

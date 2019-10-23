@@ -18,7 +18,7 @@ namespace Haipa.Modules.Identity
 
             services.AddIdentityServer()
                 .AddJwtBearerClientAuthentication()
-                .AddDeveloperSigningCredential()
+                .AddDeveloperSigningCredential()             
                 .AddClientStore<ClientStoreWrapper>()
                 
                 .AddInMemoryApiResources(new List<ApiResource>

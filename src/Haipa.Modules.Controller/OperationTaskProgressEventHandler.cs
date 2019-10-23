@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Haipa.Messages;
 using Haipa.Messages.Operations;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
@@ -34,7 +33,7 @@ namespace Haipa.Modules.Controller
                 var opLogEntry =
                     new OperationLogEntry
                     {
-                        Id = Guid.NewGuid(),
+                        Id = message.Id,
                         Message = message.Message,
                         Operation = operation,
                         Task = task,
