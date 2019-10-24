@@ -1,6 +1,6 @@
 ﻿using Haipa.VmConfig;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.Operations.Workflows
 {
     public class CreateOrUpdateMachineSagaData : TaskWorkflowSagaData
     {

@@ -7,7 +7,7 @@ using Haipa.StateDb.Model;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.Operations
 {
     [UsedImplicitly]
     public class OperationTaskProgressEventHandler : IHandleMessages<OperationTaskProgressEvent>

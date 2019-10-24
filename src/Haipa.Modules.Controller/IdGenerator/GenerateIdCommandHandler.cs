@@ -1,10 +1,9 @@
 ﻿using System.Threading.Tasks;
-using Haipa.Messages;
 using Haipa.Messages.Commands;
 using Rebus.Bus;
 using Rebus.Handlers;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.IdGenerator
 {
     public class GenerateIdCommandHandler : IHandleMessages<GenerateIdCommand>
     {

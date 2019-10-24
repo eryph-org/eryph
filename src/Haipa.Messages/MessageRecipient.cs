@@ -2,7 +2,7 @@
 {
     public enum MessageRecipient
     {
-        VMAgent,
+        VMHostAgent,
         Controllers
     }
 }

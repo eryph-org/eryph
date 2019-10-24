@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.IdGenerator
 {
     /// <inheritdoc />
     /// <summary>

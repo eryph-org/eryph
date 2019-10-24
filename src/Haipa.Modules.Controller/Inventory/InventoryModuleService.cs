@@ -5,7 +5,7 @@ using Haipa.Rebus;
 using Microsoft.Extensions.Hosting;
 using Rebus.Bus;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.Inventory
 {
     public class InventoryModuleService : IHostedService
     {

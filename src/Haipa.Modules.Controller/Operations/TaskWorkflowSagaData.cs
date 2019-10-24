@@ -1,8 +1,7 @@
 ﻿using System;
-using Haipa.VmConfig;
 using Rebus.Sagas;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.Operations
 {
     public class TaskWorkflowSagaData : ISagaData
     {

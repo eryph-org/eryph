@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages;
 using Haipa.Messages.Operations;
 using Rebus.Bus;
 using Rebus.Handlers;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.Operations
 {
     internal class IncomingOperationTaskHandler<T> : IHandleMessages<T> where T : IOperationTaskCommand
     {

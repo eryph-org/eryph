@@ -3,14 +3,13 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Haipa.Messages;
 using Haipa.Messages.Events;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 using Rebus.Handlers;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.Inventory
 {
     internal class VirtualMachineIpAddressChangedEventHandler : IHandleMessages<VirtualMachineNetworkChangedEvent>
     {

@@ -1,6 +1,8 @@
 ﻿using System;
 using Haipa.Messages;
-using Haipa.Messages.Operations;
+using Haipa.Modules.Controller.IdGenerator;
+using Haipa.Modules.Controller.Inventory;
+using Haipa.Modules.Controller.Operations;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using JetBrains.Annotations;
@@ -33,6 +35,10 @@ namespace Haipa.Modules.Controller
 
             container.RegisterSingleton( () => new Id64Generator());
             container.Register<IOperationTaskDispatcher, OperationTaskDispatcher>();
+
+            //use placement calculator of Host
+            container.Register(serviceProvider.GetService<IPlacementCalculator>);
+
 
             container.Register(() =>
             {

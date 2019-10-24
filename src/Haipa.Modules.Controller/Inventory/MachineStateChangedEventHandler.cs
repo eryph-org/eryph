@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages;
 using Haipa.Messages.Events;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Rebus.Handlers;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.Inventory
 {
     internal class MachineStateChangedEventHandler : IHandleMessages<MachineStateChangedEvent>
     {

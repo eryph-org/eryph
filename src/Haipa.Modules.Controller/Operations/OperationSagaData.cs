@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Rebus.Sagas;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.Operations
 {
     public class OperationSagaData : ISagaData
     {

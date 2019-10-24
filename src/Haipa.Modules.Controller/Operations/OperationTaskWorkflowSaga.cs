@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages;
-using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.Operations
 {
     public abstract class OperationTaskWorkflowSaga<TMessage,TSagaData> : Saga<TSagaData>,
         IAmInitiatedBy<AcceptedOperationTask<TMessage>>,
@@ -25,8 +23,8 @@ namespace Haipa.Modules.Controller
 
         protected override void CorrelateMessages(ICorrelationConfig<TSagaData> config)
         {
-            config.Correlate<AcceptedOperationTask<CreateOrUpdateMachineCommand>>(m => m.Command.OperationId, d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<CreateOrUpdateMachineCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<AcceptedOperationTask<TMessage>>(m => m.Command.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<TMessage>>(m => m.OperationId, d => d.OperationId);
 
         }
 

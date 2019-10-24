@@ -6,4 +6,9 @@ namespace Haipa.Messages.Commands
     {
         Guid MachineId { get; set; }
     }
+
+    public interface IHostAgentCommand
+    {
+        string AgentName { get; set; }
+    }
 }

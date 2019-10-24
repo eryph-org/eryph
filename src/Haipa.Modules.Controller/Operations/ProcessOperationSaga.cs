@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Haipa.Messages;
@@ -13,7 +14,7 @@ using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.Operations
 {
     [UsedImplicitly]
     internal class ProcessOperationSaga : Saga<OperationSagaData>,
@@ -82,40 +83,44 @@ namespace Haipa.Modules.Controller
 
             switch (sendCommandAttribute.Recipient)
             {
-                case MessageRecipient.VMAgent:
+                case MessageRecipient.VMHostAgent:
                 {
-                    if (command is IMachineCommand machineCommand)
+                    switch (command)
                     {
-
-                        var machine = await _dbContext.Machines.FindAsync(machineCommand.MachineId).ConfigureAwait(false);
-
-                        if (machine == null)
+                        case IMachineCommand machineCommand:
                         {
+                            var machine = await _dbContext.Machines.FindAsync(machineCommand.MachineId).ConfigureAwait(false);
 
-                            if (command.GetType().GetCustomAttribute(typeof(MachineMayNotExistsAttribute)) != null)
+                            if (machine == null)
                             {
-                                await Handle(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId));
-                            }
-                            else
-                            {
-                                await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
-                                    new ErrorData {ErrorMessage = "Machine not found"}));
 
+                                if (command.GetType().GetCustomAttribute(typeof(MachineMayNotExistsAttribute)) != null)
+                                {
+                                    await Handle(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId));
+                                }
+                                else
+                                {
+                                    await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
+                                        new ErrorData {ErrorMessage = "Machine not found"}));
+
+                                }
+
+                                return;
                             }
+
+                            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{machine.AgentName}", command)
+                                .ConfigureAwait(false);
 
                             return;
                         }
+                        case IHostAgentCommand agentCommand:
+                            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{agentCommand.AgentName}", command)
+                                .ConfigureAwait(false);
 
-                        await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{machine.AgentName}", command)
-                            .ConfigureAwait(false);
-
-                        return;
-
-
+                            return;
+                        default:
+                            throw new InvalidDataException($"Don't know how to route operation task command of type {command.GetType()}");
                     }
-
-                    await _bus.Advanced.Topics.Publish($"broadcast_{QueueNames.VMHostAgent}", command).ConfigureAwait(false);
-                    return;
                 }
 
                 case MessageRecipient.Controllers :
