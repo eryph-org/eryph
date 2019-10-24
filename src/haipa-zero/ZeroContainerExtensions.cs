@@ -12,12 +12,14 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.HttpSys;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Haipa.Runtime.Zero
@@ -42,6 +44,7 @@ namespace Haipa.Runtime.Zero
                         })
                         .UseUrls($"https://localhost:62189/{path}")
                         .UseEnvironment("Development")
+
                         .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Warning));
                 });
             container

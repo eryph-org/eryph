@@ -1,27 +1,33 @@
 ﻿using Haipa.IdentityDb.Models;
 using IdentityServer4.Models;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 namespace Haipa.Modules.Identity.Seeder
 {
     public class Config
-    {
+    {       
         public static IEnumerable<ClientEntity> GetClients()
         {
-            List<ClientEntity> clients = new List<ClientEntity>();
-            foreach (var client in GetClientsInternal())
+            List<ClientEntity> Clients = new List<ClientEntity>();
+            string FilePath = Haipa.IdentityDb.Config.GetConfigPath();
+            DirectoryInfo D = new DirectoryInfo(FilePath);
+
+            foreach (var currentConfigFile in D.GetFiles("*.json"))
             {
-                var clientEntity = new ClientEntity
+                string c = File.ReadAllText(currentConfigFile.FullName);
+                if (!String.IsNullOrEmpty(c))
                 {
-                    Client = client
-                };
-                clientEntity.AddDataToEntity();
-                clients.Add(clientEntity);
+                        ClientEntity o = new ClientEntity { ClientData = c, ConfigFile  = currentConfigFile.FullName };
+                        o.MapDataFromEntity();
+                        Clients.Add(o);
+                }
             }
-
-            return clients;
+            return Clients;
         }
-
         public static IEnumerable<IdentityResourceEntity> GetIdentityResources()
         {
             List<IdentityResourceEntity> identityResources = new List<IdentityResourceEntity>();
@@ -62,7 +68,6 @@ namespace Haipa.Modules.Identity.Seeder
                 new IdentityResource("testscope",new []{ "role1", "role2", "role3"} ),
             };
         }
-
         private static IEnumerable<ApiResource> GetApiResourcesInternal()
         {
             return new List<ApiResource>
@@ -70,31 +75,7 @@ namespace Haipa.Modules.Identity.Seeder
                     new ApiResource("compute_api")
             };
         }
-
-        private static IEnumerable<Client> GetClientsInternal()
-        {
-            return new List<Client>
-            {
-                                new Client
-                {
-                    ClientName = "test3",
-                    ClientId = "test3",
-                                        ClientSecrets = new List<Secret>
-                         {
-                              new Secret("test3".Sha256())
-                         },
-
-                    AccessTokenType = AccessTokenType.Reference,
-                    AccessTokenLifetime = 360,
-                    IdentityTokenLifetime = 300,
-                    AllowedGrantTypes = GrantTypes.ClientCredentials,
-                    AllowedScopes = new List<string>
-                    {
-                        "compute_api"
-                    }
-                },
-            };
-        }
+     
     }
 }
 

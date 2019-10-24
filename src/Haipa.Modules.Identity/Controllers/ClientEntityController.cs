@@ -4,19 +4,21 @@
     using Haipa.IdentityDb.Models;
     using IdentityServer4.Models;
     using Microsoft.AspNet.OData;
+    using Microsoft.AspNetCore.Cors;
     using Microsoft.AspNetCore.Mvc;
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel.DataAnnotations;
     using System.Linq;
     using System.Net;
     using System.Threading.Tasks;
-   
 
     /// <summary>
     /// Defines the <see cref="ClientEntityController" />
     /// </summary>
     [ApiVersion("1.0")]
     [Produces("application/json")]
+    [EnableCors("CorsPolicy")]
     public class ClientEntityController : ODataController
     {
         /// <summary>
@@ -32,89 +34,56 @@
         {
             _db = context;
         }
-        //[HttpPost("{description}")]
-        //public IActionResult Create(string description, string secrets, string allowedScopes)
-        //{
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest();
 
-        //    }
-
-        //    Guid newGuid = new Guid();
-        //    string clientId = newGuid.ToString();
-        //    string secret = clientId;
-        //    string scope = allowedScopes;
-
-        //    var clientEntity = new ClientEntity
-        //    {
-        //        Client = new IdentityServer4.Models.Client
-        //        {
-        //            ClientName = clientId,
-        //            ClientId = clientId,
-        //            ClientSecrets = new List<Secret>
-        //                 {
-        //                      new Secret(secret.Sha256())
-        //                 },
-        //            Description = description,
-        //            AccessTokenType = AccessTokenType.Jwt,
-        //            AccessTokenLifetime = 360,
-        //            IdentityTokenLifetime = 300,
-        //            AllowedGrantTypes = GrantTypes.ClientCredentials,
-        //            AllowedScopes = new List<string>
-        //            {
-        //                scope
-        //            }
-        //        },
-        //    };
-
-        //    clientEntity.AddDataToEntity();       
-        //    _db.Clients.Add(clientEntity);
-        //    _db.SaveChangesAsync();
-        //    return Ok(clientEntity);
-        //}
-        [HttpPost("{description}")]
-        public async Task<IActionResult> Post(string description, string secrets, List<string> allowedScopes)
+        /// <summary>
+        /// The Get
+        /// </summary>
+        /// <returns>The <see cref="IQueryable{ClientEntity}"/></returns>
+        [EnableQuery]
+        public IQueryable<ClientEntity> Get()
         {
-            if (!ModelState.IsValid)
-            {
-                return null;
-
-            }
-
-            Guid newGuid = Guid.NewGuid();
-            string clientId = newGuid.ToString();            
-            string secret = clientId;//for test
-
-            var clientEntity = new ClientEntity
-            {
-                Client = new IdentityServer4.Models.Client
-                {
-                    ClientName = clientId,
-                    ClientId = clientId,
-                    ClientSecrets = new List<Secret>
-                         {
-                              new Secret(secret.Sha256())
-                         },
-                    AllowedGrantTypes = GrantTypes.ClientCredentials,
-                    AllowOfflineAccess = true,
-                    AllowedScopes = allowedScopes,
-                    AllowRememberConsent = true,
-                    RequireConsent = false,
-                },
-            };
-
-            clientEntity.AddDataToEntity();
-            _db.Clients.Add(clientEntity);
-            await _db.SaveChangesAsync();
-            return Created(clientEntity);
+            return _db.Clients;
         }
 
-        [HttpPut("{clientId}")]
-        public IActionResult Update(int clientId, [FromBody]ClientEntity clientEntity)
+        /// <summary>
+        /// The Delete
+        /// </summary>
+        /// <param name="key">The key<see cref="Guid"/></param>
+        /// <returns>The <see cref="Task{ActionResult}"/></returns>
+        public async Task<ActionResult> Delete([FromODataUri] Guid key)
         {
-            var findResult = _db.Clients.Where(a => a.ClientId == clientId.ToString());
-            if (findResult == null)
+            var client = _db.Clients.Where(i => i.ClientId == key);
+            if (client.Count() > 1)
+            {
+                return BadRequest();
+            }
+            if (client.Count() == 0)
+            {
+                return NotFound();
+            }
+            var c = client.First();
+            if (c.ConfigFileExists)
+            {
+                c.DeleteFile();
+            }
+            _db.Clients.Remove(c);
+            await _db.SaveChangesAsync();
+            return StatusCode((int)HttpStatusCode.NoContent);
+        }
+
+        /// <summary>
+        /// The Put
+        /// </summary>
+        /// <param name="key">The key<see cref="Guid"/></param>
+        /// <param name="description">The description<see cref="string"/></param>
+        /// <param name="secret">The secret<see cref="string"/></param>
+        /// <param name="allowedScopes">The allowedScopes<see cref="List{string}"/></param>
+        /// <returns>The <see cref="Task{ActionResult}"/></returns>
+        public async Task<ActionResult> Put([FromODataUri] Guid key, string description, [Required] string secret, [Required] List<string> allowedScopes)
+        {
+            string clientId = key.ToString();
+            var findResult = _db.Clients.Where(a => a.ClientId == key);
+            if (findResult.Count() == 0)
             {
                 return NotFound();
             }
@@ -126,35 +95,83 @@
             {
                 return BadRequest();
             }
-            _db.Entry(findResult).CurrentValues.SetValues(clientEntity);
-            _db.SaveChanges();
-            return Ok(findResult);
-        }
+            var c = findResult.First();
+            var tempConfigFile = c.ConfigFile;
 
-        [HttpPut("{clientId}")]
-        public IActionResult Delete(int clientId)
-        {
-            var findResult = _db.Clients.Where(a => a.ClientId == clientId.ToString());
-            if (findResult == null)
+            var clientEntity = new ClientEntity
             {
-                return NotFound();
-            }
-            if (findResult.Count() > 1)
+                Client = new IdentityServer4.Models.Client
+                {
+                    ClientName = clientId,
+                    ClientId = clientId,
+                    ClientSecrets = new List<Secret>
+                    {
+                        new Secret(secret.Sha256())
+                    },
+                    Description = description,
+                    AllowedGrantTypes = GrantTypes.ClientCredentials,
+                    AllowOfflineAccess = true,
+                    AllowedScopes = allowedScopes,
+                    AllowRememberConsent = true,
+                    RequireConsent = false,
+                },
+                ConfigFile = tempConfigFile
+            };
+            clientEntity.AddDataToEntity();
+            _db.Entry(c).CurrentValues.SetValues(clientEntity);
+            c.MapDataFromEntity();
+            _db.SaveChanges();
+            if (c.ConfigFileExists)
             {
-                return StatusCode(409);
+                c.UpdateToFile();
             }
-            _db.Remove(findResult);
-            return Ok(findResult);
+            return Ok(c);
         }
 
         /// <summary>
-        /// The Get
+        /// The Post
         /// </summary>
-        /// <returns>The <see cref="IQueryable{ClientEntity}"/></returns>
-        [EnableQuery]
-        public IQueryable<ClientEntity> Get()
+        /// <param name="description">The description<see cref="string"/></param>
+        /// <param name="secret">The secret<see cref="string"/></param>
+        /// <param name="allowedScopes">The allowedScopes<see cref="List{string}"/></param>
+        /// <param name="saveAsFile">The saveAsFile<see cref="Boolean"/></param>
+        /// <returns>The <see cref="Task{IActionResult}"/></returns>
+        [HttpPost]
+        public async Task<IActionResult> Post(string description, [Required] string secret, [Required] List<string> allowedScopes, Boolean saveAsFile = false)
         {
-            return _db.Clients;
+            if (!ModelState.IsValid)
+            {
+                return null;
+
+            }
+
+            Guid newGuid = Guid.NewGuid();
+            string clientId = newGuid.ToString();
+
+            var clientEntity = new ClientEntity
+            {
+                Client = new IdentityServer4.Models.Client
+                {
+                    ClientName = clientId,
+                    ClientId = clientId,
+                    ClientSecrets = new List<Secret>
+                         {
+                              new Secret(secret.Sha256())
+                         },
+                    Description = description,
+                    AllowedGrantTypes = GrantTypes.ClientCredentials,
+                    AllowOfflineAccess = true,
+                    AllowedScopes = allowedScopes,
+                    AllowRememberConsent = true,
+                    RequireConsent = false,
+                },
+            };
+
+            clientEntity.AddDataToEntity();
+            if (saveAsFile) clientEntity.SaveToFile();
+            _db.Clients.Add(clientEntity);
+            await _db.SaveChangesAsync();
+            return Created(clientEntity);
         }
     }
 }
