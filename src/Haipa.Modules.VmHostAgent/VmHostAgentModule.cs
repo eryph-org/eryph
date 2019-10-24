@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Haipa.Messages;
 using Haipa.Rebus;
 using Haipa.VmManagement;
 using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using Rebus.Bus;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Logging;
@@ -40,36 +37,22 @@ namespace Haipa.Modules.VmHostAgent
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationHandler<>));
 
             container.ConfigureRebus(configurer => configurer
-                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, "haipa.agent." + Environment.MachineName))
+                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, $"{QueueNames.VMHostAgent}.{Environment.MachineName}"))
                 .Routing(x => x.TypeBased()
-                    .MapAssemblyOf<ConvergeVirtualMachineResponse>("haipa.controller"))
+                    .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers)
+                )                
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy();
                     x.SetNumberOfWorkers(5);
                     x.EnableSynchronousRequestReply();
                 })
-                .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>().Configure(s))
+                .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>()?.Configure(s))
                 .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None }))
                 .Logging(x => x.ColoredConsole(LogLevel.Debug)).Start());
 
            
         }
 
-    }
-
-    public class StartBusModuleHandler : IModuleHandler
-    {
-        private readonly IBus _bus;
-
-        public StartBusModuleHandler(IBus bus)
-        {
-            _bus = bus;
-        }
-
-        public Task Execute(CancellationToken stoppingToken)
-        {
-            return _bus.Advanced.Topics.Subscribe("agent.all");
-        }
     }
 }

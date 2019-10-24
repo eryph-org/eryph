@@ -7,7 +7,7 @@ namespace Haipa.Modules
     {
         string Name { get; }
 
-        void Bootstrap(IServiceProvider serviceProvider);
+        IServiceProvider Bootstrap(IServiceProvider serviceProvider);
         Task Start();
         Task Stop();
         Task WaitForShutdownAsync();

@@ -4,7 +4,7 @@
     "anonymousAuthentication": true,
     "iisExpress": {
       "applicationUrl": "http://localhost:62188/",
-      "sslPort": 0
+      "sslPort": 44392
     }
   },
   "profiles": {
@@ -13,7 +13,7 @@
       "launchBrowser": true,
       "launchUrl": "api/values",
       "environmentVariables": {
-        "MYSQL_CONNECTIONSTRING": "Server=localhost;Port=3306;Database=rebus;Uid=root;Pwd=password;",
+        "MYSQL_CONNECTIONSTRING": "Server=localhost;Port=3306;Database=rebus;Uid=root;Pwd=password;SslMode=none;;",
         "RABBITMQ_CONNECTIONSTRING": "amqp://guest:guest@localhost",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -27,6 +27,11 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "applicationUrl": "http://localhost:62189/"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchBrowser": true,
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/api/values"
     }
   }
 }

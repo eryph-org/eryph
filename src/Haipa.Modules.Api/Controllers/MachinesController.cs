@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages;
+using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Modules.Api.Services;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
@@ -71,7 +72,7 @@ namespace Haipa.Modules.Api.Controllers
         {
 
             return Ok(await _operationManager.StartNew(
-                new ConvergeVirtualMachineCommand
+                new CreateOrUpdateMachineCommand
                 {
                     Config = config,
                 }

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Haipa.Agent": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "RABBITMQ_CONNECTIONSTRING": "amqp://guest:guest@localhost"
+      }
+    }
+  }
+}

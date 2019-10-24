@@ -16,7 +16,7 @@ namespace Haipa.Modules
         private Container _container;
         private IServiceProvider _moduleServiceProvider;
 
-        public sealed override void Bootstrap(IServiceProvider serviceProvider)
+        public sealed override IServiceProvider Bootstrap(IServiceProvider serviceProvider)
         {
             ConfigureContainerWithServicesAction = EmptyAction;
 
@@ -27,6 +27,7 @@ namespace Haipa.Modules
                 .Configure(ConfigureAppAndContainer)           
                 .Build());
 
+            return Host.Services;
         }
 
         protected sealed override void WireUpServicesAndContainer(IServiceProvider serviceProvider, IServiceCollection services, Container container)

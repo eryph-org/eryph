@@ -40,15 +40,17 @@ services:
       - mariadb
     networks:
       - internal
+    environment:
+      - MYSQL_CONNECTIONSTRING="Server=localhost;Port=3306;Database=rebus;Uid=root;Pwd=password;SslMode=none;"
+      - RABBITMQ_CONNECTIONSTRING="amqp://guest:guest@rabbit""
 
-
-  Haipa.ApiEndpoint:
-    image: ${DOCKER_REGISTRY}HaipaApiEndpoint
-    build:
-      context: .
-      dockerfile: src/Haipa.ApiEndpoint/Dockerfile
-    depends_on:
-      - rabbit
-      - mariadb
-    networks:
-      - internal
+ # Haipa.ApiEndpoint:
+ #   image: ${DOCKER_REGISTRY}HaipaApiEndpoint
+ #   build:
+ #     context: .
+ #     dockerfile: src/Haipa.ApiEndpoint/Dockerfile
+ #   depends_on:
+ #     - rabbit
+ #     - mariadb
+ #  networks:
+ #     - internal
