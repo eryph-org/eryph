@@ -1,42 +1,48 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using IdentityServer4.Models;
-using Microsoft.AspNet.OData.Builder;
-using Microsoft.AspNet.OData;
-using Microsoft.AspNet.OData.Extensions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.AspNetCore.Hosting;
-using System.Linq;
-using Swashbuckle.AspNetCore.SwaggerGen;
-using IdentityServer4.Stores;
-using Haipa.IdentityDb.Stores;
-
-namespace Haipa.Modules.Identity
+﻿namespace Haipa.Modules.Identity
 {
+    using Haipa.IdentityDb.Stores;
+    using IdentityServer4.Stores;
+    using Microsoft.AspNet.OData;
+    using Microsoft.AspNet.OData.Builder;
+    using Microsoft.AspNet.OData.Extensions;
+    using Microsoft.AspNetCore.Authorization;
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.AspNetCore.Mvc.ApiExplorer;
+    using Microsoft.AspNetCore.Mvc.Cors.Internal;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Options;
+    using Swashbuckle.AspNetCore.SwaggerGen;
+    using System;
+    using System.Linq;
+    using System.Threading.Tasks;
 
-   
+ 
+    /// <summary>
+    /// Defines the <see cref="IdentityModule" />
+    /// </summary>
     [ApiVersion("1.0")]
 
-    public class HaipaClient
-    {
-        [Key]
-        public int Id { get; set; }
-        public Guid ClientId { get; set; }
-        public string Name { get; set; }
-    }
     public class IdentityModule : WebModuleBase
     {
+        /// <summary>
+        /// Gets the Name
+        /// </summary>
         public override string Name => "Haipa.Modules.Identity";
+
+        /// <summary>
+        /// Gets the Path
+        /// </summary>
         public override string Path => "identity";
 
+        /// <summary>
+        /// The ConfigureServices
+        /// </summary>
+        /// <param name="serviceProvider">The serviceProvider<see cref="IServiceProvider"/></param>
+        /// <param name="services">The services<see cref="IServiceCollection"/></param>
         protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
-        {        
+        {       
 
             services.AddDbContext<IdentityDb.ConfigurationStoreContext>(options =>
             {
@@ -61,23 +67,9 @@ namespace Haipa.Modules.Identity
             services.AddIdentityServer()
                 .AddJwtBearerClientAuthentication()
                 .AddDeveloperSigningCredential()
-                   //.AddClientStore<ClientStoreWrapper>()
-                   .AddResourceStore<ResourceStore>()
-        .AddClientStore<ClientStore>()
-               //.AddInMemoryClients(Clients.Get())
-                //.AddInMemoryApiResources(new List<ApiResource>
-                //{
-                //    new ApiResource("identity:apps:read:all"),
-                //    new ApiResource("compute_api")
-                //})
-                //.AddInMemoryIdentityResources(IdentityServer.Resources.GetIdentityResources())
-                //.AddInMemoryApiResources(IdentityServer.Resources.GetApiResources())
+                .AddResourceStore<ResourceStore>()
+                .AddClientStore<ClientStore>()
                 //.AddInMemoryCaching()
-                //.AddInMemoryIdentityResources(
-                //    new[]
-                //    {
-                //        new IdentityResources.OpenId(),
-                //    })
                 ;
 
             services.AddApiVersioning(options =>
@@ -125,7 +117,7 @@ namespace Haipa.Modules.Identity
             //        options.RequireHttpsMetadata = false;
             //    });
 
-
+         
             ////services.AddAuthorization(options =>
             ////{
             ////    options.AddPolicy("identity:apps:read:all", policy => policy.Requirements.Add(new HasScopeRequirement("identity:apps:read:all", "http://localhost:62189/identity")));
@@ -136,19 +128,34 @@ namespace Haipa.Modules.Identity
             ////});
 
             services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
+            services.AddCors(options =>
+            {
+                options.AddPolicy("CorsPolicy",
+                    builder => builder.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials());
+            });
+            services.Configure<MvcOptions>(options =>
+            {
+                 options.Filters.Add(new CorsAuthorizationFilterFactory("CorsPolicy"));
+            });
         }
 
+        /// <summary>
+        /// The Configure
+        /// </summary>
+        /// <param name="app">The app<see cref="IApplicationBuilder"/></param>
         protected override void Configure(IApplicationBuilder app)
         {
+            //app.UseCors("CorsPolicy");
+            //app.UseCorsMiddleware();
 
             var modelBuilder = app.ApplicationServices.GetService<VersionedODataModelBuilder>();
             var provider = app.ApplicationServices.GetService<IApiVersionDescriptionProvider>();
             app.UseIdentityServer();
-
             app.UseAuthentication();
-
             app.UseMvc(b =>
-
             {
                 b.Select().Expand().Filter().OrderBy().MaxTop(100).Count();
                 var models = modelBuilder.GetEdmModels().ToArray();
@@ -173,9 +180,6 @@ namespace Haipa.Modules.Identity
 
                     }
                 });
-
-
         }
-        
     }
 }

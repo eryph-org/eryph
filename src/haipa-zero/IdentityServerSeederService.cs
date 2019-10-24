@@ -38,9 +38,9 @@
         /// </summary>
         public void Seed()
         {
-            _db.AddRange(Config.GetClients());
-            _db.AddRange(Config.GetIdentityResources());
-            _db.AddRange(Config.GetApiResources());
+            _db.AddRange(Modules.Identity.Seeder.Config.GetClients());
+            _db.AddRange(Modules.Identity.Seeder.Config.GetIdentityResources());
+            _db.AddRange(Modules.Identity.Seeder.Config.GetApiResources());
             _db.SaveChanges();
         }
     }

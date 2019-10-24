@@ -22,9 +22,16 @@ namespace Haipa.IdentityDb.Stores
 
         public Task<Client> FindClientByIdAsync(string clientId)
         {
-            var client = _context.Clients.First(t => t.ClientId == clientId);
-            client.MapDataFromEntity();
-         return Task.FromResult(client.Client);
+                var client = _context.Clients.Where(t => t.ClientId.ToString() == clientId);
+                if (client.Count() == 1)
+                {
+                    client.First().MapDataFromEntity();
+                    return Task.FromResult(client.First().Client);
+                }
+                else
+                {
+                    return null;
+                }            
         }
     }
 }

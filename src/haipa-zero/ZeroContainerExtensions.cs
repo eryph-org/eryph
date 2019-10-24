@@ -12,11 +12,15 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.HttpSys;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;
+using System;
+using System.Collections.Generic;
+using System.IO;
 
 namespace Haipa.Runtime.Zero
 {
@@ -24,6 +28,7 @@ namespace Haipa.Runtime.Zero
     {    
         public static void Bootstrap(this Container container, string[] args)
         {
+         
             container.HostModule<ApiModule>();
             container.HostModule<IdentityModule>();
             container.HostModule<VmHostAgentModule>();
@@ -33,8 +38,17 @@ namespace Haipa.Runtime.Zero
                 {
                     return WebHost.CreateDefaultBuilder(args)
             .UseHttpSys()
+               .ConfigureAppConfiguration((ctx, configurationBuilder) =>
+               {
+                   configurationBuilder.AddInMemoryCollection(new Dictionary<string, string>
+                   {
+                    //   ["AllowedHosts"] = "192.168.0.3"
+
+                   });
+               })
             .UseUrls($"https://localhost:62189/{path}")
                         .UseEnvironment("Development")
+                        
                         .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Warning));
                 });
 
