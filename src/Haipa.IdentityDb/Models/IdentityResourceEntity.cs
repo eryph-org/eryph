@@ -18,16 +18,6 @@ namespace Haipa.IdentityDb.Models
         [NotMapped]
         public IdentityResource IdentityResource { get; set; }
 
-        public void AddDataToEntity()
-        {
-            IdentityResourceData = JsonConvert.SerializeObject(IdentityResource);
-            IdentityResourceName = IdentityResource.Name;
-        }
-
-        public void MapDataFromEntity()
-        {
-            IdentityResource = JsonConvert.DeserializeObject<IdentityResource>(IdentityResourceData);
-            IdentityResourceName = IdentityResource.Name;
-        }
+       
     }
 }
