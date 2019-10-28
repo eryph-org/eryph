@@ -1,4 +1,5 @@
-﻿using IdentityServer4.Models;
+﻿using Haipa.IdentityDb.Extensions;
+using IdentityServer4.Models;
 using IdentityServer4.Stores;
 using Microsoft.Extensions.Logging;
 using System;

@@ -2,6 +2,7 @@
 {
     using Haipa.IdentityDb;
     using Haipa.IdentityDb.Models;
+    using Haipa.IdentityDb.Extensions;
     using IdentityServer4.Models;
     using Microsoft.AspNet.OData;
     using Microsoft.AspNetCore.Cors;
@@ -62,7 +63,7 @@
                 return NotFound();
             }
             var c = client.First();
-            if (c.ConfigFileExists)
+            if (c.ConfigFileExists())
             {
                 c.DeleteFile();
             }
@@ -121,7 +122,7 @@
             _db.Entry(c).CurrentValues.SetValues(clientEntity);
             c.MapDataFromEntity();
             _db.SaveChanges();
-            if (c.ConfigFileExists)
+            if (c.ConfigFileExists())
             {
                 c.UpdateToFile();
             }

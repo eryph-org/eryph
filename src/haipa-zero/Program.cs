@@ -68,7 +68,6 @@ namespace Haipa.Runtime.Zero
             seederService.Seed();
             #endregion
             container.RunModuleHostService("haipa-zero");
-            //File.Delete(Path.Combine(configPath, "zero_info"));
         }
     }
 }
