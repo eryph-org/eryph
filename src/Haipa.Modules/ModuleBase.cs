@@ -18,8 +18,7 @@ namespace Haipa.Modules
 
         protected Action ConfigureContainerWithServicesAction = EmptyAction;
 
-
-        public virtual void Bootstrap(IServiceProvider serviceProvider)
+        public virtual IServiceProvider Bootstrap(IServiceProvider serviceProvider)
         {
             ConfigureContainerWithServicesAction = () => ConfigureContainer(serviceProvider, _container);
 
@@ -30,6 +29,7 @@ namespace Haipa.Modules
             _container.AutoCrossWireAspNetComponents(Host.Services);
             _container.Verify();
 
+            return _container;
         }
 
         protected void ConfigureServicesAndAppContainer(IServiceProvider serviceProvider, IServiceCollection services)

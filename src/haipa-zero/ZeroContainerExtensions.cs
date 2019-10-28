@@ -1,4 +1,4 @@
-﻿using Haipa.IdentityDb;
+using Haipa.IdentityDb;
 using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
 using Haipa.Modules.Hosting;

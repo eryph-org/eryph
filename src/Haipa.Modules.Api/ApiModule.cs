@@ -146,7 +146,7 @@ namespace Haipa.Modules.Api
                     .Transport(t =>
                         serviceProvider.GetRequiredService<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
                     .Routing(x => x.TypeBased()
-                        .MapAssemblyOf<ConvergeVirtualMachineCommand>("haipa.controller"))
+                        .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers))                        
                     .Options(x =>
                     {
                         x.SimpleRetryStrategy();

@@ -1,4 +1,4 @@
-﻿namespace Haipa.Runtime.Zero
+namespace Haipa.Runtime.Zero
 {
     using Haipa.Modules.Hosting;
     using Microsoft.Extensions.DependencyInjection;

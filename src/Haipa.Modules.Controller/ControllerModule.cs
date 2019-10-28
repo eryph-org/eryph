@@ -1,4 +1,8 @@
 ﻿using System;
+using Haipa.Messages;
+using Haipa.Modules.Controller.IdGenerator;
+using Haipa.Modules.Controller.Inventory;
+using Haipa.Modules.Controller.Operations;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using JetBrains.Annotations;
@@ -8,6 +12,7 @@ using Newtonsoft.Json;
 using Rebus.Handlers;
 using Rebus.Logging;
 using Rebus.Retry.Simple;
+using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
@@ -26,9 +31,14 @@ namespace Haipa.Modules.Controller
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
 
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
-            //container.Collection.Append(typeof(IHandleMessages<>), typeof(DispatchOperationHandler<>));
+            container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationTaskHandler<>));
 
             container.RegisterSingleton( () => new Id64Generator());
+            container.Register<IOperationTaskDispatcher, OperationTaskDispatcher>();
+
+            //use placement calculator of Host
+            container.Register(serviceProvider.GetService<IPlacementCalculator>);
+
 
             container.Register(() =>
             {
@@ -38,7 +48,11 @@ namespace Haipa.Modules.Controller
             }, Lifestyle.Scoped);
 
             container.ConfigureRebus(configurer => configurer
-                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, "haipa.controller"))
+                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, QueueNames.Controllers))
+                .Routing(r => r.TypeBased()
+                    .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers)
+                    // agent routing is not registered here by design. Agent commands will be routed by agent name
+                    )
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy();
@@ -54,6 +68,7 @@ namespace Haipa.Modules.Controller
 
         protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
+            services.AddModuleHandler<StartBusModuleHandler>();
             services.AddModuleService<InventoryModuleService>();
 
         }

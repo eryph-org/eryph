@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Haipa.Messages;
+using Haipa.Messages.Events;
 using Haipa.Modules.VmHostAgent.Inventory;
 using Haipa.VmManagement;
 using Rebus.Bus;
@@ -18,7 +19,7 @@ namespace Haipa.Modules.VmHostAgent
 
         public Task Handle(VirtualMachineStateChangedEvent message)
         {
-            return _bus.Send(new MachineStateChangedEvent
+            return _bus.Publish(new MachineStateChangedEvent
             {
                 MachineId = message.VmId,
                 Status = InventoryConverter.MapVmInfoStatusToVmStatus(message.State)

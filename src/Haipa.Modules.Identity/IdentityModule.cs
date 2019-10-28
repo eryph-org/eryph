@@ -64,7 +64,7 @@
                .AddApplicationPart(typeof(IdentityModule).Assembly)
                .AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
-            services.AddIdentityServer()
+           services.AddIdentityServer()
                 .AddJwtBearerClientAuthentication()
                 .AddDeveloperSigningCredential()
                 .AddResourceStore<ResourceStore>()

@@ -38,6 +38,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.TestClient", "test\Identity.TestClient\Identity.TestClient.csproj", "{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}"
+	ProjectSection(SolutionItems) = preProject
+		src\Haipa.Messages\IOptionalMachineCommand.cs = src\Haipa.Messages\IOptionalMachineCommand.cs
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules", "src\Haipa.Modules\Haipa.Modules.csproj", "{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}"
 EndProject
@@ -52,6 +55,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Identity", "src\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj", "{6B56359B-B15A-4888-997D-AB8A953F0A29}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.IdentityDb", "src\Haipa.IdentityDb\Haipa.IdentityDb.csproj", "{A64F9618-DEB4-4BE0-9310-39E4A57FFA2E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Security.Cryptography", "src\Haipa.Security.Cryptography\Haipa.Security.Cryptography.csproj", "{4908D4F4-3545-4FF1-B37F-E3E237B05C54}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
