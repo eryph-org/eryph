@@ -31,6 +31,16 @@ namespace Haipa.VmManagement
             return new TypedPsObject<T>(PsObject);
         }
 
+        public TypedPsObject<TProp> GetProperty<TProp>(Expression<Func<T, TProp>> property)
+        {
+            var paramType = property.Parameters[0].Type; // first parameter of expression
+
+            var propertyMemberInfo = paramType.GetMember((property.Body as MemberExpression)?.Member.Name)[0];
+            var propertyValue = PsObject.Properties[propertyMemberInfo.Name].Value;
+
+            return new TypedPsObject<TProp>(new PSObject(propertyValue));
+        }
+
         public Seq<TypedPsObject<TSub>> GetList<TSub>(
             Expression<Func<T, IList<TSub>>> listProperty,
             Func<TSub, bool> predicateFunc) => GetList(listProperty).Where(y => predicateFunc(y.Value));

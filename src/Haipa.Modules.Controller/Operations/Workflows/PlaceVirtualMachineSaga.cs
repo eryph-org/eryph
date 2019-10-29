@@ -53,9 +53,12 @@ namespace Haipa.Modules.Controller.Operations.Workflows
 
         public Task Handle(PlacementVerificationCompletedEvent message)
         {
-            return !message.Confirmed ? 
-                    CalculatePlacementAndRequestVerification() : 
-                    Complete(new PlaceVirtualMachineResult { AgentName = message.AgentName });
+            // This is not implemented fully - in case not confirmed some state has to be changed too, because
+            // otherwise calculation most likely will choose same agent again resulting in a loop.
+            // Currently this can not happen, as placement will always be confirmed by agent.
+            return message.Confirmed ? 
+                    Complete(new PlaceVirtualMachineResult { AgentName = message.AgentName }) : 
+                    CalculatePlacementAndRequestVerification();
         }
     }
 }
