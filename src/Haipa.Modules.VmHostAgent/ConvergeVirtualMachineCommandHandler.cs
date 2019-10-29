@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Management;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,6 +12,8 @@ using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.UnsafeValueAccess;
+using Newtonsoft.Json;
 using Rebus;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -23,14 +24,14 @@ using Rebus.Transport;
 namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class ConvergeTaskRequestedEventHandler : IHandleMessages<AcceptedOperationTask<ConvergeVirtualMachineCommand>>
+    internal class ConvergeVirtualMachineCommandHandler : IHandleMessages<AcceptedOperationTask<ConvergeVirtualMachineCommand>>
     {
         private readonly IPowershellEngine _engine;
         private readonly IBus _bus;
         private Guid _operationId;
         private Guid _taskId;
 
-        public ConvergeTaskRequestedEventHandler(
+        public ConvergeVirtualMachineCommandHandler(
             IPowershellEngine engine,
             IBus bus)
         {
@@ -47,11 +48,11 @@ namespace Haipa.Modules.VmHostAgent
             _operationId = command.OperationId;
             _taskId = command.TaskId;
 
-            var hostSettings = GetHostSettings();
+            var hostSettings = HostSettingsBuilder.GetHostSettings();
 
             var chain = 
 
-                from normalizedVMConfig in Converge.NormalizeMachineConfig(machineId, config, _engine, ProgressMessage).ToAsync()
+                from normalizedVMConfig in Converge.NormalizeMachineConfig(config, _engine, ProgressMessage).ToAsync()
                 from vmList in GetVmInfo(machineId, _engine).ToAsync()
                 from optionalVmInfo in EnsureUnique(vmList, machineId).ToAsync()
 
@@ -62,7 +63,9 @@ namespace Haipa.Modules.VmHostAgent
                 from _ in AttachToOperation(vmInfoCreated, _bus, command.OperationId).ToAsync()
                 from vmInfo in EnsureNameConsistent(vmInfoCreated, config, _engine).ToAsync()
 
-                from vmInfoConverged in ConvergeVm(vmInfo, config, plannedStorageSettings, hostSettings, _engine).ToAsync()
+                from metadata in EnsureMetadata(creationInfo.imageVM, vmInfo, normalizedVMConfig).ToAsync()
+                from mergedConfig in Converge.MergeConfigAndImageSettings(metadata.ImageInfo, normalizedVMConfig, _engine).ToAsync()
+                from vmInfoConverged in ConvergeVm(vmInfo, mergedConfig, plannedStorageSettings, hostSettings, _engine).ToAsync()
                 select vmInfoConverged;
 
             return chain.MatchAsync(
@@ -162,15 +165,28 @@ namespace Haipa.Modules.VmHostAgent
             return (result.ToString());
         }
 
-        private static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> EnsureCreated(Option<TypedPsObject<VirtualMachineInfo>> vmInfo, MachineConfig config, VMStorageSettings storageSettings, IPowershellEngine engine)
+        private static Task<Either<PowershellFailure, (TypedPsObject<VirtualMachineInfo> vmInfo, Option<ImageVirtualMachineInfo> imageVM)>> EnsureCreated(Option<TypedPsObject<VirtualMachineInfo>> vmInfo, MachineConfig config, HostSettings hostSettings, VMStorageSettings storageSettings, IPowershellEngine engine)
         {
+            if (!string.IsNullOrWhiteSpace(config.VM.Image.Id))
+            {
+                return vmInfo.MatchAsync(
+                    None: () =>
+                        storageSettings.StorageIdentifier.ToEither(new PowershellFailure { Message = "Unknown storage identifier, cannot create new virtual machine" })
+                            .BindAsync(storageIdentifier => Converge.ImportVirtualMachine(engine, hostSettings, config.Name, storageIdentifier,
+                                storageSettings.VMPath,
+                                config.VM.Image)),
+                    Some: s => (s, Option<ImageVirtualMachineInfo>.None)
+                );
+
+            }
+
             return vmInfo.MatchAsync(
                 None: () =>
-                    storageSettings.StorageIdentifier.ToEither(new PowershellFailure{Message = "Unknown storage identifier, cannot create new virtual machine"})
+                    (storageSettings.StorageIdentifier.ToEither(new PowershellFailure{Message = "Unknown storage identifier, cannot create new virtual machine"})
                         .BindAsync(storageIdentifier => Converge.CreateVirtualMachine(engine, config.Name, storageIdentifier,
                             storageSettings.VMPath,
-                            config.VM.Memory.Startup)),                            
-                Some: s => s
+                            config.VM.Memory.Startup)).MapAsync(r => (r, Option<ImageVirtualMachineInfo>.None))),                            
+                Some: s => (s, Option<ImageVirtualMachineInfo>.None)
             );
 
         }
@@ -230,28 +246,67 @@ namespace Haipa.Modules.VmHostAgent
             return Unit.Default;
         }
 
-        public HostSettings GetHostSettings()
+
+        private Task<Either<PowershellFailure, HaipaMetadata>> EnsureMetadata(Option<ImageVirtualMachineInfo> imageInfo, 
+            TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config)
         {
+            var notes = vmInfo.Value.Notes;
+            HaipaMetadata metadata = null;
 
-            var scope = new ManagementScope(@"\\.\root\virtualization\v2");
-            var query = new ObjectQuery("select DefaultExternalDataRoot,DefaultVirtualHardDiskPath from Msvm_VirtualSystemManagementServiceSettingData");
-
-
-            var searcher = new ManagementObjectSearcher (scope, query );
-            var settingsCollection = searcher.Get ( );
-            
-            foreach (var hostSettings in settingsCollection)
+            var metadataId = "";
+            if (!string.IsNullOrWhiteSpace(notes))
             {
-                return new HostSettings
+                var metadataIndex = notes.IndexOf("Haipa metadata id: ", StringComparison.InvariantCultureIgnoreCase);
+                if (metadataIndex != -1)
                 {
-                    DefaultVirtualHardDiskPath = Path.Combine(hostSettings.GetPropertyValue("DefaultVirtualHardDiskPath")?.ToString(), "Haipa"),
-                    DefaultDataPath = Path.Combine(hostSettings.GetPropertyValue("DefaultExternalDataRoot")?.ToString(), "Haipa")
-                };
+                    var metadataEnd = metadataIndex + 32;
+                    if (metadataEnd < notes.Length)
+                        metadataId = notes.Substring(metadataIndex, 32);
+
+                }
             }
 
-            throw new Exception("failed to query for hyper-v host settings");
+            if (!string.IsNullOrWhiteSpace(metadataId))
+            {
+                if (File.Exists($"{metadataId}.hmeta"))
+                {
+                    var metadataJsonRead = File.ReadAllText($"{metadataId}.hmeta");
+                    metadata = JsonConvert.DeserializeObject<HaipaMetadata>(metadataJsonRead);
+                }
+            }
 
+            if (metadata == null)
+            {
+
+                metadata = new HaipaMetadata
+                {
+                    Id = Guid.NewGuid(),
+                    VMId = vmInfo.Value.Id,
+                    ProvisioningConfig = config.Provisioning
+                };
+
+                if (imageInfo.IsSome)
+                    metadata.ImageInfo = imageInfo.ValueUnsafe();
+
+                var metadataJson = JsonConvert.SerializeObject(metadata);
+                File.WriteAllText($"{metadata.Id}.hmeta", metadataJson);
+            }
+
+            var newNotes = $"Haipa metadata id: {metadata.Id}";
+
+            return _engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
+                    .AddParameter("Notes", newNotes))
+                .MapAsync(_ => metadata);
         }
+    }
+
+
+    public sealed class HaipaMetadata : Record<HaipaMetadata>
+    {
+        public Guid Id { get; set; }
+        public Guid VMId { get; set; }
+        [CanBeNull] public ImageVirtualMachineInfo ImageInfo { get; set; }
+        [CanBeNull] public VirtualMachineProvisioningConfig ProvisioningConfig { get; set; }
 
     }
 

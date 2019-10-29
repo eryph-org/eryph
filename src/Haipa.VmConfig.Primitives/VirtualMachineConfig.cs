@@ -75,6 +75,8 @@ namespace Haipa.VmConfig
         public string Slug { get; set; }
         public string DataStore { get; set; }
 
+        public VirtualMachineImageConfig Image { get; set; }
+
         public VirtualMachineCpuConfig Cpu { get; set; }
 
         public VirtualMachineMemoryConfig Memory { get; set; }
@@ -83,6 +85,19 @@ namespace Haipa.VmConfig
 
         public List<VirtualMachineNetworkAdapterConfig> NetworkAdapters { get; set; }
 
+    }
+
+    public class VirtualMachineImageConfig
+    {
+        public VirtualMachineImageSource Source { get; set; }
+        public string Id { get; set; }
+        public string Version { get; set; }
+    }
+
+    public enum VirtualMachineImageSource
+    {
+        Local,
+        Vagrant
     }
 
     public class MachineConfig
