@@ -18,4 +18,6 @@ namespace Haipa.StateDb.Model
         public VirtualMachine VM { get; set; }
         public virtual List<MachineNetwork> Networks { get; set; }
     }
+
+
 }

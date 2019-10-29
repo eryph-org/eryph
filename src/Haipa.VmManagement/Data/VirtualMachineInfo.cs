@@ -9,7 +9,7 @@ using LanguageExt;
 
 namespace Haipa.VmManagement.Data
 {
-    public sealed class VirtualMachineInfo : Record<VirtualMachineInfo>
+    public sealed class VirtualMachineInfo : Record<VirtualMachineInfo>, IVirtualMachineCoreInfo
     {
 
         public DateTime CreationTime { get; private set; }
@@ -223,6 +223,48 @@ namespace Haipa.VmManagement.Data
         //public OnOffState? LockOnDisconnect { get; private set; }
 
 
+
+    }
+
+    public sealed class PlannedVirtualMachineInfo : Record<VirtualMachineInfo>, IVirtualMachineCoreInfo
+    {
+        public Guid Id { get; private set; }
+
+        public string Name { get; private set; }
+
+        public string ConfigurationLocation { get; private set; }
+
+        public bool SmartPagingFileInUse { get; private set; }
+
+        public string SmartPagingFilePath { get; private set; }
+
+        public string SnapshotFileLocation { get; private set; }
+
+
+        public DvdDriveInfo[] DVDDrives { get; private set; }
+        
+        public VMFibreChannelHbaInfo[] FibreChannelHostBusAdapters { get; private set; }
+
+        public VMFloppyDiskDriveInfo FloppyDrive { get; private set; }
+
+        public HardDiskDriveInfo[] HardDrives { get; private set; }
+
+        public PlannedVMNetworkAdapter[] NetworkAdapters { get; private set; }
+
+        public int Generation { get; private set; }
+
+        public bool IsClustered { get; private set; }
+
+        public string Path { get; private set; }
+
+        public string Version { get; private set; }
+
+    }
+
+
+    public class VMCompatibilityReportInfo : Record<VMCompatibilityReportInfo>
+    {
+        public PlannedVirtualMachineInfo VM { get; private set; }
 
     }
 }
