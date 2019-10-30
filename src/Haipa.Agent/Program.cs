@@ -14,7 +14,7 @@ namespace Haipa.Agent
             var container = new Container();
             container.Bootstrap(args);
 
-            return container.RunModule<VmHostAgentModule>();
+            return container.HostModules().RunModule<VmHostAgentModule>();
         }
     }
 }

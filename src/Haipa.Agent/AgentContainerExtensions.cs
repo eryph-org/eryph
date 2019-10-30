@@ -10,7 +10,7 @@ namespace Haipa.Agent
     {
         public static void Bootstrap(this Container container, string[] args)
         {
-            container.HostModule<VmHostAgentModule>();
+            container.HostModules().AddModule<VmHostAgentModule>();
 
             container
                 .UseRabbitMq();

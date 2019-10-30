@@ -12,7 +12,7 @@ namespace Haipa.ApiEndpoint
     {
         public static void Bootstrap(this Container container, string[] args)
         {
-            container.HostModule<ApiModule>();
+            container.HostModules().AddModule<ApiModule>();
 
             container.HostAspNetCore((path) => WebHost.CreateDefaultBuilder(args));
 

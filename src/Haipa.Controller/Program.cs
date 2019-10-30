@@ -20,7 +20,7 @@ namespace Haipa.Controller
             var container = new Container();
             container.Bootstrap(args);
 
-            await container.RunModule<ControllerModule>((sp) =>
+            await container.HostModules().RunModule<ControllerModule>((sp) =>
             {
                 using(AsyncScopedLifestyle.BeginScope(sp as Container))
                     sp.GetService<StateStoreContext>().Database.Migrate();

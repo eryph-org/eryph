@@ -17,7 +17,7 @@ namespace Haipa.ApiEndpoint
             var container = new Container();
             container.Bootstrap(args);
 
-            await container.RunModule<ApiModule>((sp) => Task.CompletedTask).ConfigureAwait(false);
+            await container.HostModules().RunModule<ApiModule>((sp) => Task.CompletedTask).ConfigureAwait(false);
 
         }
 

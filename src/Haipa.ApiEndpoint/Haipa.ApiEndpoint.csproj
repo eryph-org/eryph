@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Hosting\Haipa.Modules.Hosting.csproj" />
+    <ProjectReference Include="..\Haipa.Modules.Hosting.AspNetCore\Haipa.Modules.Hosting.AspNetCore.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 
 namespace Haipa.Modules
 {
@@ -7,10 +8,6 @@ namespace Haipa.Modules
     {
         string Name { get; }
 
-        IServiceProvider Bootstrap(IServiceProvider serviceProvider);
-        Task Start();
-        Task Stop();
-        Task WaitForShutdownAsync();
 
     }
 }

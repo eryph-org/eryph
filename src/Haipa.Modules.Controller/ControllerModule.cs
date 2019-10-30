@@ -27,9 +27,6 @@ namespace Haipa.Modules.Controller
 
         protected override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
-
-            container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationTaskHandler<>));
 

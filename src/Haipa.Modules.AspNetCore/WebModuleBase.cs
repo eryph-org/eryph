@@ -1,63 +1,27 @@
 ﻿using System;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Controllers;
-using Microsoft.AspNetCore.Mvc.ViewComponents;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
-using SimpleInjector.Integration.AspNetCore.Mvc;
+using SimpleInjector.Integration.AspNetCore;
+using SimpleInjector.Integration.ServiceCollection;
 
 namespace Haipa.Modules
 {
     public abstract class WebModuleBase : ModuleBase
     {
         public abstract string Path { get; }
-        private Container _container;
-        private IServiceProvider _moduleServiceProvider;
 
-        public sealed override IServiceProvider Bootstrap(IServiceProvider serviceProvider)
+        public sealed override void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
-            ConfigureContainerWithServicesAction = EmptyAction;
-
-            Host = new WebHostAsHost(
-                serviceProvider.GetRequiredService<IWebModuleHostBuilderFactory>().CreateWebHostBuilder(Name, Path)
-                .ConfigureServices(sc => ConfigureServicesAndAppContainer(serviceProvider, sc))
-                .UseContentRoot(@"..\..\..\..\" + Name)
-                .Configure(ConfigureAppAndContainer)           
-                .Build());
-
-            return Host.Services;
-        }
-
-        protected sealed override void WireUpServicesAndContainer(IServiceProvider serviceProvider, IServiceCollection services, Container container)
-        {
-            _container = container;
-            _moduleServiceProvider = serviceProvider;
-
-            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-            services.AddSingleton(container);
-
-            services.AddSingleton<IControllerActivator>(
-                new SimpleInjectorControllerActivator(container));
-            services.AddSingleton<IViewComponentActivator>(
-                new SimpleInjectorViewComponentActivator(container));
-
-
-            services.UseSimpleInjectorAspNetRequestScoping(container);
+            AddAspNetCore(options.AddAspNetCore());
 
         }
 
-        private void ConfigureAppAndContainer(IApplicationBuilder app)
+        protected virtual void AddAspNetCore(SimpleInjectorAspNetCoreBuilder builder)
         {
-            _container.RegisterMvcControllers(app);
-            _container.RegisterMvcViewComponents(app);
-
-            Configure(app);
-            ConfigureContainer(_moduleServiceProvider, _container);
-            _container.AutoCrossWireAspNetComponents(app);
-            _container.Verify();
-
+            builder
+                .AddControllerActivation()
+                .AddViewComponentActivation();
         }
 
 
