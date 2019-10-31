@@ -25,9 +25,9 @@ namespace Haipa.Modules
         }
 
 
-        protected abstract void Configure(IApplicationBuilder app);
+        public abstract void Configure(IApplicationBuilder app);
 
-        protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
             
         }

@@ -21,10 +21,10 @@ namespace Haipa.Modules
 
         }
 
-        protected abstract void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services);
+        public abstract void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services);
 
 
-        protected virtual void ConfigureContainer(IServiceProvider serviceProvider, Container container)
+        public virtual void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
 
         }
