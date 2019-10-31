@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Haipa.TestUtils.AspNetCore.Server
+namespace Haipa.TestUtils.Handlers
 {
     public class TestServerHandler : DelegatingHandler
     {
