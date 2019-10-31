@@ -12,7 +12,7 @@ namespace Haipa.Controller
     {
         public static void Bootstrap(this Container container, string[] args)
         {
-            container.HostModule<ControllerModule>();
+            container.HostModules().AddModule<ControllerModule>();
 
             container
                 .UseRabbitMq()

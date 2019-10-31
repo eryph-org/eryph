@@ -34,7 +34,7 @@ namespace Haipa.Modules.Api
         public override string Name => "Haipa.Modules.Api";
         public override string Path => "api";
 
-        protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
             services.AddDbContext<StateStoreContext>(options =>
                 serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>().Configure(options));
@@ -100,7 +100,7 @@ namespace Haipa.Modules.Api
                 });
         }
 
-        protected override void Configure(IApplicationBuilder app)
+        public override void Configure(IApplicationBuilder app)
         {
             var modelBuilder = app.ApplicationServices.GetService<VersionedODataModelBuilder>();
             var provider = app.ApplicationServices.GetService<IApiVersionDescriptionProvider>();
@@ -135,7 +135,7 @@ namespace Haipa.Modules.Api
                 });
         }
 
-        protected override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
+        public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ApiModule).Assembly);
             container.Register<IOperationManager, OperationManager>(Lifestyle.Scoped);

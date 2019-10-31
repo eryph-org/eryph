@@ -12,7 +12,7 @@ namespace Haipa.Modules.Identity
         public override string Name => "Haipa.Modules.Identity";
         public override string Path => "identity";
 
-        protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
             services.AddMvc();
 
@@ -64,7 +64,7 @@ namespace Haipa.Modules.Identity
             services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
         }
 
-        protected override void Configure(IApplicationBuilder app)
+        public override void Configure(IApplicationBuilder app)
         {
 
             app.UseIdentityServer();

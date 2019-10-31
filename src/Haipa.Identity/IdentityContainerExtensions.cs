@@ -11,7 +11,7 @@ namespace Haipa.Identity
     {
         public static void Bootstrap(this Container container, string[] args)
         {
-            container.HostModule<IdentityModule>();
+            container.HostModules().AddModule<IdentityModule>();
 
             container.HostAspNetCore((path) => WebHost.CreateDefaultBuilder(args));
 

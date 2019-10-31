@@ -12,7 +12,7 @@ namespace Haipa.Modules.Hosting
             {
                 config.UseSimpleInjector(container);
                 config.SetServiceName(name);
-                config.Service<ModuleHost>(s =>
+                config.Service<ModuleCollectionHost>(s =>
                 {
                     s.ConstructUsingSimpleInjector();
                     s.WhenStarted((service, control) => service.Start());

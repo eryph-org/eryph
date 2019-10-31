@@ -25,11 +25,8 @@ namespace Haipa.Modules.Controller
         public override string Name => "Haipa.Controller";
 
 
-        protected override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
+        public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
-
-            container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationTaskHandler<>));
 
@@ -66,7 +63,7 @@ namespace Haipa.Modules.Controller
                 .Logging(x => x.ColoredConsole(LogLevel.Debug)).Start());
         }
 
-        protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
             services.AddModuleHandler<StartBusModuleHandler>();
             services.AddModuleService<InventoryModuleService>();

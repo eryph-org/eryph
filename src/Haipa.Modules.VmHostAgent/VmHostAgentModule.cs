@@ -20,14 +20,14 @@ namespace Haipa.Modules.VmHostAgent
     {
         public override string Name => "Haipa.VmHostAgent";
 
-        protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
             services.AddModuleHandler<StartBusModuleHandler>();
             services.AddModuleService<WmiWatcherModuleService>();
 
         }
 
-        protected override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
+        public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
 
             container.RegisterSingleton<IPowershellEngine, PowershellEngine>();

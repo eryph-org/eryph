@@ -15,7 +15,7 @@ namespace Haipa.Identity
             var container = new Container();
             container.Bootstrap(args);
 
-            await container.RunModule<IdentityModule>((sp) => Task.CompletedTask).ConfigureAwait(false);
+            await container.HostModules().RunModule<IdentityModule>((sp) => Task.CompletedTask).ConfigureAwait(false);
 
         }
 

@@ -22,10 +22,12 @@ namespace Haipa.Runtime.Zero
     {
         public static void Bootstrap(this Container container, string[] args)
         {
-            container.HostModule<ApiModule>();
-            container.HostModule<IdentityModule>();
-            container.HostModule<VmHostAgentModule>();
-            container.HostModule<ControllerModule>();           
+            container.HostModules()
+                .AddModule<ApiModule>()
+                .AddModule<IdentityModule>()
+                .AddModule<VmHostAgentModule>()
+                .AddModule<ControllerModule>();
+            
             container
                 .HostAspNetCore((path) =>
                 {
@@ -42,6 +44,7 @@ namespace Haipa.Runtime.Zero
                 .UseInMemoryBus()
                 .UseInMemoryDb();
 
+            container.RegisterConditional(typeof(IModuleHost<>), typeof(ModuleHost<>), c => !c.Handled);
 
             container.Register<IPlacementCalculator, ZeroAgentPlacementCalculator>();
         }
