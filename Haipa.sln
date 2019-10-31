@@ -37,12 +37,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.VmConfig.Primitives",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Identity", "src\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj", "{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.TestClient", "test\Identity.TestClient\Identity.TestClient.csproj", "{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}"
-	ProjectSection(SolutionItems) = preProject
-		src\Haipa.Messages\IOptionalMachineCommand.cs = src\Haipa.Messages\IOptionalMachineCommand.cs
-	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules", "src\Haipa.Modules\Haipa.Modules.csproj", "{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}"
 EndProject
@@ -62,7 +57,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Identity.Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.TestUtils.AspNetCore", "test\Haipa.TestUtils.AspNetCore\Haipa.TestUtils.AspNetCore.csproj", "{FDE35F47-AF4A-482C-8A4F-3EC0DD6F16AC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.Modules.Hosting.AspNetCore", "src\Haipa.Modules.Hosting.AspNetCore\Haipa.Modules.Hosting.AspNetCore.csproj", "{594B4BCB-AB07-4526-9853-180CD803EB48}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting.AspNetCore", "src\Haipa.Modules.Hosting.AspNetCore\Haipa.Modules.Hosting.AspNetCore.csproj", "{594B4BCB-AB07-4526-9853-180CD803EB48}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -133,10 +128,6 @@ Global
 		{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -182,7 +173,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{C6B327A2-F638-4DE1-8937-B037D9049217} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{FDE35F47-AF4A-482C-8A4F-3EC0DD6F16AC} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection

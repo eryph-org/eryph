@@ -17,4 +17,10 @@
     <ProjectReference Include="..\Haipa.TestUtils.AspNetCore\Haipa.TestUtils.AspNetCore.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="console.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
