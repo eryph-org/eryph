@@ -34,8 +34,8 @@ namespace Haipa.Runtime.Zero
             if (!Directory.Exists(clientsConfigPath))
                 Directory.CreateDirectory(clientsConfigPath);
 
-            File.WriteAllText(Path.Combine(clientsConfigPath, "system-client.json"),
-                "{ \"client_id\": \"system_client\", \"client_secret\" : \"388D45FA-B36B-4988-BA59-B187D329C207\" }");
+            //File.WriteAllText(Path.Combine(clientsConfigPath, "system-client.json"),
+            //    "{ \"client_id\": \"system_client\", \"client_secret\" : \"388D45FA-B36B-4988-BA59-B187D329C207\" }");
             File.WriteAllText(Path.Combine(configPath, "zero_info"),
                 $"{{ \"process_id\": \"{Process.GetCurrentProcess().Id}\", \"url\" : \"http://localhost:62189\" }}");
 

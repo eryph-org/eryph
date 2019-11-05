@@ -45,7 +45,6 @@ namespace Haipa.IdentityDb.Extensions
             c.Client = JsonConvert.DeserializeObject<Client>(c.ClientData);
             c.ClientId = Guid.Parse(c.Client.ClientId);
         }
-
         public static bool ConfigFileExists(this ClientEntity c)
         {          
                 return (!String.IsNullOrEmpty(c.ConfigFile));

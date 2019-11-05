@@ -1,5 +1,7 @@
 ﻿namespace Haipa.Modules.Identity
 {
+    using Haipa.IdentityDb.Services;
+    using Haipa.IdentityDb.Services.Interfaces;
     using Haipa.IdentityDb.Stores;
     using IdentityServer4.Stores;
     using Microsoft.AspNet.OData;
@@ -36,12 +38,7 @@
         /// </summary>
         public override string Path => "identity";
 
-        /// <summary>
-        /// The ConfigureServices
-        /// </summary>
-        /// <param name="serviceProvider">The serviceProvider<see cref="IServiceProvider"/></param>
-        /// <param name="services">The services<see cref="IServiceCollection"/></param>
-        protected override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
 
             services.AddDbContext<IdentityDb.ConfigurationStoreContext>(options =>
@@ -51,6 +48,8 @@
             });
             services.AddTransient<IClientStore, ClientStore>();
             services.AddTransient<IResourceStore, ResourceStore>();
+            services.AddTransient<IClientEntityService, ClientEntityService>();
+
 
             services.AddMvc(op =>
             {
