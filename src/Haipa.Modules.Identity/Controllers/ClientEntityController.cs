@@ -15,6 +15,7 @@
     using System.Threading.Tasks;
     using Haipa.IdentityDb.Services;
     using Haipa.IdentityDb.Dtos;
+    using Haipa.IdentityDb.Services.Interfaces;
 
     /// <summary>
     /// Defines the <see cref="ClientEntityController" />
@@ -25,8 +26,8 @@
     public class ClientEntityController : ODataController
     {
         private readonly ConfigurationStoreContext _db;
-        private readonly ClientEntityService _clientEntityService;
-        public ClientEntityController(ClientEntityService clientEntityService)
+        private readonly IClientEntityService _clientEntityService;
+        public ClientEntityController(IClientEntityService clientEntityService)
         {
             _clientEntityService = clientEntityService;
         }
