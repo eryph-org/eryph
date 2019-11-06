@@ -44,12 +44,13 @@ namespace Haipa.Modules.Identity.Test
         }
 
         [Fact]
-        public async Task GetResolvedClients()
+        public void GetResolvedClients()
         {
             ServiceMock o = new ServiceMock();
             ClientEntityController a = new ClientEntityController(o);
             Assert.NotEmpty(a.Get());
-
         }
+
+
     }
 }

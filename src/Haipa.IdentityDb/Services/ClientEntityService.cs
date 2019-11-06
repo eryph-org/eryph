@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Haipa.IdentityDb;
 using IdentityServer4.Models;
 using Microsoft.EntityFrameworkCore;
+using IdentityServer4;
 
 namespace Haipa.IdentityDb.Services
 {
@@ -28,7 +29,7 @@ namespace Haipa.IdentityDb.Services
             {
                 ClientId = c.ClientId,
                 Description = c.Client.Description,
-                SecretKey = c.Client.ClientSecrets.FirstOrDefault().Value
+                X509CertificateBase64 = c.Client.ClientSecrets.FirstOrDefault().Value
             });
   
             return clients;
@@ -55,7 +56,7 @@ namespace Haipa.IdentityDb.Services
         }
         public virtual async Task<int> PutClient(ClientEntityDTO client)
         {
-            string clientId = client.SecretKey.ToString();
+            string clientId = client.ClientId.ToString();
             var findResult = _db.Clients.Where(a => a.ClientId == client.ClientId);
             if (findResult.Count() == 0)
             {
@@ -70,7 +71,7 @@ namespace Haipa.IdentityDb.Services
             {
                 return Microsoft.AspNetCore.Http.StatusCodes.Status409Conflict;
             }
-            if (client.ClientId == null || client.AllowedScopes == null || client.SecretKey == null)
+            if (client.ClientId == null || client.AllowedScopes == null || client.X509CertificateBase64 == null)
             {
                 return Microsoft.AspNetCore.Http.StatusCodes.Status409Conflict;
             }
@@ -85,7 +86,11 @@ namespace Haipa.IdentityDb.Services
                     ClientId = clientId,
                     ClientSecrets = new List<Secret>
                      {
-                         new Secret(client.SecretKey.Sha256())
+                          new Secret
+                            {
+                                Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
+                                Value = client.X509CertificateBase64
+                            }
                      },
                     Description = client.Description,
                     AllowedGrantTypes = GrantTypes.ClientCredentials,
@@ -112,7 +117,7 @@ namespace Haipa.IdentityDb.Services
             {
                 return Microsoft.AspNetCore.Http.StatusCodes.Status409Conflict;
             }
-            if (client.AllowedScopes == null || client.SecretKey == null)
+            if (client.AllowedScopes == null || client.X509CertificateBase64 == null)
             {
                 return Microsoft.AspNetCore.Http.StatusCodes.Status400BadRequest;
             }
@@ -128,7 +133,11 @@ namespace Haipa.IdentityDb.Services
                     ClientId = clientId,
                     ClientSecrets = new List<Secret>
                          {
-                              new Secret(client.SecretKey.Sha256())
+                              new Secret
+                            {
+                                Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
+                                Value = client.X509CertificateBase64
+                            }
                          },
                     Description = client.Description,
                     AllowedGrantTypes = GrantTypes.ClientCredentials,
@@ -140,7 +149,7 @@ namespace Haipa.IdentityDb.Services
             };
 
             clientEntity.AddDataToEntity();
-            if (client.saveAsFile) clientEntity.SaveToFile();
+            clientEntity.SaveToFile();
             _db.Clients.Add(clientEntity);
             await _db.SaveChangesAsync();
             return Microsoft.AspNetCore.Http.StatusCodes.Status200OK;
