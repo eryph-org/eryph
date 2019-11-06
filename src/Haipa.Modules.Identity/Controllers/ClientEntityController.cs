@@ -25,7 +25,6 @@
     [EnableCors("CorsPolicy")]
     public class ClientEntityController : ODataController
     {
-        private readonly ConfigurationStoreContext _db;
         private readonly IClientEntityService _clientEntityService;
         public ClientEntityController(IClientEntityService clientEntityService)
         {
