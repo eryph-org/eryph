@@ -8,7 +8,7 @@ namespace Haipa.Messages.Commands.OperationTasks
     {
         public string AgentName { get; set; }
 
-        public VirtualMachineImageConfig ImageConfig { get; set; }
+        public MachineImageConfig ImageConfig { get; set; }
 
     }
 }

@@ -4,9 +4,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using Haipa.CloudInit.ConfigDrive.Generator;
@@ -17,6 +15,7 @@ using Haipa.VmConfig;
 using Haipa.VmManagement.Data;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using static LanguageExt.Prelude;
 
@@ -40,8 +39,8 @@ namespace Haipa.VmManagement
                 machineConfig.Name = "haipa-machine";
             }
 
-            if(machineConfig.VM.Image == null)
-                machineConfig.VM.Image = new VirtualMachineImageConfig();
+            if(machineConfig.Image == null)
+                machineConfig.Image = new MachineImageConfig();
 
 
             if (machineConfig.VM.Cpu == null)
@@ -91,41 +90,77 @@ namespace Haipa.VmManagement
         }
 
 
-        public static Task<Either<PowershellFailure, MachineConfig>> MergeConfigAndImageSettings(Option<ImageVirtualMachineInfo> imageVmInfo, MachineConfig originalConfig, IPowershellEngine engine)
+        public static Task<Either<PowershellFailure, MachineConfig>> MergeConfigAndImageSettings(Option<VirtualMachineConfig> optionalImageConfig, MachineConfig machineConfig, IPowershellEngine engine)
         {
 
-            if (string.IsNullOrWhiteSpace(originalConfig.VM.Image.Id))
-                return RightAsync<PowershellFailure, MachineConfig>(originalConfig).ToEither(); ;
+            if (string.IsNullOrWhiteSpace(machineConfig.Image.Name))
+                return RightAsync<PowershellFailure, MachineConfig>(machineConfig).ToEither(); ;
 
+            //copy machine config to a new object
+            var mapper = new Mapper(new MapperConfiguration(c =>
+            {
+                c.CreateMap<MachineConfig, MachineConfig>();
+                c.CreateMap<VirtualMachineConfig, VirtualMachineConfig>();
+                c.CreateMap<VirtualMachineCpuConfig, VirtualMachineCpuConfig>();
+                c.CreateMap<VirtualMachineMemoryConfig, VirtualMachineMemoryConfig>();
+                c.CreateMap<VirtualMachineNetworkAdapterConfig, VirtualMachineNetworkAdapterConfig>();
+                c.CreateMap<VirtualMachineDriveConfig, VirtualMachineDriveConfig>();
 
-            var mapper = new Mapper(new MapperConfiguration(c => { }));
-            var newConfig = mapper.DefaultContext.Mapper.Map<MachineConfig>(originalConfig);
+            }));
+            var newConfig = mapper.DefaultContext.Mapper.Map<MachineConfig, MachineConfig>(machineConfig);
+                
+            return optionalImageConfig.HeadOrLeft(new PowershellFailure { Message = "Missing image configuration info" })
+                .Map(imageConfig =>
+                {
+                    //initialize machine config with image settings
+                    newConfig.VM = mapper.DefaultContext.Mapper.Map<VirtualMachineConfig, VirtualMachineConfig>(imageConfig);
 
-            return imageVmInfo.HeadOrLeft(new PowershellFailure {Message = "Missing image configuration info"})
-                .Map(config => config.HardDrives.ToSeq()
-
-                    .Map(vhdInfo => new VirtualMachineDriveConfig
-                    {
-                        Name = Path.GetFileNameWithoutExtension(vhdInfo.Path),
-                        Type = VirtualMachineDriveType.VHD,
-                        Size = (int) Math.Ceiling(vhdInfo.Size / 1024d / 1024 / 1024)
-                    })
-                    .Iter(ihd =>
-                        {
-                            if (newConfig.VM.Drives.Any(x => x.Name == ihd.Name)) return;
-
-                            var origHd = originalConfig.VM.Drives.FirstOrDefault(x => x.Name == ihd.Name);
-
-                            if (origHd != null)
+                    //merge drive settings configured both on image and vm config
+                    newConfig.VM.Drives.ToSeq()
+                        .Iter(ihd =>
                             {
-                                ihd.Size = origHd.Size;
-                                ihd.DataStore = origHd.DataStore;
-                                ihd.ShareSlug = origHd.ShareSlug;
-                            }
+                                var vmHdConfig = machineConfig.VM.Drives.FirstOrDefault(x => x.Name == ihd.Name);
 
-                            newConfig.VM.Drives.Add(ihd);
-                        }
-                    )).Map(u => newConfig).AsTask();
+                                if (vmHdConfig == null) return;
+
+                                if(vmHdConfig.Size!=0) ihd.Size = vmHdConfig.Size;
+                                if(!string.IsNullOrWhiteSpace(vmHdConfig.DataStore)) ihd.DataStore = vmHdConfig.DataStore;
+                                if(!string.IsNullOrWhiteSpace(vmHdConfig.ShareSlug))  ihd.ShareSlug = vmHdConfig.ShareSlug;
+                            }
+                        );
+
+                    //add drives configured only on vm
+                    var imageDriveNames = newConfig.VM.Drives.Select(x => x.Name);
+                    newConfig.VM.Drives.AddRange(machineConfig.VM.Drives.Where(vmHd => !imageDriveNames.Any(x=> string.Equals(x, vmHd.Name, StringComparison.InvariantCultureIgnoreCase))  ));
+
+                    //merge network adapter settings configured both on image and vm config
+                    newConfig.VM.NetworkAdapters.ToSeq()
+                        .Iter(iad =>
+                            {
+                                var vmAdapterConfig = machineConfig.VM.NetworkAdapters.FirstOrDefault(x => x.Name == iad.Name);
+
+                                if (vmAdapterConfig == null) return;
+                                if (!string.IsNullOrWhiteSpace(vmAdapterConfig.MacAddress)) iad.MacAddress = vmAdapterConfig.MacAddress;
+                                if (!string.IsNullOrWhiteSpace(vmAdapterConfig.SwitchName)) iad.SwitchName = vmAdapterConfig.SwitchName;
+                            }
+                        );
+
+                    //add network adapters configured only on vm
+                    var imageAdapterNames = newConfig.VM.NetworkAdapters.Select(x => x.Name);
+                    newConfig.VM.NetworkAdapters.AddRange(machineConfig.VM.NetworkAdapters.Where(vmHd => !imageAdapterNames.Any(x => string.Equals(x, vmHd.Name, StringComparison.InvariantCultureIgnoreCase))));
+
+                    //merge other settings
+                    if (!string.IsNullOrWhiteSpace(machineConfig.VM.DataStore)) newConfig.VM.DataStore = machineConfig.VM.DataStore;
+                    if (!string.IsNullOrWhiteSpace(machineConfig.VM.Slug)) newConfig.VM.DataStore = machineConfig.VM.Slug;
+
+                    if (machineConfig.VM.Cpu.Count.GetValueOrDefault(0) != 0) newConfig.VM.Cpu.Count = machineConfig.VM.Cpu.Count;
+                    if (machineConfig.VM.Memory.Maximum.HasValue) newConfig.VM.Memory.Maximum = machineConfig.VM.Memory.Maximum;
+                    if (machineConfig.VM.Memory.Minimum.HasValue) newConfig.VM.Memory.Minimum = machineConfig.VM.Memory.Minimum;
+                    if (machineConfig.VM.Memory.Startup.GetValueOrDefault(0) != 0) newConfig.VM.Memory.Startup = machineConfig.VM.Memory.Startup;
+
+
+                    return Unit.Default.AsTask();
+                }).Map(u => newConfig).AsTask();
 
 
         }
@@ -626,18 +661,12 @@ namespace Haipa.VmManagement
             string vmName,
             string storageIdentifier,
             string vmPath,
-            VirtualMachineImageConfig imageConfig)
+            MachineImageConfig imageConfig)
         {
-
-            var mapper = new Mapper(new MapperConfiguration(c =>
-            {
-                c.CreateMap<HardDiskDriveInfo,ImageHardDiskDriveInfo>(MemberList.None);
-            }));
-
 
             var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
             var imagePath = Path.Combine(imageRootPath,
-                $"{imageConfig.Id}\\{imageConfig.Version}\\");
+                $"{imageConfig.Name}\\{imageConfig.Tag}\\");
 
             var configRootPath = Path.Combine(imagePath, "Virtual Machines");
 
@@ -676,11 +705,32 @@ namespace Haipa.VmManagement
                 .BindAsync(realizedVM => (
                         from _ in RenameDisksToConvention(engine, realizedVM).ToAsync()
                         from vm in realizedVM.Reload(engine).ToAsync()
-                        let imageVm = mapper.DefaultContext.Mapper.Map<ImageVirtualMachineInfo>(vm.Value)
+                        from imageVm in CreateImageVMInfo(vm ,engine).ToAsync()
                         select (vm, Option<ImageVirtualMachineInfo>.Some(imageVm))).ToEither());
 
 
             return vmInfo;
+        }
+
+
+        private static readonly Mapper ImageInfoMapper = new Mapper(new MapperConfiguration(c =>
+        {
+            c.CreateMap<HardDiskDriveInfo, ImageHardDiskDriveInfo>(MemberList.None);
+        }));
+
+        private static Task<Either<PowershellFailure, ImageVirtualMachineInfo>> CreateImageVMInfo(TypedPsObject<VirtualMachineInfo> vmInfo, IPowershellEngine engine)
+        {
+            var imageInfo = ImageInfoMapper.DefaultContext.Mapper.Map<ImageVirtualMachineInfo>(vmInfo.Value);
+
+            return imageInfo.HardDrives.ToSeq().MapToEitherAsync(hd =>
+                    (from optionalDrive in Storage.GetVhdInfo(hd.Path, engine).ToAsync()
+                        from drive in optionalDrive.ToEither(new PowershellFailure {Message = "Failed to find realized image disk"})
+                            .ToAsync()
+                        let _ = drive.Apply(d => hd.Size = d.Value.Size)
+                        select hd).ToEither())
+
+                .MapT(hd => imageInfo);
+
         }
 
 

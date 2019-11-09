@@ -50,7 +50,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                 Data.AgentName = r.AgentName;
 
                 return _taskDispatcher.Send(new PrepareVirtualMachineImageCommand
-                { ImageConfig = Data.Config.VM.Image, 
+                { ImageConfig = Data.Config.Image, 
                   AgentName = r.AgentName, 
                   OperationId = message.OperationId, 
                   TaskId = Guid.NewGuid()

@@ -5,16 +5,16 @@ namespace Haipa.VmConfig
 {
     public class VirtualMachineCpuConfig
     {
-        public int Count { get; set; }
+        public int? Count { get; set; }
     }
 
     public class VirtualMachineMemoryConfig
     {
-        public int Startup { get; set; }
+        public int? Startup { get; set; }
 
-        public int Minimum { get; set; }
+        public int? Minimum { get; set; }
 
-        public int Maximum { get; set; }
+        public int? Maximum { get; set; }
     }
 
     public class VirtualMachineDriveConfig
@@ -73,8 +73,6 @@ namespace Haipa.VmConfig
         public string Slug { get; set; }
         public string DataStore { get; set; }
 
-        public VirtualMachineImageConfig Image { get; set; }
-
         public VirtualMachineCpuConfig Cpu { get; set; }
 
         public VirtualMachineMemoryConfig Memory { get; set; }
@@ -85,17 +83,17 @@ namespace Haipa.VmConfig
 
     }
 
-    public class VirtualMachineImageConfig
+    public class MachineImageConfig
     {
-        public VirtualMachineImageSource Source { get; set; }
-        public string Id { get; set; }
-        public string Version { get; set; }
+        public MachineImageSource Source { get; set; }
+        public string Name { get; set; }
+        public string Tag { get; set; }
     }
 
-    public enum VirtualMachineImageSource
+    public enum MachineImageSource
     {
         Local,
-        Vagrant
+        VagrantVM
     }
 
     public class MachineConfig
@@ -104,6 +102,8 @@ namespace Haipa.VmConfig
         public string Id { get; set; }
         public string Environment { get; set; }
         public string Project { get; set; }
+
+        public MachineImageConfig Image { get; set; }
 
         public VirtualMachineConfig VM { get; set; }
 
