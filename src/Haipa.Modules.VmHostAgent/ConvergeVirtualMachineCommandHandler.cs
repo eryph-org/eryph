@@ -167,14 +167,14 @@ namespace Haipa.Modules.VmHostAgent
 
         private static Task<Either<PowershellFailure, (TypedPsObject<VirtualMachineInfo> vmInfo, Option<ImageVirtualMachineInfo> imageVM)>> EnsureCreated(Option<TypedPsObject<VirtualMachineInfo>> vmInfo, MachineConfig config, HostSettings hostSettings, VMStorageSettings storageSettings, IPowershellEngine engine)
         {
-            if (!string.IsNullOrWhiteSpace(config.VM.Image.Id))
+            if (!string.IsNullOrWhiteSpace(config.Image.Name))
             {
                 return vmInfo.MatchAsync(
                     None: () =>
                         storageSettings.StorageIdentifier.ToEither(new PowershellFailure { Message = "Unknown storage identifier, cannot create new virtual machine" })
                             .BindAsync(storageIdentifier => Converge.ImportVirtualMachine(engine, hostSettings, config.Name, storageIdentifier,
                                 storageSettings.VMPath,
-                                config.VM.Image)),
+                                config.Image)),
                     Some: s => (s, Option<ImageVirtualMachineInfo>.None)
                 );
 
@@ -185,7 +185,7 @@ namespace Haipa.Modules.VmHostAgent
                     (storageSettings.StorageIdentifier.ToEither(new PowershellFailure{Message = "Unknown storage identifier, cannot create new virtual machine"})
                         .BindAsync(storageIdentifier => Converge.CreateVirtualMachine(engine, config.Name, storageIdentifier,
                             storageSettings.VMPath,
-                            config.VM.Memory.Startup)).MapAsync(r => (r, Option<ImageVirtualMachineInfo>.None))),                            
+                            config.VM.Memory.Startup.GetValueOrDefault(0))).MapAsync(r => (r, Option<ImageVirtualMachineInfo>.None))),                            
                 Some: s => (s, Option<ImageVirtualMachineInfo>.None)
             );
 
@@ -259,9 +259,9 @@ namespace Haipa.Modules.VmHostAgent
                 var metadataIndex = notes.IndexOf("Haipa metadata id: ", StringComparison.InvariantCultureIgnoreCase);
                 if (metadataIndex != -1)
                 {
-                    var metadataEnd = metadataIndex + 32;
-                    if (metadataEnd < notes.Length)
-                        metadataId = notes.Substring(metadataIndex, 32);
+                    var metadataEnd = metadataIndex + "Haipa metadata id: ".Length + 36;
+                    if (metadataEnd <= notes.Length)
+                        metadataId = notes.Substring(metadataIndex + "Haipa metadata id: ".Length, 36);
 
                 }
             }
@@ -286,7 +286,7 @@ namespace Haipa.Modules.VmHostAgent
                 };
 
                 if (imageInfo.IsSome)
-                    metadata.ImageInfo = imageInfo.ValueUnsafe();
+                    metadata.ImageConfig = imageInfo.ValueUnsafe().ToVmConfig();
 
                 var metadataJson = JsonConvert.SerializeObject(metadata);
                 File.WriteAllText($"{metadata.Id}.hmeta", metadataJson);
@@ -300,12 +300,13 @@ namespace Haipa.Modules.VmHostAgent
         }
     }
 
+    
 
-    public sealed class HaipaMetadata : Record<HaipaMetadata>
+    public sealed class HaipaMetadata
     {
         public Guid Id { get; set; }
         public Guid VMId { get; set; }
-        [CanBeNull] public ImageVirtualMachineInfo ImageInfo { get; set; }
+        [CanBeNull] public VirtualMachineConfig ImageConfig { get; set; }
         [CanBeNull] public VirtualMachineProvisioningConfig ProvisioningConfig { get; set; }
 
     }
