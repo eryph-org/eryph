@@ -33,7 +33,7 @@ namespace Haipa.Modules.VmHostAgent
                     Directory.CreateDirectory(imageRootPath);
 
                 var imagePath = Path.Combine(imageRootPath,
-                    $"{message.Command.ImageConfig.Id}\\{message.Command.ImageConfig.Version}");
+                    $"{message.Command.ImageConfig.Name}\\{message.Command.ImageConfig.Tag}");
 
                 if (Directory.Exists(imagePath))
                 {
@@ -41,7 +41,7 @@ namespace Haipa.Modules.VmHostAgent
                         OperationTaskStatusEvent.Completed(message.Command.OperationId, message.Command.TaskId));
                 }
 
-                if (message.Command.ImageConfig.Source == VirtualMachineImageSource.Local)
+                if (message.Command.ImageConfig.Source == MachineImageSource.Local)
                     throw new Exception("Image not found on local source.");
 
                 return Task.CompletedTask;
