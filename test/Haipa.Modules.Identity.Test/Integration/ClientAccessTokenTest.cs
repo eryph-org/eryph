@@ -7,18 +7,29 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Haipa.IdentityDb;
 using Haipa.TestUtils;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json.Linq;
+using SimpleInjector;
 using Xunit;
 
 namespace Haipa.Modules.Identity.Test.Integration
 {
-    public class ClientAccessTokenTest: IClassFixture<WebModuleFactory<IdentityModule>>
+    public class IdentityModuleFactory : WebModuleFactory<IdentityModule>
+    {
+        protected override void ConfigureModuleContainer(Container container)
+        {
+            base.ConfigureModuleContainer(container);
+            container.Register<IdentityDb.IDbContextConfigurer<ConfigurationStoreContext>, InMemoryConfigurationStoreContextConfigurer>();
+
+        }
+    }
+    public class ClientAccessTokenTest: IClassFixture<IdentityModuleFactory>
     {
         private readonly WebModuleFactory<IdentityModule> _factory;
 
-        public ClientAccessTokenTest(WebModuleFactory<IdentityModule> factory)
+        public ClientAccessTokenTest(IdentityModuleFactory factory)
         {
             _factory = factory;
             

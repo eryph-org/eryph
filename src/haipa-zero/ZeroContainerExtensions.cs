@@ -1,19 +1,25 @@
-﻿using Haipa.Modules.Api;
+﻿using Haipa.IdentityDb;
+using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
 using Haipa.Modules.Hosting;
 using Haipa.Modules.Identity;
+using Haipa.Modules.Identity.Seeder;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.HttpSys;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Haipa.Runtime.Zero
@@ -27,7 +33,7 @@ namespace Haipa.Runtime.Zero
                 .AddModule<IdentityModule>()
                 .AddModule<VmHostAgentModule>()
                 .AddModule<ControllerModule>();
-            
+
             container
                 .HostAspNetCore((path) =>
                 {
@@ -38,6 +44,7 @@ namespace Haipa.Runtime.Zero
                         })
                         .UseUrls($"https://localhost:62189/{path}")
                         .UseEnvironment("Development")
+
                         .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Warning));
                 });
             container
@@ -60,10 +67,10 @@ namespace Haipa.Runtime.Zero
         public static Container UseInMemoryDb(this Container container)
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
-            container.Register<IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
-
+            container.Register<StateDb.IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
+            container.Register<IdentityDb.IDbContextConfigurer<ConfigurationStoreContext>, InMemoryConfigurationStoreContextConfigurer>();
             return container;
         }
-       
+
     }
 }
