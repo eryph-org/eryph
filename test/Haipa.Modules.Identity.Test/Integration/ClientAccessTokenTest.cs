@@ -1,30 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Haipa.IdentityDb;
 using Haipa.TestUtils;
-using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json.Linq;
-using SimpleInjector;
+using IdentityServer4.Stores;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
 namespace Haipa.Modules.Identity.Test.Integration
 {
-    public class IdentityModuleFactory : WebModuleFactory<IdentityModule>
-    {
-        protected override void ConfigureModuleContainer(Container container)
-        {
-            base.ConfigureModuleContainer(container);
-            container.Register<IdentityDb.IDbContextConfigurer<ConfigurationStoreContext>, InMemoryConfigurationStoreContextConfigurer>();
-
-        }
-    }
     public class ClientAccessTokenTest: IClassFixture<IdentityModuleFactory>
     {
         private readonly WebModuleFactory<IdentityModule> _factory;
@@ -32,7 +15,6 @@ namespace Haipa.Modules.Identity.Test.Integration
         public ClientAccessTokenTest(IdentityModuleFactory factory)
         {
             _factory = factory;
-            
         }
 
         [Fact]
@@ -44,7 +26,17 @@ namespace Haipa.Modules.Identity.Test.Integration
         private Task<string> GetSystemClientAccessToken()
         {
             var cert = CertHelper.LoadPfx("console");
-            return _factory.CreateDefaultClient().GetClientAccessToken("console", cert, "openid");
+
+            var mockedFactory = _factory.WithWebHostBuilder(config => config.ConfigureServices(
+                sc =>
+                {
+                    sc.TryAddTransient(typeof(MockClientStore));
+                    sc.AddTransient<IClientStore, ValidatingClientStore<MockClientStore>>();
+
+                }
+            ));
+
+            return mockedFactory.CreateDefaultClient().GetClientAccessToken("console", cert, "openid");
 
         }
 

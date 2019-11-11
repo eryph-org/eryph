@@ -20,5 +20,4 @@ namespace Haipa.Modules
             return _container.GetInstance<TModuleHandler>().Execute(stoppingToken);
         }
     }
-
 }

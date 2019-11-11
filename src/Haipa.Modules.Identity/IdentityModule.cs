@@ -1,15 +1,19 @@
-﻿namespace Haipa.Modules.Identity
+﻿using System.Collections.Generic;
+using Haipa.IdentityDb;
+using Haipa.Modules.Identity.Services;
+using Haipa.Modules.Identity.Swagger;
+using IdentityServer4.EntityFramework.DbContexts;
+using IdentityServer4.Models;
+using Microsoft.EntityFrameworkCore;
+using SimpleInjector;
+
+namespace Haipa.Modules.Identity
 {
-    using Haipa.IdentityDb.Services;
-    using Haipa.IdentityDb.Services.Interfaces;
-    using Haipa.IdentityDb.Stores;
-    using IdentityServer4.Stores;
     using Microsoft.AspNet.OData;
     using Microsoft.AspNet.OData.Builder;
     using Microsoft.AspNet.OData.Extensions;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Builder;
-    using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.Mvc.ApiExplorer;
     using Microsoft.AspNetCore.Mvc.Cors.Internal;
@@ -18,7 +22,6 @@
     using Swashbuckle.AspNetCore.SwaggerGen;
     using System;
     using System.Linq;
-    using System.Threading.Tasks;
 
 
     /// <summary>
@@ -40,17 +43,6 @@
 
         public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
-
-            services.AddDbContext<IdentityDb.ConfigurationStoreContext>(options =>
-            {
-                serviceProvider.GetService<IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext>>().Configure(options);
-
-            });
-            services.AddTransient<IClientStore, ClientStore>();
-            services.AddTransient<IResourceStore, ResourceStore>();
-            services.AddTransient<IClientEntityService, ClientEntityService>();
-
-
             services.AddMvc(op =>
             {
                 op.EnableEndpointRouting = false;
@@ -66,10 +58,24 @@
             services.AddIdentityServer()
                 .AddJwtBearerClientAuthentication()
                 .AddDeveloperSigningCredential()
-                .AddResourceStore<ResourceStore>()
-                .AddClientStore<ClientStore>()
+                
+                .AddConfigurationStore(options =>
+                {
+                    options.ConfigureDbContext = builder =>
+                        serviceProvider.GetService<IDbContextConfigurer<ConfigurationDbContext>>().Configure(builder);
+                })
+                .AddInMemoryApiResources(new List<ApiResource>
+                {               
+                    new ApiResource("identity:apps:read:all"),
+                    new ApiResource("compute_api")
+                })
                 //.AddInMemoryCaching()
-                ;
+                .AddInMemoryIdentityResources(
+                    new[]
+                    {
+                        new IdentityResources.OpenId(),
+                    });
+
 
             services.AddApiVersioning(options =>
             {
@@ -177,5 +183,14 @@
                 });
         }
 
+        public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
+        {
+            base.ConfigureContainer(serviceProvider, container);
+
+            container.Register<IClientRepository, ClientRepository<ConfigurationDbContext>>(Lifestyle.Scoped);
+            container.Register<IIdentityServerClientService, IdentityServerClientService>(Lifestyle.Scoped);
+            container.Register<IClientService, ClientService>(Lifestyle.Scoped);
+
+        }
     }
 }

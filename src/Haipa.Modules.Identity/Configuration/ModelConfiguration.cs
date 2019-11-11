@@ -1,9 +1,6 @@
-﻿using Haipa.IdentityDb.Models;
-using Microsoft.AspNet.OData.Builder;
+﻿using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Haipa.Modules.Identity.Models;
 
 namespace Haipa.Modules.Identity.Configuration
 {
@@ -11,7 +8,7 @@ namespace Haipa.Modules.Identity.Configuration
     {
         private static void ConfigureV1(ODataModelBuilder builder)
         {
-            builder.EntitySet<ClientEntity>("ClientEntity");
+            builder.EntitySet<ClientEntityDTO>("ClientEntity");
         }
         public void Apply(ODataModelBuilder builder, ApiVersion apiVersion)
         {

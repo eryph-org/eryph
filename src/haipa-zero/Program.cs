@@ -55,19 +55,7 @@ namespace Haipa.Runtime.Zero
 
             var container = new Container();
             container.Bootstrap(args);
-            #region Identity Server Seeder
-            var serviceProvider = new ServiceCollection()
-    .AddDbContext<IdentityDb.ConfigurationStoreContext>(options =>
-    {
-        IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext> configurer = (IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext>)container.GetInstance(typeof(IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext>));
-        configurer.Configure(options);
-    })
-    .AddSingleton<IIdentityServerSeederService, IdentityServerSeederService>()
-    .BuildServiceProvider();
-            var seederService = serviceProvider.GetService<IIdentityServerSeederService>();
-            seederService.Seed();
-            #endregion
             container.RunModuleHostService("haipa-zero");
         }
     }
-}
+ }

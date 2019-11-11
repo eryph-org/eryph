@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using IdentityServer4.EntityFramework.DbContexts;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Haipa.IdentityDb
 {  
-    public class InMemoryConfigurationStoreContextConfigurer : IDbContextConfigurer<ConfigurationStoreContext>
+    public class InMemoryConfigurationStoreContextConfigurer : IDbContextConfigurer<ConfigurationDbContext>
     {
         private readonly InMemoryDatabaseRoot _dbRoot;
         public InMemoryConfigurationStoreContextConfigurer(InMemoryDatabaseRoot dbRoot)

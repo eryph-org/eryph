@@ -52,6 +52,9 @@ namespace Haipa.TestUtils
         /// </summary>
         public WebModuleFactory()
         {
+            _container = new Container();
+            _container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+
             _configurationAction = ConfigureWebHost;
             ConfigureModuleContainerAction = ConfigureModuleContainer;
         }
@@ -124,8 +127,6 @@ namespace Haipa.TestUtils
                 return;
             }
 
-            _container = new Container();
-            _container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
 
             var serviceProvider = new Container();
             serviceProvider.HostModules().AddModule<TModule>();

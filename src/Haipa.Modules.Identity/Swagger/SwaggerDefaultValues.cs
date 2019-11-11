@@ -1,12 +1,9 @@
 ﻿using System.Linq;
-using System.Reflection;
-using Microsoft.AspNet.OData;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Haipa.Modules.Identity
+namespace Haipa.Modules.Identity.Swagger
 {
     /// <summary>
     /// Represents the Swagger/Swashbuckle operation filter used to document the implicit API version parameter.

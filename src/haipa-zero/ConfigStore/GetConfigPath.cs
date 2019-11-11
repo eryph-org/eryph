@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
-namespace Haipa.IdentityDb
+namespace Haipa.Runtime.Zero.ConfigStore
 {   
     public class Config
     {        public static string GetConfigPath()
@@ -20,5 +18,4 @@ namespace Haipa.IdentityDb
             return clientsConfigPath;
         }
     }
-
 }

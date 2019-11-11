@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System.ComponentModel.DataAnnotations;
 
-namespace Haipa.IdentityDb.Dtos
+namespace Haipa.Modules.Identity.Models
 {
    public class ClientEntityDTO
     {
-        public Guid ClientId { get; set; }
+        [Key]
+        public string ClientId { get; set; }
         public string Description { get; set; }
         public string X509CertificateBase64 { get; set; }
         public string[] AllowedScopes { get; set; }

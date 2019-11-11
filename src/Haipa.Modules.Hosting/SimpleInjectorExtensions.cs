@@ -26,26 +26,27 @@ namespace Haipa.Modules.Hosting
 
     public class ModuleHostBuilder : IModuleHostBuilder
     {
-        private readonly Container _container;
 
         public ModuleHostBuilder(Container container)
         {
-            _container = container;
+            Container = container;
         }
+
+        public Container Container { get; }
 
         public IModuleHostBuilder AddModule<TModule>() where TModule : class, IModule
         {
 
-            _container.RegisterSingleton<TModule>();
-            _container.Collection.Append<IModule, TModule>(Lifestyle.Singleton);
+            Container.RegisterSingleton<TModule>();
+            Container.Collection.Append<IModule, TModule>(Lifestyle.Singleton);
             return this;
         }
 
         public async Task RunModule<TModule>(Func<IServiceProvider, Task> prepareStartFunc = null) where TModule : class, IModule
         {
-            var module = _container.GetInstance<TModule>();
-            var host = _container.CreateModuleHost(module);
-            host.Bootstrap(_container);
+            var module = Container.GetInstance<TModule>();
+            var host = Container.CreateModuleHost(module);
+            host.Bootstrap(Container);
 
             await host.Start().ConfigureAwait(false);
             await host.WaitForShutdownAsync().ConfigureAwait(false);
@@ -57,6 +58,7 @@ namespace Haipa.Modules.Hosting
 
     public interface IModuleHostBuilder
     {
+        Container Container { get; }
         IModuleHostBuilder AddModule<TModule>() where TModule : class, IModule;
         Task RunModule<TModule>(Func<IServiceProvider, Task> prepareStartFunc = null) where TModule : class, IModule;
     }
