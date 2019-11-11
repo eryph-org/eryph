@@ -9,7 +9,7 @@ namespace Haipa.Runtime.Zero.ConfigStore.Clients
     {
         public IEnumerable<ClientConfigModel> GetConfig()
         {
-            var configFiles = Directory.GetFiles(Config.GetConfigPath(), "*.json");
+            var configFiles = Directory.GetFiles(Config.GetClientConfigPath(), "*.json");
 
             foreach (var configFile in configFiles)
             {

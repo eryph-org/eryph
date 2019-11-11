@@ -10,7 +10,7 @@ namespace Haipa.Runtime.Zero.ConfigStore.Clients
         public static Task SaveConfigFile(this ClientConfigModel c)
         {
             var json = JsonConvert.SerializeObject(c);
-            var filePath = Path.Combine(Config.GetConfigPath(), CoerceValidFileName(c.ClientId) + ".json");
+            var filePath = Path.Combine(Config.GetClientConfigPath(), CoerceValidFileName(c.ClientId) + ".json");
             return SaveFileOperation(json, filePath);
         }
 
@@ -64,7 +64,7 @@ namespace Haipa.Runtime.Zero.ConfigStore.Clients
 
         public static void DeleteConfigFile(this ClientConfigModel c)
         {
-            var filePath = Path.Combine(Config.GetConfigPath(), c.ClientId + ".json");
+            var filePath = Path.Combine(Config.GetClientConfigPath(), c.ClientId + ".json");
             if(File.Exists(filePath))
                 File.Delete(filePath);
         }
