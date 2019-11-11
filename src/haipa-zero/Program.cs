@@ -23,6 +23,8 @@ namespace Haipa.Runtime.Zero
     using System.Diagnostics;
     using System.IO;
 
+namespace Haipa.Runtime.Zero
+﻿{
     /// <summary>
     /// Defines the <see cref="Program" />
     /// </summary>
@@ -34,18 +36,10 @@ namespace Haipa.Runtime.Zero
         /// <param name="args">The args<see cref="string[]"/></param>
         private static Task Main(string[] args)
         {
-            var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                $"Haipa{Path.DirectorySeparatorChar}zero");
+ 
+            ConfigStore.Config.EnsureConfigPaths();
 
-            var privateConfigPath = Path.Combine(configPath, "private");
-            var clientsConfigPath = Path.Combine(privateConfigPath, "clients");
-
-            if (!Directory.Exists(clientsConfigPath))
-                Directory.CreateDirectory(clientsConfigPath);
-
-            //File.WriteAllText(Path.Combine(clientsConfigPath, "system-client.json"),
-            //    "{ \"client_id\": \"system_client\", \"client_secret\" : \"388D45FA-B36B-4988-BA59-B187D329C207\" }");
-            File.WriteAllText(Path.Combine(configPath, "zero_info"),
+            File.WriteAllText(Path.Combine(ConfigStore.Config.GetConfigPath(), "zero_info"),
                 $"{{ \"process_id\": \"{Process.GetCurrentProcess().Id}\", \"url\" : \"http://localhost:62189\" }}");
 
             Certificate.CreateSSL(new CertificateOptions
@@ -60,7 +54,7 @@ namespace Haipa.Runtime.Zero
                 URL = "https://localhost:62189/",
                 AppID = "9412ee86-c21b-4eb8-bd89-f650fbf44931",
                 CACertName = "HaipaCA.pfx"
-            }); ; ;
+            });
 
             var container = new Container();
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
