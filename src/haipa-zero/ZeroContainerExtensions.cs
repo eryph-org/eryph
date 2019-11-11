@@ -1,25 +1,24 @@
-﻿using Haipa.IdentityDb;
+﻿using System;
+using Haipa.IdentityDb;
+using Haipa.Modules;
 using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
 using Haipa.Modules.Identity;
-using Haipa.Modules.Identity.Seeder;
+using Haipa.Modules.Identity.Services;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Rebus;
+using Haipa.Runtime.Zero.ConfigStore;
+using Haipa.Runtime.Zero.ConfigStore.Clients;
 using Haipa.StateDb;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Server.HttpSys;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;
-using System;
-using System.Collections.Generic;
-using System.IO;
+using IdentityServer4.EntityFramework.DbContexts;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Haipa.Runtime.Zero
 {
@@ -32,6 +31,8 @@ namespace Haipa.Runtime.Zero
                 .UseInMemoryDb();
 
             container.Register<IPlacementCalculator, ZeroAgentPlacementCalculator>();
+
+
         }
         public static Container UseInMemoryBus(this Container container)
         {
@@ -46,9 +47,43 @@ namespace Haipa.Runtime.Zero
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
             container.Register<StateDb.IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
-            container.Register<IdentityDb.IDbContextConfigurer<ConfigurationStoreContext>, InMemoryConfigurationStoreContextConfigurer>();
             return container;
         }
 
+        public static IModuleHostBuilder AddIdentityModule(this IModuleHostBuilder builder)
+        {
+            builder.AddModule<IdentityModule>();
+            
+            builder.Container.RegisterSingleton<IConfigReaderService<ClientConfigModel>, ClientConfigReaderService>();
+            builder.Container.RegisterSingleton<IConfigWriterService<ClientConfigModel>, ClientConfigWriterService>();
+            builder.Container.Register<IContainerConfigurer<IdentityModule>, IdentityModuleContainerConfigurer>();
+            builder.Container.Register<IServicesConfigurer<IdentityModule>, IdentityModuleServicesConfigurer>();
+
+            builder.Container.Register<IdentityDb.IDbContextConfigurer<ConfigurationDbContext>, InMemoryConfigurationStoreContextConfigurer>();
+
+            return builder;
+        }
+
+
+        private class IdentityModuleContainerConfigurer : IContainerConfigurer<IdentityModule>
+        {
+            public void ConfigureContainer(IdentityModule module, IServiceProvider serviceProvider, Container container)
+            {
+                container.Register(serviceProvider.GetRequiredService<IConfigWriterService<ClientConfigModel>>);
+                container.Register(serviceProvider.GetRequiredService<IConfigReaderService<ClientConfigModel>>);
+                container.RegisterDecorator<IClientService, ClientServiceWithConfigServiceDecorator>();
+                container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityClientSeeder>();
+
+            }
+        }
+
+        private class IdentityModuleServicesConfigurer : IServicesConfigurer<IdentityModule>
+        {
+            public void ConfigureServices(IdentityModule module, IServiceProvider serviceProvider, IServiceCollection services)
+            {
+                services.AddScopedModuleHandler<SeedFromConfigHandler<IdentityModule>>();
+            }
+        }
     }
+
 }

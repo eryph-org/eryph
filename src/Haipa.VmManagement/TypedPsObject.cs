@@ -60,9 +60,7 @@ namespace Haipa.VmManagement
 
         static TypedPsObjectMapping()
         {
-            var config = new MapperConfiguration(cfg => {
-                
-            });
+            var config = new MapperConfiguration(cfg => { cfg.CreateMissingTypeMaps = true; });
 
             Mapper = new Mapper(config);
         }
