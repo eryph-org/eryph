@@ -1,38 +1,34 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using Haipa.Modules.Identity.Models;
+using Haipa.Modules.Identity.Models.V1;
 using IdentityServer4;
 using IdentityServer4.Models;
-using JetBrains.Annotations;
 
 namespace Haipa.Modules.Identity.Services
 {
-    public class ClientService : IClientService
+    public class ClientService<TModel> : IClientService<TModel> where TModel : IClientApiModel
     {
         private readonly IIdentityServerClientService _identityServerService;
-        private readonly MapperConfiguration _mapperConfiguration;
 
         public ClientService(IIdentityServerClientService identityServerClient)
         {
             _identityServerService = identityServerClient;
-            _mapperConfiguration = new MapperConfiguration(cfg => cfg.AddProfile<ApiClientMapperProfile>());
 
         }
 
-        public IQueryable<ClientEntityDTO> QueryClients()
+        public IQueryable<TModel> QueryClients()
         {
-            return _identityServerService.QueryClients().ProjectTo<ClientEntityDTO>(_mapperConfiguration);
+            return ClientApiMapper.Mapper.ProjectTo<TModel>(_identityServerService.QueryClients());
         }
 
-        public async Task<ClientEntityDTO> GetClient(string clientId)
+        public async Task<TModel> GetClient(string clientId)
         {
-            return ToApiModel(await _identityServerService.GetClient(clientId));
+            return (await _identityServerService.GetClient(clientId)).ToApiModel<TModel>();
         }
 
-        public async Task DeleteClient(ClientEntityDTO client)
+        public async Task DeleteClient(TModel client)
         {
             var identityServerClient = await _identityServerService.GetClient(client.ClientId);
 
@@ -40,7 +36,7 @@ namespace Haipa.Modules.Identity.Services
                 await _identityServerService.DeleteClient(identityServerClient);
         }
 
-        public async Task UpdateClient(ClientEntityDTO client)
+        public async Task UpdateClient(TModel client)
         {
             var identityServerClient = await _identityServerService.GetClient(client.ClientId);
 
@@ -61,35 +57,10 @@ namespace Haipa.Modules.Identity.Services
             await _identityServerService.UpdateClient(identityServerClient);
         }
 
-        public Task AddClient(ClientEntityDTO client)
+        public Task AddClient(TModel client)
         {
             return _identityServerService.AddClient(client.ToIdentityServerModel());
         }
 
-        private static ClientEntityDTO ToApiModel([CanBeNull] Client client)
-        {
-            if (client == null)
-                return null;
-
-            return new ClientEntityDTO
-            {
-                ClientId = client.ClientId,
-                Description = client.Description,
-                AllowedScopes = client.AllowedScopes.ToArray(),
-                X509CertificateBase64 = client.ClientSecrets.FirstOrDefault()?.Value
-            };
-        }
-    }
-
-
-    public class ApiClientMapperProfile : Profile
-    {
-        public ApiClientMapperProfile()
-        {
-            CreateMap<Client, ClientEntityDTO>()
-                .ForMember(x => x.X509CertificateBase64,
-                    c => c.MapFrom(x => x.ClientSecrets.FirstOrDefault().Value));
-                
-        }
     }
 }

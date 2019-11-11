@@ -1,16 +1,15 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Modules.Identity.Models;
 
 namespace Haipa.Modules.Identity.Services
 {
-    public interface IClientService
+    public interface IClientService<TModel> where TModel : IClientApiModel
     {
-        IQueryable<ClientEntityDTO> QueryClients();
-        Task<ClientEntityDTO> GetClient(string clientId);
-        Task DeleteClient(ClientEntityDTO client);
-        Task UpdateClient(ClientEntityDTO client);
-        Task AddClient(ClientEntityDTO client);
+        IQueryable<TModel> QueryClients();
+        Task<TModel> GetClient(string clientId);
+        Task DeleteClient(TModel client);
+        Task UpdateClient(TModel client);
+        Task AddClient(TModel client);
     }
 }

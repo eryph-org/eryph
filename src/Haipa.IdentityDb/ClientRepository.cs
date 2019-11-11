@@ -76,6 +76,17 @@ namespace Haipa.IdentityDb
             return DbContext.AddRangeAsync(clients);
         }
 
+        public void RemoveClientRelations(Client client)
+        {
+            DbContext.RemoveRange(client.AllowedScopes);
+            DbContext.RemoveRange(client.AllowedGrantTypes);
+            DbContext.RemoveRange(client.RedirectUris);
+            DbContext.RemoveRange(client.AllowedCorsOrigins);
+            DbContext.RemoveRange(client.IdentityProviderRestrictions);
+            DbContext.RemoveRange(client.PostLogoutRedirectUris);
+
+        }
+
         public Task UpdateClientAsync(Client client)
         {
             DbContext.Update(client);
