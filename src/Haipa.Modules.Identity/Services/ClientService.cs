@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Modules.Identity.Models;
@@ -30,6 +31,9 @@ namespace Haipa.Modules.Identity.Services
 
         public async Task DeleteClient(TModel client)
         {
+            if (string.Equals(client.ClientId, "system-client"))
+                throw new InvalidOperationException("It is not allowed to delete the build-in system-client");
+
             var identityServerClient = await _identityServerService.GetClient(client.ClientId);
 
             if (identityServerClient != null)
@@ -38,12 +42,16 @@ namespace Haipa.Modules.Identity.Services
 
         public async Task UpdateClient(TModel client)
         {
+            if (string.Equals(client.ClientId, "system-client"))
+                throw new InvalidOperationException("It is not allowed to change the build-in system-client");
+
+
             var identityServerClient = await _identityServerService.GetClient(client.ClientId);
 
             if (identityServerClient == null) return;
 
             identityServerClient.AllowedScopes = client.AllowedScopes;
-            identityServerClient.Description = client.Description;
+            identityServerClient.Description = client.Description;        
             identityServerClient.AllowedScopes = client.AllowedScopes;
             identityServerClient.ClientSecrets = new List<Secret>
             {
