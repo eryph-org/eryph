@@ -2,10 +2,13 @@
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using AutoMapper.Configuration;
+using AutoMapper.QueryableExtensions;
 using Haipa.IdentityDb;
 using IdentityServer4.EntityFramework.Mappers;
 using IdentityServer4.Models;
 
+using Entities = IdentityServer4.EntityFramework.Entities;
 
 namespace Haipa.Modules.Identity.Services
 {
@@ -13,20 +16,30 @@ namespace Haipa.Modules.Identity.Services
     {
         private readonly IClientRepository _repository;
 
-        private readonly MapperConfiguration _mapperConfiguration;
-        private readonly IMapper _mapper;
+        private static readonly IMapper Mapper;
+        private static readonly MapperConfiguration ProjectionMapperConfiguration;
+
+        static IdentityServerClientService()
+        {
+            //this mapper is used for update mapping (Identity Server Mapper is not access-able for us)
+            var mapperConfiguration = new MapperConfiguration(cfg => { cfg.AddProfile<ClientMapperProfile>(); });
+
+            //projection will not work with identity server profile, but by using CovertUsing we can use to default mapper from identity server
+            ProjectionMapperConfiguration = new MapperConfiguration(cfg => cfg.CreateMap<Entities.Client,Client>()
+                    .ConvertUsing(src => src.ToModel()));
+           
+            Mapper = mapperConfiguration.CreateMapper();
+
+        }
 
         public IdentityServerClientService(IClientRepository repository)
         {
             _repository = repository;
-            _mapperConfiguration = new MapperConfiguration(cfg => { cfg.AddProfile<ClientMapperProfile>(); });
-            _mapper = _mapperConfiguration.CreateMapper();
         }
 
         public IQueryable<Client> QueryClients()
         {
-            //TODO: this is a workaround for issues with automapper and projection, Mapping or queryable usage should be reconsidered
-            return _repository.QueryClients().ToList().Select(x => x.ToModel()).AsQueryable();
+            return _repository.QueryClients().ProjectTo<Client>(ProjectionMapperConfiguration);
         }
 
         public async Task<Client> GetClient(string clientId)
@@ -66,8 +79,8 @@ namespace Haipa.Modules.Identity.Services
             if (trackedClient == null)
                 return;
 
-            var newEntityData = client.ToEntity();
-            trackedClient = _mapper.Map(newEntityData, trackedClient);
+            _repository.RemoveClientRelations(trackedClient);
+            Mapper.Map(client, trackedClient);
 
             await _repository.UpdateClientAsync(trackedClient);
             await _repository.SaveAllChangesAsync();

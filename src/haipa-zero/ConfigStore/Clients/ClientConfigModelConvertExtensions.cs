@@ -1,10 +1,11 @@
 ﻿using Haipa.Modules.Identity.Models;
+using Haipa.Modules.Identity.Models.V1;
 
 namespace Haipa.Runtime.Zero.ConfigStore.Clients
 {
     internal static class ClientConfigModelConvertExtensions
     {
-        public static ClientConfigModel FromApiModel(this ClientEntityDTO apiModel)
+        public static ClientConfigModel FromApiModel<TModel>(this TModel apiModel) where TModel: IClientApiModel
         {
             return new ClientConfigModel
             {
@@ -15,9 +16,9 @@ namespace Haipa.Runtime.Zero.ConfigStore.Clients
             };
         }
 
-        public static ClientEntityDTO ToApiModel(this ClientConfigModel configModel)
+        public static ClientApiModel ToApiModel(this ClientConfigModel configModel)
         {
-            return new ClientEntityDTO
+            return new ClientApiModel
             {
                 ClientId = configModel.ClientId,
                 AllowedScopes = configModel.AllowedScopes,

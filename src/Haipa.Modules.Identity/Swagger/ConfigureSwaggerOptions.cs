@@ -38,9 +38,9 @@ namespace Haipa.Modules.Identity.Swagger
         {
             var info = new Info()
             {
-                Title = "Haipa API",
+                Title = "Haipa Identity API",
                 Version = description.ApiVersion.ToString(),
-                Description = "Haipa management API",
+                Description = "Haipa Identity API",
                 Contact = new Contact() { Name = "dbosoft", Email = "support@dbosoft.eu" },
                 TermsOfService = "",
                 License = new License() { Name = "MIT", Url = "https://opensource.org/licenses/MIT" }

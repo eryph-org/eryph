@@ -18,5 +18,6 @@ namespace Haipa.IdentityDb
         Task RemoveClientAsync(Client client);
         Task<(int? Id, string ClientId)> GetClientIdAsync(string clientId);
         Task<Client> GetTrackedClientAsync(string clientId);
+        void RemoveClientRelations(Client client);
     }
 }

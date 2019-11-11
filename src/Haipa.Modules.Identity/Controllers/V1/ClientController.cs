@@ -1,35 +1,35 @@
-﻿using Haipa.Modules.Identity.Models;
+﻿using System.Linq;
+using System.Threading.Tasks;
+using Haipa.Modules.Identity.Models.V1;
 using Haipa.Modules.Identity.Services;
+using Microsoft.AspNet.OData;
+using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Mvc;
 
-namespace Haipa.Modules.Identity.Controllers
+namespace Haipa.Modules.Identity.Controllers.V1
 {
-    using Microsoft.AspNet.OData;
-    using Microsoft.AspNetCore.Cors;
-    using Microsoft.AspNetCore.Mvc;
-    using System.Linq;
-    using System.Threading.Tasks;
-
+    /// <inheritdoc />
     /// <summary>
-    /// Defines the <see cref="ClientEntityController" />
+    /// Defines the <see cref="!:ClientEntityController" />
     /// </summary>
     [ApiVersion("1.0")]
     [Produces("application/json")]
     [EnableCors("CorsPolicy")]
-    public class ClientEntityController : ODataController
+    public class ClientsController : ODataController
     {
-        private readonly IClientService _clientService;
-        public ClientEntityController(IClientService clientService)
+        private readonly IClientService<ClientApiModel> _clientService;
+        public ClientsController(IClientService<ClientApiModel> clientService)
         {
             _clientService = clientService;
         }
 
         [EnableQuery]
-        public IQueryable<ClientEntityDTO> Get()
+        public IQueryable<ClientApiModel> Get()
         {
             return _clientService.QueryClients();
         }
 
-        public async Task<ActionResult> Get([FromODataUri] string key)
+        public async Task<IActionResult> Get([FromODataUri] string key)
         {
             var client = await _clientService.GetClient(key);
 
@@ -38,7 +38,7 @@ namespace Haipa.Modules.Identity.Controllers
             return Ok(client);
         }
 
-        public async Task<ActionResult> Delete([FromODataUri] string key)
+        public async Task<IActionResult> Delete([FromODataUri] string key)
         {
             var client = await _clientService.GetClient(key);
             if (client == null) return NotFound();
@@ -48,19 +48,24 @@ namespace Haipa.Modules.Identity.Controllers
             return Ok();
         }
 
-        public Task<ActionResult> Put([FromODataUri] string key, [FromBody] Delta<ClientEntityDTO> client)
+        public Task<IActionResult> Put([FromODataUri] string key, [FromBody] Delta<ClientApiModel> client)
         {
             return PutOrPatch(key, client, true);
         }
 
-        public Task<ActionResult> Patch([FromODataUri] string key, [FromBody] Delta<ClientEntityDTO> client)
+        public Task<IActionResult> Patch([FromODataUri] string key, [FromBody] Delta<ClientApiModel> client)
         {
             return PutOrPatch(key, client,false);
         }
 
 
-        private async Task<ActionResult> PutOrPatch([FromODataUri] string clientId, Delta<ClientEntityDTO> client, bool putMode)
+        private async Task<IActionResult> PutOrPatch([FromODataUri] string clientId, Delta<ClientApiModel> client, bool putMode)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            
             var persistentClient = await _clientService.GetClient(clientId);
             if (client == null) return NotFound();
 
@@ -76,9 +81,13 @@ namespace Haipa.Modules.Identity.Controllers
             
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Post([FromBody] ClientEntityDTO client)
+        public async Task<IActionResult> Post([FromBody] ClientApiModel client)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             var persistentClient = await _clientService.GetClient(client.ClientId);
             if (persistentClient != null)
                 return Conflict();

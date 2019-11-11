@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using Haipa.IdentityDb;
+using Haipa.Modules.Identity.Models.V1;
 using Haipa.Modules.Identity.Services;
 using Haipa.Modules.Identity.Swagger;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.Models;
-using Microsoft.EntityFrameworkCore;
 using SimpleInjector;
 
 namespace Haipa.Modules.Identity
@@ -189,7 +189,7 @@ namespace Haipa.Modules.Identity
 
             container.Register<IClientRepository, ClientRepository<ConfigurationDbContext>>(Lifestyle.Scoped);
             container.Register<IIdentityServerClientService, IdentityServerClientService>(Lifestyle.Scoped);
-            container.Register<IClientService, ClientService>(Lifestyle.Scoped);
+            container.Register<IClientService<ClientApiModel>, ClientService<ClientApiModel>>(Lifestyle.Scoped);
 
         }
     }
