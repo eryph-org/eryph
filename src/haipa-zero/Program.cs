@@ -38,6 +38,7 @@ namespace Haipa.Runtime.Zero
         {
  
             ConfigStore.Config.EnsureConfigPaths();
+            ConfigStore.Config.EnsureSystemClient();
 
             File.WriteAllText(Path.Combine(ConfigStore.Config.GetConfigPath(), "zero_info"),
                 $"{{ \"process_id\": \"{Process.GetCurrentProcess().Id}\", \"url\" : \"http://localhost:62189\" }}");
