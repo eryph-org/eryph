@@ -29,9 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Configuration\ModelConfiguration.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Update="Configuration\ModelConfiguration.cs" />
   </ItemGroup>
 
 </Project>

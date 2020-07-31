@@ -10,7 +10,9 @@ namespace Haipa.Modules.Identity.Services
         public ClientApiMapperProfile()
         {
             CreateMap<Client, ClientApiModel>()
-                .ForMember(x => x.X509CertificateBase64,
+                .ForMember(x => x.Id, opt => opt.MapFrom(x => x.ClientId))
+                .ForMember(x => x.Name, opt => opt.MapFrom(x => x.ClientName))
+                .ForMember(x => x.Certificate,
                     c => c.MapFrom(x => x.ClientSecrets.FirstOrDefault().Value))
                 .ReverseMap();
 

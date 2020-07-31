@@ -9,9 +9,10 @@ namespace Haipa.Runtime.Zero.ConfigStore.Clients
         {
             return new ClientConfigModel
             {
-                ClientId = apiModel.ClientId,
+                ClientId = apiModel.Id,
+                ClientName = apiModel.Name,
                 AllowedScopes = apiModel.AllowedScopes,
-                X509CertificateBase64 = apiModel.X509CertificateBase64,
+                X509CertificateBase64 = apiModel.Certificate,
                 Description = apiModel.Description
             };
         }
@@ -20,9 +21,10 @@ namespace Haipa.Runtime.Zero.ConfigStore.Clients
         {
             return new ClientApiModel
             {
-                ClientId = configModel.ClientId,
+                Id = configModel.ClientId,
+                Name = configModel.ClientName,
                 AllowedScopes = configModel.AllowedScopes,
-                X509CertificateBase64 = configModel.X509CertificateBase64,
+                Certificate = configModel.X509CertificateBase64,
                 Description = configModel.Description
             };
         }

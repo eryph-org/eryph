@@ -20,7 +20,8 @@ namespace Haipa.Modules.Identity.Models.V1
         {
             return new Client
             {
-                ClientId = client.ClientId,
+                ClientId = client.Id,
+                ClientName = client.Name,
                 Description = client.Description,
                 AllowedScopes = client.AllowedScopes,
                 AllowedGrantTypes = GrantTypes.ClientCredentials,           
@@ -32,7 +33,7 @@ namespace Haipa.Modules.Identity.Models.V1
                     new Secret
                     {
                         Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
-                        Value = client.X509CertificateBase64
+                        Value = client.Certificate
                     }
                 },
             };

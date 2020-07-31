@@ -30,7 +30,7 @@ namespace Haipa.Modules.Identity.Test.Integration
                     }),
                     AllowedGrantTypes = GrantTypes.ClientCredentials,
                     AllowOfflineAccess = true,
-                    AllowedScopes = {"openid", "identity:apps:read:all", "compute_api"},
+                    AllowedScopes = {"openid", "compute_api"},
                     AllowRememberConsent = true,
                     RequireConsent = false,
 

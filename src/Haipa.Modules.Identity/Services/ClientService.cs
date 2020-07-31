@@ -31,10 +31,10 @@ namespace Haipa.Modules.Identity.Services
 
         public async Task DeleteClient(TModel client)
         {
-            if (string.Equals(client.ClientId, "system-client"))
+            if (string.Equals(client.Id, "system-client"))
                 throw new InvalidOperationException("It is not allowed to delete the build-in system-client");
 
-            var identityServerClient = await _identityServerService.GetClient(client.ClientId);
+            var identityServerClient = await _identityServerService.GetClient(client.Id);
 
             if (identityServerClient != null)
                 await _identityServerService.DeleteClient(identityServerClient);
@@ -42,11 +42,11 @@ namespace Haipa.Modules.Identity.Services
 
         public async Task UpdateClient(TModel client)
         {
-            if (string.Equals(client.ClientId, "system-client"))
+            if (string.Equals(client.Id, "system-client"))
                 throw new InvalidOperationException("It is not allowed to change the build-in system-client");
 
 
-            var identityServerClient = await _identityServerService.GetClient(client.ClientId);
+            var identityServerClient = await _identityServerService.GetClient(client.Id);
 
             if (identityServerClient == null) return;
 
@@ -58,7 +58,7 @@ namespace Haipa.Modules.Identity.Services
                 new Secret
                 {
                     Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
-                    Value = client.X509CertificateBase64
+                    Value = client.Certificate
                 }
             };
 

@@ -5,7 +5,10 @@ using Haipa.Modules.Identity.Services;
 using Haipa.Modules.Identity.Swagger;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using SimpleInjector;
+using Scope = IdentityServer4.Models.Scope;
 
 namespace Haipa.Modules.Identity
 {
@@ -46,11 +49,8 @@ namespace Haipa.Modules.Identity
             services.AddMvc(op =>
             {
                 op.EnableEndpointRouting = false;
-                //var policy = new AuthorizationPolicyBuilder()
-                //    .RequireAuthenticatedUser()
-                //    .Build();
-                //op.Filters.Add(new AuthorizeFilter(policy));
             })
+
                .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
                .AddApplicationPart(typeof(IdentityModule).Assembly)
                .AddApplicationPart(typeof(VersionedMetadataController).Assembly);
@@ -66,14 +66,28 @@ namespace Haipa.Modules.Identity
                 })
                 .AddInMemoryApiResources(new List<ApiResource>
                 {               
-                    new ApiResource("identity:apps:read:all"),
-                    new ApiResource("compute_api")
+                    new ApiResource("compute_api"),
+                    new ApiResource
+                    {
+                        Name= "identity_api",
+                        Scopes = { new Scope
+                                {
+                                    Name = "identity:clients:write:all",
+                                    DisplayName = "Full access to clients"
+                                },
+                                new Scope
+                                {
+                                    Name = "identity:clients:read:all",
+                                    DisplayName = "Read only access to clients"
+                                } }
+                    }
                 })
                 //.AddInMemoryCaching()
                 .AddInMemoryIdentityResources(
                     new[]
                     {
                         new IdentityResources.OpenId(),
+                        
                     });
 
 
@@ -111,26 +125,24 @@ namespace Haipa.Modules.Identity
                     options.EnableAnnotations();
                     options.DescribeAllEnumsAsStrings();
                 });
-            //JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-            //JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
-
-            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            //    .AddJwtBearer(options =>
-            //    {
-            //        options.Authority = "https://localhost:62189/identity";
-            //        options.Audience = "identity_api";
-            //        options.RequireHttpsMetadata = false;
-            //    });
 
 
-            ////services.AddAuthorization(options =>
-            ////{
-            ////    options.AddPolicy("identity:apps:read:all", policy => policy.Requirements.Add(new HasScopeRequirement("identity:apps:read:all", "http://localhost:62189/identity")));
-            ////});
-            ////services.AddAuthorization(options =>
-            ////{
-            ////    options.AddPolicy("identity:apps:write:all", policy => policy.Requirements.Add(new HasScopeRequirement("identity:apps:write:all", "http://localhost:62189/identity")));
-            ////});
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.Authority = "https://localhost:62189/identity";
+                    options.Audience = "identity_api";
+                });
+
+
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("identity:clients:read:all", policy => policy.Requirements.Add(new HasScopeRequirement("identity:clients:read:all", "http://localhost:62189/identity")));
+            });
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("identity:clients:write:all", policy => policy.Requirements.Add(new HasScopeRequirement("identity:clients:write:all", "http://localhost:62189/identity")));
+            });
 
             services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
             services.AddCors(options =>

@@ -25,7 +25,7 @@ namespace Haipa.Modules.Identity.Test
                 ["client_id"] = clientName,
                 ["client_assertion_type"] = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
                 ["client_assertion"] = jwt,
-                ["scopes"] = scopes
+                //["scopes"] = scopes
             });
 
             var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead);

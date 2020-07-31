@@ -1,0 +1,85 @@
+﻿using System;
+using System.IO;
+using Haipa.Security.Cryptography;
+using Newtonsoft.Json;
+using Org.BouncyCastle.Crypto;
+
+namespace Haipa.Runtime.Zero.ConfigStore.Clients
+{
+    public static class ClientGenerator
+    {
+        public static void EnsureSystemClient()
+        {
+            var systemClientDataFile = Path.Combine(Config.GetClientConfigPath(), "system-client.json");
+            var systemClientKeyFile = Path.Combine(Config.GetClientConfigPath(), "system-client.key");
+
+            var recreateSystemClient = !File.Exists(systemClientDataFile) || !File.Exists(systemClientKeyFile);
+
+            AsymmetricKeyParameter publicKey = null;
+            if (File.Exists(systemClientDataFile))
+            {
+                try
+                {
+                    var systemClientData =
+                        JsonConvert.DeserializeObject<ClientConfigModel>(File.ReadAllText(systemClientDataFile));
+                    publicKey = CertHelper.GetPublicKey(systemClientData.X509CertificateBase64);
+
+                }
+                catch (Exception)
+                {
+                    recreateSystemClient = true;
+                }
+            }
+
+            AsymmetricCipherKeyPair privateKeyPair = null;
+            if (!recreateSystemClient && File.Exists(systemClientKeyFile))
+            {
+                try
+                {
+                    privateKeyPair = CertHelper.ReadPrivateKeyFile(systemClientKeyFile);
+                }
+                catch (Exception)
+                {
+                    recreateSystemClient = true;
+                }
+            }
+
+            if (!recreateSystemClient && publicKey != null && privateKeyPair != null)
+            {
+                if (privateKeyPair.Public.Equals(publicKey))
+                    return;
+            }
+
+            RemoveSystemClient();
+
+            var (certificate, keyPair) = X509Generation.GenerateCertificate("system-client");
+
+            var newClient = new ClientConfigModel
+            {
+                ClientId = "system-client",
+                X509CertificateBase64 = Convert.ToBase64String(certificate.GetEncoded()),
+                AllowedScopes = new []{ "openid", "compute_api", "identity:clients:write:all" }
+            };
+            newClient.SaveConfigFile();
+            CertHelper.WritePrivateKeyFile(systemClientKeyFile, keyPair);
+
+        }
+
+        private static void RemoveSystemClient()
+        {
+            var systemClientDataFile = Path.Combine(Config.GetClientConfigPath(), "system-client.json");
+            var systemClientKeyFile = Path.Combine(Config.GetClientConfigPath(), "system-client.key");
+
+            if (File.Exists(systemClientDataFile))
+            {
+                File.Delete(systemClientDataFile);
+            }
+
+            if (File.Exists(systemClientKeyFile))
+            {
+                File.Delete(systemClientKeyFile);
+            }
+        }
+
+    }
+}
