@@ -1,4 +1,6 @@
-﻿namespace Haipa.Modules.Identity
+﻿using Dbosoft.Hosuto.Modules;
+
+namespace Haipa.Modules.Identity
 {
     using Haipa.IdentityDb.Services;
     using Haipa.IdentityDb.Services.Interfaces;
@@ -26,7 +28,7 @@
     /// </summary>
     [ApiVersion("1.0")]
 
-    public class IdentityModule : WebModuleBase
+    public class IdentityModule : WebModule
     {
         /// <summary>
         /// Gets the Name
@@ -38,7 +40,7 @@
         /// </summary>
         public override string Path => "identity";
 
-        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
 
             services.AddDbContext<IdentityDb.ConfigurationStoreContext>(options =>
@@ -141,7 +143,7 @@
             });
         }
 
-        public override void Configure(IApplicationBuilder app)
+        public void Configure(IApplicationBuilder app)
         {
             //app.UseCors("CorsPolicy");
             //app.UseCorsMiddleware();

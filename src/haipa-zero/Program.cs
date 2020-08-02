@@ -1,9 +1,20 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+using Dbosoft.Hosuto.Modules.Hosting;
+using Haipa.Modules.Api;
+using Haipa.Modules.Controller;
 using Haipa.Modules.Hosting;
+using Haipa.Modules.Identity;
+using Haipa.Modules.VmHostAgent;
 using Haipa.Security.Cryptography;
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SimpleInjector;
+using SimpleInjector.Lifestyles;
 
 namespace Haipa.Runtime.Zero
 ﻿{
@@ -23,7 +34,7 @@ namespace Haipa.Runtime.Zero
         /// The Main
         /// </summary>
         /// <param name="args">The args<see cref="string[]"/></param>
-        private static void Main(string[] args)
+        private static Task Main(string[] args)
         {
             var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                 $"Haipa{Path.DirectorySeparatorChar}zero");
@@ -54,20 +65,43 @@ namespace Haipa.Runtime.Zero
             }); ; ;
 
             var container = new Container();
-            container.Bootstrap(args);
+            container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+            container.Bootstrap();
+
+            var host = ModuleHost.CreateDefaultBuilder(args)
+                .UseSimpleInjector(container)
+                .HostModule<ApiModule>()
+                .HostModule<IdentityModule>()
+                .HostModule<VmHostAgentModule>()
+                .HostModule<ControllerModule>()
+                .UseAspNetCore(WebHost.CreateDefaultBuilder, (module, webHostBuilder) =>
+                {
+                    webHostBuilder.UseHttpSys(options =>
+                        {
+                            options.UrlPrefixes.Add($"https://localhost:62189/{module.Path}");
+                        })
+                        .UseUrls($"https://localhost:62189/{module.Path}");
+                })
+
+                .UseEnvironment("Development")
+                .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Warning))
+                .Build();
+
+
             #region Identity Server Seeder
             var serviceProvider = new ServiceCollection()
-    .AddDbContext<IdentityDb.ConfigurationStoreContext>(options =>
-    {
-        IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext> configurer = (IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext>)container.GetInstance(typeof(IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext>));
-        configurer.Configure(options);
-    })
-    .AddSingleton<IIdentityServerSeederService, IdentityServerSeederService>()
-    .BuildServiceProvider();
+                .AddDbContext<IdentityDb.ConfigurationStoreContext>(options =>
+                {
+                    IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext> configurer = (IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext>)container.GetInstance(typeof(IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext>));
+                    configurer.Configure(options);
+                })
+                .AddSingleton<IIdentityServerSeederService, IdentityServerSeederService>()
+                .BuildServiceProvider();
             var seederService = serviceProvider.GetService<IIdentityServerSeederService>();
             seederService.Seed();
             #endregion
-            container.RunModuleHostService("haipa-zero");
+
+            return host.RunAsync();
         }
     }
 }

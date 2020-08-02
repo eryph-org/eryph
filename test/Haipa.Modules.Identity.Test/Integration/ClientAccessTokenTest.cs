@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Dbosoft.Hosuto.Modules.Testing;
 using Haipa.IdentityDb;
 using Haipa.TestUtils;
 using Microsoft.IdentityModel.Tokens;
@@ -16,15 +17,6 @@ using Xunit;
 
 namespace Haipa.Modules.Identity.Test.Integration
 {
-    public class IdentityModuleFactory : WebModuleFactory<IdentityModule>
-    {
-        protected override void ConfigureModuleContainer(Container container)
-        {
-            base.ConfigureModuleContainer(container);
-            container.Register<IdentityDb.IDbContextConfigurer<ConfigurationStoreContext>, InMemoryConfigurationStoreContextConfigurer>();
-
-        }
-    }
     public class ClientAccessTokenTest: IClassFixture<IdentityModuleFactory>
     {
         private readonly WebModuleFactory<IdentityModule> _factory;

@@ -11,7 +11,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Messages\Haipa.Messages.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
     <ProjectReference Include="..\Haipa.Modules\Haipa.Modules.csproj" />
     <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
     <ProjectReference Include="..\Haipa.StateDb.MySql\Haipa.StateDb.MySql.csproj" />

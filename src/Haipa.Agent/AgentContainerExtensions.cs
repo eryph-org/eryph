@@ -1,5 +1,4 @@
-﻿using Haipa.Modules.Hosting;
-using Haipa.Modules.VmHostAgent;
+﻿using Haipa.Modules.VmHostAgent;
 using Haipa.Rebus;
 
 using SimpleInjector;
@@ -8,10 +7,8 @@ namespace Haipa.Agent
 {
     internal static class ControllerContainerExtensions
     {
-        public static void Bootstrap(this Container container, string[] args)
+        public static void Bootstrap(this Container container)
         {
-            container.HostModules().AddModule<VmHostAgentModule>();
-
             container
                 .UseRabbitMq();
         }

@@ -12,7 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Haipa.Modules.AspNetCore.Abstractions\Haipa.Modules.AspNetCore.Abstractions.csproj" />
     <ProjectReference Include="..\Haipa.Modules\Haipa.Modules.csproj" />
   </ItemGroup>
 

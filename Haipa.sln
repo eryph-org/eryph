@@ -1,15 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27428.2015
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30320.27
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{8FEDA44A-CCBF-4B47-838E-7FA6FEE688D4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5161FD3F-5E58-4C46-9EC5-DC275266583A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "haipa-zero", "src\haipa-zero\haipa-zero.csproj", "{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Abstractions", "src\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj", "{8E0FE0D3-3818-4131-AC31-3B5C804E4FE8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Api", "src\Haipa.Modules.Api\Haipa.Modules.Api.csproj", "{B8A556E4-4A1A-4A40-B564-F50D2A584F24}"
 EndProject
@@ -35,17 +33,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.StateDb", "src\Haipa.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.VmConfig.Primitives", "src\Haipa.VmConfig.Primitives\Haipa.VmConfig.Primitives.csproj", "{C63C8CAE-FED1-48FF-AFD8-B075D3CDEA51}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.TestClient", "test\Identity.TestClient\Identity.TestClient.csproj", "{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules", "src\Haipa.Modules\Haipa.Modules.csproj", "{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.AspNetCore", "src\Haipa.Modules.AspNetCore\Haipa.Modules.AspNetCore.csproj", "{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.AspNetCore.Abstractions", "src\Haipa.Modules.AspNetCore.Abstractions\Haipa.Modules.AspNetCore.Abstractions.csproj", "{37129E63-B26C-44B0-8ED4-5D6169D13717}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting", "src\Haipa.Modules.Hosting\Haipa.Modules.Hosting.csproj", "{3824EE94-9D2C-47D5-99B7-BE275ADF6B73}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting.Topshelf", "src\Haipa.Modules.Hosting.Topshelf\Haipa.Modules.Hosting.Topshelf.csproj", "{93E945F0-31E6-488F-A4B0-23C2D7CE5977}"
 EndProject
@@ -57,10 +49,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Identity.Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.TestUtils.AspNetCore", "test\Haipa.TestUtils.AspNetCore\Haipa.TestUtils.AspNetCore.csproj", "{FDE35F47-AF4A-482C-8A4F-3EC0DD6F16AC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting.AspNetCore", "src\Haipa.Modules.Hosting.AspNetCore\Haipa.Modules.Hosting.AspNetCore.csproj", "{594B4BCB-AB07-4526-9853-180CD803EB48}"
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Identity", "src\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj", "{6B56359B-B15A-4888-997D-AB8A953F0A29}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.IdentityDb", "src\Haipa.IdentityDb\Haipa.IdentityDb.csproj", "{A64F9618-DEB4-4BE0-9310-39E4A57FFA2E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.IdentityDb", "src\Haipa.IdentityDb\Haipa.IdentityDb.csproj", "{A64F9618-DEB4-4BE0-9310-39E4A57FFA2E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -75,10 +66,6 @@ Global
 		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8E0FE0D3-3818-4131-AC31-3B5C804E4FE8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8E0FE0D3-3818-4131-AC31-3B5C804E4FE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8E0FE0D3-3818-4131-AC31-3B5C804E4FE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8E0FE0D3-3818-4131-AC31-3B5C804E4FE8}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -127,14 +114,6 @@ Global
 		{C63C8CAE-FED1-48FF-AFD8-B075D3CDEA51}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C63C8CAE-FED1-48FF-AFD8-B075D3CDEA51}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C63C8CAE-FED1-48FF-AFD8-B075D3CDEA51}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AA719468-406C-4FC2-B8C4-BE9615EEE0CC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FC213A80-EDA8-4D8E-977B-B8F59225CB4D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -143,14 +122,6 @@ Global
 		{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{37129E63-B26C-44B0-8ED4-5D6169D13717}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{37129E63-B26C-44B0-8ED4-5D6169D13717}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{37129E63-B26C-44B0-8ED4-5D6169D13717}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{37129E63-B26C-44B0-8ED4-5D6169D13717}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3824EE94-9D2C-47D5-99B7-BE275ADF6B73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3824EE94-9D2C-47D5-99B7-BE275ADF6B73}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3824EE94-9D2C-47D5-99B7-BE275ADF6B73}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3824EE94-9D2C-47D5-99B7-BE275ADF6B73}.Release|Any CPU.Build.0 = Release|Any CPU
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -171,10 +142,6 @@ Global
 		{FDE35F47-AF4A-482C-8A4F-3EC0DD6F16AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FDE35F47-AF4A-482C-8A4F-3EC0DD6F16AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FDE35F47-AF4A-482C-8A4F-3EC0DD6F16AC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{594B4BCB-AB07-4526-9853-180CD803EB48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{594B4BCB-AB07-4526-9853-180CD803EB48}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{594B4BCB-AB07-4526-9853-180CD803EB48}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{594B4BCB-AB07-4526-9853-180CD803EB48}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6B56359B-B15A-4888-997D-AB8A953F0A29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6B56359B-B15A-4888-997D-AB8A953F0A29}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B56359B-B15A-4888-997D-AB8A953F0A29}.Release|Any CPU.ActiveCfg = Release|Any CPU

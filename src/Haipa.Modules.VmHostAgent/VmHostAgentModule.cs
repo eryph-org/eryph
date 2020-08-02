@@ -1,4 +1,6 @@
 ﻿using System;
+using Dbosoft.Hosuto.HostedServices;
+using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
 using Haipa.Rebus;
 using Haipa.VmManagement;
@@ -16,20 +18,21 @@ using SimpleInjector;
 namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    public class VmHostAgentModule : ModuleBase
+    public class VmHostAgentModule : IModule
     {
-        public override string Name => "Haipa.VmHostAgent";
+        public string Name => "Haipa.VmHostAgent";
 
-        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
-            services.AddModuleHandler<StartBusModuleHandler>();
-            services.AddModuleService<WmiWatcherModuleService>();
+            services.AddHostedHandler<StartBusModuleHandler>();
+            //TODO: add module handler in Hosuto
+            //services.AddHostedService<WmiWatcherModuleService>();
 
         }
 
-        public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
+        public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
-
+            container.Register<StartBusModuleHandler>();
             container.RegisterSingleton<IPowershellEngine, PowershellEngine>();
             container.RegisterSingleton<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>();
 

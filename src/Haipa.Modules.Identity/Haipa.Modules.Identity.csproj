@@ -21,7 +21,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.IdentityDb\Haipa.IdentityDb.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
     <ProjectReference Include="..\Haipa.Modules.AspNetCore\Haipa.Modules.AspNetCore.csproj" />
     <ProjectReference Include="..\Haipa.StateDb\Haipa.StateDb.csproj" />

@@ -1,5 +1,4 @@
 ﻿using Haipa.Modules.Api;
-using Haipa.Modules.Hosting;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using Haipa.StateDb.MySql;
@@ -10,13 +9,8 @@ namespace Haipa.ApiEndpoint
 {
     internal static class ApiEndpointContainerExtensions
     {
-        public static void Bootstrap(this Container container, string[] args)
+        public static void Bootstrap(this Container container)
         {
-            container.HostModules().AddModule<ApiModule>();
-
-            container.HostAspNetCore((path) => WebHost.CreateDefaultBuilder(args));
-
-
             container
                 .UseRabbitMq()
                 .UseMySql();

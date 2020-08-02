@@ -8,14 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.1.0-beta.5" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.1.0-beta.5" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.2.0" PrivateAssets="All" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.4.10" />
-    <PackageReference Include="SimpleInjector" Version="4.7.1" />
+    <PackageReference Include="SimpleInjector" Version="5.0.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Haipa.Modules.Hosting.AspNetCore\Haipa.Modules.Hosting.AspNetCore.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj" />
     <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
     <ProjectReference Include="..\Haipa.StateDb.MySql\Haipa.StateDb.MySql.csproj" />

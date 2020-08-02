@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.Modules.Controller;
-using Haipa.Modules.Hosting;
 using Haipa.StateDb;
 using Haipa.StateDb.MySql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
@@ -18,16 +19,17 @@ namespace Haipa.Controller
             await MySqlConnectionCheck.WaitForMySql(new TimeSpan(0, 1, 0)).ConfigureAwait(false);
 
             var container = new Container();
-            container.Bootstrap(args);
+            container.Bootstrap();
 
-            await container.HostModules().RunModule<ControllerModule>((sp) =>
-            {
-                using(AsyncScopedLifestyle.BeginScope(sp as Container))
-                    sp.GetService<StateStoreContext>().Database.Migrate();
+            await ModuleHost.CreateDefaultBuilder(args)
+                .UseSimpleInjector(container)
+                .HostModule<ControllerModule>(options => options.Configure((sp) =>
+                    {
+                        using (var scope = sp.CreateScope())
+                            scope.ServiceProvider.GetService<StateStoreContext>().Database.Migrate();
+                    }))
 
-                return Task.CompletedTask;
-
-            }).ConfigureAwait(false);
+        .RunConsoleAsync().ConfigureAwait(false);
         }
     }
 }

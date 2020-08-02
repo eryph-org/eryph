@@ -1,11 +1,12 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Hosuto.HostedServices;
 using Haipa.Messages;
 using Rebus.Bus;
 
 namespace Haipa.Modules.Controller
 {
-    public class StartBusModuleHandler : IModuleHandler
+    public class StartBusModuleHandler : IHostedServiceHandler
     {
         private readonly IBus _bus;
 

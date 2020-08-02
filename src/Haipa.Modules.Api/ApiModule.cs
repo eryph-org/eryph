@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
 using Haipa.Modules.Api.Services;
 using Haipa.Rebus;
@@ -29,12 +30,12 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 namespace Haipa.Modules.Api
 {
     [UsedImplicitly]
-    public class ApiModule : WebModuleBase
+    public class ApiModule : WebModule
     {
         public override string Name => "Haipa.Modules.Api";
         public override string Path => "api";
 
-        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
             services.AddDbContext<StateStoreContext>(options =>
                 serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>().Configure(options));
@@ -100,7 +101,7 @@ namespace Haipa.Modules.Api
                 });
         }
 
-        public override void Configure(IApplicationBuilder app)
+        public void Configure(IApplicationBuilder app)
         {
             var modelBuilder = app.ApplicationServices.GetService<VersionedODataModelBuilder>();
             var provider = app.ApplicationServices.GetService<IApiVersionDescriptionProvider>();
@@ -135,7 +136,7 @@ namespace Haipa.Modules.Api
                 });
         }
 
-        public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
+        public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ApiModule).Assembly);
             container.Register<IOperationManager, OperationManager>(Lifestyle.Scoped);
