@@ -16,7 +16,7 @@ namespace Haipa.Identity
             var container = new Container();
             container.Bootstrap();
 
-            await ModuleHost.CreateDefaultBuilder(args)
+            await ModulesHost.CreateDefaultBuilder(args)
                 .UseSimpleInjector(container)
                 .UseAspNetCore(WebHost.CreateDefaultBuilder, (module, webHostBuilder) =>
                 {

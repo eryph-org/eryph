@@ -10,8 +10,8 @@
     <EazfuscatorCompatibilityVersion>2018.1</EazfuscatorCompatibilityVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.1.0-beta.5" />
-    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.1.0-beta.5" />
+    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.1.0" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.1.0" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" Version="2.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.4" />

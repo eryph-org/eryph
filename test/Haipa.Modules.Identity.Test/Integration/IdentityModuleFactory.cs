@@ -9,9 +9,9 @@ namespace Haipa.Modules.Identity.Test.Integration
     {
         readonly Container _container = new Container();
 
-        protected override IModuleHostBuilder CreateModuleHostBuilder()
+        protected override IModulesHostBuilder CreateModuleHostBuilder()
         {
-            var moduleHostBuilder = new ModuleHostBuilder();
+            var moduleHostBuilder = new ModulesHostBuilder();
             moduleHostBuilder.UseSimpleInjector(_container);
 
             _container.Register<IDbContextConfigurer<ConfigurationStoreContext>, InMemoryConfigurationStoreContextConfigurer>();

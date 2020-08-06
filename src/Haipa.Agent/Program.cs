@@ -15,7 +15,7 @@ namespace Haipa.Agent
             var container = new Container();
             container.Bootstrap();
 
-            return ModuleHost.CreateDefaultBuilder(args)
+            return ModulesHost.CreateDefaultBuilder(args)
                 .UseSimpleInjector(container)
                 .RunModule<VmHostAgentModule>();
         }

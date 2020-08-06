@@ -68,7 +68,7 @@ namespace Haipa.Runtime.Zero
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
             container.Bootstrap();
 
-            var host = ModuleHost.CreateDefaultBuilder(args)
+            var host = ModulesHost.CreateDefaultBuilder(args)
                 .UseSimpleInjector(container)
                 .HostModule<ApiModule>()
                 .HostModule<IdentityModule>()
