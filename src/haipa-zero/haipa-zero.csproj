@@ -23,7 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Hosting.Topshelf\Haipa.Modules.Hosting.Topshelf.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj" />
     <ProjectReference Include="..\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj" />
     <ProjectReference Include="..\Haipa.Security.Cryptography\Haipa.Security.Cryptography.csproj" />

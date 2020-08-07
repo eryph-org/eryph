@@ -35,11 +35,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.VmConfig.Primitives",
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules", "src\Haipa.Modules\Haipa.Modules.csproj", "{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.AspNetCore", "src\Haipa.Modules.AspNetCore\Haipa.Modules.AspNetCore.csproj", "{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Hosting.Topshelf", "src\Haipa.Modules.Hosting.Topshelf\Haipa.Modules.Hosting.Topshelf.csproj", "{93E945F0-31E6-488F-A4B0-23C2D7CE5977}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Identity", "src\Haipa.Identity\Haipa.Identity.csproj", "{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}"
 EndProject
@@ -114,18 +110,10 @@ Global
 		{C63C8CAE-FED1-48FF-AFD8-B075D3CDEA51}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C63C8CAE-FED1-48FF-AFD8-B075D3CDEA51}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C63C8CAE-FED1-48FF-AFD8-B075D3CDEA51}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DD4809CC-ADD7-4EE1-AE11-089402DBF11B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{93E945F0-31E6-488F-A4B0-23C2D7CE5977}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}.Release|Any CPU.ActiveCfg = Release|Any CPU

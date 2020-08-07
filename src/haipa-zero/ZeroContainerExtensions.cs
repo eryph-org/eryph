@@ -1,7 +1,6 @@
 ﻿using Haipa.IdentityDb;
 using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
-using Haipa.Modules.Hosting;
 using Haipa.Modules.Identity;
 using Haipa.Modules.Identity.Seeder;
 using Haipa.Modules.VmHostAgent;

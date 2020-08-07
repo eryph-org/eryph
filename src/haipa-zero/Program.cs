@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
-using Haipa.Modules.Hosting;
 using Haipa.Modules.Identity;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Security.Cryptography;
@@ -18,7 +17,6 @@ using SimpleInjector.Lifestyles;
 
 namespace Haipa.Runtime.Zero
 ﻿{
-    using Haipa.Modules.Hosting;
     using Microsoft.Extensions.DependencyInjection;
     using SimpleInjector;
     using System;
