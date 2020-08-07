@@ -12,6 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.1.0" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.4.10" />
 
@@ -23,7 +25,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Hosting.AspNetCore\Haipa.Modules.Hosting.AspNetCore.csproj" />
   </ItemGroup>
 
 </Project>

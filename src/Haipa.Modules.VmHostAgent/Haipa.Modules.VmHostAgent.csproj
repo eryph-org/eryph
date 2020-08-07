@@ -5,14 +5,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dbosoft.Hosuto" Version="0.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2018.2.1" />
     <PackageReference Include="Rebus.Async" Version="6.0.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Messages\Haipa.Messages.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
-    <ProjectReference Include="..\Haipa.Modules\Haipa.Modules.csproj" />
     <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
     <ProjectReference Include="..\Haipa.VmManagement\Haipa.VmManagement.csproj" />
   </ItemGroup>

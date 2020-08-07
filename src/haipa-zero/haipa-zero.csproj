@@ -10,21 +10,19 @@
     <EazfuscatorCompatibilityVersion>2018.1</EazfuscatorCompatibilityVersion>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.1.0" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.1.0" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" Version="2.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="2.2.6" />
-    <PackageReference Include="SimpleInjector" Version="4.7.1" />
+    <PackageReference Include="SimpleInjector" Version="5.0.3" />
     <PackageReference Include="SQLitePCLRaw.bundle_green" Version="1.1.13" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.1" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Haipa.Modules.Abstractions\Haipa.Modules.Abstractions.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Hosting.AspNetCore\Haipa.Modules.Hosting.AspNetCore.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Hosting.Topshelf\Haipa.Modules.Hosting.Topshelf.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Hosting\Haipa.Modules.Hosting.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj" />
     <ProjectReference Include="..\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj" />
     <ProjectReference Include="..\Haipa.Security.Cryptography\Haipa.Security.Cryptography.csproj" />

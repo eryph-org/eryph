@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Hosuto.HostedServices;
 using Haipa.Messages.Events;
 using Haipa.Rebus;
 using Microsoft.Extensions.Hosting;
@@ -7,23 +8,18 @@ using Rebus.Bus;
 
 namespace Haipa.Modules.Controller.Inventory
 {
-    public class InventoryModuleService : IHostedService
+    public class InventoryHandler : IHostedServiceHandler
     {
         private readonly IBus _bus;
 
-        public InventoryModuleService(IBus bus)
+        public InventoryHandler(IBus bus)
         {
             _bus = bus;
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
-        {            
-            return _bus.Advanced.Topics.Publish($"broadcast_{QueueNames.VMHostAgent}", new InventoryRequestedEvent());
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
+        public Task Execute(CancellationToken stoppingToken)
         {
-            return Task.CompletedTask;
+            return _bus.Advanced.Topics.Publish($"broadcast_{QueueNames.VMHostAgent}", new InventoryRequestedEvent());
         }
     }
 }

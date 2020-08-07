@@ -7,14 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dbosoft.Hosuto.Hosting" Version="0.1.0" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.1" />
     <PackageReference Include="Rebus.MySql" Version="1.1.0" />
-    <PackageReference Include="SimpleInjector" Version="4.7.1" />
+    <PackageReference Include="SimpleInjector" Version="5.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Hosting\Haipa.Modules.Hosting.csproj" />
     <ProjectReference Include="..\Haipa.StateDb.MySql\Haipa.StateDb.MySql.csproj" />
   </ItemGroup>
 

@@ -1,4 +1,6 @@
 ﻿using System;
+using Dbosoft.Hosuto.HostedServices;
+using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Modules.Controller.Inventory;
@@ -20,13 +22,16 @@ using SimpleInjector.Lifestyles;
 namespace Haipa.Modules.Controller
 {
     [UsedImplicitly]
-    public class ControllerModule : ModuleBase
+    public class ControllerModule : IModule
     {
-        public override string Name => "Haipa.Controller";
+        public string Name => "Haipa.Controller";
 
 
-        public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
+        public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
+            container.Register<StartBusModuleHandler>();
+            container.Register<InventoryHandler>();
+
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationTaskHandler<>));
 
@@ -63,10 +68,10 @@ namespace Haipa.Modules.Controller
                 .Logging(x => x.ColoredConsole(LogLevel.Debug)).Start());
         }
 
-        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
-            services.AddModuleHandler<StartBusModuleHandler>();
-            services.AddModuleService<InventoryModuleService>();
+            services.AddHostedHandler<StartBusModuleHandler>();
+            services.AddHostedHandler<InventoryHandler>();
 
         }
 

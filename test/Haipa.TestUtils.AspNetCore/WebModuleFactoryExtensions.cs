@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using Haipa.Modules;
+using Dbosoft.Hosuto.Modules;
+using Dbosoft.Hosuto.Modules.Testing;
 using Haipa.TestUtils.Handlers;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration.Memory;
@@ -12,7 +13,7 @@ namespace Haipa.TestUtils
 {
     public static class WebModuleFactoryExtensions
     {
-        public static ODataClient CreateODataClient<T>(this WebModuleFactory<T> self, string uriString) where T : WebModuleBase
+        public static ODataClient CreateODataClient<T>(this WebModuleFactory<T> self, string uriString) where T : WebModule
         {
             
             return new ODataClient(
@@ -24,7 +25,7 @@ namespace Haipa.TestUtils
 
         }
 
-        public static ODataClient CreateODataClient<T>(this WebModuleFactory<T> self, string uriString, Action<IServiceCollection> services) where T : WebModuleBase
+        public static ODataClient CreateODataClient<T>(this WebModuleFactory<T> self, string uriString, Action<IServiceCollection> services) where T : WebModule
         {
             
 
@@ -34,7 +35,7 @@ namespace Haipa.TestUtils
 
         }
 
-        public static HttpClient CreateAuthenticatedClient<T>(this WebModuleFactory<T> self, Action<IServiceCollection> services) where T : WebModuleBase
+        public static HttpClient CreateAuthenticatedClient<T>(this WebModuleFactory<T> self, Action<IServiceCollection> services) where T : WebModule
         {
 
             var serviceList = new Action<IServiceCollection>(services);

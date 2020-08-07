@@ -6,14 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dbosoft.Hosuto" Version="0.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.2" />
     <PackageReference Include="SimpleInjector.Integration.AspNetCore.Mvc.Core" Version="4.7.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Haipa.Modules.AspNetCore.Abstractions\Haipa.Modules.AspNetCore.Abstractions.csproj" />
-    <ProjectReference Include="..\Haipa.Modules\Haipa.Modules.csproj" />
   </ItemGroup>
 
 </Project>

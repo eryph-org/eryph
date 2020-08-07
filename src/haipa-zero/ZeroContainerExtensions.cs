@@ -1,7 +1,6 @@
 ﻿using Haipa.IdentityDb;
 using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
-using Haipa.Modules.Hosting;
 using Haipa.Modules.Identity;
 using Haipa.Modules.Identity.Seeder;
 using Haipa.Modules.VmHostAgent;
@@ -26,32 +25,11 @@ namespace Haipa.Runtime.Zero
 {
     internal static class ZeroContainerExtensions
     {
-        public static void Bootstrap(this Container container, string[] args)
+        public static void Bootstrap(this Container container)
         {
-            container.HostModules()
-                .AddModule<ApiModule>()
-                .AddModule<IdentityModule>()
-                .AddModule<VmHostAgentModule>()
-                .AddModule<ControllerModule>();
-
-            container
-                .HostAspNetCore((path) =>
-                {
-                    return WebHost.CreateDefaultBuilder(args)
-                        .UseHttpSys(options =>
-                        {
-                            options.UrlPrefixes.Add($"https://localhost:62189/{path}");
-                        })
-                        .UseUrls($"https://localhost:62189/{path}")
-                        .UseEnvironment("Development")
-
-                        .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Warning));
-                });
             container
                 .UseInMemoryBus()
                 .UseInMemoryDb();
-
-            container.RegisterConditional(typeof(IModuleHost<>), typeof(ModuleHost<>), c => !c.Handled);
 
             container.Register<IPlacementCalculator, ZeroAgentPlacementCalculator>();
         }

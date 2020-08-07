@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.Modules.Api;
-using Haipa.Modules.Hosting;
 using Haipa.StateDb.MySql;
+using Microsoft.AspNetCore;
 using SimpleInjector;
 
 namespace Haipa.ApiEndpoint
@@ -15,9 +16,15 @@ namespace Haipa.ApiEndpoint
             await MySqlConnectionCheck.WaitForMySql(new TimeSpan(0, 1, 0)).ConfigureAwait(false);
 
             var container = new Container();
-            container.Bootstrap(args);
+            container.Bootstrap();
 
-            await container.HostModules().RunModule<ApiModule>((sp) => Task.CompletedTask).ConfigureAwait(false);
+            await ModulesHost.CreateDefaultBuilder(args)
+                .UseSimpleInjector(container)
+                .UseAspNetCore(WebHost.CreateDefaultBuilder, (module, webHostBuilder) =>
+                {
+
+                })
+                .RunModule<ApiModule>();
 
         }
 

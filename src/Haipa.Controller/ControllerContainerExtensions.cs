@@ -1,6 +1,4 @@
 ﻿using Haipa.Controller.Rebus;
-using Haipa.Modules.Controller;
-using Haipa.Modules.Hosting;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using Haipa.StateDb.MySql;
@@ -10,10 +8,8 @@ namespace Haipa.Controller
 {
     internal static class ControllerContainerExtensions
     {
-        public static void Bootstrap(this Container container, string[] args)
+        public static void Bootstrap(this Container container)
         {
-            container.HostModules().AddModule<ControllerModule>();
-
             container
                 .UseRabbitMq()
                 .UseMySql();

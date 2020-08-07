@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Modules.Hosting;
+using Dbosoft.Hosuto.Modules.Hosting;
+using Haipa.Modules.Api;
 using Haipa.Modules.Identity;
-using Haipa.StateDb.MySql;
+using Microsoft.AspNetCore;
 using SimpleInjector;
 
 namespace Haipa.Identity
@@ -13,10 +14,15 @@ namespace Haipa.Identity
         public static async Task Main(string[] args)
         {
             var container = new Container();
-            container.Bootstrap(args);
+            container.Bootstrap();
 
-            await container.HostModules().RunModule<IdentityModule>((sp) => Task.CompletedTask).ConfigureAwait(false);
+            await ModulesHost.CreateDefaultBuilder(args)
+                .UseSimpleInjector(container)
+                .UseAspNetCore(WebHost.CreateDefaultBuilder, (module, webHostBuilder) =>
+                {
 
+                })
+                .RunModule<IdentityModule>();
         }
 
     }
