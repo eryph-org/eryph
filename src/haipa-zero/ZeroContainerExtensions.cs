@@ -1,12 +1,7 @@
-﻿using Haipa.Modules.Api;
-using Haipa.Modules.Controller;
-using Haipa.Modules.VmHostAgent;
+﻿using Haipa.Modules.Controller;
 using Haipa.Rebus;
 using Haipa.StateDb;
-using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;

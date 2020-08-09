@@ -23,7 +23,6 @@ namespace Haipa.Runtime.Zero
             {
                 services.AddTransient<IConfigureContainerFilter<IdentityModule>, IdentityModuleFilters>();
                 services.AddTransient<IModuleServicesFilter<IdentityModule>, IdentityModuleFilters>();
-
             });
 
             container.RegisterSingleton<IConfigReaderService<ClientConfigModel>, ClientConfigReaderService>();
@@ -43,7 +42,6 @@ namespace Haipa.Runtime.Zero
                 return (context, container) =>
                 {
                     next(context, container);
-                    container.RegisterSingleton<SeedFromConfigHandler<IdentityModule>>();
 
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigWriterService<ClientConfigModel>>);
@@ -51,6 +49,8 @@ namespace Haipa.Runtime.Zero
                         .GetRequiredService<IConfigReaderService<ClientConfigModel>>);
                     container.RegisterDecorator(typeof(IClientService<>),
                         typeof(ClientServiceWithConfigServiceDecorator<>));
+
+                    container.RegisterSingleton<SeedFromConfigHandler<IdentityModule>>();
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityClientSeeder>();
 
                 };
