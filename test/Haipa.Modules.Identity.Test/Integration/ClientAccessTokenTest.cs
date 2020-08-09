@@ -1,29 +1,13 @@
-using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
-using Haipa.IdentityDb;
-using Haipa.TestUtils;
 using IdentityServer4;
 using IdentityServer4.Models;
-using IdentityServer4.Services;
 using IdentityServer4.Stores;
-using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using Moq;
-using Newtonsoft.Json.Linq;
-using SimpleInjector;
 using Xunit;
 
 namespace Haipa.Modules.Identity.Test.Integration
@@ -39,12 +23,12 @@ namespace Haipa.Modules.Identity.Test.Integration
         }
 
         [Fact]
-        public async Task System_Client_Gets_Access_Token()
+        public async Task Client_Gets_Access_Token()
         {            
-            Assert.NotNull(await GetSystemClientAccessToken());
+            Assert.NotNull(await GetClientAccessToken());
         }
 
-        private Task<string> GetSystemClientAccessToken()
+        private Task<string> GetClientAccessToken()
         {
 
             var cert = CertHelper.LoadPfx("console");
@@ -56,8 +40,8 @@ namespace Haipa.Modules.Identity.Test.Integration
                         c.ConfigureTestServices(
                             services =>
                             {
-                                services.AddTransient<ClientStoreWrapper>();
-                                services.AddTransient<IClientStore, ValidatingClientStore<ClientStoreWrapper>>();
+                                services.AddTransient<ClientStoreMock>();
+                                services.AddTransient<IClientStore, ValidatingClientStore<ClientStoreMock>>();
                             });
                     });
 
@@ -69,13 +53,8 @@ namespace Haipa.Modules.Identity.Test.Integration
     }
 
 
-    public class ClientStoreWrapper : IClientStore
+    public class ClientStoreMock : IClientStore
     {
-        public ClientStoreWrapper()
-        {
-
-        }
-
         public Task<Client> FindClientByIdAsync(string clientId)
         {
             if (clientId == "console")
@@ -86,11 +65,11 @@ namespace Haipa.Modules.Identity.Test.Integration
                     ClientSecrets = new List<Secret>(new[]{ new Secret
                     {
                         Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
-                        Value = "MIIDODCCAiCgAwIBAgIJAOpQ0eFJaKxwMA0GCSqGSIb3DQEBCwUAMBQxEjAQBgNVBAMTCWxvY2FsaG9zdDAeFw0xOTAxMTQxMzQzMTdaFw0yMDAxMTQxMzQzMTdaMBQxEjAQBgNVBAMTCWxvY2FsaG9zdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMPqtSGct4mEbI82borT+PtlGFWPgDvzmaufzuXq5bHmsrLO4M6JmNjSIP5GCnKyZFGdOGPUZJ1ixxMPYhxiMRDCAoXWiU5TNCGIGlU6FimXlotvocqID8wGM4i//nxtK+hpxLyOwB87bGVG2Xuz3Fy/zT9GSGprDM10gBLdWPBYudK3lV5DTvYetKCO/XKziB/m3H4CKUWDJB3MawBRgZHxTHCI7qfxuBjxKSpe6W3kx5vO7t0MEIryJWAl/35HZoIC3FmjqQOBrZCzs1oI3pCLpY9aRspmwrHTnePD56f/s1rbQEsVSzKunoBl8mvyPJkHADAceLZuR4jIv3VzUtUCAwEAAaOBjDCBiTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIFIDAWBgNVHSUBAf8EDDAKBggrBgEFBQcDATAXBgNVHREBAf8EDTALgglsb2NhbGhvc3QwOAYKKwYBBAGCN1QBAQQqQVNQLk5FVCBDb3JlIEhUVFBTIGRldmVsb3BtZW50IGNlcnRpZmljYXRlMA0GCSqGSIb3DQEBCwUAA4IBAQCwTq5AvWo03e5cFz+vIWbYGq33LQfdv1OE03o+pqXRa/0vbg4zNNOmKOV0OdicWG3eCVGztau5Z0EWYwoVGlB6iBuRRY2eKgk924qgFkrpe/wZ6SIEklEOBVj5vL30i8HO/G8IWgl9+OHdhx14YyEkpQoLtkcsEPSsWPMRlp0TF9Roawi1wrfLphbHxRDV10BIHwy3A6aLrxRLg6RSP6GjRTlMr4qwf0KPG/CtSyGI0+caqWGn+M1S/RuArUsF2QaeMpIUglHOrEFuNJlb+kH1xHWZDkcwY3KLcxL5L9LZfB1OZQ3l18nad0S0FZU6SMfiMk5daRRNDwYTEaWahrv2"
+                        Value = "MIIDgzCCAmugAwIBAgIgOlEjF4ZI2amJJfME8Gl0Z6NxvwU+tmTQ3ZFTb7o1+BEw DQYJKoZIhvcNAQEFBQAwVjEJMAcGA1UEBhMAMQkwBwYDVQQKDAAxCTAHBgNVBAsM ADEQMA4GA1UEAwwHY29uc29sZTEPMA0GCSqGSIb3DQEJARYAMRAwDgYDVQQDDAdj b25zb2xlMB4XDTIwMDgwOTE0MjQ0MVoXDTMwMDgxMDE0MjQ0MVowRDEJMAcGA1UE BhMAMQkwBwYDVQQKDAAxCTAHBgNVBAsMADEQMA4GA1UEAwwHY29uc29sZTEPMA0G CSqGSIb3DQEJARYAMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuPgA wnZbTiTDpNiTIsyshtCn/KvoS0L6mz0QEcZmHXB9PRvqUDmRyq3kqsjmU7DK5mjC Si/get31X7L4y8H0NdG/DlpoFKvbviRTPYdJiJqZqYMCtD1RbLcAvadx6KdvdWl6 KpQ1kj9CUEKJj8sAufpPuMslDB+rbUNAgE1GambRw1yY1SkgC15NecdtgYYkT08y e4ZBsrjea7IoctnK4XHCpBSW1lqHHy+YAp1Q/ijhM0cbI+Q7ttvGFhF/bOczHg2T 7gxLfocwUpcaIGGiwwr2u0g/XuAcdXUc8vxDRtTKakkOnpdp+MWosqyzAnTh7WS5 4ZS38buDUULeqd/L5wIDAQABo08wTTAdBgNVHQ4EFgQU3KKxXoqZ4aXcTEC4galH 0wPclCowHwYDVR0jBBgwFoAU3KKxXoqZ4aXcTEC4galH0wPclCowCwYDVR0RBAQw AoIAMA0GCSqGSIb3DQEBBQUAA4IBAQAWrY/lxdFa4NcLfpDwZAv/9xbJhtERjp7V Q+lOHuIv3eqkyUgrhBA0jFkSdPySmmFCFTwtGp0xR63rA+2EFxyXg3jTYLhKErwZ IL/YQch2TZKNmf7yZX8XraZ9QijhdqngXng4XCcPr19la7+TU1n/mIPzZX9Bx88o 9fFPUMglmzKcJuuR/YSXxGfb5OMdHNaliuFPODD9iyIRhMG098eaxgSVEDM5KIU8 bkex8JkFESHoR1rWe/lXzTNeR4eapEDSmMjptsuspCo1lDd16UHWH6de8Vkalf8Q 72gewTcGOcthfr1mbizj9bSJW4y/2FZyar/C6vcBIE3Bk+yyNmog"
                     }}),
                     AllowedGrantTypes = GrantTypes.ClientCredentials,
                     AllowOfflineAccess = true,
-                    AllowedScopes = { "openid", "identity:apps:read:all", "compute_api" },
+                    AllowedScopes = { "openid" },
                     AllowRememberConsent = true,
                     RequireConsent = false,
 

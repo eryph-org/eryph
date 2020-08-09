@@ -7,7 +7,7 @@ namespace Haipa.Modules.Identity.Test
         public static X509Certificate2 LoadPfx(string name)
         {
             var collection = new X509Certificate2Collection();
-            collection.Import($"{name}.pfx", "haipa", X509KeyStorageFlags.PersistKeySet);
+            collection.Import($"{name}.pfx", "1234", X509KeyStorageFlags.PersistKeySet);
 
             return collection[0];
         }

@@ -1,6 +1,5 @@
 ﻿using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
-using Haipa.Modules.Hosting;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Rebus;
 using Haipa.StateDb;

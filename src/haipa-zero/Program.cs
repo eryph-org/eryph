@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
-using Haipa.Modules.Identity;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Security.Cryptography;
 using Microsoft.AspNetCore;
@@ -15,13 +14,6 @@ using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
-namespace Haipa.Runtime.Zero
-﻿{
-    using Microsoft.Extensions.DependencyInjection;
-    using SimpleInjector;
-    using System;
-    using System.Diagnostics;
-    using System.IO;
 
 namespace Haipa.Runtime.Zero
 ﻿{
@@ -62,11 +54,6 @@ namespace Haipa.Runtime.Zero
             container.Bootstrap();
 
             var host = ModulesHost.CreateDefaultBuilder(args)
-                .UseSimpleInjector(container)
-                .HostModule<ApiModule>()
-                .HostModule<IdentityModule>()
-                .HostModule<VmHostAgentModule>()
-                .HostModule<ControllerModule>()
                 .UseAspNetCore(WebHost.CreateDefaultBuilder, (module, webHostBuilder) =>
                 {
                     webHostBuilder.UseHttpSys(options =>
@@ -75,24 +62,16 @@ namespace Haipa.Runtime.Zero
                         })
                         .UseUrls($"https://localhost:62189/{module.Path}");
                 })
+                .UseSimpleInjector(container)
+                .HostModule<ApiModule>()
+                .AddIdentityModule(container)
+                .HostModule<VmHostAgentModule>()
+                .HostModule<ControllerModule>()
+
 
                 .UseEnvironment("Development")
                 .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Warning))
                 .Build();
-
-
-            #region Identity Server Seeder
-            var serviceProvider = new ServiceCollection()
-                .AddDbContext<IdentityDb.ConfigurationStoreContext>(options =>
-                {
-                    IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext> configurer = (IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext>)container.GetInstance(typeof(IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext>));
-                    configurer.Configure(options);
-                })
-                .AddSingleton<IIdentityServerSeederService, IdentityServerSeederService>()
-                .BuildServiceProvider();
-            var seederService = serviceProvider.GetService<IIdentityServerSeederService>();
-            seederService.Seed();
-            #endregion
 
             return host.RunAsync();
         }

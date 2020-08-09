@@ -1,6 +1,7 @@
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Hosuto.Modules.Testing;
 using Haipa.IdentityDb;
+using IdentityServer4.EntityFramework.DbContexts;
 using SimpleInjector;
 
 namespace Haipa.Modules.Identity.Test.Integration
@@ -12,9 +13,10 @@ namespace Haipa.Modules.Identity.Test.Integration
         protected override IModulesHostBuilder CreateModuleHostBuilder()
         {
             var moduleHostBuilder = new ModulesHostBuilder();
+            _container.Options.AllowOverridingRegistrations = true;
             moduleHostBuilder.UseSimpleInjector(_container);
 
-            _container.Register<IDbContextConfigurer<ConfigurationStoreContext>, InMemoryConfigurationStoreContextConfigurer>();
+            _container.Register<IDbContextConfigurer<ConfigurationDbContext>, InMemoryConfigurationStoreContextConfigurer>();
 
             return moduleHostBuilder;
         }

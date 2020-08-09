@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Dbosoft.Hosuto.Modules;
 using Haipa.IdentityDb;
 using Haipa.Modules.Identity.Models.V1;
 using Haipa.Modules.Identity.Services;
@@ -46,6 +47,7 @@ namespace Haipa.Modules.Identity
 
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
+
             services.AddMvc(op =>
             {
                 op.EnableEndpointRouting = false;
@@ -62,7 +64,7 @@ namespace Haipa.Modules.Identity
                 .AddConfigurationStore(options =>
                 {
                     options.ConfigureDbContext = builder =>
-                        serviceProvider.GetService<IDbContextConfigurer<ConfigurationDbContext>>().Configure(builder);
+                        serviceProvider.GetRequiredService<IDbContextConfigurer<ConfigurationDbContext>>().Configure(builder);
                 })
                 .AddInMemoryApiResources(new List<ApiResource>
                 {               
@@ -195,10 +197,8 @@ namespace Haipa.Modules.Identity
                 });
         }
 
-        public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
+        public void ConfigureContainer(Container container)
         {
-            base.ConfigureContainer(serviceProvider, container);
-
             container.Register<IClientRepository, ClientRepository<ConfigurationDbContext>>(Lifestyle.Scoped);
             container.Register<IIdentityServerClientService, IdentityServerClientService>(Lifestyle.Scoped);
             container.Register<IClientService<ClientApiModel>, ClientService<ClientApiModel>>(Lifestyle.Scoped);
