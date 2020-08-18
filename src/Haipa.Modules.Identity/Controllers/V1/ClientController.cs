@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Modules.Identity.Models.V1;
@@ -31,7 +32,7 @@ namespace Haipa.Modules.Identity.Controllers.V1
         [HttpGet]
         [SwaggerOperation(OperationId = "Clients_List")]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(ODataValue<DbSet<ClientApiModel>>), Status200OK)]
+        [ProducesResponseType(typeof(ODataValue<IEnumerable<ClientApiModel>>), Status200OK)]
         [ProducesResponseType(Status404NotFound)]
         [EnableQuery]
         public IQueryable<ClientApiModel> Get()

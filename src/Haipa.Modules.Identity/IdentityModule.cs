@@ -8,6 +8,7 @@ using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.OpenApi.Models;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 using Scope = IdentityServer4.Models.Scope;
@@ -132,11 +133,45 @@ namespace Haipa.Modules.Identity
                     //// integrate xml comments
                     //options.IncludeXmlComments(XmlCommentsFilePath);
 
+                    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+                    {
+                        Type = SecuritySchemeType.OAuth2,
+                        Flows = new OpenApiOAuthFlows
+                        {
+                            ClientCredentials = new OpenApiOAuthFlow
+                            {
+                                TokenUrl = new Uri("/connect/token", UriKind.Relative)
+                            }
+                        }
+                    });
+
                     options.ResolveConflictingActions(app => app.First());
                     options.EnableAnnotations();
-                    options.DescribeAllEnumsAsStrings();
-                });
+                    options.CustomSchemaIds((type) =>
+                    {
+                        switch (type.Name)
+                        {
+                            case nameof(ClientApiModel): return "client";
+                            default:
+                            {
+                                if (!type.IsClosedTypeOf(typeof(ODataValue<>))) return type.Name;
 
+                                var innerType = type.GetGenericArguments().FirstOrDefault();
+                                var listType = innerType?.GetGenericArguments().FirstOrDefault();
+
+                                if (listType == null) return type.Name;
+                                switch (listType.Name)
+                                {
+                                    case nameof(ClientApiModel): return "clientList";
+                                    default: return "list" + listType.Name;
+                                }
+                            }
+                        }
+
+                    });
+                    //options.DescribeAllEnumsAsStrings();
+                });
+            services.AddSwaggerGenNewtonsoftSupport();
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -189,6 +224,7 @@ namespace Haipa.Modules.Identity
                 var models = modelBuilder.GetEdmModels().ToArray();
                 app.UseMvc(routes =>
                 {
+                    
                     //routes.MapVersionedODataRoutes("odata", "odata", models);
                     routes.MapVersionedODataRoutes("odata-bypath", "odata/v{version:apiVersion}", models);
                 });

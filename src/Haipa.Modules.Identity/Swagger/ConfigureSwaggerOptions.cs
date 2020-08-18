@@ -1,6 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc.ApiExplorer;
+﻿using System;
+using System.IO;
+using Microsoft.AspNetCore.Hosting.Internal;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -30,20 +34,18 @@ namespace Haipa.Modules.Identity.Swagger
             {
                 options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
             }
-
             
         }
 
-        static Info CreateInfoForApiVersion(ApiVersionDescription description)
+        static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
         {
-            var info = new Info()
+            var info = new OpenApiInfo()
             {
                 Title = "Haipa Identity API",
                 Version = description.ApiVersion.ToString(),
                 Description = "Haipa Identity API",
-                Contact = new Contact() { Name = "dbosoft", Email = "support@dbosoft.eu" },
-                TermsOfService = "",
-                License = new License() { Name = "MIT", Url = "https://opensource.org/licenses/MIT" }
+                Contact = new OpenApiContact() { Name = "dbosoft", Email = "support@dbosoft.eu" },
+                License = new OpenApiLicense() { Name = "MIT", Url = new Uri("https://opensource.org/licenses/MIT") }
             };
 
             if (description.IsDeprecated)

@@ -63,14 +63,14 @@ namespace Haipa.Runtime.Zero
                         .UseUrls($"https://localhost:62189/{module.Path}");
                 })
                 .UseSimpleInjector(container)
-                .HostModule<ApiModule>()
+                //.HostModule<ApiModule>()
                 .AddIdentityModule(container)
                 .HostModule<VmHostAgentModule>()
                 .HostModule<ControllerModule>()
 
 
                 .UseEnvironment("Development")
-                .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Warning))
+                .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Trace))
                 .Build();
 
             return host.RunAsync();
