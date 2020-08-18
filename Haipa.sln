@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{8FEDA44A-CCBF-4B47-838E-7FA6FEE688D4}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5161FD3F-5E58-4C46-9EC5-DC275266583A}"
+	ProjectSection(SolutionItems) = preProject
+		nuget.config = nuget.config
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "haipa-zero", "src\haipa-zero\haipa-zero.csproj", "{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}"
 EndProject

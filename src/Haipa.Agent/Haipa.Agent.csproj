@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.Hosting" Version="0.2.0" />
-    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.2.0" />
+    <PackageReference Include="Dbosoft.Hosuto.Hosting" Version="0.2.2-PullRequest0018.3" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.2.2-PullRequest0018.3" />
   </ItemGroup>
 
   <ItemGroup>

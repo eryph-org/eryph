@@ -32,8 +32,8 @@ namespace Haipa.Runtime.Zero
             ConfigStore.Config.EnsureConfigPaths();
             ConfigStore.Clients.ClientGenerator.EnsureSystemClient();
 
-            File.WriteAllText(Path.Combine(ConfigStore.Config.GetConfigPath(), "zero_info"),
-                $"{{ \"process_id\": \"{Process.GetCurrentProcess().Id}\", \"url\" : \"http://localhost:62189\" }}");
+            File.WriteAllText(Path.Combine(ConfigStore.Config.GetConfigPath("zero"), ".run_info"),
+                $"{{ \"process_id\": \"{Process.GetCurrentProcess().Id}\", \"url\" : \"https://localhost:62189\" }}");
 
             Certificate.CreateSSL(new CertificateOptions
             {

@@ -13,8 +13,8 @@ namespace Haipa.Modules
                 return Task.CompletedTask;
 
             // search a matching scope
-            if(context.User.FindFirst(c => c.Type == "scope" 
-                                              && c.Value == requirement.Scope
+            if(context.User.FindFirst(c => c.Type == "scope"
+                                              && requirement.Scopes.Contains(c.Value)
                                               && c.Issuer == requirement.Issuer) != null)
                 context.Succeed(requirement);
 

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Modules.Identity.Models.V1;
 using Haipa.Modules.Identity.Services;
@@ -68,7 +69,7 @@ namespace Haipa.Modules.Identity.Controllers.V1
         }
 
         [Authorize(Policy = "identity:clients:write:all")]
-        [HttpPost]
+        [HttpPut]
         [SwaggerOperation(OperationId = "Clients_Update")]
         [ProducesResponseType(Status200OK)]
         [ProducesResponseType(Status400BadRequest)]
@@ -105,7 +106,7 @@ namespace Haipa.Modules.Identity.Controllers.V1
             else
                 client.Patch(persistentClient);
 
-
+            persistentClient.Id = clientId;
             await _clientService.UpdateClient(persistentClient);
 
             return Ok();
@@ -117,7 +118,6 @@ namespace Haipa.Modules.Identity.Controllers.V1
         [SwaggerOperation(OperationId = "Clients_Create")]
         [ProducesResponseType(typeof(ClientApiModel), Status201Created)]
         [ProducesResponseType(Status400BadRequest)]
-        [ProducesResponseType(Status409Conflict)]
         [Produces("application/json")]
         public async Task<IActionResult> Post([FromBody] ClientApiModel client)
         {
@@ -126,9 +126,7 @@ namespace Haipa.Modules.Identity.Controllers.V1
                 return BadRequest(ModelState);
             }
 
-            var persistentClient = await _clientService.GetClient(client.Id);
-            if (persistentClient != null)
-                return Conflict();
+            client.Id = Guid.NewGuid().ToString();
 
             await _clientService.AddClient(client);
             return Created(client);

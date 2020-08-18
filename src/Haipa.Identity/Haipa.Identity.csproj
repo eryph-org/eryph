@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.2.0" />
-    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.2.0" />
+    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.2.2-PullRequest0018.3" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.2.2-PullRequest0018.3" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.2.0" PrivateAssets="All" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.4.10" />

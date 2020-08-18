@@ -6,17 +6,17 @@ namespace Haipa.Runtime.Zero.ConfigStore
     public class Config
     {
 
-        public static string GetConfigPath()
+        public static string GetConfigPath(string module)
         {
             var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                $"Haipa{Path.DirectorySeparatorChar}zero");
+                $"haipa{Path.DirectorySeparatorChar}{module}");
 
             return configPath;
         }
 
         public static string GetClientConfigPath()
         {
-            var privateConfigPath = Path.Combine(GetConfigPath(), "private");
+            var privateConfigPath = Path.Combine(GetConfigPath("identity"), "private");
             var clientsConfigPath = Path.Combine(privateConfigPath, "clients");
 
             return clientsConfigPath;
@@ -24,7 +24,9 @@ namespace Haipa.Runtime.Zero.ConfigStore
 
         public static void EnsureConfigPaths()
         {
-            EnsurePath(GetConfigPath());
+            EnsurePath(GetConfigPath("identity")); 
+            EnsurePath(GetConfigPath("zero"));
+            EnsurePath(GetConfigPath("api"));
             EnsurePath(GetClientConfigPath());            
         }
 
@@ -36,4 +38,6 @@ namespace Haipa.Runtime.Zero.ConfigStore
         }
 
     }
+
+
 }

@@ -9,9 +9,7 @@ namespace Haipa.Modules.Identity.Models.V1
         /// Only characters a-z, A-Z, numbers 0-9 and hyphens are allowed.
         /// </summary>
         [Key]
-        [Required]
-        [RegularExpression("^[a-zA-Z0-9-_]*$")]
-        [MaxLength(20)]        
+        [MaxLength(36)]
         public string Id { get; set; }
 
         /// <summary>

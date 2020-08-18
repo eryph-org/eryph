@@ -6,11 +6,11 @@ namespace Haipa.Modules
     public class HasScopeRequirement : IAuthorizationRequirement
     {
         public string Issuer { get; }
-        public string Scope { get; }
+        public string[] Scopes { get; }
 
-        public HasScopeRequirement(string scope, string issuer)
+        public HasScopeRequirement(string issuer, params string[] scopes)
         {
-            Scope = scope ?? throw new ArgumentNullException(nameof(scope));
+            Scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
             Issuer = issuer ?? throw new ArgumentNullException(nameof(issuer));
         }
     }

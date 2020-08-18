@@ -9,6 +9,7 @@ using IdentityServer4.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 using Scope = IdentityServer4.Models.Scope;
 
 namespace Haipa.Modules.Identity
@@ -44,6 +45,14 @@ namespace Haipa.Modules.Identity
         /// Gets the Path
         /// </summary>
         public override string Path => "identity";
+
+        public void AddSimpleInjector(SimpleInjectorAddOptions options)
+        {
+            options.AddAspNetCore()
+                .AddControllerActivation()
+                .AddViewComponentActivation();
+
+        }
 
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
@@ -139,11 +148,15 @@ namespace Haipa.Modules.Identity
 
             services.AddAuthorization(options =>
             {
-                options.AddPolicy("identity:clients:read:all", policy => policy.Requirements.Add(new HasScopeRequirement("identity:clients:read:all", "http://localhost:62189/identity")));
+                options.AddPolicy("identity:clients:read:all", 
+                    policy => policy.Requirements.Add(new HasScopeRequirement("https://localhost:62189/identity", 
+                        "identity:clients:read:all", "identity:clients:write:all")));
             });
             services.AddAuthorization(options =>
             {
-                options.AddPolicy("identity:clients:write:all", policy => policy.Requirements.Add(new HasScopeRequirement("identity:clients:write:all", "http://localhost:62189/identity")));
+                options.AddPolicy("identity:clients:write:all", 
+                    policy => policy.Requirements.Add(new HasScopeRequirement("https://localhost:62189/identity",
+                        "identity:clients:write:all")));
             });
 
             services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
