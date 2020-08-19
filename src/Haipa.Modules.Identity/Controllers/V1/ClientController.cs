@@ -7,7 +7,7 @@ using Haipa.Modules.Identity.Services;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Haipa.Modules.Identity.Controllers.V1
@@ -24,15 +24,21 @@ namespace Haipa.Modules.Identity.Controllers.V1
     public class ClientsController : ODataController
     {
         private readonly IClientService<ClientApiModel> _clientService;
+
         public ClientsController(IClientService<ClientApiModel> clientService)
         {
             _clientService = clientService;
         }
 
+
+        /// <summary>
+        /// Queries for Clients.
+        /// </summary>
+        /// <returns></returns>
         [HttpGet]
         [SwaggerOperation(OperationId = "Clients_List")]
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(ODataValue<IEnumerable<ClientApiModel>>), Status200OK)]
+        //[Produces("application/json")]
+        [ProducesResponseType(typeof(Clients), Status200OK)]
         [ProducesResponseType(Status404NotFound)]
         [EnableQuery]
         public IQueryable<ClientApiModel> Get()
@@ -88,21 +94,22 @@ namespace Haipa.Modules.Identity.Controllers.V1
         [Produces("application/json")]
         public Task<IActionResult> Patch([FromODataUri] string key, [FromBody] Delta<ClientApiModel> client)
         {
-            return PutOrPatch(key, client,false);
+            return PutOrPatch(key, client, false);
         }
 
 
-        private async Task<IActionResult> PutOrPatch([FromODataUri] string clientId, Delta<ClientApiModel> client, bool putMode)
+        private async Task<IActionResult> PutOrPatch([FromODataUri] string clientId, Delta<ClientApiModel> client,
+            bool putMode)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            
+
             var persistentClient = await _clientService.GetClient(clientId);
             if (client == null) return NotFound();
 
-            if(putMode)
+            if (putMode)
                 client.Put(persistentClient);
             else
                 client.Patch(persistentClient);
@@ -111,7 +118,7 @@ namespace Haipa.Modules.Identity.Controllers.V1
             await _clientService.UpdateClient(persistentClient);
 
             return Ok();
-            
+
         }
 
         [Authorize(Policy = "identity:clients:write:all")]
@@ -132,5 +139,9 @@ namespace Haipa.Modules.Identity.Controllers.V1
             await _clientService.AddClient(client);
             return Created(client);
         }
+
+        private class Clients : ODataValue<IEnumerable<ClientApiModel>>
+        { }
+
     }
 }

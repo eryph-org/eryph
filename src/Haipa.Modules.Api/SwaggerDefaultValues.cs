@@ -1,9 +1,7 @@
 ﻿using System.Linq;
-using System.Reflection;
-using Microsoft.AspNet.OData;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Any;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Haipa.Modules.Api
@@ -20,20 +18,20 @@ namespace Haipa.Modules.Api
         /// </summary>
         /// <param name="operation">The operation to apply the filter to.</param>
         /// <param name="context">The current operation filter context.</param>
-        public void Apply(Operation operation, OperationFilterContext context)
+        public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
             var apiDescription = context.ApiDescription;
 
             operation.Deprecated |= apiDescription.IsDeprecated();
-
             if (operation.Parameters == null)
             {
                 return;
             }
 
+
             // REF: https://github.com/domaindrivendev/Swashbuckle.AspNetCore/issues/412
             // REF: https://github.com/domaindrivendev/Swashbuckle.AspNetCore/pull/413
-            foreach (var parameter in operation.Parameters.OfType<NonBodyParameter>())
+            foreach (var parameter in operation.Parameters)
             {
                 var description = apiDescription.ParameterDescriptions.First(p => p.Name == parameter.Name);
 
@@ -42,13 +40,14 @@ namespace Haipa.Modules.Api
                     parameter.Description = description.ModelMetadata?.Description;
                 }
 
-                if (parameter.Default == null)
+                if (parameter.Schema.Default == null && description.DefaultValue != null)
                 {
-                    parameter.Default = description.DefaultValue;
+                    parameter.Schema.Default = new OpenApiString(description.DefaultValue.ToString());
                 }
 
                 parameter.Required |= description.IsRequired;
             }
         }
     }
+
 }

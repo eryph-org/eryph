@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
 using Haipa.Modules.Api.Services;
@@ -18,6 +20,8 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.OData.Edm;
+using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Rebus.Handlers;
 using Rebus.Logging;
@@ -48,20 +52,15 @@ namespace Haipa.Modules.Api
                         .Build();
                     op.Filters.Add(new AuthorizeFilter(policy));
                 })
-                .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
                 .AddApplicationPart(typeof(ApiModule).Assembly)
                 .AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
-
-            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-            JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
                     options.Authority = "https://localhost:62189/identity";
                     options.Audience = "compute_api";
-                    options.RequireHttpsMetadata = false;
                 });
 
 
@@ -93,14 +92,60 @@ namespace Haipa.Modules.Api
                     options.OperationFilter<SwaggerDefaultValues>();
 
                     //// integrate xml comments
-                    //options.IncludeXmlComments(XmlCommentsFilePath);
+                    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                    if (File.Exists(xmlFile))
+                    {
+                        var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+                        options.IncludeXmlComments(xmlPath);
+                    }
+
+                    options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
+                    {
+                        Description = "JWT Authorization header using the Bearer scheme (Example: 'Bearer 12345abcdef')",
+                        Name = "Authorization",
+                        In = ParameterLocation.Header,
+                        Type = SecuritySchemeType.Http,
+                        Scheme = "bearer",
+                    });
+                    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                    {
+                        {
+                            new OpenApiSecurityScheme
+                            {
+                                Reference = new OpenApiReference
+                                {
+                                    Type = ReferenceType.SecurityScheme,
+                                    Id = "bearer"
+                                }
+                            },
+                            Array.Empty<string>()
+                        }
+                    });
+
 
                     options.ResolveConflictingActions(app => app.First());
                     options.EnableAnnotations();
-                    options.DescribeAllEnumsAsStrings();
+                    options.UseInlineDefinitionsForEnums();
+                    options.CustomSchemaIds(type =>
+                    {
+                        var defaultName = type.Name;
+                        if (defaultName.EndsWith("ApiModel"))
+                            return defaultName.Replace("ApiModel", "");
+                        else
+                        {
+                            if (type.IsClosedTypeOf(typeof(ODataValue<>)))
+                            {
+                                var listType = type.GetGenericArguments().First();
+                                var innerType = listType.GetGenericArguments().First();
+                                return innerType.Name + "s";
+                            }
+                            return defaultName;
+                        }
+                    });
                 });
         }
 
+        private IEdmModel[] _models;
         public void Configure(IApplicationBuilder app)
         {
             var modelBuilder = app.ApplicationServices.GetService<VersionedODataModelBuilder>();
@@ -113,6 +158,7 @@ namespace Haipa.Modules.Api
             {
                 b.Select().Expand().Filter().OrderBy().MaxTop(100).Count();
                 var models = modelBuilder.GetEdmModels().ToArray();
+                _models = models;
                 app.UseMvc(routes =>
                 {
                     //routes.MapVersionedODataRoutes("odata", "odata", models);

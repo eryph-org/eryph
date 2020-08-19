@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Reflection;
 using Dbosoft.Hosuto.Modules;
 using Haipa.IdentityDb;
 using Haipa.Modules.Identity.Models.V1;
@@ -7,7 +8,6 @@ using Haipa.Modules.Identity.Swagger;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.OpenApi.Models;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
@@ -22,7 +22,6 @@ namespace Haipa.Modules.Identity
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.Mvc.ApiExplorer;
-    using Microsoft.AspNetCore.Mvc.Cors.Internal;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Options;
     using Swashbuckle.AspNetCore.SwaggerGen;
@@ -50,8 +49,7 @@ namespace Haipa.Modules.Identity
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
             options.AddAspNetCore()
-                .AddControllerActivation()
-                .AddViewComponentActivation();
+                .AddControllerActivation();
 
         }
 
@@ -63,7 +61,7 @@ namespace Haipa.Modules.Identity
                 op.EnableEndpointRouting = false;
             })
 
-               .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
+               //.SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
                .AddApplicationPart(typeof(IdentityModule).Assembly)
                .AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
@@ -131,47 +129,44 @@ namespace Haipa.Modules.Identity
                     options.OperationFilter<SwaggerDefaultValues>();
 
                     //// integrate xml comments
-                    //options.IncludeXmlComments(XmlCommentsFilePath);
-
-                    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+                    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                    var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+                    options.IncludeXmlComments(xmlPath);
+                    options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
                     {
-                        Type = SecuritySchemeType.OAuth2,
-                        Flows = new OpenApiOAuthFlows
+                        Description = "JWT Authorization header using the Bearer scheme (Example: 'Bearer 12345abcdef')",
+                        Name = "Authorization",
+                        In = ParameterLocation.Header,
+                        Type = SecuritySchemeType.Http,
+                        Scheme = "bearer",
+                    });
+
+                    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                    {
                         {
-                            ClientCredentials = new OpenApiOAuthFlow
+                            new OpenApiSecurityScheme
                             {
-                                TokenUrl = new Uri("/connect/token", UriKind.Relative)
-                            }
+                                Reference = new OpenApiReference
+                                {
+                                    Type = ReferenceType.SecurityScheme,
+                                    Id = "bearer"
+                                }
+                            },
+                            Array.Empty<string>()
                         }
                     });
+
 
                     options.ResolveConflictingActions(app => app.First());
                     options.EnableAnnotations();
-                    options.CustomSchemaIds((type) =>
+                    options.CustomSchemaIds(type =>
                     {
-                        switch (type.Name)
-                        {
-                            case nameof(ClientApiModel): return "client";
-                            default:
-                            {
-                                if (!type.IsClosedTypeOf(typeof(ODataValue<>))) return type.Name;
-
-                                var innerType = type.GetGenericArguments().FirstOrDefault();
-                                var listType = innerType?.GetGenericArguments().FirstOrDefault();
-
-                                if (listType == null) return type.Name;
-                                switch (listType.Name)
-                                {
-                                    case nameof(ClientApiModel): return "clientList";
-                                    default: return "list" + listType.Name;
-                                }
-                            }
-                        }
-
+                        var defaultName = type.Name;
+                        return defaultName.EndsWith("ApiModel") 
+                            ? defaultName.Replace("ApiModel", "") 
+                            : defaultName;
                     });
-                    //options.DescribeAllEnumsAsStrings();
                 });
-            services.AddSwaggerGenNewtonsoftSupport();
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -195,25 +190,10 @@ namespace Haipa.Modules.Identity
             });
 
             services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
-            services.AddCors(options =>
-            {
-                options.AddPolicy("CorsPolicy",
-                    builder => builder.AllowAnyOrigin()
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials());
-            });
-            services.Configure<MvcOptions>(options =>
-            {
-                 options.Filters.Add(new CorsAuthorizationFilterFactory("CorsPolicy"));
-            });
         }
 
         public void Configure(IApplicationBuilder app)
         {
-            //app.UseCors("CorsPolicy");
-            //app.UseCorsMiddleware();
-
             var modelBuilder = app.ApplicationServices.GetService<VersionedODataModelBuilder>();
             var provider = app.ApplicationServices.GetService<IApiVersionDescriptionProvider>();
             app.UseIdentityServer();

@@ -12,6 +12,8 @@ namespace Haipa.Modules.Identity.Configuration
         {
             builder.Namespace = "Haipa";
             builder.EntitySet<ClientApiModel>("Clients");
+            builder.EntityType<ClientApiModel>().Name = "Client";
+
         }
         public void Apply(ODataModelBuilder builder, ApiVersion apiVersion)
         {

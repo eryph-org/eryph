@@ -7,7 +7,6 @@ using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Security.Cryptography;
-using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -54,7 +53,7 @@ namespace Haipa.Runtime.Zero
             container.Bootstrap();
 
             var host = ModulesHost.CreateDefaultBuilder(args)
-                .UseAspNetCore(WebHost.CreateDefaultBuilder, (module, webHostBuilder) =>
+                .UseAspNetCore((module, webHostBuilder) =>
                 {
                     webHostBuilder.UseHttpSys(options =>
                         {
@@ -63,7 +62,7 @@ namespace Haipa.Runtime.Zero
                         .UseUrls($"https://localhost:62189/{module.Path}");
                 })
                 .UseSimpleInjector(container)
-                //.HostModule<ApiModule>()
+                .HostModule<ApiModule>()
                 .AddIdentityModule(container)
                 .HostModule<VmHostAgentModule>()
                 .HostModule<ControllerModule>()

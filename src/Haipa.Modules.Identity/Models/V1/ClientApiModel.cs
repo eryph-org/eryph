@@ -1,8 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace Haipa.Modules.Identity.Models.V1
 {
-   public class ClientApiModel : IClientApiModel
+    [DisplayName("Clients")]
+    public class ClientApiModel : IClientApiModel
     {
         /// <summary>
         /// Unique identifier for a haipa client
@@ -33,5 +37,6 @@ namespace Haipa.Modules.Identity.Models.V1
         /// allowed scopes of client
         /// </summary>
         public string[] AllowedScopes { get; set; }
+
     }
 }
