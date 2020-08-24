@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Haipa.Modules.Identity;
+using Haipa.Modules.Identity.Models;
 using Haipa.Modules.Identity.Models.V1;
 using Haipa.Modules.Identity.Services;
 

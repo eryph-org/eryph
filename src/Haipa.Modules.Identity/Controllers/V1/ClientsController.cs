@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Haipa.Modules.ApiProvider;
+using Haipa.Modules.Identity.Models;
 using Haipa.Modules.Identity.Models.V1;
 using Haipa.Modules.Identity.Services;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Haipa.Modules.Identity.Controllers.V1
@@ -21,11 +22,12 @@ namespace Haipa.Modules.Identity.Controllers.V1
     [ApiVersion("1.0")]
     [Produces("application/json")]
     [Authorize(Policy = "identity:clients:read:all")]
-    public class ClientsController : ODataController
+    [ApiExceptionFilter]
+    public class ClientsController : ApiController
     {
-        private readonly IClientService<ClientApiModel> _clientService;
+        private readonly IClientService<Client> _clientService;
 
-        public ClientsController(IClientService<ClientApiModel> clientService)
+        public ClientsController(IClientService<Client> clientService)
         {
             _clientService = clientService;
         }
@@ -37,25 +39,23 @@ namespace Haipa.Modules.Identity.Controllers.V1
         /// <returns></returns>
         [HttpGet]
         [SwaggerOperation(OperationId = "Clients_List")]
-        //[Produces("application/json")]
-        [ProducesResponseType(typeof(Clients), Status200OK)]
-        [ProducesResponseType(Status404NotFound)]
+        [SwaggerResponse(Status200OK, "Success", typeof(ODataValue<IEnumerable<Client>>))]
         [EnableQuery]
-        public IQueryable<ClientApiModel> Get()
+        
+        public IQueryable<Client> Get()
         {
             return _clientService.QueryClients();
         }
 
         [HttpGet]
         [SwaggerOperation(OperationId = "Clients_Get")]
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(ClientApiModel), Status200OK)]
-        [ProducesResponseType(Status404NotFound)]
+        [SwaggerResponse(Status200OK, "Success", typeof(Client))]
         public async Task<IActionResult> Get([FromODataUri] string key)
         {
             var client = await _clientService.GetClient(key);
 
-            if (client == null) return NotFound();
+            if (client == null) 
+                return NotFound($"client with id {key} not found.");
 
             return Ok(client);
         }
@@ -64,11 +64,11 @@ namespace Haipa.Modules.Identity.Controllers.V1
         [HttpDelete]
         [SwaggerOperation(OperationId = "Clients_Delete")]
         [ProducesResponseType(Status200OK)]
-        [Produces("application/json")]
         public async Task<IActionResult> Delete([FromODataUri] string key)
         {
             var client = await _clientService.GetClient(key);
-            if (client == null) return NotFound();
+            if (client == null)
+                return NotFound($"client with id {key} not found.");
 
             await _clientService.DeleteClient(client);
 
@@ -78,10 +78,8 @@ namespace Haipa.Modules.Identity.Controllers.V1
         [Authorize(Policy = "identity:clients:write:all")]
         [HttpPut]
         [SwaggerOperation(OperationId = "Clients_Update")]
-        [ProducesResponseType(Status200OK)]
-        [ProducesResponseType(Status400BadRequest)]
-        [Produces("application/json")]
-        public Task<IActionResult> Put([FromODataUri] string key, [FromBody] Delta<ClientApiModel> client)
+        [SwaggerResponse(Status200OK, "Success", typeof(Client))]
+        public Task<IActionResult> Put([FromODataUri] string key, [FromBody] Delta<Client> client)
         {
             return PutOrPatch(key, client, true);
         }
@@ -89,16 +87,14 @@ namespace Haipa.Modules.Identity.Controllers.V1
         [Authorize(Policy = "identity:clients:write:all")]
         [HttpPatch]
         [SwaggerOperation(OperationId = "Clients_Change")]
-        [ProducesResponseType(Status200OK)]
-        [ProducesResponseType(Status400BadRequest)]
-        [Produces("application/json")]
-        public Task<IActionResult> Patch([FromODataUri] string key, [FromBody] Delta<ClientApiModel> client)
+        [SwaggerResponse(Status200OK, "Success", typeof(Client))]
+        public Task<IActionResult> Patch([FromODataUri] string key, [FromBody] Delta<Client> client)
         {
             return PutOrPatch(key, client, false);
         }
 
 
-        private async Task<IActionResult> PutOrPatch([FromODataUri] string clientId, Delta<ClientApiModel> client,
+        private async Task<IActionResult> PutOrPatch([FromODataUri] string clientId, Delta<Client> client,
             bool putMode)
         {
             if (!ModelState.IsValid)
@@ -107,7 +103,8 @@ namespace Haipa.Modules.Identity.Controllers.V1
             }
 
             var persistentClient = await _clientService.GetClient(clientId);
-            if (client == null) return NotFound();
+            if (persistentClient == null)
+                return NotFound($"client with id {clientId} not found.");
 
             if (putMode)
                 client.Put(persistentClient);
@@ -117,18 +114,17 @@ namespace Haipa.Modules.Identity.Controllers.V1
             persistentClient.Id = clientId;
             await _clientService.UpdateClient(persistentClient);
 
-            return Ok();
+            return Updated(persistentClient);
 
         }
 
         [Authorize(Policy = "identity:clients:write:all")]
         [HttpPost]
         [SwaggerOperation(OperationId = "Clients_Create")]
-        [ProducesResponseType(typeof(ClientApiModel), Status201Created)]
-        [ProducesResponseType(Status400BadRequest)]
-        [Produces("application/json")]
-        public async Task<IActionResult> Post([FromBody] ClientApiModel client)
+        [SwaggerResponse(Status201Created, "Success", typeof(ClientWithSecrets))]
+        public async Task<IActionResult> Post([FromBody] Client client)
         {
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -136,12 +132,51 @@ namespace Haipa.Modules.Identity.Controllers.V1
 
             client.Id = Guid.NewGuid().ToString();
 
+            var privateKey = await client.NewClientCertificate();
+
             await _clientService.AddClient(client);
-            return Created(client);
+
+            var createdClient = new ClientWithSecrets
+            {
+                Id = client.Id,
+                AllowedScopes = client.AllowedScopes,
+                Description = client.Description,
+                Name = client.Name,
+                Key = privateKey,
+                KeyType = ClientSecretType.RsaPrivateKey,
+            };
+
+            return Created(createdClient);
         }
 
-        private class Clients : ODataValue<IEnumerable<ClientApiModel>>
-        { }
+        [HttpPut]
+        [Authorize(Policy = "identity:clients:write:all")]
+        [SwaggerOperation(OperationId = "Clients_NewKey")]
+        [SwaggerResponse(Status200OK, "Success", typeof(ClientWithSecrets))]
+        public async Task<IActionResult> NewKey([FromODataUri] string clientId)
+        {
+            var client = await _clientService.GetClient(clientId);
+            if (client == null)
+                return NotFound($"client with id {clientId} not found.");
+
+
+            var privateKey = await client.NewClientCertificate();
+            await _clientService.UpdateClient(client);
+
+            var createdClient = new ClientWithSecrets
+            {
+                Id = client.Id,
+                AllowedScopes = client.AllowedScopes,
+                Description = client.Description,
+                Name = client.Name,
+                Key = privateKey,
+                KeyType = ClientSecretType.RsaPrivateKey,
+            };
+
+
+            return Updated(createdClient);
+        }
+
 
     }
 }

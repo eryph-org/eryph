@@ -3,10 +3,9 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Haipa.Modules.Api
+namespace Haipa.Modules.ApiProvider.Swagger
 {
     /// <summary>
     /// Configures the Swagger generation options.
@@ -15,34 +14,39 @@ namespace Haipa.Modules.Api
     /// <see cref="IApiVersionDescriptionProvider"/> service has been resolved from the service container.</remarks>
     public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
     {
-        readonly IApiVersionDescriptionProvider provider;
+        readonly IApiVersionDescriptionProvider _provider;
+        private readonly ApiProviderOptions _apiOptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigureSwaggerOptions"/> class.
         /// </summary>
         /// <param name="provider">The <see cref="IApiVersionDescriptionProvider">provider</see> used to generate Swagger documents.</param>
-        public ConfigureSwaggerOptions(IApiVersionDescriptionProvider provider) => this.provider = provider;
+        /// <param name="apiOptions"></param>
+        public ConfigureSwaggerOptions(IApiVersionDescriptionProvider provider, IOptions<ApiProviderOptions> apiOptions)
+        {
+            _provider = provider;
+            _apiOptions = apiOptions.Value;
+        }
 
         /// <inheritdoc />
         public void Configure(SwaggerGenOptions options)
         {
             // add a swagger document for each discovered API version
             // note: you might choose to skip or document deprecated API versions differently
-            foreach (var description in provider.ApiVersionDescriptions)
+            foreach (var description in _provider.ApiVersionDescriptions)
             {
                 options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
             }
-
             
         }
 
-        static OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
+        private OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
         {
             var info = new OpenApiInfo()
             {
-                Title = "Haipa API",
+                Title = _apiOptions.ApiName,
                 Version = description.ApiVersion.ToString(),
-                Description = "Haipa management API",
+                Description = _apiOptions.ApiName,
                 Contact = new OpenApiContact() { Name = "dbosoft", Email = "support@dbosoft.eu" },
                 License = new OpenApiLicense() { Name = "MIT", Url = new Uri("https://opensource.org/licenses/MIT") }
             };

@@ -1,11 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Haipa.Modules.Identity.Models;
 using Haipa.Modules.Identity.Models.V1;
-using IdentityServer4;
-using IdentityServer4.Models;
+using Haipa.Security.Cryptography;
+using Org.BouncyCastle.OpenSsl;
 
 namespace Haipa.Modules.Identity.Services
 {
@@ -51,16 +52,8 @@ namespace Haipa.Modules.Identity.Services
             if (identityServerClient == null) return;
 
             identityServerClient.AllowedScopes = client.AllowedScopes;
-            identityServerClient.Description = client.Description;        
-            identityServerClient.AllowedScopes = client.AllowedScopes;
-            identityServerClient.ClientSecrets = new List<Secret>
-            {
-                new Secret
-                {
-                    Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
-                    Value = client.Certificate
-                }
-            };
+            identityServerClient.Description = client.Description;
+            identityServerClient.ClientName = client.Name;
 
             await _identityServerService.UpdateClient(identityServerClient);
         }

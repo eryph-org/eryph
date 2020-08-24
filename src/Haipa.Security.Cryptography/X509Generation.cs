@@ -38,7 +38,7 @@ namespace Haipa.Security.Cryptography
         ///         Default is EmailProtection
         ///     </remarks>
         /// </summary>
-        public static (X509Certificate Certificate, AsymmetricCipherKeyPair KeyPair) GenerateCertificate(string subjectName)
+        public static (X509Certificate Certificate, AsymmetricCipherKeyPair KeyPair) GenerateSelfSignedCertificate(string subjectName)
         {
             var kpGenerator = new RsaKeyPairGenerator();
 
@@ -71,53 +71,6 @@ namespace Haipa.Security.Cryptography
             return (gen.Generate(new Asn1SignatureFactory("SHA256withRSA", kp.Private)), kp);
         }
 
-
-        private sealed class CryptoApiRandomGenerator : IRandomGenerator
-        {
-            private readonly RandomNumberGenerator _rndProv;
-
-            public CryptoApiRandomGenerator() : this(new RNGCryptoServiceProvider())
-            {
-            }
-
-            private CryptoApiRandomGenerator(RandomNumberGenerator rng)
-            {
-                _rndProv = rng;
-            }
-
-            public void AddSeedMaterial(byte[] seed)
-            {
-            }
-
-            public void AddSeedMaterial(long seed)
-            {
-            }
-
-            public void NextBytes(byte[] bytes)
-            {
-                _rndProv.GetBytes(bytes);
-            }
-
-            public void NextBytes(byte[] bytes, int start, int len)
-            {
-                if (start < 0)
-                {
-                    throw new ArgumentException("Start offset cannot be negative", nameof(start));
-                }
-                if (bytes.Length < start + len)
-                {
-                    throw new ArgumentException("Byte array too small for requested offset and length");
-                }
-                if (bytes.Length == len && start == 0)
-                {
-                    NextBytes(bytes);
-                    return;
-                }
-                var numArray = new byte[len];
-                NextBytes(numArray);
-                Array.Copy(numArray, 0, bytes, start, len);
-            }
-        }
     }
 
 

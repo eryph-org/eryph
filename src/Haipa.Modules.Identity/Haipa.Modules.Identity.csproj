@@ -10,20 +10,15 @@
     <PackageReference Include="IdentityServer4" Version="2.5.3" />
     <PackageReference Include="IdentityServer4.EntityFramework" Version="2.5.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.7" />
-    <!--
-    <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />-->
-    <PackageReference Include="Microsoft.AspNetCore.OData" Version="7.4.1" />
-    <PackageReference Include="Microsoft.AspNetCore.OData.Versioning.ApiExplorer" Version="4.1.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
     <PackageReference Include="SimpleInjector.Integration.AspNetCore.Mvc.Core" Version="4.7.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="5.5.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="5.5.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.IdentityDb\Haipa.IdentityDb.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
     <ProjectReference Include="..\Haipa.Modules.AspNetCore\Haipa.Modules.AspNetCore.csproj" />
+    <ProjectReference Include="..\Haipa.Security.Cryptography\Haipa.Security.Cryptography.csproj" />
     <ProjectReference Include="..\Haipa.StateDb\Haipa.StateDb.csproj" />
   </ItemGroup>
 

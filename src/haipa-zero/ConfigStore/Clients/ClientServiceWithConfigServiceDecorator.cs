@@ -44,5 +44,6 @@ namespace Haipa.Runtime.Zero.ConfigStore.Clients
             await _configService.Add(client.FromApiModel());
         }
 
+
     }
 }

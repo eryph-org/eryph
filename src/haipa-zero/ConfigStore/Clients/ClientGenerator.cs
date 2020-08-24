@@ -52,7 +52,7 @@ namespace Haipa.Runtime.Zero.ConfigStore.Clients
 
             RemoveSystemClient();
 
-            var (certificate, keyPair) = X509Generation.GenerateCertificate("system-client");
+            var (certificate, keyPair) = X509Generation.GenerateSelfSignedCertificate("system-client");
 
             var newClient = new ClientConfigModel
             {

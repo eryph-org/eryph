@@ -1,4 +1,4 @@
-﻿
+﻿using System.Collections.Generic;
 
 namespace Haipa.Modules.Identity.Models
 {
@@ -8,6 +8,6 @@ namespace Haipa.Modules.Identity.Models
         string Name { get; set; }
         string Description { get; set; }
         string Certificate { get; set; }
-        string[] AllowedScopes { get; set; }
+        List<string> AllowedScopes { get; set; }
     }
 }
