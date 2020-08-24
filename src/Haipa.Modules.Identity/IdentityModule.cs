@@ -1,26 +1,25 @@
-﻿using Dbosoft.Hosuto.Modules;
+﻿using System.Collections.Generic;
+using Dbosoft.Hosuto.Modules;
+using Haipa.IdentityDb;
+using Haipa.Modules.ApiProvider;
+using Haipa.Modules.Identity.Configuration;
+using Haipa.Modules.Identity.Services;
+using IdentityServer4.EntityFramework.DbContexts;
+using IdentityServer4.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Hosting;
+using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
+using Client = Haipa.Modules.Identity.Models.V1.Client;
+using Scope = IdentityServer4.Models.Scope;
 
 namespace Haipa.Modules.Identity
 {
-    using Haipa.IdentityDb.Services;
-    using Haipa.IdentityDb.Services.Interfaces;
-    using Haipa.IdentityDb.Stores;
-    using IdentityServer4.Stores;
-    using Microsoft.AspNet.OData;
     using Microsoft.AspNet.OData.Builder;
-    using Microsoft.AspNet.OData.Extensions;
-    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Builder;
-    using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
-    using Microsoft.AspNetCore.Mvc.ApiExplorer;
-    using Microsoft.AspNetCore.Mvc.Cors.Internal;
     using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.Extensions.Options;
-    using Swashbuckle.AspNetCore.SwaggerGen;
     using System;
-    using System.Linq;
-    using System.Threading.Tasks;
 
 
     /// <summary>
@@ -40,144 +39,99 @@ namespace Haipa.Modules.Identity
         /// </summary>
         public override string Path => "identity";
 
-        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public void AddSimpleInjector(SimpleInjectorAddOptions options)
+        {
+            options.AddAspNetCore()
+                .AddControllerActivation();
+
+        }
+
+        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services, IHostEnvironment env)
         {
 
-            services.AddDbContext<IdentityDb.ConfigurationStoreContext>(options =>
-            {
-                serviceProvider.GetService<IdentityDb.IDbContextConfigurer<IdentityDb.ConfigurationStoreContext>>().Configure(options);
+            services.AddMvc()
+                .AddApiProvider<IdentityModule>(op => op.ApiName="Haipa Identity Api");
 
-            });
-            services.AddTransient<IClientStore, ClientStore>();
-            services.AddTransient<IResourceStore, ResourceStore>();
-            services.AddTransient<IClientEntityService, ClientEntityService>();
-
-
-            services.AddMvc(op =>
-            {
-                op.EnableEndpointRouting = false;
-                //var policy = new AuthorizationPolicyBuilder()
-                //    .RequireAuthenticatedUser()
-                //    .Build();
-                //op.Filters.Add(new AuthorizeFilter(policy));
-            })
-               .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
-               .AddApplicationPart(typeof(IdentityModule).Assembly)
-               .AddApplicationPart(typeof(VersionedMetadataController).Assembly);
+            services.AddSingleton<IModelConfiguration, ODataModelConfiguration>();
 
             services.AddIdentityServer()
                 .AddJwtBearerClientAuthentication()
                 .AddDeveloperSigningCredential()
-                .AddResourceStore<ResourceStore>()
-                .AddClientStore<ClientStore>()
+
+                .AddConfigurationStore(options =>
+                {
+                    options.ConfigureDbContext = builder =>
+                        serviceProvider.GetRequiredService<IDbContextConfigurer<ConfigurationDbContext>>()
+                            .Configure(builder);
+                })
+                .AddInMemoryApiResources(new List<ApiResource>
+                {
+                    new ApiResource("compute_api"),
+                    new ApiResource
+                    {
+                        Name = "identity_api",
+                        Scopes =
+                        {
+                            new Scope
+                            {
+                                Name = "identity:clients:write:all",
+                                DisplayName = "Full access to clients"
+                            },
+                            new Scope
+                            {
+                                Name = "identity:clients:read:all",
+                                DisplayName = "Read only access to clients"
+                            }
+                        }
+                    }
+                })
                 //.AddInMemoryCaching()
-                ;
+                .AddInMemoryIdentityResources(
+                    new[]
+                    {
+                        new IdentityResources.OpenId(),
 
-            services.AddApiVersioning(options =>
-            {
-                options.ReportApiVersions = true;
-                options.AssumeDefaultVersionWhenUnspecified = false;
-            });
-            services.AddOData().EnableApiVersioning();
+                    });
 
-            services.AddODataApiExplorer(
-                options =>
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
                 {
-                    // add the versioned api explorer, which also adds IApiVersionDescriptionProvider service
-                    // note: the specified format code will format the version as "'v'major[.minor][-status]"
-                    options.GroupNameFormat = "'v'VVV";
-
-                    // note: this option is only necessary when versioning by url segment. the SubstitutionFormat
-                    // can also be used to control the format of the API version in route templates
-                    options.SubstituteApiVersionInUrl = true;
-
-
+                    options.Authority = "https://localhost:62189/identity";
+                    options.Audience = "identity_api";
                 });
-            services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
-            services.AddSwaggerGen(
-                options =>
-                {
-                    // add a custom operation filter which sets default values
-                    options.OperationFilter<SwaggerDefaultValues>();
-
-                    //// integrate xml comments
-                    //options.IncludeXmlComments(XmlCommentsFilePath);
-
-                    options.ResolveConflictingActions(app => app.First());
-                    options.EnableAnnotations();
-                    options.DescribeAllEnumsAsStrings();
-                });
-            //JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-            //JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
-
-            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            //    .AddJwtBearer(options =>
-            //    {
-            //        options.Authority = "https://localhost:62189/identity";
-            //        options.Audience = "identity_api";
-            //        options.RequireHttpsMetadata = false;
-            //    });
 
 
-            ////services.AddAuthorization(options =>
-            ////{
-            ////    options.AddPolicy("identity:apps:read:all", policy => policy.Requirements.Add(new HasScopeRequirement("identity:apps:read:all", "http://localhost:62189/identity")));
-            ////});
-            ////services.AddAuthorization(options =>
-            ////{
-            ////    options.AddPolicy("identity:apps:write:all", policy => policy.Requirements.Add(new HasScopeRequirement("identity:apps:write:all", "http://localhost:62189/identity")));
-            ////});
-
-            services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
-            services.AddCors(options =>
+            services.AddAuthorization(options =>
             {
-                options.AddPolicy("CorsPolicy",
-                    builder => builder.AllowAnyOrigin()
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials());
+                options.AddPolicy("identity:clients:read:all",
+                    policy => policy.Requirements.Add(new HasScopeRequirement("https://localhost:62189/identity",
+                        "identity:clients:read:all", "identity:clients:write:all")));
             });
-            services.Configure<MvcOptions>(options =>
+            services.AddAuthorization(options =>
             {
-                 options.Filters.Add(new CorsAuthorizationFilterFactory("CorsPolicy"));
+                options.AddPolicy("identity:clients:write:all",
+                    policy => policy.Requirements.Add(new HasScopeRequirement("https://localhost:62189/identity",
+                        "identity:clients:write:all")));
             });
+
         }
+
+
 
         public void Configure(IApplicationBuilder app)
         {
-            //app.UseCors("CorsPolicy");
-            //app.UseCorsMiddleware();
-
-            var modelBuilder = app.ApplicationServices.GetService<VersionedODataModelBuilder>();
-            var provider = app.ApplicationServices.GetService<IApiVersionDescriptionProvider>();
             app.UseIdentityServer();
-            app.UseAuthentication();
-            app.UseMvc(b =>
-            {
-                b.Select().Expand().Filter().OrderBy().MaxTop(100).Count();
-                var models = modelBuilder.GetEdmModels().ToArray();
-                app.UseMvc(routes =>
-                {
-                    //routes.MapVersionedODataRoutes("odata", "odata", models);
-                    routes.MapVersionedODataRoutes("odata-bypath", "odata/v{version:apiVersion}", models);
-                });
+            app.UseApiProvider(this);
 
-            });
-
-            app.UseSwagger();
-            app.UseSwaggerUI(
-                options =>
-                {
-                    options.DisplayOperationId();
-
-                    // build a swagger endpoint for each discovered API version
-                    foreach (var description in provider.ApiVersionDescriptions)
-                    {
-                        options.SwaggerEndpoint($"/identity/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
-
-                    }
-                });
         }
 
+        public void ConfigureContainer(Container container)
+        {
+            container.Register<IClientRepository, ClientRepository<ConfigurationDbContext>>(Lifestyle.Scoped);
+            container.Register<IIdentityServerClientService, IdentityServerClientService>(Lifestyle.Scoped);
+            container.Register<IClientService<Client>, ClientService<Client>>(Lifestyle.Scoped);
+
+        }
     }
 }

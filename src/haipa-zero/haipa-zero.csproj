@@ -3,20 +3,21 @@
   <Import Condition=" '$(EAZFUSCATOR_NET_HOME)' != '' and Exists('$(EAZFUSCATOR_NET_HOME)\Integration\MSBuild\Eazfuscator.NET.targets') " Project="$(EAZFUSCATOR_NET_HOME)\Integration\MSBuild\Eazfuscator.NET.targets" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>Haipa.Runtime.Zero</RootNamespace>
     <EazfuscatorIntegration>MSBuild</EazfuscatorIntegration>
     <EazfuscatorActiveConfiguration>Release</EazfuscatorActiveConfiguration>
     <EazfuscatorCompatibilityVersion>2018.1</EazfuscatorCompatibilityVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.1.0" />
-    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.1.0" />
+    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.2.2-PullRequest0018.3" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.2.2-PullRequest0018.3" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" Version="2.2.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="2.2.6" />
-    <PackageReference Include="SimpleInjector" Version="5.0.3" />
+    <PackageReference Include="SimpleInjector" Version="4.7.1" />
+    <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="4.7.1" />
     <PackageReference Include="SQLitePCLRaw.bundle_green" Version="1.1.13" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.1" />
   </ItemGroup>

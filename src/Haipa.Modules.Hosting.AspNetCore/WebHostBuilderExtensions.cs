@@ -23,9 +23,11 @@ namespace Haipa.Modules.Hosting
             services.AddSingleton(hostContext.Container);
             services.EnableSimpleInjectorCrossWiring(hostContext.Container);
             hostContext.Module.ConfigureServices(hostContext.ModuleServiceProvider, services);
+
+            var configurer = hostContext.ModuleServiceProvider.GetService<IServicesConfigurer<TModule>>();
+            configurer?.ConfigureServices(hostContext.Module, hostContext.ModuleServiceProvider, services);
+
             services.AddSimpleInjector(hostContext.Container, hostContext.Module.AddSimpleInjector);
-
-
         }
 
         private static void ConfigureAppAndContainer<TModule>(IApplicationBuilder app, ModuleHostContext<TModule> hostContext)
@@ -35,6 +37,9 @@ namespace Haipa.Modules.Hosting
             hostContext.Module.Configure(app);
             app.UseSimpleInjector(hostContext.Container, hostContext.Module.UseSimpleInjector);
             hostContext.Module.ConfigureContainer(hostContext.ModuleServiceProvider, hostContext.Container);
+
+            var configurer = hostContext.ModuleServiceProvider.GetService<IContainerConfigurer<TModule>>();
+            configurer?.ConfigureContainer(hostContext.Module, hostContext.ModuleServiceProvider, hostContext.Container);
 
             hostContext.Container.AutoCrossWireAspNetComponents(app);
             hostContext.Container.Verify();

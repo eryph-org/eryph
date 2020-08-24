@@ -79,7 +79,7 @@ namespace Haipa.Modules.Api.Controllers
                 ).ConfigureAwait(false));
         }
 
-        [HttpPost]
+        [HttpPut]
         [SwaggerOperation(OperationId = "Machines_Start")]
         [ProducesResponseType(typeof(Operation), Status200OK)]
         [Produces("application/json")]
@@ -88,7 +88,7 @@ namespace Haipa.Modules.Api.Controllers
            return Ok(await _operationManager.StartNew<StartMachineCommand>(key).ConfigureAwait(false));
         }
 
-        [HttpPost]
+        [HttpPut]
         [SwaggerOperation(OperationId = "Machines_Stop")]
         [ProducesResponseType(typeof(Operation), Status200OK)]
         [Produces("application/json")]

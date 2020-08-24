@@ -1,7 +1,11 @@
 ﻿using System;
+using System.IO;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.X509;
 
 namespace Haipa.Security.Cryptography
 {
@@ -70,6 +74,28 @@ namespace Haipa.Security.Cryptography
             }
             else { return false; }
         }
-       
+
+        public static AsymmetricCipherKeyPair ReadPrivateKeyFile(string filepath)
+        {    
+
+            using (var reader = File.OpenText(filepath))
+                return (AsymmetricCipherKeyPair)new PemReader(reader).ReadObject();
+
+        }
+
+        public static void WritePrivateKeyFile(string filepath, AsymmetricCipherKeyPair keyPair)
+        {
+            using (var writer = new StreamWriter(filepath))
+                new PemWriter(writer).WriteObject(keyPair);
+
+        }
+
+        public static AsymmetricKeyParameter GetPublicKey(string certData)
+        {
+            var parser = new X509CertificateParser();
+            var cert2 = parser.ReadCertificate(Convert.FromBase64String(certData));
+            return cert2.GetPublicKey();
+        }
+
     }
 }

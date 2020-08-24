@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.Hosting" Version="0.1.0" />
-    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.1.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.1" />
+    <PackageReference Include="Dbosoft.Hosuto.Hosting" Version="0.2.2-PullRequest0018.3" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.2.2-PullRequest0018.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.4" />
     <PackageReference Include="Rebus.MySql" Version="1.1.0" />
-    <PackageReference Include="SimpleInjector" Version="5.0.3" />
+    <PackageReference Include="SimpleInjector" Version="4.7.1" />
   </ItemGroup>
 
   <ItemGroup>

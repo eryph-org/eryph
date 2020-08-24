@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.Modules.Api;
 using Haipa.StateDb.MySql;
-using Microsoft.AspNetCore;
 using SimpleInjector;
 
 namespace Haipa.ApiEndpoint
@@ -20,7 +19,7 @@ namespace Haipa.ApiEndpoint
 
             await ModulesHost.CreateDefaultBuilder(args)
                 .UseSimpleInjector(container)
-                .UseAspNetCore(WebHost.CreateDefaultBuilder, (module, webHostBuilder) =>
+                .UseAspNetCore((module, webHostBuilder) =>
                 {
 
                 })

@@ -1,17 +1,19 @@
-﻿using Haipa.IdentityDb.Models;
-using Microsoft.AspNet.OData.Builder;
+﻿using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Haipa.Modules.Identity.Models.V1;
+using JetBrains.Annotations;
 
 namespace Haipa.Modules.Identity.Configuration
 {
+    [UsedImplicitly]
     public class ODataModelConfiguration : IModelConfiguration
     {
         private static void ConfigureV1(ODataModelBuilder builder)
         {
-            builder.EntitySet<ClientEntity>("ClientEntity");
+            builder.Namespace = "Haipa";
+            builder.EntitySet<Client>("Clients");
+            builder.EntityType<Client>().Name = "Client";
+
         }
         public void Apply(ODataModelBuilder builder, ApiVersion apiVersion)
         {
