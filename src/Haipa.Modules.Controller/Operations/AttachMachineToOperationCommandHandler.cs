@@ -1,9 +1,11 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Operations;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore;
 using Rebus.Handlers;
 
 namespace Haipa.Modules.Controller.Operations
@@ -20,10 +22,18 @@ namespace Haipa.Modules.Controller.Operations
 
         public async Task Handle(AttachMachineToOperationCommand message)
         {
-            var operation = _dbContext.Operations.FirstOrDefault(op => op.Id == message.OperationId);
+            var operation = _dbContext.Operations.Include(x=>x.Resources)
+                .FirstOrDefault(op => op.Id == message.OperationId);
+
             if (operation != null)
             {
-                operation.MachineGuid = message.MachineId;
+                if(operation.Resources.All(x => x.ResourceId != message.MachineId))
+                    operation.Resources.Add(new OperationResource
+                    {
+                        Id = Guid.NewGuid(),
+                        ResourceId = message.MachineId, 
+                        ResourceType = ResourceType.Machine
+                    });
             }
 
             var agent = _dbContext.Agents.FirstOrDefault(op => op.Name == message.AgentName);

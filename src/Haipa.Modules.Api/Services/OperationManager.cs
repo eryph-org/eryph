@@ -58,7 +58,10 @@ namespace Haipa.Modules.Api.Services
             {
                 Id = Guid.NewGuid(),
                 Status = OperationStatus.Queued,
-                MachineGuid = vmId
+                Resources = new List<OperationResource>{new OperationResource
+                {
+                    Id = Guid.NewGuid(), ResourceId = vmId, ResourceType = ResourceType.Machine
+                }}
             };
 
             _db.Add(operation);

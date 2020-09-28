@@ -13,7 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Messages\Haipa.Messages.csproj" />
     <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
-    <ProjectReference Include="..\Haipa.StateDb.MySql\Haipa.StateDb.MySql.csproj" />
+    <ProjectReference Include="..\Haipa.StateDb\Haipa.StateDb.csproj" />
   </ItemGroup>
 
 </Project>

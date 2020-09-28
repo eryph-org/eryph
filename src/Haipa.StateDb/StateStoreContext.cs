@@ -13,6 +13,7 @@ namespace Haipa.StateDb
         public DbSet<Operation> Operations { get; set; }
         public DbSet<OperationLogEntry> Logs { get; set; }
         public DbSet<OperationTask> OperationTasks { get; set; }
+        public DbSet<OperationResource> OperationResources { get; set; }
 
         public DbSet<Machine> Machines { get; set; }
         public DbSet<VirtualMachine> VirtualMachines { get; set; }
@@ -29,6 +30,7 @@ namespace Haipa.StateDb
         {
             modelBuilder.Entity<Operation>().HasMany(c => c.LogEntries);
             modelBuilder.Entity<Operation>().HasMany(c => c.Tasks);
+            modelBuilder.Entity<Operation>().HasMany(c => c.Resources);
 
             modelBuilder.Entity<AgentNetwork>().HasKey("NetworkId", "AgentName");
 
