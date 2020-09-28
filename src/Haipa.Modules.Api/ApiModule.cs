@@ -17,6 +17,7 @@ using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 
 namespace Haipa.Modules.Api
 {
@@ -56,6 +57,13 @@ namespace Haipa.Modules.Api
         public void Configure(IApplicationBuilder app)
         {
             app.UseApiProvider(this);
+        }
+
+        [UsedImplicitly]
+        public void AddSimpleInjector(SimpleInjectorAddOptions options)
+        {
+            options.AddAspNetCore()
+                .AddControllerActivation();
         }
 
         [UsedImplicitly]

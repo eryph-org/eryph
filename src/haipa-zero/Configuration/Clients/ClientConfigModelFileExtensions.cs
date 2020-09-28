@@ -1,16 +1,18 @@
 ﻿using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Haipa.App;
+using Haipa.Configuration.Model;
 using Newtonsoft.Json;
 
-namespace Haipa.Runtime.Zero.ConfigStore.Clients
+namespace Haipa.Runtime.Zero.Configuration.Clients
 {
     internal static class ClientConfigModelFileExtensions
     {
         public static Task SaveConfigFile(this ClientConfigModel c)
         {
             var json = JsonConvert.SerializeObject(c);
-            var filePath = Path.Combine(Config.GetClientConfigPath(), CoerceValidFileName(c.ClientId) + ".json");
+            var filePath = Path.Combine(ZeroConfig.GetClientConfigPath(), CoerceValidFileName(c.ClientId) + ".json");
             return SaveFileOperation(json, filePath);
         }
 
@@ -64,7 +66,7 @@ namespace Haipa.Runtime.Zero.ConfigStore.Clients
 
         public static void DeleteConfigFile(this ClientConfigModel c)
         {
-            var filePath = Path.Combine(Config.GetClientConfigPath(), c.ClientId + ".json");
+            var filePath = Path.Combine(ZeroConfig.GetClientConfigPath(), c.ClientId + ".json");
             if(File.Exists(filePath))
                 File.Delete(filePath);
         }

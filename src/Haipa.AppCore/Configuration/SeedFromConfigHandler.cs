@@ -3,12 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules;
-using Haipa.Modules;
 using LanguageExt;
 
-namespace Haipa.Runtime.Zero.ConfigStore
+namespace Haipa.Configuration
 {
-    internal class SeedFromConfigHandler<TModule> : IHostedServiceHandler where TModule : IModule
+    public class SeedFromConfigHandler<TModule> : IHostedServiceHandler where TModule : IModule
     {
         private readonly IEnumerable<IConfigSeeder<TModule>> _seeders;
 
@@ -19,7 +18,7 @@ namespace Haipa.Runtime.Zero.ConfigStore
 
         public Task Execute(CancellationToken stoppingToken)
         {
-            return _seeders.AsTask().MapT(s => s.Execute(stoppingToken));
+            return _seeders.Map(s => s.Execute(stoppingToken).ToUnit()).Traverse(l=>l);
         }
     }
 }

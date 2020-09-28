@@ -128,7 +128,7 @@ namespace Haipa.Modules.VmHostAgent
                 _bus.SendRequest<GenerateIdReply>(new GenerateIdCommand(), null, TimeSpan.FromMinutes(5))
                     .Map(r => LongToString(r.GeneratedId, 36)))
                 
-                .ToEither(ex => new PowershellFailure{Message = ex.Message});
+                .ToEither(ex => new PowershellFailure{Message = ex.Message}).ToEither();
 
         }
 

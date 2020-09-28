@@ -18,7 +18,7 @@ namespace Haipa.Identity
 
             await ModulesHost.CreateDefaultBuilder(args)
                 .UseSimpleInjector(container)
-                .UseAspNetCore((module, webHostBuilder) =>
+                .UseAspNetCoreWithDefaults((module, webHostBuilder) =>
                 {
 
                 })

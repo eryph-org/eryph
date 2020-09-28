@@ -1,17 +1,19 @@
 ﻿using System;
 using System.IO;
+using Haipa.App;
+using Haipa.Configuration.Model;
 using Haipa.Security.Cryptography;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto;
 
-namespace Haipa.Runtime.Zero.ConfigStore.Clients
+namespace Haipa.Runtime.Zero.Configuration.Clients
 {
-    public static class ClientGenerator
+    public static class SystemClientGenerator
     {
         public static void EnsureSystemClient()
         {
-            var systemClientDataFile = Path.Combine(Config.GetClientConfigPath(), "system-client.json");
-            var systemClientKeyFile = Path.Combine(Config.GetClientConfigPath(), "system-client.key");
+            var systemClientDataFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.json");
+            var systemClientKeyFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.key");
 
             var recreateSystemClient = !File.Exists(systemClientDataFile) || !File.Exists(systemClientKeyFile);
 
@@ -67,8 +69,8 @@ namespace Haipa.Runtime.Zero.ConfigStore.Clients
 
         private static void RemoveSystemClient()
         {
-            var systemClientDataFile = Path.Combine(Config.GetClientConfigPath(), "system-client.json");
-            var systemClientKeyFile = Path.Combine(Config.GetClientConfigPath(), "system-client.key");
+            var systemClientDataFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.json");
+            var systemClientKeyFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.key");
 
             if (File.Exists(systemClientDataFile))
             {

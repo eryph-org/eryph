@@ -1,9 +1,11 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Haipa.Configuration;
+using Haipa.Configuration.Model;
 using Haipa.Modules.Identity.Models;
 using Haipa.Modules.Identity.Services;
 
-namespace Haipa.Runtime.Zero.ConfigStore.Clients
+namespace Haipa.Runtime.Zero.Configuration.Clients
 {
     internal class ClientServiceWithConfigServiceDecorator<TModel> : IClientService<TModel> where TModel : IClientApiModel
     {
