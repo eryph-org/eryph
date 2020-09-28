@@ -1,12 +1,12 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
+using Haipa.App;
 using Haipa.Modules.Api;
 using Haipa.Modules.Controller;
 using Haipa.Modules.VmHostAgent;
-using Haipa.Security.Cryptography;
+using Haipa.Runtime.Zero.Configuration;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -25,28 +25,13 @@ namespace Haipa.Runtime.Zero
         /// The Main
         /// </summary>
         /// <param name="args">The args<see cref="string[]"/></param>
-        private static Task Main(string[] args)
+        private static async Task Main(string[] args)
         {
  
-            ConfigStore.Config.EnsureConfigPaths();
-            ConfigStore.Clients.ClientGenerator.EnsureSystemClient();
+            await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
-            File.WriteAllText(Path.Combine(ConfigStore.Config.GetConfigPath("zero"), ".run_info"),
-                $"{{ \"process_id\": \"{Process.GetCurrentProcess().Id}\", \"url\" : \"https://localhost:62189\" }}");
-
-            Certificate.CreateSSL(new CertificateOptions
-            {
-                Issuer = Network.FQDN,
-                FriendlyName = "Haipa Zero Management Certificate",
-                Suffix = "CA",
-                ValidStartDate = DateTime.UtcNow,
-                ValidEndDate = DateTime.UtcNow.AddYears(5),
-                Password = "password",
-                ExportDirectory = Directory.GetCurrentDirectory(),
-                URL = "https://localhost:62189/",
-                AppID = "9412ee86-c21b-4eb8-bd89-f650fbf44931",
-                CACertName = "HaipaCA.pfx"
-            });
+            ZeroConfig.EnsureConfiguration();
+            const string basePath = "https://localhost:62189/";
 
             var container = new Container();
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
@@ -57,9 +42,9 @@ namespace Haipa.Runtime.Zero
                 {
                     webHostBuilder.UseHttpSys(options =>
                         {
-                            options.UrlPrefixes.Add($"https://localhost:62189/{module.Path}");
+                            options.UrlPrefixes.Add($"{basePath}{module.Path}");
                         })
-                        .UseUrls($"https://localhost:62189/{module.Path}");
+                        .UseUrls($"{basePath}{module.Path}");
                 })
                 .UseSimpleInjector(container)
                 .HostModule<ApiModule>()
@@ -72,7 +57,18 @@ namespace Haipa.Runtime.Zero
                 .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Trace))
                 .Build();
 
-            return host.RunAsync();
+            processLock.SetMetadata(new Dictionary<string, object>
+            {
+                { "endpoints", new Dictionary<string, string>
+                {
+                    {"identity", $"{basePath}identity"},
+                    {"compute", $"{basePath}api"}
+                }}
+            });
+            
+            await host.RunAsync();
+
         }
+
     }
  }

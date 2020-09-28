@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>Haipa</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LanguageExt.Core" Version="3.4.15" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.2.2" />
+
+  </ItemGroup>
+
+</Project>

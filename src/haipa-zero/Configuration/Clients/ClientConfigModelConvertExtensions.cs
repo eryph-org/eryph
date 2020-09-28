@@ -1,8 +1,9 @@
 ﻿using System.Linq;
+using Haipa.Configuration.Model;
 using Haipa.Modules.Identity.Models;
 using Haipa.Modules.Identity.Models.V1;
 
-namespace Haipa.Runtime.Zero.ConfigStore.Clients
+namespace Haipa.Runtime.Zero.Configuration.Clients
 {
     internal static class ClientConfigModelConvertExtensions
     {

@@ -1,15 +1,16 @@
 ﻿using System;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
+using Haipa.Configuration;
+using Haipa.Configuration.Model;
 using Haipa.IdentityDb;
 using Haipa.Modules.Identity;
 using Haipa.Modules.Identity.Services;
-using Haipa.Runtime.Zero.ConfigStore;
-using Haipa.Runtime.Zero.ConfigStore.Clients;
+using Haipa.Runtime.Zero.Configuration;
+using Haipa.Runtime.Zero.Configuration.Clients;
 using IdentityServer4.EntityFramework.DbContexts;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
-using SimpleInjector.Integration.ServiceCollection;
 
 namespace Haipa.Runtime.Zero
 {
