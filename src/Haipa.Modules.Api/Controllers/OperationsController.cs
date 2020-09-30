@@ -36,6 +36,7 @@ namespace Haipa.Modules.Api.Controllers
         [SwaggerOperation(OperationId = "Operations_Get")]
         [SwaggerResponse(Status200OK, "Success", typeof(Operation))]
         [Produces("application/json")]
+        [EnableQuery]
         public IActionResult Get(Guid key)
         {
             return Ok(SingleResult.Create(_db.Operations.Where(c => c.Id == key)));

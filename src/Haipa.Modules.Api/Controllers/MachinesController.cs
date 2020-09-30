@@ -46,7 +46,8 @@ namespace Haipa.Modules.Api.Controllers
         [SwaggerOperation(OperationId = "Machines_Get")]
         [Produces("application/json")]
         [SwaggerResponse(Status200OK, "Success", typeof(Machine))]
-        public IActionResult Get(Guid key)
+        [EnableQuery]
+        public IActionResult Get([FromODataUri] Guid key)
         {
             return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == key)));
         }
@@ -55,7 +56,7 @@ namespace Haipa.Modules.Api.Controllers
         [SwaggerOperation(OperationId = "Machines_Delete")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public async Task<IActionResult> Delete(Guid key)
+        public async Task<IActionResult> Delete([FromODataUri] Guid key)
         {
             return Accepted(await _operationManager.StartNew<DestroyMachineCommand>(key).ConfigureAwait(false));
         }
@@ -75,7 +76,7 @@ namespace Haipa.Modules.Api.Controllers
                 ).ConfigureAwait(false));
         }
 
-        [HttpPut]
+        [HttpPost]
         [SwaggerOperation(OperationId = "Machines_Start")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
@@ -84,7 +85,7 @@ namespace Haipa.Modules.Api.Controllers
            return Accepted(await _operationManager.StartNew<StartMachineCommand>(key).ConfigureAwait(false));
         }
 
-        [HttpPut]
+        [HttpPost]
         [SwaggerOperation(OperationId = "Machines_Stop")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
