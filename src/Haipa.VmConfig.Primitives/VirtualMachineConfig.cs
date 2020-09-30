@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 
 namespace Haipa.VmConfig
@@ -106,6 +108,8 @@ namespace Haipa.VmConfig
 
         public ProvisioningMethod Method { get; set; }
     }
+
+    [JsonConverter(typeof(StringEnumConverter))]
 
     public enum ProvisioningMethod
     {
