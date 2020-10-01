@@ -52,20 +52,20 @@ namespace Haipa.Modules.VmHostAgent
 
             var chain = 
 
-                from normalizedVMConfig in Converge.NormalizeMachineConfig(config, _engine, ProgressMessage)
-                from vmList in GetVmInfo(machineId, _engine)
-                from optionalVmInfo in EnsureUnique(vmList, machineId)
-                                
-                from currentStorageSettings in Storage.DetectVMStorageSettings(optionalVmInfo, hostSettings, ProgressMessage)
-                from plannedStorageSettings in Storage.PlanVMStorageSettings(normalizedVMConfig, currentStorageSettings, hostSettings, GenerateId)
-                
-                from creationInfo in EnsureCreated(optionalVmInfo, config, hostSettings, plannedStorageSettings, _engine)
-                from _ in AttachToOperation(creationInfo.vmInfo, _bus, command.OperationId)
-                from vmInfo in EnsureNameConsistent(creationInfo.vmInfo, config, _engine)
+                from normalizedVMConfig in Converge.NormalizeMachineConfig(machineId,config, _engine, ProgressMessage).ToAsync()
+                from vmList in GetVmInfo(machineId, _engine).ToAsync()
+                from optionalVmInfo in EnsureUnique(vmList, machineId).ToAsync()
 
-                from metadata in EnsureMetadata(creationInfo.imageVM, vmInfo, normalizedVMConfig)
-                from mergedConfig in Converge.MergeConfigAndImageSettings(metadata.ImageConfig, normalizedVMConfig, _engine)
-                from vmInfoConverged in ConvergeVm(vmInfo, mergedConfig, plannedStorageSettings, hostSettings, _engine)
+                from currentStorageSettings in Storage.DetectVMStorageSettings(optionalVmInfo, hostSettings, ProgressMessage).ToAsync()
+                from plannedStorageSettings in Storage.PlanVMStorageSettings(normalizedVMConfig, currentStorageSettings, hostSettings, GenerateId).ToAsync()
+
+                from creationInfo in EnsureCreated(optionalVmInfo, config, hostSettings, plannedStorageSettings, _engine).ToAsync()
+                from _ in AttachToOperation(creationInfo.vmInfo, _bus, command.OperationId).ToAsync()
+                from vmInfo in EnsureNameConsistent(creationInfo.vmInfo, config, _engine).ToAsync()
+
+                from metadata in EnsureMetadata(creationInfo.imageVM, vmInfo, normalizedVMConfig).ToAsync()
+                from mergedConfig in Converge.MergeConfigAndImageSettings(metadata.ImageConfig, normalizedVMConfig, _engine).ToAsync()
+                from vmInfoConverged in ConvergeVm(vmInfo, mergedConfig, plannedStorageSettings, hostSettings, _engine).ToAsync()
                 select vmInfoConverged;
 
             return chain.MatchAsync(
@@ -175,7 +175,7 @@ namespace Haipa.Modules.VmHostAgent
                             .BindAsync(storageIdentifier => Converge.ImportVirtualMachine(engine, hostSettings, config.Name, storageIdentifier,
                                 storageSettings.VMPath,
                                 config.Image)),
-                    Some: s => (s, Option<ImageVirtualMachineInfo>.None)
+                    Some: s => Prelude.Right((s, Option<ImageVirtualMachineInfo>.None))
                 );
 
             }
@@ -185,7 +185,7 @@ namespace Haipa.Modules.VmHostAgent
                     (storageSettings.StorageIdentifier.ToEither(new PowershellFailure{Message = "Unknown storage identifier, cannot create new virtual machine"})
                         .BindAsync(storageIdentifier => Converge.CreateVirtualMachine(engine, config.Name, storageIdentifier,
                             storageSettings.VMPath,
-                            config.VM.Memory.Startup.GetValueOrDefault(0))).MapAsync(r => (r, Option<ImageVirtualMachineInfo>.None))),                            
+                            config.VM.Memory.Startup)).MapAsync(r => (r, Option<ImageVirtualMachineInfo>.None))),                            
                 Some: s => (s, Option<ImageVirtualMachineInfo>.None)
             );
 
@@ -226,13 +226,13 @@ namespace Haipa.Modules.VmHostAgent
         private static Task<Either<PowershellFailure, Seq<TypedPsObject<VirtualMachineInfo>>>> GetVmInfo(Guid id,
             IPowershellEngine engine) =>
 
-            Prelude.Cond<Guid>((c) => c == Guid.Empty)(id).MatchAsync(
+            Prelude.Cond<Guid>((c) => c != Guid.Empty)(id).MatchAsync(
                 None:  () => Seq<TypedPsObject<VirtualMachineInfo>>.Empty,
                 Some: (s) => engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
                     .AddCommand("get-vm").AddParameter("Id", id)
                     //this a bit dangerous, because there may be other errors causing the 
                     //command to fail. However there seems to be no other way except parsing error response
-                    //.AddParameter("ErrorAction", "SilentlyContinue")
+                    .AddParameter("ErrorAction", "SilentlyContinue")
                 ));
 
         private async Task<Unit> HandleError(PowershellFailure failure)

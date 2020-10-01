@@ -25,6 +25,11 @@ namespace Haipa.Modules.VmHostAgent
         {
             try
             {
+                if (message.Command.ImageConfig == null)
+                {
+                    return _bus.Publish(
+                        OperationTaskStatusEvent.Completed(message.Command.OperationId, message.Command.TaskId));
+                }
 
                 var hostSettings = HostSettingsBuilder.GetHostSettings();
                 var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
