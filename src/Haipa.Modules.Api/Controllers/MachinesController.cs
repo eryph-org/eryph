@@ -62,18 +62,39 @@ namespace Haipa.Modules.Api.Controllers
         }
 
         [HttpPost]
-        [SwaggerOperation(OperationId = "Machines_UpdateOrCreate")]
+        [SwaggerOperation(OperationId = "Machines_Create")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
         public async Task<IActionResult> Post([FromBody] MachineConfig config)
         {
 
             return Accepted(await _operationManager.StartNew(
-                new CreateOrUpdateMachineCommand
+                new CreateMachineCommand
                 {
                     Config = config,
                 }
                 ).ConfigureAwait(false));
+        }
+
+        [HttpPut]
+        [SwaggerOperation(OperationId = "Machines_Update")]
+        [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
+        [Produces("application/json")]
+        public async Task<IActionResult> Put([FromODataUri] Guid key, [FromBody] MachineConfig config)
+        {
+            var machine = _db.Machines.FirstOrDefault(op => op.Id == key);
+
+            if (machine == null)
+                return NotFound();
+            
+            return Accepted(await _operationManager.StartNew(
+                new UpdateMachineCommand
+                {
+                    MachineId = key,
+                    Config = config,
+                    AgentName = machine.AgentName,
+                }
+            ).ConfigureAwait(false));
         }
 
         [HttpPost]

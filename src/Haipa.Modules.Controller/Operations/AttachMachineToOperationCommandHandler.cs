@@ -25,7 +25,7 @@ namespace Haipa.Modules.Controller.Operations
             var operation = _dbContext.Operations.Include(x=>x.Resources)
                 .FirstOrDefault(op => op.Id == message.OperationId);
 
-            if (operation != null)
+            if (operation != null && message.MachineId != Guid.Empty)
             {
                 if(operation.Resources.All(x => x.ResourceId != message.MachineId))
                     operation.Resources.Add(new OperationResource

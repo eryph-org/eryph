@@ -88,7 +88,6 @@ namespace Haipa.VmConfig
     public class MachineConfig
     {
         public string Name { get; set; }
-        public string Id { get; set; }
         public string Environment { get; set; }
         public string Project { get; set; }
 

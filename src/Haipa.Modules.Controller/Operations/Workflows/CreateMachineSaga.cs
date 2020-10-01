@@ -10,18 +10,18 @@ using Rebus.Sagas;
 namespace Haipa.Modules.Controller.Operations.Workflows
 {
     [UsedImplicitly]
-    internal class CreateOrUpdateMachineSaga : OperationTaskWorkflowSaga<CreateOrUpdateMachineCommand, CreateOrUpdateMachineSagaData>,
+    internal class CreateMachineSaga : OperationTaskWorkflowSaga<CreateMachineCommand, CreateMachineSagaData>,
         IHandleMessages<OperationTaskStatusEvent<PlaceVirtualMachineCommand>>,
         IHandleMessages<OperationTaskStatusEvent<ConvergeVirtualMachineCommand>>
     {
         private readonly IOperationTaskDispatcher _taskDispatcher;
 
-        public CreateOrUpdateMachineSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus)
+        public CreateMachineSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus)
         {
             _taskDispatcher = taskDispatcher;
         }
 
-        protected override void CorrelateMessages(ICorrelationConfig<CreateOrUpdateMachineSagaData> config)
+        protected override void CorrelateMessages(ICorrelationConfig<CreateMachineSagaData> config)
         {
             base.CorrelateMessages(config);
 
@@ -30,7 +30,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
 
         }
 
-        public override Task Initiated(CreateOrUpdateMachineCommand message)
+        public override Task Initiated(CreateMachineCommand message)
         {
             Data.Config = message.Config;
 

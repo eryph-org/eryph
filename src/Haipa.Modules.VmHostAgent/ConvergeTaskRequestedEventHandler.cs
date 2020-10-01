@@ -42,6 +42,8 @@ namespace Haipa.Modules.VmHostAgent
         {
             var command = message.Command;
             var config = command.Config;
+            var machineId = command.MachineId;
+            
             _operationId = command.OperationId;
             _taskId = command.TaskId;
 
@@ -49,21 +51,21 @@ namespace Haipa.Modules.VmHostAgent
 
             var chain = 
 
-                from normalizedVMConfig in Converge.NormalizeMachineConfig(config, _engine, ProgressMessage)
-                from vmList in GetVmInfo(normalizedVMConfig.Id, _engine)
-                from optionalVmInfo in EnsureUnique(vmList, normalizedVMConfig.Id)
-                                
-                from currentStorageSettings in Storage.DetectVMStorageSettings(optionalVmInfo, hostSettings, ProgressMessage)
-                from plannedStorageSettings in Storage.PlanVMStorageSettings(normalizedVMConfig, currentStorageSettings, hostSettings, GenerateId)
-                
-                from vmInfoCreated in EnsureCreated(optionalVmInfo, config, plannedStorageSettings, _engine)
-                from _ in AttachToOperation(vmInfoCreated, _bus, command.OperationId)
-                from vmInfo in EnsureNameConsistent(vmInfoCreated, config, _engine)
+                from normalizedVMConfig in Converge.NormalizeMachineConfig(machineId, config, _engine, ProgressMessage).ToAsync()
+                from vmList in GetVmInfo(machineId, _engine).ToAsync()
+                from optionalVmInfo in EnsureUnique(vmList, machineId).ToAsync()
 
-                from vmInfoConverged in ConvergeVm(vmInfo, config, plannedStorageSettings, hostSettings, _engine)
+                from currentStorageSettings in Storage.DetectVMStorageSettings(optionalVmInfo, hostSettings, ProgressMessage).ToAsync()
+                from plannedStorageSettings in Storage.PlanVMStorageSettings(normalizedVMConfig, currentStorageSettings, hostSettings, GenerateId).ToAsync()
+
+                from vmInfoCreated in EnsureCreated(optionalVmInfo, config, plannedStorageSettings, _engine).ToAsync()
+                from _ in AttachToOperation(vmInfoCreated, _bus, command.OperationId).ToAsync()
+                from vmInfo in EnsureNameConsistent(vmInfoCreated, config, _engine).ToAsync()
+
+                from vmInfoConverged in ConvergeVm(vmInfo, config, plannedStorageSettings, hostSettings, _engine).ToAsync()
                 select vmInfoConverged;
 
-            return chain.ToAsync().MatchAsync(
+            return chain.MatchAsync(
                 LeftAsync: HandleError,
                 RightAsync: async vmInfo2 =>
                 {
@@ -113,7 +115,7 @@ namespace Haipa.Modules.VmHostAgent
         }
 
 #pragma warning disable 1998
-        private async Task<Either<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>>> EnsureUnique(Seq<TypedPsObject<VirtualMachineInfo>> list, string id)
+        private async Task<Either<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>>> EnsureUnique(Seq<TypedPsObject<VirtualMachineInfo>> list, Guid id)
 #pragma warning restore 1998
         {
             if (list.Count > 1)
@@ -205,16 +207,16 @@ namespace Haipa.Modules.VmHostAgent
 
         }
 
-        private static Task<Either<PowershellFailure, Seq<TypedPsObject<VirtualMachineInfo>>>> GetVmInfo(string id,
+        private static Task<Either<PowershellFailure, Seq<TypedPsObject<VirtualMachineInfo>>>> GetVmInfo(Guid id,
             IPowershellEngine engine) =>
 
-            Prelude.Cond<string>((c) => !string.IsNullOrWhiteSpace(c))(id).MatchAsync(
+            Prelude.Cond<Guid>((c) => c == Guid.Empty)(id).MatchAsync(
                 None:  () => Seq<TypedPsObject<VirtualMachineInfo>>.Empty,
                 Some: (s) => engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
-                    .AddCommand("get-vm").AddParameter("Id", s)
+                    .AddCommand("get-vm").AddParameter("Id", id)
                     //this a bit dangerous, because there may be other errors causing the 
                     //command to fail. However there seems to be no other way except parsing error response
-                    .AddParameter("ErrorAction", "SilentlyContinue")
+                    //.AddParameter("ErrorAction", "SilentlyContinue")
                 ));
 
         private async Task<Unit> HandleError(PowershellFailure failure)
