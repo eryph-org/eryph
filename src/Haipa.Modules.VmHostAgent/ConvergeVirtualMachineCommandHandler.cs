@@ -52,20 +52,20 @@ namespace Haipa.Modules.VmHostAgent
 
             var chain = 
 
-                from normalizedVMConfig in Converge.NormalizeMachineConfig(config, _engine, ProgressMessage).ToAsync()
-                from vmList in GetVmInfo(machineId, _engine).ToAsync()
-                from optionalVmInfo in EnsureUnique(vmList, machineId).ToAsync()
+                from normalizedVMConfig in Converge.NormalizeMachineConfig(config, _engine, ProgressMessage)
+                from vmList in GetVmInfo(machineId, _engine)
+                from optionalVmInfo in EnsureUnique(vmList, machineId)
+                                
+                from currentStorageSettings in Storage.DetectVMStorageSettings(optionalVmInfo, hostSettings, ProgressMessage)
+                from plannedStorageSettings in Storage.PlanVMStorageSettings(normalizedVMConfig, currentStorageSettings, hostSettings, GenerateId)
+                
+                from creationInfo in EnsureCreated(optionalVmInfo, config, hostSettings, plannedStorageSettings, _engine)
+                from _ in AttachToOperation(creationInfo.vmInfo, _bus, command.OperationId)
+                from vmInfo in EnsureNameConsistent(creationInfo.vmInfo, config, _engine)
 
-                from currentStorageSettings in Storage.DetectVMStorageSettings(optionalVmInfo, hostSettings, ProgressMessage).ToAsync()
-                from plannedStorageSettings in Storage.PlanVMStorageSettings(normalizedVMConfig, currentStorageSettings, hostSettings, GenerateId).ToAsync()
-
-                from vmInfoCreated in EnsureCreated(optionalVmInfo, config, plannedStorageSettings, _engine).ToAsync()
-                from _ in AttachToOperation(vmInfoCreated, _bus, command.OperationId).ToAsync()
-                from vmInfo in EnsureNameConsistent(vmInfoCreated, config, _engine).ToAsync()
-
-                from metadata in EnsureMetadata(creationInfo.imageVM, vmInfo, normalizedVMConfig).ToAsync()
-                from mergedConfig in Converge.MergeConfigAndImageSettings(metadata.ImageInfo, normalizedVMConfig, _engine).ToAsync()
-                from vmInfoConverged in ConvergeVm(vmInfo, mergedConfig, plannedStorageSettings, hostSettings, _engine).ToAsync()
+                from metadata in EnsureMetadata(creationInfo.imageVM, vmInfo, normalizedVMConfig)
+                from mergedConfig in Converge.MergeConfigAndImageSettings(metadata.ImageConfig, normalizedVMConfig, _engine)
+                from vmInfoConverged in ConvergeVm(vmInfo, mergedConfig, plannedStorageSettings, hostSettings, _engine)
                 select vmInfoConverged;
 
             return chain.MatchAsync(
