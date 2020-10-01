@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Haipa.Modules.Api;
 using Haipa.Modules.Identity;
 using Microsoft.AspNetCore;
 using SimpleInjector;

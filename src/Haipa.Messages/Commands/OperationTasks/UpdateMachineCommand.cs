@@ -4,12 +4,11 @@ using Haipa.VmConfig;
 
 namespace Haipa.Messages.Commands.OperationTasks
 {
-    [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class ConvergeVirtualMachineCommand : OperationTaskCommand, IHostAgentCommand
+    [SendMessageTo(MessageRecipient.Controllers)]
+    public class UpdateMachineCommand : OperationTaskCommand
     {
+        public Guid MachineId { get; set; }
         public MachineConfig Config { get; set; }
         public string AgentName { get; set; }
-
-        public Guid MachineId { get; set; }
     }
 }

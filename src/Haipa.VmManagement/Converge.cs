@@ -25,6 +25,7 @@ namespace Haipa.VmManagement
 #pragma warning disable 1998
         public static async Task<Either<PowershellFailure, MachineConfig>> NormalizeMachineConfig(
 #pragma warning restore 1998
+            Guid machineId,
             MachineConfig config,  IPowershellEngine engine, Func<string, Task> reportProgress)
         {
             var machineConfig = config;
@@ -32,13 +33,12 @@ namespace Haipa.VmManagement
             if (machineConfig.VM== null)
                 machineConfig.VM = new VirtualMachineConfig();
 
-            if (string.IsNullOrWhiteSpace(machineConfig.Name) && string.IsNullOrWhiteSpace(machineConfig.Id))
+            if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == Guid.Empty)
             {
                 //TODO generate a random name here
                 machineConfig.Name = "haipa-machine";
             }
-
-
+            
             if (machineConfig.VM.Cpu == null)
                 machineConfig.VM.Cpu = new VirtualMachineCpuConfig {Count = 1};
 

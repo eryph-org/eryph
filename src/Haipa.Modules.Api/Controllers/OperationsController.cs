@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
@@ -23,7 +24,7 @@ namespace Haipa.Modules.Api.Controllers
         [EnableQuery]
         [HttpGet]
         [SwaggerOperation(OperationId = "Operations_List")]
-        [ProducesResponseType(typeof(ODataValue<DbSet<Operation>>), Status200OK)]
+        [SwaggerResponse(Status200OK, "Success", typeof(ODataValue<IEnumerable<Operation>>))]
         [Produces("application/json")]
         public IActionResult Get()
         {
@@ -31,11 +32,11 @@ namespace Haipa.Modules.Api.Controllers
             return Ok(_db.Operations);
         }
 
-        [EnableQuery]
         [HttpGet]
         [SwaggerOperation(OperationId = "Operations_Get")]
-        [ProducesResponseType(typeof(Operation), Status200OK)]
+        [SwaggerResponse(Status200OK, "Success", typeof(Operation))]
         [Produces("application/json")]
+        [EnableQuery]
         public IActionResult Get(Guid key)
         {
             return Ok(SingleResult.Create(_db.Operations.Where(c => c.Id == key)));
@@ -44,7 +45,7 @@ namespace Haipa.Modules.Api.Controllers
 
         [EnableQuery]
         [SwaggerOperation(OperationId = "Operations_GetLogEntries")]
-        [ProducesResponseType(typeof(ODataValue<DbSet<OperationLogEntry>>), Status200OK)]
+        [SwaggerResponse(Status200OK, "Success", typeof(ODataValue<IEnumerable<OperationLogEntry>>))]
         [Produces("application/json")]
         public IActionResult GetLogEntries([FromODataUri] Guid key)
         {

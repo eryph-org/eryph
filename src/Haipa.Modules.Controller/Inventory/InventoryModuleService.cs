@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.HostedServices;
 using Haipa.Messages.Events;
 using Haipa.Rebus;
-using Microsoft.Extensions.Hosting;
 using Rebus.Bus;
 
 namespace Haipa.Modules.Controller.Inventory

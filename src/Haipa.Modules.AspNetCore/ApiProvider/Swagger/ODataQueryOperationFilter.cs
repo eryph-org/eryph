@@ -23,6 +23,9 @@ namespace Haipa.Modules.ApiProvider.Swagger
             if (queryAttribute == null || responseType == null)
                 return;
 
+            if (operation.Parameters.All(x => x.Name != "$filter"))
+                return;
+
             var referenceType = responseType.Type;
             if (responseType.Type.IsClosedTypeOf(typeof(ODataValue<>)))
             {

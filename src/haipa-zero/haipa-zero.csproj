@@ -10,12 +10,12 @@
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Dbosoft.Hosuto.Hosting" Version="0.2.2" />
     <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.2.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="2.2.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="2.2.6" />
     <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="4.7.1" />
     <PackageReference Include="SQLitePCLRaw.bundle_green" Version="1.1.13" />
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="4.5.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Haipa.Configuration\Haipa.Configuration.csproj" />

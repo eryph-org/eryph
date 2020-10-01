@@ -14,6 +14,7 @@ using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 
 namespace Haipa.Modules.VmHostAgent
 {
@@ -25,9 +26,12 @@ namespace Haipa.Modules.VmHostAgent
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
             services.AddHostedHandler<StartBusModuleHandler>();
-            //TODO: add module handler in Hosuto
-            //services.AddHostedService<WmiWatcherModuleService>();
+        }
 
+        [UsedImplicitly]
+        public void AddSimpleInjector(SimpleInjectorAddOptions options)
+        {
+            options.AddHostedService<WmiWatcherModuleService>();
         }
 
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)

@@ -2,7 +2,6 @@
 using Haipa.Rebus;
 using Haipa.StateDb;
 using Haipa.StateDb.MySql;
-using Microsoft.AspNetCore;
 using SimpleInjector;
 
 namespace Haipa.ApiEndpoint

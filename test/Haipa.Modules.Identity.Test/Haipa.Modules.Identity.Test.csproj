@@ -7,7 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.2.2-PullRequest0018.3" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.2.2" />
+    <PackageReference Include="Dbosoft.Hosuto.Testing.AspNetCore" Version="0.2.2" />
     <PackageReference Include="Haipa.IdentityModel" Version="0.1.0-ci.21" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="3.1.7" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
@@ -21,7 +22,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj" />
-    <ProjectReference Include="..\Haipa.TestUtils.AspNetCore\Haipa.TestUtils.AspNetCore.csproj" />
   </ItemGroup>
 
 </Project>

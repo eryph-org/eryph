@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Haipa.Messages;
 using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Modules.Api.Services;
 using Haipa.StateDb;
@@ -9,7 +9,6 @@ using Haipa.StateDb.Model;
 using Haipa.VmConfig;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
@@ -30,8 +29,7 @@ namespace Haipa.Modules.Api.Controllers
         [HttpGet]
         [SwaggerOperation( OperationId  = "Machines_List")]
         [Produces( "application/json" )]
-        [ProducesResponseType( typeof(ODataValue<DbSet<Machine>> ), Status200OK )]
-        [ProducesResponseType( Status404NotFound )]
+        [SwaggerResponse(Status200OK, "Success", typeof(ODataValue<IEnumerable<Machine>>))]
         [EnableQuery]
         public IActionResult Get()
         {
@@ -47,32 +45,31 @@ namespace Haipa.Modules.Api.Controllers
         [HttpGet]
         [SwaggerOperation(OperationId = "Machines_Get")]
         [Produces("application/json")]
-        [ProducesResponseType( typeof( Machine), Status200OK )]
-        [ProducesResponseType( Status404NotFound )]
+        [SwaggerResponse(Status200OK, "Success", typeof(Machine))]
         [EnableQuery]
-        public IActionResult Get(Guid key)
+        public IActionResult Get([FromODataUri] Guid key)
         {
             return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == key)));
         }
 
         [HttpDelete]
         [SwaggerOperation(OperationId = "Machines_Delete")]
-        [ProducesResponseType(typeof(Operation), Status200OK)]
+        [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public async Task<IActionResult> Delete(Guid key)
+        public async Task<IActionResult> Delete([FromODataUri] Guid key)
         {
-            return Ok(await _operationManager.StartNew<DestroyMachineCommand>(key).ConfigureAwait(false));
+            return Accepted(await _operationManager.StartNew<DestroyMachineCommand>(key).ConfigureAwait(false));
         }
 
         [HttpPost]
-        [SwaggerOperation(OperationId = "Machines_UpdateOrCreate")]
-        [ProducesResponseType(typeof(Operation), Status200OK)]
+        [SwaggerOperation(OperationId = "Machines_Create")]
+        [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
         public async Task<IActionResult> Post([FromBody] MachineConfig config)
         {
 
-            return Ok(await _operationManager.StartNew(
-                new CreateOrUpdateMachineCommand
+            return Accepted(await _operationManager.StartNew(
+                new CreateMachineCommand
                 {
                     Config = config,
                 }
@@ -80,21 +77,42 @@ namespace Haipa.Modules.Api.Controllers
         }
 
         [HttpPut]
+        [SwaggerOperation(OperationId = "Machines_Update")]
+        [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
+        [Produces("application/json")]
+        public async Task<IActionResult> Put([FromODataUri] Guid key, [FromBody] MachineConfig config)
+        {
+            var machine = _db.Machines.FirstOrDefault(op => op.Id == key);
+
+            if (machine == null)
+                return NotFound();
+            
+            return Accepted(await _operationManager.StartNew(
+                new UpdateMachineCommand
+                {
+                    MachineId = key,
+                    Config = config,
+                    AgentName = machine.AgentName,
+                }
+            ).ConfigureAwait(false));
+        }
+
+        [HttpPost]
         [SwaggerOperation(OperationId = "Machines_Start")]
-        [ProducesResponseType(typeof(Operation), Status200OK)]
+        [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
         public async Task<IActionResult> Start([FromODataUri] Guid key)
         {
-           return Ok(await _operationManager.StartNew<StartMachineCommand>(key).ConfigureAwait(false));
+           return Accepted(await _operationManager.StartNew<StartMachineCommand>(key).ConfigureAwait(false));
         }
 
-        [HttpPut]
+        [HttpPost]
         [SwaggerOperation(OperationId = "Machines_Stop")]
-        [ProducesResponseType(typeof(Operation), Status200OK)]
+        [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
         public async Task<IActionResult> Stop([FromODataUri] Guid key)
         {
-            return Ok(await _operationManager.StartNew<StopMachineCommand>(key).ConfigureAwait(false));
+            return Accepted(await _operationManager.StartNew<StopMachineCommand>(key).ConfigureAwait(false));
         }
     }
 }
