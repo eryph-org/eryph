@@ -10,6 +10,7 @@ namespace Haipa.VmManagement.Data
 
     }
 
+
     public class VMNetworkAdapter : VirtualMachineDeviceInfo
     {
 

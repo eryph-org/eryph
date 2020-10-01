@@ -54,8 +54,7 @@ namespace Haipa.Modules.VmHostAgent
                 adapterInfo => new VirtualMachineNetworkAdapterConfig
                 {
                     Name = adapterInfo.Name,
-                    MacAddress = !adapterInfo.DynamicMacAddressEnabled ? adapterInfo.MacAddress: null,
-                    SwitchName = adapterInfo.SwitchName
+                    SwitchName = adapterInfo.SwitchName ?? "Default Switch"
                 }).ToList();
 
         }

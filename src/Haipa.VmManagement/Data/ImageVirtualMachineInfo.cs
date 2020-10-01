@@ -12,7 +12,7 @@ namespace Haipa.VmManagement.Data
 
         public ImageHardDiskDriveInfo[] HardDrives { get; set; }
 
-        public VMNetworkAdapter[] NetworkAdapters { get;  set; }
+        public ImageVMNetworkAdapter[] NetworkAdapters { get;  set; }
 
         public int Generation { get; set; }
 
@@ -35,13 +35,7 @@ namespace Haipa.VmManagement.Data
         public ulong? MaximumIOPS { get; set; }
 
         public ulong? MinimumIOPS { get; set; }
-
-        //public Guid? QoSPolicyID { get; set; }
-
-        public bool? SupportPersistentReservations { get; set; }
-
-        //public CacheAttributes? WriteHardeningMethod { get; set; }
-
+        
         public AttachedDiskType AttachedDiskType { get; set; }
 
         public long Size { get; set;  }
