@@ -15,7 +15,9 @@ namespace Haipa.Modules.ApiProvider.Swagger
                 || context.Type == typeof(OperationLogEntry)
                 || context.Type == typeof(OperationStatus)
                 || context.Type == typeof(OperationTask)
-                || context.Type == typeof(OperationTaskStatus))
+                || context.Type == typeof(OperationTaskStatus)
+                || context.Type == typeof(OperationResource)
+                || context.Type == typeof(ResourceType))
                 schema.Extensions.Add("x-ms-external", new OpenApiBoolean(true));
         }
     }
