@@ -1,8 +1,8 @@
 ﻿using System;
 using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
-using Haipa.Modules.Api.Services;
 using Haipa.Modules.ApiProvider;
+using Haipa.Modules.ComputeApi.Services;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using JetBrains.Annotations;
@@ -19,13 +19,13 @@ using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
-namespace Haipa.Modules.Api
+namespace Haipa.Modules.ComputeApi
 {
     [UsedImplicitly]
     public class ApiModule : WebModule
     {
-        public override string Name => "Haipa.Modules.Api";
-        public override string Path => "api";
+        public override string Name => "Haipa.Modules.ComputeApi";
+        public override string Path => "compute";
 
         [UsedImplicitly]
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)

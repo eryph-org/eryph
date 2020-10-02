@@ -1,5 +1,4 @@
-﻿using Haipa.Modules.Api;
-using Haipa.Rebus;
+﻿using Haipa.Rebus;
 using Haipa.StateDb;
 using Haipa.StateDb.MySql;
 using SimpleInjector;

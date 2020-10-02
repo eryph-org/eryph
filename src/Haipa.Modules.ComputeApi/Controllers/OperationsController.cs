@@ -5,11 +5,10 @@ using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
-namespace Haipa.Modules.Api.Controllers
+namespace Haipa.Modules.ComputeApi.Controllers
 {
     [ApiVersion( "1.0" )]
     public class OperationsController : ODataController

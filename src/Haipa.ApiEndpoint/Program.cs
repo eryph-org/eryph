@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Haipa.Modules.Api;
+using Haipa.Modules.ComputeApi;
 using Haipa.StateDb.MySql;
 using SimpleInjector;
 

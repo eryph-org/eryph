@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.App;
-using Haipa.Modules.Api;
+using Haipa.Modules.ComputeApi;
 using Haipa.Modules.Controller;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Runtime.Zero.Configuration;

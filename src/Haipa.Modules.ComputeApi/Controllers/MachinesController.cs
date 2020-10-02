@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Commands.OperationTasks;
-using Haipa.Modules.Api.Services;
+using Haipa.Modules.ComputeApi.Services;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Haipa.VmConfig;
@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
-namespace Haipa.Modules.Api.Controllers
+namespace Haipa.Modules.ComputeApi.Controllers
 {
     [ApiVersion( "1.0" )]
     public class MachinesController : ODataController

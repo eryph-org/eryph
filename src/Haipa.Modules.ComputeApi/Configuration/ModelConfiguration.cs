@@ -1,9 +1,8 @@
-﻿
-using Haipa.StateDb.Model;
+﻿using Haipa.StateDb.Model;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Haipa.Modules.Api.Configuration
+namespace Haipa.Modules.ComputeApi.Configuration
 {
     public class ODataModelConfiguration : IModelConfiguration
     {
