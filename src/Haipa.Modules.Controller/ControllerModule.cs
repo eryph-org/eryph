@@ -15,6 +15,7 @@ using Rebus.Handlers;
 using Rebus.Logging;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
+using Rebus.Sagas.Exclusive;
 using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
@@ -61,7 +62,11 @@ namespace Haipa.Modules.Controller
                     x.SetNumberOfWorkers(5);
                 })
                 .Timeouts(t => serviceProvider.GetService<IRebusTimeoutConfigurer>().Configure(t))
-                .Sagas(s => serviceProvider.GetService<IRebusSagasConfigurer>().Configure(s))
+                .Sagas(s =>
+                {
+                    serviceProvider.GetService<IRebusSagasConfigurer>().Configure(s);
+                    s.EnforceExclusiveAccess();
+                })
                 .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>().Configure(s))
 
                 .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None }))

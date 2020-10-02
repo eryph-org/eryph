@@ -2,11 +2,13 @@
 using System.Threading.Tasks;
 using Haipa.Messages.Events;
 using Haipa.Messages.Operations;
+using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Haipa.Modules.VmHostAgent
 {
+    [UsedImplicitly]
     public class VerifyPlacementCalculationCommandHandler : IHandleMessages<VerifyPlacementCalculationCommand>
     {
         private readonly IBus _bus;

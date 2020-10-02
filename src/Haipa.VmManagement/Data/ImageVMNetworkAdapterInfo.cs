@@ -1,29 +1,14 @@
-﻿using System;
-
-namespace Haipa.VmManagement.Data
+﻿namespace Haipa.VmManagement.Data
 {
-    public class PlannedVMNetworkAdapter : VirtualMachineDeviceInfo
+    public sealed class ImageVMNetworkAdapterInfo : VirtualMachineDeviceInfo
     {
         public string MacAddress { get; private set; }
 
         public bool DynamicMacAddressEnabled { get; private set; }
 
-    }
-
-
-    public class VMNetworkAdapter : VirtualMachineDeviceInfo
-    {
-
-        public bool ClusterMonitored { get; private set; }
-
-        public string MacAddress { get; private set; }
-
-        public bool DynamicMacAddressEnabled { get; private set; }
-
-        //public bool AllowPacketDirect { get; private set; }
+        public bool AllowPacketDirect { get; private set; }
 
         public bool IsLegacy { get; private set; }
-        public string[] IPAddresses { get; private set; }
 
         //public OnOffState DeviceNaming { get; private set; }
 
@@ -50,27 +35,13 @@ namespace Haipa.VmManagement.Data
 
         //public string PoolName { get; private set; }
 
-        public bool Connected { get; private set; }
 
         //public string TestReplicaPoolName { get; private set; }
 
         //public string TestReplicaSwitchName { get; private set; }
 
-        public string SwitchName { get; private set; }
-
-        public string AdapterId { get; private set; }
-
         //public string[] StatusDescription { get; private set; }
 
-
-        //public VMNetworkAdapterOperationalStatus[] Status { get; private set; }
-
-
-        //public bool IsManagementOs { get; private set; }
-
-        //public bool IsExternalAdapter { get; private set; }
-
-        public Guid? SwitchId { get; private set; }
 
 
         public VMNetworkAdapterAclSetting[] AclList { get; private set; }
@@ -88,7 +59,6 @@ namespace Haipa.VmManagement.Data
 
 
         public VMNetworkAdapterBandwidthSetting BandwidthSetting { get; private set; }
-
 
 
         public VMNetworkAdapterIsolationMode CurrentIsolationMode { get; private set; }
@@ -175,15 +145,6 @@ namespace Haipa.VmManagement.Data
 
         //public VrssVmbusChannelAffinityPolicyType VrssVmbusChannelAffinityPolicyRequested { get; private set; }
 
-        //public int VmqUsage { get; private set; }
-
-
-        //public uint IPsecOffloadSAUsage { get; private set; }
-
-
-        public bool VFDataPathActive { get; private set; }
-
-        public uint BandwidthPercentage { get; private set; }
 
     }
 }

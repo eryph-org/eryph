@@ -12,7 +12,9 @@ namespace Haipa.Modules.Controller.Operations.Workflows
     [UsedImplicitly]
     internal class CreateMachineSaga : OperationTaskWorkflowSaga<CreateMachineCommand, CreateMachineSagaData>,
         IHandleMessages<OperationTaskStatusEvent<PlaceVirtualMachineCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<ConvergeVirtualMachineCommand>>
+        IHandleMessages<OperationTaskStatusEvent<ConvergeVirtualMachineCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>
+
     {
         private readonly IOperationTaskDispatcher _taskDispatcher;
 
@@ -27,6 +29,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
 
             config.Correlate<OperationTaskStatusEvent<PlaceVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<ConvergeVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>(m => m.OperationId, d => d.OperationId);
 
         }
 
@@ -44,10 +47,14 @@ namespace Haipa.Modules.Controller.Operations.Workflows
         {
             return FailOrRun<PlaceVirtualMachineCommand,PlaceVirtualMachineResult>(message, (r) =>
             {
-                var convergeMessage = new ConvergeVirtualMachineCommand
-                    { Config = Data.Config, AgentName = r.AgentName, OperationId = message.OperationId, TaskId = Guid.NewGuid() };
+                Data.AgentName = r.AgentName;
 
-                return _taskDispatcher.Send(convergeMessage);
+                return _taskDispatcher.Send(new PrepareVirtualMachineImageCommand
+                { ImageConfig = Data.Config.Image, 
+                  AgentName = r.AgentName, 
+                  OperationId = message.OperationId, 
+                  TaskId = Guid.NewGuid()
+                });
             });
 
         }
@@ -59,5 +66,15 @@ namespace Haipa.Modules.Controller.Operations.Workflows
         }
 
 
+        public Task Handle(OperationTaskStatusEvent<PrepareVirtualMachineImageCommand> message)
+        {
+            return FailOrRun(message, () =>
+            {
+                var convergeMessage = new ConvergeVirtualMachineCommand
+                    { Config = Data.Config, AgentName = Data.AgentName, OperationId = message.OperationId, TaskId = Guid.NewGuid() };
+
+                return _taskDispatcher.Send(convergeMessage);
+            });
+        }
     }
 }

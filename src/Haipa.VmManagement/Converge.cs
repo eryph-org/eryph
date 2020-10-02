@@ -5,8 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using AutoMapper;
 using Haipa.CloudInit.ConfigDrive.Generator;
 using Haipa.CloudInit.ConfigDrive.NoCloud;
 using Haipa.CloudInit.ConfigDrive.Processing;
@@ -38,12 +38,16 @@ namespace Haipa.VmManagement
                 //TODO generate a random name here
                 machineConfig.Name = "haipa-machine";
             }
-            
+
+            if(machineConfig.Image == null)
+                machineConfig.Image = new MachineImageConfig();
+
+
             if (machineConfig.VM.Cpu == null)
-                machineConfig.VM.Cpu = new VirtualMachineCpuConfig {Count = 1};
+                machineConfig.VM.Cpu = new VirtualMachineCpuConfig();
 
             if (machineConfig.VM.Memory == null)
-                machineConfig.VM.Memory = new VirtualMachineMemoryConfig() { Startup = 1024 };
+                machineConfig.VM.Memory = new VirtualMachineMemoryConfig();
 
             if (machineConfig.VM.Drives == null)
                 machineConfig.VM.Drives = new List<VirtualMachineDriveConfig>();
@@ -69,6 +73,9 @@ namespace Haipa.VmManagement
                 {
                     adapterConfig.MacAddress = "";
                 }
+
+                if (string.IsNullOrWhiteSpace(adapterConfig.SwitchName))
+                    adapterConfig.SwitchName = "Default Switch";
             }
 
             foreach (var driveConfig in machineConfig.VM.Drives)
@@ -85,6 +92,100 @@ namespace Haipa.VmManagement
             return machineConfig;
         }
 
+
+        public static Task<Either<PowershellFailure, MachineConfig>> MergeConfigAndImageSettings(Option<VirtualMachineConfig> optionalImageConfig, MachineConfig machineConfig, IPowershellEngine engine)
+        {
+
+            if (string.IsNullOrWhiteSpace(machineConfig.Image.Name))
+                return RightAsync<PowershellFailure, MachineConfig>(machineConfig).ToEither();
+
+            //copy machine config to a new object
+            var mapper = new Mapper(new MapperConfiguration(c =>
+            {
+                c.CreateMap<MachineConfig, MachineConfig>();
+                c.CreateMap<VirtualMachineConfig, VirtualMachineConfig>();
+                c.CreateMap<VirtualMachineCpuConfig, VirtualMachineCpuConfig>();
+                c.CreateMap<VirtualMachineMemoryConfig, VirtualMachineMemoryConfig>();
+                c.CreateMap<VirtualMachineNetworkAdapterConfig, VirtualMachineNetworkAdapterConfig>();
+                c.CreateMap<VirtualMachineDriveConfig, VirtualMachineDriveConfig>();
+
+            }));
+            var newConfig = mapper.DefaultContext.Mapper.Map<MachineConfig, MachineConfig>(machineConfig);
+
+            return optionalImageConfig
+                .Map(imageConfig =>
+                {
+                    //initialize machine config with image settings
+                    newConfig.VM =
+                        mapper.DefaultContext.Mapper.Map<VirtualMachineConfig, VirtualMachineConfig>(imageConfig);
+
+                    //merge drive settings configured both on image and vm config
+                    newConfig.VM.Drives.ToSeq()
+                        .Iter(ihd =>
+                            {
+                                var vmHdConfig = machineConfig.VM.Drives.FirstOrDefault(x => x.Name == ihd.Name);
+
+                                if (vmHdConfig == null) return;
+
+                                if (vmHdConfig.Size != 0) ihd.Size = vmHdConfig.Size;
+                                if (!string.IsNullOrWhiteSpace(vmHdConfig.DataStore))
+                                    ihd.DataStore = vmHdConfig.DataStore;
+                                if (!string.IsNullOrWhiteSpace(vmHdConfig.ShareSlug))
+                                    ihd.ShareSlug = vmHdConfig.ShareSlug;
+                            }
+                        );
+
+                    //add drives configured only on vm
+                    var imageDriveNames = newConfig.VM.Drives.Select(x => x.Name);
+                    newConfig.VM.Drives.AddRange(machineConfig.VM.Drives.Where(vmHd =>
+                        !imageDriveNames.Any(x =>
+                            string.Equals(x, vmHd.Name, StringComparison.InvariantCultureIgnoreCase))));
+
+                    //merge network adapter settings configured both on image and vm config
+                    newConfig.VM.NetworkAdapters.ToSeq()
+                        .Iter(iad =>
+                            {
+                                var vmAdapterConfig =
+                                    machineConfig.VM.NetworkAdapters.FirstOrDefault(x => x.Name == iad.Name);
+
+                                if (vmAdapterConfig == null) return;
+                                if (!string.IsNullOrWhiteSpace(vmAdapterConfig.MacAddress))
+                                    iad.MacAddress = vmAdapterConfig.MacAddress;
+                                if (!string.IsNullOrWhiteSpace(vmAdapterConfig.SwitchName))
+                                    iad.SwitchName = vmAdapterConfig.SwitchName;
+                            }
+                        );
+
+                    //add network adapters configured only on vm
+                    var imageAdapterNames = newConfig.VM.NetworkAdapters.Select(x => x.Name);
+                    newConfig.VM.NetworkAdapters.AddRange(machineConfig.VM.NetworkAdapters.Where(vmHd =>
+                        !imageAdapterNames.Any(x =>
+                            string.Equals(x, vmHd.Name, StringComparison.InvariantCultureIgnoreCase))));
+
+                    //merge other settings
+                    if (!string.IsNullOrWhiteSpace(machineConfig.VM.DataStore))
+                        newConfig.VM.DataStore = machineConfig.VM.DataStore;
+                    if (!string.IsNullOrWhiteSpace(machineConfig.VM.Slug))
+                        newConfig.VM.DataStore = machineConfig.VM.Slug;
+
+                    if (machineConfig.VM.Cpu.Count.HasValue)
+                        newConfig.VM.Cpu.Count = machineConfig.VM.Cpu.Count;
+                    if (machineConfig.VM.Memory.Maximum.HasValue)
+                        newConfig.VM.Memory.Maximum = machineConfig.VM.Memory.Maximum;
+                    if (machineConfig.VM.Memory.Minimum.HasValue)
+                        newConfig.VM.Memory.Minimum = machineConfig.VM.Memory.Minimum;
+                    if (machineConfig.VM.Memory.Startup.HasValue)
+                        newConfig.VM.Memory.Startup = machineConfig.VM.Memory.Startup;
+
+
+                    return Unit.Default.AsTask();
+                }).Map(u => newConfig)
+                .Match(
+                    None: () => RightAsync<PowershellFailure, MachineConfig>(machineConfig),
+                    Some: RightAsync<PowershellFailure, MachineConfig>).ToEither();
+
+
+        }
 
         public static async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Firmware(TypedPsObject<VirtualMachineInfo> vmInfo,
             MachineConfig config, IPowershellEngine engine, Func<string, Task> reportProgress)
@@ -130,14 +231,15 @@ namespace Haipa.VmManagement
                 None: () => vmInfo,
                 Some: async config =>
                 {
-                    if (vmInfo.Value.ProcessorCount != config.Count)
+                    var configCount = config.Count.GetValueOrDefault(1);
+                    if (vmInfo.Value.ProcessorCount != configCount)
                     {
-                        await reportProgress($"Configure VM Processor: Count: {config.Count}").ConfigureAwait(false);
+                        await reportProgress($"Configure VM Processor: Count: {configCount}").ConfigureAwait(false);
 
                         await engine.RunAsync(PsCommandBuilder.Create()
                             .AddCommand("Set-VMProcessor")
                             .AddParameter("VM", vmInfo.PsObject)
-                            .AddParameter("Count", config.Count)).ConfigureAwait(false);
+                            .AddParameter("Count", configCount)).ConfigureAwait(false);
 
                         return await vmInfo.RecreateOrReload(engine).ConfigureAwait(false);
                     }
@@ -487,7 +589,6 @@ namespace Haipa.VmManagement
             Func<string, Task> reportProgress)
         {
 
-
             var optionalAdapter = await GetOrCreateInfoAsync(vmInfo,
                 i => i.NetworkAdapters,
                 adapter => networkAdapterConfig.Name.Equals(adapter.Name, StringComparison.OrdinalIgnoreCase),
@@ -504,21 +605,21 @@ namespace Haipa.VmManagement
 
                 }).ConfigureAwait(false);
 
-            return await optionalAdapter.BindAsync(_ => vmInfo.RecreateOrReload(engine)).ConfigureAwait(false);
 
-            //optionalAdapter.Map(async (adapter) =>
-            //{
-            //    if (!adapter.Value.Connected || adapter.Value.SwitchName != networkConfig.SwitchName)
-            //    {
-            //        await reportProgress($"Connect Network Adapter {adapter.Value.Name} to switch {networkConfig.SwitchName}").ConfigureAwait(false);
-            //        await engine.RunAsync(
-            //            PsCommandBuilder.Create().AddCommand("Connect-VmNetworkAdapter")
-            //                .AddParameter("VMNetworkAdapter", adapter.PsObject)
-            //                .AddParameter("SwitchName", networkConfig.SwitchName)).ConfigureAwait(false);
+            return await optionalAdapter.BindAsync(async (adapter) =>
+            {
+                if (adapter.Value.Connected && adapter.Value.SwitchName == networkAdapterConfig.SwitchName)
+                    return Unit.Default;
 
-            //    }
-            //});
+                await reportProgress(
+                        $"Connecting Network Adapter {adapter.Value.Name} to switch {networkAdapterConfig.SwitchName}")
+                    .ConfigureAwait(false);
+                return await engine.RunAsync(
+                    PsCommandBuilder.Create().AddCommand("Connect-VmNetworkAdapter")
+                        .AddParameter("VMNetworkAdapter", adapter.PsObject)
+                        .AddParameter("SwitchName", networkAdapterConfig.SwitchName)).ConfigureAwait(false);
 
+            }).BindAsync(_ => vmInfo.RecreateOrReload(engine)).ConfigureAwait(false);
 
         }
 
@@ -577,15 +678,96 @@ namespace Haipa.VmManagement
             return res;
         }
 
+        public static Task<Either<PowershellFailure, (TypedPsObject<VirtualMachineInfo> vm, Option<ImageVirtualMachineInfo> imageVM)>> ImportVirtualMachine(
+            IPowershellEngine engine,
+            HostSettings hostSettings,
+            string vmName,
+            string storageIdentifier,
+            string vmPath,
+            MachineImageConfig imageConfig)
+        {
+
+            var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
+            var imagePath = Path.Combine(imageRootPath,
+                $"{imageConfig.Name}\\{imageConfig.Tag}\\");
+
+            var configRootPath = Path.Combine(imagePath, "Virtual Machines");
+
+            var vmStorePath = Path.Combine(vmPath, storageIdentifier);
+            var vhdPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, storageIdentifier);
+
+            var vmInfo = Directory.GetFiles(configRootPath, "*.vmcx")
+                .HeadOrLeft(new PowershellFailure {Message = "Failed to find image configuration file"}).AsTask()
+                .BindAsync(configPath =>
+                    engine.GetObjectsAsync<VMCompatibilityReportInfo>(PsCommandBuilder.Create()
+                        .AddCommand("Compare-VM")
+                        .AddParameter("VirtualMachinePath", vmStorePath)
+                        .AddParameter("SnapshotFilePath", vmStorePath)
+                        .AddParameter("Path", configPath)
+                        .AddParameter("VhdDestinationPath", vhdPath)
+                        .AddParameter("Copy")
+                        .AddParameter("GenerateNewID")
+                    )
+                )
+                .BindAsync(x => x.HeadOrLeft(new PowershellFailure {Message = "Failed to Import VM Image"}))
+                .BindAsync(rep => (
+                        from _ in RenameVirtualMachine(engine, rep.GetProperty(x => x.VM), vmName).ToAsync()
+                        from __ in ResetMetadata(engine, rep.GetProperty(x => x.VM)).ToAsync()
+                        from ___ in RenamePlannedNetAdaptersToConvention(engine, rep.GetProperty(x => x.VM)).ToAsync()
+                        from ____ in DisconnectNetworkAdapters(engine, rep.GetProperty(x => x.VM)).ToAsync()
+                        from repRecreated in RightAsync<PowershellFailure, TypedPsObject<VMCompatibilityReportInfo>>(
+                            rep.Recreate())
+                        select repRecreated
+                    ).ToEither()
+
+                )
+                .BindAsync(rep =>
+                    engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
+                            .AddCommand("Import-VM")
+                            .AddParameter("CompatibilityReport", rep.PsObject))
+                        .BindAsync(x => x.HeadOrLeft(new PowershellFailure {Message = "Failed to Import VM Image"})))
+                .BindAsync(realizedVM => (
+                        from _ in RenameDisksToConvention(engine, realizedVM).ToAsync()
+                        from vm in realizedVM.Reload(engine).ToAsync()
+                        from imageVm in CreateImageVMInfo(vm ,engine).ToAsync()
+                        select (vm, Option<ImageVirtualMachineInfo>.Some(imageVm))).ToEither());
+
+
+            return vmInfo;
+        }
+
+
+        private static readonly Mapper ImageInfoMapper = new Mapper(new MapperConfiguration(c =>
+        {
+            c.CreateMap<VirtualMachineInfo, ImageVirtualMachineInfo>();
+            c.CreateMap<HardDiskDriveInfo, ImageHardDiskDriveInfo>();
+            c.CreateMap<VMNetworkAdapter, ImageVMNetworkAdapter>();
+        }));
+
+        private static Task<Either<PowershellFailure, ImageVirtualMachineInfo>> CreateImageVMInfo(TypedPsObject<VirtualMachineInfo> vmInfo, IPowershellEngine engine)
+        {
+            var imageInfo = ImageInfoMapper.DefaultContext.Mapper.Map<ImageVirtualMachineInfo>(vmInfo.Value);
+
+            return imageInfo.HardDrives.ToSeq().MapToEitherAsync(hd =>
+                    (from optionalDrive in Storage.GetVhdInfo(hd.Path, engine).ToAsync()
+                        from drive in optionalDrive.ToEither(new PowershellFailure { Message = "Failed to find realized image disk" })
+                            .ToAsync()
+                        let _ = drive.Apply(d => hd.Size = d.Value.Size)
+                        select hd).ToEither())
+
+                .MapT(hd => imageInfo);
+
+        }
+
+
         public static Task<Either<PowershellFailure,TypedPsObject<VirtualMachineInfo>>> CreateVirtualMachine(
             IPowershellEngine engine,
             string vmName,
             string storageIdentifier,
             string vmPath,
-            int startupMemory)
+            int? startupMemory)
         {
-            var memoryStartupBytes = startupMemory * 1024L * 1024;
-
+            var memoryStartupBytes = startupMemory.GetValueOrDefault(1024) * 1024L * 1024;
 
             return engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
                     .AddCommand("New-VM")
@@ -594,11 +776,12 @@ namespace Haipa.VmManagement
                     .AddParameter("MemoryStartupBytes", memoryStartupBytes)
                     .AddParameter("Generation", 2))
                 .MapAsync(x => x.Head).MapAsync(
-                    result =>
+                    async result =>
                     {
 
-                        engine.RunAsync(PsCommandBuilder.Create().AddCommand("Get-VMNetworkAdapter")
+                        await engine.RunAsync(PsCommandBuilder.Create().AddCommand("Get-VMNetworkAdapter")
                             .AddParameter("VM", result.PsObject).AddCommand("Remove-VMNetworkAdapter"));
+
 
                         return result;
                     })
@@ -606,16 +789,100 @@ namespace Haipa.VmManagement
 
         }
 
-        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> RenameVirtualMachine(
+
+
+        public static Task<Either<PowershellFailure, TypedPsObject<T>>> RenameVirtualMachine<T>(
             IPowershellEngine engine,
-            TypedPsObject<VirtualMachineInfo> vmInfo,
+            TypedPsObject<T> vmInfo,
             string newName)
+            where  T : IVirtualMachineCoreInfo
         {
             return engine.RunAsync(PsCommandBuilder.Create()
                 .AddCommand("Rename-VM")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("NewName", newName)
             ).BindAsync(u => vmInfo.RecreateOrReload(engine));
+
+        }
+
+        public static Task<Either<PowershellFailure, TypedPsObject<T>>> ResetMetadata<T>(
+            IPowershellEngine engine,
+            TypedPsObject<T> vmInfo)
+            where T : IVirtualMachineCoreInfo
+        {
+            return engine.RunAsync(PsCommandBuilder.Create()
+                .AddCommand("Set-VM")
+                .AddParameter("VM", vmInfo.PsObject)
+                .AddParameter("Notes", "")
+            ).BindAsync(u => vmInfo.RecreateOrReload(engine));
+
+        }
+
+        public static Task<Either<PowershellFailure, TypedPsObject<T>>> DisconnectNetworkAdapters<T>(
+            IPowershellEngine engine,
+            TypedPsObject<T> vmInfo)
+            where T : IVirtualMachineCoreInfo
+        {
+            return engine.RunAsync(PsCommandBuilder.Create()
+                .AddCommand("Get-VMNetworkAdapter")
+                .AddParameter("VM", vmInfo.PsObject)
+                .AddCommand("Disconnect-VMNetworkAdapter")
+            ).BindAsync(u => vmInfo.RecreateOrReload(engine));
+
+        }
+
+        public static async Task<Either<PowershellFailure, Unit>> RenameDisksToConvention<T>(
+            IPowershellEngine engine,
+            TypedPsObject<T> vmInfo)
+            where T : IVirtualMachineCoreInfo
+        {
+            const string abc = "abcdefklmnopqrstvxyz";
+
+            var counterSCSI = -1;
+            var counterIDE = -1;
+
+            vmInfo.GetList(x => x.HardDrives).Map(disk =>
+            {
+                var fileName = Path.GetFileNameWithoutExtension("filename");
+
+                switch (disk.Value.ControllerType)
+                {
+                    case ControllerType.SCSI:
+                        counterSCSI++;
+                        fileName = "sd" + abc[counterSCSI];
+                        break;
+                    case ControllerType.IDE:
+                        counterIDE++;
+                        fileName = "hd" + abc[counterIDE];
+                        break;
+                }
+
+                var newPath = Path.Combine(Path.GetDirectoryName(disk.Value.Path), $"{fileName}.vhdx");
+                File.Move(disk.Value.Path, newPath);
+                return engine.Run(new PsCommandBuilder().AddCommand("Set-VMHardDiskDrive")
+                    .AddParameter("VMHardDiskDrive", disk.PsObject).AddParameter("Path", newPath));
+            }).ToArray();
+
+           return Unit.Default;
+        }
+
+
+        public static Task<Either<PowershellFailure, Unit>> RenamePlannedNetAdaptersToConvention(
+            IPowershellEngine engine,
+            TypedPsObject<PlannedVirtualMachineInfo> vmInfo)
+        {
+            var adapterCounter = -1;
+
+            return vmInfo.GetList(x => x.NetworkAdapters).MapToEitherAsync(adapter =>
+            {
+                adapterCounter++;
+                var adapterName = "eth" + adapterCounter;
+
+                return engine.RunAsync(new PsCommandBuilder()
+                    .AddCommand("Rename-VMNetworkAdapter")
+                    .AddParameter("VMNetworkAdapter", adapter.PsObject).AddParameter("NewName", adapterName));
+
+            }).MapAsync(seq => Unit.Default);
 
         }
 
