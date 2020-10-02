@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Haipa.Messages.Operations;
 using Haipa.StateDb.Model;
 
-namespace Haipa.Modules.ComputeApi.Services
+namespace Haipa.Modules.ApiProvider.Services
 {
     public interface IOperationManager
     {

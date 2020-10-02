@@ -8,9 +8,9 @@ using Haipa.StateDb.Model;
 using Newtonsoft.Json;
 using Rebus.Bus;
 
-namespace Haipa.Modules.ComputeApi.Services
+namespace Haipa.Modules.ApiProvider.Services
 {
-    class OperationManager : IOperationManager
+    public class OperationManager : IOperationManager
     {
         private readonly StateStoreContext _db;
         private readonly IBus _bus;

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
@@ -12,6 +12,8 @@
 
     <PackageReference Include="JetBrains.Annotations" Version="2020.1.0" />
 
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.7" />
+
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.7" />
     <PackageReference Include="SimpleInjector.Integration.AspNetCore.Mvc.Core" Version="4.7.1" />
     <PackageReference Include="Microsoft.AspNetCore.OData" Version="7.4.1" />
@@ -21,6 +23,12 @@
     <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="5.5.1" />
     <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="5.5.1" />
 
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Haipa.Messages\Haipa.Messages.csproj" />
+    <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
+    <ProjectReference Include="..\Haipa.StateDb\Haipa.StateDb.csproj" />
   </ItemGroup>
 
 </Project>

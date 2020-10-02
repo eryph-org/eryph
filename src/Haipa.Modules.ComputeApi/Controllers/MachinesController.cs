@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Commands.OperationTasks;
-using Haipa.Modules.ComputeApi.Services;
+using Haipa.Modules.ApiProvider.Services;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Haipa.VmConfig;

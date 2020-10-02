@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.App;
+using Haipa.Modules.CommonApi;
 using Haipa.Modules.ComputeApi;
 using Haipa.Modules.Controller;
 using Haipa.Modules.VmHostAgent;
@@ -47,7 +48,8 @@ namespace Haipa.Runtime.Zero
                         .UseUrls($"{basePath}{module.Path}");
                 })
                 .UseSimpleInjector(container)
-                .HostModule<ApiModule>()
+                .HostModule<CommonApiModule>()
+                .HostModule<ComputeApiModule>()
                 .AddIdentityModule(container)
                 .HostModule<VmHostAgentModule>()
                 .HostModule<ControllerModule>()

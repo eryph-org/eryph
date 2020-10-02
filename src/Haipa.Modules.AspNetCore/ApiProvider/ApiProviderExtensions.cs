@@ -73,6 +73,7 @@ namespace Haipa.Modules.ApiProvider
                     options.OperationFilter<SwaggerDefaultValues>();
                     options.OperationFilter<ODataErrorOperationFilter>();
                     options.SchemaFilter<ODataErrorSchemaFilter>();
+                    options.SchemaFilter<OperationSchemaFilter>();
                     options.OperationFilter<ODataQueryOperationFilter>();
 
 

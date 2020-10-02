@@ -2,7 +2,7 @@
 using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
 using Haipa.Modules.ApiProvider;
-using Haipa.Modules.ComputeApi.Services;
+using Haipa.Modules.ApiProvider.Services;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using JetBrains.Annotations;
@@ -19,13 +19,12 @@ using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
-namespace Haipa.Modules.ComputeApi
+namespace Haipa.Modules
 {
-    [UsedImplicitly]
-    public class ApiModule : WebModule
+    public abstract class ApiModule<TModule> : WebModule where TModule: WebModule
     {
-        public override string Name => "Haipa.Modules.ComputeApi";
-        public override string Path => "compute";
+        public abstract string ApiName { get;  }
+        public abstract string AudienceName { get; }
 
         [UsedImplicitly]
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
@@ -38,16 +37,16 @@ namespace Haipa.Modules.ComputeApi
                     .Build();
                 op.Filters.Add(new AuthorizeFilter(policy));
 
-            }).AddApiProvider<ApiModule>(op => op.ApiName = "Haipa Compute Api");
+            }).AddApiProvider<TModule>(op => op.ApiName = ApiName);
 
-            
+
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
                     options.Authority = "https://localhost:62189/identity";
-                    options.Audience = "compute_api";
+                    options.Audience = AudienceName;
                 });
-            
+
 
             services.AddDbContext<StateStoreContext>(options =>
                 serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>().Configure(options));
@@ -67,9 +66,9 @@ namespace Haipa.Modules.ComputeApi
         }
 
         [UsedImplicitly]
-        public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
+        public virtual void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
-            container.Collection.Register(typeof(IHandleMessages<>), typeof(ApiModule).Assembly);
+            container.Collection.Register(typeof(IHandleMessages<>), typeof(TModule).Assembly);
             container.Register<IOperationManager, OperationManager>(Lifestyle.Scoped);
 
             container.ConfigureRebus(configurer =>
@@ -78,18 +77,17 @@ namespace Haipa.Modules.ComputeApi
                     .Transport(t =>
                         serviceProvider.GetRequiredService<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
                     .Routing(x => x.TypeBased()
-                        .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers))                        
+                        .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers))
                     .Options(x =>
                     {
                         x.SimpleRetryStrategy();
                         x.SetNumberOfWorkers(5);
                     })
                     .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings
-                        { TypeNameHandling = TypeNameHandling.None }))
+                    { TypeNameHandling = TypeNameHandling.None }))
                     .Logging(x => x.ColoredConsole()).Start();
             });
         }
+
     }
-
-
 }

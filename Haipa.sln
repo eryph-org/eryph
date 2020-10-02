@@ -56,6 +56,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Configuration", "..\s
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.ComputeApi", "src\Haipa.Modules.ComputeApi\Haipa.Modules.ComputeApi.csproj", "{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.CommonApi", "src\Haipa.Modules.CommonApi\Haipa.Modules.CommonApi.csproj", "{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -153,6 +155,10 @@ Global
 		{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
