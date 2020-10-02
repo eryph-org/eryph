@@ -20,7 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Haipa.Configuration\Haipa.Configuration.csproj" />
     <ProjectReference Include="..\Haipa.AppCore\Haipa.AppCore.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
+    <ProjectReference Include="..\Haipa.Modules.ComputeApi\Haipa.Modules.ComputeApi.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj" />
     <ProjectReference Include="..\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj" />

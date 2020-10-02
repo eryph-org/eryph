@@ -24,7 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.AppCore\Haipa.AppCore.csproj" />
-    <ProjectReference Include="..\Haipa.Modules.Api\Haipa.Modules.Api.csproj" />
+    <ProjectReference Include="..\Haipa.Modules.ComputeApi\Haipa.Modules.ComputeApi.csproj" />
     <ProjectReference Include="..\Haipa.StateDb.MySql\Haipa.StateDb.MySql.csproj" />
   </ItemGroup>
 
