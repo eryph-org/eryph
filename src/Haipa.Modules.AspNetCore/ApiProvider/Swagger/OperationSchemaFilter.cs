@@ -11,13 +11,13 @@ namespace Haipa.Modules.ApiProvider.Swagger
     {
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)
         {
-            if (context.Type == typeof(Operation)
-                || context.Type == typeof(OperationLogEntry)
-                || context.Type == typeof(OperationStatus)
-                || context.Type == typeof(OperationTask)
-                || context.Type == typeof(OperationTaskStatus)
-                || context.Type == typeof(OperationResource)
-                || context.Type == typeof(ResourceType))
+            if (context.Type.FullName == typeof(Operation).FullName
+                || context.Type.FullName == typeof(OperationLogEntry).FullName
+                || context.Type.FullName == typeof(OperationStatus).FullName
+                || context.Type.FullName == typeof(OperationTask).FullName
+                || context.Type.FullName == typeof(OperationTaskStatus).FullName
+                || context.Type.FullName == typeof(OperationResource).FullName
+                || context.Type.FullName == typeof(ResourceType).FullName)
                 schema.Extensions.Add("x-ms-external", new OpenApiBoolean(true));
         }
     }
