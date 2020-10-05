@@ -73,6 +73,7 @@ namespace Haipa.Modules.ApiProvider
                     options.OperationFilter<SwaggerDefaultValues>();
                     options.OperationFilter<ODataErrorOperationFilter>();
                     options.SchemaFilter<ODataErrorSchemaFilter>();
+                    options.SchemaFilter<OperationSchemaFilter>();
                     options.OperationFilter<ODataQueryOperationFilter>();
 
 
@@ -157,7 +158,7 @@ namespace Haipa.Modules.ApiProvider
                 app.UseMvc(routes =>
                 {
                     routes.Select().Expand().Filter().OrderBy().MaxTop(100).Count();
-                    routes.MapVersionedODataRoutes("odata-bypath", "odata/v{version:apiVersion}", models);
+                    routes.MapVersionedODataRoutes("odata-bypath", "api/v{version:apiVersion}", models);
                 });
 
             });

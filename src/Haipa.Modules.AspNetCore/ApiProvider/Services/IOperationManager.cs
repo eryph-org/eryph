@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages;
 using Haipa.Messages.Operations;
 using Haipa.StateDb.Model;
 
-namespace Haipa.Modules.Api.Services
+namespace Haipa.Modules.ApiProvider.Services
 {
     public interface IOperationManager
     {

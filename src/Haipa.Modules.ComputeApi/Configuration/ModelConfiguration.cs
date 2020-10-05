@@ -1,9 +1,8 @@
-﻿
-using Haipa.StateDb.Model;
+﻿using Haipa.StateDb.Model;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Haipa.Modules.Api.Configuration
+namespace Haipa.Modules.ComputeApi.Configuration
 {
     public class ODataModelConfiguration : IModelConfiguration
     {
@@ -11,9 +10,6 @@ namespace Haipa.Modules.Api.Configuration
         {
             builder.Namespace = "Haipa";
 
-            builder.EntitySet<Operation>("Operations");
-            builder.EntitySet<OperationLogEntry>("OperationLogs");
-            builder.EntitySet<OperationTask>("OperationTaks");
             builder.EntitySet<Machine>("Machines");
             builder.EntitySet<Agent>("Agents");
             builder.EntitySet<Network>("Networks");

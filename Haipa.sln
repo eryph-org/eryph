@@ -12,8 +12,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "haipa-zero", "src\haipa-zero\haipa-zero.csproj", "{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Api", "src\Haipa.Modules.Api\Haipa.Modules.Api.csproj", "{B8A556E4-4A1A-4A40-B564-F50D2A584F24}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Controller", "src\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj", "{D407363B-27CE-4180-BB8A-986A619941CD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.VmManagement", "src\Haipa.VmManagement\Haipa.VmManagement.csproj", "{B55118C0-8D29-4079-A291-62383B857EEA}"
@@ -56,6 +54,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.AppCore", "src\Haipa.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Configuration", "..\src\Haipa.Configuration\Haipa.Configuration.csproj", "{9B749857-F075-4389-AFF0-4D73C2F54ABA}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.ComputeApi", "src\Haipa.Modules.ComputeApi\Haipa.Modules.ComputeApi.csproj", "{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.CommonApi", "src\Haipa.Modules.CommonApi\Haipa.Modules.CommonApi.csproj", "{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,10 +71,6 @@ Global
 		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B8A556E4-4A1A-4A40-B564-F50D2A584F24}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D407363B-27CE-4180-BB8A-986A619941CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D407363B-27CE-4180-BB8A-986A619941CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D407363B-27CE-4180-BB8A-986A619941CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -153,6 +151,14 @@ Global
 		{9B749857-F075-4389-AFF0-4D73C2F54ABA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9B749857-F075-4389-AFF0-4D73C2F54ABA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9B749857-F075-4389-AFF0-4D73C2F54ABA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

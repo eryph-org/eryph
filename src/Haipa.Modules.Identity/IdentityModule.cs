@@ -66,6 +66,7 @@ namespace Haipa.Modules.Identity
                 })
                 .AddInMemoryApiResources(new List<ApiResource>
                 {
+                    new ApiResource("common_api"),
                     new ApiResource("compute_api"),
                     new ApiResource
                     {

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Haipa.Modules.Api;
+using Haipa.Modules.CommonApi;
+using Haipa.Modules.ComputeApi;
 using Haipa.StateDb.MySql;
+using Microsoft.Extensions.Hosting;
 using SimpleInjector;
 
 namespace Haipa.ApiEndpoint
@@ -23,7 +25,9 @@ namespace Haipa.ApiEndpoint
                 {
 
                 })
-                .RunModule<ApiModule>();
+                .HostModule<ComputeApiModule>()
+                .HostModule<CommonApiModule>()
+                .RunConsoleAsync();
 
         }
 

@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Linq;
-using System.Threading.Tasks;
 using Haipa.StateDb;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace Haipa.Modules.Api.Controllers
+namespace Haipa.Modules.ComputeApi.Controllers
 {
     [ApiVersion( "1.0" )]
     public class SubnetsController : ODataController

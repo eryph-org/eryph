@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Haipa.Messages;
 using Haipa.Messages.Commands;
 using Haipa.Messages.Operations;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Newtonsoft.Json;
 using Rebus.Bus;
-using OperationTask = Haipa.StateDb.Model.OperationTask;
 
-namespace Haipa.Modules.Api.Services
+namespace Haipa.Modules.ApiProvider.Services
 {
-    class OperationManager : IOperationManager
+    public class OperationManager : IOperationManager
     {
         private readonly StateStoreContext _db;
         private readonly IBus _bus;
