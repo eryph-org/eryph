@@ -8,6 +8,7 @@ using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Full;
 using Haipa.VmManagement.Data.Planned;
+using Haipa.VmManagement.Storage;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
@@ -38,7 +39,7 @@ namespace Haipa.Modules.VmHostAgent
             var hostSettings = HostSettingsBuilder.GetHostSettings();
             
             var planStorageSettings = Prelude.fun(() => 
-                Storage.PlanVMStorageSettings(config, Option<VMStorageSettings>.None, hostSettings, GenerateId).ToAsync());
+                VMStorageSettings.Plan(hostSettings, GenerateId, config, Option<VMStorageSettings>.None).ToAsync());
 
             var createVM = Prelude.fun((VMStorageSettings settings) => 
                 CreateVM(config, hostSettings, settings, _engine).ToAsync());
@@ -71,7 +72,7 @@ namespace Haipa.Modules.VmHostAgent
             {
                 return storageSettings.StorageIdentifier.ToEither(new PowershellFailure
                         {Message = "Unknown storage identifier, cannot create new virtual machine"})
-                    .BindAsync(storageIdentifier => Converge.ImportVirtualMachine(engine, hostSettings, config.Name,
+                    .BindAsync(storageIdentifier => VirtualMachine.Import(engine, hostSettings, config.Name,
                         storageIdentifier,
                         storageSettings.VMPath,
                         config.Image));
@@ -81,7 +82,7 @@ namespace Haipa.Modules.VmHostAgent
 
             return storageSettings.StorageIdentifier.ToEither(new PowershellFailure
                     {Message = "Unknown storage identifier, cannot create new virtual machine"})
-                .BindAsync(storageIdentifier => Converge.CreateVirtualMachine(engine, config.Name, storageIdentifier,
+                .BindAsync(storageIdentifier => VirtualMachine.Create(engine, config.Name, storageIdentifier,
                     storageSettings.VMPath,
                     config.VM.Memory.Startup)).MapAsync(r => (r, Option<PlannedVirtualMachineInfo>.None));
 

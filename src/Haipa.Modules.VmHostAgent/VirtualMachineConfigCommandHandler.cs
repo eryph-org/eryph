@@ -135,7 +135,7 @@ namespace Haipa.Modules.VmHostAgent
 
                 .MatchAsync(
                     None: () => vmInfo,
-                    Some: (some) => Converge.RenameVirtualMachine(engine, vmInfo, config.Name));
+                    Some: (some) => VirtualMachine.Rename(engine, vmInfo, config.Name));
 
 
         }

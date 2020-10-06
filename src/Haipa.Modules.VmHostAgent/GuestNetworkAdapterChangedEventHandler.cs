@@ -1,19 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 using Haipa.Messages.Events;
 using Haipa.VmManagement;
-using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Full;
+using Haipa.VmManagement.Networking;
+using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Haipa.Modules.VmHostAgent
 {
+    [UsedImplicitly]
     internal class GuestNetworkAdapterChangedEventHandler : IHandleMessages<GuestNetworkAdapterChangedEvent>
     {
         private readonly IBus _bus;
@@ -27,13 +26,17 @@ namespace Haipa.Modules.VmHostAgent
 
         public Task Handle(GuestNetworkAdapterChangedEvent message)
         {
-            Either<PowershellFailure, TypedPsObject<VMNetworkAdapter>> FindAdapterForMessage(
-                Seq<TypedPsObject<VMNetworkAdapter>> seq) => FindAdapter(seq, message.AdapterId);
+            var findAdapterForMessage = Prelude.fun(
+                (Seq<TypedPsObject<VMNetworkAdapter>> seq) => NetworkAdapterQuery.FindAdapter(seq, message.AdapterId));
+
+            var getNetworkAdapters = Prelude.fun(
+                (TypedPsObject<object> vm) => NetworkAdapterQuery.GetNetworkAdapters(vm, _engine));
+
 
             return GetVMs<object>(message.VmId)
                 .BindAsync(SingleOrFailure)
-                .BindAsync(GetNetworkAdapters)
-                .BindAsync(FindAdapterForMessage)
+                .BindAsync(getNetworkAdapters)
+                .BindAsync(findAdapterForMessage)
                 .ToAsync().MatchAsync(
                     RightAsync: (a => _bus.Publish(
                         new VirtualMachineNetworkChangedEvent
@@ -50,7 +53,7 @@ namespace Haipa.Modules.VmHostAgent
                             {
                                 AdapterName = a.Value.Name,
                                 IPAddresses = message.IPAddresses,
-                                Subnets = AddressesAndSubnetsToSubnets(message.IPAddresses,message.Netmasks).ToArray(),
+                                Subnets = NetworkAddresses.AddressesAndSubnetsToSubnets(message.IPAddresses,message.Netmasks).ToArray(),
                                 DefaultGateways = message.DefaultGateways,
                                 DnsServers = message.DnsServers,
                                 DhcpEnabled = message.DhcpEnabled,
@@ -62,38 +65,10 @@ namespace Haipa.Modules.VmHostAgent
                     });
         }
 
-        private static IEnumerable<string> AddressesAndSubnetsToSubnets(IReadOnlyList<string> ipAddresses, IReadOnlyList<string> netmasks)
-        {
-            for (var i = 0; i < ipAddresses.Count; i++)
-            {
-                var address = ipAddresses[i];
-                var netmask = netmasks[i];
-                if (netmask.StartsWith("/"))
-                {
-                    yield return IPNetwork.Parse(address + netmask).ToString();
-                }
-                else
-                    yield return IPNetwork.Parse(address,netmask).ToString();
-            }
-        }
-
-        private Task<Either<PowershellFailure, Seq<TypedPsObject<VMNetworkAdapter>>>> GetNetworkAdapters<TVM>(TypedPsObject<TVM> vm)
-        {
-            return _engine.GetObjectsAsync<VMNetworkAdapter>(
-                new PsCommandBuilder().AddCommand("Get-VMNetworkAdapter")
-                    .AddParameter("VM", vm.PsObject));
-        }
 
         private static Either<PowershellFailure, TypedPsObject<T>> SingleOrFailure<T>(Seq<TypedPsObject<T>> sequence)
         {
             return sequence.HeadOrNone().ToEither(new PowershellFailure());
-        }
-
-        private static Either<PowershellFailure, TypedPsObject<T>> FindAdapter<T>(Seq<TypedPsObject<T>> sequence, string adapterId) where T: IVMNetworkAdapterCore
-        {
-            adapterId = adapterId.Replace("Microsoft:GuestNetwork\\", "Microsoft:");
-            return sequence.Find(a => a.Value.Id == adapterId)
-                .ToEither(new PowershellFailure{Message = $"could not find network adapter with Id '{adapterId}'"});
         }
 
         private Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetVMs<T>(Guid vmId)
@@ -102,13 +77,6 @@ namespace Haipa.Modules.VmHostAgent
                 .AddCommand("Get-VM").AddParameter("Id", vmId));
         }
 
-        private static string[] GetAddressesByFamily(IEnumerable<string> addresses, AddressFamily family)
-        {
-            return addresses.Where(a =>
-            {
-                var ipAddress = IPAddress.Parse(a);
-                return ipAddress.AddressFamily == family;
-            }).ToArray();
-        }
+
     }
 }

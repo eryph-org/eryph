@@ -4,8 +4,8 @@ using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
 using Haipa.VmConfig;
 using Haipa.VmManagement;
-using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Full;
+using Haipa.VmManagement.Storage;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;
@@ -33,20 +33,22 @@ namespace Haipa.Modules.VmHostAgent
             _taskId = command.TaskId;
 
             var hostSettings = HostSettingsBuilder.GetHostSettings();
+            var convergeVM = Prelude.fun((TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig c, VMStorageSettings storageSettings) =>
+                VirtualMachine.Converge(hostSettings, _engine, ProgressMessage, vmInfo, c, storageSettings));
 
             var chain =
 
                 from vmList in GetVmInfo(machineId, _engine).ToAsync()
                 from vmInfo in EnsureSingleEntry(vmList, machineId).ToAsync()
 
-                from currentStorageSettings in Storage.DetectVMStorageSettings(vmInfo, hostSettings, ProgressMessage).ToAsync()
-                from plannedStorageSettings in Storage.PlanVMStorageSettings(config, currentStorageSettings, hostSettings, GenerateId).ToAsync()
+                from currentStorageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).ToAsync()
+                from plannedStorageSettings in VMStorageSettings.Plan(hostSettings, GenerateId, config, currentStorageSettings).ToAsync()
 
                 from metadata in EnsureMetadata(message.Command.MachineMetadata, vmInfo).ToAsync()
-                from mergedConfig in Converge.MergeConfigAndImageSettings(metadata.ImageConfig, config, _engine).ToAsync()
+                from mergedConfig in config.MergeWithImageSettings(metadata.ImageConfig).ToAsync()
                 from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, _engine).ToAsync()
 
-                from vmInfoConverged in ConvergeVm(vmInfoConsistent, mergedConfig, plannedStorageSettings, hostSettings, _engine).ToAsync()
+                from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings).ToAsync()
                 select vmInfoConverged;
 
             return chain.MatchAsync(
@@ -60,24 +62,7 @@ namespace Haipa.Modules.VmHostAgent
                 });
 
         }
-
-        private Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> ConvergeVm(
-            TypedPsObject<VirtualMachineInfo> vmInfo,
-            MachineConfig machineConfig,
-            VMStorageSettings storageSettings,
-            HostSettings hostSettings,
-            IPowershellEngine engine)
-        {
-            return
-                from infoFirmware in Converge.Firmware(vmInfo, machineConfig, engine, ProgressMessage)
-                from infoCpu in Converge.Cpu(infoFirmware, machineConfig.VM.Cpu, engine, ProgressMessage)
-                from infoDrives in Converge.Drives(infoCpu, machineConfig, storageSettings, hostSettings, engine, ProgressMessage)
-                from infoNetworks in Converge.NetworkAdapters(infoDrives, machineConfig.VM.NetworkAdapters.ToSeq(), machineConfig, engine, ProgressMessage)
-                from infoCloudInit in Converge.CloudInit(infoNetworks, storageSettings.VMPath, machineConfig.Provisioning, engine, ProgressMessage)
-                select infoCloudInit;
-
-        }
-
+        
 #pragma warning disable 1998
         private async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> EnsureSingleEntry(Seq<TypedPsObject<VirtualMachineInfo>> list, Guid id)
 #pragma warning restore 1998
