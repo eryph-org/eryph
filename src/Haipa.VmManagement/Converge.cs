@@ -10,9 +10,11 @@ using AutoMapper;
 using Haipa.CloudInit.ConfigDrive.Generator;
 using Haipa.CloudInit.ConfigDrive.NoCloud;
 using Haipa.CloudInit.ConfigDrive.Processing;
-using Haipa.Modules.VmHostAgent;
 using Haipa.VmConfig;
 using Haipa.VmManagement.Data;
+using Haipa.VmManagement.Data.Core;
+using Haipa.VmManagement.Data.Full;
+using Haipa.VmManagement.Data.Planned;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
 using Newtonsoft.Json.Linq;
@@ -23,75 +25,6 @@ namespace Haipa.VmManagement
     public static class Converge
     {
 #pragma warning disable 1998
-        public static async Task<Either<PowershellFailure, MachineConfig>> NormalizeMachineConfig(
-#pragma warning restore 1998
-            Guid machineId,
-            MachineConfig config,  IPowershellEngine engine, Func<string, Task> reportProgress)
-        {
-            var machineConfig = config;
-
-            if (machineConfig.VM== null)
-                machineConfig.VM = new VirtualMachineConfig();
-
-            if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == Guid.Empty)
-            {
-                //TODO generate a random name here
-                machineConfig.Name = "haipa-machine";
-            }
-
-            if(machineConfig.Image == null)
-                machineConfig.Image = new MachineImageConfig();
-
-
-            if (machineConfig.VM.Cpu == null)
-                machineConfig.VM.Cpu = new VirtualMachineCpuConfig();
-
-            if (machineConfig.VM.Memory == null)
-                machineConfig.VM.Memory = new VirtualMachineMemoryConfig();
-
-            if (machineConfig.VM.Drives == null)
-                machineConfig.VM.Drives = new List<VirtualMachineDriveConfig>();
-
-            if (machineConfig.VM.NetworkAdapters == null)
-                machineConfig.VM.NetworkAdapters = new List<VirtualMachineNetworkAdapterConfig>();
-
-            if (machineConfig.Provisioning == null)
-                machineConfig.Provisioning = new VirtualMachineProvisioningConfig();
-
-            if (string.IsNullOrWhiteSpace(machineConfig.Provisioning.Hostname))
-                machineConfig.Provisioning.Hostname = machineConfig.Name;
-
-            foreach (var adapterConfig in machineConfig.VM.NetworkAdapters)
-            {
-                if (adapterConfig.MacAddress != null)
-                {
-                    adapterConfig.MacAddress = adapterConfig.MacAddress.Replace("-", "");
-                    adapterConfig.MacAddress = adapterConfig.MacAddress.Replace(":", "");
-                    adapterConfig.MacAddress = adapterConfig.MacAddress.ToLowerInvariant();
-                }
-                else
-                {
-                    adapterConfig.MacAddress = "";
-                }
-
-                if (string.IsNullOrWhiteSpace(adapterConfig.SwitchName))
-                    adapterConfig.SwitchName = "Default Switch";
-            }
-
-            foreach (var driveConfig in machineConfig.VM.Drives)
-            {
-                if (!driveConfig.Type.HasValue)
-                    driveConfig.Type = VirtualMachineDriveType.VHD;
-
-                if (driveConfig.Size == 0)
-                    driveConfig.Size = null;
-            }
-
-            await reportProgress($"Converging virtual machine '{config.Name}'").ConfigureAwait(false);
-
-            return machineConfig;
-        }
-
 
         public static Task<Either<PowershellFailure, MachineConfig>> MergeConfigAndImageSettings(Option<VirtualMachineConfig> optionalImageConfig, MachineConfig machineConfig, IPowershellEngine engine)
         {
@@ -678,7 +611,7 @@ namespace Haipa.VmManagement
             return res;
         }
 
-        public static Task<Either<PowershellFailure, (TypedPsObject<VirtualMachineInfo> vm, Option<ImageVirtualMachineInfo> imageVM)>> ImportVirtualMachine(
+        public static Task<Either<PowershellFailure, (TypedPsObject<VirtualMachineInfo> vm, Option<PlannedVirtualMachineInfo> template)>> ImportVirtualMachine(
             IPowershellEngine engine,
             HostSettings hostSettings,
             string vmName,
@@ -721,41 +654,34 @@ namespace Haipa.VmManagement
                     ).ToEither()
 
                 )
-                .BindAsync(rep =>
-                    engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
+                .Apply(repEither =>
+                    from rep in repEither
+                    from vms in engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
                             .AddCommand("Import-VM")
                             .AddParameter("CompatibilityReport", rep.PsObject))
-                        .BindAsync(x => x.HeadOrLeft(new PowershellFailure {Message = "Failed to Import VM Image"})))
-                .BindAsync(realizedVM => (
-                        from _ in RenameDisksToConvention(engine, realizedVM).ToAsync()
-                        from vm in realizedVM.Reload(engine).ToAsync()
-                        from imageVm in CreateImageVMInfo(vm ,engine).ToAsync()
-                        select (vm, Option<ImageVirtualMachineInfo>.Some(imageVm))).ToEither());
+                    from vm in vms.HeadOrLeft(new PowershellFailure { Message = "Failed to import VM Image" }).ToAsync().ToEither()
+                    from _ in RenameDisksToConvention(engine, vm)
+                    from vmReloaded in vm.Reload(engine)
+                    from template in ExpandTemplateData(rep.Value.VM, engine)
+                    select (vmReloaded, Option<PlannedVirtualMachineInfo>.Some(template)));
 
 
             return vmInfo;
         }
 
 
-        private static readonly Mapper ImageInfoMapper = new Mapper(new MapperConfiguration(c =>
-        {
-            c.CreateMap<VirtualMachineInfo, ImageVirtualMachineInfo>();
-            c.CreateMap<HardDiskDriveInfo, ImageHardDiskDriveInfo>();
-            c.CreateMap<VMNetworkAdapter, ImageVMNetworkAdapter>();
-        }));
 
-        private static Task<Either<PowershellFailure, ImageVirtualMachineInfo>> CreateImageVMInfo(TypedPsObject<VirtualMachineInfo> vmInfo, IPowershellEngine engine)
+        private static Task<Either<PowershellFailure, PlannedVirtualMachineInfo>> ExpandTemplateData(PlannedVirtualMachineInfo template, IPowershellEngine engine)
         {
-            var imageInfo = ImageInfoMapper.DefaultContext.Mapper.Map<ImageVirtualMachineInfo>(vmInfo.Value);
 
-            return imageInfo.HardDrives.ToSeq().MapToEitherAsync(hd =>
+            return template.HardDrives.ToSeq().MapToEitherAsync(hd =>
                     (from optionalDrive in Storage.GetVhdInfo(hd.Path, engine).ToAsync()
                         from drive in optionalDrive.ToEither(new PowershellFailure { Message = "Failed to find realized image disk" })
                             .ToAsync()
                         let _ = drive.Apply(d => hd.Size = d.Value.Size)
                         select hd).ToEither())
 
-                .MapT(hd => imageInfo);
+                .MapT(hd => template);
 
         }
 
@@ -834,7 +760,7 @@ namespace Haipa.VmManagement
         public static async Task<Either<PowershellFailure, Unit>> RenameDisksToConvention<T>(
             IPowershellEngine engine,
             TypedPsObject<T> vmInfo)
-            where T : IVirtualMachineCoreInfo
+            where T : IVMWithDrivesInfo<HardDiskDriveInfo>
         {
             const string abc = "abcdefklmnopqrstvxyz";
 

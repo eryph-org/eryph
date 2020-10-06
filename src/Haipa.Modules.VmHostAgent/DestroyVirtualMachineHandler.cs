@@ -4,6 +4,7 @@ using Haipa.Messages;
 using Haipa.Messages.Commands.OperationTasks;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
+using Haipa.VmManagement.Data.Full;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;

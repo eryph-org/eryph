@@ -4,10 +4,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Haipa.Messages;
 using Haipa.Messages.Events;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
+using Haipa.VmManagement.Data.Full;
 using LanguageExt;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -27,10 +27,10 @@ namespace Haipa.Modules.VmHostAgent
 
         public Task Handle(GuestNetworkAdapterChangedEvent message)
         {
-            Either<PowershellFailure, TypedPsObject<MinimizedVMNetworkAdapter>> FindAdapterForMessage(
-                Seq<TypedPsObject<MinimizedVMNetworkAdapter>> seq) => FindAdapter(seq, message.AdapterId);
+            Either<PowershellFailure, TypedPsObject<VMNetworkAdapter>> FindAdapterForMessage(
+                Seq<TypedPsObject<VMNetworkAdapter>> seq) => FindAdapter(seq, message.AdapterId);
 
-            return GetVMs(message.VmId)
+            return GetVMs<object>(message.VmId)
                 .BindAsync(SingleOrFailure)
                 .BindAsync(GetNetworkAdapters)
                 .BindAsync(FindAdapterForMessage)
@@ -77,28 +77,28 @@ namespace Haipa.Modules.VmHostAgent
             }
         }
 
-        private Task<Either<PowershellFailure, Seq<TypedPsObject<MinimizedVMNetworkAdapter>>>> GetNetworkAdapters(TypedPsObject<MinimizedVirtualMachineInfo> vm)
+        private Task<Either<PowershellFailure, Seq<TypedPsObject<VMNetworkAdapter>>>> GetNetworkAdapters<TVM>(TypedPsObject<TVM> vm)
         {
-            return _engine.GetObjectsAsync<MinimizedVMNetworkAdapter>(
+            return _engine.GetObjectsAsync<VMNetworkAdapter>(
                 new PsCommandBuilder().AddCommand("Get-VMNetworkAdapter")
                     .AddParameter("VM", vm.PsObject));
         }
 
-        private static Either<PowershellFailure, TypedPsObject<MinimizedVirtualMachineInfo>> SingleOrFailure(Seq<TypedPsObject<MinimizedVirtualMachineInfo>> sequence)
+        private static Either<PowershellFailure, TypedPsObject<T>> SingleOrFailure<T>(Seq<TypedPsObject<T>> sequence)
         {
             return sequence.HeadOrNone().ToEither(new PowershellFailure());
         }
 
-        private static Either<PowershellFailure, TypedPsObject<MinimizedVMNetworkAdapter>> FindAdapter(Seq<TypedPsObject<MinimizedVMNetworkAdapter>> sequence, string adapterId)
+        private static Either<PowershellFailure, TypedPsObject<T>> FindAdapter<T>(Seq<TypedPsObject<T>> sequence, string adapterId) where T: IVMNetworkAdapterCore
         {
             adapterId = adapterId.Replace("Microsoft:GuestNetwork\\", "Microsoft:");
             return sequence.Find(a => a.Value.Id == adapterId)
                 .ToEither(new PowershellFailure{Message = $"could not find network adapter with Id '{adapterId}'"});
         }
 
-        private Task<Either<PowershellFailure, Seq<TypedPsObject<MinimizedVirtualMachineInfo>>>> GetVMs(Guid vmId)
+        private Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetVMs<T>(Guid vmId)
         {
-            return _engine.GetObjectsAsync<MinimizedVirtualMachineInfo>(new PsCommandBuilder()
+            return _engine.GetObjectsAsync<T>(new PsCommandBuilder()
                 .AddCommand("Get-VM").AddParameter("Id", vmId));
         }
 

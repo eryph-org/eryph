@@ -13,7 +13,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
 {
     [UsedImplicitly]
     internal class UpdateMachineSaga : OperationTaskWorkflowSaga<UpdateMachineCommand, UpdateMachineSagaData>,
-        IHandleMessages<OperationTaskStatusEvent<ConvergeVirtualMachineCommand>>
+        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>
     {
         private readonly IOperationTaskDispatcher _taskDispatcher;
 
@@ -25,7 +25,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
         protected override void CorrelateMessages(ICorrelationConfig<UpdateMachineSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<ConvergeVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
 
         }
 
@@ -34,7 +34,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             Data.Config = message.Config;
             Data.MachineId = message.MachineId;
 
-            var convergeMessage = new ConvergeVirtualMachineCommand
+            var convergeMessage = new UpdateVirtualMachineCommand
             {
                 MachineId = Data.MachineId,
                 Config = Data.Config, 
@@ -46,7 +46,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             return _taskDispatcher.Send(convergeMessage);
         }
 
-        public Task Handle(OperationTaskStatusEvent<ConvergeVirtualMachineCommand> message)
+        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
         {
             return FailOrRun(message, () => Complete());
 

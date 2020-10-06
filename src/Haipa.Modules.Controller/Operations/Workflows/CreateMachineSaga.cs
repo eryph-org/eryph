@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Haipa.Messages.Commands;
 using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
 using JetBrains.Annotations;
@@ -11,8 +12,9 @@ namespace Haipa.Modules.Controller.Operations.Workflows
 {
     [UsedImplicitly]
     internal class CreateMachineSaga : OperationTaskWorkflowSaga<CreateMachineCommand, CreateMachineSagaData>,
+        IHandleMessages<OperationTaskStatusEvent<ValidateMachineConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PlaceVirtualMachineCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<ConvergeVirtualMachineCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>
 
     {
@@ -27,20 +29,39 @@ namespace Haipa.Modules.Controller.Operations.Workflows
         {
             base.CorrelateMessages(config);
 
+            config.Correlate<OperationTaskStatusEvent<ValidateMachineConfigCommand>>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<PlaceVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<ConvergeVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>(m => m.OperationId, d => d.OperationId);
 
         }
+
 
         public override Task Initiated(CreateMachineCommand message)
         {
             Data.Config = message.Config;
 
-            var convergeMessage = new PlaceVirtualMachineCommand()
-                { Config = message.Config, OperationId = message.OperationId, TaskId = Guid.NewGuid() };
+            return _taskDispatcher.Send(
+                    new ValidateMachineConfigCommand
+                    {
+                        MachineId = Guid.Empty,
+                        Config = message.Config,
+                        OperationId = Data.OperationId,
+                        TaskId = new Guid(),
+                    }
+                );
+        }
 
-            return _taskDispatcher.Send(convergeMessage);
+        public Task Handle(OperationTaskStatusEvent<ValidateMachineConfigCommand> message)
+        {
+            return FailOrRun<ValidateMachineConfigCommand, ValidateMachineConfigCommand>(message, (r) => 
+                _taskDispatcher.Send(
+                    new PlaceVirtualMachineCommand
+                    {
+                        OperationId = message.OperationId,
+                        TaskId = Guid.NewGuid(),
+                        Config = r.Config, 
+                    }));
         }
 
         public Task Handle(OperationTaskStatusEvent<PlaceVirtualMachineCommand> message)
@@ -59,7 +80,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
 
         }
 
-        public Task Handle(OperationTaskStatusEvent<ConvergeVirtualMachineCommand> message)
+        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
         {
             return FailOrRun(message, () => Complete());
 
@@ -70,11 +91,12 @@ namespace Haipa.Modules.Controller.Operations.Workflows
         {
             return FailOrRun(message, () =>
             {
-                var convergeMessage = new ConvergeVirtualMachineCommand
+                var convergeMessage = new UpdateVirtualMachineCommand
                     { Config = Data.Config, AgentName = Data.AgentName, OperationId = message.OperationId, TaskId = Guid.NewGuid() };
 
                 return _taskDispatcher.Send(convergeMessage);
             });
         }
+
     }
 }

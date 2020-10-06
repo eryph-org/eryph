@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.VmManagement.Data;
+using Haipa.VmManagement.Data.Full;
 using LanguageExt;
 
 namespace Haipa.VmManagement
