@@ -75,23 +75,6 @@ namespace Haipa.VmManagement
             return vmInfo;
         }
 
-
-
-        private static Task<Either<PowershellFailure, PlannedVirtualMachineInfo>> ExpandTemplateData(PlannedVirtualMachineInfo template, IPowershellEngine engine)
-        {
-
-            return template.HardDrives.ToSeq().MapToEitherAsync(hd =>
-                    (from optionalDrive in VhdQuery.GetVhdInfo(engine, hd.Path).ToAsync()
-                     from drive in optionalDrive.ToEither(new PowershellFailure { Message = "Failed to find realized image disk" })
-                         .ToAsync()
-                     let _ = drive.Apply(d => hd.Size = d.Value.Size)
-                     select hd).ToEither())
-
-                .MapT(hd => template);
-
-        }
-
-
         public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Create(
             IPowershellEngine engine,
             string vmName,
@@ -137,19 +120,6 @@ namespace Haipa.VmManagement
 
         }
 
-        public static Task<Either<PowershellFailure, TypedPsObject<T>>> ResetMetadata<T>(
-            IPowershellEngine engine,
-            TypedPsObject<T> vmInfo)
-            where T : IVirtualMachineCoreInfo
-        {
-            return engine.RunAsync(PsCommandBuilder.Create()
-                .AddCommand("Set-VM")
-                .AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("Notes", "")
-            ).BindAsync(u => vmInfo.RecreateOrReload(engine));
-
-        }
-
         public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
             HostSettings hostSettings,
             IPowershellEngine engine,
@@ -170,8 +140,36 @@ namespace Haipa.VmManagement
 
             };
 
-            return convergeTasks.Fold(Prelude.RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
+            return convergeTasks.Fold(RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
                 (info, task) => info.BindAsync(task.Converge));
+
+        }
+
+
+        private static Task<Either<PowershellFailure, TypedPsObject<T>>> ResetMetadata<T>(
+            IPowershellEngine engine,
+            TypedPsObject<T> vmInfo)
+            where T : IVirtualMachineCoreInfo
+        {
+            return engine.RunAsync(PsCommandBuilder.Create()
+                .AddCommand("Set-VM")
+                .AddParameter("VM", vmInfo.PsObject)
+                .AddParameter("Notes", "")
+            ).BindAsync(u => vmInfo.RecreateOrReload(engine));
+
+        }
+
+        private static Task<Either<PowershellFailure, PlannedVirtualMachineInfo>> ExpandTemplateData(PlannedVirtualMachineInfo template, IPowershellEngine engine)
+        {
+
+            return template.HardDrives.ToSeq().MapToEitherAsync(hd =>
+                    (from optionalDrive in VhdQuery.GetVhdInfo(engine, hd.Path).ToAsync()
+                        from drive in optionalDrive.ToEither(new PowershellFailure { Message = "Failed to find realized image disk" })
+                            .ToAsync()
+                        let _ = drive.Apply(d => hd.Size = d.Value.Size)
+                        select hd).ToEither())
+
+                .MapT(hd => template);
 
         }
 

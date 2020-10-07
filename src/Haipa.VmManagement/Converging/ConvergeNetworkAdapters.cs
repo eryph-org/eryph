@@ -30,6 +30,10 @@ namespace Haipa.VmManagement.Converging
             VirtualMachineNetworkAdapterConfig networkAdapterConfig,
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
+            var switchName = string.IsNullOrWhiteSpace(networkAdapterConfig.SwitchName)
+                ? "Default Switch"
+                : networkAdapterConfig.SwitchName;
+
 
             var optionalAdapter = await ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
                 i => i.NetworkAdapters,
@@ -43,23 +47,24 @@ namespace Haipa.VmManagement.Converging
                         .AddParameter("VM", vmInfo.PsObject)
                         .AddParameter("Name", networkAdapterConfig.Name)
                         .AddParameter("StaticMacAddress", UseOrGenerateMacAddress(networkAdapterConfig, vmInfo))
-                        .AddParameter("SwitchName", networkAdapterConfig.SwitchName)).ConfigureAwait(false);
+                        .AddParameter("SwitchName", switchName)).ConfigureAwait(false);
 
                 }).ConfigureAwait(false);
 
 
             return await optionalAdapter.BindAsync(async (adapter) =>
             {
-                if (adapter.Value.Connected && adapter.Value.SwitchName == networkAdapterConfig.SwitchName)
+                
+                if (adapter.Value.Connected &&  adapter.Value.SwitchName == switchName)
                     return Unit.Default;
 
                 await Context.ReportProgress(
-                        $"Connecting Network Adapter {adapter.Value.Name} to switch {networkAdapterConfig.SwitchName}")
+                        $"Connecting Network Adapter {adapter.Value.Name} to switch {switchName}")
                     .ConfigureAwait(false);
                 return await Context.Engine.RunAsync(
                     PsCommandBuilder.Create().AddCommand("Connect-VmNetworkAdapter")
                         .AddParameter("VMNetworkAdapter", adapter.PsObject)
-                        .AddParameter("SwitchName", networkAdapterConfig.SwitchName)).ConfigureAwait(false);
+                        .AddParameter("SwitchName", switchName)).ConfigureAwait(false);
 
             }).BindAsync(_ => vmInfo.RecreateOrReload(Context.Engine)).ConfigureAwait(false);
 

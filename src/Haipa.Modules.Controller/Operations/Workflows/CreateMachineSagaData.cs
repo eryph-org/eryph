@@ -6,5 +6,6 @@ namespace Haipa.Modules.Controller.Operations.Workflows
     {
         public MachineConfig Config { get; set; }
         public string AgentName { get; set; }
+        public VirtualMachineMetadata Metadata { get; set; }
     }
 }

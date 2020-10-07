@@ -14,6 +14,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
     internal class CreateMachineSaga : OperationTaskWorkflowSaga<CreateMachineCommand, CreateMachineSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateMachineConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PlaceVirtualMachineCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<CreateVirtualMachineCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>
 
@@ -31,6 +32,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
 
             config.Correlate<OperationTaskStatusEvent<ValidateMachineConfigCommand>>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<PlaceVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<CreateVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>(m => m.OperationId, d => d.OperationId);
 
@@ -47,21 +49,26 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                         MachineId = Guid.Empty,
                         Config = message.Config,
                         OperationId = Data.OperationId,
-                        TaskId = new Guid(),
+                        TaskId = Guid.NewGuid(),
                     }
                 );
         }
 
         public Task Handle(OperationTaskStatusEvent<ValidateMachineConfigCommand> message)
         {
-            return FailOrRun<ValidateMachineConfigCommand, ValidateMachineConfigCommand>(message, (r) => 
-                _taskDispatcher.Send(
+            return FailOrRun<ValidateMachineConfigCommand, ValidateMachineConfigCommand>(message, (r) =>
+            {
+                Data.Config = r.Config;
+
+                return _taskDispatcher.Send(
                     new PlaceVirtualMachineCommand
                     {
                         OperationId = message.OperationId,
                         TaskId = Guid.NewGuid(),
-                        Config = r.Config, 
-                    }));
+                        Config = Data.Config,
+                    });
+
+            });
         }
 
         public Task Handle(OperationTaskStatusEvent<PlaceVirtualMachineCommand> message)
@@ -80,22 +87,33 @@ namespace Haipa.Modules.Controller.Operations.Workflows
 
         }
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
-        {
-            return FailOrRun(message, () => Complete());
-
-        }
-
-
         public Task Handle(OperationTaskStatusEvent<PrepareVirtualMachineImageCommand> message)
         {
             return FailOrRun(message, () =>
             {
-                var convergeMessage = new UpdateVirtualMachineCommand
+                var convergeMessage = new CreateVirtualMachineCommand
                     { Config = Data.Config, AgentName = Data.AgentName, OperationId = message.OperationId, TaskId = Guid.NewGuid() };
 
                 return _taskDispatcher.Send(convergeMessage);
             });
+        }
+
+        public Task Handle(OperationTaskStatusEvent<CreateVirtualMachineCommand> message)
+        {
+            return FailOrRun<CreateVirtualMachineCommand, CreateVirtualMachineResult>(message, (r) =>
+            {
+                Data.Metadata = r.MachineMetadata;
+                var convergeMessage = new UpdateVirtualMachineCommand
+                { MachineId = r.Inventory.MachineId, Config = Data.Config, MachineMetadata = Data.Metadata, AgentName = Data.AgentName, OperationId = message.OperationId, TaskId = Guid.NewGuid() };
+
+                return _taskDispatcher.Send(convergeMessage);
+            });
+        }
+
+        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
+        {
+            return FailOrRun(message, () => Complete());
+
         }
 
     }

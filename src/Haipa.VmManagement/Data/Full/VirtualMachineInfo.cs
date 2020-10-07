@@ -1,4 +1,6 @@
 ﻿using System;
+using AutoMapper;
+using AutoMapper.Configuration.Annotations;
 using Haipa.VmManagement.Data.Core;
 using LanguageExt;
 

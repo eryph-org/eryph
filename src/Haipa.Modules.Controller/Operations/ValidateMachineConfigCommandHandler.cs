@@ -23,7 +23,7 @@ namespace Haipa.Modules.Controller.Operations
         public Task Handle(ValidateMachineConfigCommand message)
         {
             message.Config = NormalizeMachineConfig(message.MachineId, message.Config);
-            return _bus.Publish(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, message));
+            return _bus.SendLocal(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, message));
 
         }
 
