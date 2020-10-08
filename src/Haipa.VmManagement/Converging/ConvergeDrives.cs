@@ -54,9 +54,9 @@ namespace Haipa.VmManagement.Converging
         {
             var plannedDiskSettings = plannedDriveStorageSettings
                 .Where(x => x.Type == VirtualMachineDriveType.VHD || x.Type == VirtualMachineDriveType.SharedVHD)
-                .Cast<VMDiskStorageSettings>().ToSeq();
+                .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
-            return (from currentDiskSettings in CurrentVMDiskStorageSettings.DetectDiskStorageSettings(Context.Engine, Context.HostSettings, vmInfo.Value.HardDrives)
+            return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine, Context.HostSettings, vmInfo.Value.HardDrives)
                 from _ in plannedDiskSettings.MapToEitherAsync(s => VirtualDisk(s, vmInfo, currentDiskSettings))
                 select Unit.Default);
 
@@ -78,7 +78,7 @@ namespace Haipa.VmManagement.Converging
 
         {
 
-            return (from currentDiskSettings in CurrentVMDiskStorageSettings.DetectDiskStorageSettings(Context.Engine, Context.HostSettings, vmInfo.Value.HardDrives).ToAsync()
+            return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine, Context.HostSettings, vmInfo.Value.HardDrives).ToAsync()
                 from _ in DetachUndefinedHardDrives(vmInfo, plannedStorageSettings, currentDiskSettings).ToAsync()
                 from __ in DetachUndefinedDvdDrives(vmInfo, plannedStorageSettings).ToAsync()
                 select Unit.Default).ToEither();
@@ -88,12 +88,12 @@ namespace Haipa.VmManagement.Converging
         private Task<Either<PowershellFailure, Unit>> DetachUndefinedHardDrives(
             TypedPsObject<VirtualMachineInfo> vmInfo,
             Seq<VMDriveStorageSettings> plannedStorageSettings,
-            Seq<CurrentVMDiskStorageSettings> currentDiskStorageSettings)
+            Seq<CurrentHardDiskDriveStorageSettings> currentDiskStorageSettings)
 
         {
             var planedDiskSettings = plannedStorageSettings.Where(x =>
                     x.Type == VirtualMachineDriveType.VHD || x.Type == VirtualMachineDriveType.SharedVHD)
-                .Cast<VMDiskStorageSettings>().ToSeq();
+                .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
             var attachedPaths = planedDiskSettings.Map(s => s.AttachPath).Map(x => x.IfNone(""))
                 .Where(x => !string.IsNullOrWhiteSpace(x));
@@ -182,40 +182,41 @@ namespace Haipa.VmManagement.Converging
 
 
         private async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> VirtualDisk(
-            VMDiskStorageSettings diskSettings,
+            HardDiskDriveStorageSettings driveSettings,
             TypedPsObject<VirtualMachineInfo> vmInfo,
-            Seq<CurrentVMDiskStorageSettings> currentStorageSettings)
+            Seq<CurrentHardDiskDriveStorageSettings> currentStorageSettings)
         {
 
             var currentSettings =
-                currentStorageSettings.Find(x => diskSettings.Path.Equals(x.Path, StringComparison.OrdinalIgnoreCase)
-                                                 && diskSettings.Name.Equals(x.Name, StringComparison.InvariantCultureIgnoreCase));
+                currentStorageSettings.Find(x => driveSettings.DiskSettings.Path.Equals(x.DiskSettings.Path, StringComparison.OrdinalIgnoreCase)
+                                                 && driveSettings.DiskSettings.Name.Equals(x.DiskSettings.Name, StringComparison.InvariantCultureIgnoreCase));
             var frozenOptional = currentSettings.Map(x => x.Frozen);
 
             if (frozenOptional.IsSome && frozenOptional.ValueUnsafe())
             {
-                await Context.ReportProgress($"Skipping disk '{diskSettings.Name}': storage management is disabled for this disk.").ConfigureAwait(false);
+                await Context.ReportProgress($"Skipping HD Drive '{driveSettings.DiskSettings.Name}': storage management is disabled for this disk.").ConfigureAwait(false);
                 return vmInfo;
             }
 
 
 
-            return await diskSettings.AttachPath.Map(async (vhdPath) =>
+            return await driveSettings.AttachPath.Map(async (vhdPath) =>
             {
 
                 if (!File.Exists(vhdPath))
                 {
-                    await Context.ReportProgress($"Create VHD: {diskSettings.Name}").ConfigureAwait(false);
+                    await Context.ReportProgress($"Creating HD Drive: {driveSettings.DiskSettings.Name}").ConfigureAwait(false);
 
-                    var createDiskResult = await diskSettings.ParentPath.Match(Some: parentPath =>
+                    var createDiskResult = await driveSettings.DiskSettings.ParentSettings.Match(Some: parentSettings =>
                         {
+                            var parentFilePath = Path.Combine(parentSettings.Path, parentSettings.FileName);
                             return Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
-                                $"New-VHD -Path \"{vhdPath}\" -ParentPath \"{parentPath}\" -Differencing"));
+                                $"New-VHD -Path \"{vhdPath}\" -ParentPath \"{parentFilePath}\" -Differencing"));
                         },
                         None: () =>
                         {
                             return Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
-                                $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {diskSettings.SizeBytes}"));
+                                $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {driveSettings.DiskSettings.SizeBytes}"));
                         });
 
                     if (createDiskResult.IsLeft)
@@ -226,14 +227,14 @@ namespace Haipa.VmManagement.Converging
                     .GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("get-vhd").AddArgument(vhdPath))
                     .BindAsync(x => x.HeadOrLeft(new PowershellFailure())).BindAsync(async (vhdInfo) =>
                     {
-                        if (vhdInfo.Value.Size != diskSettings.SizeBytes && diskSettings.SizeBytes > 0)
+                        if (vhdInfo.Value.Size != driveSettings.DiskSettings.SizeBytes && driveSettings.DiskSettings.SizeBytes > 0)
                         {
-                            var gb = Math.Round(diskSettings.SizeBytes / 1024d / 1024 / 1024, 1);
+                            var gb = Math.Round(driveSettings.DiskSettings.SizeBytes / 1024d / 1024 / 1024, 1);
                             await Context.ReportProgress(
-                                $"Resizing disk {diskSettings.Name} to {gb} GB");
+                                $"Resizing disk {driveSettings.DiskSettings.Name} to {gb} GB");
                             return await Context.Engine.RunAsync(PsCommandBuilder.Create().AddCommand("Resize-VHD")
                                 .AddArgument(vhdPath)
-                                .AddParameter("Size", diskSettings.SizeBytes));
+                                .AddParameter("Size", driveSettings.DiskSettings.SizeBytes));
 
                         }
 
@@ -249,13 +250,13 @@ namespace Haipa.VmManagement.Converging
                         disk => currentSettings.Map(x => x.AttachedVMId) == disk.Id,
                         async () =>
                         {
-                            await Context.ReportProgress($"Attaching disk {diskSettings.Name} to controller: {diskSettings.ControllerNumber}, Location: {diskSettings.ControllerLocation}").ConfigureAwait(false);
+                            await Context.ReportProgress($"Attaching HD Drive {driveSettings.DiskSettings.Name} to controller: {driveSettings.ControllerNumber}, Location: {driveSettings.ControllerLocation}").ConfigureAwait(false);
                             return (await Context.Engine.GetObjectsAsync<HardDiskDriveInfo>(PsCommandBuilder.Create()
                                 .AddCommand("Add-VMHardDiskDrive")
                                 .AddParameter("VM", vmInfo.PsObject)
                                 .AddParameter("Path", vhdPath)
-                                .AddParameter("ControllerNumber", diskSettings.ControllerNumber)
-                                .AddParameter("ControllerLocation", diskSettings.ControllerLocation)
+                                .AddParameter("ControllerNumber", driveSettings.ControllerNumber)
+                                .AddParameter("ControllerLocation", driveSettings.ControllerLocation)
                                 .AddParameter("PassThru")
                             ).ConfigureAwait(false));
 

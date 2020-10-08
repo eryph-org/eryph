@@ -24,7 +24,7 @@ namespace Haipa.Modules.VmHostAgent
         {
             _bus = bus;
             _engine = engine;
-            _inventory = new VirtualMachineInventory();
+            _inventory = new VirtualMachineInventory(_engine, HostSettingsBuilder.GetHostSettings());
         }
 
 

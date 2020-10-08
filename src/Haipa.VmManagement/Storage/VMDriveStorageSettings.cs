@@ -6,6 +6,8 @@ using LanguageExt;
 
 namespace Haipa.VmManagement.Storage
 {
+
+
     public class VMDriveStorageSettings
     {
         public VirtualMachineDriveType Type { get; set; }
@@ -86,18 +88,33 @@ namespace Haipa.VmManagement.Storage
                      .ToAsync()
                      .ToEither().ToAsync()
 
-                 let planned = new VMDiskStorageSettings
+                 let planned = new HardDiskDriveStorageSettings
                  {
                      Type = driveConfig.Type.Value,
-                     StorageNames = names,
-                     StorageIdentifier = storageIdentifier,
-                     ParentPath = driveConfig.Template,
-                     Path = Path.Combine(resolvedPath, identifier),
                      AttachPath = Path.Combine(Path.Combine(resolvedPath, identifier), $"{driveConfig.Name}.vhdx"),
-                     // ReSharper disable once StringLiteralTypo
-                     Name = driveConfig.Name,
-                     SizeBytes = driveConfig.Size.ToOption().Match(None: () => 1 * 1024L * 1024 * 1024,
-                                                                   Some: s => s * 1024L * 1024 * 1024),
+                     DiskSettings = new DiskStorageSettings
+                     {
+                         StorageNames = names,
+                         StorageIdentifier = storageIdentifier,
+                         ParentSettings = 
+                             string.IsNullOrWhiteSpace(driveConfig.Template) 
+                                 ? Option<DiskStorageSettings>.None 
+                                 : Option<DiskStorageSettings>.Some(new DiskStorageSettings
+                                 {
+                                     StorageNames = StorageNames.FromPath(driveConfig.Template, hostSettings.DefaultVirtualHardDiskPath).Names,
+                                     StorageIdentifier = StorageNames.FromPath(driveConfig.Template, hostSettings.DefaultVirtualHardDiskPath).StorageIdentifier,
+                                     Path = Path.GetDirectoryName(driveConfig.Template),
+                                     FileName = Path.GetFileName(driveConfig.Template),
+                                     Name = Path.GetFileNameWithoutExtension(driveConfig.Template)
+                                 }),
+                         Path = Path.Combine(resolvedPath, identifier),
+                         FileName = $"{ driveConfig.Name}.vhdx",
+                         // ReSharper disable once StringLiteralTypo
+                         Name = driveConfig.Name,
+                         SizeBytes = driveConfig.Size.ToOption().Match(None: () => 1 * 1024L * 1024 * 1024,
+                             Some: s => s * 1024L * 1024 * 1024),
+
+                     },
                      ControllerNumber = controllerNumber,
                      ControllerLocation = controllerLocation
                  }

@@ -1,4 +1,6 @@
-﻿namespace Haipa.VmManagement.Data
+﻿using Haipa.Messages.Events;
+
+namespace Haipa.VmManagement.Data
 {
     public interface IDriveInfo
     {

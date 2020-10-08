@@ -13,6 +13,8 @@ namespace Haipa.Messages.Events
 
         public VirtualMachineNetworkAdapterInfo[] NetworkAdapters { get; set; }
         public VirtualMachineNetworkInfo[] Networks { get; set; }
+        public VirtualMachineDriveInfo[] Drives { get; set; }
+
 
     }
 }

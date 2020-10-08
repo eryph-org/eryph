@@ -28,18 +28,27 @@ namespace Haipa.VmManagement.Converging
                 return remove;
             }
 
+            return await Context.StorageSettings.StorageIdentifier.MatchAsync(
+                Some: async storageIdentifier =>
+                {
+                    var configDriveIsoPath = Path.Combine(Context.StorageSettings.VMPath, storageIdentifier, "configdrive.iso");
 
-            var configDriveIsoPath = Path.Combine(Context.StorageSettings.VMPath, "configdrive.iso");
+                    await Context.ReportProgress("Updating configdrive disk").ConfigureAwait(false);
 
-            await Context.ReportProgress("Updating configdrive disk").ConfigureAwait(false);
+                    await from _ in CreateConfigDriveDirectory(Context.StorageSettings.VMPath).AsTask()
+                        select _;
 
-            await from _ in CreateConfigDriveDirectory(Context.StorageSettings.VMPath).AsTask()
-                select _;
+                    GenerateConfigDriveDisk(configDriveIsoPath, Context.Config.Provisioning.Hostname,
+                        Context.Config.Provisioning.UserData);
 
-            GenerateConfigDriveDisk(configDriveIsoPath, Context.Config.Provisioning.Hostname,
-                Context.Config.Provisioning.UserData);
+                    return await InsertConfigDriveDisk(configDriveIsoPath, vmInfo);
 
-            return await InsertConfigDriveDisk(configDriveIsoPath, vmInfo);
+                },
+                None: () => Context.ReportProgress("Missing storage identifier - cannot generate cloud init disk.")
+                    .ToUnit().MapAsync(u => Prelude.RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither())
+            );
+
+
         }
 
 

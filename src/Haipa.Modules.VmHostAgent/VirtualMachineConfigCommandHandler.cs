@@ -141,10 +141,11 @@ namespace Haipa.Modules.VmHostAgent
         }
 
         protected static Task<Either<PowershellFailure, MachineInfo>> CreateMachineInventory(
+            IPowershellEngine engine, HostSettings hostSettings,
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
 
-            var inventory = new VirtualMachineInventory();
+            var inventory = new VirtualMachineInventory(engine, hostSettings);
             return inventory.InventorizeVM(vmInfo).ToAsync().ToEither();
         }
     }

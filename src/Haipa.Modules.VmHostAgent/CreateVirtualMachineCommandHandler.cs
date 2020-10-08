@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Threading.Tasks;
 using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
@@ -41,17 +40,21 @@ namespace Haipa.Modules.VmHostAgent
             var planStorageSettings = Prelude.fun(() => 
                 VMStorageSettings.Plan(hostSettings, GenerateId, config, Option<VMStorageSettings>.None).ToAsync());
 
-            var createVM = Prelude.fun((VMStorageSettings settings) => 
-                CreateVM(config, hostSettings, settings, _engine).ToAsync());
+            var getTemplate = Prelude.fun(() =>
+                GetTemplate(_engine, hostSettings,config.Image).ToAsync());
+            
+            var createVM = Prelude.fun((VMStorageSettings settings, Option<PlannedVirtualMachineInfo> template) => 
+                CreateVM(config, hostSettings, settings, _engine, template).ToAsync());
 
             var createMetadata = Prelude.fun((TypedPsObject<VirtualMachineInfo> vmInfo, Option<PlannedVirtualMachineInfo> plannedVM) =>
                 CreateMetadata(plannedVM, vmInfo, config).ToAsync());
 
             var chain =
                 from plannedStorageSettings in planStorageSettings()
-                from creationInfo in createVM(plannedStorageSettings)
-                from metadata in createMetadata(creationInfo.VM, creationInfo.Template)
-                from inventory in CreateMachineInventory(creationInfo.VM).ToAsync()
+                from optionalTemplate in getTemplate()
+                from createdVM in createVM(plannedStorageSettings, optionalTemplate)
+                from metadata in createMetadata(createdVM, optionalTemplate)
+                from inventory in CreateMachineInventory(_engine, hostSettings, createdVM).ToAsync()
                 select new CreateVirtualMachineResult
                 {
                     Inventory = inventory,
@@ -65,26 +68,35 @@ namespace Haipa.Modules.VmHostAgent
 
         }
 
-
-        private static Task<Either<PowershellFailure, (TypedPsObject<VirtualMachineInfo> VM, Option<PlannedVirtualMachineInfo> Template)>> CreateVM(MachineConfig config, HostSettings hostSettings, VMStorageSettings storageSettings, IPowershellEngine engine)
+        private static Task<Either<PowershellFailure, Option<PlannedVirtualMachineInfo>>> GetTemplate(
+            IPowershellEngine engine,
+            HostSettings hostSettings,
+            MachineImageConfig imageConfig)
         {
-            if (!string.IsNullOrWhiteSpace(config.Image.Name))
-            {
-                return storageSettings.StorageIdentifier.ToEither(new PowershellFailure
-                        {Message = "Unknown storage identifier, cannot create new virtual machine"})
-                    .BindAsync(storageIdentifier => VirtualMachine.Import(engine, hostSettings, config.Name,
-                        storageIdentifier,
-                        storageSettings.VMPath,
-                        config.Image));
+            //add a cache lookup here, as image data should not change
+            return VirtualMachine.TemplateFromImage(engine, hostSettings, imageConfig);
+        }
 
+        private static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> CreateVM(MachineConfig config, HostSettings hostSettings, VMStorageSettings storageSettings, IPowershellEngine engine, Option<PlannedVirtualMachineInfo> optionalTemplate)
+        {
+            return from storageIdentifier in storageSettings.StorageIdentifier.ToEitherAsync(new PowershellFailure
+                    {Message = "Unknown storage identifier, cannot create new virtual machine"}).ToEither()
 
-            }
+                from vm in optionalTemplate.MatchAsync(
+                    Some: template =>
 
-            return storageSettings.StorageIdentifier.ToEither(new PowershellFailure
-                    {Message = "Unknown storage identifier, cannot create new virtual machine"})
-                .BindAsync(storageIdentifier => VirtualMachine.Create(engine, config.Name, storageIdentifier,
-                    storageSettings.VMPath,
-                    config.VM.Memory.Startup)).MapAsync(r => (r, Option<PlannedVirtualMachineInfo>.None));
+                        VirtualMachine.ImportTemplate(engine, hostSettings, config.Name,
+                            storageIdentifier,
+                            storageSettings.VMPath,
+                            template),
+
+                    None: () =>
+                        VirtualMachine.Create(engine, config.Name, storageIdentifier,
+                            storageSettings.VMPath,
+                            config.VM.Memory.Startup)
+                        )
+
+                        select vm;
 
         }
 

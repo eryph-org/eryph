@@ -1,4 +1,6 @@
-﻿namespace Haipa.VmManagement.Data.Core
+﻿using Haipa.Messages.Events;
+
+namespace Haipa.VmManagement.Data.Core
 {
     public abstract class DriveInfo : DriveInfoBase, IDriveInfo
     {

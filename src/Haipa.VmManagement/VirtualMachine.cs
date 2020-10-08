@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Haipa.Messages.Events;
 using Haipa.VmConfig;
 using Haipa.VmManagement.Converging;
 using Haipa.VmManagement.Data;
@@ -9,7 +10,7 @@ using Haipa.VmManagement.Data.Full;
 using Haipa.VmManagement.Data.Planned;
 using Haipa.VmManagement.Storage;
 using LanguageExt;
-
+using LanguageExt.SomeHelp;
 using static LanguageExt.Prelude;
 
 
@@ -17,36 +18,28 @@ namespace Haipa.VmManagement
 {
     public static class VirtualMachine
     {
-        public static Task<Either<PowershellFailure, (TypedPsObject<VirtualMachineInfo> vm, Option<PlannedVirtualMachineInfo> template)>> Import(
+        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> ImportTemplate(
             IPowershellEngine engine,
             HostSettings hostSettings,
             string vmName,
             string storageIdentifier,
             string vmPath,
-            MachineImageConfig imageConfig)
+            PlannedVirtualMachineInfo template)
         {
 
-            var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
-            var imagePath = Path.Combine(imageRootPath,
-                $"{imageConfig.Name}\\{imageConfig.Tag}\\");
-
-            var configRootPath = Path.Combine(imagePath, "Virtual Machines");
+            var configPath = Path.Combine(template.Path, "Virtual Machines", $"{template.Id}.vmcx");
 
             var vmStorePath = Path.Combine(vmPath, storageIdentifier);
             var vhdPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, storageIdentifier);
 
-            var vmInfo = Directory.GetFiles(configRootPath, "*.vmcx")
-                .HeadOrLeft(new PowershellFailure { Message = "Failed to find image configuration file" }).AsTask()
-                .BindAsync(configPath =>
-                    engine.GetObjectsAsync<VMCompatibilityReportInfo>(PsCommandBuilder.Create()
-                        .AddCommand("Compare-VM")
-                        .AddParameter("VirtualMachinePath", vmStorePath)
-                        .AddParameter("SnapshotFilePath", vmStorePath)
-                        .AddParameter("Path", configPath)
-                        .AddParameter("VhdDestinationPath", vhdPath)
-                        .AddParameter("Copy")
-                        .AddParameter("GenerateNewID")
-                    )
+            var vmInfo = engine.GetObjectsAsync<VMCompatibilityReportInfo>(PsCommandBuilder.Create()
+                    .AddCommand("Compare-VM")
+                    .AddParameter("VirtualMachinePath", vmStorePath)
+                    .AddParameter("SnapshotFilePath", vmStorePath)
+                    .AddParameter("Path", configPath)
+                    .AddParameter("VhdDestinationPath", vhdPath)
+                    .AddParameter("Copy")
+                    .AddParameter("GenerateNewID")
                 )
                 .BindAsync(x => x.HeadOrLeft(new PowershellFailure { Message = "Failed to Import VM Image" }))
                 .BindAsync(rep => (
@@ -62,17 +55,47 @@ namespace Haipa.VmManagement
                 )
                 .Apply(repEither =>
                     from rep in repEither
+                    //from template in ExpandTemplateData(rep.Value.VM, engine)
                     from vms in engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
                             .AddCommand("Import-VM")
                             .AddParameter("CompatibilityReport", rep.PsObject))
                     from vm in vms.HeadOrLeft(new PowershellFailure { Message = "Failed to import VM Image" }).ToAsync().ToEither()
                     from _ in RenameDisksToConvention(engine, vm)
                     from vmReloaded in vm.Reload(engine)
-                    from template in ExpandTemplateData(rep.Value.VM, engine)
-                    select (vmReloaded, Option<PlannedVirtualMachineInfo>.Some(template)));
+                    select vmReloaded);
 
 
             return vmInfo;
+        }
+
+        public static Task<Either<PowershellFailure, Option<PlannedVirtualMachineInfo>>> TemplateFromImage(
+            IPowershellEngine engine,
+            HostSettings hostSettings,
+            MachineImageConfig imageConfig)
+        {
+
+            if(string.IsNullOrWhiteSpace(imageConfig?.Name))
+                return RightAsync<PowershellFailure, Option<PlannedVirtualMachineInfo>>(None).ToEither();
+            
+
+            var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
+            var imagePath = Path.Combine(imageRootPath,
+                $"{imageConfig.Name}\\{imageConfig.Tag}\\");
+
+            var configRootPath = Path.Combine(imagePath, "Virtual Machines");
+
+            var vmInfo = Directory.GetFiles(configRootPath, "*.vmcx")
+                .HeadOrLeft(new PowershellFailure {Message = "Failed to find image configuration file"}).AsTask()
+                .BindAsync(configPath =>
+                    engine.GetObjectsAsync<VMCompatibilityReportInfo>(PsCommandBuilder.Create()
+                            .AddCommand("Compare-VM")
+                            .AddParameter("Path", configPath)
+                        )
+
+                .BindAsync(x => x.HeadOrLeft(new PowershellFailure {Message = "Failed to load VM Image"}))
+                .BindAsync(rep=> ExpandTemplateData(rep.Value.VM, engine)));
+
+            return vmInfo.MapAsync(Some);
         }
 
         public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Create(
