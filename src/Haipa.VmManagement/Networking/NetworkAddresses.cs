@@ -45,6 +45,8 @@ namespace Haipa.VmManagement.Networking
             var scope = new ManagementScope(@"\\.\root\virtualization\v2");
             var resultList = new List<VirtualMachineNetworkInfo>();
 
+            var networkNames = new List<string>();
+
             foreach (var networkAdapter in networkAdapters)
             {
                 var guestNetworkId = networkAdapter.Id.Replace("Microsoft:", "Microsoft:GuestNetwork\\").Replace("\\", "\\\\");
@@ -56,7 +58,7 @@ namespace Haipa.VmManagement.Networking
 
                 var info = new VirtualMachineNetworkInfo
                 {
-                    AdapterName = networkAdapter.Name,
+                    Name = Networks.GenerateName(ref networkNames, networkAdapter),
                     IPAddresses = ObjectToStringArray(obj.GetPropertyValue("IPAddresses")),
                     DefaultGateways = ObjectToStringArray(obj.GetPropertyValue("DefaultGateways")),
                     DnsServers = ObjectToStringArray(obj.GetPropertyValue("DNSServers")),

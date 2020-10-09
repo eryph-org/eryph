@@ -1,7 +1,10 @@
-﻿namespace Haipa.Messages.Events
+﻿using System;
+
+namespace Haipa.Messages.Events
 {
     public class DiskInfo
     {
+        public Guid Id { get; set; }
         public string Name { get; set; }
         public string StorageIdentifier { get; set; }
         public string DataStore { get; set; }

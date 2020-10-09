@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Haipa.Messages.Commands;
 using Haipa.Messages.Commands.OperationTasks;
+using Haipa.Messages.Events;
 using Haipa.Messages.Operations;
 using JetBrains.Annotations;
 using Rebus.Bus;
@@ -21,10 +23,10 @@ namespace Haipa.Modules.Controller.Operations.Workflows
     {
         private readonly IOperationTaskDispatcher _taskDispatcher;
 
-        public CreateMachineSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus)
-        {
-            _taskDispatcher = taskDispatcher;
-        }
+       public CreateMachineSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus)
+       {
+           _taskDispatcher = taskDispatcher;
+       }
 
         protected override void CorrelateMessages(ICorrelationConfig<CreateMachineSagaData> config)
         {
@@ -100,19 +102,36 @@ namespace Haipa.Modules.Controller.Operations.Workflows
 
         public Task Handle(OperationTaskStatusEvent<CreateVirtualMachineCommand> message)
         {
-            return FailOrRun<CreateVirtualMachineCommand, CreateVirtualMachineResult>(message, (r) =>
+            return FailOrRun<CreateVirtualMachineCommand, ConvergeVirtualMachineResult>(message,async (r) =>
             {
+                await Bus.Send(new AttachMachineToOperationCommand
+                {
+                    AgentName = Data.AgentName,
+                    MachineId = r.Inventory.MachineId,
+                    OperationId = Data.OperationId
+                });
+
                 Data.Metadata = r.MachineMetadata;
+                
                 var convergeMessage = new UpdateVirtualMachineCommand
                 { MachineId = r.Inventory.MachineId, Config = Data.Config, MachineMetadata = Data.Metadata, AgentName = Data.AgentName, OperationId = message.OperationId, TaskId = Guid.NewGuid() };
 
-                return _taskDispatcher.Send(convergeMessage);
+                await _taskDispatcher.Send(convergeMessage);
             });
         }
 
         public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
         {
-            return FailOrRun(message, () => Complete());
+            return FailOrRun<UpdateVirtualMachineCommand, ConvergeVirtualMachineResult>(message,async r =>
+            {
+                await Bus.Send(new UpdateInventoryCommand
+                {
+                    AgentName = Data.AgentName,
+                    Inventory = new List<MachineInfo>{r.Inventory }
+                });
+
+                await Complete();
+            });
 
         }
 

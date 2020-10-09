@@ -8,7 +8,10 @@ namespace Haipa.StateDb.Model
         public Guid Id { get; set; }
         public Machine Machine { get; set; }
         public string Path { get; set; }
+
         public virtual List<VirtualMachineNetworkAdapter> NetworkAdapters { get; set; }
+
+        public virtual List<VirtualMachineDrive> Drives { get; set; }
 
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Events;
@@ -50,6 +51,7 @@ namespace Haipa.Modules.VmHostAgent
         {
             var disk = new DiskInfo
             {
+                Id = Guid.NewGuid(),
                 Name = storageSettings.Name,
                 Path = storageSettings.Path,
                 FileName = storageSettings.FileName,

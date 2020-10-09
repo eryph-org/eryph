@@ -18,6 +18,8 @@ namespace Haipa.StateDb
         public DbSet<Machine> Machines { get; set; }
         public DbSet<VirtualMachine> VirtualMachines { get; set; }
         public DbSet<VirtualMachineNetworkAdapter> VirtualMachineNetworkAdapters { get; set; }
+        public DbSet<VirtualMachineDrive> VirtualMachineDrives { get; set; }
+        public DbSet<VirtualDisk> VirtualDisks { get; set; }
 
         public DbSet<Network> Networks { get; set; }
         public DbSet<Subnet> Subnets { get; set; }
@@ -59,7 +61,7 @@ namespace Haipa.StateDb
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<MachineNetwork>()
-                .HasKey("MachineId", "AdapterName");
+                .HasKey(x=>x.Id);
 
 
             modelBuilder.Entity<VirtualMachine>()
@@ -68,11 +70,33 @@ namespace Haipa.StateDb
                 .HasForeignKey(x=>x.MachineId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<VirtualMachine>()
+                .HasMany(x => x.Drives)
+                .WithOne(x => x.Vm)
+                .HasForeignKey(x => x.MachineId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<Subnet>().HasKey(c => c.Id);
             modelBuilder.Entity<Subnet>().HasIndex(x => x.Address);
 
+            modelBuilder.Entity<VirtualMachineNetworkAdapter>().HasKey("MachineId", "Id");
 
-            modelBuilder.Entity<VirtualMachineNetworkAdapter>().HasKey("MachineId", "Name");
+
+            modelBuilder.Entity<VirtualMachineDrive>()
+                .HasKey(x => x.Id);
+
+            modelBuilder.Entity<VirtualMachineDrive>()
+                .HasOne(x => x.AttachedDisk)
+                .WithMany(x => x.AttachedDrives)
+                .HasForeignKey(x => x.AttachedDiskId);
+                
+
+
+            modelBuilder.Entity<VirtualDisk>().HasKey(x => x.Id);
+            modelBuilder.Entity<VirtualDisk>().HasOne(x => x.Parent)
+                .WithMany(x => x.Childs)
+                .HasForeignKey(x => x.ParentId);
+
         }
     }
 }

@@ -55,7 +55,7 @@ namespace Haipa.Modules.VmHostAgent
                 from createdVM in createVM(plannedStorageSettings, optionalTemplate)
                 from metadata in createMetadata(createdVM, optionalTemplate)
                 from inventory in CreateMachineInventory(_engine, hostSettings, createdVM).ToAsync()
-                select new CreateVirtualMachineResult
+                select new ConvergeVirtualMachineResult
                 {
                     Inventory = inventory,
                     MachineMetadata = metadata,

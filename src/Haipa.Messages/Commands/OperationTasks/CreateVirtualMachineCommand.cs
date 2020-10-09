@@ -13,7 +13,7 @@ namespace Haipa.Messages.Commands.OperationTasks
 
     }
 
-    public class CreateVirtualMachineResult
+    public class ConvergeVirtualMachineResult
     {
         public VirtualMachineMetadata MachineMetadata { get; set; }
         public MachineInfo Inventory { get; set; }

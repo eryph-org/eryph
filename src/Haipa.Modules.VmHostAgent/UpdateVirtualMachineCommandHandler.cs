@@ -49,15 +49,19 @@ namespace Haipa.Modules.VmHostAgent
                 from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, _engine).ToAsync()
 
                 from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings).ToAsync()
-                select vmInfoConverged;
-
+                from inventory in CreateMachineInventory(_engine, hostSettings, vmInfoConverged).ToAsync()
+                select new ConvergeVirtualMachineResult
+                {
+                    Inventory = inventory,
+                    MachineMetadata = metadata,
+                };
             return chain.MatchAsync(
                 LeftAsync: HandleError,
-                RightAsync: async vmInfo2 =>
+                RightAsync: async result =>
                 {
-                    await ProgressMessage($"Virtual machine '{vmInfo2.Value.Name}' has been converged.").ConfigureAwait(false);
+                    await ProgressMessage($"Virtual machine '{result.Inventory.Name}' has been converged.").ConfigureAwait(false);
 
-                    return await _bus.Publish(OperationTaskStatusEvent.Completed(_operationId, _taskId))
+                    return await _bus.Publish(OperationTaskStatusEvent.Completed(_operationId, _taskId, result))
                         .ToUnit().ConfigureAwait(false);
                 });
 

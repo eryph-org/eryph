@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Events;
@@ -32,6 +33,7 @@ namespace Haipa.Modules.VmHostAgent
             var getNetworkAdapters = Prelude.fun(
                 (TypedPsObject<object> vm) => NetworkAdapterQuery.GetNetworkAdapters(vm, _engine));
 
+            var networkNames = new List<string>();
 
             return GetVMs<object>(message.VmId)
                 .BindAsync(SingleOrFailure)
@@ -44,6 +46,7 @@ namespace Haipa.Modules.VmHostAgent
                             MachineId = message.VmId,
                             ChangedAdapter = new VirtualMachineNetworkAdapterInfo()
                             {
+                                Id = a.Value.Id,
                                 AdapterName = a.Value.Name,
                                 VLanId = (ushort) a.Value.VlanSetting.AccessVlanId,
                                 VirtualSwitchName = a.Value.SwitchName,
@@ -51,7 +54,7 @@ namespace Haipa.Modules.VmHostAgent
                             },
                             ChangedNetwork = new VirtualMachineNetworkInfo
                             {
-                                AdapterName = a.Value.Name,
+                                Name = Networks.GenerateName(ref networkNames, a.Value),
                                 IPAddresses = message.IPAddresses,
                                 Subnets = NetworkAddresses.AddressesAndSubnetsToSubnets(message.IPAddresses,message.Netmasks).ToArray(),
                                 DefaultGateways = message.DefaultGateways,
@@ -76,7 +79,5 @@ namespace Haipa.Modules.VmHostAgent
             return _engine.GetObjectsAsync<T>(new PsCommandBuilder()
                 .AddCommand("Get-VM").AddParameter("Id", vmId));
         }
-
-
     }
 }
