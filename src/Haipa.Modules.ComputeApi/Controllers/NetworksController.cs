@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Microsoft.AspNet.OData;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
@@ -11,6 +12,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Haipa.Modules.ComputeApi.Controllers
 {
     [ApiVersion( "1.0" )]
+    [Authorize]
     public class NetworksController : ODataController
     {
         private readonly StateStoreContext _db;
