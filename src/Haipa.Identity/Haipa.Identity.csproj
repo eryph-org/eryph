@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Haipa.AppCore\Haipa.AppCore.csproj" />
     <ProjectReference Include="..\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj" />
   </ItemGroup>
 

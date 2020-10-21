@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Haipa.AppCore\Haipa.AppCore.csproj" />
     <ProjectReference Include="..\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj" />
   </ItemGroup>
 
