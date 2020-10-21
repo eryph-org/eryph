@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Events;
-using Haipa.Modules.VmHostAgent.Inventory;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Core;
@@ -12,7 +11,7 @@ using Haipa.VmManagement.Networking;
 using Haipa.VmManagement.Storage;
 using LanguageExt;
 
-namespace Haipa.Modules.VmHostAgent
+namespace Haipa.Modules.VmHostAgent.Inventory
 {
     internal class VirtualMachineInventory
     {
@@ -30,10 +29,11 @@ namespace Haipa.Modules.VmHostAgent
         {
             return from vm in Prelude.RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither()
                 from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _hostSettings, vm.Value.HardDrives)
-                        
+
                     select new MachineInfo
                     {
                         MachineId = vm.Value.Id,
+                        MetadataId = GetMetadataId(vm),
                         Status = InventoryConverter.MapVmInfoStatusToVmStatus(vm.Value.State),
                         Name = vm.Value.Name,
                         Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.Value.HardDrives).ToArray(),
@@ -66,6 +66,28 @@ namespace Haipa.Modules.VmHostAgent
             return disk;
 
         }
+        private static Guid GetMetadataId(TypedPsObject<VirtualMachineInfo> vmInfo)
+        {
+            var notes = vmInfo.Value.Notes;
+
+            var metadataIdString = "";
+            if (!string.IsNullOrWhiteSpace(notes))
+            {
+                var metadataIndex = notes.IndexOf("Haipa metadata id: ", StringComparison.InvariantCultureIgnoreCase);
+                if (metadataIndex != -1)
+                {
+                    var metadataEnd = metadataIndex + "Haipa metadata id: ".Length + 36;
+                    if (metadataEnd <= notes.Length)
+                        metadataIdString = notes.Substring(metadataIndex + "Haipa metadata id: ".Length, 36);
+
+                }
+            }
+
+            return !Guid.TryParse(metadataIdString, out var metadataId) 
+                ? Guid.Empty
+                : metadataId;
+        }
+
 
         private static IEnumerable<VirtualMachineDriveInfo> CreateHardDriveInfo(Seq<CurrentHardDiskDriveStorageSettings> storageSettings, IEnumerable<HardDiskDriveInfo> hds)
         {

@@ -31,12 +31,14 @@ namespace Haipa.Modules.Controller.Inventory
             parentDisks.Add(disk);
         }
 
+        
         public async Task Handle(UpdateInventoryCommand message)
         {
+
             var agentData = await _stateStoreContext.Agents
-                .Include(a=> a.Machines)
-                .FirstOrDefaultAsync(x=> x.Name == message.AgentName).ConfigureAwait(false) 
-                            ?? new Agent { Name = message.AgentName };
+                                .Include(a => a.Machines)
+                                .FirstOrDefaultAsync(x => x.Name == message.AgentName).ConfigureAwait(false)
+                            ?? new Agent {Name = message.AgentName};
 
 
             var diskInfos = message.Inventory.SelectMany(x => x.Drives.Select(d => d.Disk)).ToList();
@@ -50,6 +52,8 @@ namespace Haipa.Modules.Controller.Inventory
                 string.Equals(x.Path, y.Path, StringComparison.InvariantCultureIgnoreCase) &&
                 string.Equals(x.FileName, y.FileName, StringComparison.InvariantCultureIgnoreCase)).ToList();
 
+            var addedDisks = new List<VirtualDisk>();
+
             VirtualDisk LookupVirtualDisk(DiskInfo diskInfo)
             {
                 var disksDataCandidates = _stateStoreContext.VirtualDisks.Where(
@@ -57,7 +61,15 @@ namespace Haipa.Modules.Controller.Inventory
                          x.Project == diskInfo.Project &&
                          x.Environment == diskInfo.Environment &&
                          x.StorageIdentifier == diskInfo.StorageIdentifier &&
-                         x.Name == diskInfo.Name).ToArray();
+                         x.Name == diskInfo.Name).AsEnumerable()
+                    .Append(addedDisks
+                        .Where(
+                            x => x.DataStore == diskInfo.DataStore &&
+                                 x.Project == diskInfo.Project &&
+                                 x.Environment == diskInfo.Environment &&
+                                 x.StorageIdentifier == diskInfo.StorageIdentifier &&
+                                 x.Name == diskInfo.Name)
+                    ).ToArray();
 
                 VirtualDisk disk;
                 if (disksDataCandidates.Length <= 1)
@@ -85,7 +97,8 @@ namespace Haipa.Modules.Controller.Inventory
                         Environment = diskInfo.Environment,
                         StorageIdentifier = diskInfo.StorageIdentifier,
                     };
-                    await _stateStoreContext.AddAsync(disk);
+                    await _stateStoreContext.VirtualDisks.AddAsync(disk);
+                    addedDisks.Add(disk);
                 }
 
                 diskInfo.Id = disk.Id; // copy id of existing record
@@ -95,14 +108,12 @@ namespace Haipa.Modules.Controller.Inventory
                 disk.SizeBytes = diskInfo.SizeBytes;
             }
 
-            await _stateStoreContext.SaveChangesAsync().ConfigureAwait(false);
-
-
             //second loop to assign parents
             foreach (var diskInfo in diskInfos)
             {
                 var currentDisk = LookupVirtualDisk(diskInfo);
-                if (currentDisk == null) continue; // should not happen
+                if (currentDisk == null)
+                    continue; // should not happen
 
                 if (diskInfo.Parent == null)
                 {
@@ -114,8 +125,15 @@ namespace Haipa.Modules.Controller.Inventory
                 currentDisk.Parent = parentDisk;
             }
 
-            await _stateStoreContext.SaveChangesAsync().ConfigureAwait(false);
+            try
+            {
 
+                await _stateStoreContext.SaveChangesAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
 
             var newMachines = message.Inventory.Select(x =>
             {
@@ -127,13 +145,14 @@ namespace Haipa.Modules.Controller.Inventory
                     Agent = agentData,
                     VM = new VirtualMachine
                     {
+                        MetadataId = x.MetadataId,
                         NetworkAdapters = x.NetworkAdapters.Select(a => new VirtualMachineNetworkAdapter
                         {
                             Id = a.Id,
                             MachineId = x.MachineId,
                             Name = a.AdapterName,
-                            SwitchName = a.VirtualSwitchName                        
-                        }).ToList(),                      
+                            SwitchName = a.VirtualSwitchName
+                        }).ToList(),
                         Drives = x.Drives.Select(d => new VirtualMachineDrive
                         {
                             Id = d.Id,
@@ -142,33 +161,38 @@ namespace Haipa.Modules.Controller.Inventory
                             AttachedDisk = d.Disk != null ? _stateStoreContext.Find<VirtualDisk>(d.Disk.Id) : null
                         }).ToList()
                     },
-                    Networks = x.Networks?.Select( mn=> new MachineNetwork
+                    Networks = x.Networks?.Select(mn => new MachineNetwork
                     {
-                        Id = Guid.NewGuid(),
                         MachineId = x.MachineId,
                         Name = mn.Name,
-                        DnsServerAddresses = mn.DnsServers,                       
-                        IpV4Addresses = mn.IPAddresses.Select(IPAddress.Parse).Where(n=>n.AddressFamily == AddressFamily.InterNetwork )
-                                .Select(n=>n.ToString()).ToArray(),
-                        IpV6Addresses = mn.IPAddresses.Select(IPAddress.Parse).Where(n=>n.AddressFamily == AddressFamily.InterNetworkV6 )
-                            .Select(n=>n.ToString()).ToArray(),
-                        IPv4DefaultGateway = mn.DefaultGateways.Select(IPAddress.Parse).FirstOrDefault(n=>n.AddressFamily == AddressFamily.InterNetwork)?.ToString(),
-                        IPv6DefaultGateway = mn.DefaultGateways.Select(IPAddress.Parse).FirstOrDefault(n=>n.AddressFamily == AddressFamily.InterNetworkV6)?.ToString(),
-                        IpV4Subnets = mn.IPAddresses.Select(IPNetwork.Parse).Where(n=>n.AddressFamily == AddressFamily.InterNetwork )
-                            .Select(n=>n.ToString()).ToArray(),
-                        IpV6Subnets = mn.IPAddresses.Select(IPNetwork.Parse).Where(n=>n.AddressFamily == AddressFamily.InterNetworkV6 )
-                            .Select(n=>n.ToString()).ToArray(),
+                        DnsServerAddresses = mn.DnsServers,
+                        IpV4Addresses = mn.IPAddresses.Select(IPAddress.Parse)
+                            .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
+                            .Select(n => n.ToString()).ToArray(),
+                        IpV6Addresses = mn.IPAddresses.Select(IPAddress.Parse)
+                            .Where(n => n.AddressFamily == AddressFamily.InterNetworkV6)
+                            .Select(n => n.ToString()).ToArray(),
+                        IPv4DefaultGateway = mn.DefaultGateways.Select(IPAddress.Parse)
+                            .FirstOrDefault(n => n.AddressFamily == AddressFamily.InterNetwork)?.ToString(),
+                        IPv6DefaultGateway = mn.DefaultGateways.Select(IPAddress.Parse)
+                            .FirstOrDefault(n => n.AddressFamily == AddressFamily.InterNetworkV6)?.ToString(),
+                        IpV4Subnets = mn.IPAddresses.Select(IPNetwork.Parse)
+                            .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
+                            .Select(n => n.ToString()).ToArray(),
+                        IpV6Subnets = mn.IPAddresses.Select(IPNetwork.Parse)
+                            .Where(n => n.AddressFamily == AddressFamily.InterNetworkV6)
+                            .Select(n => n.ToString()).ToArray(),
                     }).ToList()
                 };
             });
 
             foreach (var newMachine in newMachines)
             {
-                var existingMachine = await _stateStoreContext.Machines.Where(x=>x.Id == newMachine.Id)
+                var existingMachine = await _stateStoreContext.Machines.Where(x => x.Id == newMachine.Id)
                     .Include(x => x.VM)
-                        .ThenInclude(x => x.NetworkAdapters)
+                    .ThenInclude(x => x.NetworkAdapters)
                     .Include(x => x.VM)
-                        .ThenInclude(x => x.Drives)
+                    .ThenInclude(x => x.Drives)
 
                     .Include(x => x.Networks).FirstOrDefaultAsync().ConfigureAwait(false);
 
@@ -181,18 +205,26 @@ namespace Haipa.Modules.Controller.Inventory
                 existingMachine.Name = newMachine.Name;
                 existingMachine.Status = newMachine.Status;
                 existingMachine.Agent = agentData;
+
+
                 existingMachine.Networks = newMachine.Networks;
 
-                if (existingMachine.VM== null)
+                if (existingMachine.VM == null)
                     existingMachine.VM = new VirtualMachine();
 
                 existingMachine.VM.NetworkAdapters = newMachine.VM.NetworkAdapters;
                 existingMachine.VM.Drives = newMachine.VM.Drives;
             }
 
+            try
+            {
 
-            await _stateStoreContext.SaveChangesAsync().ConfigureAwait(false);
-
+                await _stateStoreContext.SaveChangesAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
         private static MachineStatus MapVmStatusToMachineStatus(VmStatus status)

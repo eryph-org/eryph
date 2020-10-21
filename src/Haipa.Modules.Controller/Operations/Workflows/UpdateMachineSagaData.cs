@@ -7,6 +7,11 @@ namespace Haipa.Modules.Controller.Operations.Workflows
     {
         public MachineConfig Config { get; set; }
         public Guid MachineId { get; set; }
+        public string AgentName { get; set; }
 
+        public bool Validated;
+        public bool Updated;
     }
+
+
 }

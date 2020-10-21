@@ -13,6 +13,8 @@ namespace Haipa.Messages.Commands.OperationTasks
 
         public Guid MachineId { get; set; }
 
+        public long NewStorageId { get; set; }
+
         public VirtualMachineMetadata MachineMetadata { get; set; }
 
     }

@@ -7,8 +7,8 @@
   <ItemGroup>
     <PackageReference Include="Dbosoft.Hosuto" Version="0.2.2-PullRequest0018.3" />
     <PackageReference Include="JetBrains.Annotations" Version="2020.1.0" />
-    <PackageReference Include="Rebus.Async" Version="6.0.2" />
-    <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="4.6.0" />
+    <PackageReference Include="Rebus.Async" Version="7.1.0" />
+    <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="4.7.1" />
   </ItemGroup>
 
   <ItemGroup>

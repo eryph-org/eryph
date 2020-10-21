@@ -78,14 +78,14 @@ namespace Haipa.VmManagement.Storage
 
         public static Task<Either<PowershellFailure, VMStorageSettings>> Plan(
             HostSettings hostSettings,
-            Func<Task<Either<PowershellFailure, string>>> idGeneratorFunc,
+            string newStorageId,
             MachineConfig config, 
             Option<VMStorageSettings> currentStorageSettings)
         {
             return FromMachineConfig(config, hostSettings).BindAsync(newSettings =>
                 currentStorageSettings.MatchAsync(
-                    None: () => EnsureStorageId(idGeneratorFunc, newSettings),
-                    Some: currentSettings => EnsureStorageId(idGeneratorFunc, newSettings, currentSettings)));
+                    None: () => EnsureStorageId(newStorageId, newSettings),
+                    Some: currentSettings => EnsureStorageId(newStorageId, newSettings, currentSettings)));
 
         }
 
@@ -113,13 +113,13 @@ namespace Haipa.VmManagement.Storage
         }
 
         private static Task<Either<PowershellFailure, VMStorageSettings>> EnsureStorageId(
-            Func<Task<Either<PowershellFailure, string>>> idGeneratorFunc, VMStorageSettings settings)
+            string newStorageId, VMStorageSettings settings)
         {
-            return EnsureStorageId(idGeneratorFunc, settings, new VMStorageSettings());
+            return EnsureStorageId(newStorageId, settings, new VMStorageSettings());
         }
 
         private static Task<Either<PowershellFailure, VMStorageSettings>> EnsureStorageId(
-            Func<Task<Either<PowershellFailure, string>>> idGeneratorFunc, 
+            string newStorageId,
             VMStorageSettings first, VMStorageSettings second)
         {
             if (second.Frozen)
@@ -129,7 +129,7 @@ namespace Haipa.VmManagement.Storage
             return first.StorageIdentifier.MatchAsync(
                 None:
                 () => second.StorageIdentifier.MatchAsync(
-                    None: idGeneratorFunc,
+                    None: () => newStorageId,
                     Some: s => Prelude.RightAsync<PowershellFailure, string>(s).ToEither()),
                 Some: s => Prelude.RightAsync<PowershellFailure, string>(s).ToEither()
             ).MapAsync(storageIdentifier =>

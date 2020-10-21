@@ -108,9 +108,12 @@ namespace Haipa.VmManagement.Converging
         {
             return ConvergeHelpers.FindAndApply(vmInfo, l => l.DVDDrives,
                     drive => drive.ControllerLocation == 63 && drive.ControllerNumber == 0,
-                    drive => Context.Engine.RunAsync(PsCommandBuilder.Create()
-                        .AddCommand("Remove-VMDvdDrive")
-                        .AddParameter("VMDvdDrive", drive.PsObject)))
+                    drive =>
+                    {
+                        return Context.Engine.RunAsync(PsCommandBuilder.Create()
+                            .AddCommand("Remove-VMDvdDrive")
+                            .AddParameter("VMDvdDrive", drive.PsObject));
+                    })
                 .Map(list => list.Lefts().HeadOrNone()).MatchAsync(
                     None: () => vmInfo.RecreateOrReload(Context.Engine),
                     Some: l => Prelude.LeftAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(l).ToEither());

@@ -18,11 +18,30 @@ namespace Haipa.Runtime.Zero.Configuration
             return clientsConfigPath;
         }
 
+        public static string GetVMConfigPath()
+        {
+            var privateConfigPath = Path.Combine(GetConfigPath(), "private");
+            var vmConfigPath = Path.Combine(privateConfigPath, "vms");
+
+            return vmConfigPath;
+        }
+
+        public static string GetMetadataConfigPath()
+        {
+            var vmConfigPath = GetVMConfigPath();
+            var metadataConfigPath = Path.Combine(vmConfigPath, "md");
+
+            return metadataConfigPath;
+        }
+
 
         public static void EnsureConfiguration()
         {
             Config.EnsurePath(GetConfigPath());
             Config.EnsurePath(GetClientConfigPath());
+            Config.EnsurePath(GetVMConfigPath());
+            Config.EnsurePath(GetMetadataConfigPath());
+
             SystemClientGenerator.EnsureSystemClient();
 
             Certificate.CreateSSL(new CertificateOptions

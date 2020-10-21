@@ -1,21 +1,16 @@
 ﻿using System;
-using System.IO;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Commands;
-using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Events;
 using Haipa.Messages.Operations;
+using Haipa.Modules.VmHostAgent.Inventory;
 using Haipa.VmConfig;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Full;
 using LanguageExt;
-using LanguageExt.UnsafeValueAccess;
-using Newtonsoft.Json;
-using Rebus;
 using Rebus.Bus;
 using Rebus.Transport;
 
@@ -23,17 +18,17 @@ namespace Haipa.Modules.VmHostAgent
 {
     internal abstract class VirtualMachineConfigCommandHandler
     {
-        protected readonly IPowershellEngine _engine;
-        protected readonly IBus _bus;
-        protected Guid _operationId;
-        protected Guid _taskId;
+        protected readonly IPowershellEngine Engine;
+        protected readonly IBus Bus;
+        protected Guid OperationId;
+        protected Guid TaskId;
 
         protected VirtualMachineConfigCommandHandler(
             IPowershellEngine engine,
             IBus bus)
         {
-            _engine = engine;
-            _bus = bus;
+            Engine = engine;
+            Bus = bus;
         }
 
 
@@ -41,11 +36,11 @@ namespace Haipa.Modules.VmHostAgent
         {
             using (var scope = new RebusTransactionScope())
             {
-                await _bus.Publish(new OperationTaskProgressEvent
+                await Bus.Publish(new OperationTaskProgressEvent
                 {
                     Id = Guid.NewGuid(),
-                    OperationId = _operationId,
-                    TaskId = _taskId,
+                    OperationId = OperationId,
+                    TaskId = TaskId,
                     Message = message,
                     Timestamp = DateTimeOffset.UtcNow,
                 }).ConfigureAwait(false);
@@ -61,8 +56,8 @@ namespace Haipa.Modules.VmHostAgent
         protected async Task<Unit> HandleError(PowershellFailure failure)
         {
 
-            await _bus.Publish(OperationTaskStatusEvent.Failed(
-                _operationId, _taskId,
+            await Bus.Publish(OperationTaskStatusEvent.Failed(
+                OperationId, TaskId,
                 new ErrorData { ErrorMessage = failure.Message })
             ).ConfigureAwait(false);
 
@@ -87,19 +82,9 @@ namespace Haipa.Modules.VmHostAgent
 
         }
 
-        protected Task<Either<PowershellFailure, string>> GenerateId()
-        {
-            return Prelude.TryAsync(() =>
-                    _bus.SendRequest<GenerateIdReply>(new GenerateIdCommand(), null, TimeSpan.FromMinutes(5))
-                        .Map(r => LongToString(r.GeneratedId, 36)))
-
-                .ToEither(ex => new PowershellFailure { Message = ex.Message }).ToEither();
-
-        }
-
         public const string DefaultDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-        public static string LongToString(BigInteger subject, int @base, string digits = DefaultDigits)
+        public static string LongToString(BigInteger subject, int @base = 36, string digits = DefaultDigits)
         {
             if (@base < 2) { throw (new ArgumentException("Base must not be less than 2", nameof(@base))); }
             if (digits.Length < @base) { throw (new ArgumentException("Not enough Digits for the base", nameof(digits))); }

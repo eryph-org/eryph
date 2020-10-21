@@ -52,7 +52,7 @@ namespace Haipa.Runtime.Zero
                 .HostModule<ComputeApiModule>()
                 .AddIdentityModule(container)
                 .HostModule<VmHostAgentModule>()
-                .HostModule<ControllerModule>()
+                .AddControllerModule(container)
 
 
                 .UseEnvironment("Development")

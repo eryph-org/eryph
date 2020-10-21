@@ -53,9 +53,14 @@ namespace Haipa.Modules.Controller.Operations
                     Id = message.MachineId,
                     VM = new VirtualMachine { Id = message.MachineId }
                 };
+                
                 await _dbContext.AddAsync(machine).ConfigureAwait(false);
 
             }
+
+            if (message.NewMetadataId.HasValue)
+                machine.VM.MetadataId = message.NewMetadataId.GetValueOrDefault();
+
 
             await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 

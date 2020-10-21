@@ -29,27 +29,27 @@ namespace Haipa.Modules.VmHostAgent
             var config = command.Config;
             var machineId = command.MachineId;
 
-            _operationId = command.OperationId;
-            _taskId = command.TaskId;
+            OperationId = command.OperationId;
+            TaskId = command.TaskId;
 
             var hostSettings = HostSettingsBuilder.GetHostSettings();
             var convergeVM = Prelude.fun((TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig c, VMStorageSettings storageSettings) =>
-                VirtualMachine.Converge(hostSettings, _engine, ProgressMessage, vmInfo, c, storageSettings));
+                VirtualMachine.Converge(hostSettings, Engine, ProgressMessage, vmInfo, c, storageSettings));
 
             var chain =
 
-                from vmList in GetVmInfo(machineId, _engine).ToAsync()
+                from vmList in GetVmInfo(machineId, Engine).ToAsync()
                 from vmInfo in EnsureSingleEntry(vmList, machineId).ToAsync()
 
                 from currentStorageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).ToAsync()
-                from plannedStorageSettings in VMStorageSettings.Plan(hostSettings, GenerateId, config, currentStorageSettings).ToAsync()
+                from plannedStorageSettings in VMStorageSettings.Plan(hostSettings,LongToString(command.NewStorageId), config, currentStorageSettings).ToAsync()
 
                 from metadata in EnsureMetadata(message.Command.MachineMetadata, vmInfo).ToAsync()
                 from mergedConfig in config.MergeWithImageSettings(metadata.ImageConfig).ToAsync()
-                from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, _engine).ToAsync()
+                from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).ToAsync()
 
                 from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings).ToAsync()
-                from inventory in CreateMachineInventory(_engine, hostSettings, vmInfoConverged).ToAsync()
+                from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged).ToAsync()
                 select new ConvergeVirtualMachineResult
                 {
                     Inventory = inventory,
@@ -61,7 +61,7 @@ namespace Haipa.Modules.VmHostAgent
                 {
                     await ProgressMessage($"Virtual machine '{result.Inventory.Name}' has been converged.").ConfigureAwait(false);
 
-                    return await _bus.Publish(OperationTaskStatusEvent.Completed(_operationId, _taskId, result))
+                    return await Bus.Publish(OperationTaskStatusEvent.Completed(OperationId, TaskId, result))
                         .ToUnit().ConfigureAwait(false);
                 });
 
@@ -94,7 +94,7 @@ namespace Haipa.Modules.VmHostAgent
         {
             var notes = vmInfo.Value.Notes;
 
-            var metadataId = "";
+            var metadataIdString = "";
             if (!string.IsNullOrWhiteSpace(notes))
             {
                 var metadataIndex = notes.IndexOf("Haipa metadata id: ", StringComparison.InvariantCultureIgnoreCase);
@@ -102,19 +102,23 @@ namespace Haipa.Modules.VmHostAgent
                 {
                     var metadataEnd = metadataIndex + "Haipa metadata id: ".Length + 36;
                     if (metadataEnd <= notes.Length)
-                        metadataId = notes.Substring(metadataIndex + "Haipa metadata id: ".Length, 36);
+                        metadataIdString = notes.Substring(metadataIndex + "Haipa metadata id: ".Length, 36);
 
                 }
             }
 
-            if (string.IsNullOrWhiteSpace(metadataId))
+
+            if (string.IsNullOrWhiteSpace(metadataIdString))
             {
                 var newNotes = $"Haipa metadata id: {metadata.Id}";
 
-                return _engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
+                return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
                     .AddParameter("Notes", newNotes)).MapAsync(u => metadata);
 
             }
+
+            if (!Guid.TryParse(metadataIdString, out var metadataId))
+                throw new InvalidOperationException("Found invalid haipa metadata id in VM notes.");
 
 
             if (metadataId != metadata.Id)
@@ -125,5 +129,5 @@ namespace Haipa.Modules.VmHostAgent
 
     }
 
-    
+
 }

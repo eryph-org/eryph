@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="8.1.1" />
+    <PackageReference Include="AutoMapper" Version="10.0.0" />
     <PackageReference Include="Haipa.CloudInit.ConfigDrive" Version="0.5.0" />
     <PackageReference Include="Haipa.CloudInit.ConfigDrive.NoCloud" Version="0.5.0" />
     <PackageReference Include="Haipa.CloudInit.ConfigDrive.WindowsImaging" Version="0.5.0" />

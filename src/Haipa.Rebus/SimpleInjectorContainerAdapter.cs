@@ -37,14 +37,12 @@ namespace Haipa.Rebus
             {
                 var handlerList = handlerInstances.ToList();
 
-                transactionContext.OnDisposed(() =>
+                transactionContext.OnDisposed((ctx) =>
                 {
-                    handlerList
-                        .OfType<IDisposable>()
-                        .ForEach(disposable =>
-                        {
-                            disposable.Dispose();
-                        });
+                    foreach (var disposable in handlerList.OfType<IDisposable>())
+                    {
+                        disposable.Dispose();
+                    }
 
                     scope.Dispose();
                 });

@@ -11,6 +11,7 @@ using Haipa.VmManagement.Data.Planned;
 using Haipa.VmManagement.Storage;
 using LanguageExt;
 using LanguageExt.SomeHelp;
+using LanguageExt.UnsafeValueAccess;
 using static LanguageExt.Prelude;
 
 
@@ -263,9 +264,6 @@ namespace Haipa.VmManagement
             }).MapAsync(seq => Unit.Default);
 
         }
-
-
-
 
     }
 }

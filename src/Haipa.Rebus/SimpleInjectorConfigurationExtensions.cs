@@ -94,6 +94,31 @@ namespace Haipa.Rebus
                 throw new NotImplementedException();
             }
 
+            public void SendLocal(object commandMessage, IDictionary<string, string> optionalHeaders = null)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Send(object commandMessage, IDictionary<string, string> optionalHeaders = null)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Reply(object replyMessage, IDictionary<string, string> optionalHeaders = null)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Defer(TimeSpan delay, object message, IDictionary<string, string> optionalHeaders = null)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void DeferLocal(TimeSpan delay, object message, IDictionary<string, string> optionalHeaders = null)
+            {
+                throw new NotImplementedException();
+            }
+
             public void Subscribe<TEvent>()
             {
                 throw new NotImplementedException();
@@ -110,6 +135,11 @@ namespace Haipa.Rebus
             }
 
             public void Unsubscribe(Type eventType)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Publish(object eventMessage, IDictionary<string, string> optionalHeaders = null)
             {
                 throw new NotImplementedException();
             }

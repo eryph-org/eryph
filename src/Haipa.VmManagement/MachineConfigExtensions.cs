@@ -26,14 +26,14 @@ namespace Haipa.VmManagement
                 c.CreateMap<VirtualMachineDriveConfig, VirtualMachineDriveConfig>();
 
             }));
-            var newConfig = mapper.DefaultContext.Mapper.Map<MachineConfig, MachineConfig>(machineConfig);
+            var newConfig = mapper.Map<MachineConfig, MachineConfig>(machineConfig);
 
             return optionalImageConfig
                 .Map(imageConfig =>
                 {
                     //initialize machine config with image settings
                     newConfig.VM =
-                        mapper.DefaultContext.Mapper.Map<VirtualMachineConfig, VirtualMachineConfig>(imageConfig);
+                        mapper.Map<VirtualMachineConfig, VirtualMachineConfig>(imageConfig);
 
                     //merge drive settings configured both on image and vm config
                     newConfig.VM.Drives.ToSeq()

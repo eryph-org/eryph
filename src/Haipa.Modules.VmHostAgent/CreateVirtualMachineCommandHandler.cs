@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿using System;
 using System.Threading.Tasks;
 using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
@@ -11,7 +11,6 @@ using Haipa.VmManagement.Storage;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
-using Newtonsoft.Json;
 using Rebus.Bus;
 using Rebus.Handlers;
 
@@ -32,19 +31,19 @@ namespace Haipa.Modules.VmHostAgent
             var command = message.Command;
             var config = command.Config;
 
-            _operationId = command.OperationId;
-            _taskId = command.TaskId;
+            OperationId = command.OperationId;
+            TaskId = command.TaskId;
 
             var hostSettings = HostSettingsBuilder.GetHostSettings();
             
             var planStorageSettings = Prelude.fun(() => 
-                VMStorageSettings.Plan(hostSettings, GenerateId, config, Option<VMStorageSettings>.None).ToAsync());
+                VMStorageSettings.Plan(hostSettings, LongToString(message.Command.NewStorageId), config, Option<VMStorageSettings>.None).ToAsync());
 
             var getTemplate = Prelude.fun(() =>
-                GetTemplate(_engine, hostSettings,config.Image).ToAsync());
+                GetTemplate(Engine, hostSettings,config.Image).ToAsync());
             
             var createVM = Prelude.fun((VMStorageSettings settings, Option<PlannedVirtualMachineInfo> template) => 
-                CreateVM(config, hostSettings, settings, _engine, template).ToAsync());
+                CreateVM(config, hostSettings, settings, Engine, template).ToAsync());
 
             var createMetadata = Prelude.fun((TypedPsObject<VirtualMachineInfo> vmInfo, Option<PlannedVirtualMachineInfo> plannedVM) =>
                 CreateMetadata(plannedVM, vmInfo, config).ToAsync());
@@ -54,7 +53,7 @@ namespace Haipa.Modules.VmHostAgent
                 from optionalTemplate in getTemplate()
                 from createdVM in createVM(plannedStorageSettings, optionalTemplate)
                 from metadata in createMetadata(createdVM, optionalTemplate)
-                from inventory in CreateMachineInventory(_engine, hostSettings, createdVM).ToAsync()
+                from inventory in CreateMachineInventory(Engine, hostSettings, createdVM).ToAsync()
                 select new ConvergeVirtualMachineResult
                 {
                     Inventory = inventory,
@@ -64,7 +63,7 @@ namespace Haipa.Modules.VmHostAgent
             return chain.MatchAsync(
                 LeftAsync: HandleError,
                 RightAsync: result => 
-                    _bus.Publish(OperationTaskStatusEvent.Completed(_operationId, _taskId, result)).ToUnit());
+                    Bus.Publish(OperationTaskStatusEvent.Completed(OperationId, TaskId, result)).ToUnit());
 
         }
 
@@ -103,30 +102,20 @@ namespace Haipa.Modules.VmHostAgent
         private Task<Either<PowershellFailure, VirtualMachineMetadata>> CreateMetadata(Option<PlannedVirtualMachineInfo> template,
             TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config)
         {
-            return GenerateId().BindAsync(id =>
+            var metadata = new VirtualMachineMetadata
             {
-                var metadata = new VirtualMachineMetadata
-                {
-                    Id = id,
-                    VMId = vmInfo.Value.Id,
-                    ProvisioningConfig = config.Provisioning
-                };
+                Id = Guid.NewGuid(),
+                VMId = vmInfo.Value.Id,
+                ProvisioningConfig = config.Provisioning
+            };
 
-                if (template.IsSome)
-                    metadata.ImageConfig = template.ValueUnsafe().ToVmConfig();
+            if (template.IsSome)
+                metadata.ImageConfig = template.ValueUnsafe().ToVmConfig();
+            
+            var newNotes = $"Haipa metadata id: {metadata.Id}";
 
-                var metadataJson = JsonConvert.SerializeObject(metadata);
-                File.WriteAllText($"{metadata.Id}.hmeta", metadataJson);
-
-                return Prelude.RightAsync<PowershellFailure, VirtualMachineMetadata>(metadata).ToEither();
-            }).BindAsync(metadata =>
-            {
-                var newNotes = $"Haipa metadata id: {metadata.Id}";
-
-                return _engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("Notes", newNotes)).MapAsync(u => metadata);
-            });
-
+            return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
+                .AddParameter("Notes", newNotes)).MapAsync(u => metadata);
 
 
         }
