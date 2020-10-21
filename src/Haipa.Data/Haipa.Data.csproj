@@ -2,16 +2,18 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <RootNamespace>Haipa</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.2.2" />
+    <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="4.1.0" />
 
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="3.1.8" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Core\Haipa.Core.csproj" />
   </ItemGroup>
+
 
 </Project>

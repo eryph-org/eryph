@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dbosoft.Hosuto" Version="0.2.2" />
+            <PackageReference Include="Rebus.Async" Version="7.1.0" />
+            <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="4.6.2" />
+    
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Haipa.Core\Haipa.Core.csproj" />
+    <ProjectReference Include="..\Haipa.Messages\Haipa.Messages.csproj" />
+    <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
+  </ItemGroup>
+</Project>

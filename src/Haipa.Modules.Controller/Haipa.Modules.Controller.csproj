@@ -1,18 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>7.1</LangVersion>
+    <TargetFramework>netstandard2.1</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto" Version="0.2.2-PullRequest0018.3" />
-    <PackageReference Include="JetBrains.Annotations" Version="2020.1.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Haipa.Messages\Haipa.Messages.csproj" />
-    <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
+    <ProjectReference Include="..\Haipa.ModuleCore\Haipa.ModuleCore.csproj" />
     <ProjectReference Include="..\Haipa.StateDb\Haipa.StateDb.csproj" />
   </ItemGroup>
 
