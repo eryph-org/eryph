@@ -36,6 +36,12 @@ namespace Haipa.Modules.Controller
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationTaskHandler<>));
 
+            container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
+            container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
+
+            container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
+
+
             container.RegisterSingleton( () => new Id64Generator());
             container.Register<IOperationTaskDispatcher, OperationTaskDispatcher>();
 
@@ -73,7 +79,7 @@ namespace Haipa.Modules.Controller
                 .Logging(x => x.ColoredConsole(LogLevel.Debug)).Start());
         }
 
-        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        public void ConfigureServices(IServiceCollection services)
         {
             services.AddHostedHandler<StartBusModuleHandler>();
             services.AddHostedHandler<InventoryHandler>();

@@ -8,11 +8,15 @@ namespace Haipa.Messages.Events
         public string Name { get; set; }
 
         public Guid MachineId { get; set; }
-        
+        public Guid MetadataId { get; set; }
+
+
         public VmStatus Status { get; set; }
 
         public VirtualMachineNetworkAdapterInfo[] NetworkAdapters { get; set; }
         public VirtualMachineNetworkInfo[] Networks { get; set; }
+        public VirtualMachineDriveInfo[] Drives { get; set; }
+
 
     }
 }

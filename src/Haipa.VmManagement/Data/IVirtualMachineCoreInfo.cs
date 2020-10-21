@@ -6,10 +6,11 @@ namespace Haipa.VmManagement.Data
     {
         Guid Id { get; }
         string Name { get; }
-        DvdDriveInfo[] DVDDrives { get; }
-        HardDiskDriveInfo[] HardDrives { get; }
-        int Generation { get; }
-        bool IsClustered { get; }
+
+        //bool IsClustered { get; }
         string Path { get; }
+        long MemoryStartup { get; }
+        long ProcessorCount { get; }
+        int Generation { get; }
     }
 }

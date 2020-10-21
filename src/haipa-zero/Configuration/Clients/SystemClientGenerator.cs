@@ -62,7 +62,9 @@ namespace Haipa.Runtime.Zero.Configuration.Clients
                 X509CertificateBase64 = Convert.ToBase64String(certificate.GetEncoded()),
                 AllowedScopes = new []{ "openid", "compute_api", "common_api", "identity:clients:write:all" }
             };
-            newClient.SaveConfigFile();
+
+            var clientIO = new ConfigIO(ZeroConfig.GetClientConfigPath());
+            clientIO.SaveConfigFile(newClient, newClient.ClientId);
             CertHelper.WritePrivateKeyFile(systemClientKeyFile, keyPair);
 
         }

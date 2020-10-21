@@ -8,6 +8,7 @@ using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Haipa.VmConfig;
 using Microsoft.AspNet.OData;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using static Microsoft.AspNetCore.Http.StatusCodes;
@@ -15,6 +16,7 @@ using static Microsoft.AspNetCore.Http.StatusCodes;
 namespace Haipa.Modules.ComputeApi.Controllers
 {
     [ApiVersion( "1.0" )]
+    [Authorize]
     public class MachinesController : ODataController
     {
         private readonly StateStoreContext _db;
@@ -30,7 +32,7 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [SwaggerOperation( OperationId  = "Machines_List")]
         [Produces( "application/json" )]
         [SwaggerResponse(Status200OK, "Success", typeof(ODataValue<IEnumerable<Machine>>))]
-        [EnableQuery]
+        [EnableQuery(MaxExpansionDepth = 3)]
         public IActionResult Get()
         {
 
@@ -46,7 +48,7 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [SwaggerOperation(OperationId = "Machines_Get")]
         [Produces("application/json")]
         [SwaggerResponse(Status200OK, "Success", typeof(Machine))]
-        [EnableQuery]
+        [EnableQuery(MaxExpansionDepth = 3)]
         public IActionResult Get([FromODataUri] Guid key)
         {
             return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == key)));

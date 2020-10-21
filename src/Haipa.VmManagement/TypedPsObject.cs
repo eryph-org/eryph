@@ -4,7 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Management.Automation;
+using System.Reflection;
 using AutoMapper;
+using Haipa.VmManagement.Data;
+using Haipa.VmManagement.Data.Core;
+using Haipa.VmManagement.Data.Full;
+using Haipa.VmManagement.Data.Planned;
 using LanguageExt;
 
 namespace Haipa.VmManagement
@@ -66,18 +71,49 @@ namespace Haipa.VmManagement
 
     internal static class TypedPsObjectMapping
     {
-        private static readonly IMapper Mapper;
+        private static IMapper _mapper;
 
-        static TypedPsObjectMapping()
+        private static void EnsureMapper(PSObject psoObject)
         {
-            var config = new MapperConfiguration(cfg => { cfg.CreateMissingTypeMaps = true; });
+            if (_mapper != null)
+                return;
 
-            Mapper = new Mapper(config);
+            var powershellAssembly = psoObject.BaseObject.GetType().Assembly;
+
+            Type GetPsType(string name)
+            {
+                return powershellAssembly.GetType($"Microsoft.HyperV.PowerShell.{name}", true);
+            }
+            
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateProfile("Powershell", c =>
+                {
+                    c.CreateMap(GetPsType("VirtualMachine"), typeof(PlannedVirtualMachineInfo));
+
+                    c.CreateMap(GetPsType("HardDiskDrive"), typeof(HardDiskDriveInfo));
+                    c.CreateMap(GetPsType("HardDiskDrive"), typeof(PlannedHardDiskDriveInfo))
+                        .ForMember("Size", m => m.Ignore());
+
+                    c.CreateMap(GetPsType("DvdDrive"), typeof(DvdDriveInfo));
+
+                    c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(VMNetworkAdapter));
+                    c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(PlannedVMNetworkAdapter));
+
+                    c.CreateMap(GetPsType(nameof(VMNetworkAdapterVlanSetting)), typeof(VMNetworkAdapterVlanSetting));
+
+                });
+            });
+
+            _mapper = new Mapper(config);
         }
 
-        public static T Map<T>(object psObject)
+        public static T Map<T>(PSObject psObject)
         {
-            return Mapper.Map<T>(psObject);
+            EnsureMapper(psObject);
+
+            // ReSharper disable once RedundantCast
+            return _mapper.Map<T>((object) psObject);
         }
     }
 

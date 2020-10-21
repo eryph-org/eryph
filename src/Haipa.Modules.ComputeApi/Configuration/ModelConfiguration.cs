@@ -1,5 +1,6 @@
 ﻿using Haipa.StateDb.Model;
 using Microsoft.AspNet.OData.Builder;
+using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Haipa.Modules.ComputeApi.Configuration
@@ -11,8 +12,11 @@ namespace Haipa.Modules.ComputeApi.Configuration
             builder.Namespace = "Haipa";
 
             builder.EntitySet<Machine>("Machines");
+
             builder.EntitySet<Agent>("Agents");
             builder.EntitySet<Network>("Networks");
+            builder.EntitySet<VirtualDisk>("VirtualDisks");
+
             //builder.EntitySet<Subnet>("Subnets");
 
             //builder.EntityType<Network>().HasOptional(np => np.Subnets);
@@ -29,7 +33,7 @@ namespace Haipa.Modules.ComputeApi.Configuration
             builder.EntityType<Machine>().HasMany(x => x.Networks);
 
             builder.EntitySet<MachineNetwork>("MachineNetworks");
-            builder.EntityType<MachineNetwork>().HasKey(x => x.MachineId).HasKey(x => x.AdapterName);
+            builder.EntityType<MachineNetwork>().HasKey(x=> x.Id);
             builder.EntityType<MachineNetwork>().Ignore(x=>x.IpV4AddressesInternal);
             builder.EntityType<MachineNetwork>().Ignore(x => x.IpV6AddressesInternal);
             builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV6Addresses);
@@ -41,12 +45,27 @@ namespace Haipa.Modules.ComputeApi.Configuration
             builder.EntityType<MachineNetwork>().Ignore(x=>x.DnsServersInternal);
             builder.EntityType<MachineNetwork>().CollectionProperty(x => x.DnsServerAddresses);
 
+            builder.EntitySet<VirtualMachine>("VirtualMachines");
+            builder.EntityType<VirtualMachine>().HasKey(x=>x.Id);
+            builder.EntityType<VirtualMachine>().HasRequired(x => x.Machine);
 
-            builder.EntityType<VirtualMachine>().HasMany(x => x.NetworkAdapters);
+            builder.EntityType<VirtualMachine>().ContainsMany(x => x.Drives);
+            builder.EntityType<VirtualMachine>().ContainsMany(x => x.NetworkAdapters);
 
-            builder.EntitySet<VirtualMachineNetworkAdapter>("VirtualMachineNetworkAdapters");
-            builder.EntityType<VirtualMachineNetworkAdapter>().HasKey(x => x.MachineId).HasKey(x => x.Name);
+            builder.EntityType<VirtualDisk>().ContainsMany(x => x.AttachedDrives);
 
+            //builder.EntitySet<VirtualMachineNetworkAdapter>("VirtualMachineNetworkAdapters");
+            //builder.EntityType<VirtualMachineNetworkAdapter>().HasKey(x => x.Id);
+
+            //builder.EntitySet<VirtualMachineDrive>("VirtualMachineDrives");
+            //builder.EntityType<VirtualMachineDrive>().HasKey(x => x.Id);
+            //builder.EntityType<VirtualMachineDrive>().HasOptional(x => x.AttachedDisk);
+
+            builder.EntitySet<VirtualDisk>("VirtualDisks");
+            builder.EntityType<VirtualDisk>().HasKey(x => x.Id);
+            builder.EntityType<VirtualDisk>().HasOptional(x => x.Parent);
+            builder.EntityType<VirtualDisk>().HasMany(x => x.Childs);
+            builder.EntityType<VirtualDisk>().ContainsMany(x=>x.AttachedDrives);
 
             builder.EntityType<Machine>().Action("Start").ReturnsFromEntitySet<Operation>("Operations");
             builder.EntityType<Machine>().Action("Stop").ReturnsFromEntitySet<Operation>("Operations");

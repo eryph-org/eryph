@@ -8,6 +8,7 @@ namespace Haipa.Messages.Operations
         public Guid OperationId { get; set; }
         public Guid MachineId { get; set; }
         public string AgentName { get; set; }
+        public Guid? NewMetadataId { get; set; }
 
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Microsoft.AspNet.OData;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using static Microsoft.AspNetCore.Http.StatusCodes;
@@ -11,6 +12,7 @@ using static Microsoft.AspNetCore.Http.StatusCodes;
 namespace Haipa.Modules.CommonApi.Controllers
 {
     [ApiVersion( "1.0" )]
+    [Authorize]
     public class OperationsController : ODataController
     {
         private readonly StateStoreContext _db;

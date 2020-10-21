@@ -11,7 +11,7 @@ using Microsoft.Extensions.Hosting;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 using Client = Haipa.Modules.Identity.Models.V1.Client;
-using Scope = IdentityServer4.Models.Scope;
+using Scope = IdentityServer4.Models.ApiScope;
 
 namespace Haipa.Modules.Identity
 {
@@ -66,25 +66,40 @@ namespace Haipa.Modules.Identity
                 })
                 .AddInMemoryApiResources(new List<ApiResource>
                 {
-                    new ApiResource("common_api"),
-                    new ApiResource("compute_api"),
+                    new ApiResource("common_api")
+                        { 
+                            Scopes = new List<string>
+                            {
+                                "compute_api",
+                            }
+                        },
+
+                    new ApiResource("compute_api")
+                    {
+                        Scopes = new List<string>
+                        {
+                            "common_api",
+                        }
+                    },
+
                     new ApiResource
                     {
                         Name = "identity_api",
-                        Scopes =
+                        Scopes = new List<string>
                         {
-                            new Scope
-                            {
-                                Name = "identity:clients:write:all",
-                                DisplayName = "Full access to clients"
-                            },
-                            new Scope
-                            {
-                                Name = "identity:clients:read:all",
-                                DisplayName = "Read only access to clients"
-                            }
+                            "identity:clients:write:all",
+                            "identity:clients:read:all"
                         }
                     }
+                })
+                .AddInMemoryApiScopes(new []
+                {
+                    new Scope("common_api"),
+                    new Scope("compute_api"),
+
+                    new Scope("identity:clients:write:all", "Full access to clients"),
+                    new Scope("identity:clients:read:all",  "Read only access to clients")
+
                 })
                 //.AddInMemoryCaching()
                 .AddInMemoryIdentityResources(

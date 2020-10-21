@@ -5,10 +5,12 @@ namespace Haipa.StateDb.Model
 {
     public class MachineNetwork
     {
+        public Guid Id { get; set; }
+
         public Guid MachineId { get; set; }
         public Machine Machine { get; set; }
 
-        public string AdapterName { get; set; }
+        public string Name { get; set; }
 
         [Column("IpV4Addresses")]
         public string IpV4AddressesInternal { get; set; }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Haipa.VmManagement.Data;
+using Haipa.VmManagement.Data.Full;
 using LanguageExt;
 
 namespace Haipa.VmManagement

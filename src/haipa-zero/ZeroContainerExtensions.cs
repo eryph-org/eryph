@@ -16,7 +16,6 @@ namespace Haipa.Runtime.Zero
                 .UseInMemoryBus()
                 .UseInMemoryDb();
 
-            container.Register<IPlacementCalculator, ZeroAgentPlacementCalculator>();
 
 
         }

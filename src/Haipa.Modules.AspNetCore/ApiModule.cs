@@ -32,11 +32,6 @@ namespace Haipa.Modules
 
             services.AddMvc(op =>
             {
-                var policy = new AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .Build();
-                op.Filters.Add(new AuthorizeFilter(policy));
-
             }).AddApiProvider<TModule>(op => op.ApiName = ApiName);
 
 

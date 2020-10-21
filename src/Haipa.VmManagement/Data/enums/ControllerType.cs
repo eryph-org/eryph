@@ -1,0 +1,4 @@
+﻿namespace Haipa.VmManagement.Data
+{
+
+}

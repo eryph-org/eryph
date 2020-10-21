@@ -36,16 +36,18 @@ namespace Haipa.Modules.Controller.Inventory
 
             if (adapter == null)
             {
-                adapter = new VirtualMachineNetworkAdapter {Name = message.ChangedAdapter.AdapterName, Vm = machine.VM};
+                adapter = new VirtualMachineNetworkAdapter {Id = message.ChangedAdapter.Id, Name = message.ChangedAdapter.AdapterName, Vm = machine.VM};
                 _stateStoreContext.Add(adapter);
             }
 
             adapter.SwitchName = message.ChangedAdapter.VirtualSwitchName;
+             
+            var network = machine.Networks.FirstOrDefault(x => 
+                x.Name == message.ChangedNetwork.Name );
 
-            var network = machine.Networks.FirstOrDefault(x => x.AdapterName == message.ChangedNetwork.AdapterName);
             if (network == null)
             {
-                network = new MachineNetwork {AdapterName = message.ChangedNetwork.AdapterName};
+                network = new MachineNetwork {Id = Guid.NewGuid(), Name = message.ChangedNetwork.Name};
                 machine.Networks.Add(network);
             }
 
@@ -71,17 +73,5 @@ namespace Haipa.Modules.Controller.Inventory
 
         }
 
-        private static MachineStatus MapVmStatusToMachineStatus(VmStatus status)
-        {
-            switch (status)
-            {
-                case VmStatus.Stopped:
-                    return MachineStatus.Stopped;
-                case VmStatus.Running:
-                    return MachineStatus.Running;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(status), status, null);
-            }
-        }
     }
 }

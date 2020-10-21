@@ -1,9 +1,9 @@
 ﻿using System.Threading.Tasks;
-using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
+using Haipa.VmManagement.Data.Full;
 using LanguageExt;
 
-namespace Haipa.Modules.VmHostAgent
+namespace Haipa.VmManagement
 {
     public static class VirtualMachineInfoExtensions
     {

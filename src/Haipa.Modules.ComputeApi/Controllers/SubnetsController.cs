@@ -2,12 +2,14 @@
 using System.Linq;
 using Haipa.StateDb;
 using Microsoft.AspNet.OData;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Haipa.Modules.ComputeApi.Controllers
 {
     [ApiVersion( "1.0" )]
+    [Authorize]
     public class SubnetsController : ODataController
     {
         private readonly StateStoreContext _db;
