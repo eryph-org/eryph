@@ -9,7 +9,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Haipa.AppCore\Haipa.AppCore.csproj" />
     <ProjectReference Include="..\Haipa.StateDb\Haipa.StateDb.csproj" />
   </ItemGroup>
 

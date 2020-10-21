@@ -1,7 +1,6 @@
 ﻿using System;
 using Haipa.Messages.Operations;
 using Haipa.VmConfig;
-using JetBrains.Annotations;
 
 namespace Haipa.Messages.Commands.OperationTasks
 {

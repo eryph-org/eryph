@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Haipa.Core\Haipa.Core.csproj" />
+    <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
   </ItemGroup>
 
 </Project>

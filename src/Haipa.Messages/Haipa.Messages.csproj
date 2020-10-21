@@ -7,7 +7,6 @@
 
 
   <ItemGroup>
-    <ProjectReference Include="..\Haipa.Core\Haipa.Core.csproj" />
     <ProjectReference Include="..\Haipa.VmConfig.Primitives\Haipa.VmConfig.Primitives.csproj" />
   </ItemGroup>
 
