@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Haipa.IdentityModel.Clients;
