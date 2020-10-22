@@ -117,8 +117,8 @@ namespace Haipa.Modules.ApiProvider
                     options.CustomSchemaIds((type) =>
                     {
                         var defaultName = DefaultSchemaIdSelector(type);
-                        return defaultName.EndsWith("IEnumerableODataValue")
-                            ? defaultName.Replace("IEnumerableODataValue", "List")
+                        return defaultName.EndsWith("IEnumerableODataValueEx")
+                            ? defaultName.Replace("IEnumerableODataValueEx", "List")
                             : defaultName;
                     });
                 });
@@ -157,7 +157,7 @@ namespace Haipa.Modules.ApiProvider
             {
                 app.UseMvc(routes =>
                 {
-                    routes.Select().Expand().Filter().OrderBy().MaxTop(100).Count();
+                    routes.Select().Expand().Filter().OrderBy().MaxTop(100).Count().SkipToken();
                     routes.MapVersionedODataRoutes("odata-bypath", "api/v{version:apiVersion}", models);
                 });
 
