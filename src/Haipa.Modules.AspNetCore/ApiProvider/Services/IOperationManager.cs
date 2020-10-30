@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Haipa.Messages.Operations;
 using Haipa.StateDb.Model;
 
-namespace Haipa.Modules.ApiProvider.Services
+namespace Haipa.Modules.AspNetCore.ApiProvider.Services
 {
     public interface IOperationManager
     {

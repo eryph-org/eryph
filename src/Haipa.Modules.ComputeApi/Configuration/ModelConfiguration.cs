@@ -1,4 +1,5 @@
-﻿using Haipa.StateDb.Model;
+﻿using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
+using Haipa.Modules.ComputeApi.Model.V1;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNetCore.Mvc;
@@ -9,66 +10,28 @@ namespace Haipa.Modules.ComputeApi.Configuration
     {
         private static void ConfigureV1( ODataModelBuilder builder )
         {
-            builder.Namespace = "Haipa";
+            builder.Namespace = "Compute";
+
+            //operations are not part of this model and will therefore be no entity type.
+            builder.ComplexType<Operation>();
 
             builder.EntitySet<Machine>("Machines");
+            builder.Action("CreateMachine").Returns<Operation>();
 
-            builder.EntitySet<Agent>("Agents");
-            builder.EntitySet<Network>("Networks");
-            builder.EntitySet<VirtualDisk>("VirtualDisks");
+            builder.EntityType<Machine>().Action("Start").Returns<Operation>();
+            builder.EntityType<Machine>().Action("Stop").Returns<Operation>();
 
-            //builder.EntitySet<Subnet>("Subnets");
+            builder.EntityType<Machine>().Action("Update").Returns<Operation>();
 
-            //builder.EntityType<Network>().HasOptional(np => np.Subnets);
-            //builder.EntityType<Network>().HasOptional(np => np.AgentNetworks);
-
-            builder.EntityType<Subnet>().HasRequired(np => np.Network);
-            builder.EntityType<Subnet>().Ignore(x => x.DnsServersInternal);
-            builder.EntityType<Subnet>().CollectionProperty(x => x.DnsServerAddresses);
-            
-            builder.EntityType<Agent>().HasKey(t => t.Name);
-
-            builder.EntityType<Machine>().HasRequired(np => np.Agent);
-            builder.EntityType<Machine>().HasOptional(x => x.VM);
-            builder.EntityType<Machine>().HasMany(x => x.Networks);
-
-            builder.EntitySet<MachineNetwork>("MachineNetworks");
-            builder.EntityType<MachineNetwork>().HasKey(x=> x.Id);
-            builder.EntityType<MachineNetwork>().Ignore(x=>x.IpV4AddressesInternal);
-            builder.EntityType<MachineNetwork>().Ignore(x => x.IpV6AddressesInternal);
-            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV6Addresses);
-            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV4Addresses);
-            builder.EntityType<MachineNetwork>().Ignore(x=>x.IpV4SubnetsInternal);
-            builder.EntityType<MachineNetwork>().Ignore(x => x.IpV6SubnetsInternal);
-            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV4Subnets);
-            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.IpV6Subnets);
-            builder.EntityType<MachineNetwork>().Ignore(x=>x.DnsServersInternal);
-            builder.EntityType<MachineNetwork>().CollectionProperty(x => x.DnsServerAddresses);
 
             builder.EntitySet<VirtualMachine>("VirtualMachines");
-            builder.EntityType<VirtualMachine>().HasKey(x=>x.Id);
-            builder.EntityType<VirtualMachine>().HasRequired(x => x.Machine);
+            builder.EntityType<VirtualMachine>().DerivesFromNothing(); //doesn't work with AutoMapper
 
-            builder.EntityType<VirtualMachine>().ContainsMany(x => x.Drives);
-            builder.EntityType<VirtualMachine>().ContainsMany(x => x.NetworkAdapters);
 
-            builder.EntityType<VirtualDisk>().ContainsMany(x => x.AttachedDrives);
-
-            //builder.EntitySet<VirtualMachineNetworkAdapter>("VirtualMachineNetworkAdapters");
-            //builder.EntityType<VirtualMachineNetworkAdapter>().HasKey(x => x.Id);
-
-            //builder.EntitySet<VirtualMachineDrive>("VirtualMachineDrives");
-            //builder.EntityType<VirtualMachineDrive>().HasKey(x => x.Id);
-            //builder.EntityType<VirtualMachineDrive>().HasOptional(x => x.AttachedDisk);
 
             builder.EntitySet<VirtualDisk>("VirtualDisks");
-            builder.EntityType<VirtualDisk>().HasKey(x => x.Id);
-            builder.EntityType<VirtualDisk>().HasOptional(x => x.Parent);
-            builder.EntityType<VirtualDisk>().HasMany(x => x.Childs);
-            builder.EntityType<VirtualDisk>().ContainsMany(x=>x.AttachedDrives);
 
-            builder.EntityType<Machine>().Action("Start").ReturnsFromEntitySet<Operation>("Operations");
-            builder.EntityType<Machine>().Action("Stop").ReturnsFromEntitySet<Operation>("Operations");
+
 
         }
 

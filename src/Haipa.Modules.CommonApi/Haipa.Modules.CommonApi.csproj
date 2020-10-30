@@ -9,11 +9,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="10.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Haipa.Modules.AspNetCore\Haipa.Modules.AspNetCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Update="Configuration\ModelConfiguration.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\V1\" />
   </ItemGroup>
 
 </Project>

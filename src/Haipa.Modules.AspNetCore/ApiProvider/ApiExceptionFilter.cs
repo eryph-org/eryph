@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using Haipa.Modules.ApiProvider.Model;
+using Haipa.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace Haipa.Modules.ApiProvider
+namespace Haipa.Modules.AspNetCore.ApiProvider
 {
     public class ApiExceptionFilter : ExceptionFilterAttribute
     {

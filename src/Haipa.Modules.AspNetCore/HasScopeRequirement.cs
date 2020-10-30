@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Haipa.Modules
+namespace Haipa.Modules.AspNetCore
 {
     public class HasScopeRequirement : IAuthorizationRequirement
     {

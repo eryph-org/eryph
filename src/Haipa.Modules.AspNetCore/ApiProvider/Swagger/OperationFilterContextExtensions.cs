@@ -2,7 +2,7 @@
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Haipa.Modules.ApiProvider.Swagger
+namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
 {
     public static class OperationFilterContextExtensions
     {

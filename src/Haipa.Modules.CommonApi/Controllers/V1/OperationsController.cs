@@ -1,18 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Haipa.Modules.AspNetCore.ApiProvider;
+using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
+using Haipa.Modules.AspNetCore.OData;
 using Haipa.StateDb;
-using Haipa.StateDb.Model;
 using Microsoft.AspNet.OData;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
-namespace Haipa.Modules.CommonApi.Controllers
+namespace Haipa.Modules.CommonApi.Controllers.V1
 {
     [ApiVersion( "1.0" )]
-    [Authorize]
+    //[Authorize]
+    [ApiExceptionFilter]
     public class OperationsController : ODataController
     {
         private readonly StateStoreContext _db;
@@ -22,40 +24,25 @@ namespace Haipa.Modules.CommonApi.Controllers
             _db = context;
         }
 
-        [EnableQuery]
         [HttpGet]
+        [EnableMappedQuery]
         [SwaggerOperation(OperationId = "Operations_List")]
-        [SwaggerResponse(Status200OK, "Success", typeof(ODataValue<IEnumerable<Operation>>))]
+        [SwaggerResponse(Status200OK, "Success", typeof(ODataValueEx<IEnumerable<Operation>>))]
         [Produces("application/json")]
         public IActionResult Get()
         {
-
-            return Ok(_db.Operations);
+            return Ok(_db.Operations.ForMappedQuery<Operation>());
         }
 
         [HttpGet]
+        [EnableMappedQuery]
         [SwaggerOperation(OperationId = "Operations_Get")]
         [SwaggerResponse(Status200OK, "Success", typeof(Operation))]
         [Produces("application/json")]
-        [EnableQuery]
         public IActionResult Get(Guid key)
         {
-            return Ok(SingleResult.Create(_db.Operations.Where(c => c.Id == key)));
+            return Ok(SingleResult.Create(_db.Operations.Where(x=>x.Id == key).ForMappedQuery<Operation>()));
         }
-
-
-        [EnableQuery]
-        [SwaggerOperation(OperationId = "Operations_GetLogEntries")]
-        [SwaggerResponse(Status200OK, "Success", typeof(ODataValue<IEnumerable<OperationLogEntry>>))]
-        [Produces("application/json")]
-        public IActionResult GetLogEntries([FromODataUri] Guid key)
-        {
-            var op = _db.Operations.FirstOrDefault(x => x.Id == key);
-            if (op == null) return Ok();
-
-            return Ok(_db.Logs.Where(x => x.Operation == op));
-        }
-
 
 
     }

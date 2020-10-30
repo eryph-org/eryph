@@ -1,23 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
+using Haipa.Modules.AspNetCore.ApiProvider.Services;
+using Haipa.Modules.AspNetCore.OData;
+using Haipa.Modules.ComputeApi.Model.V1;
+using Haipa.StateDb;
+using Microsoft.AspNet.OData;
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Commands.OperationTasks;
-using Haipa.Modules.ApiProvider.Services;
-using Haipa.StateDb;
-using Haipa.StateDb.Model;
+using Haipa.Modules.AspNetCore;
+using Haipa.Modules.AspNetCore.ApiProvider;
+using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
 using Haipa.VmConfig;
-using Microsoft.AspNet.OData;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Swashbuckle.AspNetCore.Annotations;
+using LanguageExt;
+using Microsoft.AspNet.OData.Routing;
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Haipa.Modules.ComputeApi.Controllers
 {
     [ApiVersion( "1.0" )]
-    [Authorize]
-    public class MachinesController : ODataController
+    //[Authorize]
+    public class MachinesController : ApiController
     {
         private readonly StateStoreContext _db;
         private readonly IOperationManager _operationManager;
@@ -29,14 +34,14 @@ namespace Haipa.Modules.ComputeApi.Controllers
         }
 
         [HttpGet]
+        [EnableMappedQuery]
         [SwaggerOperation( OperationId  = "Machines_List")]
         [Produces( "application/json" )]
-        [SwaggerResponse(Status200OK, "Success", typeof(ODataValue<IEnumerable<Machine>>))]
-        [EnableQuery(MaxExpansionDepth = 3)]
+        [SwaggerResponse(Status200OK, "Success", typeof(ODataValueEx<IEnumerable<Machine>>))]
         public IActionResult Get()
         {
 
-            return Ok(_db.Machines);
+            return Ok(_db.Machines.ForMappedQuery<Machine>());
         }
 
         /// <summary>
@@ -48,52 +53,64 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [SwaggerOperation(OperationId = "Machines_Get")]
         [Produces("application/json")]
         [SwaggerResponse(Status200OK, "Success", typeof(Machine))]
-        [EnableQuery(MaxExpansionDepth = 3)]
+        [EnableMappedQuery]
         public IActionResult Get([FromODataUri] Guid key)
         {
-            return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == key)));
+            return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == key).ForMappedQuery<Machine>()));
         }
 
         [HttpDelete]
         [SwaggerOperation(OperationId = "Machines_Delete")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public async Task<IActionResult> Delete([FromODataUri] Guid key)
+        public Task<IActionResult> Delete([FromODataUri] Guid key)
         {
-            return Accepted(await _operationManager.StartNew<DestroyMachineCommand>(key).ConfigureAwait(false));
+            return FindMachine(key).MapAsync(id =>
+                    Accepted(_operationManager.StartNew<DestroyMachineCommand>(id))).ToAsync()
+                .Match(r => r, l => l);
+
         }
+
 
         [HttpPost]
         [SwaggerOperation(OperationId = "Machines_Create")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public async Task<IActionResult> Post([FromBody] MachineConfig config)
+        [ODataRoute("CreateMachine")]
+
+        public async Task<IActionResult> Create([FromBody] MachineProvisioningSettings settings)
         {
+            var machineConfig = settings.Configuration.ToObject<MachineConfig>();
 
             return Accepted(await _operationManager.StartNew(
                 new CreateMachineCommand
                 {
-                    Config = config,
+                    CorrelationId = settings.CorrelationId,
+                    Config = machineConfig,
                 }
                 ).ConfigureAwait(false));
         }
 
-        [HttpPut]
+        [HttpPost]
         [SwaggerOperation(OperationId = "Machines_Update")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public async Task<IActionResult> Put([FromODataUri] Guid key, [FromBody] MachineConfig config)
+        public async Task<IActionResult> Update([FromODataUri] Guid key, [FromBody] MachineProvisioningSettings settings)
         {
             var machine = _db.Machines.FirstOrDefault(op => op.Id == key);
 
             if (machine == null)
                 return NotFound();
-            
+
+            var machineConfig = settings.Configuration.ToObject<MachineConfig>();
+
+
             return Accepted(await _operationManager.StartNew(
                 new UpdateMachineCommand
                 {
+                    CorrelationId = settings.CorrelationId,
                     MachineId = key,
-                    Config = config,
+                    Config = machineConfig,
                     AgentName = machine.AgentName,
                 }
             ).ConfigureAwait(false));
@@ -103,18 +120,32 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [SwaggerOperation(OperationId = "Machines_Start")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public async Task<IActionResult> Start([FromODataUri] Guid key)
+        public Task<IActionResult> Start([FromODataUri] Guid key)
         {
-           return Accepted(await _operationManager.StartNew<StartMachineCommand>(key).ConfigureAwait(false));
+            return FindMachine(key).MapAsync(id =>
+                    Accepted(_operationManager.StartNew<StartMachineCommand>(id))).ToAsync()
+                .Match(r => r, l => l);
         }
 
         [HttpPost]
         [SwaggerOperation(OperationId = "Machines_Stop")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public async Task<IActionResult> Stop([FromODataUri] Guid key)
+        public Task<IActionResult> Stop([FromODataUri] Guid key)
         {
-            return Accepted(await _operationManager.StartNew<StopMachineCommand>(key).ConfigureAwait(false));
+            return FindMachine(key).MapAsync(id =>
+                    Accepted(_operationManager.StartNew<StopMachineCommand>(id))).ToAsync()
+                .Match(r => r, l => l);
+        }
+
+
+        private async Task<Either<IActionResult,Guid>> FindMachine(Guid key)
+        {
+            var vm = await _db.FindAsync<StateDb.Model.Machine>(key);
+            if (vm == null)
+                return NotFound();
+
+            return vm.Id;
         }
     }
 }

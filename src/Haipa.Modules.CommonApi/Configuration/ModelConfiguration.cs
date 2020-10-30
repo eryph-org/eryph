@@ -1,5 +1,9 @@
-﻿using Haipa.StateDb.Model;
+﻿using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
+using Haipa.Modules.CommonApi.Controllers;
+using Haipa.Modules.CommonApi.Models.V1;
+using JetBrains.Annotations;
 using Microsoft.AspNet.OData.Builder;
+using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Haipa.Modules.CommonApi.Configuration
@@ -11,8 +15,6 @@ namespace Haipa.Modules.CommonApi.Configuration
             builder.Namespace = "Common";
 
             builder.EntitySet<Operation>("Operations");
-            builder.EntitySet<OperationLogEntry>("OperationLogs");
-            builder.EntitySet<OperationTask>("OperationTaks");
 
         }
 

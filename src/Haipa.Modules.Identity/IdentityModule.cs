@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using Dbosoft.Hosuto.Modules;
 using Haipa.IdentityDb;
-using Haipa.Modules.ApiProvider;
+using Haipa.Modules.AspNetCore;
+using Haipa.Modules.AspNetCore.ApiProvider;
 using Haipa.Modules.Identity.Configuration;
 using Haipa.Modules.Identity.Services;
 using IdentityServer4.EntityFramework.DbContexts;

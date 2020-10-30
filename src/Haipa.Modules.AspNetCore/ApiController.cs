@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Haipa.Modules.ApiProvider.Model;
+﻿using Haipa.Modules.AspNetCore.ApiProvider;
+using Haipa.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Haipa.Modules
+namespace Haipa.Modules.AspNetCore
 {
+    [MapOperation]
+    [ApiExceptionFilter]
     public class ApiController : ODataController
     {
 

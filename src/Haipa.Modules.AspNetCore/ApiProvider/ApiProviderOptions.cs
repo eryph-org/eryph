@@ -1,4 +1,4 @@
-﻿namespace Haipa.Modules.ApiProvider
+﻿namespace Haipa.Modules.AspNetCore.ApiProvider
 {
     public class ApiProviderOptions
     {

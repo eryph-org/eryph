@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Haipa.Modules.ApiProvider.Model;
+using Haipa.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNet.OData.Formatter;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
-namespace Haipa.Modules.ApiProvider
+namespace Haipa.Modules.AspNetCore.ApiProvider
 {
     public class CustomODataOutputFormatter : ODataOutputFormatter
     {

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using Dbosoft.Hosuto.Modules;
-using Haipa.Modules.ApiProvider.Swagger;
+using Haipa.Modules.AspNetCore.ApiProvider.Swagger;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Extensions;
@@ -21,7 +21,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Haipa.Modules.ApiProvider
+namespace Haipa.Modules.AspNetCore.ApiProvider
 {
     public static class ApiProviderExtensions
     {
@@ -117,8 +117,8 @@ namespace Haipa.Modules.ApiProvider
                     options.CustomSchemaIds((type) =>
                     {
                         var defaultName = DefaultSchemaIdSelector(type);
-                        return defaultName.EndsWith("IEnumerableODataValue")
-                            ? defaultName.Replace("IEnumerableODataValue", "List")
+                        return defaultName.EndsWith("IEnumerableODataValueEx")
+                            ? defaultName.Replace("IEnumerableODataValueEx", "List")
                             : defaultName;
                     });
                 });
@@ -157,7 +157,7 @@ namespace Haipa.Modules.ApiProvider
             {
                 app.UseMvc(routes =>
                 {
-                    routes.Select().Expand().Filter().OrderBy().MaxTop(100).Count();
+                    routes.Select().Expand().Filter().OrderBy().MaxTop(100).Count().SkipToken();
                     routes.MapVersionedODataRoutes("odata-bypath", "api/v{version:apiVersion}", models);
                 });
 

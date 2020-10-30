@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
-using Haipa.Modules.ApiProvider.Model;
+using Haipa.Modules.AspNetCore.ApiProvider.Model;
 using JetBrains.Annotations;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Haipa.Modules.ApiProvider.Swagger
+namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
 {
     [UsedImplicitly]
     public class ODataErrorOperationFilter : IOperationFilter

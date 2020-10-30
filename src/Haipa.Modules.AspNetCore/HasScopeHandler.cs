@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Haipa.Modules
+namespace Haipa.Modules.AspNetCore
 {
     public class HasScopeHandler : AuthorizationHandler<HasScopeRequirement>
     {
