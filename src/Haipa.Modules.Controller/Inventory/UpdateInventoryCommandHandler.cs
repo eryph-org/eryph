@@ -9,7 +9,6 @@ using Haipa.Messages.Events;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Rebus.Handlers;
 
 namespace Haipa.Modules.Controller.Inventory
@@ -206,8 +205,39 @@ namespace Haipa.Modules.Controller.Inventory
                 existingMachine.Status = newMachine.Status;
                 existingMachine.Agent = agentData;
 
+                //merge Networks 
+                var networkList = newMachine.Networks.ToList();
+                var existingNetworksListUniqueName = existingMachine.Networks.ToList().Distinct((x,y)=>x.Name == y.Name );
+                
+                foreach (var existingNetwork in existingNetworksListUniqueName)
+                {
+                    var networksWithSameName = existingMachine.Networks.Where(x => x.Name == existingNetwork.Name).ToArray();
 
-                existingMachine.Networks = newMachine.Networks;
+                    var deleteNetwork = networksWithSameName.Length > 1 ||  //delete if name is not unique
+                                        //delete also, if there is a reference in current machine but no longer in new machine
+                                        existingMachine.Networks.All(x => x.Name != existingNetwork.Name);
+                    
+                    if (deleteNetwork)
+                        existingMachine.Networks.RemoveAll(x => x.Name == existingNetwork.Name);
+
+                }
+
+                foreach (var newNetwork in networkList.ToArray())
+                {
+                    var existingNetwork = existingMachine.Networks.FirstOrDefault(x => x.Name == newNetwork.Name);
+                    if (existingNetwork == null) continue;
+                    existingNetwork.DnsServerAddresses = newNetwork.DnsServerAddresses;
+                    existingNetwork.IPv4DefaultGateway = newNetwork.IPv4DefaultGateway;
+                    existingNetwork.IPv4DefaultGateway = newNetwork.IPv6DefaultGateway;
+                    existingNetwork.IpV4Addresses = newNetwork.IpV4Addresses;
+                    existingNetwork.IpV6Addresses = newNetwork.IpV6Addresses;
+                    existingNetwork.IpV4Subnets = newNetwork.IpV4Subnets;
+                    existingNetwork.IpV6Subnets = newNetwork.IpV6Subnets;
+
+                    networkList.Remove(newNetwork);
+                }
+
+                existingMachine.Networks.AddRange(networkList);
 
                 if (existingMachine.VM == null)
                     existingMachine.VM = new VirtualMachine();
@@ -245,4 +275,6 @@ namespace Haipa.Modules.Controller.Inventory
             }
         }
     }
+
+
 }
