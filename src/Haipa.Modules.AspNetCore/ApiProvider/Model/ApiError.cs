@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using Microsoft.AspNet.OData.Formatter.Deserialization;
 using Microsoft.OData;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Haipa.Modules.ApiProvider.Model
+namespace Haipa.Modules.AspNetCore.ApiProvider.Model
 {
     public class ApiErrorBody
     {

@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
-using Haipa.Modules.ApiProvider.Model;
-using Haipa.Modules.ApiProvider.Model.V1;
+using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
 
 namespace Haipa.Modules.CommonApi.Models.V1
 {

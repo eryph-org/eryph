@@ -1,10 +1,10 @@
-﻿using Haipa.Modules.ApiProvider.Model.V1;
+﻿using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
 using JetBrains.Annotations;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Haipa.Modules.ApiProvider.Swagger
+namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
 {
     [UsedImplicitly]
     public class OperationSchemaFilter : ISchemaFilter

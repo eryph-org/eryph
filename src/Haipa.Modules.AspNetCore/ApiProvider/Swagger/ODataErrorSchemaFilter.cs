@@ -1,10 +1,10 @@
-﻿using Haipa.Modules.ApiProvider.Model;
+﻿using Haipa.Modules.AspNetCore.ApiProvider.Model;
 using JetBrains.Annotations;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Haipa.Modules.ApiProvider.Swagger
+namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
 {
     [UsedImplicitly]
     public class ODataErrorSchemaFilter : ISchemaFilter

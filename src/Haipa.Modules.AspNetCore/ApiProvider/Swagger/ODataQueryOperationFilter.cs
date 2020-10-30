@@ -11,7 +11,7 @@ using SimpleInjector;
 using Swashbuckle.AspNetCore.Annotations;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Haipa.Modules.ApiProvider.Swagger
+namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
 {
     [UsedImplicitly]
     public class ODataQueryOperationFilter : IOperationFilter

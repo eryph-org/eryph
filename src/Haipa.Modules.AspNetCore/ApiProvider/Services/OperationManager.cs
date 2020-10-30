@@ -8,7 +8,7 @@ using Haipa.StateDb.Model;
 using Newtonsoft.Json;
 using Rebus.Bus;
 
-namespace Haipa.Modules.ApiProvider.Services
+namespace Haipa.Modules.AspNetCore.ApiProvider.Services
 {
     public class OperationManager : IOperationManager
     {

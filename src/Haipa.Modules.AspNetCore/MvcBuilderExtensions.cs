@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
+﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Haipa.Modules
+namespace Haipa.Modules.AspNetCore
 {
     public static class MvcBuilderExtensions
     {

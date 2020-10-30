@@ -1,15 +1,16 @@
 ﻿using System;
+using AutoMapper;
+using AutoMapper.Configuration;
 using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
-using Haipa.Modules.ApiProvider;
-using Haipa.Modules.ApiProvider.Services;
+using Haipa.Modules.AspNetCore.ApiProvider;
+using Haipa.Modules.AspNetCore.ApiProvider.Services;
+using Haipa.Modules.CommonApi.Models.V1;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Rebus.Handlers;
@@ -19,7 +20,7 @@ using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
-namespace Haipa.Modules
+namespace Haipa.Modules.AspNetCore
 {
     public abstract class ApiModule<TModule> : WebModule where TModule: WebModule
     {
@@ -45,6 +46,9 @@ namespace Haipa.Modules
 
             services.AddDbContext<StateStoreContext>(options =>
                 serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>().Configure(options));
+
+
+            services.AddAutoMapper(typeof(TModule).Assembly, typeof(MapperProfile).Assembly);
 
         }
 
@@ -82,7 +86,12 @@ namespace Haipa.Modules
                     { TypeNameHandling = TypeNameHandling.None }))
                     .Logging(x => x.ColoredConsole()).Start();
             });
+
+
+
         }
 
+
     }
+
 }

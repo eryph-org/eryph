@@ -3,7 +3,7 @@ using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OData;
 
-namespace Haipa.Modules.ApiProvider
+namespace Haipa.Modules.AspNetCore.ApiProvider
 {
     public static class CommonExtensions
     {

@@ -1,5 +1,4 @@
-﻿using Haipa.Modules.ApiProvider.Model;
-using Haipa.Modules.ApiProvider.Model.V1;
+﻿using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
 using Haipa.Modules.CommonApi.Controllers;
 using Haipa.Modules.CommonApi.Models.V1;
 using JetBrains.Annotations;
@@ -16,7 +15,7 @@ namespace Haipa.Modules.CommonApi.Configuration
             builder.Namespace = "Common";
 
             builder.EntitySet<Operation>("Operations");
-            builder.EntityType<Operation>().Expand(1, SelectExpandType.Automatic);
+
         }
 
         public void Apply( ODataModelBuilder builder, ApiVersion apiVersion )

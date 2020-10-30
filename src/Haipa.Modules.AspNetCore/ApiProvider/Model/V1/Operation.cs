@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Haipa.StateDb.Model;
 using Microsoft.AspNet.OData.Builder;
+using Microsoft.AspNet.OData.Query;
 
-namespace Haipa.Modules.ApiProvider.Model.V1
+namespace Haipa.Modules.AspNetCore.ApiProvider.Model.V1
 {
+    [Page(PageSize = 100)]
     public class Operation
     {
         [Key]
@@ -15,9 +17,12 @@ namespace Haipa.Modules.ApiProvider.Model.V1
         public string StatusMessage { get; set; }
 
         [Contained]
+        [AutoExpand]
         public IEnumerable<OperationResource> Resources { get; set; }
 
         [Contained]
+        [AutoExpand]
+
         public IEnumerable<OperationLogEntry> LogEntries { get; set; }
 
     }

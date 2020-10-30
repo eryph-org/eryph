@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Haipa.Modules.ApiProvider;
+using Haipa.Modules.AspNetCore;
+using Haipa.Modules.AspNetCore.ApiProvider;
 using Haipa.Modules.Identity.Models;
 using Haipa.Modules.Identity.Models.V1;
 using Haipa.Modules.Identity.Services;

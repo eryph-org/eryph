@@ -2,18 +2,23 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RootNamespace>Haipa.Modules</RootNamespace>
+    <RootNamespace>Haipa.Modules.AspNetCore</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <!--<FrameworkReference Include="Microsoft.AspNetCore.App" />-->
 
+    <PackageReference Include="Ardalis.ApiEndpoints" Version="2.0.0" />
+
+    <PackageReference Include="AutoMapper.AspNetCore.OData.EFCore" Version="2.0.2" />
+
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.1.0" />
+
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="3.1.7" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.7" />
     <PackageReference Include="SimpleInjector.Integration.AspNetCore.Mvc.Core" Version="4.7.1" />
-    <PackageReference Include="Microsoft.AspNetCore.OData" Version="7.4.1" />
+    <PackageReference Include="Microsoft.AspNetCore.OData" Version="7.5.1" />
     <PackageReference Include="Microsoft.AspNetCore.OData.Versioning.ApiExplorer" Version="4.1.1" />
-    <PackageReference Include="Microsoft.OData.Core" Version="7.7.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.5.1" />
     <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="5.5.1" />
     <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" Version="5.5.1" />

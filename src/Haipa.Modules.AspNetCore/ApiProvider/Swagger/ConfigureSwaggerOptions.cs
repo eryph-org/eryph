@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Haipa.Modules.ApiProvider.Swagger
+namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
 {
     /// <summary>
     /// Configures the Swagger generation options.
