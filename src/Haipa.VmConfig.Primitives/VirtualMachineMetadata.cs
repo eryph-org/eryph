@@ -7,6 +7,8 @@ namespace Haipa.VmConfig
     {
         public Guid Id { get; set; }
         public Guid VMId { get; set; }
+        public long MachineId { get; set; }
+
         [CanBeNull] public VirtualMachineConfig ImageConfig { get; set; }
         [CanBeNull] public VirtualMachineProvisioningConfig ProvisioningConfig { get; set; }
 

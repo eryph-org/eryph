@@ -1,15 +1,14 @@
-﻿using System;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Commands;
 using Haipa.Messages.Events;
 using Haipa.Modules.VmHostAgent.Inventory;
 using Haipa.VmManagement;
-using Haipa.VmManagement.Data;
-using Haipa.VmManagement.Data.Full;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;
 using Rebus.Handlers;
+using VirtualMachineInfo = Haipa.VmManagement.Data.Full.VirtualMachineInfo;
 
 namespace Haipa.Modules.VmHostAgent
 {
@@ -20,12 +19,14 @@ namespace Haipa.Modules.VmHostAgent
         private readonly IPowershellEngine _engine;
         private readonly IBus _bus;
         private readonly VirtualMachineInventory _inventory;
+        private readonly HostInventory _hostInventory;
 
         public InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine)
         {
             _bus = bus;
             _engine = engine;
             _inventory = new VirtualMachineInventory(_engine, HostSettingsBuilder.GetHostSettings());
+            _hostInventory = new HostInventory(_engine);
         }
 
 
@@ -35,18 +36,18 @@ namespace Haipa.Modules.VmHostAgent
                 .BindAsync(VmsToInventory)
                 .ToAsync().IfRightAsync(c => _bus.Send(c));
 
-        private Task<Either<PowershellFailure, UpdateInventoryCommand>> VmsToInventory(Seq<TypedPsObject<VirtualMachineInfo>> vms)
-        {
-            return vms.Map(_inventory.InventorizeVM).Traverse(l => l)
-                .Map(t => t.Traverse(l => l))
-                .BindAsync(s =>
-                    Prelude.RightAsync<PowershellFailure,UpdateInventoryCommand>(new UpdateInventoryCommand
-                    {
-                        AgentName = Environment.MachineName,
-                        Inventory = s.ToList()
 
-                    }).ToEither()
-                );
+        private Task<Either<PowershellFailure, UpdateVMHostInventoryCommand>> VmsToInventory(Seq<TypedPsObject<VirtualMachineInfo>> vms)
+        {
+            return (from vmInventory in vms.Map(_inventory.InventorizeVM).Traverse(l => l)
+                    .Map(t => t.Traverse(l => l)).ToAsync()
+                from hostInventory in _hostInventory.InventorizeHost().ToAsync()
+                select new UpdateVMHostInventoryCommand
+                {
+                    HostInventory = hostInventory,
+                    VMInventory = vmInventory.ToList()
+
+                }).ToEither();
 
         }
 

@@ -7,7 +7,7 @@ using Rebus.Bus;
 namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class VirtualMachineStopHandler : VirtualMachineStateTransitionHandler<StopMachineCommand>
+    internal class VirtualMachineStopHandler : VirtualMachineStateTransitionHandler<StopVMCommand>
     {
 
         public VirtualMachineStopHandler(IBus bus, IPowershellEngine engine) : base(bus, engine)

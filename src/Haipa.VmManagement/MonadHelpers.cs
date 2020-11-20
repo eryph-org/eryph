@@ -15,7 +15,7 @@ namespace Haipa.VmManagement
 
         }
 
-        public static Task<Either<TL, Seq<TR>>> MapToEitherAsync<TL, TR, TEntry>(this ISeq<TEntry> sequence, Func<int, TEntry, Task<Either<TL, TR>>> mapperFunc)
+        public static Task<Either<TL, Seq<TR>>> MapToEitherAsync<TL, TR, TEntry>(this Seq<TEntry> sequence, Func<int, TEntry, Task<Either<TL, TR>>> mapperFunc)
         {
             return sequence.Map(mapperFunc).ToImmutableArray()
                 .Traverse(l => l)
@@ -30,7 +30,7 @@ namespace Haipa.VmManagement
 
         }
 
-        public static Task<Either<TL, Seq<TR>>> MapToEitherAsync<TL, TR, TEntry>(this ISeq<TEntry> sequence, Func<TEntry, Task<Either<TL, TR>>> mapperFunc)
+        public static Task<Either<TL, Seq<TR>>> MapToEitherAsync<TL, TR, TEntry>(this Seq<TEntry> sequence, Func<TEntry, Task<Either<TL, TR>>> mapperFunc)
         {
             return sequence.Map(mapperFunc).ToImmutableArray()
                 .Traverse(l => l)

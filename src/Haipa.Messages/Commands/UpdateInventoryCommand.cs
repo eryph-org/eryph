@@ -8,7 +8,17 @@ namespace Haipa.Messages.Commands
     {
         public string AgentName { get; set; }
 
-        public List<MachineInfo> Inventory { get; set; }
+        public List<VirtualMachineInfo> Inventory { get; set; }
+
+
+    }
+
+    [SendMessageTo(MessageRecipient.Controllers)]
+    public class UpdateVMHostInventoryCommand
+    {
+        public VMHostMachineInfo HostInventory { get; set; }
+
+        public List<VirtualMachineInfo> VMInventory { get; set; }
 
 
     }

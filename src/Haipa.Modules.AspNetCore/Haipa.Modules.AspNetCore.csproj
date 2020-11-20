@@ -5,6 +5,10 @@
     <RootNamespace>Haipa.Modules.AspNetCore</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>TRACE;DISABLE_AUTH</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <!--<FrameworkReference Include="Microsoft.AspNetCore.App" />-->
 

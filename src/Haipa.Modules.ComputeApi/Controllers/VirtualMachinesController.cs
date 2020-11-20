@@ -51,9 +51,9 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [Produces("application/json")]
         [SwaggerResponse(Status200OK, "Success", typeof(VirtualMachine))]
         [EnableMappedQuery]
-        public IActionResult Get([FromODataUri] Guid key)
+        public IActionResult Get([FromODataUri] string key)
         {
-            return Ok(SingleResult.Create(_db.VirtualMachines.Where(c => c.Id == key).ForMappedQuery<VirtualMachine>()));
+            return Ok(SingleResult.Create(_db.VirtualMachines.Where(c => c.Id == Convert.ToInt64(key)).ForMappedQuery<VirtualMachine>()));
         }
 
     }

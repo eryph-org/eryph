@@ -29,14 +29,14 @@ namespace Haipa.Modules.Controller.Operations
 
         private static MachineConfig NormalizeMachineConfig(
 #pragma warning restore 1998
-            Guid machineId, MachineConfig config)
+            long machineId, MachineConfig config)
         {
             var machineConfig = config;
 
             if (machineConfig.VM == null)
                 machineConfig.VM = new VirtualMachineConfig();
 
-            if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == Guid.Empty)
+            if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == 0)
             {
                 //TODO generate a random name here
                 machineConfig.Name = "haipa-machine";

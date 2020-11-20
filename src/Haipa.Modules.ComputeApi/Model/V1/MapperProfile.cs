@@ -12,9 +12,7 @@ namespace Haipa.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.MachineNetwork, MachineNetwork>();
 
             CreateMap<StateDb.Model.Machine, Machine>();
-            CreateMap<StateDb.Model.VirtualMachine, VirtualMachine>()
-                .ForMember(x => x.Name, x => x.MapFrom(y => y.Machine.Name))
-                .ForMember(x => x.Networks, x => x.MapFrom(y => y.Machine.Networks));
+            CreateMap<StateDb.Model.VirtualMachine, VirtualMachine>();
             CreateMap<StateDb.Model.VirtualMachineDrive, VirtualMachineDrive>();
             CreateMap<StateDb.Model.VirtualMachineNetworkAdapter, VirtualMachineNetworkAdapter>();
             CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>().ForMember(x => x.Path, o =>

@@ -84,7 +84,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                         Data.Validated = true;
                         var convergeMessage = new UpdateVirtualMachineCommand
                         {
-                            MachineId = data.vm.Id,
+                            VMId = data.vm.VMId,
                             Config = Data.Config,
                             AgentName = Data.AgentName,
                             OperationId = message.OperationId,
@@ -96,7 +96,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                         return _taskDispatcher.Send(convergeMessage);
                     },
                     None: () => Fail(new ErrorData
-                        { ErrorMessage = $"Could not find virtual machine with Id {Data.MachineId}" })
+                        { ErrorMessage = $"Could not find virtual machine with machine id {Data.MachineId}" })
                 );
 
 
@@ -117,7 +117,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                 await Bus.Send(new UpdateInventoryCommand
                 {
                     AgentName = Data.AgentName,
-                    Inventory = new List<MachineInfo> { r.Inventory }
+                    Inventory = new List<VirtualMachineInfo> { r.Inventory }
                 });
 
                 await Complete();

@@ -1,6 +1,6 @@
 ﻿namespace Haipa.Messages.Events
 {
-    public class VirtualMachineNetworkInfo
+    public class MachineNetworkInfo
     {
         public string Name { get; set; }       
         

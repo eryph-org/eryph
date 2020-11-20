@@ -8,7 +8,7 @@ namespace Haipa.Modules.ComputeApi.Model.V1
     {
         [Key] public Guid Id { get; set; }
 
-        public Guid MachineId { get; set; }
+        public string MachineId { get; set; }
 
         public string Name { get; set; }
 

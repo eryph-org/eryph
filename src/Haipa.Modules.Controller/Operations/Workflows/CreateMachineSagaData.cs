@@ -1,4 +1,5 @@
-﻿using Haipa.VmConfig;
+﻿using System;
+using Haipa.VmConfig;
 
 namespace Haipa.Modules.Controller.Operations.Workflows
 {
@@ -8,6 +9,8 @@ namespace Haipa.Modules.Controller.Operations.Workflows
         public string AgentName { get; set; }
 
         public CreateVMState State { get; set; }
+        public long MachineId { get; set; }
+
     }
 
     public enum CreateVMState

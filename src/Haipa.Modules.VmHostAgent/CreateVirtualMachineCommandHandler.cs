@@ -37,7 +37,7 @@ namespace Haipa.Modules.VmHostAgent
             var hostSettings = HostSettingsBuilder.GetHostSettings();
             
             var planStorageSettings = Prelude.fun(() => 
-                VMStorageSettings.Plan(hostSettings, LongToString(message.Command.NewStorageId), config, Option<VMStorageSettings>.None).ToAsync());
+                VMStorageSettings.Plan(hostSettings, LongToString(message.Command.NewMachineId), config, Option<VMStorageSettings>.None).ToAsync());
 
             var getTemplate = Prelude.fun(() =>
                 GetTemplate(Engine, hostSettings,config.Image).ToAsync());
@@ -46,7 +46,7 @@ namespace Haipa.Modules.VmHostAgent
                 CreateVM(config, hostSettings, settings, Engine, template).ToAsync());
 
             var createMetadata = Prelude.fun((TypedPsObject<VirtualMachineInfo> vmInfo, Option<PlannedVirtualMachineInfo> plannedVM) =>
-                CreateMetadata(plannedVM, vmInfo, config).ToAsync());
+                CreateMetadata(plannedVM, vmInfo, config, command.NewMachineId).ToAsync());
 
             var chain =
                 from plannedStorageSettings in planStorageSettings()
@@ -100,23 +100,23 @@ namespace Haipa.Modules.VmHostAgent
         }
 
         private Task<Either<PowershellFailure, VirtualMachineMetadata>> CreateMetadata(Option<PlannedVirtualMachineInfo> template,
-            TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config)
+            TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config, long machineId)
         {
             var metadata = new VirtualMachineMetadata
             {
                 Id = Guid.NewGuid(),
+                MachineId = machineId,
                 VMId = vmInfo.Value.Id,
                 ProvisioningConfig = config.Provisioning
             };
 
             if (template.IsSome)
                 metadata.ImageConfig = template.ValueUnsafe().ToVmConfig();
+
+
+
+            return SetMetadataId(vmInfo, metadata.Id).MapAsync(u => metadata);
             
-            var newNotes = $"Haipa metadata id: {metadata.Id}";
-
-            return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("Notes", newNotes)).MapAsync(u => metadata);
-
 
         }
     }

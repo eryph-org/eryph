@@ -40,10 +40,10 @@ namespace Haipa.VmManagement.Networking
 
     public static class VirtualNetworkQuery
     {
-        public static VirtualMachineNetworkInfo[] GetNetworksByAdapters(Guid vmId, IEnumerable<IVMNetworkAdapterWithConnection> networkAdapters)
+        public static MachineNetworkInfo[] GetNetworksByAdapters(Guid vmId, IEnumerable<IVMNetworkAdapterWithConnection> networkAdapters)
         {
             var scope = new ManagementScope(@"\\.\root\virtualization\v2");
-            var resultList = new List<VirtualMachineNetworkInfo>();
+            var resultList = new List<MachineNetworkInfo>();
 
             var networkNames = new List<string>();
 
@@ -56,7 +56,7 @@ namespace Haipa.VmManagement.Networking
                 obj.Path = path;
                 obj.Get();
 
-                var info = new VirtualMachineNetworkInfo
+                var info = new MachineNetworkInfo
                 {
                     Name = Networks.GenerateName(ref networkNames, networkAdapter),
                     IPAddresses = ObjectToStringArray(obj.GetPropertyValue("IPAddresses")),

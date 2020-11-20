@@ -7,6 +7,7 @@
   <ItemGroup>
     <PackageReference Include="Rebus" Version="6.4.1" />
     <PackageReference Include="Rebus.RabbitMq" Version="7.2.0" />
+    <PackageReference Include="Rebus.UnitOfWork" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,6 +6,7 @@ using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
+using Haipa.VmConfig;
 using Newtonsoft.Json;
 using Rebus.Bus;
 
@@ -25,30 +26,30 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Services
 
         public Task<Operation> StartNew<T>() where T : OperationTaskCommand
         {
-            return StartNew<T>(Guid.Empty);
+            return StartNew<T>(null, null);
         }
 
-        public Task<Operation> StartNew<T>(Guid vmId) where T : OperationTaskCommand
+        public Task<Operation> StartNew<T>(long? resourceId, ResourceType? resourceType) where T : OperationTaskCommand
         {
-            return StartNew(Activator.CreateInstance<T>(), vmId);
+            return StartNew(Activator.CreateInstance<T>(), resourceId, resourceType);
         }
 
         public Task<Operation> StartNew(Type operationCommandType)
         {
-            return StartNew(operationCommandType, Guid.Empty);
+            return StartNew(operationCommandType, null, null);
         }
 
-        public Task<Operation> StartNew(Type operationCommandType, Guid vmId)
+        public Task<Operation> StartNew(Type operationCommandType, long? resourceId, ResourceType? resourceType)
         {
-            return StartNew(Activator.CreateInstance(operationCommandType) as OperationTaskCommand, vmId);
+            return StartNew(Activator.CreateInstance(operationCommandType) as OperationTaskCommand, resourceId, resourceType);
         }
 
         public Task<Operation> StartNew(OperationTaskCommand operationCommand)
         {
-            return StartNew(operationCommand, Guid.Empty);
+            return StartNew(operationCommand,null, null);
         }
 
-        public async Task<Operation> StartNew(OperationTaskCommand taskCommand, Guid resourceId)
+        public async Task<Operation> StartNew(OperationTaskCommand taskCommand, long? resourceId, ResourceType? resourceType)
         {
             if(taskCommand == null)
                 throw new ArgumentNullException(nameof(taskCommand));
@@ -64,19 +65,19 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Services
             {
                 Id = operationId,
                 Status = OperationStatus.Queued,
-                Resources = new List<OperationResource>{new OperationResource
+                Resources = resourceId.HasValue ? new List<OperationResource>{new OperationResource
                 {
-                    Id = Guid.NewGuid(), ResourceId = resourceId, ResourceType = ResourceType.Machine
-                }}
+                    Id = Guid.NewGuid(), ResourceId = resourceId.GetValueOrDefault(), ResourceType = resourceType.GetValueOrDefault()
+                }}: null
             };
 
             _db.Add(operation);
 
             await _db.SaveChangesAsync().ConfigureAwait(false);
         
-            if (resourceId != Guid.Empty && (taskCommand is IMachineCommand machineCommand) 
-                                         && machineCommand.MachineId != resourceId)
-                machineCommand.MachineId = resourceId;
+            if (resourceId != 0 && (taskCommand is IResourceCommand resourceCommand) 
+                                         && resourceCommand.ResourceId != resourceId)
+                resourceCommand.ResourceId = resourceId.GetValueOrDefault(0);
 
 
             taskCommand.OperationId = operation.Id;
