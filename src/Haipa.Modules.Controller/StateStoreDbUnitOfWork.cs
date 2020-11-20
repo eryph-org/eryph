@@ -11,9 +11,9 @@ namespace Haipa.Modules.Controller
     {
         private readonly StateStoreContext _dbContext;
 
-        public StateStoreDbUnitOfWork(StateStoreContext dbcontext)
+        public StateStoreDbUnitOfWork(StateStoreContext dbContext)
         {
-            _dbContext = dbcontext;
+            _dbContext = dbContext;
         }
 
         public ValueTask DisposeAsync()
