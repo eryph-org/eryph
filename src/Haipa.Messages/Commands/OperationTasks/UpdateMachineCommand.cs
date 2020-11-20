@@ -8,7 +8,7 @@ namespace Haipa.Messages.Commands.OperationTasks
     public class UpdateMachineCommand : OperationTaskCommand
     {
         public Guid CorrelationId { get; set; }
-        public Guid MachineId { get; set; }
+        public long MachineId { get; set; }
         public MachineConfig Config { get; set; }
         public string AgentName { get; set; }
     }

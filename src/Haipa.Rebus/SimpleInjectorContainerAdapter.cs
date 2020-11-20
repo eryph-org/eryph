@@ -36,6 +36,7 @@ namespace Haipa.Rebus
             if (TryGetInstance<IEnumerable<IHandleMessages<TMessage>>>(_container, out var handlerInstances))
             {
                 var handlerList = handlerInstances.ToList();
+                transactionContext.Items["SI_scope"] = scope;
 
                 transactionContext.OnDisposed((ctx) =>
                 {

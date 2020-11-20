@@ -3,7 +3,7 @@
 namespace Haipa.Messages
 {
     [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-    public class MachineMayNotExistsAttribute : Attribute
+    public class ResourceMayNotExistsAttribute : Attribute
     {
 
     }

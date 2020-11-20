@@ -4,7 +4,6 @@ using Haipa.Messages;
 using Haipa.Messages.Commands;
 using Haipa.Messages.Operations;
 using Haipa.VmManagement;
-using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Full;
 using LanguageExt;
 using Rebus.Bus;
@@ -13,7 +12,7 @@ using Rebus.Handlers;
 
 namespace Haipa.Modules.VmHostAgent
 {
-    internal abstract class MachineOperationHandlerBase<T> : IHandleMessages<AcceptedOperationTask<T>> where T: IOperationTaskCommand, IMachineCommand
+    internal abstract class MachineOperationHandlerBase<T> : IHandleMessages<AcceptedOperationTask<T>> where T: IOperationTaskCommand, IVMCommand
     {
         private readonly IPowershellEngine _engine;
         private readonly IBus _bus;
@@ -31,7 +30,7 @@ namespace Haipa.Modules.VmHostAgent
         {
             var command = message.Command;
 
-            var result = await GetVmInfo(command.MachineId, _engine)            
+            var result = await GetVmInfo(command.VMId, _engine)            
                 .BindAsync(optVmInfo =>
                 {
                     return optVmInfo.MatchAsync(

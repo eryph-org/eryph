@@ -18,7 +18,6 @@ using Rebus.Routing.TypeBased;
 using Rebus.Sagas.Exclusive;
 using Rebus.Serialization.Json;
 using SimpleInjector;
-using SimpleInjector.Lifestyles;
 
 namespace Haipa.Modules.Controller
 {
@@ -33,8 +32,10 @@ namespace Haipa.Modules.Controller
             container.Register<StartBusModuleHandler>();
             container.Register<InventoryHandler>();
 
+            container.Register<IRebusUnitOfWork, StateStoreDbUnitOfWork>(Lifestyle.Scoped);
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationTaskHandler<>));
+
 
             container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
             container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
@@ -66,10 +67,12 @@ namespace Haipa.Modules.Controller
                 {
                     x.SimpleRetryStrategy();
                     x.SetNumberOfWorkers(5);
+                    x.EnableSimpleInjectorUnitOfWork();
                 })
                 .Timeouts(t => serviceProvider.GetService<IRebusTimeoutConfigurer>().Configure(t))
                 .Sagas(s =>
                 {
+                    
                     serviceProvider.GetService<IRebusSagasConfigurer>().Configure(s);
                     s.EnforceExclusiveAccess();
                 })
@@ -77,6 +80,8 @@ namespace Haipa.Modules.Controller
 
                 .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None }))
                 .Logging(x => x.ColoredConsole(LogLevel.Debug)).Start());
+
+
         }
 
         public void ConfigureServices(IServiceCollection services)
@@ -86,8 +91,6 @@ namespace Haipa.Modules.Controller
 
         }
 
-
-
-
+        
     }
 }

@@ -1,10 +1,17 @@
 ﻿using System;
+using Haipa.VmConfig;
 
 namespace Haipa.Messages.Commands
 {
-    public interface IMachineCommand 
+    public interface IResourceCommand 
     {
-        Guid MachineId { get; set; }
+        long ResourceId { get; set; }
+        ResourceType ResourceType { get; set; }
+    }
+
+    public interface IVMCommand
+    {
+        Guid VMId { get; set; }
     }
 
     public interface IHostAgentCommand

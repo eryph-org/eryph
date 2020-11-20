@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Haipa.StateDb.Model;
+using Haipa.VmConfig;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Query;
 
@@ -32,7 +33,7 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Model.V1
         [Key]
         public Guid Id { get; set; }
 
-        public Guid ResourceId { get; set; }
+        public string ResourceId { get; set; }
         public ResourceType ResourceType { get; set; }
     }
 
