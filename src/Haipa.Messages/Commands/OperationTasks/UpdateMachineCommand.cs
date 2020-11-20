@@ -5,7 +5,7 @@ using Haipa.VmConfig;
 namespace Haipa.Messages.Commands.OperationTasks
 {
     [SendMessageTo(MessageRecipient.Controllers)]
-    public class UpdateMachineCommand : OperationTaskCommand
+    public class UpdateMachineCommand : OperationTaskCommand, IHasCorrelationId
     {
         public Guid CorrelationId { get; set; }
         public Guid MachineId { get; set; }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Haipa.Messages.Commands;
+using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
@@ -47,18 +48,25 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Services
             return StartNew(operationCommand, Guid.Empty);
         }
 
-        public async Task<Operation> StartNew(OperationTaskCommand taskCommand, Guid vmId)
+        public async Task<Operation> StartNew(OperationTaskCommand taskCommand, Guid resourceId)
         {
             if(taskCommand == null)
                 throw new ArgumentNullException(nameof(taskCommand));
           
+            // if supported by the command use the correlation id as operation id
+            // this will prevent that commands are send twice
+            var operationId = Guid.NewGuid();
+            if (taskCommand is IHasCorrelationId correlatedCommand)
+                operationId = correlatedCommand.CorrelationId!=Guid.Empty ? operationId : correlatedCommand.CorrelationId;
+
+
             var operation = new Operation
             {
-                Id = Guid.NewGuid(),
+                Id = operationId,
                 Status = OperationStatus.Queued,
                 Resources = new List<OperationResource>{new OperationResource
                 {
-                    Id = Guid.NewGuid(), ResourceId = vmId, ResourceType = ResourceType.Machine
+                    Id = Guid.NewGuid(), ResourceId = resourceId, ResourceType = ResourceType.Machine
                 }}
             };
 
@@ -66,9 +74,9 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Services
 
             await _db.SaveChangesAsync().ConfigureAwait(false);
         
-            if (vmId != Guid.Empty && (taskCommand is IMachineCommand machineCommand) 
-                                   && machineCommand.MachineId != vmId)
-                machineCommand.MachineId = vmId;
+            if (resourceId != Guid.Empty && (taskCommand is IMachineCommand machineCommand) 
+                                         && machineCommand.MachineId != resourceId)
+                machineCommand.MachineId = resourceId;
 
 
             taskCommand.OperationId = operation.Id;
