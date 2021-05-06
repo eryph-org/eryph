@@ -67,7 +67,10 @@ namespace Haipa.Modules.ComputeApi.Controllers
         public Task<IActionResult> Delete([FromODataUri] string key)
         {
             return FindMachine(key).MapAsync(id =>
-                    Accepted(_operationManager.StartNew<DestroyResourceCommand>(id, ResourceType.Machine))).ToAsync()
+                    Accepted(_operationManager.StartNew<DestroyResourcesCommand>(
+                            new Resource(ResourceType.Machine, Convert.ToInt64(id))
+                            )
+                    )).ToAsync()
                 .Match(r => r, l => l);
 
         }
@@ -124,7 +127,9 @@ namespace Haipa.Modules.ComputeApi.Controllers
         public Task<IActionResult> Start([FromODataUri] string key)
         {
             return FindMachine(key).MapAsync(id =>
-                    Accepted(_operationManager.StartNew<StartMachineCommand>(id, ResourceType.Machine))).ToAsync()
+                    Accepted(_operationManager.StartNew<StartMachineCommand>(
+                            new Resource(ResourceType.Machine, Convert.ToInt64(id))))
+                    ).ToAsync()
                 .Match(r => r, l => l);
         }
 
@@ -135,7 +140,9 @@ namespace Haipa.Modules.ComputeApi.Controllers
         public Task<IActionResult> Stop([FromODataUri] string key)
         {
             return FindMachine(key).MapAsync(id =>
-                    Accepted(_operationManager.StartNew<StopMachineCommand>(id, ResourceType.Machine))).ToAsync()
+                    Accepted(_operationManager.StartNew<StopMachineCommand>(
+                        new Resource(ResourceType.Machine, Convert.ToInt64(id))))
+                    ).ToAsync()
                 .Match(r => r, l => l);
         }
 

@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Haipa.VmConfig;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Haipa.StateDb.Model
 {
@@ -23,13 +25,26 @@ namespace Haipa.StateDb.Model
 
 
         public MachineStatus Status { get; set; }
+        public MachineType MachineType { get; set; }
+
 
         public virtual List<MachineNetwork> Networks { get; set; }
     }
 
     public class VMHostMachine : Machine
     {
+        public VMHostMachine()
+        {
+            MachineType = MachineType.VMHost;
+        }
 
         public virtual List<VirtualMachine> VMs { get; set; }
+    }
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum MachineType
+    {
+        VMHost,
+        VM
     }
 }

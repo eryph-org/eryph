@@ -9,4 +9,16 @@ namespace Haipa.VmConfig
     {
         Machine
     }
+
+    public struct Resource
+    {
+        public long Id { get; set; }
+        public ResourceType Type { get; set; }
+
+        public Resource(ResourceType resourceType, long resourceId)
+        {
+            Type = resourceType;
+            Id = resourceId;
+        }
+    }
 }

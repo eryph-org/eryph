@@ -86,23 +86,14 @@ namespace Haipa.Modules.Controller.Operations
                 {
                     switch (command)
                     {
-                        case IResourceCommand machineCommand:
+                        case IVMCommand vmCommand:
                         {
-                            var machine = await _dbContext.VirtualMachines.FindAsync(machineCommand.ResourceId).ConfigureAwait(false);
+                            var machine = await _dbContext.VirtualMachines.FindAsync(vmCommand.MachineId).ConfigureAwait(false);
 
                             if (machine == null)
                             {
-
-                                if (command.GetType().GetCustomAttribute(typeof(ResourceMayNotExistsAttribute)) != null)
-                                {
-                                    await Handle(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId));
-                                }
-                                else
-                                {
-                                    await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
-                                        new ErrorData {ErrorMessage = "Machine not found"}));
-
-                                }
+                                await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
+                                    new ErrorData { ErrorMessage = $"VirtualMachine {vmCommand.MachineId} not found" }));
 
                                 return;
                             }

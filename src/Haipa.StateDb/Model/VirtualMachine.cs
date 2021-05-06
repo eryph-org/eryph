@@ -5,6 +5,11 @@ namespace Haipa.StateDb.Model
 {
     public class VirtualMachine : Machine
     {
+        public VirtualMachine()
+        {
+            MachineType = MachineType.VM;
+        }
+
         public Guid VMId { get; set; }
 
         public Guid MetadataId { get; set; }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Commands;
@@ -12,7 +11,7 @@ using Newtonsoft.Json;
 using Rebus.Bus;
 using Resource = Haipa.VmConfig.Resource;
 
-namespace Haipa.Modules.AspNetCore.ApiProvider.Services
+namespace Haipa.ModuleCore
 {
     public class OperationManager : IOperationManager
     {
@@ -26,23 +25,33 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Services
             _bus = bus;
         }
 
+        public async Task<Operation?> StartNew<T>() where T : OperationTaskCommand
+        {
+            return await StartNew(Activator.CreateInstance<T>());
+        }
 
-        public async Task<Operation?> StartNew<T>(Resource resource = default) where T : OperationTaskCommand
+
+        public async Task<Operation?> StartNew<T>(Resource resource) where T : OperationTaskCommand
         {
             return (await StartNew(Activator.CreateInstance<T>(), resource)).FirstOrDefault();
         }
 
-        public Task<IEnumerable<Operation>> StartNew<T>([AllowNull] params Resource[] resources) where T : OperationTaskCommand
+        public Task<IEnumerable<Operation>> StartNew<T>(params Resource[] resources) where T : OperationTaskCommand
         {
             return StartNew(Activator.CreateInstance<T>(), resources);
         }
 
-        public async Task<Operation?> StartNew(Type operationCommandType, Resource resource = default)
+        public async Task<Operation?> StartNew(Type operationCommandType)
         {
-            return (await StartNew(operationCommandType, new []{resource}))?.FirstOrDefault();
+            return (await StartNew(operationCommandType, new Resource[] {} )).FirstOrDefault();
         }
 
-        public Task<IEnumerable<Operation>> StartNew(Type operationCommandType, [AllowNull] params Resource[] resources)
+        public async Task<Operation?> StartNew(Type operationCommandType, Resource resource)
+        {
+            return (await StartNew(operationCommandType, new []{resource})).FirstOrDefault();
+        }
+
+        public Task<IEnumerable<Operation>> StartNew(Type operationCommandType,  params Resource[] resources)
         {
             if (!(Activator.CreateInstance(operationCommandType) is OperationTaskCommand command))
                 throw new ArgumentException("Invalid operation task type", nameof(operationCommandType));
@@ -52,10 +61,10 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Services
 
         public async Task<Operation?> StartNew(OperationTaskCommand operationCommand)
         {
-            return (await StartNew(operationCommand,null)).FirstOrDefault();
+            return (await StartNew(operationCommand, new Resource[] { })).FirstOrDefault();
         }
 
-        public async Task<IEnumerable<Operation>> StartNew(OperationTaskCommand taskCommand, [AllowNull] params Resource[] resources)
+        public async Task<IEnumerable<Operation>> StartNew(OperationTaskCommand taskCommand, params Resource[] resources)
         {
             if(taskCommand == null)
                 throw new ArgumentNullException(nameof(taskCommand));
@@ -70,7 +79,7 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Services
 
             //create a operation for each resource
             //or, if command supports multiple resources or there are no resources - 1 operation
-            var opCount = (resources?.Length).GetValueOrDefault(1);
+            var opCount = resources.Length;
             if (opCount > 1 && taskCommand is IResourcesCommand)
                 opCount = 1;
 

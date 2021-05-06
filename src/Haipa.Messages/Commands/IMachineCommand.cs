@@ -3,14 +3,19 @@ using Haipa.VmConfig;
 
 namespace Haipa.Messages.Commands
 {
-    public interface IResourceCommand 
+    public interface IResourceCommand
     {
-        long ResourceId { get; set; }
-        ResourceType ResourceType { get; set; }
+        Resource Resource { get; set; }
+    }
+
+    public interface IResourcesCommand
+    {
+        Resource[] Resources { get; set; }
     }
 
     public interface IVMCommand
     {
+        long MachineId { get; set; }
         Guid VMId { get; set; }
     }
 

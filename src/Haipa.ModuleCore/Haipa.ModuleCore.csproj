@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,5 +16,7 @@
     <ProjectReference Include="..\Haipa.Core\Haipa.Core.csproj" />
     <ProjectReference Include="..\Haipa.Messages\Haipa.Messages.csproj" />
     <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
+    <ProjectReference Include="..\Haipa.StateDb\Haipa.StateDb.csproj" />
+
   </ItemGroup>
 </Project>
