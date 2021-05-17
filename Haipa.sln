@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30320.27
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{8FEDA44A-CCBF-4B47-838E-7FA6FEE688D4}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5161FD3F-5E58-4C46-9EC5-DC275266583A}"
 	ProjectSection(SolutionItems) = preProject
 		nuget.config = nuget.config
@@ -68,11 +66,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{E889
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{7F64364D-A6A2-441C-9F30-3702BF35A02F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.Data", "src\Haipa.Data\Haipa.Data.csproj", "{27279203-AD89-4FD0-B44C-21F7678CB076}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Data", "src\Haipa.Data\Haipa.Data.csproj", "{27279203-AD89-4FD0-B44C-21F7678CB076}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Core", "src\Haipa.Core\Haipa.Core.csproj", "{1BC81BC6-C5D8-4F07-90DE-CABCA9BBC2DA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Haipa.ModuleCore", "src\Haipa.ModuleCore\Haipa.ModuleCore.csproj", "{A90AF0DD-866A-4D16-938D-9E66649BB8D6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.ModuleCore", "src\Haipa.ModuleCore\Haipa.ModuleCore.csproj", "{A90AF0DD-866A-4D16-938D-9E66649BB8D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -80,9 +78,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8FEDA44A-CCBF-4B47-838E-7FA6FEE688D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8FEDA44A-CCBF-4B47-838E-7FA6FEE688D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8FEDA44A-CCBF-4B47-838E-7FA6FEE688D4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}.Release|Any CPU.ActiveCfg = Release|Any CPU

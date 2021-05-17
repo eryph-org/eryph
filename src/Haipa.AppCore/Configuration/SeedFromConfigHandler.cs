@@ -7,7 +7,7 @@ using LanguageExt;
 
 namespace Haipa.Configuration
 {
-    public class SeedFromConfigHandler<TModule> : IHostedServiceHandler where TModule : IModule
+    public class SeedFromConfigHandler<TModule> : IHostedServiceHandler where TModule : class
     {
         private readonly IEnumerable<IConfigSeeder<TModule>> _seeders;
 
