@@ -8,53 +8,53 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		nuget.config = nuget.config
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "haipa-zero", "src\haipa-zero\haipa-zero.csproj", "{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "haipa-zero", "src\apps\src\haipa-zero\haipa-zero.csproj", "{4E376AF9-0BA5-42AE-BCD9-F8B0E2CC131F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Controller", "src\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj", "{D407363B-27CE-4180-BB8A-986A619941CD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Controller", "src\modules\src\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj", "{D407363B-27CE-4180-BB8A-986A619941CD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.VmManagement", "src\Haipa.VmManagement\Haipa.VmManagement.csproj", "{B55118C0-8D29-4079-A291-62383B857EEA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.VmManagement", "src\core\src\Haipa.VmManagement\Haipa.VmManagement.csproj", "{B55118C0-8D29-4079-A291-62383B857EEA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.VmHostAgent", "src\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj", "{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.VmHostAgent", "src\modules\src\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj", "{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.StateDb.MySql", "src\Haipa.StateDb.MySql\Haipa.StateDb.MySql.csproj", "{ABBA71A2-8149-4F2D-A097-EAD2AE59D822}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.StateDb.MySql", "src\Infrastructure\src\Haipa.StateDb.MySql\Haipa.StateDb.MySql.csproj", "{ABBA71A2-8149-4F2D-A097-EAD2AE59D822}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Agent", "src\Haipa.Agent\Haipa.Agent.csproj", "{A976200C-AE38-49FA-8437-0A067EBB66DB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Agent", "src\apps\src\Haipa.Agent\Haipa.Agent.csproj", "{A976200C-AE38-49FA-8437-0A067EBB66DB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.ApiEndpoint", "src\Haipa.ApiEndpoint\Haipa.ApiEndpoint.csproj", "{4396620F-1CE7-4836-99EC-ECE5250E14E6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.ApiEndpoint", "src\apps\src\Haipa.ApiEndpoint\Haipa.ApiEndpoint.csproj", "{4396620F-1CE7-4836-99EC-ECE5250E14E6}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Controller", "src\Haipa.Controller\Haipa.Controller.csproj", "{9211A83F-7ECA-4C06-BF19-ABA4235C206A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Controller", "src\apps\src\Haipa.Controller\Haipa.Controller.csproj", "{9211A83F-7ECA-4C06-BF19-ABA4235C206A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Messages", "src\Haipa.Messages\Haipa.Messages.csproj", "{480881D1-8B5E-43AB-9C0B-8C556DDA9B6D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Messages", "src\core\src\Haipa.Messages\Haipa.Messages.csproj", "{480881D1-8B5E-43AB-9C0B-8C556DDA9B6D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Rebus", "src\Haipa.Rebus\Haipa.Rebus.csproj", "{81EA1BD0-14A9-4C25-B232-6AD983FC86F7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Rebus", "src\infrastructure\src\Haipa.Rebus\Haipa.Rebus.csproj", "{81EA1BD0-14A9-4C25-B232-6AD983FC86F7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.StateDb", "src\Haipa.StateDb\Haipa.StateDb.csproj", "{CC838016-EDE2-43F4-A319-30D25345C846}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.StateDb", "src\data\src\Haipa.StateDb\Haipa.StateDb.csproj", "{CC838016-EDE2-43F4-A319-30D25345C846}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.VmConfig.Primitives", "src\Haipa.VmConfig.Primitives\Haipa.VmConfig.Primitives.csproj", "{C63C8CAE-FED1-48FF-AFD8-B075D3CDEA51}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.VmConfig.Primitives", "src\core\src\Haipa.VmConfig.Primitives\Haipa.VmConfig.Primitives.csproj", "{C63C8CAE-FED1-48FF-AFD8-B075D3CDEA51}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.AspNetCore", "src\Haipa.Modules.AspNetCore\Haipa.Modules.AspNetCore.csproj", "{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.AspNetCore", "src\modules\src\Haipa.Modules.AspNetCore\Haipa.Modules.AspNetCore.csproj", "{61D83696-7E5B-4DB7-B872-6E6BA63ADB7A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Identity", "src\Haipa.Identity\Haipa.Identity.csproj", "{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Identity", "src\apps\src\Haipa.Identity\Haipa.Identity.csproj", "{0CA50C75-42C7-48E6-B6D7-CBA2CA5E96FE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Security.Cryptography", "src\Haipa.Security.Cryptography\Haipa.Security.Cryptography.csproj", "{4908D4F4-3545-4FF1-B37F-E3E237B05C54}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Security.Cryptography", "src\core\src\Haipa.Security.Cryptography\Haipa.Security.Cryptography.csproj", "{4908D4F4-3545-4FF1-B37F-E3E237B05C54}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Identity.Test", "test\Haipa.Modules.Identity.Test\Haipa.Modules.Identity.Test.csproj", "{C6B327A2-F638-4DE1-8937-B037D9049217}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Identity.Test", "src\modules\test\Haipa.Modules.Identity.Test\Haipa.Modules.Identity.Test.csproj", "{C6B327A2-F638-4DE1-8937-B037D9049217}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.TestUtils.AspNetCore", "test\Haipa.TestUtils.AspNetCore\Haipa.TestUtils.AspNetCore.csproj", "{FDE35F47-AF4A-482C-8A4F-3EC0DD6F16AC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.TestUtils.AspNetCore", "src\modules\test\Haipa.TestUtils.AspNetCore\Haipa.TestUtils.AspNetCore.csproj", "{FDE35F47-AF4A-482C-8A4F-3EC0DD6F16AC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Identity", "src\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj", "{6B56359B-B15A-4888-997D-AB8A953F0A29}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.Identity", "src\modules\src\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj", "{6B56359B-B15A-4888-997D-AB8A953F0A29}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.IdentityDb", "src\Haipa.IdentityDb\Haipa.IdentityDb.csproj", "{A64F9618-DEB4-4BE0-9310-39E4A57FFA2E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.IdentityDb", "src\data\src\Haipa.IdentityDb\Haipa.IdentityDb.csproj", "{A64F9618-DEB4-4BE0-9310-39E4A57FFA2E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.AppCore", "src\Haipa.AppCore\Haipa.AppCore.csproj", "{C1D77E9E-1827-424E-AB8E-A5A43E415C3F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.AppCore", "src\apps\src\Haipa.AppCore\Haipa.AppCore.csproj", "{C1D77E9E-1827-424E-AB8E-A5A43E415C3F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Configuration", "..\src\Haipa.Configuration\Haipa.Configuration.csproj", "{9B749857-F075-4389-AFF0-4D73C2F54ABA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Configuration", "src\core\src\Haipa.Configuration\Haipa.Configuration.csproj", "{9B749857-F075-4389-AFF0-4D73C2F54ABA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.ComputeApi", "src\Haipa.Modules.ComputeApi\Haipa.Modules.ComputeApi.csproj", "{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.ComputeApi", "src\modules\src\Haipa.Modules.ComputeApi\Haipa.Modules.ComputeApi.csproj", "{2E8FD3D3-C3F4-4818-AF10-E11D7A131FD2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.CommonApi", "src\Haipa.Modules.CommonApi\Haipa.Modules.CommonApi.csproj", "{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Modules.CommonApi", "src\modules\src\Haipa.Modules.CommonApi\Haipa.Modules.CommonApi.csproj", "{B0B79FB3-7F38-4DBE-B3E3-4E102FDDED2E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Apps", "Apps", "{5F41CD29-E6EF-4810-8A84-8B9E52AEAE70}"
 EndProject
@@ -66,11 +66,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules", "Modules", "{E889
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{7F64364D-A6A2-441C-9F30-3702BF35A02F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Data", "src\Haipa.Data\Haipa.Data.csproj", "{27279203-AD89-4FD0-B44C-21F7678CB076}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Data", "src\data\src\Haipa.Data\Haipa.Data.csproj", "{27279203-AD89-4FD0-B44C-21F7678CB076}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Core", "src\Haipa.Core\Haipa.Core.csproj", "{1BC81BC6-C5D8-4F07-90DE-CABCA9BBC2DA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.Core", "src\core\src\Haipa.Core\Haipa.Core.csproj", "{1BC81BC6-C5D8-4F07-90DE-CABCA9BBC2DA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.ModuleCore", "src\Haipa.ModuleCore\Haipa.ModuleCore.csproj", "{A90AF0DD-866A-4D16-938D-9E66649BB8D6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Haipa.ModuleCore", "src\modules\src\Haipa.ModuleCore\Haipa.ModuleCore.csproj", "{A90AF0DD-866A-4D16-938D-9E66649BB8D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

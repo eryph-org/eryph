@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>Haipa</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.4.0" />
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Haipa.Core\Haipa.Core.csproj" />
+    <ProjectReference Include="..\..\..\infrastructure\src\Haipa.Rebus\Haipa.Rebus.csproj" />
+  </ItemGroup>
+
+</Project>

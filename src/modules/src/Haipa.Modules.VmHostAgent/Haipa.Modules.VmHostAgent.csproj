@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Haipa.Messages\Haipa.Messages.csproj" />
+    <ProjectReference Include="..\Haipa.ModuleCore\Haipa.ModuleCore.csproj" />
+    <ProjectReference Include="..\..\..\infrastructure\src\Haipa.Rebus\Haipa.Rebus.csproj" />
+    <ProjectReference Include="..\..\..\core\src\Haipa.VmManagement\Haipa.VmManagement.csproj" />
+  </ItemGroup>
+
+</Project>

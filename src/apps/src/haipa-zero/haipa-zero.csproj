@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+    <RootNamespace>Haipa.Runtime.Zero</RootNamespace>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="0.4.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.6">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.0.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Haipa.Configuration\Haipa.Configuration.csproj" />
+    <ProjectReference Include="..\Haipa.AppCore\Haipa.AppCore.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Haipa.Modules.CommonApi\Haipa.Modules.CommonApi.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Haipa.Modules.ComputeApi\Haipa.Modules.ComputeApi.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Haipa.Modules.Controller\Haipa.Modules.Controller.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Haipa.Modules.Identity\Haipa.Modules.Identity.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj" />
+    <ProjectReference Include="..\..\..\core\src\Haipa.Security.Cryptography\Haipa.Security.Cryptography.csproj" />
+  </ItemGroup>
+  <PropertyGroup>
+    <PackageTags>9412ee86-c21b-4eb8-bd89-f650fbf44931</PackageTags>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+</Project>

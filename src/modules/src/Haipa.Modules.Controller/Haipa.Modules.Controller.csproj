@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Haipa.ModuleCore\Haipa.ModuleCore.csproj" />
+    <ProjectReference Include="..\..\..\data\src\Haipa.StateDb\Haipa.StateDb.csproj" />
+  </ItemGroup>
+
+</Project>
