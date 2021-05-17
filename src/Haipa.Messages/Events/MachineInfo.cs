@@ -4,8 +4,6 @@ namespace Haipa.Messages.Events
 {
     public class VirtualMachineInfo : MachineInfo
     {
-        public string Name { get; set; }
-
         public Guid VMId { get; set; }
 
         public Guid MetadataId { get; set; }
@@ -14,7 +12,6 @@ namespace Haipa.Messages.Events
         public VmStatus Status { get; set; }
 
         public VirtualMachineNetworkAdapterInfo[] NetworkAdapters { get; set; }
-        public MachineNetworkInfo[] Networks { get; set; }
         public VirtualMachineDriveInfo[] Drives { get; set; }
 
 

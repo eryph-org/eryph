@@ -149,7 +149,7 @@ namespace Haipa.Modules.Controller.Inventory
                             metadata.MachineId = IdGenerator.GenerateId();
                             metadata.VMId = vmInfo.VMId;
 
-                            await _taskDispatcher.StartNewOperation(new UpdateVirtualMachineMetadataCommand
+                            await _taskDispatcher.Send(new UpdateVirtualMachineMetadataCommand
                             {
                                 AgentName = hostMachine.AgentName,
                                 CurrentMetadataId = oldMetadataId,
@@ -157,7 +157,7 @@ namespace Haipa.Modules.Controller.Inventory
                                 VMId = vmInfo.VMId,
                                 OperationId = Guid.NewGuid(),
                                 TaskId = Guid.NewGuid()
-                            }, metadata.MachineId, ResourceType.Machine);
+                            });
                         }
 
                         if(metadata.MachineId == 0)

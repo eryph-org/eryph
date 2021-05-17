@@ -14,7 +14,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
 {
     [UsedImplicitly]
     internal class DestroyResourcesSaga : OperationTaskWorkflowSaga<DestroyResourcesCommand, DestroyResourcesSagaData>,
-        IHandleMessages<OperationTaskStatusEvent<DestroyMachineCommand>>
+        IHandleMessages<OperationTaskStatusEvent<DestroyResourcesCommand>>
     {
         private readonly IOperationTaskDispatcher _taskDispatcher;
 
@@ -26,7 +26,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
         protected override void CorrelateMessages(ICorrelationConfig<DestroyResourcesSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<DestroyMachineCommand>(m => m.OperationId, m => m.OperationId);
+            config.Correlate<DestroyResourcesCommand>(m => m.OperationId, m => m.OperationId);
 
         }
 
@@ -42,7 +42,8 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                 return resource.Type switch
                 {
                     ResourceType.Machine => _taskDispatcher.Send(
-                        new DestroyMachineCommand {OperationId = Data.OperationId, TaskId = Guid.NewGuid(),}),
+                        new DestroyMachineCommand {OperationId = Data.OperationId, 
+                            TaskId = Guid.NewGuid(), Resource = resource}),
                     _ => throw new ArgumentOutOfRangeException()
                 };
             }
@@ -51,9 +52,5 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             return Task.CompletedTask;
         }
 
-        public Task Handle(OperationTaskStatusEvent<DestroyMachineCommand> message)
-        {
-
-        }
     }
 }

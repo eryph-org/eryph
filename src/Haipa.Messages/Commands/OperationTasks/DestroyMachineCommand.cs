@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Haipa.Messages.Operations;
+﻿using Haipa.Messages.Operations;
 using Haipa.VmConfig;
 
 namespace Haipa.Messages.Commands.OperationTasks
@@ -17,15 +15,7 @@ namespace Haipa.Messages.Commands.OperationTasks
         public Resource Resource { get; set; }
     }
 
-    [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class RemoveVMCommand : OperationTaskCommand, IVMCommand
-    {
-        public long MachineId { get; set; }
-        public Guid VMId { get; set; }
-    }
-    
-
-    public class DestroyResourceResponse
+    public class DestroyResourcesResponse
     {
         public Resource[] DestroyedResources { get; set; }
         public Resource[] DetachedResources { get; set; }

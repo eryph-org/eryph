@@ -89,10 +89,17 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Services
                 result.Add(operation);
 
                 await _db.SaveChangesAsync();
-                var resource = resources?[i];
-                if (resource.HasValue && taskCommand is IResourceCommand resourceCommand)
-                    resourceCommand.Resource = resource.Value;
 
+                if (taskCommand is IResourcesCommand resourcesCommand)
+                {
+                    resourcesCommand.Resources = resources;
+                }
+                else
+                {
+                    var resource = resources?[i];
+                    if (resource.HasValue && taskCommand is IResourceCommand resourceCommand)
+                        resourceCommand.Resource = resource.Value;
+                }
 
                 taskCommand.OperationId = operation.Id;
                 taskCommand.TaskId = Guid.NewGuid();

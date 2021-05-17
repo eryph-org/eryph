@@ -88,7 +88,9 @@ namespace Haipa.Modules.Controller.Operations
                     {
                         case IVMCommand vmCommand:
                         {
-                            var machine = await _dbContext.VirtualMachines.FindAsync(vmCommand.MachineId).ConfigureAwait(false);
+                            var machine = await _dbContext.VirtualMachines.FindAsync(vmCommand.MachineId)
+                                
+                                .ConfigureAwait(false);
 
                             if (machine == null)
                             {
@@ -98,7 +100,7 @@ namespace Haipa.Modules.Controller.Operations
                                 return;
                             }
 
-                            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{machine.Host.Name}", command)
+                            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{machine.AgentName}", command)
                                 .ConfigureAwait(false);
 
                             return;
