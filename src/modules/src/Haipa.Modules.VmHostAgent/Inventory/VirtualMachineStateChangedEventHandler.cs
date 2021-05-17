@@ -17,9 +17,9 @@ namespace Haipa.Modules.VmHostAgent
 
         public Task Handle(VirtualMachineStateChangedEvent message)
         {
-            return _bus.Publish(new MachineStateChangedEvent
+            return _bus.Publish(new VMStateChangedEvent
             {
-                MachineId = message.VmId,
+                VmId = message.VmId,
                 Status = InventoryConverter.MapVmInfoStatusToVmStatus(message.State)
             });
         }

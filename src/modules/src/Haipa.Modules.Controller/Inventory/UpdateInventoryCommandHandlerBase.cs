@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Resources.Machines.Commands;
+using Haipa.ModuleCore;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Modules.Controller.Operations;
 using Haipa.Resources.Disks;
@@ -14,7 +15,7 @@ namespace Haipa.Modules.Controller.Inventory
 {
     internal class UpdateInventoryCommandHandlerBase
     {
-        private readonly IOperationTaskDispatcher _taskDispatcher;
+        private readonly IOperationDispatcher _dispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
         protected readonly Id64Generator IdGenerator;
 
@@ -23,13 +24,13 @@ namespace Haipa.Modules.Controller.Inventory
 
 
         protected UpdateInventoryCommandHandlerBase(StateStoreContext stateStoreContext, Id64Generator idGenerator,
-            IVirtualMachineMetadataService metadataService, IOperationTaskDispatcher taskDispatcher,
+            IVirtualMachineMetadataService metadataService, IOperationDispatcher dispatcher,
             IVirtualMachineDataService vmDataService)
         {
             StateStoreContext = stateStoreContext;
             IdGenerator = idGenerator;
             MetadataService = metadataService;
-            _taskDispatcher = taskDispatcher;
+            _dispatcher = dispatcher;
             _vmDataService = vmDataService;
         }
 
@@ -145,14 +146,12 @@ namespace Haipa.Modules.Controller.Inventory
                             metadata.MachineId = IdGenerator.GenerateId();
                             metadata.VMId = vmInfo.VMId;
 
-                            await _taskDispatcher.Send(new UpdateVirtualMachineMetadataCommand
+                            await _dispatcher.StartNew(new UpdateVirtualMachineMetadataCommand
                             {
                                 AgentName = hostMachine.AgentName,
                                 CurrentMetadataId = oldMetadataId,
                                 NewMetadataId = metadata.Id,
                                 VMId = vmInfo.VMId,
-                                OperationId = Guid.NewGuid(),
-                                TaskId = Guid.NewGuid()
                             });
                         }
 

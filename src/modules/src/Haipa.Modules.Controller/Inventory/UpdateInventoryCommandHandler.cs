@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Haipa.Messages.Resources.Machines.Commands;
+using Haipa.ModuleCore;
 using Haipa.Modules.Controller;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Modules.Controller.Inventory;
@@ -17,9 +18,9 @@ internal class UpdateVMInventoryCommandHandler : UpdateInventoryCommandHandlerBa
     IHandleMessages<UpdateInventoryCommand>
 {
     public UpdateVMInventoryCommandHandler(StateStoreContext stateStoreContext, Id64Generator idGenerator,
-        IVirtualMachineMetadataService metadataService, IOperationTaskDispatcher taskDispatcher,
+        IVirtualMachineMetadataService metadataService, IOperationDispatcher dispatcher,
         IVirtualMachineDataService vmDataService) : base(stateStoreContext, idGenerator, metadataService,
-        taskDispatcher, vmDataService)
+        dispatcher, vmDataService)
     {
     }
 

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Haipa.ModuleCore;
 using Haipa.Modules.AspNetCore.ApiProvider;
-using Haipa.Modules.AspNetCore.ApiProvider.Services;
 using Haipa.Modules.AspNetCore.OData;
 using Haipa.Modules.ComputeApi.Model.V1;
 using Haipa.StateDb;
@@ -18,9 +18,9 @@ namespace Haipa.Modules.ComputeApi.Controllers
     public class VirtualDisksController : ODataController
     {
         private readonly StateStoreContext _db;
-        private readonly IOperationManager _operationManager;
+        private readonly IOperationDispatcher _operationManager;
 
-        public VirtualDisksController(StateStoreContext context, IOperationManager operationManager)
+        public VirtualDisksController(StateStoreContext context, IOperationDispatcher operationManager)
         {
             _db = context;
             _operationManager = operationManager;

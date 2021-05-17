@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Resources.Machines.Commands;
+using Haipa.ModuleCore;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Modules.Controller.Operations;
 using Haipa.StateDb;
@@ -14,9 +15,9 @@ namespace Haipa.Modules.Controller.Inventory
         IHandleMessages<UpdateVMHostInventoryCommand>
     {
         public UpdateVMHostInventoryCommandHandler(StateStoreContext stateStoreContext, Id64Generator idGenerator,
-            IVirtualMachineMetadataService metadataService, IOperationTaskDispatcher taskDispatcher,
+            IVirtualMachineMetadataService metadataService, IOperationDispatcher dispatcher,
             IVirtualMachineDataService vmDataService) : base(stateStoreContext, idGenerator, metadataService,
-            taskDispatcher, vmDataService)
+            dispatcher, vmDataService)
         {
         }
 

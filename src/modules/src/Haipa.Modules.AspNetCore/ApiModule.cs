@@ -3,8 +3,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
+using Haipa.ModuleCore;
 using Haipa.Modules.AspNetCore.ApiProvider;
-using Haipa.Modules.AspNetCore.ApiProvider.Services;
 using Haipa.Modules.CommonApi.Models.V1;
 using Haipa.Rebus;
 using Haipa.StateDb;
@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Rebus.Handlers;
+using Rebus.Logging;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
@@ -77,7 +78,7 @@ namespace Haipa.Modules.AspNetCore
         public virtual void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.Collection.Register(typeof(IHandleMessages<>), typeof(TModule).Assembly);
-            container.Register<IOperationManager, OperationManager>(Lifestyle.Scoped);
+            container.Register<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped);
 
             container.ConfigureRebus(configurer =>
             {
@@ -93,7 +94,7 @@ namespace Haipa.Modules.AspNetCore
                     })
                     .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings
                         {TypeNameHandling = TypeNameHandling.None}))
-                    .Logging(x => x.ColoredConsole()).Start();
+                    .Logging(x => x.Trace()).Start();
             });
         }
     }

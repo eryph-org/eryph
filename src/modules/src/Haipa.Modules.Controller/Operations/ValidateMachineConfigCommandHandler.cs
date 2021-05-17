@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Resources.Machines;
@@ -11,7 +12,7 @@ using Rebus.Handlers;
 namespace Haipa.Modules.Controller.Operations
 {
     [UsedImplicitly]
-    public class ValidateMachineConfigCommandHandler : IHandleMessages<ValidateMachineConfigCommand>
+    public class ValidateMachineConfigCommandHandler : IHandleMessages<OperationTask<ValidateMachineConfigCommand>>
     {
         private readonly IBus _bus;
 
@@ -20,10 +21,10 @@ namespace Haipa.Modules.Controller.Operations
             _bus = bus;
         }
 
-        public Task Handle(ValidateMachineConfigCommand message)
+        public Task Handle(OperationTask<ValidateMachineConfigCommand> message)
         {
-            message.Config = NormalizeMachineConfig(message.MachineId, message.Config);
-            return _bus.SendLocal(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, message));
+            message.Command.Config = NormalizeMachineConfig(message.Command.MachineId, message.Command.Config);
+            return _bus.SendLocal(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, message.Command));
         }
 
         private static MachineConfig NormalizeMachineConfig(

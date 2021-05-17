@@ -4,10 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Resources.Commands;
 using Haipa.Messages.Resources.Machines.Commands;
+using Haipa.ModuleCore;
 using Haipa.Modules.AspNetCore;
 using Haipa.Modules.AspNetCore.ApiProvider;
 using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
-using Haipa.Modules.AspNetCore.ApiProvider.Services;
 using Haipa.Modules.AspNetCore.OData;
 using Haipa.Modules.ComputeApi.Model.V1;
 using Haipa.Resources;
@@ -27,9 +27,9 @@ namespace Haipa.Modules.ComputeApi.Controllers
     public class MachinesController : ApiController
     {
         private readonly StateStoreContext _db;
-        private readonly IOperationManager _operationManager;
+        private readonly IOperationDispatcher _operationManager;
 
-        public MachinesController(StateStoreContext context, IOperationManager operationManager)
+        public MachinesController(StateStoreContext context, IOperationDispatcher operationManager)
         {
             _db = context;
             _operationManager = operationManager;
@@ -113,10 +113,10 @@ namespace Haipa.Modules.ComputeApi.Controllers
                 new UpdateMachineCommand
                 {
                     CorrelationId = settings.CorrelationId,
-                    MachineId = Convert.ToInt64(key),
                     Config = machineConfig,
                     AgentName = machine.AgentName
-                }
+                },
+                new Resource(ResourceType.Machine, Convert.ToInt64(key))
             ).ConfigureAwait(false));
         }
 

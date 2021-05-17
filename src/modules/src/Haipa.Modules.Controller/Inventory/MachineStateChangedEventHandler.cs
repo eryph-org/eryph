@@ -4,11 +4,12 @@ using Haipa.Messages.Resources.Machines.Events;
 using Haipa.Resources.Machines;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
+using Microsoft.EntityFrameworkCore;
 using Rebus.Handlers;
 
 namespace Haipa.Modules.Controller.Inventory
 {
-    internal class MachineStateChangedEventHandler : IHandleMessages<MachineStateChangedEvent>
+    internal class MachineStateChangedEventHandler : IHandleMessages<VMStateChangedEvent>
     {
         private readonly StateStoreContext _stateStoreContext;
 
@@ -17,14 +18,14 @@ namespace Haipa.Modules.Controller.Inventory
             _stateStoreContext = stateStoreContext;
         }
 
-        public async Task Handle(MachineStateChangedEvent message)
+        public async Task Handle(VMStateChangedEvent message)
         {
-            var machine = await _stateStoreContext.FindAsync<Machine>(message.MachineId);
+            var vm = await _stateStoreContext.VirtualMachines.FirstOrDefaultAsync(x=> x.VMId == message.VmId);
 
-            if (machine == null)
+            if (vm == null)
                 return;
 
-            machine.Status = MapVmStatusToMachineStatus(message.Status);
+            vm.Status = MapVmStatusToMachineStatus(message.Status);
         }
 
         private static MachineStatus MapVmStatusToMachineStatus(VmStatus status)

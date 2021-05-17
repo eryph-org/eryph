@@ -6,7 +6,7 @@ using Haipa.Resources.Machines.Config;
 namespace Haipa.Messages.Resources.Machines.Commands
 {
     [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class UpdateVirtualMachineCommand : OperationTaskCommand, IHostAgentCommand
+    public class UpdateVirtualMachineCommand : IHostAgentCommand
     {
         public MachineConfig Config { get; set; }
 

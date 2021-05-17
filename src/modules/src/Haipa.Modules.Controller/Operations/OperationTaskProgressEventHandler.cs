@@ -1,10 +1,10 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Haipa.Messages.Operations.Events;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 
 namespace Haipa.Modules.Controller.Operations
@@ -13,20 +13,24 @@ namespace Haipa.Modules.Controller.Operations
     public class OperationTaskProgressEventHandler : IHandleMessages<OperationTaskProgressEvent>
     {
         private readonly StateStoreContext _dbContext;
+        private readonly ILogger<OperationTaskProgressEventHandler> _logger;
 
-        public OperationTaskProgressEventHandler(StateStoreContext dbContext)
+        public OperationTaskProgressEventHandler(StateStoreContext dbContext, ILogger<OperationTaskProgressEventHandler> logger)
         {
             _dbContext = dbContext;
+            _logger = logger;
         }
 
 
-        public Task Handle(OperationTaskProgressEvent message)
+        public async Task Handle(OperationTaskProgressEvent message)
         {
-            var operation = _dbContext.Operations.FirstOrDefault(op => op.Id == message.OperationId);
-            var task = _dbContext.OperationTasks.FirstOrDefault(op => op.Id == message.TaskId);
+            _logger.LogDebug($"Received operation task progress event. Id : '{message.OperationId}/{message.TaskId}'");
 
+            var operation = await _dbContext.Operations.FirstOrDefaultAsync(op => op.Id == message.OperationId);
+            var task = await _dbContext.OperationTasks.FirstOrDefaultAsync(op => op.Id == message.TaskId);
+            
 
-            if (operation != null)
+            if (operation != null && task!=null)
             {
                 var opLogEntry =
                     new OperationLogEntry
@@ -38,11 +42,20 @@ namespace Haipa.Modules.Controller.Operations
                         Timestamp = message.Timestamp
                     };
 
-                _dbContext.Add(opLogEntry);
+                await _dbContext.AddAsync(opLogEntry);
             }
+            else
+            {
+                _logger.LogWarning($"Received operation task progress event for a unknown operation task. Id : '{message.OperationId}/{message.TaskId}'", new
+                {
+                    message.OperationId,
+                    message.TaskId,
+                    message.Message,
+                    message.Timestamp,
+                });
 
-            Console.WriteLine(message.Message);
-            return Task.CompletedTask;
+            }
+            
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages.Operations.Commands;
+using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Events;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -9,10 +9,10 @@ using Rebus.Sagas;
 namespace Haipa.Modules.Controller.Operations
 {
     public abstract class OperationTaskWorkflowSaga<TMessage, TSagaData> : Saga<TSagaData>,
-        IAmInitiatedBy<AcceptedOperationTaskEvent<TMessage>>,
+        IAmInitiatedBy<OperationTask<TMessage>>,
         IHandleMessages<OperationTaskStatusEvent<TMessage>>
         where TSagaData : TaskWorkflowSagaData, new()
-        where TMessage : OperationTaskCommand
+        where TMessage : class, new()
     {
         protected readonly IBus Bus;
 
@@ -22,10 +22,10 @@ namespace Haipa.Modules.Controller.Operations
         }
 
 
-        public Task Handle(AcceptedOperationTaskEvent<TMessage> message)
+        public Task Handle(OperationTask<TMessage> message)
         {
-            Data.OperationId = message.Command.OperationId;
-            Data.InitiatingTaskId = message.Command.TaskId;
+            Data.OperationId = message.OperationId;
+            Data.InitiatingTaskId = message.TaskId;
             return Initiated(message.Command);
         }
 
@@ -36,7 +36,7 @@ namespace Haipa.Modules.Controller.Operations
 
         protected override void CorrelateMessages(ICorrelationConfig<TSagaData> config)
         {
-            config.Correlate<AcceptedOperationTaskEvent<TMessage>>(m => m.Command.OperationId, d => d.OperationId);
+            config.Correlate<OperationTask<TMessage>>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<TMessage>>(m => m.OperationId, d => d.OperationId);
         }
 
@@ -66,7 +66,7 @@ namespace Haipa.Modules.Controller.Operations
         }
 
         public Task FailOrRun<T>(OperationTaskStatusEvent<T> message, Func<Task> completedFunc)
-            where T : OperationTaskCommand
+            where T : class, new()
         {
             if (message.OperationFailed)
                 return Fail(message.GetMessage());
@@ -75,13 +75,14 @@ namespace Haipa.Modules.Controller.Operations
         }
 
         public Task FailOrRun<T, TOpMessage>(OperationTaskStatusEvent<T> message, Func<TOpMessage, Task> completedFunc)
-            where T : OperationTaskCommand
+            where T : class, new()
             where TOpMessage : class
         {
-            if (message.OperationFailed)
-                return Fail(message.GetMessage());
-
-            return completedFunc(message.GetMessage() as TOpMessage);
+            return message.OperationFailed 
+                ? Fail(message.GetMessage()) 
+                : completedFunc(message.GetMessage() as TOpMessage 
+                                ?? throw new InvalidOperationException(
+                                    $"Message {typeof(T)} has not returned a result of type {typeof(TOpMessage)}."));
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Resources.Machines.Config;
@@ -16,20 +17,20 @@ namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
     internal class UpdateVirtualMachineCommandHandler : VirtualMachineConfigCommandHandler,
-        IHandleMessages<AcceptedOperationTaskEvent<UpdateVirtualMachineCommand>>
+        IHandleMessages<OperationTask<UpdateVirtualMachineCommand>>
     {
         public UpdateVirtualMachineCommandHandler(IPowershellEngine engine, IBus bus) : base(engine, bus)
         {
         }
 
-        public Task Handle(AcceptedOperationTaskEvent<UpdateVirtualMachineCommand> message)
+        public Task Handle(OperationTask<UpdateVirtualMachineCommand> message)
         {
             var command = message.Command;
             var config = command.Config;
             var vmId = command.VMId;
 
-            OperationId = command.OperationId;
-            TaskId = command.TaskId;
+            OperationId = message.OperationId;
+            TaskId = message.TaskId;
 
             var hostSettings = HostSettingsBuilder.GetHostSettings();
             var convergeVM = Prelude.fun(

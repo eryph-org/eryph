@@ -47,8 +47,6 @@ namespace Haipa.Runtime.Zero
                 .AddIdentityModule(container)
                 .HostModule<VmHostAgentModule>()
                 .AddControllerModule(container)
-                .UseEnvironment("Development")
-                .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Trace))
                 .Build();
 
             processLock.SetMetadata(new Dictionary<string, object>

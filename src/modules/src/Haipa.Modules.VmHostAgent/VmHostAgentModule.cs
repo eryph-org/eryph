@@ -1,6 +1,7 @@
 ﻿using System;
 using Dbosoft.Hosuto.HostedServices;
 using Haipa.Messages;
+using Haipa.ModuleCore;
 using Haipa.Rebus;
 using Haipa.VmManagement;
 using JetBrains.Annotations;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Rebus.Config;
 using Rebus.Handlers;
+using Rebus.Logging;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
@@ -39,7 +41,7 @@ namespace Haipa.Modules.VmHostAgent
             container.RegisterSingleton<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>();
 
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);
-            container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationHandler<>));
+            container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingTaskMessageHandler<>));
 
             container.ConfigureRebus(configurer => configurer
                 .Transport(t =>
@@ -57,7 +59,7 @@ namespace Haipa.Modules.VmHostAgent
                 .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>()?.Configure(s))
                 .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings
                     {TypeNameHandling = TypeNameHandling.None}))
-                .Logging(x => x.ColoredConsole()).Start());
+                .Logging(x => x.Trace()).Start());
         }
     }
 }

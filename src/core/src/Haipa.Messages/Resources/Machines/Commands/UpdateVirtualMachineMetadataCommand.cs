@@ -4,7 +4,7 @@ using Haipa.Messages.Operations.Commands;
 namespace Haipa.Messages.Resources.Machines.Commands
 {
     [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class UpdateVirtualMachineMetadataCommand : OperationTaskCommand, IHostAgentCommand
+    public class UpdateVirtualMachineMetadataCommand :  IHostAgentCommand
     {
         public Guid NewMetadataId { get; set; }
         public Guid CurrentMetadataId { get; set; }

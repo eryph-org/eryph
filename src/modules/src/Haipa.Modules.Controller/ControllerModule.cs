@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using Dbosoft.Hosuto.HostedServices;
 using Haipa.Messages;
+using Haipa.ModuleCore;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Modules.Controller.Inventory;
 using Haipa.Modules.Controller.Operations;
@@ -32,7 +34,8 @@ namespace Haipa.Modules.Controller
 
             container.Register<IRebusUnitOfWork, StateStoreDbUnitOfWork>(Lifestyle.Scoped);
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
-            container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingOperationTaskHandler<>));
+            container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingTaskMessageHandler<>));
+            container.Collection.Append(typeof(IHandleMessages<>), typeof(FailedOperationHandler<>));
 
 
             container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
@@ -42,7 +45,8 @@ namespace Haipa.Modules.Controller
 
 
             container.RegisterSingleton(() => new Id64Generator());
-            container.Register<IOperationTaskDispatcher, OperationTaskDispatcher>();
+            container.Register<IOperationTaskDispatcher, OperationDispatcher>();
+            container.Register<IOperationDispatcher, OperationDispatcher>();
 
             //use placement calculator of Host
             container.Register(serviceProvider.GetService<IPlacementCalculator>);
@@ -65,7 +69,7 @@ namespace Haipa.Modules.Controller
                 )
                 .Options(x =>
                 {
-                    x.SimpleRetryStrategy();
+                    x.SimpleRetryStrategy(secondLevelRetriesEnabled: true);
                     x.SetNumberOfWorkers(5);
                     x.EnableSimpleInjectorUnitOfWork();
                 })
@@ -78,7 +82,9 @@ namespace Haipa.Modules.Controller
                 .Subscriptions(s => serviceProvider.GetRequiredService<IRebusSubscriptionConfigurer>().Configure(s))
                 .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings
                     {TypeNameHandling = TypeNameHandling.None}))
-                .Logging(x => x.ColoredConsole()).Start());
+                //.Logging(x => x.Trace())
+                .Start());
+
         }
 
         public void ConfigureServices(IServiceCollection services)

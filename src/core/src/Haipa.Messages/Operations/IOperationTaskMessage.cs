@@ -7,7 +7,8 @@ namespace Haipa.Messages.Operations
     /// </summary>
     public interface IOperationTaskMessage
     {
-        Guid OperationId { get; set; }
-        Guid TaskId { get; set; }
+        Guid OperationId { get; }
+        Guid TaskId { get;  }
     }
+
 }

@@ -7,6 +7,7 @@ using Haipa.Messages.Operations.Commands;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources;
 using Haipa.Messages.Resources.Machines;
+using Haipa.ModuleCore;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
@@ -64,11 +65,15 @@ namespace Haipa.Modules.Controller.Operations
                 _dbContext.Add(task);
             }
 
-            task.Name = command.GetType().Name;
-            Data.Tasks.Add(message.TaskId, command.GetType().AssemblyQualifiedName);
+            var messageType = Type.GetType(message.CommandType);
+            task.Name = messageType.Name;
+            Data.Tasks.Add(message.TaskId, messageType.AssemblyQualifiedName);
 
+            var outboundMessage = Activator.CreateInstance(typeof(OperationTaskSystemMessage<>).MakeGenericType(messageType), 
+                command, message.OperationId, message.TaskId) ;
+            
 
-            var sendCommandAttribute = command.GetType().GetCustomAttribute<SendMessageToAttribute>();
+            var sendCommandAttribute = messageType.GetCustomAttribute<SendMessageToAttribute>();
 
             switch (sendCommandAttribute.Recipient)
             {
@@ -89,14 +94,14 @@ namespace Haipa.Modules.Controller.Operations
                                 return;
                             }
 
-                            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{machine.AgentName}", command)
+                            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{machine.AgentName}", outboundMessage)
                                 .ConfigureAwait(false);
 
                             return;
                         }
                         case IHostAgentCommand agentCommand:
                             await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{agentCommand.AgentName}",
-                                    command)
+                                    outboundMessage)
                                 .ConfigureAwait(false);
 
                             return;
@@ -107,7 +112,7 @@ namespace Haipa.Modules.Controller.Operations
                 }
 
                 case MessageRecipient.Controllers:
-                    await _bus.Send(command);
+                    await _bus.SendLocal(outboundMessage);
                     return;
 
                 default:

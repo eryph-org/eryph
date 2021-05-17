@@ -5,7 +5,7 @@ using Haipa.Resources.Machines.Config;
 namespace Haipa.Messages.Resources.Machines.Commands
 {
     [SendMessageTo(MessageRecipient.Controllers)]
-    public class CreateMachineCommand : OperationTaskCommand, IHasCorrelationId
+    public class CreateMachineCommand : IHasCorrelationId
     {
         public MachineConfig Config { get; set; }
         public Guid CorrelationId { get; set; }

@@ -1,8 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Commands;
 using Haipa.Messages.Resources.Machines.Commands;
+using Haipa.ModuleCore;
 using Haipa.Resources;
 using JetBrains.Annotations;
 using LanguageExt.UnsafeValueAccess;
@@ -50,12 +50,10 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             Data.MachineId = message.Resource.Id;
             var res = await _vmDataService.GetVM(Data.MachineId);
             var data = res.ValueUnsafe();
-            await _taskDispatcher.Send(new RemoveVMCommand
+            await _taskDispatcher.StartNew(Data.OperationId,new RemoveVMCommand
             {
                 MachineId = Data.MachineId,
-                VMId = data.VMId,
-                OperationId = Data.OperationId,
-                TaskId = Guid.NewGuid()
+                VMId = data.VMId
             });
         }
     }

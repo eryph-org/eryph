@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Haipa.Messages;
 using Haipa.Messages.Operations;
-using Haipa.Messages.Operations.Commands;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Machines;
 using Haipa.VmManagement;
@@ -15,8 +14,8 @@ using Rebus.Handlers;
 
 namespace Haipa.Modules.VmHostAgent
 {
-    internal abstract class MachineOperationHandlerBase<T> : IHandleMessages<AcceptedOperationTaskEvent<T>>
-        where T : IOperationTaskCommand, IVMCommand
+    internal abstract class MachineOperationHandlerBase<T> : IHandleMessages<OperationTask<T>>
+        where T : class, IVMCommand, new()
     {
         private readonly IBus _bus;
         private readonly IPowershellEngine _engine;
@@ -27,7 +26,7 @@ namespace Haipa.Modules.VmHostAgent
             _engine = engine;
         }
 
-        public async Task Handle(AcceptedOperationTaskEvent<T> message)
+        public async Task Handle(OperationTask<T> message)
         {
             var command = message.Command;
 
@@ -40,10 +39,10 @@ namespace Haipa.Modules.VmHostAgent
                 }).ConfigureAwait(false);
 
             await result.MatchAsync(
-                LeftAsync: f => HandleError(f, command),
+                LeftAsync: f => HandleError(f, message),
                 RightAsync: async _ =>
                 {
-                    await _bus.Publish(OperationTaskStatusEvent.Completed(command.OperationId, command.TaskId))
+                    await _bus.Publish(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId))
                         .ConfigureAwait(false);
 
                     return Unit.Default;
@@ -53,9 +52,9 @@ namespace Haipa.Modules.VmHostAgent
         protected abstract Task<Either<PowershellFailure, Unit>> HandleCommand(
             TypedPsObject<VirtualMachineInfo> vmInfo, T command, IPowershellEngine engine);
 
-        private async Task<Unit> HandleError(PowershellFailure failure, IOperationTaskMessage command)
+        private async Task<Unit> HandleError(PowershellFailure failure, IOperationTaskMessage message)
         {
-            await _bus.Publish(OperationTaskStatusEvent.Failed(command.OperationId, command.TaskId,
+            await _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
                 new ErrorData
                 {
                     ErrorMessage = failure.Message

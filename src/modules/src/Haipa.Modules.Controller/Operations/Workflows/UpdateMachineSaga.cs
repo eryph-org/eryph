@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Haipa.Messages;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Machines.Commands;
+using Haipa.ModuleCore;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Resources.Machines;
 using JetBrains.Annotations;
@@ -74,18 +74,15 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                     Some: data =>
                     {
                         Data.Validated = true;
-                        var convergeMessage = new UpdateVirtualMachineCommand
+
+                        return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualMachineCommand
                         {
                             VMId = data.vm.VMId,
                             Config = Data.Config,
                             AgentName = Data.AgentName,
-                            OperationId = message.OperationId,
                             NewStorageId = _idGenerator.GenerateId(),
                             MachineMetadata = data.metadata,
-                            TaskId = Guid.NewGuid()
-                        };
-
-                        return _taskDispatcher.Send(convergeMessage);
+                        });
                     },
                     None: () => Fail(new ErrorData
                         {ErrorMessage = $"Could not find virtual machine with machine id {Data.MachineId}"})
@@ -105,17 +102,15 @@ namespace Haipa.Modules.Controller.Operations.Workflows
         public override Task Initiated(UpdateMachineCommand message)
         {
             Data.Config = message.Config;
-            Data.MachineId = message.MachineId;
+            Data.MachineId = message.Resource.Id;
             Data.AgentName = message.AgentName;
 
 
-            return _taskDispatcher.Send(
+            return _taskDispatcher.StartNew(Data.OperationId, 
                 new ValidateMachineConfigCommand
                 {
-                    MachineId = message.MachineId,
+                    MachineId = message.Resource.Id,
                     Config = message.Config,
-                    OperationId = Data.OperationId,
-                    TaskId = Guid.NewGuid()
                 }
             );
         }

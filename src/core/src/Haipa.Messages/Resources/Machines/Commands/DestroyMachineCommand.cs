@@ -1,10 +1,11 @@
-﻿using Haipa.Messages.Operations.Commands;
+﻿using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Commands;
 using Haipa.Resources;
 
 namespace Haipa.Messages.Resources.Machines.Commands
 {
     [SendMessageTo(MessageRecipient.Controllers)]
-    public class DestroyMachineCommand : OperationTaskCommand, IResourceCommand
+    public class DestroyMachineCommand : IResourceCommand
     {
         public Resource Resource { get; set; }
     }

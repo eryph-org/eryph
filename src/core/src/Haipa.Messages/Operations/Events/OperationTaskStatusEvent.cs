@@ -69,7 +69,7 @@ namespace Haipa.Messages.Operations.Events
         }
     }
 
-    public class OperationTaskStatusEvent<T> : OperationTaskStatusEvent where T : OperationTaskCommand
+    public class OperationTaskStatusEvent<T> : OperationTaskStatusEvent where T : class, new()
     {
         public OperationTaskStatusEvent()
         {

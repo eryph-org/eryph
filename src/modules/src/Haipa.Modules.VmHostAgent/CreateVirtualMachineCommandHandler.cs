@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Resources.Machines;
@@ -20,20 +21,20 @@ namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
     internal class CreateVirtualMachineCommandHandler : VirtualMachineConfigCommandHandler,
-        IHandleMessages<AcceptedOperationTaskEvent<CreateVirtualMachineCommand>>
+        IHandleMessages<OperationTask<CreateVirtualMachineCommand>>
     {
         public CreateVirtualMachineCommandHandler(IPowershellEngine engine, IBus bus) : base(engine, bus)
         {
         }
 
 
-        public Task Handle(AcceptedOperationTaskEvent<CreateVirtualMachineCommand> message)
+        public Task Handle(OperationTask<CreateVirtualMachineCommand> message)
         {
             var command = message.Command;
             var config = command.Config;
 
-            OperationId = command.OperationId;
-            TaskId = command.TaskId;
+            OperationId = message.OperationId;
+            TaskId = message.TaskId;
 
             var hostSettings = HostSettingsBuilder.GetHostSettings();
 

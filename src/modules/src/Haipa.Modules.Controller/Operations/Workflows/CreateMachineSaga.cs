@@ -1,9 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Images.Commands;
 using Haipa.Messages.Resources.Machines.Commands;
+using Haipa.ModuleCore;
 using Haipa.Modules.Controller.IdGenerator;
+using Haipa.Resources;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;
 using Rebus.Bus;
@@ -49,13 +50,11 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                     VMId = r.Inventory.VMId
                 }, r.MachineMetadata);
 
-                var convergeMessage = new UpdateMachineCommand
+                await _taskDispatcher.StartNew(Data.OperationId, new UpdateMachineCommand
                 {
-                    MachineId = newMachine.Id, Config = Data.Config, AgentName = Data.AgentName,
-                    OperationId = message.OperationId, TaskId = Guid.NewGuid()
-                };
-
-                await _taskDispatcher.Send(convergeMessage);
+                    Config = Data.Config,
+                    AgentName = Data.AgentName }, 
+                    new Resources.Resource(ResourceType.Machine, Data.MachineId));
             });
         }
 
@@ -69,12 +68,10 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                 Data.State = CreateVMState.Placed;
                 Data.AgentName = r.AgentName;
 
-                return _taskDispatcher.Send(new PrepareVirtualMachineImageCommand
+                return _taskDispatcher.StartNew(Data.OperationId,new PrepareVirtualMachineImageCommand
                 {
                     ImageConfig = Data.Config.Image,
-                    AgentName = r.AgentName,
-                    OperationId = message.OperationId,
-                    TaskId = Guid.NewGuid()
+                    AgentName = r.AgentName
                 });
             });
         }
@@ -89,14 +86,12 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                 Data.State = CreateVMState.ImagePrepared;
                 Data.MachineId = _idGenerator.GenerateId();
 
-                var createMessage = new CreateVirtualMachineCommand
+                return _taskDispatcher.StartNew(Data.OperationId,new CreateVirtualMachineCommand
                 {
                     Config = Data.Config,
                     NewMachineId = Data.MachineId,
-                    AgentName = Data.AgentName, OperationId = message.OperationId, TaskId = Guid.NewGuid()
-                };
-
-                return _taskDispatcher.Send(createMessage);
+                    AgentName = Data.AgentName
+                });
             });
         }
 
@@ -123,11 +118,9 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                 Data.State = CreateVMState.ConfigValidated;
 
 
-                return _taskDispatcher.Send(
+                return _taskDispatcher.StartNew(Data.OperationId,
                     new PlaceVirtualMachineCommand
                     {
-                        OperationId = message.OperationId,
-                        TaskId = Guid.NewGuid(),
                         Config = Data.Config
                     });
             });
@@ -154,13 +147,11 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             Data.Config = message.Config;
             Data.State = CreateVMState.Initiated;
 
-            return _taskDispatcher.Send(
+            return _taskDispatcher.StartNew(Data.OperationId,
                 new ValidateMachineConfigCommand
                 {
                     MachineId = 0,
-                    Config = message.Config,
-                    OperationId = Data.OperationId,
-                    TaskId = Guid.NewGuid()
+                    Config = message.Config
                 }
             );
         }

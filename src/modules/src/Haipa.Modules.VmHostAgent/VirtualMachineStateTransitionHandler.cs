@@ -11,7 +11,7 @@ namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
     internal abstract class VirtualMachineStateTransitionHandler<T> : MachineOperationHandlerBase<T>
-        where T : IOperationTaskCommand, IVMCommand
+        where T : class, IVMCommand, new()
     {
         public VirtualMachineStateTransitionHandler(IBus bus, IPowershellEngine engine) : base(bus, engine)
         {
