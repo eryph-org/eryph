@@ -5,7 +5,6 @@ using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.App;
 using Haipa.Modules.CommonApi;
 using Haipa.Modules.ComputeApi;
-using Haipa.Modules.Controller;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Runtime.Zero.Configuration;
 using Microsoft.AspNetCore.Hosting;
@@ -14,21 +13,19 @@ using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
-
 namespace Haipa.Runtime.Zero
-﻿{
+{
     /// <summary>
-    /// Defines the <see cref="Program" />
+    ///     Defines the <see cref="Program" />
     /// </summary>
     internal class Program
     {
         /// <summary>
-        /// The Main
+        ///     The Main
         /// </summary>
-        /// <param name="args">The args<see cref="string[]"/></param>
+        /// <param name="args">The args<see cref="string[]" /></param>
         private static async Task Main(string[] args)
         {
- 
             await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
             ZeroConfig.EnsureConfiguration();
@@ -41,10 +38,7 @@ namespace Haipa.Runtime.Zero
             var host = ModulesHost.CreateDefaultBuilder(args)
                 .UseAspNetCore((module, webHostBuilder) =>
                 {
-                    webHostBuilder.UseHttpSys(options =>
-                        {
-                            options.UrlPrefixes.Add($"{basePath}{module.Path}");
-                        })
+                    webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add($"{basePath}{module.Path}"); })
                         .UseUrls($"{basePath}{module.Path}");
                 })
                 .UseSimpleInjector(container)
@@ -53,24 +47,22 @@ namespace Haipa.Runtime.Zero
                 .AddIdentityModule(container)
                 .HostModule<VmHostAgentModule>()
                 .AddControllerModule(container)
-
-
                 .UseEnvironment("Development")
                 .ConfigureLogging(lc => lc.SetMinimumLevel(LogLevel.Trace))
                 .Build();
 
             processLock.SetMetadata(new Dictionary<string, object>
             {
-                { "endpoints", new Dictionary<string, string>
                 {
-                    {"identity", $"{basePath}identity"},
-                    {"compute", $"{basePath}api"}
-                }}
+                    "endpoints", new Dictionary<string, string>
+                    {
+                        {"identity", $"{basePath}identity"},
+                        {"compute", $"{basePath}api"}
+                    }
+                }
             });
-            
+
             await host.RunAsync();
-
         }
-
     }
- }
+}

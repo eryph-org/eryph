@@ -3,6 +3,6 @@
     public enum IPProtocolPreference
     {
         IPv4,
-        IPv6,
+        IPv6
     }
 }

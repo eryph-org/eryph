@@ -3,6 +3,6 @@
     public enum CriticalErrorAction
     {
         None,
-        Pause,
+        Pause
     }
 }

@@ -5,7 +5,6 @@ using JetBrains.Annotations;
 
 namespace Haipa.Modules.Controller
 {
-
     [UsedImplicitly]
     public class StateStoreDbUnitOfWork : IRebusUnitOfWork
     {
@@ -28,7 +27,6 @@ namespace Haipa.Modules.Controller
 
         public void Dispose()
         {
-           
         }
     }
 }

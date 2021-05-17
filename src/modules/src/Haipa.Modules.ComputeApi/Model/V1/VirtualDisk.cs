@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Query;
 
@@ -11,8 +10,7 @@ namespace Haipa.Modules.ComputeApi.Model.V1
     [AutoExpand(DisableWhenSelectPresent = true)]
     public class VirtualDisk
     {
-        [Key]
-        public Guid Id { get; set; }
+        [Key] public Guid Id { get; set; }
 
         public string Name { get; set; }
         public string StorageIdentifier { get; set; }
@@ -24,13 +22,10 @@ namespace Haipa.Modules.ComputeApi.Model.V1
 
 
         public long? SizeBytes { get; set; }
-        
+
         public Guid ParentId { get; set; }
 
 
-        [Contained]
-        public IEnumerable<VirtualMachineDrive> AttachedDrives { get; set; }
-
-
+        [Contained] public IEnumerable<VirtualMachineDrive> AttachedDrives { get; set; }
     }
 }

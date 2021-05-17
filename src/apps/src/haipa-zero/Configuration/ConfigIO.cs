@@ -39,10 +39,10 @@ namespace Haipa.Runtime.Zero.Configuration
         }
 
         /// <summary>
-        /// Strip illegal chars and reserved words from a candidate filename (should not include the directory path)
+        ///     Strip illegal chars and reserved words from a candidate filename (should not include the directory path)
         /// </summary>
         /// <remarks>
-        /// http://stackoverflow.com/questions/309485/c-sharp-sanitize-file-name
+        ///     http://stackoverflow.com/questions/309485/c-sharp-sanitize-file-name
         /// </remarks>
         public static string CoerceValidFileName(string filename)
         {
@@ -72,7 +72,7 @@ namespace Haipa.Runtime.Zero.Configuration
         public void DeleteConfigFile(string id)
         {
             var filePath = Path.Combine(ZeroConfig.GetClientConfigPath(), CoerceValidFileName(id) + ".json");
-            if(File.Exists(filePath))
+            if (File.Exists(filePath))
                 File.Delete(filePath);
         }
     }

@@ -10,13 +10,9 @@ namespace Haipa.Rebus
             this TypeBasedRouterConfigurationExtensions.TypeBasedRouterConfigurationBuilder builder,
             IEnumerable<Type> types, string destination)
         {
-            foreach (var type in types)
-            {
-                builder.Map(type, destination);
-            }
+            foreach (var type in types) builder.Map(type, destination);
 
             return builder;
         }
-
     }
 }

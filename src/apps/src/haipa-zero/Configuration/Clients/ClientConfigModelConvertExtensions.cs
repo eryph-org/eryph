@@ -7,7 +7,7 @@ namespace Haipa.Runtime.Zero.Configuration.Clients
 {
     internal static class ClientConfigModelConvertExtensions
     {
-        public static ClientConfigModel FromApiModel<TModel>(this TModel apiModel) where TModel: IClientApiModel
+        public static ClientConfigModel FromApiModel<TModel>(this TModel apiModel) where TModel : IClientApiModel
         {
             return new ClientConfigModel
             {
@@ -31,7 +31,7 @@ namespace Haipa.Runtime.Zero.Configuration.Clients
 
             var clientAsApiModel = (IClientApiModel) client;
             clientAsApiModel.Certificate = configModel.X509CertificateBase64;
-            
+
             return client;
         }
     }

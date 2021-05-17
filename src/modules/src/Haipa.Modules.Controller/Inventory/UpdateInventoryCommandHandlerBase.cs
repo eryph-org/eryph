@@ -5,9 +5,8 @@ using System.Threading.Tasks;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Modules.Controller.Operations;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Disks;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Disks;
+using Haipa.Resources.Machines;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 
@@ -15,15 +14,17 @@ namespace Haipa.Modules.Controller.Inventory
 {
     internal class UpdateInventoryCommandHandlerBase
     {
-        protected readonly StateStoreContext StateStoreContext;
+        private readonly IOperationTaskDispatcher _taskDispatcher;
+        private readonly IVirtualMachineDataService _vmDataService;
         protected readonly Id64Generator IdGenerator;
 
         protected readonly IVirtualMachineMetadataService MetadataService;
-        private readonly IOperationTaskDispatcher _taskDispatcher;
-        private readonly IVirtualMachineDataService _vmDataService;
+        protected readonly StateStoreContext StateStoreContext;
 
 
-        protected UpdateInventoryCommandHandlerBase(StateStoreContext stateStoreContext, Id64Generator idGenerator, IVirtualMachineMetadataService metadataService, IOperationTaskDispatcher taskDispatcher, IVirtualMachineDataService vmDataService)
+        protected UpdateInventoryCommandHandlerBase(StateStoreContext stateStoreContext, Id64Generator idGenerator,
+            IVirtualMachineMetadataService metadataService, IOperationTaskDispatcher taskDispatcher,
+            IVirtualMachineDataService vmDataService)
         {
             StateStoreContext = stateStoreContext;
             IdGenerator = idGenerator;
@@ -46,10 +47,7 @@ namespace Haipa.Modules.Controller.Inventory
 
             var diskInfos = vms.SelectMany(x => x.Drives.Select(d => d.Disk)).ToList();
             var allDisks = new List<DiskInfo>();
-            foreach (var diskInfo in diskInfos)
-            {
-                SelectAllParentDisks(ref allDisks, diskInfo);
-            }
+            foreach (var diskInfo in diskInfos) SelectAllParentDisks(ref allDisks, diskInfo);
 
             diskInfos = allDisks.Distinct((x, y) =>
                 string.Equals(x.Path, y.Path, StringComparison.InvariantCultureIgnoreCase) &&
@@ -78,11 +76,9 @@ namespace Haipa.Modules.Controller.Inventory
                 if (disksDataCandidates.Length <= 1)
                     disk = disksDataCandidates.FirstOrDefault();
                 else
-                {
                     disk = disksDataCandidates.FirstOrDefault(x =>
                         string.Equals(x.Path, diskInfo.Path, StringComparison.InvariantCultureIgnoreCase) &&
                         string.Equals(x.FileName, diskInfo.FileName, StringComparison.InvariantCultureIgnoreCase));
-                }
 
                 return disk;
             }
@@ -98,7 +94,7 @@ namespace Haipa.Modules.Controller.Inventory
                         DataStore = diskInfo.DataStore,
                         Project = diskInfo.Project,
                         Environment = diskInfo.Environment,
-                        StorageIdentifier = diskInfo.StorageIdentifier,
+                        StorageIdentifier = diskInfo.StorageIdentifier
                     };
                     await StateStoreContext.VirtualDisks.AddAsync(disk);
                     addedDisks.Add(disk);
@@ -141,7 +137,6 @@ namespace Haipa.Modules.Controller.Inventory
                     //machine not found or metadata is assigned to new VM - a new VM resource will be created)
                     if (existingMachine == null || metadata.VMId != vmInfo.VMId)
                     {
-
                         // create new metadata for machines that have been imported
                         if (metadata.VMId != vmInfo.VMId)
                         {
@@ -161,12 +156,12 @@ namespace Haipa.Modules.Controller.Inventory
                             });
                         }
 
-                        if(metadata.MachineId == 0)
+                        if (metadata.MachineId == 0)
                             metadata.MachineId = IdGenerator.GenerateId();
 
-                        await _vmDataService.AddNewVM(VirtualMachineInfoToMachine(vmInfo, hostMachine, metadata.MachineId),
+                        await _vmDataService.AddNewVM(
+                            VirtualMachineInfoToMachine(vmInfo, hostMachine, metadata.MachineId),
                             metadata);
-
 
 
                         return;
@@ -184,16 +179,14 @@ namespace Haipa.Modules.Controller.Inventory
 
                     existingMachine.NetworkAdapters = newMachine.NetworkAdapters;
                     existingMachine.Drives = newMachine.Drives;
-
-
                 });
-
             }
         }
 
-        private VirtualMachine VirtualMachineInfoToMachine(VirtualMachineData vmInfo, VMHostMachine hostMachine, long machineId)
+        private VirtualMachine VirtualMachineInfoToMachine(VirtualMachineData vmInfo, VMHostMachine hostMachine,
+            long machineId)
         {
-            return new VirtualMachine()
+            return new VirtualMachine
             {
                 Id = machineId,
                 VMId = vmInfo.VMId,
@@ -247,15 +240,15 @@ namespace Haipa.Modules.Controller.Inventory
 
             foreach (var existingNetwork in existingNetworksListUniqueName)
             {
-                var networksWithSameName = existingMachine.Networks.Where(x => x.Name == existingNetwork.Name).ToArray();
+                var networksWithSameName =
+                    existingMachine.Networks.Where(x => x.Name == existingNetwork.Name).ToArray();
 
-                var deleteNetwork = networksWithSameName.Length > 1 ||  //delete if name is not unique
+                var deleteNetwork = networksWithSameName.Length > 1 || //delete if name is not unique
                                     //delete also, if there is a reference in current machine but no longer in new machine
                                     existingMachine.Networks.All(x => x.Name != existingNetwork.Name);
 
                 if (deleteNetwork)
                     existingMachine.Networks.RemoveAll(x => x.Name == existingNetwork.Name);
-
             }
 
             foreach (var newNetwork in networkList.ToArray())
@@ -274,7 +267,6 @@ namespace Haipa.Modules.Controller.Inventory
             }
 
             existingMachine.Networks.AddRange(networkList);
-
         }
     }
 }

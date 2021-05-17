@@ -1,9 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.Modules.VmHostAgent;
-
 using SimpleInjector;
-
 
 namespace Haipa.Agent
 {
@@ -11,7 +9,6 @@ namespace Haipa.Agent
     {
         private static Task Main(string[] args)
         {
-            
             var container = new Container();
             container.Bootstrap();
 

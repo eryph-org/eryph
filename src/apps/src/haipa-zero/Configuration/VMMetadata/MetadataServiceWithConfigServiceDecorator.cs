@@ -2,18 +2,18 @@
 using System.Threading.Tasks;
 using Haipa.Configuration;
 using Haipa.Modules.Controller;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 using LanguageExt;
 
 namespace Haipa.Runtime.Zero.Configuration.VMMetadata
 {
     internal class MetadataServiceWithConfigServiceDecorator : IVirtualMachineMetadataService
     {
-        private readonly IVirtualMachineMetadataService _decoratedService;
         private readonly IConfigWriterService<VirtualMachineMetadata> _configService;
+        private readonly IVirtualMachineMetadataService _decoratedService;
 
-        public MetadataServiceWithConfigServiceDecorator(IVirtualMachineMetadataService decoratedService, IConfigWriterService<VirtualMachineMetadata> configService)
+        public MetadataServiceWithConfigServiceDecorator(IVirtualMachineMetadataService decoratedService,
+            IConfigWriterService<VirtualMachineMetadata> configService)
         {
             _decoratedService = decoratedService;
             _configService = configService;

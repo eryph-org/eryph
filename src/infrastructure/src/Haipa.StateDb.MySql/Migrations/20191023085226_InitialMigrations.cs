@@ -8,46 +8,37 @@ namespace Haipa.StateDb.MySql.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "Agents",
-                columns: table => new
+                "Agents",
+                table => new
                 {
                     Name = table.Column<string>(nullable: false)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Agents", x => x.Name);
-                });
+                constraints: table => { table.PrimaryKey("PK_Agents", x => x.Name); });
 
             migrationBuilder.CreateTable(
-                name: "Networks",
-                columns: table => new
+                "Networks",
+                table => new
                 {
                     Id = table.Column<Guid>(nullable: false),
                     Name = table.Column<string>(nullable: false),
                     VLanId = table.Column<ulong>(nullable: false)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Networks", x => x.Id);
-                });
+                constraints: table => { table.PrimaryKey("PK_Networks", x => x.Id); });
 
             migrationBuilder.CreateTable(
-                name: "Operations",
-                columns: table => new
+                "Operations",
+                table => new
                 {
                     Id = table.Column<Guid>(nullable: false),
                     MachineGuid = table.Column<Guid>(nullable: false),
                     Status = table.Column<int>(nullable: false),
                     StatusMessage = table.Column<string>(nullable: true)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Operations", x => x.Id);
-                });
+                constraints: table => { table.PrimaryKey("PK_Operations", x => x.Id); });
 
             migrationBuilder.CreateTable(
-                name: "Machines",
-                columns: table => new
+                "Machines",
+                table => new
                 {
                     Id = table.Column<Guid>(nullable: false),
                     Name = table.Column<string>(nullable: true),
@@ -58,16 +49,16 @@ namespace Haipa.StateDb.MySql.Migrations
                 {
                     table.PrimaryKey("PK_Machines", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Machines_Agents_AgentName",
-                        column: x => x.AgentName,
-                        principalTable: "Agents",
-                        principalColumn: "Name",
+                        "FK_Machines_Agents_AgentName",
+                        x => x.AgentName,
+                        "Agents",
+                        "Name",
                         onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "AgentNetworks",
-                columns: table => new
+                "AgentNetworks",
+                table => new
                 {
                     AgentName = table.Column<string>(nullable: false),
                     NetworkId = table.Column<Guid>(nullable: false),
@@ -75,24 +66,24 @@ namespace Haipa.StateDb.MySql.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_AgentNetworks", x => new { x.NetworkId, x.AgentName });
+                    table.PrimaryKey("PK_AgentNetworks", x => new {x.NetworkId, x.AgentName});
                     table.ForeignKey(
-                        name: "FK_AgentNetworks_Agents_AgentName",
-                        column: x => x.AgentName,
-                        principalTable: "Agents",
-                        principalColumn: "Name",
+                        "FK_AgentNetworks_Agents_AgentName",
+                        x => x.AgentName,
+                        "Agents",
+                        "Name",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_AgentNetworks_Networks_NetworkId",
-                        column: x => x.NetworkId,
-                        principalTable: "Networks",
-                        principalColumn: "Id",
+                        "FK_AgentNetworks_Networks_NetworkId",
+                        x => x.NetworkId,
+                        "Networks",
+                        "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Subnets",
-                columns: table => new
+                "Subnets",
+                table => new
                 {
                     Id = table.Column<Guid>(nullable: false),
                     NetworkId = table.Column<Guid>(nullable: false),
@@ -107,16 +98,16 @@ namespace Haipa.StateDb.MySql.Migrations
                 {
                     table.PrimaryKey("PK_Subnets", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Subnets_Networks_NetworkId",
-                        column: x => x.NetworkId,
-                        principalTable: "Networks",
-                        principalColumn: "Id",
+                        "FK_Subnets_Networks_NetworkId",
+                        x => x.NetworkId,
+                        "Networks",
+                        "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "OperationTasks",
-                columns: table => new
+                "OperationTasks",
+                table => new
                 {
                     Id = table.Column<Guid>(nullable: false),
                     OperationId = table.Column<Guid>(nullable: true),
@@ -128,16 +119,16 @@ namespace Haipa.StateDb.MySql.Migrations
                 {
                     table.PrimaryKey("PK_OperationTasks", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_OperationTasks_Operations_OperationId",
-                        column: x => x.OperationId,
-                        principalTable: "Operations",
-                        principalColumn: "Id",
+                        "FK_OperationTasks_Operations_OperationId",
+                        x => x.OperationId,
+                        "Operations",
+                        "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "MachineNetwork",
-                columns: table => new
+                "MachineNetwork",
+                table => new
                 {
                     MachineId = table.Column<Guid>(nullable: false),
                     AdapterName = table.Column<string>(nullable: false),
@@ -151,18 +142,18 @@ namespace Haipa.StateDb.MySql.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MachineNetwork", x => new { x.MachineId, x.AdapterName });
+                    table.PrimaryKey("PK_MachineNetwork", x => new {x.MachineId, x.AdapterName});
                     table.ForeignKey(
-                        name: "FK_MachineNetwork_Machines_MachineId",
-                        column: x => x.MachineId,
-                        principalTable: "Machines",
-                        principalColumn: "Id",
+                        "FK_MachineNetwork_Machines_MachineId",
+                        x => x.MachineId,
+                        "Machines",
+                        "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "VirtualMachines",
-                columns: table => new
+                "VirtualMachines",
+                table => new
                 {
                     Id = table.Column<Guid>(nullable: false),
                     Path = table.Column<string>(nullable: true)
@@ -171,16 +162,16 @@ namespace Haipa.StateDb.MySql.Migrations
                 {
                     table.PrimaryKey("PK_VirtualMachines", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_VirtualMachines_Machines_Id",
-                        column: x => x.Id,
-                        principalTable: "Machines",
-                        principalColumn: "Id",
+                        "FK_VirtualMachines_Machines_Id",
+                        x => x.Id,
+                        "Machines",
+                        "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Logs",
-                columns: table => new
+                "Logs",
+                table => new
                 {
                     Id = table.Column<Guid>(nullable: false),
                     Message = table.Column<string>(nullable: true),
@@ -192,22 +183,22 @@ namespace Haipa.StateDb.MySql.Migrations
                 {
                     table.PrimaryKey("PK_Logs", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Logs_Operations_OperationId",
-                        column: x => x.OperationId,
-                        principalTable: "Operations",
-                        principalColumn: "Id",
+                        "FK_Logs_Operations_OperationId",
+                        x => x.OperationId,
+                        "Operations",
+                        "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Logs_OperationTasks_TaskId",
-                        column: x => x.TaskId,
-                        principalTable: "OperationTasks",
-                        principalColumn: "Id",
+                        "FK_Logs_OperationTasks_TaskId",
+                        x => x.TaskId,
+                        "OperationTasks",
+                        "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
-                name: "VirtualMachineNetworkAdapters",
-                columns: table => new
+                "VirtualMachineNetworkAdapters",
+                table => new
                 {
                     MachineId = table.Column<Guid>(nullable: false),
                     Name = table.Column<string>(nullable: false),
@@ -216,85 +207,85 @@ namespace Haipa.StateDb.MySql.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_VirtualMachineNetworkAdapters", x => new { x.MachineId, x.Name });
+                    table.PrimaryKey("PK_VirtualMachineNetworkAdapters", x => new {x.MachineId, x.Name});
                     table.ForeignKey(
-                        name: "FK_VirtualMachineNetworkAdapters_VirtualMachines_MachineId",
-                        column: x => x.MachineId,
-                        principalTable: "VirtualMachines",
-                        principalColumn: "Id",
+                        "FK_VirtualMachineNetworkAdapters_VirtualMachines_MachineId",
+                        x => x.MachineId,
+                        "VirtualMachines",
+                        "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_AgentNetworks_AgentName",
-                table: "AgentNetworks",
-                column: "AgentName");
+                "IX_AgentNetworks_AgentName",
+                "AgentNetworks",
+                "AgentName");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Logs_OperationId",
-                table: "Logs",
-                column: "OperationId");
+                "IX_Logs_OperationId",
+                "Logs",
+                "OperationId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Logs_TaskId",
-                table: "Logs",
-                column: "TaskId");
+                "IX_Logs_TaskId",
+                "Logs",
+                "TaskId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Machines_AgentName",
-                table: "Machines",
-                column: "AgentName");
+                "IX_Machines_AgentName",
+                "Machines",
+                "AgentName");
 
             migrationBuilder.CreateIndex(
-                name: "IX_OperationTasks_OperationId",
-                table: "OperationTasks",
-                column: "OperationId");
+                "IX_OperationTasks_OperationId",
+                "OperationTasks",
+                "OperationId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Subnets_Address",
-                table: "Subnets",
-                column: "Address");
+                "IX_Subnets_Address",
+                "Subnets",
+                "Address");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Subnets_NetworkId",
-                table: "Subnets",
-                column: "NetworkId");
+                "IX_Subnets_NetworkId",
+                "Subnets",
+                "NetworkId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "AgentNetworks");
+                "AgentNetworks");
 
             migrationBuilder.DropTable(
-                name: "Logs");
+                "Logs");
 
             migrationBuilder.DropTable(
-                name: "MachineNetwork");
+                "MachineNetwork");
 
             migrationBuilder.DropTable(
-                name: "Subnets");
+                "Subnets");
 
             migrationBuilder.DropTable(
-                name: "VirtualMachineNetworkAdapters");
+                "VirtualMachineNetworkAdapters");
 
             migrationBuilder.DropTable(
-                name: "OperationTasks");
+                "OperationTasks");
 
             migrationBuilder.DropTable(
-                name: "Networks");
+                "Networks");
 
             migrationBuilder.DropTable(
-                name: "VirtualMachines");
+                "VirtualMachines");
 
             migrationBuilder.DropTable(
-                name: "Operations");
+                "Operations");
 
             migrationBuilder.DropTable(
-                name: "Machines");
+                "Machines");
 
             migrationBuilder.DropTable(
-                name: "Agents");
+                "Agents");
         }
     }
 }

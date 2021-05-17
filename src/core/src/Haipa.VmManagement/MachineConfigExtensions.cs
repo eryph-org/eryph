@@ -2,17 +2,16 @@
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines.Config;
+using Haipa.Resources.Machines.Config;
 using LanguageExt;
 
 namespace Haipa.VmManagement
 {
     public static class MachineConfigExtensions
     {
-        public static Task<Either<PowershellFailure, MachineConfig>> MergeWithImageSettings(this MachineConfig machineConfig, Option<VirtualMachineConfig> optionalImageConfig)
+        public static Task<Either<PowershellFailure, MachineConfig>> MergeWithImageSettings(
+            this MachineConfig machineConfig, Option<VirtualMachineConfig> optionalImageConfig)
         {
-
             if (string.IsNullOrWhiteSpace(machineConfig.Image.Name))
                 return Prelude.RightAsync<PowershellFailure, MachineConfig>(machineConfig).ToEither();
 
@@ -25,7 +24,6 @@ namespace Haipa.VmManagement
                 c.CreateMap<VirtualMachineMemoryConfig, VirtualMachineMemoryConfig>();
                 c.CreateMap<VirtualMachineNetworkAdapterConfig, VirtualMachineNetworkAdapterConfig>();
                 c.CreateMap<VirtualMachineDriveConfig, VirtualMachineDriveConfig>();
-
             }));
             var newConfig = mapper.Map<MachineConfig, MachineConfig>(machineConfig);
 
@@ -100,8 +98,6 @@ namespace Haipa.VmManagement
                 .Match(
                     None: () => Prelude.RightAsync<PowershellFailure, MachineConfig>(machineConfig),
                     Some: Prelude.RightAsync<PowershellFailure, MachineConfig>).ToEither();
-
-
         }
     }
 }

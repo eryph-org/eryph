@@ -8,8 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Haipa.Modules.AspNetCore.OData
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public class EnableMappedQueryAttribute: EnableQueryAttribute
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+    public class EnableMappedQueryAttribute : EnableQueryAttribute
     {
         private IMapper _mapper;
 
@@ -21,10 +21,8 @@ namespace Haipa.Modules.AspNetCore.OData
 
         public override IQueryable ApplyQuery(IQueryable queryable, ODataQueryOptions queryOptions)
         {
-            
             var mappedOptions = new MappedODataQueryOptions(queryOptions, _mapper);
             return base.ApplyQuery(queryable, mappedOptions);
         }
-
     }
 }

@@ -4,6 +4,6 @@
     {
         Nothing = 2,
         StartIfRunning = 3,
-        Start = 4,
+        Start = 4
     }
 }

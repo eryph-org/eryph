@@ -6,7 +6,6 @@ namespace Haipa.VmManagement.Data
 {
     public sealed class VMGroupInfo
     {
-
         public string Name { get; set; }
 
 
@@ -20,7 +19,5 @@ namespace Haipa.VmManagement.Data
 
 
         public IReadOnlyList<VMGroupInfo> VMGroupMembers { get; set; }
-
-
     }
 }

@@ -7,6 +7,5 @@ namespace Haipa.StateDb.Model
         public Guid Id { get; set; }
 
         public string Metadata { get; set; }
-
     }
 }

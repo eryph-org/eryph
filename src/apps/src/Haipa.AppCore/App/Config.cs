@@ -2,10 +2,9 @@
 using System.IO;
 
 namespace Haipa.App
-{   
+{
     public class Config
     {
-
         public static string GetConfigPath(string module)
         {
             var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
@@ -19,9 +18,6 @@ namespace Haipa.App
         {
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
-
         }
     }
-
-
 }

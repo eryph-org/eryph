@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Events;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
@@ -13,7 +12,6 @@ namespace Haipa.Modules.Controller.Operations
     [UsedImplicitly]
     public class OperationTaskProgressEventHandler : IHandleMessages<OperationTaskProgressEvent>
     {
-
         private readonly StateStoreContext _dbContext;
 
         public OperationTaskProgressEventHandler(StateStoreContext dbContext)
@@ -30,7 +28,6 @@ namespace Haipa.Modules.Controller.Operations
 
             if (operation != null)
             {
-
                 var opLogEntry =
                     new OperationLogEntry
                     {
@@ -47,6 +44,5 @@ namespace Haipa.Modules.Controller.Operations
             Console.WriteLine(message.Message);
             return Task.CompletedTask;
         }
-
     }
 }

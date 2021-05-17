@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace Haipa.Primitives.Resources.Machines.Config
+namespace Haipa.Resources.Machines.Config
 {
     public class VirtualMachineProvisioningConfig
     {

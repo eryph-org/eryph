@@ -2,9 +2,8 @@
 
 namespace Haipa.Messages.Operations
 {
-
     /// <summary>
-    /// Interface for all Messages for operation tasks
+    ///     Interface for all Messages for operation tasks
     /// </summary>
     public interface IOperationTaskMessage
     {

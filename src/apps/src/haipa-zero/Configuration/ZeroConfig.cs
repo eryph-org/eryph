@@ -8,7 +8,10 @@ namespace Haipa.Runtime.Zero.Configuration
 {
     public static class ZeroConfig
     {
-        public static string GetConfigPath() => Config.GetConfigPath("zero");
+        public static string GetConfigPath()
+        {
+            return Config.GetConfigPath("zero");
+        }
 
         public static string GetClientConfigPath()
         {

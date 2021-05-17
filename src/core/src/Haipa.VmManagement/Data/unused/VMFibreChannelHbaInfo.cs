@@ -4,8 +4,6 @@ namespace Haipa.VmManagement.Data
 {
     public sealed class VMFibreChannelHbaInfo : VirtualMachineDeviceInfo
     {
-
- 
         public string SanName { get; set; }
 
 
@@ -19,7 +17,5 @@ namespace Haipa.VmManagement.Data
 
 
         public string WorldWidePortNameSetB { get; set; }
-
-
     }
 }

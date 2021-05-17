@@ -9,6 +9,6 @@ namespace Haipa.StateDb.Model
         Queued,
         Running,
         Failed,
-        Completed,
+        Completed
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Commands;
 using Haipa.Messages.Operations.Events;
 using Rebus.Bus;
@@ -9,10 +8,9 @@ using Rebus.Sagas;
 
 namespace Haipa.Modules.Controller.Operations
 {
-    public abstract class OperationTaskWorkflowSaga<TMessage,TSagaData> : Saga<TSagaData>,
+    public abstract class OperationTaskWorkflowSaga<TMessage, TSagaData> : Saga<TSagaData>,
         IAmInitiatedBy<AcceptedOperationTaskEvent<TMessage>>,
         IHandleMessages<OperationTaskStatusEvent<TMessage>>
-
         where TSagaData : TaskWorkflowSagaData, new()
         where TMessage : OperationTaskCommand
     {
@@ -21,13 +19,6 @@ namespace Haipa.Modules.Controller.Operations
         protected OperationTaskWorkflowSaga(IBus bus)
         {
             Bus = bus;
-        }
-
-        protected override void CorrelateMessages(ICorrelationConfig<TSagaData> config)
-        {
-            config.Correlate<AcceptedOperationTaskEvent<TMessage>>(m => m.Command.OperationId, d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<TMessage>>(m => m.OperationId, d => d.OperationId);
-
         }
 
 
@@ -41,6 +32,12 @@ namespace Haipa.Modules.Controller.Operations
         public Task Handle(OperationTaskStatusEvent<TMessage> message)
         {
             return message.OperationFailed ? InitiatingTaskFailed() : InitiatingTaskCompleted();
+        }
+
+        protected override void CorrelateMessages(ICorrelationConfig<TSagaData> config)
+        {
+            config.Correlate<AcceptedOperationTaskEvent<TMessage>>(m => m.Command.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<TMessage>>(m => m.OperationId, d => d.OperationId);
         }
 
         public abstract Task Initiated(TMessage message);
@@ -66,10 +63,10 @@ namespace Haipa.Modules.Controller.Operations
         public Task Complete(object message = null)
         {
             return Bus.SendLocal(OperationTaskStatusEvent.Completed(Data.OperationId, Data.InitiatingTaskId, message));
-
         }
 
-        public Task FailOrRun<T>(OperationTaskStatusEvent<T> message, Func<Task> completedFunc) where T: OperationTaskCommand
+        public Task FailOrRun<T>(OperationTaskStatusEvent<T> message, Func<Task> completedFunc)
+            where T : OperationTaskCommand
         {
             if (message.OperationFailed)
                 return Fail(message.GetMessage());
@@ -77,7 +74,7 @@ namespace Haipa.Modules.Controller.Operations
             return completedFunc();
         }
 
-        public Task FailOrRun<T, TOpMessage>(OperationTaskStatusEvent<T> message, Func<TOpMessage, Task> completedFunc) 
+        public Task FailOrRun<T, TOpMessage>(OperationTaskStatusEvent<T> message, Func<TOpMessage, Task> completedFunc)
             where T : OperationTaskCommand
             where TOpMessage : class
         {
@@ -86,7 +83,5 @@ namespace Haipa.Modules.Controller.Operations
 
             return completedFunc(message.GetMessage() as TOpMessage);
         }
-
-
     }
 }

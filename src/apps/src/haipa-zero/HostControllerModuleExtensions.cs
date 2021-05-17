@@ -2,17 +2,9 @@
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.Configuration;
-using Haipa.Configuration.Model;
-using Haipa.IdentityDb;
 using Haipa.Modules.Controller;
-using Haipa.Modules.Identity;
-using Haipa.Modules.Identity.Services;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
-using Haipa.Runtime.Zero.Configuration;
-using Haipa.Runtime.Zero.Configuration.Clients;
+using Haipa.Resources.Machines;
 using Haipa.Runtime.Zero.Configuration.VMMetadata;
-using IdentityServer4.EntityFramework.DbContexts;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 
@@ -40,9 +32,11 @@ namespace Haipa.Runtime.Zero
         }
 
 
-        private class ControllerModuleFilters : IConfigureContainerFilter<ControllerModule>, IModuleServicesFilter<ControllerModule>
+        private class ControllerModuleFilters : IConfigureContainerFilter<ControllerModule>,
+            IModuleServicesFilter<ControllerModule>
         {
-            public Action<IModuleContext<ControllerModule>, Container> Invoke(Action<IModuleContext<ControllerModule>, Container> next)
+            public Action<IModuleContext<ControllerModule>, Container> Invoke(
+                Action<IModuleContext<ControllerModule>, Container> next)
             {
                 return (context, container) =>
                 {
@@ -57,21 +51,19 @@ namespace Haipa.Runtime.Zero
 
                     container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>();
-
                 };
             }
 
 
-            public Action<IModulesHostBuilderContext<ControllerModule>, IServiceCollection> Invoke(Action<IModulesHostBuilderContext<ControllerModule>, IServiceCollection> next)
+            public Action<IModulesHostBuilderContext<ControllerModule>, IServiceCollection> Invoke(
+                Action<IModulesHostBuilderContext<ControllerModule>, IServiceCollection> next)
             {
                 return (context, services) =>
                 {
                     next(context, services);
                     services.AddHostedHandler<SeedFromConfigHandler<ControllerModule>>();
-
                 };
             }
         }
-
     }
 }

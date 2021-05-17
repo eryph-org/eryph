@@ -5,6 +5,6 @@
         Default,
         WriteCacheEnabled,
         WriteCacheAndFUAEnabled,
-        WriteCacheDisabled,
+        WriteCacheDisabled
     }
 }

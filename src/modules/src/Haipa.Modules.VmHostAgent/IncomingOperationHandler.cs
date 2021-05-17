@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Commands;
 using Haipa.Messages.Operations.Events;
 using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Pipeline;
 
 namespace Haipa.Modules.VmHostAgent
 {

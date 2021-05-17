@@ -1,12 +1,7 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Haipa.Modules.Identity.Models;
-using Haipa.Modules.Identity.Models.V1;
-using Haipa.Security.Cryptography;
-using Org.BouncyCastle.OpenSsl;
 
 namespace Haipa.Modules.Identity.Services
 {
@@ -17,7 +12,6 @@ namespace Haipa.Modules.Identity.Services
         public ClientService(IIdentityServerClientService identityServerClient)
         {
             _identityServerService = identityServerClient;
-
         }
 
         public IQueryable<TModel> QueryClients()
@@ -62,6 +56,5 @@ namespace Haipa.Modules.Identity.Services
         {
             return _identityServerService.AddClient(client.ToIdentityServerModel());
         }
-
     }
 }

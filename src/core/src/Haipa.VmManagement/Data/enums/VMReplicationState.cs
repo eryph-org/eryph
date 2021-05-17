@@ -22,6 +22,6 @@
         WaitingForRepurposeCompletion,
         PreparedForSyncReplication,
         PreparedForGroupReverseReplication,
-        FiredrillInProgress,
+        FiredrillInProgress
     }
 }

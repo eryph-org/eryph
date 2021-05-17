@@ -2,7 +2,6 @@
 {
     public class ApiProviderOptions
     {
-        public string ApiName {  get; set;
-        }
+        public string? ApiName { get; set; }
     }
 }

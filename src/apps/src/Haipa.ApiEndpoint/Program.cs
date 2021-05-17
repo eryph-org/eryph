@@ -11,7 +11,6 @@ namespace Haipa.ApiEndpoint
 {
     public class Program
     {
-
         public static async Task Main(string[] args)
         {
             await MySqlConnectionCheck.WaitForMySql(new TimeSpan(0, 1, 0)).ConfigureAwait(false);
@@ -21,15 +20,10 @@ namespace Haipa.ApiEndpoint
 
             await ModulesHost.CreateDefaultBuilder(args)
                 .UseSimpleInjector(container)
-                .UseAspNetCore((module, webHostBuilder) =>
-                {
-
-                })
+                .UseAspNetCore((module, webHostBuilder) => { })
                 .HostModule<ComputeApiModule>()
                 .HostModule<CommonApiModule>()
                 .RunConsoleAsync();
-
         }
-
     }
 }

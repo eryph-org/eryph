@@ -1,4 +1,4 @@
-﻿namespace Haipa.Primitives.Resources.Machines.Config
+﻿namespace Haipa.Resources.Machines.Config
 {
     public class VirtualMachineMemoryConfig
     {

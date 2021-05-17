@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Haipa.Primitives.Resources.Machines.Config
+namespace Haipa.Resources.Machines.Config
 {
     public class MachineNetworkConfig
     {

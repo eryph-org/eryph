@@ -6,6 +6,4 @@ namespace Haipa.StateDb
     {
         void Configure(DbContextOptionsBuilder options);
     }
-
-
 }

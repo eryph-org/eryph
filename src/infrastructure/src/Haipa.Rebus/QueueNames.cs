@@ -1,5 +1,4 @@
-﻿
-namespace Haipa.Rebus
+﻿namespace Haipa.Rebus
 {
     public class QueueNames
     {

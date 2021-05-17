@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Haipa.Primitives.Resources.Disks
+namespace Haipa.Resources.Disks
 {
     public class DiskInfo
     {

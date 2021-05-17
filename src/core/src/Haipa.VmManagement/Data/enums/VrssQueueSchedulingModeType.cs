@@ -4,6 +4,6 @@
     {
         Dynamic,
         StaticVmq,
-        StaticVrss,
+        StaticVrss
     }
 }

@@ -10,9 +10,9 @@ namespace Haipa.StateDb.MySql
 
         public static async Task WaitForMySql(TimeSpan timeout)
         {
-
             if (string.IsNullOrWhiteSpace(ConnectionString))
-                throw new ApplicationException("missing MySQL connection string (set environment variable MYSQL_CONNECTIONSTRING");
+                throw new ApplicationException(
+                    "missing MySQL connection string (set environment variable MYSQL_CONNECTIONSTRING");
 
 
             var cancelationSource = new CancellationTokenSource(timeout);
@@ -37,7 +37,5 @@ namespace Haipa.StateDb.MySql
 
             throw new ApplicationException("Failed to connect to MySQL database");
         }
-
-
     }
 }

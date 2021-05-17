@@ -1,6 +1,5 @@
 ﻿using Haipa.Messages.Operations.Commands;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines.Config;
+using Haipa.Resources.Machines.Config;
 
 namespace Haipa.Messages.Resources.Machines.Commands
 {
@@ -8,8 +7,7 @@ namespace Haipa.Messages.Resources.Machines.Commands
     public class CreateVirtualMachineCommand : OperationTaskCommand, IHostAgentCommand
     {
         public MachineConfig Config { get; set; }
-        public string AgentName { get; set; }
         public long NewMachineId { get; set; }
-
+        public string AgentName { get; set; }
     }
 }

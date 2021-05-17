@@ -23,8 +23,8 @@ namespace Haipa.Modules.Controller.Inventory
         public async Task Handle(VirtualMachineNetworkChangedEvent message)
         {
             var machine = await _stateStoreContext.VirtualMachines
-                .Include(vm=>vm.NetworkAdapters)
-                .Include(x=>x.Networks)
+                .Include(vm => vm.NetworkAdapters)
+                .Include(x => x.Networks)
                 .FirstOrDefaultAsync(x => x.VMId == message.VMId);
 
             var adapter = machine.NetworkAdapters
@@ -32,14 +32,15 @@ namespace Haipa.Modules.Controller.Inventory
 
             if (adapter == null)
             {
-                adapter = new VirtualMachineNetworkAdapter {Id = message.ChangedAdapter.Id, Name = message.ChangedAdapter.AdapterName, Vm = machine};
+                adapter = new VirtualMachineNetworkAdapter
+                    {Id = message.ChangedAdapter.Id, Name = message.ChangedAdapter.AdapterName, Vm = machine};
                 _stateStoreContext.Add(adapter);
             }
 
             adapter.SwitchName = message.ChangedAdapter.VirtualSwitchName;
-             
-            var network = machine.Networks.FirstOrDefault(x => 
-                x.Name == message.ChangedNetwork.Name );
+
+            var network = machine.Networks.FirstOrDefault(x =>
+                x.Name == message.ChangedNetwork.Name);
 
             if (network == null)
             {
@@ -65,8 +66,6 @@ namespace Haipa.Modules.Controller.Inventory
             network.IpV6Subnets = message.ChangedNetwork.IPAddresses.Select(IPNetwork.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetworkV6)
                 .Select(n => n.ToString()).ToArray();
-
         }
-
     }
 }

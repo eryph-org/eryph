@@ -4,11 +4,6 @@ namespace Haipa.VmManagement.Data.Full
 {
     public class VMNetworkAdapter : VirtualMachineDeviceInfo, IVMNetworkAdapterWithConnection
     {
-
-        //public bool ClusterMonitored { get; private set; }
-
-        public string MacAddress { get; private set; }
-
         //public bool DynamicMacAddressEnabled { get; private set; }
 
         //public bool AllowPacketDirect { get; private set; }
@@ -42,6 +37,10 @@ namespace Haipa.VmManagement.Data.Full
         //public string PoolName { get; private set; }
 
         public bool Connected { get; private set; }
+
+        //public bool ClusterMonitored { get; private set; }
+
+        public string MacAddress { get; private set; }
 
         //public string TestReplicaPoolName { get; private set; }
 
@@ -79,7 +78,6 @@ namespace Haipa.VmManagement.Data.Full
 
 
         //public VMNetworkAdapterBandwidthSetting BandwidthSetting { get; private set; }
-
 
 
         //public VMNetworkAdapterIsolationMode CurrentIsolationMode { get; private set; }
@@ -175,6 +173,5 @@ namespace Haipa.VmManagement.Data.Full
         //public bool VFDataPathActive { get; private set; }
 
         //public uint BandwidthPercentage { get; private set; }
-
     }
 }

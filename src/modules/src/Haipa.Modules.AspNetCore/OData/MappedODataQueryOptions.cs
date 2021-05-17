@@ -18,10 +18,11 @@ namespace Haipa.Modules.AspNetCore.OData
 {
     public class MappedODataQueryOptions : ODataQueryOptions
     {
-        private readonly ODataQueryOptions _options;
         private readonly IMapper _mapper;
+        private readonly ODataQueryOptions _options;
 
-        public MappedODataQueryOptions(ODataQueryOptions options, IMapper mapper) : base(options.Context, options.Request)
+        public MappedODataQueryOptions(ODataQueryOptions options, IMapper mapper) : base(options.Context,
+            options.Request)
         {
             _options = options;
             _mapper = mapper;
@@ -29,29 +30,32 @@ namespace Haipa.Modules.AspNetCore.OData
 
         public override IQueryable ApplyTo(IQueryable query, ODataQuerySettings querySettings)
         {
-            if(!(query is IMappedResult mappedResult))
-                throw new ArgumentException("The result content of an action with EnableMappedQueryAttribute has to be of type IMappedResult.");
-            
+            if (!(query is IMappedResult mappedResult))
+                throw new ArgumentException(
+                    "The result content of an action with EnableMappedQueryAttribute has to be of type IMappedResult.");
+
             var entityQuery = mappedResult.EntityQueryable;
             var modelType = mappedResult.ModelType;
             var entityType = ElementTypeHelper.GetElementType(entityQuery.GetType());
 
-            var genericMethod = this.GetType().GetMethod(nameof(ProjectToModel), BindingFlags.Instance | BindingFlags.NonPublic);
+            var genericMethod =
+                GetType().GetMethod(nameof(ProjectToModel), BindingFlags.Instance | BindingFlags.NonPublic);
             Debug.Assert(genericMethod != null, nameof(genericMethod) + " != null");
 
 
             genericMethod = genericMethod.MakeGenericMethod(modelType, entityType);
 
-            var mappedQueryable = genericMethod.Invoke(this, new[] { entityQuery, querySettings, mappedResult.Parameters }) as IQueryable;
-            
+            var mappedQueryable =
+                genericMethod.Invoke(this, new[] {entityQuery, querySettings, mappedResult.Parameters}) as IQueryable;
+
 
             var result = _options.ApplyTo(mappedQueryable, querySettings);
             return result;
         }
 
 
-
-        private IQueryable<TModel> ProjectToModel<TModel, TEntity>(IQueryable<TEntity> query, ODataQuerySettings querySettings, object parameters) where TModel : class
+        private IQueryable<TModel> ProjectToModel<TModel, TEntity>(IQueryable<TEntity> query,
+            ODataQuerySettings querySettings, object parameters) where TModel : class
         {
             //currently it seems to be sufficient to use just ProjectTo - however see second method below is a option
             //when https://github.com/AutoMapper/AutoMapper.Extensions.OData is more compatible all odata features.
@@ -71,24 +75,30 @@ namespace Haipa.Modules.AspNetCore.OData
 
         //    return result.AsQueryable();
         //}
-
-
-
     }
 
     public static class QueryableExtensions2
     {
-        public static ICollection<TModel> Get<TModel, TData>(this IQueryable<TData> query, IMapper mapper, ODataQueryOptions<TModel> options, HandleNullPropagationOption handleNullPropagation = HandleNullPropagationOption.Default)
-            where TModel : class
-            => Task.Run(async () => await query.GetAsync(mapper, options, handleNullPropagation)).Result;
-
-        public static async Task<ICollection<TModel>> GetAsync<TModel, TData>(this IQueryable<TData> query, IMapper mapper, ODataQueryOptions<TModel> options, HandleNullPropagationOption handleNullPropagation = HandleNullPropagationOption.Default)
+        public static ICollection<TModel> Get<TModel, TData>(this IQueryable<TData> query, IMapper mapper,
+            ODataQueryOptions<TModel> options,
+            HandleNullPropagationOption handleNullPropagation = HandleNullPropagationOption.Default)
             where TModel : class
         {
-            ICollection<Expression<Func<IQueryable<TModel>, IIncludableQueryable<TModel, object>>>> includeExpressions = options.SelectExpand.GetIncludes().BuildIncludesExpressionCollection<TModel>()?.ToList();
+            return Task.Run(async () => await query.GetAsync(mapper, options, handleNullPropagation)).Result;
+        }
+
+        public static async Task<ICollection<TModel>> GetAsync<TModel, TData>(this IQueryable<TData> query,
+            IMapper mapper, ODataQueryOptions<TModel> options,
+            HandleNullPropagationOption handleNullPropagation = HandleNullPropagationOption.Default)
+            where TModel : class
+        {
+            ICollection<Expression<Func<IQueryable<TModel>, IIncludableQueryable<TModel, object>>>> includeExpressions =
+                options.SelectExpand.GetIncludes().BuildIncludesExpressionCollection<TModel>()?.ToList();
             Expression<Func<TModel, bool>> filter = options.Filter.ToFilterExpression<TModel>(handleNullPropagation);
-            Expression<Func<IQueryable<TModel>, IQueryable<TModel>>> queryableExpression = options.GetQueryableExpression();
-            Expression<Func<IQueryable<TModel>, long>> countExpression = LinqExtensions.GetCountExpression<TModel>(filter);
+            Expression<Func<IQueryable<TModel>, IQueryable<TModel>>> queryableExpression =
+                options.GetQueryableExpression();
+            Expression<Func<IQueryable<TModel>, long>> countExpression =
+                LinqExtensions.GetCountExpression<TModel>(filter);
 
             options.AddExpandOptionsResult();
             if (options.Count?.Value == true)
@@ -104,15 +114,20 @@ namespace Haipa.Modules.AspNetCore.OData
         //    => Task.Run(async () => await query.GetAsync(mapper, filter, queryFunc, includeProperties)).Result;
 
 
-        public static async Task<ICollection<TModel>> GetAsync<TModel, TData>(this IQueryable<TData> query, IMapper mapper,
+        public static async Task<ICollection<TModel>> GetAsync<TModel, TData>(this IQueryable<TData> query,
+            IMapper mapper,
             Expression<Func<TModel, bool>> filter = null,
             Expression<Func<IQueryable<TModel>, IQueryable<TModel>>> queryFunc = null,
-            ICollection<Expression<Func<IQueryable<TModel>, IIncludableQueryable<TModel, object>>>> includeProperties = null)
+            ICollection<Expression<Func<IQueryable<TModel>, IIncludableQueryable<TModel, object>>>> includeProperties =
+                null)
         {
             //Map the expressions
             Expression<Func<TData, bool>> f = mapper.MapExpression<Expression<Func<TData, bool>>>(filter);
-            Func<IQueryable<TData>, IQueryable<TData>> mappedQueryFunc = mapper.MapExpression<Expression<Func<IQueryable<TData>, IQueryable<TData>>>>(queryFunc)?.Compile();
-            ICollection<Expression<Func<IQueryable<TData>, IIncludableQueryable<TData, object>>>> includes = mapper.MapIncludesList<Expression<Func<IQueryable<TData>, IIncludableQueryable<TData, object>>>>(includeProperties);
+            Func<IQueryable<TData>, IQueryable<TData>> mappedQueryFunc = mapper
+                .MapExpression<Expression<Func<IQueryable<TData>, IQueryable<TData>>>>(queryFunc)?.Compile();
+            ICollection<Expression<Func<IQueryable<TData>, IIncludableQueryable<TData, object>>>> includes =
+                mapper.MapIncludesList<Expression<Func<IQueryable<TData>, IIncludableQueryable<TData, object>>>>(
+                    includeProperties);
 
             if (filter != null)
                 query = query.Where(f);
@@ -121,7 +136,9 @@ namespace Haipa.Modules.AspNetCore.OData
                 query = includes.Select(i => i.Compile()).Aggregate(query, (q, next) => q = next(q));
 
             //Call the store
-            ICollection<TData> result = mappedQueryFunc != null ? await mappedQueryFunc(query).ToListAsync() : await query.ToListAsync();
+            ICollection<TData> result = mappedQueryFunc != null
+                ? await mappedQueryFunc(query).ToListAsync()
+                : await query.ToListAsync();
 
             //Map and return the data
             return mapper.Map<IEnumerable<TData>, IEnumerable<TModel>>(result).ToList();
@@ -157,5 +174,4 @@ namespace Haipa.Modules.AspNetCore.OData
             options.Request.ODataFeature().TotalCount = longCount;
         }
     }
-
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Haipa.Modules.Identity.Services;
@@ -39,7 +38,7 @@ namespace Haipa.Modules.Identity.Models
                         Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
                         Value = client.Certificate
                     }
-                },
+                }
             };
         }
 

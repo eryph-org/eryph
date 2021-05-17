@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Commands;
 using Haipa.StateDb.Model;
-using Resource = Haipa.Primitives.Resources.Resource;
+using Resource = Haipa.Resources.Resource;
 
 namespace Haipa.ModuleCore
 {

@@ -12,7 +12,7 @@ using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Haipa.Modules.CommonApi.Controllers.V1
 {
-    [ApiVersion( "1.0" )]
+    [ApiVersion("1.0")]
     //[Authorize]
     [ApiExceptionFilter]
     public class OperationsController : ODataController
@@ -41,9 +41,7 @@ namespace Haipa.Modules.CommonApi.Controllers.V1
         [Produces("application/json")]
         public IActionResult Get(Guid key)
         {
-            return Ok(SingleResult.Create(_db.Operations.Where(x=>x.Id == key).ForMappedQuery<Operation>()));
+            return Ok(SingleResult.Create(_db.Operations.Where(x => x.Id == key).ForMappedQuery<Operation>()));
         }
-
-
     }
 }

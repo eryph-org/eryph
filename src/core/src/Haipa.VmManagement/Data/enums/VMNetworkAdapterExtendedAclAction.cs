@@ -3,6 +3,6 @@
     public enum VMNetworkAdapterExtendedAclAction : byte
     {
         Allow = 1,
-        Deny = 2,
+        Deny = 2
     }
 }

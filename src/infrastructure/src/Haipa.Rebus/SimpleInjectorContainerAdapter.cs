@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Rebus.Activation;
 using Rebus.Bus;
-using Rebus.Extensions;
 using Rebus.Handlers;
 using Rebus.Transport;
 using SimpleInjector;
@@ -15,12 +14,14 @@ using SimpleInjector.Lifestyles;
 
 namespace Haipa.Rebus
 {
-    class SimpleInjectorContainerAdapter : IContainerAdapter
+    internal class SimpleInjectorContainerAdapter : IContainerAdapter
     {
-        readonly Container _container;
+        private readonly Container _container;
+
+        private bool _busWasSet;
 
         /// <summary>
-        /// Constructs the container adapter
+        ///     Constructs the container adapter
         /// </summary>
         public SimpleInjectorContainerAdapter(Container container)
         {
@@ -28,9 +29,10 @@ namespace Haipa.Rebus
         }
 
         /// <summary>
-        /// Resolves all handlers for the given <typeparamref name="TMessage"/> message type
+        ///     Resolves all handlers for the given <typeparamref name="TMessage" /> message type
         /// </summary>
-        public async Task<IEnumerable<IHandleMessages<TMessage>>> GetHandlers<TMessage>(TMessage message, ITransactionContext transactionContext)
+        public async Task<IEnumerable<IHandleMessages<TMessage>>> GetHandlers<TMessage>(TMessage message,
+            ITransactionContext transactionContext)
         {
             var scope = AsyncScopedLifestyle.BeginScope(_container);
             if (TryGetInstance<IEnumerable<IHandleMessages<TMessage>>>(_container, out var handlerInstances))
@@ -38,12 +40,9 @@ namespace Haipa.Rebus
                 var handlerList = handlerInstances.ToList();
                 transactionContext.Items["SI_scope"] = scope;
 
-                transactionContext.OnDisposed((ctx) =>
+                transactionContext.OnDisposed(ctx =>
                 {
-                    foreach (var disposable in handlerList.OfType<IDisposable>())
-                    {
-                        disposable.Dispose();
-                    }
+                    foreach (var disposable in handlerList.OfType<IDisposable>()) disposable.Dispose();
 
                     scope.Dispose();
                 });
@@ -56,16 +55,6 @@ namespace Haipa.Rebus
             return new IHandleMessages<TMessage>[0];
         }
 
-        static bool TryGetInstance<TService>(Container container, out TService instance)
-            where TService : class
-        {
-            IServiceProvider provider = container;
-            instance = (TService)provider.GetService(typeof(TService));
-            return instance != null;
-        }
-
-        bool _busWasSet;
-
         public void SetBus(IBus bus)
         {
             // hack: this is just to satisfy the contract test... we are pretty sure that
@@ -73,9 +62,8 @@ namespace Haipa.Rebus
             // 2. we are the only ones who create the instance of the container adapter, because
             // 3. the container adapter class is internal
             if (_busWasSet)
-            {
-                throw new InvalidOperationException("SetBus was called twice on the container adapter. This is a sign that something has gone wrong during the configuration process.");
-            }
+                throw new InvalidOperationException(
+                    "SetBus was called twice on the container adapter. This is a sign that something has gone wrong during the configuration process.");
             _busWasSet = true;
 
             // 2nd hack:
@@ -84,9 +72,15 @@ namespace Haipa.Rebus
             var actualBusType = bus.GetType();
 
             if (actualBusType.Name == "FakeBus" && actualBusType.DeclaringType?.Name == "ContainerTests`1")
-            {
                 bus.Dispose();
-            }
+        }
+
+        private static bool TryGetInstance<TService>(Container container, out TService instance)
+            where TService : class
+        {
+            IServiceProvider provider = container;
+            instance = (TService) provider.GetService(typeof(TService));
+            return instance != null;
         }
     }
 }

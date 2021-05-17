@@ -7,21 +7,14 @@ namespace Haipa.Messages.Operations.Events
     [SubscribesMessage(MessageSubscriber.Controllers)]
     public class OperationTaskStatusEvent : IOperationTaskMessage
     {
-        public Guid OperationId { get; set; }
-        public Guid TaskId { get; set; }
-
-        public string MessageData { get; set; }
-        public string MessageType { get; set; }
-        public bool OperationFailed { get; set; }
-
         // ReSharper disable once UnusedMember.Global
         // required for serialization
         public OperationTaskStatusEvent()
         {
-
         }
 
-        protected OperationTaskStatusEvent(Guid operationId, Guid taskId, bool failed, string messageType, string messageData)
+        protected OperationTaskStatusEvent(Guid operationId, Guid taskId, bool failed, string messageType,
+            string messageData)
         {
             OperationId = operationId;
             TaskId = taskId;
@@ -29,6 +22,12 @@ namespace Haipa.Messages.Operations.Events
             MessageData = messageData;
             MessageType = messageType;
         }
+
+        public string MessageData { get; set; }
+        public string MessageType { get; set; }
+        public bool OperationFailed { get; set; }
+        public Guid OperationId { get; set; }
+        public Guid TaskId { get; set; }
 
         public static OperationTaskStatusEvent Failed(Guid operationId, Guid taskId)
         {
@@ -39,7 +38,6 @@ namespace Haipa.Messages.Operations.Events
         {
             var (data, typeName) = SerializeMessage(message);
             return new OperationTaskStatusEvent(operationId, taskId, true, typeName, data);
-
         }
 
         public static OperationTaskStatusEvent Completed(Guid operationId, Guid taskId)
@@ -51,7 +49,6 @@ namespace Haipa.Messages.Operations.Events
         {
             var (data, typeName) = SerializeMessage(message);
             return new OperationTaskStatusEvent(operationId, taskId, false, typeName, data);
-
         }
 
         private static (string data, string type) SerializeMessage(object message)
@@ -61,7 +58,6 @@ namespace Haipa.Messages.Operations.Events
 
 
             return (JsonConvert.SerializeObject(message), message.GetType().AssemblyQualifiedName);
-
         }
 
         public object GetMessage()
@@ -77,7 +73,6 @@ namespace Haipa.Messages.Operations.Events
     {
         public OperationTaskStatusEvent()
         {
-
         }
 
         public OperationTaskStatusEvent(OperationTaskStatusEvent message) :
@@ -85,5 +80,4 @@ namespace Haipa.Messages.Operations.Events
         {
         }
     }
-
 }

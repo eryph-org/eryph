@@ -11,10 +11,10 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
     {
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)
         {
-            if(context.Type == typeof(ApiError) 
-               || context.Type == typeof(ApiErrorData) 
-               || context.Type == typeof(ApiErrorBody)
-               || context.Type == typeof(ApiErrorData.InnerErrorData))
+            if (context.Type == typeof(ApiError)
+                || context.Type == typeof(ApiErrorData)
+                || context.Type == typeof(ApiErrorBody)
+                || context.Type == typeof(ApiErrorData.InnerErrorData))
                 schema.Extensions.Add("x-ms-external", new OpenApiBoolean(true));
         }
     }

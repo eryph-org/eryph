@@ -1,10 +1,8 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Ardalis.Specification;
 using Haipa.Configuration;
 using Haipa.Modules.Controller;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 using Haipa.StateDb;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -15,10 +13,11 @@ namespace Haipa.Runtime.Zero.Configuration.VMMetadata
     [UsedImplicitly]
     internal class VMMetadataSeeder : IConfigSeeder<ControllerModule>
     {
-        private readonly IStateStoreRepository<StateDb.Model.VirtualMachineMetadata> _repository;
         private readonly IConfigReaderService<VirtualMachineMetadata> _configReaderService;
+        private readonly IStateStoreRepository<StateDb.Model.VirtualMachineMetadata> _repository;
 
-        public VMMetadataSeeder(IConfigReaderService<VirtualMachineMetadata> configReaderService, IStateStoreRepository<StateDb.Model.VirtualMachineMetadata> repository)
+        public VMMetadataSeeder(IConfigReaderService<VirtualMachineMetadata> configReaderService,
+            IStateStoreRepository<StateDb.Model.VirtualMachineMetadata> repository)
         {
             _configReaderService = configReaderService;
             _repository = repository;
@@ -30,16 +29,13 @@ namespace Haipa.Runtime.Zero.Configuration.VMMetadata
                 .Map(x =>
                 {
                     var json = JsonConvert.SerializeObject(x);
-                    return _repository.AddAsync(new StateDb.Model.VirtualMachineMetadata()
+                    return _repository.AddAsync(new StateDb.Model.VirtualMachineMetadata
                     {
                         Id = x.Id,
                         Metadata = json
                     });
-
                 })
                 .Traverse(l => l).Map(_ => _repository.SaveChangesAsync());
-
         }
-
     }
 }

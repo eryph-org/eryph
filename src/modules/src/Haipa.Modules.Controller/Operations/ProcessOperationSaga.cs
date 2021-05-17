@@ -3,7 +3,6 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Commands;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources;
@@ -27,25 +26,13 @@ namespace Haipa.Modules.Controller.Operations
         IHandleMessages<OperationTaskStatusEvent>,
         IHandleMessages<OperationTimeoutEvent>
     {
-        private readonly StateStoreContext _dbContext;
         private readonly IBus _bus;
+        private readonly StateStoreContext _dbContext;
 
         public ProcessOperationSaga(StateStoreContext dbContext, IBus bus)
         {
             _dbContext = dbContext;
             _bus = bus;
-
-        }
-
-
-        protected override void CorrelateMessages(ICorrelationConfig<OperationSagaData> config)
-        {
-            config.Correlate<CreateOperationCommand>(m => m.TaskMessage.OperationId, d => d.OperationId);
-            config.Correlate<CreateNewOperationTaskCommand>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationTimeoutEvent>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationTaskAcceptedEvent>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent>(m => m.OperationId, d => d.OperationId);
-
         }
 
         public Task Handle(CreateOperationCommand message)
@@ -71,7 +58,7 @@ namespace Haipa.Modules.Controller.Operations
                 task = new OperationTask
                 {
                     Id = message.TaskId,
-                    Operation = op,
+                    Operation = op
                 };
 
                 _dbContext.Add(task);
@@ -92,13 +79,12 @@ namespace Haipa.Modules.Controller.Operations
                         case IVMCommand vmCommand:
                         {
                             var machine = await _dbContext.VirtualMachines.FindAsync(vmCommand.MachineId)
-                                
                                 .ConfigureAwait(false);
 
                             if (machine == null)
                             {
                                 await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
-                                    new ErrorData { ErrorMessage = $"VirtualMachine {vmCommand.MachineId} not found" }));
+                                    new ErrorData {ErrorMessage = $"VirtualMachine {vmCommand.MachineId} not found"}));
 
                                 return;
                             }
@@ -109,27 +95,24 @@ namespace Haipa.Modules.Controller.Operations
                             return;
                         }
                         case IHostAgentCommand agentCommand:
-                            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{agentCommand.AgentName}", command)
+                            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{agentCommand.AgentName}",
+                                    command)
                                 .ConfigureAwait(false);
 
                             return;
                         default:
-                            throw new InvalidDataException($"Don't know how to route operation task command of type {command.GetType()}");
+                            throw new InvalidDataException(
+                                $"Don't know how to route operation task command of type {command.GetType()}");
                     }
                 }
 
-                case MessageRecipient.Controllers :
+                case MessageRecipient.Controllers:
                     await _bus.Send(command);
                     return;
 
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-        }
-
-        public Task Handle(OperationTimeoutEvent message)
-        {
-            return Task.CompletedTask;
         }
 
 
@@ -147,8 +130,6 @@ namespace Haipa.Modules.Controller.Operations
 
             task.Status = OperationTaskStatus.Running;
             task.AgentName = message.AgentName;
-
-
         }
 
         public async Task Handle(OperationTaskStatusEvent message)
@@ -167,14 +148,12 @@ namespace Haipa.Modules.Controller.Operations
                 var wrappedCommandType = genericType.MakeGenericType(Type.GetType(taskCommandTypeName));
                 var commandInstance = Activator.CreateInstance(wrappedCommandType, message);
                 await _bus.SendLocal(commandInstance);
-
             }
 
             task.Status = message.OperationFailed ? OperationTaskStatus.Failed : OperationTaskStatus.Completed;
 
             if (message.TaskId == Data.PrimaryTaskId)
             {
-                
                 op.Status = message.OperationFailed ? OperationStatus.Failed : OperationStatus.Completed;
                 string errorMessage = null;
                 if (message.GetMessage() is ErrorData errorData)
@@ -183,8 +162,21 @@ namespace Haipa.Modules.Controller.Operations
                 op.StatusMessage = string.IsNullOrWhiteSpace(errorMessage) ? op.Status.ToString() : errorMessage;
                 MarkAsComplete();
             }
+        }
+
+        public Task Handle(OperationTimeoutEvent message)
+        {
+            return Task.CompletedTask;
+        }
 
 
+        protected override void CorrelateMessages(ICorrelationConfig<OperationSagaData> config)
+        {
+            config.Correlate<CreateOperationCommand>(m => m.TaskMessage.OperationId, d => d.OperationId);
+            config.Correlate<CreateNewOperationTaskCommand>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTimeoutEvent>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskAcceptedEvent>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent>(m => m.OperationId, d => d.OperationId);
         }
 
         //public async Task Handle(OperationCompletedEvent message)
@@ -201,9 +193,6 @@ namespace Haipa.Modules.Controller.Operations
 
         //    MarkAsComplete();
         //}
-
-
-
     }
 
     //[UsedImplicitly]

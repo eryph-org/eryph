@@ -4,6 +4,6 @@
     {
         Unknown,
         Generation1,
-        Generation2,
+        Generation2
     }
 }

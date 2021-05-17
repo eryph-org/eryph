@@ -12,9 +12,9 @@ namespace Haipa.Rebus
 
         public static async Task WaitForRabbitMq(TimeSpan timeout)
         {
-
             if (string.IsNullOrWhiteSpace(ConnectionString))
-                throw new ApplicationException("missing RABBITMQ connection string (set environment variable RABBITMQ_CONNECTIONSTRING");
+                throw new ApplicationException(
+                    "missing RABBITMQ connection string (set environment variable RABBITMQ_CONNECTIONSTRING");
 
             var factory = new ConnectionFactory {Uri = new Uri(ConnectionString)};
 
@@ -39,7 +39,6 @@ namespace Haipa.Rebus
                 // ReSharper disable once MethodSupportsCancellation
                 await Task.Delay(100).ConfigureAwait(false);
             }
-
         }
     }
 }

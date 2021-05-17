@@ -4,6 +4,6 @@
     {
         Mac = 1,
         WildcardBoth = 6,
-        WildcardMac = 7,
+        WildcardMac = 7
     }
 }

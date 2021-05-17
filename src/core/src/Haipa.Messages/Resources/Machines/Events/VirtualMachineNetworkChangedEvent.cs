@@ -1,6 +1,5 @@
 ﻿using System;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 
 namespace Haipa.Messages.Resources.Machines.Events
 {
@@ -11,6 +10,5 @@ namespace Haipa.Messages.Resources.Machines.Events
 
         public MachineNetworkData ChangedNetwork { get; set; }
         public VirtualMachineNetworkAdapterData ChangedAdapter { get; set; }
-
     }
 }

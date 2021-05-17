@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Commands;
 using Haipa.Messages.Operations.Events;
 using Rebus.Bus;
@@ -25,7 +24,7 @@ namespace Haipa.Modules.Controller.Operations
             {
                 AgentName = Environment.MachineName,
                 OperationId = message.OperationId,
-                TaskId =  message.TaskId,
+                TaskId = message.TaskId
             }).ConfigureAwait(false);
         }
     }

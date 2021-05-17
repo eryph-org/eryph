@@ -1,14 +1,23 @@
 ﻿using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
 using Haipa.Modules.ComputeApi.Model.V1;
 using Microsoft.AspNet.OData.Builder;
-using Microsoft.AspNet.OData.Query;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Haipa.Modules.ComputeApi.Configuration
 {
     public class ODataModelConfiguration : IModelConfiguration
     {
-        private static void ConfigureV1( ODataModelBuilder builder )
+        public void Apply(ODataModelBuilder builder, ApiVersion apiVersion)
+        {
+            switch (apiVersion.MajorVersion)
+            {
+                default:
+                    ConfigureV1(builder);
+                    break;
+            }
+        }
+
+        private static void ConfigureV1(ODataModelBuilder builder)
         {
             builder.Namespace = "Compute";
 
@@ -28,21 +37,7 @@ namespace Haipa.Modules.ComputeApi.Configuration
             builder.EntityType<VirtualMachine>().DerivesFromNothing(); //doesn't work with AutoMapper
 
 
-
             builder.EntitySet<VirtualDisk>("VirtualDisks");
-
-
-
-        }
-
-        public void Apply( ODataModelBuilder builder, ApiVersion apiVersion )
-        {
-            switch ( apiVersion.MajorVersion )
-            {
-                default:
-                    ConfigureV1( builder );
-                    break;
-            }
         }
     }
 }

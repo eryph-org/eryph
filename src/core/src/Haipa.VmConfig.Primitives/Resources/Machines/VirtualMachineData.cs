@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Haipa.Primitives.Resources.Machines
+namespace Haipa.Resources.Machines
 {
     public class VirtualMachineData : MachineData
     {
@@ -13,7 +13,5 @@ namespace Haipa.Primitives.Resources.Machines
 
         public VirtualMachineNetworkAdapterData[] NetworkAdapters { get; set; }
         public VirtualMachineDriveData[] Drives { get; set; }
-
-
     }
 }

@@ -18,8 +18,7 @@ namespace Haipa.StateDb.Model
         public string Address { get; set; }
 
 
-        [Column("DnsServers")]
-        public string DnsServersInternal { get; set; }
+        [Column("DnsServers")] public string DnsServersInternal { get; set; }
 
         [NotMapped]
         public string[] DnsServerAddresses

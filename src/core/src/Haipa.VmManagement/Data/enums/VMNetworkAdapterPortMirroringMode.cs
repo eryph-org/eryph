@@ -4,6 +4,6 @@
     {
         None,
         Destination,
-        Source,
+        Source
     }
 }

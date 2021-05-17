@@ -6,5 +6,4 @@ namespace Haipa.Messages
     {
         public Guid OperationId { get; set; }
     }
-
 }

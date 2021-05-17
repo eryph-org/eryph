@@ -1,7 +1,6 @@
 ﻿using Haipa.Modules.AspNetCore;
 using JetBrains.Annotations;
 
-
 namespace Haipa.Modules.ComputeApi
 {
     [UsedImplicitly]
@@ -12,6 +11,4 @@ namespace Haipa.Modules.ComputeApi
         public override string ApiName => "Compute Api";
         public override string AudienceName => "compute_api";
     }
-
-
 }

@@ -28,6 +28,6 @@
         PausingCritical = 32791, // 0x00008017
         ResumingCritical = 32792, // 0x00008018
         FastSavedCritical = 32793, // 0x00008019
-        FastSavingCritical = 32794, // 0x0000801A
+        FastSavingCritical = 32794 // 0x0000801A
     }
 }

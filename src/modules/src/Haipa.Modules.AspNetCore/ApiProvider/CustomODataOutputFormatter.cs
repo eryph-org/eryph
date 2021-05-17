@@ -19,24 +19,24 @@ namespace Haipa.Modules.AspNetCore.ApiProvider
         private readonly JsonSerializer _serializer;
 
         public CustomODataOutputFormatter()
-            : base(new[] { ODataPayloadKind.Error })
+            : base(new[] {ODataPayloadKind.Error})
         {
-            _serializer = new JsonSerializer()
+            _serializer = new JsonSerializer
             {
                 Formatting = Formatting.None,
                 NullValueHandling = NullValueHandling.Ignore,
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
-                
             };
 
             SupportedMediaTypes.Add("application/json");
             SupportedEncodings.Add(new UTF8Encoding());
         }
 
-        public override async Task WriteResponseBodyAsync(OutputFormatterWriteContext context, Encoding selectedEncoding)
+        public override async Task WriteResponseBodyAsync(OutputFormatterWriteContext context,
+            Encoding selectedEncoding)
         {
             if (!(context.Object is SerializableError serializableError))
-            { 
+            {
                 await base.WriteResponseBodyAsync(context, selectedEncoding);
                 return;
             }
@@ -48,12 +48,9 @@ namespace Haipa.Modules.AspNetCore.ApiProvider
             var jObject = JObject.FromObject(error, _serializer);
 
             await using var writer = new StreamWriter(context.HttpContext.Response.Body);
-                await jObject.WriteToAsync(new JsonTextWriter(writer)); 
-                
+            await jObject.WriteToAsync(new JsonTextWriter(writer));
+
             await writer.FlushAsync();
-            
         }
-
-
     }
 }

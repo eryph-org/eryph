@@ -9,6 +9,5 @@
 
 
         public long? MaximumBandwidth { get; private set; }
-
     }
 }

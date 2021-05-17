@@ -10,11 +10,12 @@ namespace Haipa.VmManagement.Converging
         {
         }
 
-        public override async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(TypedPsObject<VirtualMachineInfo> vmInfo)
+        public override async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
+            TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var configCount = Context.Config.VM.Cpu.Count.GetValueOrDefault(1);
             if (vmInfo.Value.ProcessorCount == configCount) return vmInfo;
-            
+
             await Context.ReportProgress($"Configure VM Processor: Count: {configCount}").ConfigureAwait(false);
 
             await Context.Engine.RunAsync(PsCommandBuilder.Create()
@@ -23,9 +24,6 @@ namespace Haipa.VmManagement.Converging
                 .AddParameter("Count", configCount)).ConfigureAwait(false);
 
             return await vmInfo.RecreateOrReload(Context.Engine).ConfigureAwait(false);
-
         }
-
-
     }
 }

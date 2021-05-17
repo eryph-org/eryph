@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Haipa.StateDb.Model;
 
 namespace Haipa.Modules.ComputeApi.Model.V1
 {
@@ -15,10 +14,8 @@ namespace Haipa.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.VirtualMachine, VirtualMachine>();
             CreateMap<StateDb.Model.VirtualMachineDrive, VirtualMachineDrive>();
             CreateMap<StateDb.Model.VirtualMachineNetworkAdapter, VirtualMachineNetworkAdapter>();
-            CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>().ForMember(x => x.Path, o =>
-            {
-                o.MapFrom(s=> userRole == "Admin" ? s.Path : null );
-            });
+            CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>().ForMember(x => x.Path,
+                o => { o.MapFrom(s => userRole == "Admin" ? s.Path : null); });
         }
     }
 }

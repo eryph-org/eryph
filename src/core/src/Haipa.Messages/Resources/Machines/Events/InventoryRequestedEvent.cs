@@ -3,6 +3,5 @@
     [SubscribesMessage(MessageSubscriber.VMHostAgents)]
     public class InventoryRequestedEvent
     {
-
     }
 }

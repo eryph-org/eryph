@@ -21,6 +21,6 @@
         SupportingEntity = 16, // 0x00000010
         Completed = 17, // 0x00000011
         PowerMode = 18, // 0x00000012
-        ProtocolVersion = 32775, // 0x00008007
+        ProtocolVersion = 32775 // 0x00008007
     }
 }

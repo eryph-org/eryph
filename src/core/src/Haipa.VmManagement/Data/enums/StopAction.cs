@@ -4,6 +4,6 @@
     {
         TurnOff = 2,
         Save = 3,
-        ShutDown = 4,
+        ShutDown = 4
     }
 }

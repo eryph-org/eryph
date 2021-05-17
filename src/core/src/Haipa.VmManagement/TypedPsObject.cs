@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Management.Automation;
-using System.Reflection;
 using AutoMapper;
 using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Core;
@@ -16,15 +15,14 @@ namespace Haipa.VmManagement
 {
     public class TypedPsObject<T> : Record<TypedPsObject<T>>
     {
-        public T Value { get;  }
-        public PSObject PsObject { get; }
-
-
         public TypedPsObject(PSObject psObject)
         {
             PsObject = psObject;
             Value = TypedPsObjectMapping.Map<T>(psObject);
         }
+
+        public T Value { get; }
+        public PSObject PsObject { get; }
 
         public static implicit operator T(TypedPsObject<T> typed)
         {
@@ -48,7 +46,10 @@ namespace Haipa.VmManagement
 
         public Seq<TypedPsObject<TSub>> GetList<TSub>(
             Expression<Func<T, IList<TSub>>> listProperty,
-            Func<TSub, bool> predicateFunc) => GetList(listProperty).Where(y => predicateFunc(y.Value));
+            Func<TSub, bool> predicateFunc)
+        {
+            return GetList(listProperty).Where(y => predicateFunc(y.Value));
+        }
 
         public Seq<TypedPsObject<TSub>> GetList<TSub>(
             Expression<Func<T, IList<TSub>>> listProperty)
@@ -57,17 +58,15 @@ namespace Haipa.VmManagement
             var property = paramType.GetMember((listProperty.Body as MemberExpression)?.Member.Name)[0];
 
             return
-                Prelude.TryOption(((PsObject.Properties[property.Name].Value as IEnumerable)?.Cast<object>().
-                    Map(x => new TypedPsObject<TSub>(new PSObject(x)))))
-                .Match(
-                    Fail: () => new TypedPsObject<TSub>[] { },
-                    Some: x => x
-                ).ToSeq();
+                Prelude.TryOption((PsObject.Properties[property.Name].Value as IEnumerable)?.Cast<object>()
+                        .Map(x => new TypedPsObject<TSub>(new PSObject(x))))
+                    .Match(
+                        Fail: () => new TypedPsObject<TSub>[] { },
+                        Some: x => x
+                    ).ToSeq();
         }
-
     }
 
-    
 
     internal static class TypedPsObjectMapping
     {
@@ -84,7 +83,7 @@ namespace Haipa.VmManagement
             {
                 return powershellAssembly.GetType($"Microsoft.HyperV.PowerShell.{name}", true);
             }
-            
+
             var config = new MapperConfiguration(cfg =>
             {
                 cfg.CreateProfile("Powershell", c =>
@@ -101,7 +100,6 @@ namespace Haipa.VmManagement
                     c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(PlannedVMNetworkAdapter));
 
                     c.CreateMap(GetPsType(nameof(VMNetworkAdapterVlanSetting)), typeof(VMNetworkAdapterVlanSetting));
-
                 });
             });
 
@@ -116,6 +114,4 @@ namespace Haipa.VmManagement
             return _mapper.Map<T>((object) psObject);
         }
     }
-
-
 }

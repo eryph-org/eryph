@@ -17,6 +17,6 @@
         FastSaved = 32779, // 0x0000800B
         FastSaving = 32780, // 0x0000800C
         ForceShutdown = 32781, // 0x0000800D
-        ForceReboot = 32782, // 0x0000800E
+        ForceReboot = 32782 // 0x0000800E
     }
 }

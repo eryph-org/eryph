@@ -3,6 +3,6 @@
     public enum GroupType
     {
         VMCollectionType,
-        ManagementCollectionType,
+        ManagementCollectionType
     }
 }

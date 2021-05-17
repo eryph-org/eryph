@@ -5,6 +5,6 @@
         None = 1,
         Weak = 2,
         Strong = 3,
-        Strict = 4,
+        Strict = 4
     }
 }

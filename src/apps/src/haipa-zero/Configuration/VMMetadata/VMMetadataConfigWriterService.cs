@@ -1,8 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Haipa.Configuration;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
-using Haipa.Runtime.Zero.Configuration.Clients;
+using Haipa.Resources.Machines;
 
 namespace Haipa.Runtime.Zero.Configuration.VMMetadata
 {
@@ -24,13 +22,11 @@ namespace Haipa.Runtime.Zero.Configuration.VMMetadata
         public Task Update(VirtualMachineMetadata metadata)
         {
             return _io.SaveConfigFile(metadata, metadata.Id.ToString());
-
         }
 
         public Task Add(VirtualMachineMetadata metadata)
         {
             return _io.SaveConfigFile(metadata, metadata.Id.ToString());
-
         }
     }
 }

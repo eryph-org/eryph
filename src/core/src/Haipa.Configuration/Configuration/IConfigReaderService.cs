@@ -6,6 +6,4 @@ namespace Haipa.Configuration
     {
         IEnumerable<TConfig> GetConfig();
     }
-
-
 }

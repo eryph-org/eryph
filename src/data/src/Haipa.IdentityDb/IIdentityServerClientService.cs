@@ -13,6 +13,5 @@ namespace Haipa.Modules.Identity.Services
         Task UpdateClient(Client client);
         Task AddClient(Client client);
         Task AddClients(IEnumerable<Client> clients);
-
     }
 }

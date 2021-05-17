@@ -1,6 +1,5 @@
 ﻿using Haipa.Messages.Operations.Commands;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines.Config;
+using Haipa.Resources.Machines.Config;
 
 namespace Haipa.Messages.Resources.Machines.Commands
 {

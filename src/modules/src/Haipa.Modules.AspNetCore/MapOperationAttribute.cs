@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
-using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
+using Haipa.StateDb.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Haipa.Modules.AspNetCore
 {
-
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class MapOperationAttribute : ActionFilterAttribute
     {
         private IMapper _mapper;
@@ -24,14 +20,14 @@ namespace Haipa.Modules.AspNetCore
             if (!(actionExecutedContext.Result is AcceptedResult acceptedResult))
                 return;
 
-            StateDb.Model.Operation operation;
+            Operation operation;
 
             switch (acceptedResult.Value)
             {
-                case Task<StateDb.Model.Operation> operationTask:
+                case Task<Operation> operationTask:
                     operation = operationTask.GetAwaiter().GetResult();
                     break;
-                case StateDb.Model.Operation modelOperation:
+                case Operation modelOperation:
                     operation = modelOperation;
                     break;
 
@@ -39,10 +35,8 @@ namespace Haipa.Modules.AspNetCore
             }
 
 
-            var mappedOperation = _mapper.Map<Operation>(operation);
+            var mappedOperation = _mapper.Map<ApiProvider.Model.V1.Operation>(operation);
             actionExecutedContext.Result = new AcceptedResult(acceptedResult.Location, mappedOperation);
-
         }
-
     }
 }

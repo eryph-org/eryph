@@ -1,15 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
-using Haipa.Messages;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 using Haipa.VmManagement.Data;
-using LanguageExt;
 
 namespace Haipa.Modules.VmHostAgent.Inventory
 {
@@ -77,6 +68,5 @@ namespace Haipa.Modules.VmHostAgent.Inventory
                     throw new ArgumentOutOfRangeException(nameof(valueState), valueState, null);
             }
         }
-
     }
 }

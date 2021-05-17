@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace Haipa.Primitives.Resources.Machines
+namespace Haipa.Resources.Machines
 {
     [JsonConverter(typeof(StringEnumConverter))]
     public enum VirtualMachineDriveType
@@ -10,8 +10,8 @@ namespace Haipa.Primitives.Resources.Machines
         VHD = 0,
         SharedVHD = 1,
         PHD = 2,
-        DVD = 3,
-        // ReSharper restore InconsistentNaming
 
+        DVD = 3
+        // ReSharper restore InconsistentNaming
     }
 }

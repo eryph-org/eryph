@@ -4,6 +4,5 @@ namespace Haipa.VmManagement.Data.Full
 {
     public sealed class VMFloppyDiskDriveInfo : DriveInfoBase
     {
-
     }
 }

@@ -16,7 +16,5 @@
 
 
         //public OnOffState PauseAfterBootFailure { get; private set; }
-
-
     }
 }

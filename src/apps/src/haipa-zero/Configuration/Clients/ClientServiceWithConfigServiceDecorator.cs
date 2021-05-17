@@ -7,18 +7,20 @@ using Haipa.Modules.Identity.Services;
 
 namespace Haipa.Runtime.Zero.Configuration.Clients
 {
-    internal class ClientServiceWithConfigServiceDecorator<TModel> : IClientService<TModel> where TModel : IClientApiModel
+    internal class ClientServiceWithConfigServiceDecorator<TModel> : IClientService<TModel>
+        where TModel : IClientApiModel
     {
-        private readonly IClientService<TModel> _decoratedService;
         private readonly IConfigWriterService<ClientConfigModel> _configService;
+        private readonly IClientService<TModel> _decoratedService;
 
-        public ClientServiceWithConfigServiceDecorator(IClientService<TModel> decoratedService, IConfigWriterService<ClientConfigModel> configService)
+        public ClientServiceWithConfigServiceDecorator(IClientService<TModel> decoratedService,
+            IConfigWriterService<ClientConfigModel> configService)
         {
             _decoratedService = decoratedService;
             _configService = configService;
         }
 
-        public IQueryable<TModel> QueryClients ()
+        public IQueryable<TModel> QueryClients()
         {
             return _decoratedService.QueryClients();
         }
@@ -45,7 +47,5 @@ namespace Haipa.Runtime.Zero.Configuration.Clients
             await _decoratedService.AddClient(client);
             await _configService.Add(client.FromApiModel());
         }
-
-
     }
 }

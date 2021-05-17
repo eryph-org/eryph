@@ -1,30 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
-using Haipa.Modules.AspNetCore.ApiProvider.Services;
-using Haipa.Modules.AspNetCore.OData;
-using Haipa.Modules.ComputeApi.Model.V1;
-using Haipa.StateDb;
-using Microsoft.AspNet.OData;
-using Microsoft.AspNetCore.Mvc;
-using Swashbuckle.AspNetCore.Annotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Resources.Commands;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Modules.AspNetCore;
 using Haipa.Modules.AspNetCore.ApiProvider;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources;
-using Haipa.Primitives.Resources.Machines.Config;
+using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
+using Haipa.Modules.AspNetCore.ApiProvider.Services;
+using Haipa.Modules.AspNetCore.OData;
+using Haipa.Modules.ComputeApi.Model.V1;
+using Haipa.Resources;
+using Haipa.Resources.Machines.Config;
+using Haipa.StateDb;
 using LanguageExt;
+using Microsoft.AspNet.OData;
 using Microsoft.AspNet.OData.Routing;
+using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using static Microsoft.AspNetCore.Http.StatusCodes;
-using Machine = Haipa.Modules.ComputeApi.Model.V1.Machine;
-using Operation = Haipa.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
 namespace Haipa.Modules.ComputeApi.Controllers
 {
-    [ApiVersion( "1.0" )]
+    [ApiVersion("1.0")]
     //[Authorize]
     public class MachinesController : ApiController
     {
@@ -39,17 +37,16 @@ namespace Haipa.Modules.ComputeApi.Controllers
 
         [HttpGet]
         [EnableMappedQuery]
-        [SwaggerOperation( OperationId  = "Machines_List")]
-        [Produces( "application/json" )]
+        [SwaggerOperation(OperationId = "Machines_List")]
+        [Produces("application/json")]
         [SwaggerResponse(Status200OK, "Success", typeof(ODataValueEx<IEnumerable<Machine>>))]
         public IActionResult Get()
         {
-
             return Ok(_db.Machines.ForMappedQuery<Machine>());
         }
 
         /// <summary>
-        /// Gets a single machine.
+        ///     Gets a single machine.
         /// </summary>
         /// <response code="200">The machine was successfully retrieved.</response>
         /// <response code="404">The machine does not exist.</response>
@@ -60,7 +57,8 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [EnableMappedQuery]
         public IActionResult Get([FromODataUri] string key)
         {
-            return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == Convert.ToInt64(key)).ForMappedQuery<Machine>()));
+            return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == Convert.ToInt64(key))
+                .ForMappedQuery<Machine>()));
         }
 
         [HttpDelete]
@@ -72,10 +70,9 @@ namespace Haipa.Modules.ComputeApi.Controllers
             return FindMachine(key).MapAsync(id =>
                     Accepted(_operationManager.StartNew<DestroyResourcesCommand>(
                             new Resource(ResourceType.Machine, Convert.ToInt64(id))
-                            )
+                        )
                     )).ToAsync()
                 .Match(r => r, l => l);
-
         }
 
 
@@ -84,7 +81,6 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
         [ODataRoute("CreateMachine")]
-
         public async Task<IActionResult> Create([FromBody] MachineProvisioningSettings settings)
         {
             var machineConfig = settings.Configuration.ToObject<MachineConfig>();
@@ -93,16 +89,17 @@ namespace Haipa.Modules.ComputeApi.Controllers
                 new CreateMachineCommand
                 {
                     CorrelationId = settings.CorrelationId,
-                    Config = machineConfig,
+                    Config = machineConfig
                 }
-                ).ConfigureAwait(false));
+            ).ConfigureAwait(false));
         }
 
         [HttpPost]
         [SwaggerOperation(OperationId = "Machines_Update")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public async Task<IActionResult> Update([FromODataUri] string key, [FromBody] MachineProvisioningSettings settings)
+        public async Task<IActionResult> Update([FromODataUri] string key,
+            [FromBody] MachineProvisioningSettings settings)
         {
             var machine = _db.Machines.FirstOrDefault(op => op.Id == Convert.ToInt64(key));
 
@@ -118,7 +115,7 @@ namespace Haipa.Modules.ComputeApi.Controllers
                     CorrelationId = settings.CorrelationId,
                     MachineId = Convert.ToInt64(key),
                     Config = machineConfig,
-                    AgentName = machine.AgentName,
+                    AgentName = machine.AgentName
                 }
             ).ConfigureAwait(false));
         }
@@ -131,8 +128,8 @@ namespace Haipa.Modules.ComputeApi.Controllers
         {
             return FindMachine(key).MapAsync(id =>
                     Accepted(_operationManager.StartNew<StartMachineCommand>(
-                            new Resource(ResourceType.Machine, Convert.ToInt64(id))))
-                    ).ToAsync()
+                        new Resource(ResourceType.Machine, Convert.ToInt64(id))))
+                ).ToAsync()
                 .Match(r => r, l => l);
         }
 
@@ -145,12 +142,12 @@ namespace Haipa.Modules.ComputeApi.Controllers
             return FindMachine(key).MapAsync(id =>
                     Accepted(_operationManager.StartNew<StopMachineCommand>(
                         new Resource(ResourceType.Machine, Convert.ToInt64(id))))
-                    ).ToAsync()
+                ).ToAsync()
                 .Match(r => r, l => l);
         }
 
 
-        private async Task<Either<IActionResult,long>> FindMachine(string key)
+        private async Task<Either<IActionResult, long>> FindMachine(string key)
         {
             var vm = await _db.FindAsync<StateDb.Model.Machine>(Convert.ToInt64(key));
             if (vm == null)

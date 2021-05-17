@@ -30,6 +30,6 @@
         IovBlockedByPolicy = 32788, // 0x00008014
         IovNoAvailResources = 32789, // 0x00008015
         IovGuestDriversNeeded = 32790, // 0x00008016
-        CriticalIoError = 32795, // 0x0000801B
+        CriticalIoError = 32795 // 0x0000801B
     }
 }

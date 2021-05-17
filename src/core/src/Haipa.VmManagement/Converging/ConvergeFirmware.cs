@@ -8,12 +8,12 @@ namespace Haipa.VmManagement.Converging
 {
     public class ConvergeFirmware : ConvergeTaskBase
     {
-
         public ConvergeFirmware(ConvergeContext context) : base(context)
         {
         }
 
-        public override async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(TypedPsObject<VirtualMachineInfo> vmInfo)
+        public override async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
+            TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             if (vmInfo.Value.Generation < 2)
                 return vmInfo;
@@ -24,7 +24,7 @@ namespace Haipa.VmManagement.Converging
                 .BindAsync(firmwareInfoSeq =>
                     firmwareInfoSeq.HeadOrNone()
                         .Match<Either<PowershellFailure, TypedPsObject<VMFirmwareInfo>>>(
-                            None: () => new PowershellFailure { Message = "Failed to get VM Firmware" },
+                            None: () => new PowershellFailure {Message = "Failed to get VM Firmware"},
                             Some: s => s
                         ))
                 .BindAsync(async firmwareInfo =>
@@ -38,7 +38,8 @@ namespace Haipa.VmManagement.Converging
                             var res = await Context.Engine.RunAsync(PsCommandBuilder.Create()
                                 .AddCommand("Set-VMFirmware")
                                 .AddParameter("VM", vmInfo.PsObject)
-                                .AddParameter("EnableSecureBoot", OnOffState.Off)).BindAsync(_ => vmInfo.RecreateOrReload(Context.Engine)
+                                .AddParameter("EnableSecureBoot", OnOffState.Off)).BindAsync(
+                                _ => vmInfo.RecreateOrReload(Context.Engine)
                             ).ConfigureAwait(false);
                             return res;
                         }
@@ -47,7 +48,5 @@ namespace Haipa.VmManagement.Converging
                     }
                 ).ConfigureAwait(false);
         }
-
-
     }
 }

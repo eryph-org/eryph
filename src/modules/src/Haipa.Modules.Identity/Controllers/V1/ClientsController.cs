@@ -9,16 +9,17 @@ using Haipa.Modules.Identity.Models.V1;
 using Haipa.Modules.Identity.Services;
 using Microsoft.AspNet.OData;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Haipa.Modules.Identity.Controllers.V1
 {
-    using static Microsoft.AspNetCore.Http.StatusCodes;
+    using static StatusCodes;
 
     /// <inheritdoc />
     /// <summary>
-    /// Defines the <see cref="!:ClientEntityController" />
+    ///     Defines the <see cref="!:ClientEntityController" />
     /// </summary>
     [ApiVersion("1.0")]
     [Produces("application/json")]
@@ -35,14 +36,13 @@ namespace Haipa.Modules.Identity.Controllers.V1
 
 
         /// <summary>
-        /// Queries for Clients.
+        ///     Queries for Clients.
         /// </summary>
         /// <returns></returns>
         [HttpGet]
         [SwaggerOperation(OperationId = "Clients_List")]
         [SwaggerResponse(Status200OK, "Success", typeof(ODataValue<IEnumerable<Client>>))]
         [EnableQuery]
-        
         public IQueryable<Client> Get()
         {
             return _clientService.QueryClients();
@@ -55,7 +55,7 @@ namespace Haipa.Modules.Identity.Controllers.V1
         {
             var client = await _clientService.GetClient(key);
 
-            if (client == null) 
+            if (client == null)
                 return NotFound($"client with id {key} not found.");
 
             return Ok(client);
@@ -98,10 +98,7 @@ namespace Haipa.Modules.Identity.Controllers.V1
         private async Task<IActionResult> PutOrPatch([FromODataUri] string clientId, Delta<Client> client,
             bool putMode)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var persistentClient = await _clientService.GetClient(clientId);
             if (persistentClient == null)
@@ -116,7 +113,6 @@ namespace Haipa.Modules.Identity.Controllers.V1
             await _clientService.UpdateClient(persistentClient);
 
             return Updated(persistentClient);
-
         }
 
         [Authorize(Policy = "identity:clients:write:all")]
@@ -125,11 +121,7 @@ namespace Haipa.Modules.Identity.Controllers.V1
         [SwaggerResponse(Status201Created, "Success", typeof(ClientWithSecrets))]
         public async Task<IActionResult> Post([FromBody] Client client)
         {
-
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             client.Id = Guid.NewGuid().ToString();
 
@@ -144,7 +136,7 @@ namespace Haipa.Modules.Identity.Controllers.V1
                 Description = client.Description,
                 Name = client.Name,
                 Key = privateKey,
-                KeyType = ClientSecretType.RsaPrivateKey,
+                KeyType = ClientSecretType.RsaPrivateKey
             };
 
             return Created(createdClient);
@@ -171,13 +163,11 @@ namespace Haipa.Modules.Identity.Controllers.V1
                 Description = client.Description,
                 Name = client.Name,
                 Key = privateKey,
-                KeyType = ClientSecretType.RsaPrivateKey,
+                KeyType = ClientSecretType.RsaPrivateKey
             };
 
 
             return Updated(createdClient);
         }
-
-
     }
 }

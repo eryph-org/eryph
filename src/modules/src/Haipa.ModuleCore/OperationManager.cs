@@ -3,21 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Commands;
 using Haipa.Messages.Resources;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Newtonsoft.Json;
 using Rebus.Bus;
-using Resource = Haipa.Primitives.Resources.Resource;
+using Resource = Haipa.Resources.Resource;
 
 namespace Haipa.ModuleCore
 {
     public class OperationManager : IOperationManager
     {
-        private readonly StateStoreContext _db;
         private readonly IBus _bus;
+        private readonly StateStoreContext _db;
 
 
         public OperationManager(StateStoreContext db, IBus bus)
@@ -44,15 +43,15 @@ namespace Haipa.ModuleCore
 
         public async Task<Operation?> StartNew(Type operationCommandType)
         {
-            return (await StartNew(operationCommandType, new Resource[] {} )).FirstOrDefault();
+            return (await StartNew(operationCommandType, new Resource[] { })).FirstOrDefault();
         }
 
         public async Task<Operation?> StartNew(Type operationCommandType, Resource resource)
         {
-            return (await StartNew(operationCommandType, new []{resource})).FirstOrDefault();
+            return (await StartNew(operationCommandType, new[] {resource})).FirstOrDefault();
         }
 
-        public Task<IEnumerable<Operation>> StartNew(Type operationCommandType,  params Resource[] resources)
+        public Task<IEnumerable<Operation>> StartNew(Type operationCommandType, params Resource[] resources)
         {
             if (!(Activator.CreateInstance(operationCommandType) is OperationTaskCommand command))
                 throw new ArgumentException("Invalid operation task type", nameof(operationCommandType));
@@ -65,16 +64,19 @@ namespace Haipa.ModuleCore
             return (await StartNew(operationCommand, new Resource[] { })).FirstOrDefault();
         }
 
-        public async Task<IEnumerable<Operation>> StartNew(OperationTaskCommand taskCommand, params Resource[] resources)
+        public async Task<IEnumerable<Operation>> StartNew(OperationTaskCommand taskCommand,
+            params Resource[] resources)
         {
-            if(taskCommand == null)
+            if (taskCommand == null)
                 throw new ArgumentNullException(nameof(taskCommand));
-          
+
             // if supported by the command use the correlation id as operation id
             // this will prevent that commands are send twice
             var operationId = Guid.NewGuid();
             if (taskCommand is IHasCorrelationId correlatedCommand)
-                operationId = correlatedCommand.CorrelationId!=Guid.Empty ? operationId : correlatedCommand.CorrelationId;
+                operationId = correlatedCommand.CorrelationId != Guid.Empty
+                    ? operationId
+                    : correlatedCommand.CorrelationId;
 
             var result = new List<Operation>();
 
@@ -86,7 +88,6 @@ namespace Haipa.ModuleCore
 
             for (var i = 0; i < opCount; i++)
             {
-
                 var operation = new Operation
                 {
                     Id = operationId,
@@ -109,19 +110,17 @@ namespace Haipa.ModuleCore
                 var commandJson = JsonConvert.SerializeObject(taskCommand);
 
                 await _bus.Send(
-                        new CreateOperationCommand
-                        {
-                            TaskMessage = new CreateNewOperationTaskCommand(
-                                taskCommand.GetType().AssemblyQualifiedName,
-                                commandJson, operation.Id,
-                                taskCommand.TaskId)
-                        });
+                    new CreateOperationCommand
+                    {
+                        TaskMessage = new CreateNewOperationTaskCommand(
+                            taskCommand.GetType().AssemblyQualifiedName,
+                            commandJson, operation.Id,
+                            taskCommand.TaskId)
+                    });
             }
 
 
             return result;
         }
-
-
     }
 }

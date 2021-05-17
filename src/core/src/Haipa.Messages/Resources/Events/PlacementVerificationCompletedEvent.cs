@@ -8,6 +8,5 @@ namespace Haipa.Messages.Resources.Events
         public Guid CorrelationId { get; set; }
         public string AgentName { get; set; }
         public bool Confirmed { get; set; }
-
     }
 }

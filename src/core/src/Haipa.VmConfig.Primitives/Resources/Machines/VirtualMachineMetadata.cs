@@ -1,8 +1,8 @@
 ﻿using System;
-using Haipa.Primitives.Resources.Machines.Config;
+using Haipa.Resources.Machines.Config;
 using JetBrains.Annotations;
 
-namespace Haipa.Primitives.Resources.Machines
+namespace Haipa.Resources.Machines
 {
     public sealed class VirtualMachineMetadata
     {
@@ -12,6 +12,5 @@ namespace Haipa.Primitives.Resources.Machines
 
         [CanBeNull] public VirtualMachineConfig ImageConfig { get; set; }
         [CanBeNull] public VirtualMachineProvisioningConfig ProvisioningConfig { get; set; }
-
     }
 }

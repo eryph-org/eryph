@@ -47,18 +47,20 @@ namespace Haipa.VmManagement
                     vmState = VirtualMachineState.FastSavingCritical;
                     break;
             }
+
             return vmState;
         }
 
-        public static VirtualMachineState ConvertVMState(ushort enabledStateNumber, string otherEnabledState, ushort healthStateNumber)
+        public static VirtualMachineState ConvertVMState(ushort enabledStateNumber, string otherEnabledState,
+            ushort healthStateNumber)
         {
-            var computerState = (VMComputerSystemState)enabledStateNumber;
+            var computerState = (VMComputerSystemState) enabledStateNumber;
             if (computerState == VMComputerSystemState.Other)
                 computerState = ConvertVMOtherState(otherEnabledState);
 
-            var state = (VirtualMachineState)computerState;
+            var state = (VirtualMachineState) computerState;
 
-            var healthState = (VMComputerSystemHealthState)healthStateNumber;
+            var healthState = (VMComputerSystemHealthState) healthStateNumber;
             if (healthState != VMComputerSystemHealthState.Ok)
                 state = GetCriticalState(state);
 
@@ -73,8 +75,9 @@ namespace Haipa.VmManagement
                 return VMComputerSystemState.Resuming;
             if (string.Equals(otherState, "Saving", StringComparison.OrdinalIgnoreCase))
                 return VMComputerSystemState.Saving;
-            return string.Equals(otherState, "FastSaving", StringComparison.OrdinalIgnoreCase) ? VMComputerSystemState.FastSaving : VMComputerSystemState.Unknown;
+            return string.Equals(otherState, "FastSaving", StringComparison.OrdinalIgnoreCase)
+                ? VMComputerSystemState.FastSaving
+                : VMComputerSystemState.Unknown;
         }
-
     }
 }

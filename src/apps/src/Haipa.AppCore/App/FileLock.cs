@@ -15,33 +15,13 @@ namespace Haipa.App
         private readonly FileStream _lockStream;
 
 
-        public ProcessFileLock(string filePath, IDictionary<string, object> metadata= null)
+        public ProcessFileLock(string filePath, IDictionary<string, object> metadata = null)
         {
             _filePath = filePath;
             _lockStream = File.Open(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
             SetMetadata(metadata);
         }
 
-        private void ReleaseUnmanagedResources()
-        {
-            File.Delete(_filePath);
-        }
-
-        private void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _lockStream?.Dispose();
-            }
-            ReleaseUnmanagedResources();
-
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
         public ValueTask DisposeAsync()
         {
             try
@@ -53,6 +33,23 @@ namespace Haipa.App
             {
                 return new ValueTask(Task.FromException(exception));
             }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        private void ReleaseUnmanagedResources()
+        {
+            File.Delete(_filePath);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (disposing) _lockStream?.Dispose();
+            ReleaseUnmanagedResources();
         }
 
         ~ProcessFileLock()
@@ -71,20 +68,15 @@ namespace Haipa.App
             lockData.Add("processId", process.Id);
 
             if (metadata != null)
-            {
                 foreach (var kv in metadata
                     .Where(kv => kv.Key != "processName " && kv.Key != "processId"))
-                {
                     lockData.Add(kv.Key, kv.Value);
-                }
-            }
 
             var dataJson = JsonConvert.SerializeObject(lockData);
 
             using var textWriter = new StreamWriter(_lockStream, Encoding.UTF8, 4096, true);
             textWriter.Write(dataJson);
             textWriter.Flush();
-
         }
     }
 }

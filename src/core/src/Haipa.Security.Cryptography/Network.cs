@@ -9,13 +9,10 @@ namespace Haipa.Security.Cryptography
         {
             get
             {
-                string domainName = IPGlobalProperties.GetIPGlobalProperties().DomainName;
-                string hostName = Dns.GetHostName();
+                var domainName = IPGlobalProperties.GetIPGlobalProperties().DomainName;
+                var hostName = Dns.GetHostName();
 
-                if (!hostName.EndsWith(domainName))
-                {
-                    hostName += "." + domainName;
-                }
+                if (!hostName.EndsWith(domainName)) hostName += "." + domainName;
                 return hostName;
             }
         }

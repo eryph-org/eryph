@@ -12,6 +12,6 @@
         ApplicationCritical = 32782, // 0x0000800E
         CommunicationTimedOut = 32783, // 0x0000800F
         CommunicationFailed = 32784, // 0x00008010
-        Disabled = 32896, // 0x00008080
+        Disabled = 32896 // 0x00008080
     }
 }

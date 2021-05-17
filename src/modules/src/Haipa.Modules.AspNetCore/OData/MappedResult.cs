@@ -8,16 +8,15 @@ namespace Haipa.Modules.AspNetCore.OData
 {
     public class MappedResult<TModel> : IQueryable<TModel>, IMappedResult
     {
-        public IQueryable EntityQueryable { get; }
-        public Type ModelType => typeof(TModel);
-        public object Parameters { get; set; }
-
-
         public MappedResult(IQueryable innerQueryable, object parameters = null)
         {
             Parameters = parameters;
             EntityQueryable = innerQueryable;
         }
+
+        public IQueryable EntityQueryable { get; }
+        public Type ModelType => typeof(TModel);
+        public object Parameters { get; set; }
 
         public IEnumerator<TModel> GetEnumerator()
         {

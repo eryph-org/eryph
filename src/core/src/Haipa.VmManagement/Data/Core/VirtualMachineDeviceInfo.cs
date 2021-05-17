@@ -7,6 +7,5 @@ namespace Haipa.VmManagement.Data.Core
         public virtual string Name { get; set; }
 
         public virtual string Id { get; set; }
-
     }
 }

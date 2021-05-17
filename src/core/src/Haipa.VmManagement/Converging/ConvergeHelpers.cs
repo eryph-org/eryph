@@ -9,7 +9,8 @@ namespace Haipa.VmManagement.Converging
 {
     public static class ConvergeHelpers
     {
-        public static async Task<Either<PowershellFailure, TypedPsObject<TSub>>> GetOrCreateInfoAsync<T, TSub>(TypedPsObject<T> parentInfo,
+        public static async Task<Either<PowershellFailure, TypedPsObject<TSub>>> GetOrCreateInfoAsync<T, TSub>(
+            TypedPsObject<T> parentInfo,
             Expression<Func<T, IList<TSub>>> listProperty,
             Func<TSub, bool> predicateFunc,
             Func<Task<Either<PowershellFailure, Seq<TypedPsObject<TSub>>>>> creatorFunc)
@@ -18,10 +19,7 @@ namespace Haipa.VmManagement.Converging
 
             if (result.Length() != 0)
                 return Prelude.Try(result.Single()).Try().Match<Either<PowershellFailure, TypedPsObject<TSub>>>(
-                    Fail: ex =>
-                    {
-                        return Prelude.Left(new PowershellFailure { Message = ex.Message });
-                    },
+                    Fail: ex => { return Prelude.Left(new PowershellFailure {Message = ex.Message}); },
                     Succ: x => Prelude.Right(x)
                 );
 
@@ -30,7 +28,7 @@ namespace Haipa.VmManagement.Converging
 
             var res = creatorResult.Bind(
                 seq => seq.HeadOrNone().ToEither(() =>
-                    new PowershellFailure { Message = "Object creation was successful, but no result was returned." }));
+                    new PowershellFailure {Message = "Object creation was successful, but no result was returned."}));
 
             return res;
         }
@@ -43,6 +41,5 @@ namespace Haipa.VmManagement.Converging
             return parentInfo.GetList(listProperty, predicateFunc).ToArray().Map(applyFunc)
                 .Traverse(l => l);
         }
-
     }
 }

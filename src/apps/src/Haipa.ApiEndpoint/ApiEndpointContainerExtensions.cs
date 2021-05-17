@@ -17,7 +17,7 @@ namespace Haipa.ApiEndpoint
         public static Container UseRabbitMq(this Container container)
         {
             container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
-            
+
             return container;
         }
 

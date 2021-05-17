@@ -4,7 +4,7 @@ using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;
 using LanguageExt;
-using VirtualMachineMetadata = Haipa.Primitives.Resources.Machines.VirtualMachineMetadata;
+using VirtualMachineMetadata = Haipa.Resources.Machines.VirtualMachineMetadata;
 
 namespace Haipa.Modules.Controller
 {
@@ -16,10 +16,11 @@ namespace Haipa.Modules.Controller
 
     internal class VirtualMachineDataService : IVirtualMachineDataService
     {
-        private readonly IStateStoreRepository<VirtualMachine> _repository;
         private readonly IVirtualMachineMetadataService _metadataService;
+        private readonly IStateStoreRepository<VirtualMachine> _repository;
 
-        public VirtualMachineDataService(IStateStoreRepository<VirtualMachine> repository, IVirtualMachineMetadataService metadataService)
+        public VirtualMachineDataService(IStateStoreRepository<VirtualMachine> repository,
+            IVirtualMachineMetadataService metadataService)
         {
             _repository = repository;
             _metadataService = metadataService;
@@ -27,18 +28,18 @@ namespace Haipa.Modules.Controller
 
         public async Task<Option<VirtualMachine>> GetVM(long id)
         {
-           var res = await _repository.GetByIdAsync(id);
-           return res;
+            var res = await _repository.GetByIdAsync(id);
+            return res;
         }
 
-        public async Task<VirtualMachine> AddNewVM([NotNull] VirtualMachine vm, [NotNull] VirtualMachineMetadata metadata)
+        public async Task<VirtualMachine> AddNewVM([NotNull] VirtualMachine vm,
+            [NotNull] VirtualMachineMetadata metadata)
         {
-
             if (vm.Id == 0)
                 throw new ArgumentException($"{nameof(VirtualMachine.Id)} is missing", nameof(vm));
-            
+
             if (vm.VMId == null)
-                throw new ArgumentException($"{nameof(VirtualMachine.VMId)} is missing", nameof(vm) );
+                throw new ArgumentException($"{nameof(VirtualMachine.VMId)} is missing", nameof(vm));
 
             if (metadata.Id == null)
                 throw new ArgumentException($"{nameof(metadata.Id)} is missing", nameof(metadata));
@@ -51,12 +52,11 @@ namespace Haipa.Modules.Controller
 
 
             await _metadataService.SaveMetadata(metadata);
-            
+
             vm.MetadataId = metadata.Id;
 
             var res = await _repository.AddAsync(vm);
             return res;
         }
-
     }
 }

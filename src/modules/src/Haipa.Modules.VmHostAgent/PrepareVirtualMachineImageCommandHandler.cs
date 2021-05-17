@@ -2,11 +2,9 @@
 using System.IO;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Images.Commands;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines.Config;
+using Haipa.Resources.Machines.Config;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -14,7 +12,9 @@ using Rebus.Handlers;
 namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    public class PrepareVirtualMachineImageCommandHandler : IHandleMessages<AcceptedOperationTaskEvent<PrepareVirtualMachineImageCommand>>
+    public class
+        PrepareVirtualMachineImageCommandHandler : IHandleMessages<
+            AcceptedOperationTaskEvent<PrepareVirtualMachineImageCommand>>
     {
         private readonly IBus _bus;
 
@@ -28,10 +28,8 @@ namespace Haipa.Modules.VmHostAgent
             try
             {
                 if (message.Command.ImageConfig == null)
-                {
                     return _bus.Publish(
                         OperationTaskStatusEvent.Completed(message.Command.OperationId, message.Command.TaskId));
-                }
 
                 var hostSettings = HostSettingsBuilder.GetHostSettings();
                 var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
@@ -43,10 +41,8 @@ namespace Haipa.Modules.VmHostAgent
                     $"{message.Command.ImageConfig.Name}\\{message.Command.ImageConfig.Tag}");
 
                 if (Directory.Exists(imagePath))
-                {
                     return _bus.Publish(
                         OperationTaskStatusEvent.Completed(message.Command.OperationId, message.Command.TaskId));
-                }
 
                 if (message.Command.ImageConfig.Source == MachineImageSource.Local)
                     throw new Exception("Image not found on local source.");
@@ -57,10 +53,8 @@ namespace Haipa.Modules.VmHostAgent
             {
                 return _bus.Publish(OperationTaskStatusEvent.Failed(message.Command.OperationId,
                     message.Command.TaskId,
-                    new ErrorData { ErrorMessage = ex.Message }));
-
+                    new ErrorData {ErrorMessage = ex.Message}));
             }
-
         }
     }
 }

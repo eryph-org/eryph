@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Threading.Tasks;
 using Rebus.Pipeline;
 using SimpleInjector;
@@ -14,7 +13,6 @@ namespace Haipa.Rebus
             Debug.Assert(scope != null);
 
             await scope.GetInstance<IRebusUnitOfWork>().DisposeAsync().ConfigureAwait(false);
-
         }
 
         public async Task Commit(IMessageContext context)
@@ -23,7 +21,6 @@ namespace Haipa.Rebus
             Debug.Assert(scope != null);
 
             await scope.GetInstance<IRebusUnitOfWork>().Commit().ConfigureAwait(false);
-
         }
     }
 }

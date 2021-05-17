@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Machines.Commands;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
-using Haipa.Primitives.Resources.Machines.Config;
+using Haipa.Resources.Machines;
+using Haipa.Resources.Machines.Config;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -27,7 +24,6 @@ namespace Haipa.Modules.Controller.Operations
         {
             message.Config = NormalizeMachineConfig(message.MachineId, message.Config);
             return _bus.SendLocal(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, message));
-
         }
 
         private static MachineConfig NormalizeMachineConfig(
@@ -40,10 +36,8 @@ namespace Haipa.Modules.Controller.Operations
                 machineConfig.VM = new VirtualMachineConfig();
 
             if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == 0)
-            {
                 //TODO generate a random name here
                 machineConfig.Name = "haipa-machine";
-            }
 
             if (machineConfig.Image == null)
                 machineConfig.Image = new MachineImageConfig();
@@ -95,8 +89,5 @@ namespace Haipa.Modules.Controller.Operations
 
             return machineConfig;
         }
-
-
-
     }
 }

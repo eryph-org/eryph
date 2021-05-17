@@ -31,10 +31,7 @@ namespace Haipa.VmManagement.Storage
                 var pathAfterDataStore = path.Remove(0, dataStorePath.ValueUnsafe().Length).TrimStart('\\');
 
                 var pathRoot = Path.GetPathRoot(pathAfterDataStore);
-                if (pathRoot.StartsWith("haipa_p"))
-                {
-                    projectName = pathRoot.Remove(0, "haipa_p".Length);
-                }
+                if (pathRoot.StartsWith("haipa_p")) projectName = pathRoot.Remove(0, "haipa_p".Length);
 
                 var idCandidate = pathAfterDataStore;
 
@@ -53,23 +50,25 @@ namespace Haipa.VmManagement.Storage
             };
 
             return (names, storageIdentifier);
-
         }
 
         public Task<Either<PowershellFailure, string>> ResolveStorageBasePath(string defaultPath)
         {
             return (
-                from dsName in DataStoreName.ToEitherAsync(new PowershellFailure { Message = "Unknown data store name. Cannot resolve path" })
-                from projectName in ProjectName.ToEitherAsync(new PowershellFailure { Message = "Unknown project name. Cannot resolve path" })
-                from environmentName in EnvironmentName.ToEitherAsync(new PowershellFailure { Message = "Unknown environment name. Cannot resolve path" })
+                from dsName in DataStoreName.ToEitherAsync(new PowershellFailure
+                    {Message = "Unknown data store name. Cannot resolve path"})
+                from projectName in ProjectName.ToEitherAsync(new PowershellFailure
+                    {Message = "Unknown project name. Cannot resolve path"})
+                from environmentName in EnvironmentName.ToEitherAsync(new PowershellFailure
+                    {Message = "Unknown environment name. Cannot resolve path"})
                 from dsPath in LookupVMDatastorePathInEnvironment(dsName, environmentName, defaultPath).ToAsync()
                 from projectPath in JoinPathAndProject(dsPath, projectName).ToAsync()
                 select projectPath
-
             ).ToEither();
         }
 
-        static async Task<Either<PowershellFailure, string>> LookupVMDatastorePathInEnvironment(string datastore, string environment, string defaultPath)
+        private static async Task<Either<PowershellFailure, string>> LookupVMDatastorePathInEnvironment(
+            string datastore, string environment, string defaultPath)
         {
             return defaultPath;
         }

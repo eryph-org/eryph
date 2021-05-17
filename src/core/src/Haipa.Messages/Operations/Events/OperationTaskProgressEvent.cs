@@ -12,5 +12,4 @@ namespace Haipa.Messages.Operations.Events
         public string Message { get; set; }
         public DateTimeOffset Timestamp { get; set; }
     }
-
 }

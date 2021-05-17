@@ -1,19 +1,17 @@
 ﻿using System;
-using System.Security.Cryptography;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Crypto.Prng;
+using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
-using BigInteger = Org.BouncyCastle.Math.BigInteger;
 
 namespace Haipa.Security.Cryptography
 {
     public static class X509Generation
     {
-
         /// <summary>
         ///     Create a BouncyCastle AsymmetricCipherKeyPair and associated
         ///     X509Certificate
@@ -29,7 +27,8 @@ namespace Haipa.Security.Cryptography
         ///         <remarks>
         ///             see http://msdn.microsoft.com/en-us/library/windows/desktop/aa366101(v=vs.85).aspx
         ///             for Distinguished Name format
-        ///             See http://stackoverflow.com/questions/5136198/what-strings-are-allowed-in-the-common-name-attribute-in-an-x-509-certificate
+        ///             See
+        ///             http://stackoverflow.com/questions/5136198/what-strings-are-allowed-in-the-common-name-attribute-in-an-x-509-certificate
         ///             answer 2 for encoding details
         ///             Input is appended to "CN=".
         ///         </remarks>
@@ -38,7 +37,8 @@ namespace Haipa.Security.Cryptography
         ///         Default is EmailProtection
         ///     </remarks>
         /// </summary>
-        public static (X509Certificate Certificate, AsymmetricCipherKeyPair KeyPair) GenerateSelfSignedCertificate(string subjectName)
+        public static (X509Certificate Certificate, AsymmetricCipherKeyPair KeyPair) GenerateSelfSignedCertificate(
+            string subjectName)
         {
             var kpGenerator = new RsaKeyPairGenerator();
 
@@ -70,8 +70,5 @@ namespace Haipa.Security.Cryptography
 
             return (gen.Generate(new Asn1SignatureFactory("SHA256withRSA", kp.Private)), kp);
         }
-
     }
-
-
 }

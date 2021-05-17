@@ -3,6 +3,5 @@
     public interface IVMWithStateInfo
     {
         VirtualMachineState State { get; }
-
     }
 }

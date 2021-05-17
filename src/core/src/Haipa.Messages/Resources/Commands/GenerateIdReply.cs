@@ -3,6 +3,5 @@
     public class GenerateIdReply
     {
         public long GeneratedId { get; set; }
-
     }
 }

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Haipa.StateDb
 {
-    public class InMemoryStateStoreContextConfigurer : IDbContextConfigurer<StateStoreContext> 
+    public class InMemoryStateStoreContextConfigurer : IDbContextConfigurer<StateStoreContext>
     {
         private readonly InMemoryDatabaseRoot _dbRoot;
 

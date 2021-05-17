@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.HostedServices;
-using Dbosoft.Hosuto.Modules;
 using LanguageExt;
 
 namespace Haipa.Configuration
@@ -18,7 +17,7 @@ namespace Haipa.Configuration
 
         public Task Execute(CancellationToken stoppingToken)
         {
-            return _seeders.Map(s => s.Execute(stoppingToken).ToUnit()).Traverse(l=>l);
+            return _seeders.Map(s => s.Execute(stoppingToken).ToUnit()).Traverse(l => l);
         }
     }
 }

@@ -4,6 +4,6 @@
     {
         None,
         ISO,
-        PassThrough,
+        PassThrough
     }
 }

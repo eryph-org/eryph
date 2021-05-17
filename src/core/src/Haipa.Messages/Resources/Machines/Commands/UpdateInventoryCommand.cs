@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 
 namespace Haipa.Messages.Resources.Machines.Commands
 {
@@ -10,7 +9,5 @@ namespace Haipa.Messages.Resources.Machines.Commands
         public string AgentName { get; set; }
 
         public List<VirtualMachineData> Inventory { get; set; }
-
-
     }
 }

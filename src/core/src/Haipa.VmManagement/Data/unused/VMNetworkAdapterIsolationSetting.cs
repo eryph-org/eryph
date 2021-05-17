@@ -9,6 +9,5 @@
         public int DefaultIsolationID { get; private set; }
 
         public OnOffState MultiTenantStack { get; private set; }
-
     }
 }

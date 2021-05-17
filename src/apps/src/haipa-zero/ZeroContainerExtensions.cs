@@ -1,5 +1,4 @@
-﻿using Haipa.Modules.Controller;
-using Haipa.Rebus;
+﻿using Haipa.Rebus;
 using Haipa.StateDb;
 using Microsoft.EntityFrameworkCore.Storage;
 using Rebus.Persistence.InMem;
@@ -15,10 +14,8 @@ namespace Haipa.Runtime.Zero
             container
                 .UseInMemoryBus()
                 .UseInMemoryDb();
-
-
-
         }
+
         public static Container UseInMemoryBus(this Container container)
         {
             container.RegisterInstance(new InMemNetwork(true));
@@ -26,8 +23,10 @@ namespace Haipa.Runtime.Zero
             container.Register<IRebusTransportConfigurer, InMemoryTransportConfigurer>();
             container.Register<IRebusSagasConfigurer, InMemorySagasConfigurer>();
             container.Register<IRebusSubscriptionConfigurer, InMemorySubscriptionConfigurer>();
-            container.Register<IRebusTimeoutConfigurer, InMemoryTimeoutConfigurer>(); return container;
+            container.Register<IRebusTimeoutConfigurer, InMemoryTimeoutConfigurer>();
+            return container;
         }
+
         public static Container UseInMemoryDb(this Container container)
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());

@@ -15,8 +15,5 @@
         public string RemoteAddress { get; private set; }
 
         public VMNetworkAdapterAclType RemoteAddressType { get; private set; }
-
-
-
     }
 }

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using JetBrains.Annotations;
 
 // ReSharper disable once CheckNamespace
@@ -15,7 +13,9 @@ namespace System.Linq
             [NotNull] this IEnumerable<T> source,
             [NotNull] Func<T, T, bool> comparer)
             where T : class
-            => source.Distinct(new DynamicEqualityComparer<T>(comparer));
+        {
+            return source.Distinct(new DynamicEqualityComparer<T>(comparer));
+        }
 
         private sealed class DynamicEqualityComparer<T> : IEqualityComparer<T>
             where T : class
@@ -27,10 +27,15 @@ namespace System.Linq
                 _func = func;
             }
 
-            public bool Equals(T x, T y) => _func(x, y);
+            public bool Equals(T x, T y)
+            {
+                return _func(x, y);
+            }
 
-            public int GetHashCode(T obj) => 0;
+            public int GetHashCode(T obj)
+            {
+                return 0;
+            }
         }
-
     }
 }

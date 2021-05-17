@@ -8,7 +8,6 @@ namespace Haipa.Modules.AspNetCore
     {
         public static IMvcBuilder ConfigureAsRazorModule(this IMvcBuilder builder)
         {
-
             var frame = new StackFrame(1);
             var method = frame.GetMethod();
             var type = method.DeclaringType;
@@ -27,11 +26,8 @@ namespace Haipa.Modules.AspNetCore
                 {
                     var partFactory = ApplicationPartFactory.GetApplicationPartFactory(relatedAssembly);
                     foreach (var part in partFactory.GetApplicationParts(relatedAssembly))
-                    {
                         apm.ApplicationParts.Add(part);
-                    }
                 }
-
             });
             return builder;
         }

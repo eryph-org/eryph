@@ -12,10 +12,11 @@ namespace Haipa.Runtime.Zero.Configuration.Clients
     [UsedImplicitly]
     internal class IdentityClientSeeder : IConfigSeeder<IdentityModule>
     {
-        private readonly IIdentityServerClientService _clientService;
         private readonly IConfigReaderService<ClientConfigModel> _clientConfigService;
+        private readonly IIdentityServerClientService _clientService;
 
-        public IdentityClientSeeder(IIdentityServerClientService clientService, IConfigReaderService<ClientConfigModel> clientConfigService)
+        public IdentityClientSeeder(IIdentityServerClientService clientService,
+            IConfigReaderService<ClientConfigModel> clientConfigService)
         {
             _clientService = clientService;
             _clientConfigService = clientConfigService;
@@ -27,6 +28,5 @@ namespace Haipa.Runtime.Zero.Configuration.Clients
                 _clientConfigService.GetConfig()
                     .Map(x => x.ToApiModel().ToIdentityServerModel()));
         }
-
     }
 }

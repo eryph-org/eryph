@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources;
+using Haipa.Resources;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -29,7 +27,6 @@ namespace Haipa.StateDb.Model
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
-
     public enum ComputeResourceType
     {
         Machine

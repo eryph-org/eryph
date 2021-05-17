@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Modules.Controller.IdGenerator;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;
@@ -21,14 +19,14 @@ namespace Haipa.Modules.Controller.Operations.Workflows
         IHandleMessages<OperationTaskStatusEvent<ValidateMachineConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>
     {
-        private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly Id64Generator _idGenerator;
-        private readonly IVirtualMachineDataService _vmDataService;
         private readonly IVirtualMachineMetadataService _metadataService;
+        private readonly IOperationTaskDispatcher _taskDispatcher;
+        private readonly IVirtualMachineDataService _vmDataService;
 
 
-        public UpdateMachineSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, Id64Generator idGenerator, 
-            IVirtualMachineDataService vmDataService, 
+        public UpdateMachineSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, Id64Generator idGenerator,
+            IVirtualMachineDataService vmDataService,
             IVirtualMachineMetadataService metadataService) : base(bus)
         {
             _taskDispatcher = taskDispatcher;
@@ -37,30 +35,25 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             _metadataService = metadataService;
         }
 
-        protected override void CorrelateMessages(ICorrelationConfig<UpdateMachineSagaData> config)
+        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
         {
-            base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<ValidateMachineConfigCommand>>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId, d => d.OperationId);
+            if (Data.Updated)
+                return Task.CompletedTask;
 
-        }
+            return FailOrRun<UpdateVirtualMachineCommand, ConvergeVirtualMachineResult>(message, async r =>
+            {
+                Data.Updated = true;
 
-        public override Task Initiated(UpdateMachineCommand message)
-        {
-            Data.Config = message.Config;
-            Data.MachineId = message.MachineId;
-            Data.AgentName = message.AgentName;
+                await _metadataService.SaveMetadata(r.MachineMetadata);
 
-
-            return _taskDispatcher.Send(
-                new ValidateMachineConfigCommand
+                await Bus.Send(new UpdateInventoryCommand
                 {
-                    MachineId = message.MachineId,
-                    Config = message.Config,
-                    OperationId = Data.OperationId,
-                    TaskId = Guid.NewGuid(),
-                }
-            );
+                    AgentName = Data.AgentName,
+                    Inventory = new List<VirtualMachineData> {r.Inventory}
+                });
+
+                await Complete();
+            });
         }
 
         public Task Handle(OperationTaskStatusEvent<ValidateMachineConfigCommand> message)
@@ -68,9 +61,8 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             if (Data.Validated)
                 return Task.CompletedTask;
 
-            return FailOrRun<ValidateMachineConfigCommand, ValidateMachineConfigCommand>(message,async (r) =>
+            return FailOrRun<ValidateMachineConfigCommand, ValidateMachineConfigCommand>(message, async r =>
             {
-                
                 Data.Config = r.Config;
 
                 var optionalMachineData = await
@@ -79,7 +71,6 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                     select (vm, metadata);
 
                 await optionalMachineData.Match(
-
                     Some: data =>
                     {
                         Data.Validated = true;
@@ -97,34 +88,36 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                         return _taskDispatcher.Send(convergeMessage);
                     },
                     None: () => Fail(new ErrorData
-                        { ErrorMessage = $"Could not find virtual machine with machine id {Data.MachineId}" })
+                        {ErrorMessage = $"Could not find virtual machine with machine id {Data.MachineId}"})
                 );
-
-
             });
         }
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
+        protected override void CorrelateMessages(ICorrelationConfig<UpdateMachineSagaData> config)
         {
-            if(Data.Updated)
-                return Task.CompletedTask;
-
-            return FailOrRun<UpdateVirtualMachineCommand, ConvergeVirtualMachineResult>(message, async (r) =>
-            {
-                Data.Updated = true;
-
-                await _metadataService.SaveMetadata(r.MachineMetadata);
-
-                await Bus.Send(new UpdateInventoryCommand
-                {
-                    AgentName = Data.AgentName,
-                    Inventory = new List<VirtualMachineData> { r.Inventory }
-                });
-
-                await Complete();
-            });
-
+            base.CorrelateMessages(config);
+            config.Correlate<OperationTaskStatusEvent<ValidateMachineConfigCommand>>(m => m.OperationId,
+                d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId,
+                d => d.OperationId);
         }
 
+        public override Task Initiated(UpdateMachineCommand message)
+        {
+            Data.Config = message.Config;
+            Data.MachineId = message.MachineId;
+            Data.AgentName = message.AgentName;
+
+
+            return _taskDispatcher.Send(
+                new ValidateMachineConfigCommand
+                {
+                    MachineId = message.MachineId,
+                    Config = message.Config,
+                    OperationId = Data.OperationId,
+                    TaskId = Guid.NewGuid()
+                }
+            );
+        }
     }
 }

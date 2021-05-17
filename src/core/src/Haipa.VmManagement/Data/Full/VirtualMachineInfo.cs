@@ -1,6 +1,4 @@
 ﻿using System;
-using AutoMapper;
-using AutoMapper.Configuration.Annotations;
 using Haipa.VmManagement.Data.Core;
 using LanguageExt;
 
@@ -12,19 +10,12 @@ using LanguageExt;
 
 namespace Haipa.VmManagement.Data.Full
 {
-    public sealed class VirtualMachineInfo : Record<VirtualMachineInfo>, 
-        IVirtualMachineCoreInfo, 
-        IVMWithStateInfo, 
-        IVMWithNetworkAdapterInfo<VMNetworkAdapter>, 
+    public sealed class VirtualMachineInfo : Record<VirtualMachineInfo>,
+        IVirtualMachineCoreInfo,
+        IVMWithStateInfo,
+        IVMWithNetworkAdapterInfo<VMNetworkAdapter>,
         IVMWithDrivesInfo<HardDiskDriveInfo>
     {
-
-        //public DateTime CreationTime { get; private set; }
-
-        public Guid Id { get; private set; }
-
-        public string Name { get; private set; }
-
         //public string ComputerName { get; private set; }
 
 
@@ -144,6 +135,44 @@ namespace Haipa.VmManagement.Data.Full
 
         public CheckpointType CheckpointType { get; private set; }
 
+        //public bool DynamicMemoryEnabled { get; private set; }
+
+
+        public long MemoryMaximum { get; private set; }
+
+        public long MemoryMinimum { get; private set; }
+
+
+        //public bool IsClustered { get; private set; }
+
+        public string Notes { get; private set; }
+
+        //public DateTime CreationTime { get; private set; }
+
+        public Guid Id { get; private set; }
+
+        public string Name { get; private set; }
+
+
+        public long MemoryStartup { get; private set; }
+
+
+        public long ProcessorCount { get; private set; }
+
+
+        //public bool BatteryPassthroughEnabled { get; private set; }
+
+
+        public int Generation { get; private set; }
+
+        //public Guid? ParentSnapshotId { get; private set; }
+
+
+        //public string ParentSnapshotName { get; private set; }
+
+
+        public string Path { get; private set; }
+
         //public VMGroupInfo[] Groups { get; private set; }
 
 
@@ -176,38 +205,6 @@ namespace Haipa.VmManagement.Data.Full
 
         public VMNetworkAdapter[] NetworkAdapters { get; private set; }
 
-        //public bool DynamicMemoryEnabled { get; private set; }
-
-
-        public long MemoryMaximum { get; private set; }
-
-        public long MemoryMinimum { get; private set; }
-
-
-        public long MemoryStartup { get; private set; }
-
-
-        public long ProcessorCount { get; private set; }
-
-
-        //public bool BatteryPassthroughEnabled { get; private set; }
-
-
-        public int Generation { get; private set; }
-
-
-        //public bool IsClustered { get; private set; }
-
-        public string Notes { get; private set; }
-
-        //public Guid? ParentSnapshotId { get; private set; }
-
-
-        //public string ParentSnapshotName { get; private set; }
-
-
-        public string Path { get; private set; }
-
 
         //public long SizeOfSystemFiles { get; private set; }
 
@@ -227,8 +224,5 @@ namespace Haipa.VmManagement.Data.Full
 
 
         //public OnOffState? LockOnDisconnect { get; private set; }
-
-
-
     }
 }

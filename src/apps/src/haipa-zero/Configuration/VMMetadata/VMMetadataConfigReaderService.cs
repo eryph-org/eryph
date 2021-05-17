@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using Haipa.Configuration;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 using Newtonsoft.Json;
 
 namespace Haipa.Runtime.Zero.Configuration.VMMetadata

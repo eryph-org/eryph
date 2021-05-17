@@ -1,9 +1,9 @@
-﻿namespace Haipa.Primitives.Resources.Machines
+﻿namespace Haipa.Resources.Machines
 {
     public class MachineNetworkData
     {
-        public string Name { get; set; }       
-        
+        public string Name { get; set; }
+
         public string[] Subnets { get; set; }
         public string[] IPAddresses { get; set; }
 

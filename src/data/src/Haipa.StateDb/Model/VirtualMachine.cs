@@ -21,6 +21,5 @@ namespace Haipa.StateDb.Model
         public virtual List<VirtualMachineNetworkAdapter> NetworkAdapters { get; set; }
 
         public virtual List<VirtualMachineDrive> Drives { get; set; }
-
     }
 }

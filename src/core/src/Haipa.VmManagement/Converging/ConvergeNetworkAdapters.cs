@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Text;
 using System.Threading.Tasks;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines.Config;
+using Haipa.Resources.Machines.Config;
 using Haipa.VmManagement.Data.Full;
 using LanguageExt;
 
@@ -14,7 +13,8 @@ namespace Haipa.VmManagement.Converging
         {
         }
 
-        public override async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(TypedPsObject<VirtualMachineInfo> vmInfo)
+        public override async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
+            TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var adapterConfig = Context.Config.VM.NetworkAdapters;
 
@@ -41,7 +41,8 @@ namespace Haipa.VmManagement.Converging
                 adapter => networkAdapterConfig.Name.Equals(adapter.Name, StringComparison.OrdinalIgnoreCase),
                 async () =>
                 {
-                    await Context.ReportProgress($"Add Network Adapter: {networkAdapterConfig.Name}").ConfigureAwait(false);
+                    await Context.ReportProgress($"Add Network Adapter: {networkAdapterConfig.Name}")
+                        .ConfigureAwait(false);
                     return await Context.Engine.GetObjectsAsync<VMNetworkAdapter>(PsCommandBuilder.Create()
                         .AddCommand("Add-VmNetworkAdapter")
                         .AddParameter("Passthru")
@@ -49,14 +50,12 @@ namespace Haipa.VmManagement.Converging
                         .AddParameter("Name", networkAdapterConfig.Name)
                         .AddParameter("StaticMacAddress", UseOrGenerateMacAddress(networkAdapterConfig, vmInfo))
                         .AddParameter("SwitchName", switchName)).ConfigureAwait(false);
-
                 }).ConfigureAwait(false);
 
 
-            return await optionalAdapter.BindAsync(async (adapter) =>
+            return await optionalAdapter.BindAsync(async adapter =>
             {
-                
-                if (adapter.Value.Connected &&  adapter.Value.SwitchName == switchName)
+                if (adapter.Value.Connected && adapter.Value.SwitchName == switchName)
                     return Unit.Default;
 
                 await Context.ReportProgress(
@@ -66,12 +65,11 @@ namespace Haipa.VmManagement.Converging
                     PsCommandBuilder.Create().AddCommand("Connect-VmNetworkAdapter")
                         .AddParameter("VMNetworkAdapter", adapter.PsObject)
                         .AddParameter("SwitchName", switchName)).ConfigureAwait(false);
-
             }).BindAsync(_ => vmInfo.RecreateOrReload(Context.Engine)).ConfigureAwait(false);
-
         }
 
-        private static string UseOrGenerateMacAddress(VirtualMachineNetworkAdapterConfig adapterConfig, TypedPsObject<VirtualMachineInfo> vmInfo)
+        private static string UseOrGenerateMacAddress(VirtualMachineNetworkAdapterConfig adapterConfig,
+            TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var result = adapterConfig.MacAddress;
             if (string.IsNullOrWhiteSpace(result))
@@ -95,9 +93,8 @@ namespace Haipa.VmManagement.Converging
                     temp = $"0{temp}";
                 result += temp;
             }
+
             return "d2ab" + result;
         }
-
-
     }
 }

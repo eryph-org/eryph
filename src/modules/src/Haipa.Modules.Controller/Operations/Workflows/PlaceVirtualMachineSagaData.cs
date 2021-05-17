@@ -1,6 +1,5 @@
 ﻿using System;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines.Config;
+using Haipa.Resources.Machines.Config;
 
 namespace Haipa.Modules.Controller.Operations.Workflows
 {
@@ -8,5 +7,5 @@ namespace Haipa.Modules.Controller.Operations.Workflows
     {
         public Guid CorrelationId { get; set; }
         public MachineConfig Config { get; set; }
-}
+    }
 }

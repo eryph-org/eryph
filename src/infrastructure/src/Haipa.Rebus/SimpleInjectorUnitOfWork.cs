@@ -21,9 +21,14 @@ namespace Haipa.Rebus
             return Task.FromResult(unitOfWork);
         }
 
-        private static Task Commit(IMessageContext context, RebusUnitOfWorkAdapter uow) => uow.Commit(context);
-        private static Task Dispose(IMessageContext context, RebusUnitOfWorkAdapter uow) => uow.Dispose(context);
+        private static Task Commit(IMessageContext context, RebusUnitOfWorkAdapter uow)
+        {
+            return uow.Commit(context);
+        }
 
-
+        private static Task Dispose(IMessageContext context, RebusUnitOfWorkAdapter uow)
+        {
+            return uow.Dispose(context);
+        }
     }
 }

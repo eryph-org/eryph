@@ -1,4 +1,4 @@
-﻿namespace Haipa.Primitives.Resources.Networks
+﻿namespace Haipa.Resources.Networks
 {
     public enum NetworkType
     {

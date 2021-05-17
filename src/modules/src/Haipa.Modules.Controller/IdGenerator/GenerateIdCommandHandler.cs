@@ -20,7 +20,6 @@ namespace Haipa.Modules.Controller.IdGenerator
         {
             var id = _idGenerator.GenerateId();
             return _bus.Reply(new GenerateIdReply {GeneratedId = id});
-
         }
     }
 }

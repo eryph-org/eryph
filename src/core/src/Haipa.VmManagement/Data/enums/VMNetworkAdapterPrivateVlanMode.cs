@@ -4,6 +4,6 @@
     {
         Isolated = 1,
         Community = 2,
-        Promiscuous = 3,
+        Promiscuous = 3
     }
 }

@@ -5,6 +5,6 @@
         None,
         NativeVirtualSubnet,
         ExternalVirtualSubnet,
-        Vlan,
+        Vlan
     }
 }

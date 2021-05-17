@@ -25,6 +25,5 @@ namespace Haipa.Modules.ComputeApi.Model.V1
         public IEnumerable<string> DnsServerAddresses { get; set; }
         public IEnumerable<string> IpV4Subnets { get; set; }
         public IEnumerable<string> IpV6Subnets { get; set; }
-
     }
 }

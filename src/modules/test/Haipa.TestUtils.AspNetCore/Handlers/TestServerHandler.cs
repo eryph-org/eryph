@@ -9,10 +9,10 @@ namespace Haipa.TestUtils.Handlers
     {
         public TestServerHandler(HttpMessageHandler innerHandler) : base(innerHandler)
         {
-            
         }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+            CancellationToken cancellationToken)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", "dGVzdDp0ZXN0");
             return base.SendAsync(request, cancellationToken);

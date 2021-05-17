@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Haipa.Primitives.Resources.Machines.Config
+namespace Haipa.Resources.Machines.Config
 {
     public class VirtualMachineConfig
     {
@@ -14,6 +14,5 @@ namespace Haipa.Primitives.Resources.Machines.Config
         public List<VirtualMachineDriveConfig> Drives { get; set; }
 
         public List<VirtualMachineNetworkAdapterConfig> NetworkAdapters { get; set; }
-
     }
 }

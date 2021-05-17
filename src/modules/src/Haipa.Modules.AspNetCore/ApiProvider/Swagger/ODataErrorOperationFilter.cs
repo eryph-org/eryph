@@ -16,20 +16,18 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
             var response = new OpenApiResponse
             {
                 Description = "Error response describing why the operation failed",
-                Content = new Dictionary<string, OpenApiMediaType>()
+                Content = new Dictionary<string, OpenApiMediaType>
                 {
                     {
-                        "application/json", new OpenApiMediaType()
+                        "application/json", new OpenApiMediaType
                         {
                             Schema = errorSchema
                         }
                     }
-
                 }
             };
 
             operation.Responses.Add("default", response);
         }
-
     }
 }

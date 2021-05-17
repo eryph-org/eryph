@@ -4,6 +4,6 @@
     {
         Allow = 1,
         Deny = 2,
-        Meter = 3,
+        Meter = 3
     }
 }

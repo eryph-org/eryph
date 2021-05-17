@@ -1,5 +1,4 @@
-﻿using Haipa.Primitives;
-using Haipa.Primitives.Resources;
+﻿using Haipa.Resources;
 
 namespace Haipa.Messages.Resources.Commands
 {

@@ -2,14 +2,14 @@
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;
 
 internal static class MachineNetworkInfoExtensions
 {
-    public static IEnumerable<MachineNetwork> ToMachineNetwork([CanBeNull] this IEnumerable<MachineNetworkData> networkInfos, long machineId)
+    public static IEnumerable<MachineNetwork> ToMachineNetwork(
+        [CanBeNull] this IEnumerable<MachineNetworkData> networkInfos, long machineId)
     {
         return networkInfos?.Select(mn => new MachineNetwork
         {
@@ -31,7 +31,7 @@ internal static class MachineNetworkInfoExtensions
                 .Select(n => n.ToString()).ToArray(),
             IpV6Subnets = mn.Subnets.Select(IPNetwork.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetworkV6)
-                .Select(n => n.ToString()).ToArray(),
+                .Select(n => n.ToString()).ToArray()
         });
     }
 }

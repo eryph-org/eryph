@@ -5,6 +5,6 @@
         Untagged,
         Access,
         Trunk,
-        Private,
+        Private
     }
 }

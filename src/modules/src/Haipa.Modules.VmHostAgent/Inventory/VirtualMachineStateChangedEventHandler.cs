@@ -1,8 +1,6 @@
 ﻿using System.Threading.Tasks;
-using Haipa.Messages;
 using Haipa.Messages.Resources.Machines.Events;
 using Haipa.Modules.VmHostAgent.Inventory;
-using Haipa.VmManagement;
 using Rebus.Bus;
 using Rebus.Handlers;
 

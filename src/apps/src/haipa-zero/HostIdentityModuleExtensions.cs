@@ -6,7 +6,6 @@ using Haipa.Configuration.Model;
 using Haipa.IdentityDb;
 using Haipa.Modules.Identity;
 using Haipa.Modules.Identity.Services;
-using Haipa.Runtime.Zero.Configuration;
 using Haipa.Runtime.Zero.Configuration.Clients;
 using IdentityServer4.EntityFramework.DbContexts;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,15 +29,18 @@ namespace Haipa.Runtime.Zero
             container.RegisterSingleton<IConfigWriterService<ClientConfigModel>, ClientConfigWriterService>();
 
 
-            container.Register<IDbContextConfigurer<ConfigurationDbContext>, InMemoryConfigurationStoreContextConfigurer>();
+            container
+                .Register<IDbContextConfigurer<ConfigurationDbContext>, InMemoryConfigurationStoreContextConfigurer>();
 
             return builder;
         }
 
 
-        private class IdentityModuleFilters : IConfigureContainerFilter<IdentityModule>, IModuleServicesFilter<IdentityModule>
+        private class IdentityModuleFilters : IConfigureContainerFilter<IdentityModule>,
+            IModuleServicesFilter<IdentityModule>
         {
-            public Action<IModuleContext<IdentityModule>, Container> Invoke(Action<IModuleContext<IdentityModule>, Container> next)
+            public Action<IModuleContext<IdentityModule>, Container> Invoke(
+                Action<IModuleContext<IdentityModule>, Container> next)
             {
                 return (context, container) =>
                 {
@@ -53,21 +55,19 @@ namespace Haipa.Runtime.Zero
 
                     container.RegisterSingleton<SeedFromConfigHandler<IdentityModule>>();
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityClientSeeder>();
-
                 };
             }
 
 
-            public Action<IModulesHostBuilderContext<IdentityModule>, IServiceCollection> Invoke(Action<IModulesHostBuilderContext<IdentityModule>, IServiceCollection> next)
+            public Action<IModulesHostBuilderContext<IdentityModule>, IServiceCollection> Invoke(
+                Action<IModulesHostBuilderContext<IdentityModule>, IServiceCollection> next)
             {
                 return (context, services) =>
                 {
                     next(context, services);
                     services.AddHostedHandler<SeedFromConfigHandler<IdentityModule>>();
-
                 };
             }
         }
-
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Dbosoft.Hosuto.Modules;
 using Haipa.IdentityDb;
 using Haipa.Modules.AspNetCore;
@@ -7,7 +8,11 @@ using Haipa.Modules.Identity.Configuration;
 using Haipa.Modules.Identity.Services;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.Models;
+using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
@@ -16,22 +21,14 @@ using Scope = IdentityServer4.Models.ApiScope;
 
 namespace Haipa.Modules.Identity
 {
-    using Microsoft.AspNet.OData.Builder;
-    using Microsoft.AspNetCore.Builder;
-    using Microsoft.AspNetCore.Mvc;
-    using Microsoft.Extensions.DependencyInjection;
-    using System;
-
-
     /// <summary>
-    /// Defines the <see cref="IdentityModule" />
+    ///     Defines the <see cref="IdentityModule" />
     /// </summary>
     [ApiVersion("1.0")]
-
     public class IdentityModule : WebModule
     {
         /// <summary>
-        /// Gets the Path
+        ///     Gets the Path
         /// </summary>
         public override string Path => "identity";
 
@@ -39,21 +36,19 @@ namespace Haipa.Modules.Identity
         {
             options.AddAspNetCore()
                 .AddControllerActivation();
-
         }
 
-        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services, IHostEnvironment env)
+        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
+            IHostEnvironment env)
         {
-
             services.AddMvc()
-                .AddApiProvider<IdentityModule>(op => op.ApiName="Haipa Identity Api");
+                .AddApiProvider<IdentityModule>(op => op.ApiName = "Haipa Identity Api");
 
             services.AddSingleton<IModelConfiguration, ODataModelConfiguration>();
 
             services.AddIdentityServer()
                 .AddJwtBearerClientAuthentication()
                 .AddDeveloperSigningCredential()
-
                 .AddConfigurationStore(options =>
                 {
                     options.ConfigureDbContext = builder =>
@@ -63,18 +58,18 @@ namespace Haipa.Modules.Identity
                 .AddInMemoryApiResources(new List<ApiResource>
                 {
                     new ApiResource("common_api")
-                        { 
-                            Scopes = new List<string>
-                            {
-                                "compute_api",
-                            }
-                        },
+                    {
+                        Scopes = new List<string>
+                        {
+                            "compute_api"
+                        }
+                    },
 
                     new ApiResource("compute_api")
                     {
                         Scopes = new List<string>
                         {
-                            "common_api",
+                            "common_api"
                         }
                     },
 
@@ -88,21 +83,19 @@ namespace Haipa.Modules.Identity
                         }
                     }
                 })
-                .AddInMemoryApiScopes(new []
+                .AddInMemoryApiScopes(new[]
                 {
                     new Scope("common_api"),
                     new Scope("compute_api"),
 
                     new Scope("identity:clients:write:all", "Full access to clients"),
-                    new Scope("identity:clients:read:all",  "Read only access to clients")
-
+                    new Scope("identity:clients:read:all", "Read only access to clients")
                 })
                 //.AddInMemoryCaching()
                 .AddInMemoryIdentityResources(
                     new[]
                     {
-                        new IdentityResources.OpenId(),
-
+                        new IdentityResources.OpenId()
                     });
 
 
@@ -126,16 +119,13 @@ namespace Haipa.Modules.Identity
                     policy => policy.Requirements.Add(new HasScopeRequirement("https://localhost:62189/identity",
                         "identity:clients:write:all")));
             });
-
         }
-
 
 
         public void Configure(IApplicationBuilder app)
         {
             app.UseIdentityServer();
             app.UseApiProvider(this);
-
         }
 
         public void ConfigureContainer(Container container)
@@ -143,7 +133,6 @@ namespace Haipa.Modules.Identity
             container.Register<IClientRepository, ClientRepository<ConfigurationDbContext>>(Lifestyle.Scoped);
             container.Register<IIdentityServerClientService, IdentityServerClientService>(Lifestyle.Scoped);
             container.Register<IClientService<Client>, ClientService<Client>>(Lifestyle.Scoped);
-
         }
     }
 }

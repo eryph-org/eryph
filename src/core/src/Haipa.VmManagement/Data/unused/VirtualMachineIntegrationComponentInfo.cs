@@ -13,8 +13,9 @@ namespace Haipa.VmManagement.Data
             get
             {
                 var operationalStatus = OperationalStatus;
-                return operationalStatus.Length != 0 ? operationalStatus[0] : 
-                    new VMIntegrationComponentOperationalStatus?();
+                return operationalStatus.Length != 0
+                    ? operationalStatus[0]
+                    : new VMIntegrationComponentOperationalStatus?();
             }
         }
 
@@ -52,7 +53,5 @@ namespace Haipa.VmManagement.Data
         }
 
         public string[] StatusDescription { get; set; }
-
-
     }
 }

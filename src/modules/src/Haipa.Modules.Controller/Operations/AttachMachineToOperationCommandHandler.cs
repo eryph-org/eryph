@@ -1,14 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Haipa.Messages.Operations;
-using Haipa.StateDb;
-using Haipa.StateDb.Model;
-using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore;
-using Rebus.Handlers;
-
-namespace Haipa.Modules.Controller.Operations
+﻿namespace Haipa.Modules.Controller.Operations
 {
     //[UsedImplicitly]
     //public class AttachMachineToOperationCommandHandler : IHandleMessages<AttachMachineToOperationCommand>

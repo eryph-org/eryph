@@ -7,5 +7,4 @@ namespace Haipa.Messages.Operations.Events
     {
         public Guid OperationId { get; set; }
     }
-
 }

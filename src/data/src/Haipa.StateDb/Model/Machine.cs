@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources;
+using Haipa.Resources;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
@@ -10,18 +8,15 @@ namespace Haipa.StateDb.Model
 {
     public class Resource
     {
-        [Key]
-        public long Id { get; set; }
+        [Key] public long Id { get; set; }
+
         public ResourceType ResourceType { get; set; }
 
         public string Name { get; set; }
-
-
     }
 
     public class Machine : Resource
     {
-
         public string AgentName { get; set; }
 
 

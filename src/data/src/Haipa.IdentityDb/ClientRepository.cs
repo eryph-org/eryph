@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.EntityFramework.Entities;
@@ -46,14 +44,13 @@ namespace Haipa.IdentityDb
                 .Include(x => x.AllowedCorsOrigins)
                 .Include(x => x.Properties)
                 .AsNoTracking();
-
         }
 
 
         public async Task<(int? Id, string ClientId)> GetClientIdAsync(string clientId)
         {
             var client = await DbContext.Clients.Where(x => x.ClientId == clientId)
-                .Select(x => new { x.Id, x.ClientId })
+                .Select(x => new {x.Id, x.ClientId})
                 .SingleOrDefaultAsync();
 
             return (client?.Id, client?.ClientId);
@@ -84,7 +81,6 @@ namespace Haipa.IdentityDb
             DbContext.RemoveRange(client.AllowedCorsOrigins);
             DbContext.RemoveRange(client.IdentityProviderRestrictions);
             DbContext.RemoveRange(client.PostLogoutRedirectUris);
-
         }
 
         public Task UpdateClientAsync(Client client)
@@ -97,7 +93,6 @@ namespace Haipa.IdentityDb
         {
             DbContext.Remove(client);
             return Task.CompletedTask;
-
         }
     }
 }

@@ -16,6 +16,4 @@ namespace Haipa.VmManagement.Converging
         public abstract Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo);
     }
-
-
 }

@@ -10,32 +10,32 @@ using System.Security.Cryptography;
 namespace Haipa.VmManagement
 {
     /// <summary>
-    /// Implements a 32-bit CRC hash algorithm compatible with Zip etc.
+    ///     Implements a 32-bit CRC hash algorithm compatible with Zip etc.
     /// </summary>
     /// <remarks>
-    /// Crc32 should only be used for backward compatibility with older file formats
-    /// and algorithms. It is not secure enough for new applications.
-    /// If you need to call multiple times for the same data either use the HashAlgorithm
-    /// interface or remember that the result of one Compute call needs to be ~ (XOR) before
-    /// being passed in as the seed for the next Compute call.
+    ///     Crc32 should only be used for backward compatibility with older file formats
+    ///     and algorithms. It is not secure enough for new applications.
+    ///     If you need to call multiple times for the same data either use the HashAlgorithm
+    ///     interface or remember that the result of one Compute call needs to be ~ (XOR) before
+    ///     being passed in as the seed for the next Compute call.
     /// </remarks>
     public sealed class Crc32 : HashAlgorithm
     {
-        public const UInt32 DefaultPolynomial = 0xedb88320u;
-        public const UInt32 DefaultSeed = 0xffffffffu;
+        public const uint DefaultPolynomial = 0xedb88320u;
+        public const uint DefaultSeed = 0xffffffffu;
 
-        static UInt32[] defaultTable;
+        private static uint[] defaultTable;
 
-        readonly UInt32 seed;
-        readonly UInt32[] table;
-        UInt32 hash;
+        private readonly uint seed;
+        private readonly uint[] table;
+        private uint hash;
 
         public Crc32()
             : this(DefaultPolynomial, DefaultSeed)
         {
         }
 
-        public Crc32(UInt32 polynomial, UInt32 seed)
+        public Crc32(uint polynomial, uint seed)
         {
             if (!BitConverter.IsLittleEndian)
                 throw new PlatformNotSupportedException("Not supported on Big Endian processors");
@@ -43,6 +43,8 @@ namespace Haipa.VmManagement
             table = InitializeTable(polynomial);
             this.seed = hash = seed;
         }
+
+        public override int HashSize => 32;
 
         public override void Initialize()
         {
@@ -61,32 +63,30 @@ namespace Haipa.VmManagement
             return hashBuffer;
         }
 
-        public override int HashSize { get { return 32; } }
-
-        public static UInt32 Compute(byte[] buffer)
+        public static uint Compute(byte[] buffer)
         {
             return Compute(DefaultSeed, buffer);
         }
 
-        public static UInt32 Compute(UInt32 seed, byte[] buffer)
+        public static uint Compute(uint seed, byte[] buffer)
         {
             return Compute(DefaultPolynomial, seed, buffer);
         }
 
-        public static UInt32 Compute(UInt32 polynomial, UInt32 seed, byte[] buffer)
+        public static uint Compute(uint polynomial, uint seed, byte[] buffer)
         {
             return ~CalculateHash(InitializeTable(polynomial), seed, buffer, 0, buffer.Length);
         }
 
-        static UInt32[] InitializeTable(UInt32 polynomial)
+        private static uint[] InitializeTable(uint polynomial)
         {
             if (polynomial == DefaultPolynomial && defaultTable != null)
                 return defaultTable;
 
-            var createTable = new UInt32[256];
+            var createTable = new uint[256];
             for (var i = 0; i < 256; i++)
             {
-                var entry = (UInt32)i;
+                var entry = (uint) i;
                 for (var j = 0; j < 8; j++)
                     if ((entry & 1) == 1)
                         entry = (entry >> 1) ^ polynomial;
@@ -101,15 +101,15 @@ namespace Haipa.VmManagement
             return createTable;
         }
 
-        static UInt32 CalculateHash(UInt32[] table, UInt32 seed, IList<byte> buffer, int start, int size)
+        private static uint CalculateHash(uint[] table, uint seed, IList<byte> buffer, int start, int size)
         {
             var hash = seed;
             for (var i = start; i < start + size; i++)
-                hash = (hash >> 8) ^ table[buffer[i] ^ hash & 0xff];
+                hash = (hash >> 8) ^ table[buffer[i] ^ (hash & 0xff)];
             return hash;
         }
 
-        static byte[] UInt32ToBigEndianBytes(UInt32 uint32)
+        private static byte[] UInt32ToBigEndianBytes(uint uint32)
         {
             var result = BitConverter.GetBytes(uint32);
 

@@ -2,22 +2,18 @@
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using AutoMapper.Configuration;
 using AutoMapper.QueryableExtensions;
 using Haipa.IdentityDb;
 using IdentityServer4.EntityFramework.Mappers;
 using IdentityServer4.Models;
 
-using Entities = IdentityServer4.EntityFramework.Entities;
-
 namespace Haipa.Modules.Identity.Services
 {
     public class IdentityServerClientService : IIdentityServerClientService
     {
-        private readonly IClientRepository _repository;
-
         private static readonly IMapper Mapper;
         private static readonly MapperConfiguration ProjectionMapperConfiguration;
+        private readonly IClientRepository _repository;
 
         static IdentityServerClientService()
         {
@@ -25,11 +21,11 @@ namespace Haipa.Modules.Identity.Services
             var mapperConfiguration = new MapperConfiguration(cfg => { cfg.AddProfile<ClientMapperProfile>(); });
 
             //projection will not work with identity server profile, but by using CovertUsing we can use to default mapper from identity server
-            ProjectionMapperConfiguration = new MapperConfiguration(cfg => cfg.CreateMap<Entities.Client,Client>()
-                    .ConvertUsing(src => src.ToModel()));
-           
-            Mapper = mapperConfiguration.CreateMapper();
+            ProjectionMapperConfiguration = new MapperConfiguration(cfg => cfg
+                .CreateMap<IdentityServer4.EntityFramework.Entities.Client, Client>()
+                .ConvertUsing(src => src.ToModel()));
 
+            Mapper = mapperConfiguration.CreateMapper();
         }
 
         public IdentityServerClientService(IClientRepository repository)
@@ -85,7 +81,5 @@ namespace Haipa.Modules.Identity.Services
             await _repository.UpdateClientAsync(trackedClient);
             await _repository.SaveAllChangesAsync();
         }
-
     }
-
 }

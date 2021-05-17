@@ -6,7 +6,6 @@ namespace Haipa.Runtime.Zero.Configuration.Clients
 {
     internal class ClientConfigWriterService : IConfigWriterService<ClientConfigModel>
     {
-
         private readonly ConfigIO _io;
 
         public ClientConfigWriterService()
@@ -22,8 +21,7 @@ namespace Haipa.Runtime.Zero.Configuration.Clients
 
         public Task Update(ClientConfigModel client)
         {
-            return _io.SaveConfigFile(client,client.ClientId);
-
+            return _io.SaveConfigFile(client, client.ClientId);
         }
 
         public Task Add(ClientConfigModel client)

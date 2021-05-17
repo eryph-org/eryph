@@ -18,11 +18,7 @@ namespace Haipa.Modules.Controller
         public async Task Execute(CancellationToken stoppingToken)
         {
             foreach (var type in MessageTypes.BySubscriber(MessageSubscriber.Controllers))
-            {
                 await _bus.Subscribe(type).ConfigureAwait(false);
-            }
-
-            
         }
     }
 }

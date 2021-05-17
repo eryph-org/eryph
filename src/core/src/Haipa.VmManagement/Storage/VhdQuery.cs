@@ -8,22 +8,25 @@ namespace Haipa.VmManagement.Storage
 {
     public static class VhdQuery
     {
-        public static async Task<Either<PowershellFailure, Option<TypedPsObject<VhdInfo>>>> GetVhdInfo(IPowershellEngine engine, string path)
+        public static async Task<Either<PowershellFailure, Option<TypedPsObject<VhdInfo>>>> GetVhdInfo(
+            IPowershellEngine engine, string path)
         {
             if (string.IsNullOrWhiteSpace(path))
                 return Option<TypedPsObject<VhdInfo>>.None;
 
-            var res = await engine.GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path)).MapAsync(s => s.HeadOrNone());
+            var res = await engine
+                .GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path))
+                .MapAsync(s => s.HeadOrNone());
             return res;
         }
 
 
-        public static Task<Either<PowershellFailure, (Option<TypedPsObject<VhdInfo>> SnapshotVhd, Option<TypedPsObject<VhdInfo>> ActualVhd)>> 
+        public static Task<Either<PowershellFailure, (Option<TypedPsObject<VhdInfo>> SnapshotVhd,
+                Option<TypedPsObject<VhdInfo>> ActualVhd)>>
             GetSnapshotAndActualVhd(IPowershellEngine engine, Option<TypedPsObject<VhdInfo>> vhdInfo)
         {
-            return vhdInfo.MapAsync(async (info) =>
+            return vhdInfo.MapAsync(async info =>
             {
-
                 var firstSnapshotVhdOption = Option<TypedPsObject<VhdInfo>>.None;
                 var snapshotVhdOption = Option<TypedPsObject<VhdInfo>>.None;
                 var actualVhdOption = Option<TypedPsObject<VhdInfo>>.None;
@@ -41,18 +44,16 @@ namespace Haipa.VmManagement.Storage
 
                 while (actualVhdOption.IsNone)
                 {
-
                     var eitherVhdInfo = await snapshotVhdOption.ToEither(new PowershellFailure
-                    { Message = "Storage failure: Missing snapshot " })
-
+                            {Message = "Storage failure: Missing snapshot "})
                         .Map(snapshotVhd => string.IsNullOrWhiteSpace(snapshotVhd?.Value?.ParentPath)
                             ? Option<string>.None
                             : Option<string>.Some(snapshotVhd.Value.ParentPath))
                         .Bind(o => o.ToEither(new PowershellFailure
-                        { Message = "Storage failure: Missing snapshot parent path" }))
+                            {Message = "Storage failure: Missing snapshot parent path"}))
                         .BindAsync(path => GetVhdInfo(engine, path))
                         .BindAsync(o => o.ToEither(new PowershellFailure
-                        { Message = "Storage failure: Missing snapshot parent" }))
+                            {Message = "Storage failure: Missing snapshot parent"}))
                         .ConfigureAwait(false);
 
 
@@ -69,15 +70,10 @@ namespace Haipa.VmManagement.Storage
                         snapshotVhdOption = info;
                     else
                         actualVhdOption = info;
-
                 }
 
                 return Prelude.Right((firstSnapshotVhdOption, actualVhdOption));
-
             }).IfNone(Prelude.Right((Option<TypedPsObject<VhdInfo>>.None, Option<TypedPsObject<VhdInfo>>.None)));
-
-
         }
-
     }
 }

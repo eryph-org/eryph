@@ -15,6 +15,5 @@
         //public CacheAttributes? WriteHardeningMethod { get; set; }
 
         //public AttachedDiskType AttachedDiskType { get; set; }
-
     }
 }

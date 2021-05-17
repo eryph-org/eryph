@@ -1,6 +1,6 @@
-﻿using Haipa.Primitives.Resources.Disks;
+﻿using Haipa.Resources.Disks;
 
-namespace Haipa.Primitives.Resources.Machines
+namespace Haipa.Resources.Machines
 {
     public class VirtualMachineDriveData
     {

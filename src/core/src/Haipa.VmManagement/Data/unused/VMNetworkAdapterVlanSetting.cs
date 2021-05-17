@@ -2,8 +2,6 @@
 {
     public sealed class VMNetworkAdapterVlanSetting
     {
-
-
         public VMNetworkAdapterVlanMode OperationMode { get; private set; }
 
 
@@ -32,6 +30,5 @@
 
 
         public string SecondaryVlanIdListString { get; private set; }
-
     }
 }

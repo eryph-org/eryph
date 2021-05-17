@@ -1,10 +1,7 @@
-
-
 namespace Haipa.Modules.Identity.Test.Integration
 {
     public static class TestClientData
     {
-
         public const string KeyFileString = @"-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA1lVnYA9GCGJDfvjbfaWoeUWltKjDu2ow5X801Lws2c3TDgxL
 9hi2n9NU77F2pwLC01hdgWDl50cmUbC8EaMVY3RW71Fi6Zbjfm13g20r3/tRS0R0

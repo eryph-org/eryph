@@ -18,7 +18,7 @@ namespace Haipa.Controller
         public static Container UseRabbitMq(this Container container)
         {
             container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
-            
+
             return container;
         }
 

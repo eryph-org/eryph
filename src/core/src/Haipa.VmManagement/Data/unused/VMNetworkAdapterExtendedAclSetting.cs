@@ -23,6 +23,5 @@
         public int IdleSessionTimeout { get; private set; }
 
         public int IsolationID { get; private set; }
-
     }
 }

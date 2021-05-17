@@ -10,6 +10,6 @@
         OkApplicationsUnknown,
         OkApplicationsHealthy,
         OkApplicationsCritical,
-        Paused,
+        Paused
     }
 }

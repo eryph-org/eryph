@@ -6,12 +6,6 @@ namespace Haipa.Rebus
 {
     public class RabbitMqRebusTransportConfigurer : IRebusTransportConfigurer
     {
-        void WaitForConnection()
-        {
-            RabbitMqConnectionCheck.WaitForRabbitMq(new TimeSpan(0, 0, 10)).Wait();
-
-        }
-
         public void ConfigureAsOneWayClient(StandardConfigurer<ITransport> configurer)
         {
             WaitForConnection();
@@ -24,7 +18,11 @@ namespace Haipa.Rebus
             WaitForConnection();
             configurer.UseRabbitMq(
                 Environment.GetEnvironmentVariable("RABBITMQ_CONNECTIONSTRING"), queueName);
+        }
 
+        private void WaitForConnection()
+        {
+            RabbitMqConnectionCheck.WaitForRabbitMq(new TimeSpan(0, 0, 10)).Wait();
         }
     }
 }

@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Resources.Machines.Events;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data.Full;
 using Haipa.VmManagement.Networking;
@@ -42,11 +41,11 @@ namespace Haipa.Modules.VmHostAgent
                 .BindAsync(getNetworkAdapters)
                 .BindAsync(findAdapterForMessage)
                 .ToAsync().MatchAsync(
-                    RightAsync: (a => _bus.Publish(
+                    RightAsync: a => _bus.Publish(
                         new VirtualMachineNetworkChangedEvent
                         {
                             VMId = message.VmId,
-                            ChangedAdapter = new VirtualMachineNetworkAdapterData()
+                            ChangedAdapter = new VirtualMachineNetworkAdapterData
                             {
                                 Id = a.Value.Id,
                                 AdapterName = a.Value.Name,
@@ -58,16 +57,14 @@ namespace Haipa.Modules.VmHostAgent
                             {
                                 Name = Networks.GenerateName(ref networkNames, a.Value),
                                 IPAddresses = message.IPAddresses,
-                                Subnets = NetworkAddresses.AddressesAndSubnetsToSubnets(message.IPAddresses,message.Netmasks).ToArray(),
+                                Subnets = NetworkAddresses
+                                    .AddressesAndSubnetsToSubnets(message.IPAddresses, message.Netmasks).ToArray(),
                                 DefaultGateways = message.DefaultGateways,
                                 DnsServers = message.DnsServers,
-                                DhcpEnabled = message.DhcpEnabled,
+                                DhcpEnabled = message.DhcpEnabled
                             }
-                        })),
-                    Left: l =>
-                    {
-
-                    });
+                        }),
+                    Left: l => { });
         }
 
 

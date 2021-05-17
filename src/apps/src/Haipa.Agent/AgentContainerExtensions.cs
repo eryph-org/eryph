@@ -1,6 +1,4 @@
-﻿using Haipa.Modules.VmHostAgent;
-using Haipa.Rebus;
-
+﻿using Haipa.Rebus;
 using SimpleInjector;
 
 namespace Haipa.Agent
@@ -16,10 +14,8 @@ namespace Haipa.Agent
         public static Container UseRabbitMq(this Container container)
         {
             container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
-            
+
             return container;
         }
-
-
     }
 }

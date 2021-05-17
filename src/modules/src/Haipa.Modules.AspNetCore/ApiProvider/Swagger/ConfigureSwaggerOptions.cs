@@ -8,19 +8,24 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
 {
     /// <summary>
-    /// Configures the Swagger generation options.
+    ///     Configures the Swagger generation options.
     /// </summary>
-    /// <remarks>This allows API versioning to define a Swagger document per API version after the
-    /// <see cref="IApiVersionDescriptionProvider"/> service has been resolved from the service container.</remarks>
+    /// <remarks>
+    ///     This allows API versioning to define a Swagger document per API version after the
+    ///     <see cref="IApiVersionDescriptionProvider" /> service has been resolved from the service container.
+    /// </remarks>
     public class ConfigureSwaggerOptions : IConfigureOptions<SwaggerGenOptions>
     {
-        readonly IApiVersionDescriptionProvider _provider;
         private readonly ApiProviderOptions _apiOptions;
+        private readonly IApiVersionDescriptionProvider _provider;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConfigureSwaggerOptions"/> class.
+        ///     Initializes a new instance of the <see cref="ConfigureSwaggerOptions" /> class.
         /// </summary>
-        /// <param name="provider">The <see cref="IApiVersionDescriptionProvider">provider</see> used to generate Swagger documents.</param>
+        /// <param name="provider">
+        ///     The <see cref="IApiVersionDescriptionProvider">provider</see> used to generate Swagger
+        ///     documents.
+        /// </param>
         /// <param name="apiOptions"></param>
         public ConfigureSwaggerOptions(IApiVersionDescriptionProvider provider, IOptions<ApiProviderOptions> apiOptions)
         {
@@ -34,27 +39,21 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
             // add a swagger document for each discovered API version
             // note: you might choose to skip or document deprecated API versions differently
             foreach (var description in _provider.ApiVersionDescriptions)
-            {
                 options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
-            }
-            
         }
 
         private OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
         {
-            var info = new OpenApiInfo()
+            var info = new OpenApiInfo
             {
                 Title = _apiOptions.ApiName,
                 Version = description.ApiVersion.ToString(),
                 Description = _apiOptions.ApiName,
-                Contact = new OpenApiContact() { Name = "dbosoft", Email = "support@dbosoft.eu" },
-                License = new OpenApiLicense() { Name = "MIT", Url = new Uri("https://opensource.org/licenses/MIT") }
+                Contact = new OpenApiContact {Name = "dbosoft", Email = "support@dbosoft.eu"},
+                License = new OpenApiLicense {Name = "MIT", Url = new Uri("https://opensource.org/licenses/MIT")}
             };
 
-            if (description.IsDeprecated)
-            {
-                info.Description += " This API version has been deprecated.";
-            }
+            if (description.IsDeprecated) info.Description += " This API version has been deprecated.";
 
             return info;
         }

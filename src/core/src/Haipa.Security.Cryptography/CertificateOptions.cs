@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 
 namespace Haipa.Security.Cryptography
 {
@@ -17,13 +16,6 @@ namespace Haipa.Security.Cryptography
         public string URL { get; set; }
         public string CACertName { get; set; }
 
-        public string CAFilePath
-        {
-            get
-            {
-                return ExportDirectory + CACertName;
-            }
-        }
-
+        public string CAFilePath => ExportDirectory + CACertName;
     }
 }

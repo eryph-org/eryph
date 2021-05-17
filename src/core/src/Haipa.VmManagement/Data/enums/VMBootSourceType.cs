@@ -5,6 +5,6 @@
         Unknown,
         Drive,
         Network,
-        File,
+        File
     }
 }

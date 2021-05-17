@@ -10,6 +10,5 @@ namespace Haipa.VmManagement.Data
         public int[] IsolationID { get; private set; }
 
         public string[] IsolationName { get; private set; }
-
     }
 }

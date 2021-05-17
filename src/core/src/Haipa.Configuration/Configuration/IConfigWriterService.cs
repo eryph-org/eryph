@@ -7,6 +7,5 @@ namespace Haipa.Configuration
         Task Delete(TConfig config);
         Task Update(TConfig config);
         Task Add(TConfig config);
-
     }
 }

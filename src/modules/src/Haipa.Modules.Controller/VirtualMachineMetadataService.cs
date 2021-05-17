@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
-using Ardalis.Specification;
+using Haipa.Resources.Machines;
 using Haipa.StateDb;
 using JetBrains.Annotations;
 using LanguageExt;
-using LanguageExt.TypeClasses;
 using Newtonsoft.Json;
-using VirtualMachineMetadata = Haipa.Primitives.Resources.Machines.VirtualMachineMetadata;
 
 namespace Haipa.Modules.Controller
 {
@@ -30,7 +26,6 @@ namespace Haipa.Modules.Controller
         public Task<Option<VirtualMachineMetadata>> GetMetadata(Guid id)
         {
             return _repository.GetByIdAsync(id).Map(DeserializeMetadataEntity);
-            
         }
 
         public async Task<Unit> SaveMetadata(VirtualMachineMetadata metadata)
@@ -43,22 +38,19 @@ namespace Haipa.Modules.Controller
                     Id = metadata.Id,
                     Metadata = JsonConvert.SerializeObject(metadata)
                 });
-                
-                return Unit.Default;
 
+                return Unit.Default;
             }
 
             entity.Metadata = JsonConvert.SerializeObject(metadata);
             await _repository.UpdateAsync(entity);
             return Unit.Default;
-            
         }
 
-        private Option<VirtualMachineMetadata>  DeserializeMetadataEntity([CanBeNull] StateDb.Model.VirtualMachineMetadata metadataEntity)
+        private static Option<VirtualMachineMetadata> DeserializeMetadataEntity(
+            [CanBeNull] StateDb.Model.VirtualMachineMetadata metadataEntity)
         {
-            return metadataEntity == null 
-                ? Option<VirtualMachineMetadata>.None 
-                : JsonConvert.DeserializeObject<VirtualMachineMetadata>(metadataEntity.Metadata);
+            return JsonConvert.DeserializeObject<VirtualMachineMetadata>(metadataEntity.Metadata);
         }
     }
 }

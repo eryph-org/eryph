@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using Haipa.App;
 using Haipa.Configuration;
 using Haipa.Configuration.Model;
 using Newtonsoft.Json;

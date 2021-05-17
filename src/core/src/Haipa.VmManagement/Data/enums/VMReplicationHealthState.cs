@@ -5,6 +5,6 @@
         NotApplicable,
         Normal,
         Warning,
-        Critical,
+        Critical
     }
 }

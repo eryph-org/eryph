@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Haipa.Messages.Resources.Machines.Events;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Rebus.Handlers;
@@ -26,7 +25,6 @@ namespace Haipa.Modules.Controller.Inventory
                 return;
 
             machine.Status = MapVmStatusToMachineStatus(message.Status);
-
         }
 
         private static MachineStatus MapVmStatusToMachineStatus(VmStatus status)

@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Sockets;
 using System.Reflection;
-using System.Text;
 
 namespace Haipa.Messages
 {
@@ -11,7 +9,7 @@ namespace Haipa.Messages
     {
         public static IEnumerable<Type> BySubscriber(MessageSubscriber subscriber)
         {
-            return MessageTypesWithAttributeValues<SubscribesMessageAttribute>( a => a.Subscriber == subscriber);
+            return MessageTypesWithAttributeValues<SubscribesMessageAttribute>(a => a.Subscriber == subscriber);
         }
 
         public static IEnumerable<Type> ByRecipient(MessageRecipient recipient)
@@ -19,14 +17,14 @@ namespace Haipa.Messages
             return MessageTypesWithAttributeValues<SendMessageToAttribute>(a => a.Recipient == recipient);
         }
 
-        private static IEnumerable<Type> MessageTypesWithAttributeValues<TAttribute>(Func<TAttribute, bool> predicateFunc)
+        private static IEnumerable<Type> MessageTypesWithAttributeValues<TAttribute>(
+            Func<TAttribute, bool> predicateFunc)
             where TAttribute : Attribute
         {
             return from type in GetTypesWithMessageAttribute()
-                   from attribute in type.GetCustomAttributes<TAttribute>()
-                   where predicateFunc(attribute)
-                   select type;
-                
+                from attribute in type.GetCustomAttributes<TAttribute>()
+                where predicateFunc(attribute)
+                select type;
         }
 
         private static IEnumerable<Type> GetTypesWithMessageAttribute()
@@ -34,9 +32,8 @@ namespace Haipa.Messages
             var assembly = typeof(SendMessageToAttribute).Assembly;
 
             return assembly.GetExportedTypes().Where(x =>
-                x.GetCustomAttributes<SendMessageToAttribute>().Any() || 
+                x.GetCustomAttributes<SendMessageToAttribute>().Any() ||
                 x.GetCustomAttributes<SubscribesMessageAttribute>().Any());
         }
     }
-
 }

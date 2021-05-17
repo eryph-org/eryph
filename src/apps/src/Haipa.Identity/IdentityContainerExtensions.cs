@@ -1,8 +1,4 @@
-﻿
-using Haipa.Modules.Identity;
-
-using Microsoft.AspNetCore;
-using SimpleInjector;
+﻿using SimpleInjector;
 
 namespace Haipa.Identity
 {
@@ -10,8 +6,6 @@ namespace Haipa.Identity
     {
         public static void Bootstrap(this Container containers)
         {
-
         }
-
     }
 }

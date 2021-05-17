@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Linq;
 using System.Management;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Haipa.VmManagement;
@@ -59,18 +58,17 @@ namespace Haipa.Modules.VmHostAgent
             _statusWatcher = new ManagementEventWatcher(scope, query);
             _statusWatcher.EventArrived += StatusWatcherOnEventArrived;
             _statusWatcher.Start();
-
         }
 
         private void StatusWatcherOnEventArrived(object sender, EventArrivedEventArgs e)
         {
             var instance = GetTargetInstance(e);
-            var vmId = Guid.Parse(instance.GetPropertyValue("Name") as string 
+            var vmId = Guid.Parse(instance.GetPropertyValue("Name") as string
                                   ?? throw new InvalidOperationException());
 
-            var enabledState = (ushort)instance.GetPropertyValue("EnabledState");
-            var otherEnabledState = (string)instance.GetPropertyValue("OtherEnabledState");
-            var healthState = (ushort)instance.GetPropertyValue("HealthState");
+            var enabledState = (ushort) instance.GetPropertyValue("EnabledState");
+            var otherEnabledState = (string) instance.GetPropertyValue("OtherEnabledState");
+            var healthState = (ushort) instance.GetPropertyValue("HealthState");
 
             _bus.SendLocal(new VirtualMachineStateChangedEvent
             {
@@ -98,16 +96,13 @@ namespace Haipa.Modules.VmHostAgent
                 Netmasks = ObjectToStringArray(instance.GetPropertyValue("Subnets")),
                 DefaultGateways = ObjectToStringArray(instance.GetPropertyValue("DefaultGateways")),
                 DnsServers = ObjectToStringArray(instance.GetPropertyValue("DNSServers")),
-                DhcpEnabled = (bool) instance.GetPropertyValue("DHCPEnabled") 
+                DhcpEnabled = (bool) instance.GetPropertyValue("DHCPEnabled")
             });
         }
 
         private static string[] ObjectToStringArray(object value)
         {
-            if (value != null && value is IEnumerable enumerable)
-            {
-                return enumerable.Cast<string>().ToArray();
-            }
+            if (value != null && value is IEnumerable enumerable) return enumerable.Cast<string>().ToArray();
 
             return new string[0];
         }
@@ -116,6 +111,5 @@ namespace Haipa.Modules.VmHostAgent
         {
             return e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
         }
-
     }
 }

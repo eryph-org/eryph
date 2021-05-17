@@ -1,4 +1,4 @@
-﻿namespace Haipa.Primitives.Resources.Machines.Config
+﻿namespace Haipa.Resources.Machines.Config
 {
     public class VirtualMachineNetworkAdapterConfig
     {
@@ -7,6 +7,5 @@
         public string SwitchName { get; set; }
 
         public string MacAddress { get; set; }
-
     }
 }

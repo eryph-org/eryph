@@ -1,15 +1,12 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.Modules.Identity;
-using Microsoft.AspNetCore;
 using SimpleInjector;
 
 namespace Haipa.Identity
 {
     public class Program
     {
-
         public static async Task Main(string[] args)
         {
             var container = new Container();
@@ -17,12 +14,8 @@ namespace Haipa.Identity
 
             await ModulesHost.CreateDefaultBuilder(args)
                 .UseSimpleInjector(container)
-                .UseAspNetCoreWithDefaults((module, webHostBuilder) =>
-                {
-
-                })
+                .UseAspNetCoreWithDefaults((module, webHostBuilder) => { })
                 .RunModule<IdentityModule>();
         }
-
     }
 }

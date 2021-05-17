@@ -1,10 +1,10 @@
-﻿namespace Haipa.Primitives.Resources.Machines
+﻿namespace Haipa.Resources.Machines
 {
     public enum VmStatus
     {
         Stopped,
         Running,
         Pending,
-        Error,
+        Error
     }
 }

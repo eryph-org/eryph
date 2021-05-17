@@ -6,6 +6,6 @@
         Primary,
         Replica,
         TestReplica,
-        ExtendedReplica,
+        ExtendedReplica
     }
 }

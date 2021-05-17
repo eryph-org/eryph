@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using AutoMapper;
-using AutoMapper.Configuration;
 using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
 using Haipa.Modules.AspNetCore.ApiProvider;
@@ -30,21 +28,16 @@ using SimpleInjector.Integration.ServiceCollection;
 
 namespace Haipa.Modules.AspNetCore
 {
-    public abstract class ApiModule<TModule> : WebModule where TModule: WebModule
+    public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
     {
-
-        public abstract string ApiName { get;  }
+        public abstract string ApiName { get; }
         public abstract string AudienceName { get; }
 
         [UsedImplicitly]
-        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services, IHostEnvironment env)
+        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
+            IHostEnvironment env)
         {
-
-
-            
-            services.AddMvc(op =>
-            {
-            }).AddApiProvider<TModule>(op => op.ApiName = ApiName);
+            services.AddMvc(op => { }).AddApiProvider<TModule>(op => op.ApiName = ApiName);
 
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -57,10 +50,8 @@ namespace Haipa.Modules.AspNetCore
 // build symbol to disable any authentication, will also require environment to be set to Development
 #if DISABLE_AUTH
             if (env.IsDevelopment())
-            {
                 // Disable authentication and authorization.
                 services.TryAddSingleton<IPolicyEvaluator, DisableAuthenticationPolicyEvaluator>();
-            }
 #endif
 
             services.AddDbContext<StateStoreContext>(options =>
@@ -68,7 +59,6 @@ namespace Haipa.Modules.AspNetCore
 
 
             services.AddAutoMapper(typeof(TModule).Assembly, typeof(MapperProfile).Assembly);
-
         }
 
         public void Configure(IApplicationBuilder app)
@@ -102,15 +92,10 @@ namespace Haipa.Modules.AspNetCore
                         x.SetNumberOfWorkers(5);
                     })
                     .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings
-                    { TypeNameHandling = TypeNameHandling.None }))
+                        {TypeNameHandling = TypeNameHandling.None}))
                     .Logging(x => x.ColoredConsole()).Start();
             });
-
-
-
         }
-
-
     }
 
     public class DisableAuthenticationPolicyEvaluator : IPolicyEvaluator
@@ -118,15 +103,16 @@ namespace Haipa.Modules.AspNetCore
         public async Task<AuthenticateResult> AuthenticateAsync(AuthorizationPolicy policy, HttpContext context)
         {
             // Always pass authentication.
-            var authenticationTicket = new AuthenticationTicket(new ClaimsPrincipal(), new AuthenticationProperties(), JwtBearerDefaults.AuthenticationScheme);
+            var authenticationTicket = new AuthenticationTicket(new ClaimsPrincipal(), new AuthenticationProperties(),
+                JwtBearerDefaults.AuthenticationScheme);
             return await Task.FromResult(AuthenticateResult.Success(authenticationTicket));
         }
 
-        public async Task<PolicyAuthorizationResult> AuthorizeAsync(AuthorizationPolicy policy, AuthenticateResult authenticationResult, HttpContext context, object resource)
+        public async Task<PolicyAuthorizationResult> AuthorizeAsync(AuthorizationPolicy policy,
+            AuthenticateResult authenticationResult, HttpContext context, object? resource)
         {
             // Always pass authorization
             return await Task.FromResult(PolicyAuthorizationResult.Success());
         }
     }
-
 }

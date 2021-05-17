@@ -12,6 +12,5 @@ namespace Haipa.Modules.VmHostAgent
         public string[] DnsServers { get; set; }
         public string[] DefaultGateways { get; set; }
         public bool DhcpEnabled { get; set; }
-
     }
 }

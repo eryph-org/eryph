@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Haipa.Rebus;
+﻿using Haipa.Rebus;
 using Haipa.StateDb.MySql;
 using Rebus.Config;
 using Rebus.Sagas;

@@ -6,19 +6,20 @@ using Haipa.Messages.Operations.Commands;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Machines;
 using Haipa.VmManagement;
+using Haipa.VmManagement.Data.Full;
 using LanguageExt;
 using Rebus.Bus;
 using Rebus.Handlers;
-using VirtualMachineInfo = Haipa.VmManagement.Data.Full.VirtualMachineInfo;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
 namespace Haipa.Modules.VmHostAgent
 {
-    internal abstract class MachineOperationHandlerBase<T> : IHandleMessages<AcceptedOperationTaskEvent<T>> where T: IOperationTaskCommand, IVMCommand
+    internal abstract class MachineOperationHandlerBase<T> : IHandleMessages<AcceptedOperationTaskEvent<T>>
+        where T : IOperationTaskCommand, IVMCommand
     {
-        private readonly IPowershellEngine _engine;
         private readonly IBus _bus;
+        private readonly IPowershellEngine _engine;
 
         protected MachineOperationHandlerBase(IBus bus, IPowershellEngine engine)
         {
@@ -26,23 +27,20 @@ namespace Haipa.Modules.VmHostAgent
             _engine = engine;
         }
 
-        protected abstract Task<Either<PowershellFailure, Unit>> HandleCommand(
-            TypedPsObject<VirtualMachineInfo> vmInfo, T command, IPowershellEngine engine);
-
         public async Task Handle(AcceptedOperationTaskEvent<T> message)
         {
             var command = message.Command;
 
-            var result = await GetVmInfo(command.VMId, _engine)            
+            var result = await GetVmInfo(command.VMId, _engine)
                 .BindAsync(optVmInfo =>
                 {
                     return optVmInfo.MatchAsync(
                         Some: s => HandleCommand(s, command, _engine),
                         None: () => Unit.Default);
                 }).ConfigureAwait(false);
-            
+
             await result.MatchAsync(
-                LeftAsync: f => HandleError(f,command),
+                LeftAsync: f => HandleError(f, command),
                 RightAsync: async _ =>
                 {
                     await _bus.Publish(OperationTaskStatusEvent.Completed(command.OperationId, command.TaskId))
@@ -52,12 +50,16 @@ namespace Haipa.Modules.VmHostAgent
                 }).ConfigureAwait(false);
         }
 
+        protected abstract Task<Either<PowershellFailure, Unit>> HandleCommand(
+            TypedPsObject<VirtualMachineInfo> vmInfo, T command, IPowershellEngine engine);
+
         private async Task<Unit> HandleError(PowershellFailure failure, IOperationTaskMessage command)
         {
-            await _bus.Publish(OperationTaskStatusEvent.Failed(command.OperationId, command.TaskId, 
-                new ErrorData { ErrorMessage = failure.Message
-
-            })).ConfigureAwait(false);
+            await _bus.Publish(OperationTaskStatusEvent.Failed(command.OperationId, command.TaskId,
+                new ErrorData
+                {
+                    ErrorMessage = failure.Message
+                })).ConfigureAwait(false);
 
             return Unit.Default;
         }
@@ -65,7 +67,8 @@ namespace Haipa.Modules.VmHostAgent
         private Task<Either<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>>> GetVmInfo(Guid vmId,
             IPowershellEngine engine)
         {
-            return engine.GetObjectsAsync<VirtualMachineInfo>(CreateGetVMCommand(vmId)).MapAsync(seq => seq.HeadOrNone());
+            return engine.GetObjectsAsync<VirtualMachineInfo>(CreateGetVMCommand(vmId))
+                .MapAsync(seq => seq.HeadOrNone());
         }
 
         protected virtual PsCommandBuilder CreateGetVMCommand(Guid vmId)

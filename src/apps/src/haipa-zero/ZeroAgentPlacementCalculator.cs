@@ -1,7 +1,6 @@
 ﻿using System;
 using Haipa.Modules.Controller;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines.Config;
+using Haipa.Resources.Machines.Config;
 
 namespace Haipa.Runtime.Zero
 {

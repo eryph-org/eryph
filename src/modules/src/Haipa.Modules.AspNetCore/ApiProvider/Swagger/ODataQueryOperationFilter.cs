@@ -24,7 +24,7 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
             var hasQueryOptions = context.MethodInfo.GetParameters()
                 .Any(x => x.ParameterType.IsClosedTypeOf(typeof(ODataQueryOptions<>)));
 
-            if ((queryAttribute == null && !hasQueryOptions) || responseType == null)
+            if (queryAttribute == null && !hasQueryOptions || responseType == null)
                 return;
 
             if (operation.Parameters.All(x => x.Name != "$filter"))
@@ -32,19 +32,16 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Swagger
 
             var referenceType = responseType.Type;
             if (responseType.Type.IsClosedTypeOf(typeof(ODataValueEx<>)))
-            {
                 // get inner list type for odata reference
                 referenceType = referenceType.GetGenericArguments().First().GetGenericArguments().First();
-            }
             var reference = context.EnsureSchemaPresentAndGetRef(referenceType);
 
-            operation.Extensions.Add(new KeyValuePair<string, IOpenApiExtension>("x-ms-odata", new OpenApiString(reference.Reference.ReferenceV2)));
+            operation.Extensions.Add(new KeyValuePair<string, IOpenApiExtension>("x-ms-odata",
+                new OpenApiString(reference.Reference.ReferenceV2)));
             operation.Extensions.Add(new KeyValuePair<string, IOpenApiExtension>("x-ms-pageable", new OpenApiObject
             {
-                { "nextLinkName",new OpenApiString("@odata.nextLink")}
+                {"nextLinkName", new OpenApiString("@odata.nextLink")}
             }));
-
         }
-
     }
 }

@@ -6,7 +6,6 @@ namespace Haipa.Rebus
 {
     public class InMemoryTransportConfigurer : IRebusTransportConfigurer
     {
-
         private readonly InMemNetwork _network;
 
         public InMemoryTransportConfigurer(InMemNetwork network)

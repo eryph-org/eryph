@@ -3,6 +3,6 @@
     public enum OnOffState
     {
         On,
-        Off,
+        Off
     }
 }

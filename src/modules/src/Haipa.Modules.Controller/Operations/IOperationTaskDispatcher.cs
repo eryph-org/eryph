@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Commands;
 
 namespace Haipa.Modules.Controller.Operations

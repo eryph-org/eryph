@@ -1,5 +1,4 @@
-﻿using Haipa.Primitives;
-using Haipa.Primitives.Resources.Disks;
+﻿using Haipa.Resources.Disks;
 
 namespace Haipa.VmManagement.Data
 {

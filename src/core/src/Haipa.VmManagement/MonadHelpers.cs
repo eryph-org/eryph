@@ -12,10 +12,10 @@ namespace Haipa.VmManagement
         public static Task<Either<TL, Option<TR>>> LastOrNone<TL, TR>(this Task<Either<TL, Seq<TR>>> either)
         {
             return either.MapAsync(s => s.LastOrNone());
-
         }
 
-        public static Task<Either<TL, Seq<TR>>> MapToEitherAsync<TL, TR, TEntry>(this Seq<TEntry> sequence, Func<int, TEntry, Task<Either<TL, TR>>> mapperFunc)
+        public static Task<Either<TL, Seq<TR>>> MapToEitherAsync<TL, TR, TEntry>(this Seq<TEntry> sequence,
+            Func<int, TEntry, Task<Either<TL, TR>>> mapperFunc)
         {
             return sequence.Map(mapperFunc).ToImmutableArray()
                 .Traverse(l => l)
@@ -24,13 +24,13 @@ namespace Haipa.VmManagement
                     var enumerable = e as Either<TL, TR>[] ?? e.ToArray();
                     return enumerable.Lefts().HeadOrNone()
                         .MatchAsync(
-                            Some: s => LeftAsync<TL, Seq<TR>>(s).ToEither(),
-                            None: () => RightAsync<TL, Seq<TR>>(enumerable.Rights().ToSeq()).ToEither());
+                            s => LeftAsync<TL, Seq<TR>>(s).ToEither(),
+                            () => RightAsync<TL, Seq<TR>>(enumerable.Rights().ToSeq()).ToEither());
                 });
-
         }
 
-        public static Task<Either<TL, Seq<TR>>> MapToEitherAsync<TL, TR, TEntry>(this Seq<TEntry> sequence, Func<TEntry, Task<Either<TL, TR>>> mapperFunc)
+        public static Task<Either<TL, Seq<TR>>> MapToEitherAsync<TL, TR, TEntry>(this Seq<TEntry> sequence,
+            Func<TEntry, Task<Either<TL, TR>>> mapperFunc)
         {
             return sequence.Map(mapperFunc).ToImmutableArray()
                 .Traverse(l => l)
@@ -39,10 +39,9 @@ namespace Haipa.VmManagement
                     var enumerable = e as Either<TL, TR>[] ?? e.ToArray();
                     return enumerable.Lefts().HeadOrNone()
                         .MatchAsync(
-                            Some: s => LeftAsync<TL, Seq<TR>>(s).ToEither(),
-                            None: () => RightAsync<TL, Seq<TR>>(enumerable.Rights().ToSeq()).ToEither());
+                            s => LeftAsync<TL, Seq<TR>>(s).ToEither(),
+                            () => RightAsync<TL, Seq<TR>>(enumerable.Rights().ToSeq()).ToEither());
                 });
-
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Haipa.Primitives;
-using Haipa.Primitives.Resources.Machines;
+using Haipa.Resources.Machines;
 
 namespace Haipa.StateDb.Model
 {
@@ -16,11 +15,10 @@ namespace Haipa.StateDb.Model
         public string SwitchName { get; set; }
 
         public string MacAddress { get; set; }
-
     }
 
     public class VirtualMachineDrive
-   {
+    {
         public string Id { get; set; }
 
         public long MachineId { get; set; }
@@ -53,7 +51,5 @@ namespace Haipa.StateDb.Model
         public List<VirtualMachineDrive> AttachedDrives { get; set; }
 
         public Guid ParentId { get; set; }
-
-
     }
 }

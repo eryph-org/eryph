@@ -12,18 +12,16 @@ namespace Haipa.StateDb.Model
 
         public string Name { get; set; }
 
-        [Column("IpV4Addresses")]
-        public string IpV4AddressesInternal { get; set; }
+        [Column("IpV4Addresses")] public string IpV4AddressesInternal { get; set; }
 
         [NotMapped]
         public string[] IpV4Addresses
         {
             get => IpV4AddressesInternal?.Split(';');
-            set => IpV4AddressesInternal = value == null ? null : string.Join(";",value );
+            set => IpV4AddressesInternal = value == null ? null : string.Join(";", value);
         }
 
-        [Column("IpV6Addresses")]
-        public string IpV6AddressesInternal { get; set; }
+        [Column("IpV6Addresses")] public string IpV6AddressesInternal { get; set; }
 
         [NotMapped]
         public string[] IpV6Addresses
@@ -34,13 +32,12 @@ namespace Haipa.StateDb.Model
 
         // ReSharper disable once InconsistentNaming
         public string IPv4DefaultGateway { get; set; }
+
         // ReSharper disable once InconsistentNaming
         public string IPv6DefaultGateway { get; set; }
 
 
-
-        [Column("DnsServers")]
-        public string DnsServersInternal { get; set; }
+        [Column("DnsServers")] public string DnsServersInternal { get; set; }
 
         [NotMapped]
         public string[] DnsServerAddresses
@@ -49,18 +46,16 @@ namespace Haipa.StateDb.Model
             set => DnsServersInternal = value == null ? null : string.Join(";", value);
         }
 
-        [Column("IpV4Subnets")]
-        public string IpV4SubnetsInternal { get; set; }
+        [Column("IpV4Subnets")] public string IpV4SubnetsInternal { get; set; }
 
         [NotMapped]
         public string[] IpV4Subnets
         {
             get => IpV4SubnetsInternal?.Split(';');
-            set => IpV4SubnetsInternal = value == null ? null : string.Join(";",value );
+            set => IpV4SubnetsInternal = value == null ? null : string.Join(";", value);
         }
 
-        [Column("IpV6Subnets")]
-        public string IpV6SubnetsInternal { get; set; }
+        [Column("IpV6Subnets")] public string IpV6SubnetsInternal { get; set; }
 
         [NotMapped]
         public string[] IpV6Subnets
@@ -68,6 +63,5 @@ namespace Haipa.StateDb.Model
             get => IpV6SubnetsInternal?.Split(';');
             set => IpV6SubnetsInternal = value == null ? null : string.Join(";", value);
         }
-
     }
 }

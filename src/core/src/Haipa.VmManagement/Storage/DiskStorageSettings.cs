@@ -1,6 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Haipa.Primitives;
-using Haipa.VmManagement.Data;
 using LanguageExt;
 
 namespace Haipa.VmManagement.Storage
@@ -19,14 +17,17 @@ namespace Haipa.VmManagement.Storage
         public long SizeBytes { get; set; }
 
 
-        public static Task<Either<PowershellFailure, Option<DiskStorageSettings>>> FromVhdPath(IPowershellEngine engine, HostSettings hostSettings, Option<string> optionalPath)
+        public static Task<Either<PowershellFailure, Option<DiskStorageSettings>>> FromVhdPath(IPowershellEngine engine,
+            HostSettings hostSettings, Option<string> optionalPath)
         {
             return optionalPath.Map(path => from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path).ToAsync()
-
-                from vhdInfo in optionalVhdInfo.ToEither(new PowershellFailure{ Message = "Failed to read VHD "}).ToAsync()
+                from vhdInfo in optionalVhdInfo.ToEither(new PowershellFailure {Message = "Failed to read VHD "})
+                    .ToAsync()
                 let nameAndId = StorageNames.FromPath(System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
                     hostSettings.DefaultVirtualHardDiskPath)
-                let parentPath = string.IsNullOrWhiteSpace(vhdInfo.Value.ParentPath) ? Option<string>.None : Option<string>.Some(vhdInfo.Value.ParentPath)
+                let parentPath = string.IsNullOrWhiteSpace(vhdInfo.Value.ParentPath)
+                    ? Option<string>.None
+                    : Option<string>.Some(vhdInfo.Value.ParentPath)
                 from parentSettings in FromVhdPath(engine, hostSettings, parentPath).ToAsync()
                 select
                     new DiskStorageSettings
@@ -39,9 +40,6 @@ namespace Haipa.VmManagement.Storage
                         SizeBytes = vhdInfo.Value.Size,
                         ParentSettings = parentSettings
                     }).Traverse(l => l).ToEither();
-
         }
     }
-
-
 }

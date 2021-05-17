@@ -1,6 +1,5 @@
 ﻿using System;
 using Dbosoft.Hosuto.HostedServices;
-using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Modules.Controller.Inventory;
@@ -12,7 +11,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Rebus.Handlers;
-using Rebus.Logging;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Sagas.Exclusive;
@@ -43,7 +41,7 @@ namespace Haipa.Modules.Controller
             container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
 
 
-            container.RegisterSingleton( () => new Id64Generator());
+            container.RegisterSingleton(() => new Id64Generator());
             container.Register<IOperationTaskDispatcher, OperationTaskDispatcher>();
 
             //use placement calculator of Host
@@ -53,44 +51,40 @@ namespace Haipa.Modules.Controller
             container.Register(() =>
             {
                 var optionsBuilder = new DbContextOptionsBuilder<StateStoreContext>();
-                serviceProvider.GetService<IDbContextConfigurer<StateStoreContext>>().Configure(optionsBuilder);
+                serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>().Configure(optionsBuilder);
                 return new StateStoreContext(optionsBuilder.Options);
             }, Lifestyle.Scoped);
 
             container.ConfigureRebus(configurer => configurer
-                .Transport(t => serviceProvider.GetService<IRebusTransportConfigurer>().Configure(t, QueueNames.Controllers))
+                .Transport(t =>
+                    serviceProvider.GetRequiredService<IRebusTransportConfigurer>()
+                        .Configure(t, QueueNames.Controllers))
                 .Routing(r => r.TypeBased()
-                    .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers)
+                        .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers)
                     // agent routing is not registered here by design. Agent commands will be routed by agent name
-                    )
+                )
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy();
                     x.SetNumberOfWorkers(5);
                     x.EnableSimpleInjectorUnitOfWork();
                 })
-                .Timeouts(t => serviceProvider.GetService<IRebusTimeoutConfigurer>().Configure(t))
+                .Timeouts(t => serviceProvider.GetRequiredService<IRebusTimeoutConfigurer>().Configure(t))
                 .Sagas(s =>
                 {
-                    
-                    serviceProvider.GetService<IRebusSagasConfigurer>().Configure(s);
+                    serviceProvider.GetRequiredService<IRebusSagasConfigurer>().Configure(s);
                     s.EnforceExclusiveAccess();
                 })
-                .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>().Configure(s))
-
-                .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.None }))
-                .Logging(x => x.ColoredConsole(LogLevel.Debug)).Start());
-
-
+                .Subscriptions(s => serviceProvider.GetRequiredService<IRebusSubscriptionConfigurer>().Configure(s))
+                .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings
+                    {TypeNameHandling = TypeNameHandling.None}))
+                .Logging(x => x.ColoredConsole()).Start());
         }
 
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddHostedHandler<StartBusModuleHandler>();
             services.AddHostedHandler<InventoryHandler>();
-
         }
-
-        
     }
 }

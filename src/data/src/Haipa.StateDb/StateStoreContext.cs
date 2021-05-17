@@ -51,19 +51,19 @@ namespace Haipa.StateDb
             //modelBuilder.Entity<Agent>().HasMany(c => c.Machines)
             //    .WithOne(one => one.Agent).HasForeignKey(fk => fk.AgentName);
             //modelBuilder.Entity<Agent>().HasMany(c => c.Networks)
-                //.WithOne(one => one.Agent).HasForeignKey(fk => fk.AgentName);
+            //.WithOne(one => one.Agent).HasForeignKey(fk => fk.AgentName);
 
             modelBuilder.Entity<Network>().HasMany(c => c.Subnets)
                 .WithOne(one => one.Network).HasForeignKey(fk => fk.NetworkId);
 
             modelBuilder.Entity<Machine>()
                 .HasMany(x => x.Networks)
-                .WithOne(x=>x.Machine)
-                .HasForeignKey(x=>x.MachineId)
+                .WithOne(x => x.Machine)
+                .HasForeignKey(x => x.MachineId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<MachineNetwork>()
-                .HasKey(x=>x.Id);
+                .HasKey(x => x.Id);
 
             modelBuilder.Entity<VirtualMachine>()
                 .HasOne(x => x.Host)
@@ -72,7 +72,7 @@ namespace Haipa.StateDb
             modelBuilder.Entity<VirtualMachine>()
                 .HasMany(x => x.NetworkAdapters)
                 .WithOne(x => x.Vm)
-                .HasForeignKey(x=>x.MachineId)
+                .HasForeignKey(x => x.MachineId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<VirtualMachine>()
@@ -94,7 +94,6 @@ namespace Haipa.StateDb
                 .HasOne(x => x.AttachedDisk)
                 .WithMany(x => x.AttachedDrives)
                 .HasForeignKey(x => x.AttachedDiskId);
-                
 
 
             modelBuilder.Entity<VirtualDisk>().HasKey(x => x.Id);
@@ -104,13 +103,11 @@ namespace Haipa.StateDb
 
             modelBuilder.Entity<VirtualMachineMetadata>()
                 .HasKey(x => x.Id);
-
         }
     }
 
-    public interface IStateStoreRepository<T> : IRepositoryBase<T> where T: class
+    public interface IStateStoreRepository<T> : IRepositoryBase<T> where T : class
     {
-
     }
 
     public class StateStoreRepository<T> : IStateStoreRepository<T> where T : class
@@ -134,19 +131,16 @@ namespace Haipa.StateDb
         public async Task UpdateAsync(T entity)
         {
             _dbContext.Entry(entity).State = EntityState.Modified;
-
         }
 
         public async Task DeleteAsync(T entity)
         {
             _dbContext.Set<T>().Remove(entity);
-
         }
 
         public async Task DeleteRangeAsync(IEnumerable<T> entities)
         {
             _dbContext.Set<T>().RemoveRange(entities);
-
         }
 
         public async Task SaveChangesAsync()
@@ -162,7 +156,6 @@ namespace Haipa.StateDb
         public async Task<T> GetByIdAsync<TId>(TId id)
         {
             return await _dbContext.Set<T>().FindAsync(id);
-
         }
 
         public async Task<T> GetBySpecAsync(ISpecification<T> specification)

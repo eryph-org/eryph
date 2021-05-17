@@ -10,10 +10,13 @@ using Rebus.Handlers;
 
 namespace Haipa.Modules.Controller.Inventory
 {
-    internal class UpdateVMHostInventoryCommandHandler : UpdateInventoryCommandHandlerBase, IHandleMessages<UpdateVMHostInventoryCommand>
+    internal class UpdateVMHostInventoryCommandHandler : UpdateInventoryCommandHandlerBase,
+        IHandleMessages<UpdateVMHostInventoryCommand>
     {
-
-        public UpdateVMHostInventoryCommandHandler(StateStoreContext stateStoreContext, Id64Generator idGenerator, IVirtualMachineMetadataService metadataService, IOperationTaskDispatcher taskDispatcher, IVirtualMachineDataService vmDataService) : base(stateStoreContext, idGenerator, metadataService, taskDispatcher, vmDataService)
+        public UpdateVMHostInventoryCommandHandler(StateStoreContext stateStoreContext, Id64Generator idGenerator,
+            IVirtualMachineMetadataService metadataService, IOperationTaskDispatcher taskDispatcher,
+            IVirtualMachineDataService vmDataService) : base(stateStoreContext, idGenerator, metadataService,
+            taskDispatcher, vmDataService)
         {
         }
 
@@ -25,7 +28,7 @@ namespace Haipa.Modules.Controller.Inventory
                 {
                     Id = IdGenerator.GenerateId(),
                     AgentName = message.HostInventory.Name,
-                    Name = message.HostInventory.Name,
+                    Name = message.HostInventory.Name
                 };
 
             newMachine.Networks = message.HostInventory.Networks.ToMachineNetwork(newMachine.Id).ToList();
@@ -45,9 +48,6 @@ namespace Haipa.Modules.Controller.Inventory
             }
 
             await UpdateVMs(message.VMInventory, existingMachine);
-
-
         }
-
     }
 }

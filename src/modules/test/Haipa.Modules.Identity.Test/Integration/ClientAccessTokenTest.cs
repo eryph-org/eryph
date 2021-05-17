@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Haipa.IdentityModel.Clients;
@@ -19,26 +18,25 @@ using Xunit;
 
 namespace Haipa.Modules.Identity.Test.Integration
 {
-    public class ClientAccessTokenTest: IClassFixture<IdentityModuleFactory>
+    public class ClientAccessTokenTest : IClassFixture<IdentityModuleFactory>
     {
         private readonly WebModuleFactory<IdentityModule> _factory;
 
         public ClientAccessTokenTest(IdentityModuleFactory factory)
         {
             _factory = factory;
-            
         }
 
         [Fact]
         public async Task Client_Gets_Access_Token()
-        {            
+        {
             Assert.NotNull(await GetClientAccessToken());
         }
 
         private async Task<string> GetClientAccessToken()
         {
-
-            var keyPair = (AsymmetricCipherKeyPair)new PemReader(new StringReader(TestClientData.KeyFileString)).ReadObject();
+            var keyPair =
+                (AsymmetricCipherKeyPair) new PemReader(new StringReader(TestClientData.KeyFileString)).ReadObject();
             var rsaParameters = DotNetUtilities.ToRSAParameters(keyPair.Private as RsaPrivateCrtKeyParameters);
 
             var factory = _factory
@@ -54,11 +52,10 @@ namespace Haipa.Modules.Identity.Test.Integration
                             });
                     });
 
-            var response = await factory.CreateDefaultClient().GetClientAccessToken("test-client", rsaParameters, new []{"openid"});
+            var response = await factory.CreateDefaultClient()
+                .GetClientAccessToken("test-client", rsaParameters, new[] {"openid"});
             return response.AccessToken;
         }
-
-
     }
 
 
@@ -67,21 +64,23 @@ namespace Haipa.Modules.Identity.Test.Integration
         public Task<Client> FindClientByIdAsync(string clientId)
         {
             if (clientId == "test-client")
-                return Task.FromResult(new Client()
+                return Task.FromResult(new Client
                 {
                     ClientId = "test-client",
                     //ClientSecrets = new List<Secret>(new Secret[] { new Secret("peng".Sha256()), }),
-                    ClientSecrets = new List<Secret>(new[]{ new Secret
+                    ClientSecrets = new List<Secret>(new[]
                     {
-                        Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
-                        Value = TestClientData.CertificateString
-                    }}),
+                        new Secret
+                        {
+                            Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
+                            Value = TestClientData.CertificateString
+                        }
+                    }),
                     AllowedGrantTypes = GrantTypes.ClientCredentials,
                     AllowOfflineAccess = true,
-                    AllowedScopes = { "openid" },
+                    AllowedScopes = {"openid"},
                     AllowRememberConsent = true,
-                    RequireConsent = false,
-
+                    RequireConsent = false
                 });
 
             return null;

@@ -4,6 +4,6 @@
     {
         None,
         Virtual,
-        Physical,
+        Physical
     }
 }
