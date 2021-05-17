@@ -22,7 +22,7 @@ using SimpleInjector;
 namespace Haipa.Modules.Controller
 {
     [UsedImplicitly]
-    public class ControllerModule : IModule
+    public class ControllerModule
     {
         public string Name => "Haipa.Controller";
 

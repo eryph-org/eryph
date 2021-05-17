@@ -25,5 +25,10 @@ namespace Haipa.Modules.Controller
         {
             return _dbContext.SaveChangesAsync();
         }
+
+        public void Dispose()
+        {
+           
+        }
     }
 }

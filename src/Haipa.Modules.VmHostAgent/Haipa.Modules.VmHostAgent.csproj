@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -9,10 +9,6 @@
     <ProjectReference Include="..\Haipa.ModuleCore\Haipa.ModuleCore.csproj" />
     <ProjectReference Include="..\Haipa.Rebus\Haipa.Rebus.csproj" />
     <ProjectReference Include="..\Haipa.VmManagement\Haipa.VmManagement.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="System.Management" />
   </ItemGroup>
 
 </Project>

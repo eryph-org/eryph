@@ -31,11 +31,6 @@ namespace Haipa.Modules.Identity
     public class IdentityModule : WebModule
     {
         /// <summary>
-        /// Gets the Name
-        /// </summary>
-        public override string Name => "Haipa.Modules.Identity";
-
-        /// <summary>
         /// Gets the Path
         /// </summary>
         public override string Path => "identity";

@@ -11,7 +11,6 @@ namespace Haipa.Modules.CommonApi
     [UsedImplicitly]
     public class CommonApiModule : ApiModule<CommonApiModule>
     {
-        public override string Name => "Haipa.Modules.CommonApi";
         public override string Path => "common";
 
         public override string ApiName => "Common Api";

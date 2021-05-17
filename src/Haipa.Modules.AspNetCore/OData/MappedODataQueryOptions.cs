@@ -9,7 +9,6 @@ using AutoMapper;
 using AutoMapper.AspNet.OData;
 using AutoMapper.Extensions.ExpressionMapping;
 using AutoMapper.Internal;
-using LogicBuilder.Expressions.Utils.Expansions;
 using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNet.OData.Query;
 using Microsoft.EntityFrameworkCore;

@@ -15,11 +15,10 @@ namespace Haipa.StateDb.MySql
 
 
             return optionsBuilder.UseMySql(mySqlConnectionString, // replace with your Connection String
+                new MariaDbServerVersion("10.3.8"),
                 mysqlOptions =>
                 {
                     mysqlOptions.MigrationsAssembly(typeof(DbStateDbContextOptionsBuilder).Assembly.GetName().Name);                    
-                    mysqlOptions.ServerVersion(new Version(10, 3, 8),
-                        ServerType.MariaDb); // replace with your Server Version and Type
                 });
         }
 

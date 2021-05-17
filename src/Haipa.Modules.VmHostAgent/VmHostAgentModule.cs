@@ -19,7 +19,7 @@ using SimpleInjector.Integration.ServiceCollection;
 namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    public class VmHostAgentModule : IModule
+    public class VmHostAgentModule
     {
         public string Name => "Haipa.VmHostAgent";
 
