@@ -4,6 +4,7 @@ using Haipa.Messages.Commands;
 using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
 using Haipa.Modules.Controller.IdGenerator;
+using Haipa.StateDb.Model;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -22,13 +23,13 @@ namespace Haipa.Modules.Controller.Operations.Workflows
     {
         private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly Id64Generator _idGenerator;
-        private readonly IVirtualMachineMetadataService _metadataService;
+        private readonly IVirtualMachineDataService _vmDataService;
 
-        public CreateMachineSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, Id64Generator idGenerator, IVirtualMachineMetadataService metadataService) : base(bus)
+        public CreateMachineSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, Id64Generator idGenerator, IVirtualMachineDataService vmDataService) : base(bus)
       {
           _taskDispatcher = taskDispatcher;
           _idGenerator = idGenerator;
-          _metadataService = metadataService;
+          _vmDataService = vmDataService;
       }
 
         protected override void CorrelateMessages(ICorrelationConfig<CreateMachineSagaData> config)
@@ -52,7 +53,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             return _taskDispatcher.Send(
                     new ValidateMachineConfigCommand
                     {
-                        MachineId = Guid.Empty,
+                        MachineId = 0,
                         Config = message.Config,
                         OperationId = Data.OperationId,
                         TaskId = Guid.NewGuid(),
@@ -69,7 +70,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             {
                 Data.Config = r.Config;
                 Data.State = CreateVMState.ConfigValidated;
-
+                
 
                 return _taskDispatcher.Send(
                     new PlaceVirtualMachineCommand
@@ -110,10 +111,11 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             return FailOrRun(message, () =>
             {
                 Data.State = CreateVMState.ImagePrepared;
+                Data.MachineId = _idGenerator.GenerateId();
 
                 var createMessage = new CreateVirtualMachineCommand
                     { Config = Data.Config, 
-                        NewStorageId = _idGenerator.GenerateId(),
+                        NewMachineId = Data.MachineId,
                         AgentName = Data.AgentName, OperationId = message.OperationId, TaskId = Guid.NewGuid() };
 
                 return _taskDispatcher.Send(createMessage);
@@ -129,19 +131,15 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             {
                 Data.State = CreateVMState.Created;
 
-                await _metadataService.SaveMetadata(r.MachineMetadata);
-
-                await Bus.Send(new AttachMachineToOperationCommand
+                var newMachine = await _vmDataService.AddNewVM(new VirtualMachine
                 {
+                    Id = Data.MachineId,
                     AgentName = Data.AgentName,
-                    MachineId = r.Inventory.MachineId,
-                    OperationId = Data.OperationId,
-                    NewMetadataId = r.MachineMetadata.Id
-                });
+                    VMId = r.Inventory.VMId
+                }, r.MachineMetadata);
 
-               
                 var convergeMessage = new UpdateMachineCommand
-                { MachineId = r.Inventory.MachineId, Config = Data.Config, AgentName = Data.AgentName, OperationId = message.OperationId, TaskId = Guid.NewGuid() };
+                { MachineId = newMachine.Id, Config = Data.Config, AgentName = Data.AgentName, OperationId = message.OperationId, TaskId = Guid.NewGuid() };
 
                 await _taskDispatcher.Send(convergeMessage);
             });

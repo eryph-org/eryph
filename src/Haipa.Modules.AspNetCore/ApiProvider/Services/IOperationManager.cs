@@ -1,19 +1,21 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Haipa.Messages.Operations;
 using Haipa.StateDb.Model;
+using Haipa.VmConfig;
+using Resource = Haipa.VmConfig.Resource;
 
 namespace Haipa.Modules.AspNetCore.ApiProvider.Services
 {
     public interface IOperationManager
     {
-        Task<Operation> StartNew<T>(Guid vmId) where T : OperationTaskCommand;
-        Task<Operation> StartNew(Type operationCommandType, Guid vmId);
-        Task<Operation> StartNew(OperationTaskCommand operationCommand, Guid vmId);
-
-        Task<Operation> StartNew<T>() where T : OperationTaskCommand;
-        Task<Operation> StartNew(Type operationCommandType);
-        Task<Operation> StartNew(OperationTaskCommand operationCommand);
-
+        Task<Operation?> StartNew<T>(Resource resource = default) where T : OperationTaskCommand;
+        Task<IEnumerable<Operation>> StartNew<T>([AllowNull] params Resource[] resources) where T : OperationTaskCommand;
+        Task<Operation?> StartNew(Type operationCommandType, Resource resource = default);
+        Task<IEnumerable<Operation>> StartNew(Type operationCommandType, [AllowNull] params Resource[] resources);
+        Task<Operation?> StartNew(OperationTaskCommand operationCommand);
+        Task<IEnumerable<Operation>> StartNew(OperationTaskCommand taskCommand, [AllowNull] params Resource[] resources);
     }
 }

@@ -8,6 +8,6 @@ namespace Haipa.Messages.Commands
     public class ValidateMachineConfigCommand : OperationTaskCommand
     {
         public MachineConfig Config { get; set; }
-        public Guid MachineId { get; set; }
+        public long MachineId { get; set; }
     }
 }

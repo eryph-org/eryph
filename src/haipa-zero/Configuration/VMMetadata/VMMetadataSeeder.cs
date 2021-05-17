@@ -36,7 +36,7 @@ namespace Haipa.Runtime.Zero.Configuration.VMMetadata
                     });
 
                 })
-                .Traverse(l => l);
+                .Traverse(l => l).Map(_ => _repository.SaveChangesAsync());
 
         }
 

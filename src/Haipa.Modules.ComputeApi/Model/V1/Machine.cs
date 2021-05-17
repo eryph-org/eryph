@@ -11,7 +11,7 @@ namespace Haipa.Modules.ComputeApi.Model.V1
     [AutoExpand(DisableWhenSelectPresent = true)]
     public class Machine
     {
-        [Key] public Guid Id { get; set; }
+        [Key] public string Id { get; set; }
 
         public string Name { get; set; }
         

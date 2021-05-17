@@ -77,7 +77,6 @@ namespace Haipa.Modules.Controller.Operations
             task.Name = command.GetType().Name;
             Data.Tasks.Add(message.TaskId, command.GetType().AssemblyQualifiedName);
 
-            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
             var sendCommandAttribute = command.GetType().GetCustomAttribute<SendMessageToAttribute>();
 
@@ -87,23 +86,16 @@ namespace Haipa.Modules.Controller.Operations
                 {
                     switch (command)
                     {
-                        case IMachineCommand machineCommand:
+                        case IVMCommand vmCommand:
                         {
-                            var machine = await _dbContext.Machines.FindAsync(machineCommand.MachineId).ConfigureAwait(false);
+                            var machine = await _dbContext.VirtualMachines.FindAsync(vmCommand.MachineId)
+                                
+                                .ConfigureAwait(false);
 
                             if (machine == null)
                             {
-
-                                if (command.GetType().GetCustomAttribute(typeof(MachineMayNotExistsAttribute)) != null)
-                                {
-                                    await Handle(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId));
-                                }
-                                else
-                                {
-                                    await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
-                                        new ErrorData {ErrorMessage = "Machine not found"}));
-
-                                }
+                                await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
+                                    new ErrorData { ErrorMessage = $"VirtualMachine {vmCommand.MachineId} not found" }));
 
                                 return;
                             }
@@ -153,7 +145,6 @@ namespace Haipa.Modules.Controller.Operations
             task.Status = OperationTaskStatus.Running;
             task.AgentName = message.AgentName;
 
-            await _dbContext.SaveChangesAsync();
 
         }
 
@@ -190,8 +181,6 @@ namespace Haipa.Modules.Controller.Operations
                 MarkAsComplete();
             }
 
-
-            await _dbContext.SaveChangesAsync();
 
         }
 

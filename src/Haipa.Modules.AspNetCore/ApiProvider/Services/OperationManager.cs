@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Commands;
 using Haipa.Messages.Commands.OperationTasks;
@@ -8,6 +10,7 @@ using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Newtonsoft.Json;
 using Rebus.Bus;
+using Resource = Haipa.VmConfig.Resource;
 
 namespace Haipa.Modules.AspNetCore.ApiProvider.Services
 {
@@ -23,32 +26,36 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Services
             _bus = bus;
         }
 
-        public Task<Operation> StartNew<T>() where T : OperationTaskCommand
+
+        public async Task<Operation?> StartNew<T>(Resource resource = default) where T : OperationTaskCommand
         {
-            return StartNew<T>(Guid.Empty);
+            return (await StartNew(Activator.CreateInstance<T>(), resource)).FirstOrDefault();
         }
 
-        public Task<Operation> StartNew<T>(Guid vmId) where T : OperationTaskCommand
+        public Task<IEnumerable<Operation>> StartNew<T>([AllowNull] params Resource[] resources) where T : OperationTaskCommand
         {
-            return StartNew(Activator.CreateInstance<T>(), vmId);
+            return StartNew(Activator.CreateInstance<T>(), resources);
         }
 
-        public Task<Operation> StartNew(Type operationCommandType)
+        public async Task<Operation?> StartNew(Type operationCommandType, Resource resource = default)
         {
-            return StartNew(operationCommandType, Guid.Empty);
+            return (await StartNew(operationCommandType, new []{resource}))?.FirstOrDefault();
         }
 
-        public Task<Operation> StartNew(Type operationCommandType, Guid vmId)
+        public Task<IEnumerable<Operation>> StartNew(Type operationCommandType, [AllowNull] params Resource[] resources)
         {
-            return StartNew(Activator.CreateInstance(operationCommandType) as OperationTaskCommand, vmId);
+            if (!(Activator.CreateInstance(operationCommandType) is OperationTaskCommand command))
+                throw new ArgumentException("Invalid operation task type", nameof(operationCommandType));
+
+            return StartNew(command, resources);
         }
 
-        public Task<Operation> StartNew(OperationTaskCommand operationCommand)
+        public async Task<Operation?> StartNew(OperationTaskCommand operationCommand)
         {
-            return StartNew(operationCommand, Guid.Empty);
+            return (await StartNew(operationCommand,null)).FirstOrDefault();
         }
 
-        public async Task<Operation> StartNew(OperationTaskCommand taskCommand, Guid resourceId)
+        public async Task<IEnumerable<Operation>> StartNew(OperationTaskCommand taskCommand, [AllowNull] params Resource[] resources)
         {
             if(taskCommand == null)
                 throw new ArgumentNullException(nameof(taskCommand));
@@ -59,39 +66,57 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Services
             if (taskCommand is IHasCorrelationId correlatedCommand)
                 operationId = correlatedCommand.CorrelationId!=Guid.Empty ? operationId : correlatedCommand.CorrelationId;
 
+            var result = new List<Operation>();
 
-            var operation = new Operation
+            //create a operation for each resource
+            //or, if command supports multiple resources or there are no resources - 1 operation
+            var opCount = (resources?.Length).GetValueOrDefault(1);
+            if (opCount > 1 && taskCommand is IResourcesCommand)
+                opCount = 1;
+
+            for (var i = 0; i < opCount; i++)
             {
-                Id = operationId,
-                Status = OperationStatus.Queued,
-                Resources = new List<OperationResource>{new OperationResource
+
+                var operation = new Operation
                 {
-                    Id = Guid.NewGuid(), ResourceId = resourceId, ResourceType = ResourceType.Machine
-                }}
-            };
+                    Id = operationId,
+                    Status = OperationStatus.Queued,
+                    Resources = resources?.Select(x => new OperationResource {ResourceId = x.Id, ResourceType = x.Type})
+                        .ToList()
+                };
 
-            _db.Add(operation);
+                _db.Add(operation);
+                result.Add(operation);
 
-            await _db.SaveChangesAsync().ConfigureAwait(false);
-        
-            if (resourceId != Guid.Empty && (taskCommand is IMachineCommand machineCommand) 
-                                         && machineCommand.MachineId != resourceId)
-                machineCommand.MachineId = resourceId;
+                await _db.SaveChangesAsync();
+
+                if (taskCommand is IResourcesCommand resourcesCommand)
+                {
+                    resourcesCommand.Resources = resources;
+                }
+                else
+                {
+                    var resource = resources?[i];
+                    if (resource.HasValue && taskCommand is IResourceCommand resourceCommand)
+                        resourceCommand.Resource = resource.Value;
+                }
+
+                taskCommand.OperationId = operation.Id;
+                taskCommand.TaskId = Guid.NewGuid();
+                var commandJson = JsonConvert.SerializeObject(taskCommand);
+
+                await _bus.Send(
+                        new CreateOperationCommand
+                        {
+                            TaskMessage = new CreateNewOperationTaskCommand(
+                                taskCommand.GetType().AssemblyQualifiedName,
+                                commandJson, operation.Id,
+                                taskCommand.TaskId)
+                        });
+            }
 
 
-            taskCommand.OperationId = operation.Id;
-            taskCommand.TaskId = Guid.NewGuid();
-            var commandJson = JsonConvert.SerializeObject(taskCommand);
-
-            await _bus.Send(
-                new CreateOperationCommand{ 
-                    TaskMessage = new CreateNewOperationTaskCommand(
-                        taskCommand.GetType().AssemblyQualifiedName, 
-                        commandJson, operation.Id,
-                        taskCommand.TaskId) })
-                .ConfigureAwait(false);
-
-            return operation;
+            return result;
         }
 
 

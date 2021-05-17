@@ -41,7 +41,6 @@ namespace Haipa.Modules.Controller.Operations
                     };
 
                 _dbContext.Add(opLogEntry);
-                _dbContext.SaveChanges();
             }
 
             Console.WriteLine(message.Message);

@@ -10,7 +10,7 @@ namespace Haipa.Messages.Commands.OperationTasks
         public MachineConfig Config { get; set; }
         public string AgentName { get; set; }
 
-        public Guid MachineId { get; set; }
+        public Guid VMId { get; set; }
 
         public long NewStorageId { get; set; }
 

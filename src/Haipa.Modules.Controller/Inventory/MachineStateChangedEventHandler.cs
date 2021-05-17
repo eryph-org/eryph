@@ -25,9 +25,6 @@ namespace Haipa.Modules.Controller.Inventory
 
             machine.Status = MapVmStatusToMachineStatus(message.Status);
 
-
-            await _stateStoreContext.SaveChangesAsync().ConfigureAwait(false);
-
         }
 
         private static MachineStatus MapVmStatusToMachineStatus(VmStatus status)

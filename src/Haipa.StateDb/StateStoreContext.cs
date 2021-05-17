@@ -23,18 +23,17 @@ namespace Haipa.StateDb
 
         public DbSet<Machine> Machines { get; set; }
         public DbSet<VirtualMachine> VirtualMachines { get; set; }
+        public DbSet<VMHostMachine> VMHosts { get; set; }
+
         public DbSet<VirtualMachineNetworkAdapter> VirtualMachineNetworkAdapters { get; set; }
         public DbSet<VirtualMachineDrive> VirtualMachineDrives { get; set; }
         public DbSet<VirtualDisk> VirtualDisks { get; set; }
 
         public DbSet<Network> Networks { get; set; }
         public DbSet<Subnet> Subnets { get; set; }
-        public DbSet<AgentNetwork> AgentNetworks { get; set; }
 
         public DbSet<MachineNetwork> MachineNetworks { get; set; }
 
-
-        public DbSet<Agent> Agents { get; set; }
 
         public DbSet<VirtualMachineMetadata> Metadata { get; set; }
 
@@ -45,25 +44,17 @@ namespace Haipa.StateDb
             modelBuilder.Entity<Operation>().HasMany(c => c.Tasks);
             modelBuilder.Entity<Operation>().HasMany(c => c.Resources);
 
-            modelBuilder.Entity<AgentNetwork>().HasKey("NetworkId", "AgentName");
+            //modelBuilder.Entity<AgentNetwork>().HasKey("NetworkId", "AgentName");
 
 
-            modelBuilder.Entity<Agent>().HasKey(k => k.Name);
-            modelBuilder.Entity<Agent>().HasMany(c => c.Machines)
-                .WithOne(one => one.Agent).HasForeignKey(fk => fk.AgentName);
-            modelBuilder.Entity<Agent>().HasMany(c => c.Networks)
-                .WithOne(one => one.Agent).HasForeignKey(fk => fk.AgentName);
+            //modelBuilder.Entity<Agent>().HasKey(k => k.Name);
+            //modelBuilder.Entity<Agent>().HasMany(c => c.Machines)
+            //    .WithOne(one => one.Agent).HasForeignKey(fk => fk.AgentName);
+            //modelBuilder.Entity<Agent>().HasMany(c => c.Networks)
+                //.WithOne(one => one.Agent).HasForeignKey(fk => fk.AgentName);
 
             modelBuilder.Entity<Network>().HasMany(c => c.Subnets)
                 .WithOne(one => one.Network).HasForeignKey(fk => fk.NetworkId);
-            modelBuilder.Entity<Network>().HasMany(c => c.AgentNetworks)
-                .WithOne(one => one.Network).HasForeignKey(fk => fk.NetworkId);
-
-            modelBuilder.Entity<Machine>()
-                .HasOne(x => x.VM)
-                .WithOne(x=>x.Machine)
-                .HasForeignKey<VirtualMachine>(x=>x.Id)
-                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Machine>()
                 .HasMany(x => x.Networks)
@@ -74,6 +65,9 @@ namespace Haipa.StateDb
             modelBuilder.Entity<MachineNetwork>()
                 .HasKey(x=>x.Id);
 
+            modelBuilder.Entity<VirtualMachine>()
+                .HasOne(x => x.Host)
+                .WithMany(x => x.VMs);
 
             modelBuilder.Entity<VirtualMachine>()
                 .HasMany(x => x.NetworkAdapters)
@@ -134,8 +128,6 @@ namespace Haipa.StateDb
         {
             await _dbContext.Set<T>().AddAsync(entity);
 
-            await SaveChangesAsync();
-
             return entity;
         }
 
@@ -143,21 +135,18 @@ namespace Haipa.StateDb
         {
             _dbContext.Entry(entity).State = EntityState.Modified;
 
-            await SaveChangesAsync();
         }
 
         public async Task DeleteAsync(T entity)
         {
             _dbContext.Set<T>().Remove(entity);
 
-            await SaveChangesAsync();
         }
 
         public async Task DeleteRangeAsync(IEnumerable<T> entities)
         {
             _dbContext.Set<T>().RemoveRange(entities);
 
-            await SaveChangesAsync();
         }
 
         public async Task SaveChangesAsync()

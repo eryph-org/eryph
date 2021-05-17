@@ -14,6 +14,7 @@ namespace Haipa.Modules.Controller.Operations
             _bus = bus;
         }
 
+
         public Task Send(OperationTaskCommand message)
         {
             var commandJson = JsonConvert.SerializeObject(message);

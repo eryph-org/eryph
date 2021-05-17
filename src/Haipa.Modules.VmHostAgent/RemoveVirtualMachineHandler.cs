@@ -14,14 +14,14 @@ using PsVMResult = LanguageExt.Either<Haipa.VmManagement.PowershellFailure, Lang
 namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class DestroyVirtualMachineHandler : MachineOperationHandlerBase<DestroyMachineCommand>
+    internal class RemoveVirtualMachineHandler : MachineOperationHandlerBase<RemoveVMCommand>
     {
 
-        public DestroyVirtualMachineHandler(IBus bus, IPowershellEngine engine) : base(bus, engine)
+        public RemoveVirtualMachineHandler(IBus bus, IPowershellEngine engine) : base(bus, engine)
         {
         }
         
-        protected override Task<PsVMResult> HandleCommand(TypedPsObject<VirtualMachineInfo> vmInfo, DestroyMachineCommand command, IPowershellEngine engine)
+        protected override Task<PsVMResult> HandleCommand(TypedPsObject<VirtualMachineInfo> vmInfo, RemoveVMCommand command, IPowershellEngine engine)
         {
             return vmInfo
                 .StopIfRunning(engine)

@@ -43,7 +43,7 @@ namespace Haipa.Modules.VmHostAgent
                     RightAsync: (a => _bus.Publish(
                         new VirtualMachineNetworkChangedEvent
                         {
-                            MachineId = message.VmId,
+                            VMId = message.VmId,
                             ChangedAdapter = new VirtualMachineNetworkAdapterInfo()
                             {
                                 Id = a.Value.Id,
@@ -52,7 +52,7 @@ namespace Haipa.Modules.VmHostAgent
                                 VirtualSwitchName = a.Value.SwitchName,
                                 MACAddress = a.Value.MacAddress
                             },
-                            ChangedNetwork = new VirtualMachineNetworkInfo
+                            ChangedNetwork = new MachineNetworkInfo
                             {
                                 Name = Networks.GenerateName(ref networkNames, a.Value),
                                 IPAddresses = message.IPAddresses,

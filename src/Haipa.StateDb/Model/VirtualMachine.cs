@@ -3,13 +3,20 @@ using System.Collections.Generic;
 
 namespace Haipa.StateDb.Model
 {
-    public class VirtualMachine
+    public class VirtualMachine : Machine
     {
-        public Guid Id { get; set; }
-        public Machine Machine { get; set; }
+        public VirtualMachine()
+        {
+            MachineType = MachineType.VM;
+        }
+
+        public Guid VMId { get; set; }
+
         public Guid MetadataId { get; set; }
 
         public string Path { get; set; }
+        public VMHostMachine Host { get; set; }
+
 
         public virtual List<VirtualMachineNetworkAdapter> NetworkAdapters { get; set; }
 

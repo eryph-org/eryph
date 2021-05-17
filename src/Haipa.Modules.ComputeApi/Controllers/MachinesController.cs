@@ -12,11 +12,12 @@ using System.Threading.Tasks;
 using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Modules.AspNetCore;
 using Haipa.Modules.AspNetCore.ApiProvider;
-using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
 using Haipa.VmConfig;
 using LanguageExt;
 using Microsoft.AspNet.OData.Routing;
 using static Microsoft.AspNetCore.Http.StatusCodes;
+using Machine = Haipa.Modules.ComputeApi.Model.V1.Machine;
+using Operation = Haipa.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
 namespace Haipa.Modules.ComputeApi.Controllers
 {
@@ -54,19 +55,22 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [Produces("application/json")]
         [SwaggerResponse(Status200OK, "Success", typeof(Machine))]
         [EnableMappedQuery]
-        public IActionResult Get([FromODataUri] Guid key)
+        public IActionResult Get([FromODataUri] string key)
         {
-            return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == key).ForMappedQuery<Machine>()));
+            return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == Convert.ToInt64(key)).ForMappedQuery<Machine>()));
         }
 
         [HttpDelete]
         [SwaggerOperation(OperationId = "Machines_Delete")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public Task<IActionResult> Delete([FromODataUri] Guid key)
+        public Task<IActionResult> Delete([FromODataUri] string key)
         {
             return FindMachine(key).MapAsync(id =>
-                    Accepted(_operationManager.StartNew<DestroyMachineCommand>(id))).ToAsync()
+                    Accepted(_operationManager.StartNew<DestroyResourcesCommand>(
+                            new Resource(ResourceType.Machine, Convert.ToInt64(id))
+                            )
+                    )).ToAsync()
                 .Match(r => r, l => l);
 
         }
@@ -95,9 +99,9 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [SwaggerOperation(OperationId = "Machines_Update")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public async Task<IActionResult> Update([FromODataUri] Guid key, [FromBody] MachineProvisioningSettings settings)
+        public async Task<IActionResult> Update([FromODataUri] string key, [FromBody] MachineProvisioningSettings settings)
         {
-            var machine = _db.Machines.FirstOrDefault(op => op.Id == key);
+            var machine = _db.Machines.FirstOrDefault(op => op.Id == Convert.ToInt64(key));
 
             if (machine == null)
                 return NotFound();
@@ -109,7 +113,7 @@ namespace Haipa.Modules.ComputeApi.Controllers
                 new UpdateMachineCommand
                 {
                     CorrelationId = settings.CorrelationId,
-                    MachineId = key,
+                    MachineId = Convert.ToInt64(key),
                     Config = machineConfig,
                     AgentName = machine.AgentName,
                 }
@@ -120,10 +124,12 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [SwaggerOperation(OperationId = "Machines_Start")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public Task<IActionResult> Start([FromODataUri] Guid key)
+        public Task<IActionResult> Start([FromODataUri] string key)
         {
             return FindMachine(key).MapAsync(id =>
-                    Accepted(_operationManager.StartNew<StartMachineCommand>(id))).ToAsync()
+                    Accepted(_operationManager.StartNew<StartMachineCommand>(
+                            new Resource(ResourceType.Machine, Convert.ToInt64(id))))
+                    ).ToAsync()
                 .Match(r => r, l => l);
         }
 
@@ -131,17 +137,19 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [SwaggerOperation(OperationId = "Machines_Stop")]
         [SwaggerResponse(Status202Accepted, "Success", typeof(Operation))]
         [Produces("application/json")]
-        public Task<IActionResult> Stop([FromODataUri] Guid key)
+        public Task<IActionResult> Stop([FromODataUri] string key)
         {
             return FindMachine(key).MapAsync(id =>
-                    Accepted(_operationManager.StartNew<StopMachineCommand>(id))).ToAsync()
+                    Accepted(_operationManager.StartNew<StopMachineCommand>(
+                        new Resource(ResourceType.Machine, Convert.ToInt64(id))))
+                    ).ToAsync()
                 .Match(r => r, l => l);
         }
 
 
-        private async Task<Either<IActionResult,Guid>> FindMachine(Guid key)
+        private async Task<Either<IActionResult,long>> FindMachine(string key)
         {
-            var vm = await _db.FindAsync<StateDb.Model.Machine>(key);
+            var vm = await _db.FindAsync<StateDb.Model.Machine>(Convert.ToInt64(key));
             if (vm == null)
                 return NotFound();
 

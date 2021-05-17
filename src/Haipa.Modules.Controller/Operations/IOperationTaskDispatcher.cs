@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Haipa.Messages.Operations;
+using Haipa.VmConfig;
 
 namespace Haipa.Modules.Controller.Operations
 {
