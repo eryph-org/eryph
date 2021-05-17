@@ -3,16 +3,18 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Commands;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Events;
 using Haipa.Modules.VmHostAgent.Inventory;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
+using Haipa.Primitives.Resources.Machines.Config;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
-using Haipa.VmManagement.Data.Full;
 using LanguageExt;
 using Rebus.Bus;
 using Rebus.Transport;
+using VirtualMachineInfo = Haipa.VmManagement.Data.Full.VirtualMachineInfo;
 
 namespace Haipa.Modules.VmHostAgent
 {
@@ -199,7 +201,7 @@ namespace Haipa.Modules.VmHostAgent
 
         }
 
-        protected static Task<Either<PowershellFailure, Messages.Events.VirtualMachineInfo>> CreateMachineInventory(
+        protected static Task<Either<PowershellFailure, VirtualMachineData>> CreateMachineInventory(
             IPowershellEngine engine, HostSettings hostSettings,
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {

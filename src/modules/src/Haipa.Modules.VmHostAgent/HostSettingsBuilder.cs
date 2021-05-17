@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Management;
+using Haipa.Primitives;
 using Haipa.VmManagement.Data;
 
 namespace Haipa.Modules.VmHostAgent

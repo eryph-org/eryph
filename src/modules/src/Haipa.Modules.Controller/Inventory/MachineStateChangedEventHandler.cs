@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages.Events;
+using Haipa.Messages.Resources.Machines.Events;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Rebus.Handlers;

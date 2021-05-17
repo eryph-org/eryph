@@ -1,7 +1,9 @@
 ﻿using System.Threading.Tasks;
-using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
-using Haipa.VmConfig;
+using Haipa.Messages.Operations.Events;
+using Haipa.Messages.Resources.Machines.Commands;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.VmManagement;
 using LanguageExt;
 using Rebus.Bus;
@@ -9,7 +11,7 @@ using Rebus.Handlers;
 
 namespace Haipa.Modules.VmHostAgent
 {
-    internal class UpdateVirtualMachineMetadataCommandHandler : VirtualMachineConfigCommandHandler, IHandleMessages<AcceptedOperationTask<UpdateVirtualMachineMetadataCommand>>
+    internal class UpdateVirtualMachineMetadataCommandHandler : VirtualMachineConfigCommandHandler, IHandleMessages<AcceptedOperationTaskEvent<UpdateVirtualMachineMetadataCommand>>
     {
 
         public UpdateVirtualMachineMetadataCommandHandler(IPowershellEngine engine, IBus bus) : base(engine, bus)
@@ -17,7 +19,7 @@ namespace Haipa.Modules.VmHostAgent
         }
 
 
-        public Task Handle(AcceptedOperationTask<UpdateVirtualMachineMetadataCommand> message)
+        public Task Handle(AcceptedOperationTaskEvent<UpdateVirtualMachineMetadataCommand> message)
         {
             var command = message.Command;
             OperationId = command.OperationId;

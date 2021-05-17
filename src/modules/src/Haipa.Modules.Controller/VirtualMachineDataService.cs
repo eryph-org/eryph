@@ -4,13 +4,14 @@ using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;
 using LanguageExt;
+using VirtualMachineMetadata = Haipa.Primitives.Resources.Machines.VirtualMachineMetadata;
 
 namespace Haipa.Modules.Controller
 {
     internal interface IVirtualMachineDataService
     {
         Task<Option<VirtualMachine>> GetVM(long id);
-        Task<VirtualMachine> AddNewVM(VirtualMachine vm, VmConfig.VirtualMachineMetadata metadata);
+        Task<VirtualMachine> AddNewVM(VirtualMachine vm, VirtualMachineMetadata metadata);
     }
 
     internal class VirtualMachineDataService : IVirtualMachineDataService
@@ -30,7 +31,7 @@ namespace Haipa.Modules.Controller
            return res;
         }
 
-        public async Task<VirtualMachine> AddNewVM([NotNull] VirtualMachine vm, [NotNull] VmConfig.VirtualMachineMetadata metadata)
+        public async Task<VirtualMachine> AddNewVM([NotNull] VirtualMachine vm, [NotNull] VirtualMachineMetadata metadata)
         {
 
             if (vm.Id == 0)

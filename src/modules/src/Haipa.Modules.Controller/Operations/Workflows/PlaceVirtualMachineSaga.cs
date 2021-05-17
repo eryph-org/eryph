@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Commands.OperationTasks;
-using Haipa.Messages.Events;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Resources.Commands;
+using Haipa.Messages.Resources.Events;
+using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Rebus;
 using JetBrains.Annotations;
 using Rebus.Bus;

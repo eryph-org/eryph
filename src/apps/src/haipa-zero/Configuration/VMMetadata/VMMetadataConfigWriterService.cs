@@ -1,7 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Haipa.Configuration;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.Runtime.Zero.Configuration.Clients;
-using Haipa.VmConfig;
 
 namespace Haipa.Runtime.Zero.Configuration.VMMetadata
 {

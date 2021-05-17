@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Text;
 using System.Threading.Tasks;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines.Config;
 using Haipa.VmManagement.Data.Full;
 using LanguageExt;
 

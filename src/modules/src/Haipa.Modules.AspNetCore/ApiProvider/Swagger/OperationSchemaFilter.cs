@@ -1,5 +1,6 @@
 ﻿using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources;
 using JetBrains.Annotations;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Commands;
+using Haipa.Messages.Operations.Events;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
@@ -8,7 +10,7 @@ using Rebus.Sagas;
 namespace Haipa.Modules.Controller.Operations
 {
     public abstract class OperationTaskWorkflowSaga<TMessage,TSagaData> : Saga<TSagaData>,
-        IAmInitiatedBy<AcceptedOperationTask<TMessage>>,
+        IAmInitiatedBy<AcceptedOperationTaskEvent<TMessage>>,
         IHandleMessages<OperationTaskStatusEvent<TMessage>>
 
         where TSagaData : TaskWorkflowSagaData, new()
@@ -23,13 +25,13 @@ namespace Haipa.Modules.Controller.Operations
 
         protected override void CorrelateMessages(ICorrelationConfig<TSagaData> config)
         {
-            config.Correlate<AcceptedOperationTask<TMessage>>(m => m.Command.OperationId, d => d.OperationId);
+            config.Correlate<AcceptedOperationTaskEvent<TMessage>>(m => m.Command.OperationId, d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<TMessage>>(m => m.OperationId, d => d.OperationId);
 
         }
 
 
-        public Task Handle(AcceptedOperationTask<TMessage> message)
+        public Task Handle(AcceptedOperationTaskEvent<TMessage> message)
         {
             Data.OperationId = message.Command.OperationId;
             Data.InitiatingTaskId = message.Command.TaskId;

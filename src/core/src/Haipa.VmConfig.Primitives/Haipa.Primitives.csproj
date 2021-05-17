@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>Haipa.Primitives</RootNamespace>
+    <AssemblyName>Haipa.Primitives</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Haipa.Core\Haipa.Core.csproj" />
+  </ItemGroup>
+
+</Project>

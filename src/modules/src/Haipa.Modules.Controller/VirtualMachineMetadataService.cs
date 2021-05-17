@@ -8,7 +8,7 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.TypeClasses;
 using Newtonsoft.Json;
-using VirtualMachineMetadata = Haipa.VmConfig.VirtualMachineMetadata;
+using VirtualMachineMetadata = Haipa.Primitives.Resources.Machines.VirtualMachineMetadata;
 
 namespace Haipa.Modules.Controller
 {

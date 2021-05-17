@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.HostedServices;
-using Haipa.Messages.Events;
+using Haipa.Messages.Resources.Machines.Events;
 using Haipa.Rebus;
 using Rebus.Bus;
 

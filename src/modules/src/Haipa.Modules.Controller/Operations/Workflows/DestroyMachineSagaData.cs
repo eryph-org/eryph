@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Haipa.StateDb.Model;
-using Haipa.VmConfig;
 
 namespace Haipa.Modules.Controller.Operations.Workflows
 {

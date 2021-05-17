@@ -1,4 +1,5 @@
-﻿using Haipa.Messages.Events;
+﻿using Haipa.Primitives;
+using Haipa.Primitives.Resources.Disks;
 
 namespace Haipa.VmManagement.Data
 {

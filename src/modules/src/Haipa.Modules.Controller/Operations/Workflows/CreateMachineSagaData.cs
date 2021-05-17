@@ -1,5 +1,6 @@
 ﻿using System;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines.Config;
 
 namespace Haipa.Modules.Controller.Operations.Workflows
 {

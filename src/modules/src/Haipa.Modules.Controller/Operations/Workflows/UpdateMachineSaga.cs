@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Commands;
-using Haipa.Messages.Commands.OperationTasks;
-using Haipa.Messages.Events;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Events;
+using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Modules.Controller.IdGenerator;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;
@@ -117,7 +118,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
                 await Bus.Send(new UpdateInventoryCommand
                 {
                     AgentName = Data.AgentName,
-                    Inventory = new List<VirtualMachineInfo> { r.Inventory }
+                    Inventory = new List<VirtualMachineData> { r.Inventory }
                 });
 
                 await Complete();

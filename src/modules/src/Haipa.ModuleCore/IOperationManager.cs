@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Commands;
 using Haipa.StateDb.Model;
-using Resource = Haipa.VmConfig.Resource;
+using Resource = Haipa.Primitives.Resources.Resource;
 
 namespace Haipa.ModuleCore
 {

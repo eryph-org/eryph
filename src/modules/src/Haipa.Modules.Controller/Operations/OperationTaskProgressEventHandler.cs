@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Events;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;

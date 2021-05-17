@@ -1,8 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Haipa.Messages.Events;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Disks;
+using Haipa.Primitives.Resources.Machines.Config;
 using Haipa.VmManagement.Converging;
 using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Core;

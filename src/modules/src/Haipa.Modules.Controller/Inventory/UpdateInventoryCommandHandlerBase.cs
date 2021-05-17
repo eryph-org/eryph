@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Haipa.Messages.Commands.OperationTasks;
-using Haipa.Messages.Events;
+using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Modules.Controller.Operations;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Disks;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
-using Haipa.VmConfig;
 
 namespace Haipa.Modules.Controller.Inventory
 {
@@ -39,9 +40,9 @@ namespace Haipa.Modules.Controller.Inventory
             parentDisks.Add(disk);
         }
 
-        protected async Task UpdateVMs(IEnumerable<VirtualMachineInfo> vmList, VMHostMachine hostMachine)
+        protected async Task UpdateVMs(IEnumerable<VirtualMachineData> vmList, VMHostMachine hostMachine)
         {
-            var vms = vmList as VirtualMachineInfo[] ?? vmList.ToArray();
+            var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
 
             var diskInfos = vms.SelectMany(x => x.Drives.Select(d => d.Disk)).ToList();
             var allDisks = new List<DiskInfo>();
@@ -190,7 +191,7 @@ namespace Haipa.Modules.Controller.Inventory
             }
         }
 
-        private VirtualMachine VirtualMachineInfoToMachine(VirtualMachineInfo vmInfo, VMHostMachine hostMachine, long machineId)
+        private VirtualMachine VirtualMachineInfoToMachine(VirtualMachineData vmInfo, VMHostMachine hostMachine, long machineId)
         {
             return new VirtualMachine()
             {

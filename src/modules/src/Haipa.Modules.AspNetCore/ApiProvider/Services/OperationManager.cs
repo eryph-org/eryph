@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using Haipa.Messages.Commands;
-using Haipa.Messages.Commands.OperationTasks;
+using Haipa.Messages;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Commands;
+using Haipa.Messages.Resources;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
 using Newtonsoft.Json;
 using Rebus.Bus;
-using Resource = Haipa.VmConfig.Resource;
+using Resource = Haipa.Primitives.Resources.Resource;
 
 namespace Haipa.Modules.AspNetCore.ApiProvider.Services
 {

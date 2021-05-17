@@ -7,7 +7,14 @@
 
 
   <ItemGroup>
-    <ProjectReference Include="..\Haipa.VmConfig.Primitives\Haipa.VmConfig.Primitives.csproj" />
+    <ProjectReference Include="..\Haipa.VmConfig.Primitives\Haipa.Primitives.csproj" />
+  </ItemGroup>
+
+
+
+  <ItemGroup>
+    <Folder Include="Events\" />
+    <Folder Include="Resources\Images\Events\" />
   </ItemGroup>
 
 </Project>

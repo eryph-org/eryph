@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Core;
 using LanguageExt;

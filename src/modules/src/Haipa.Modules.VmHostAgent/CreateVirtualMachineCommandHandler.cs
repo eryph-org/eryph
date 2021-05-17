@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
-using Haipa.VmConfig;
+using Haipa.Messages.Operations.Events;
+using Haipa.Messages.Resources.Machines.Commands;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
+using Haipa.Primitives.Resources.Machines.Config;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
-using Haipa.VmManagement.Data.Full;
 using Haipa.VmManagement.Data.Planned;
 using Haipa.VmManagement.Storage;
 using JetBrains.Annotations;
@@ -13,20 +15,21 @@ using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
+using VirtualMachineInfo = Haipa.VmManagement.Data.Full.VirtualMachineInfo;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
 namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class CreateVirtualMachineCommandHandler : VirtualMachineConfigCommandHandler, IHandleMessages<AcceptedOperationTask<CreateVirtualMachineCommand>>
+    internal class CreateVirtualMachineCommandHandler : VirtualMachineConfigCommandHandler, IHandleMessages<AcceptedOperationTaskEvent<CreateVirtualMachineCommand>>
     {
         public CreateVirtualMachineCommandHandler(IPowershellEngine engine, IBus bus) : base(engine, bus)
         {
         }
 
 
-        public Task Handle(AcceptedOperationTask<CreateVirtualMachineCommand> message)
+        public Task Handle(AcceptedOperationTaskEvent<CreateVirtualMachineCommand> message)
         {
             var command = message.Command;
             var config = command.Config;

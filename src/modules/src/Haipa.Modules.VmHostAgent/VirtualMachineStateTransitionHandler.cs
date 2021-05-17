@@ -1,7 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Commands;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Commands;
+using Haipa.Messages.Resources.Machines;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Full;

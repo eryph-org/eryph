@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources;
 
 namespace Haipa.Modules.Controller.Operations.Workflows
 {

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Commands;
+using Haipa.Messages.Operations.Events;
 using Rebus.Bus;
 using Rebus.Handlers;
 
@@ -17,7 +19,7 @@ namespace Haipa.Modules.Controller.Operations
 
         public async Task Handle(T message)
         {
-            await _bus.SendLocal(new AcceptedOperationTask<T>(message)).ConfigureAwait(false);
+            await _bus.SendLocal(new AcceptedOperationTaskEvent<T>(message)).ConfigureAwait(false);
 
             await _bus.Reply(new OperationTaskAcceptedEvent
             {

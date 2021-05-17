@@ -1,4 +1,4 @@
-﻿namespace Haipa.VmManagement.Data
+﻿namespace Haipa.Primitives
 {
     public class HostSettings
     {

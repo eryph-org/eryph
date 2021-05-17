@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Haipa.Messages.Commands;
 using Haipa.Messages.Operations;
 using Haipa.StateDb;
 using Haipa.StateDb.Model;
-using Haipa.VmConfig;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Rebus.Handlers;

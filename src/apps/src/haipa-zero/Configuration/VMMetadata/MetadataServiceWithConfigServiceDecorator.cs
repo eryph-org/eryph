@@ -2,7 +2,8 @@
 using System.Threading.Tasks;
 using Haipa.Configuration;
 using Haipa.Modules.Controller;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using LanguageExt;
 
 namespace Haipa.Runtime.Zero.Configuration.VMMetadata

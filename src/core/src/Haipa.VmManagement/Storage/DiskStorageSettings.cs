@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Haipa.Primitives;
 using Haipa.VmManagement.Data;
 using LanguageExt;
 

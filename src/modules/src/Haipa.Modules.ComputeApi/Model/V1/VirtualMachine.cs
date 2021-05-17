@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNet.OData.Query;
 

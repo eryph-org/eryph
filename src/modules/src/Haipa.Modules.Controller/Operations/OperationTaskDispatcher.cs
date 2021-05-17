@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Commands;
 using Newtonsoft.Json;
 using Rebus.Bus;
 

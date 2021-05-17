@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 
 namespace Haipa.StateDb.Model
 {

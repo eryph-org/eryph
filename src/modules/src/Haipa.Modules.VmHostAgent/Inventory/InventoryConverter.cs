@@ -6,7 +6,8 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Events;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.VmManagement.Data;
 using LanguageExt;
 

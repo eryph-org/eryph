@@ -2,7 +2,8 @@
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines.Config;
 using LanguageExt;
 
 namespace Haipa.VmManagement

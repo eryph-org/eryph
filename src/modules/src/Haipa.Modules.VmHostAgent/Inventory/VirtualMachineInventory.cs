@@ -5,14 +5,15 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Haipa.Messages.Events;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Disks;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Core;
 using Haipa.VmManagement.Networking;
 using Haipa.VmManagement.Storage;
 using LanguageExt;
-using VirtualMachineInfo = Haipa.Messages.Events.VirtualMachineInfo;
 
 namespace Haipa.Modules.VmHostAgent.Inventory
 {
@@ -25,7 +26,7 @@ namespace Haipa.Modules.VmHostAgent.Inventory
             _engine = engine;
         }
 
-        public async Task<Either<PowershellFailure, VMHostMachineInfo>> InventorizeHost()
+        public async Task<Either<PowershellFailure, VMHostMachineData>> InventorizeHost()
         {
             var standardSwitchId = Guid.Parse("c08cb7b8-9b3c-408e-8e30-5e16a3aeb444");
 
@@ -41,10 +42,10 @@ namespace Haipa.Modules.VmHostAgent.Inventory
                 let adapters = adapters1.SelectMany(x => x)
                 from networks in adapters.Map(a => GetNetworkFromAdapter(a, standardSwitchName)).Traverse(l => l)
                     .Map(x => x.Traverse(l => l)).ToAsync()
-                select new VMHostMachineInfo
+                select new VMHostMachineData
                 {
                     Name = Environment.MachineName,
-                    Switches = switches.Select(s => new VMHostSwitchInfo
+                    Switches = switches.Select(s => new VMHostSwitchData
                     {
                         Id = s.Value.Id.ToString()
                     }).ToArray(),
@@ -54,7 +55,7 @@ namespace Haipa.Modules.VmHostAgent.Inventory
             return res;
         }
 
-        private static Task<Either<PowershellFailure, MachineNetworkInfo>> GetNetworkFromAdapter(TypedPsObject<dynamic> adapterInfo, Option<string> standardSwitchName)
+        private static Task<Either<PowershellFailure, MachineNetworkData>> GetNetworkFromAdapter(TypedPsObject<dynamic> adapterInfo, Option<string> standardSwitchName)
         {
 
             var isStandardSwitchAdapter = adapterInfo.Value.SwitchName == standardSwitchName;
@@ -66,7 +67,7 @@ namespace Haipa.Modules.VmHostAgent.Inventory
             let networks = adapter.GetIPProperties().UnicastAddresses.Select(x =>
                 IPNetwork.Parse(x.Address.ToString(), (byte) x.PrefixLength)).ToArray()
 
-            select new MachineNetworkInfo
+            select new MachineNetworkData
             {
                 DefaultGateways = isStandardSwitchAdapter
                     ? networks.Select(x => x.FirstUsable.ToString()).ToArray()
@@ -95,20 +96,20 @@ namespace Haipa.Modules.VmHostAgent.Inventory
             _hostSettings = hostSettings;
         }
 
-        public Task<Either<PowershellFailure, VirtualMachineInfo>> InventorizeVM(TypedPsObject<VmManagement.Data.Full.VirtualMachineInfo> vmInfo)
+        public Task<Either<PowershellFailure, VirtualMachineData>> InventorizeVM(TypedPsObject<VmManagement.Data.Full.VirtualMachineInfo> vmInfo)
 
         {
             return from vm in Prelude.RightAsync<PowershellFailure, TypedPsObject<VmManagement.Data.Full.VirtualMachineInfo>>(vmInfo).ToEither()
                 from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _hostSettings, vm.Value.HardDrives)
 
-                    select new VirtualMachineInfo
+                    select new VirtualMachineData
                     {
                         VMId = vm.Value.Id,
                         MetadataId = GetMetadataId(vm),
                         Status = InventoryConverter.MapVmInfoStatusToVmStatus(vm.Value.State),
                         Name = vm.Value.Name,
                         Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.Value.HardDrives).ToArray(),
-                        NetworkAdapters = vm.Value.NetworkAdapters?.Map(a => new VirtualMachineNetworkAdapterInfo
+                        NetworkAdapters = vm.Value.NetworkAdapters?.Map(a => new VirtualMachineNetworkAdapterData
                         {
                             Id = a.Id,
                             AdapterName = a.Name,
@@ -160,13 +161,13 @@ namespace Haipa.Modules.VmHostAgent.Inventory
         }
 
 
-        private static IEnumerable<VirtualMachineDriveInfo> CreateHardDriveInfo(Seq<CurrentHardDiskDriveStorageSettings> storageSettings, IEnumerable<HardDiskDriveInfo> hds)
+        private static IEnumerable<VirtualMachineDriveData> CreateHardDriveInfo(Seq<CurrentHardDiskDriveStorageSettings> storageSettings, IEnumerable<HardDiskDriveInfo> hds)
         {
             foreach (var hd in hds)
             {
                 var storageSetting = storageSettings.FirstOrDefault(x => x.AttachedVMId == hd.Id);
 
-                var drive = new VirtualMachineDriveInfo
+                var drive = new VirtualMachineDriveData
                 {
                     Id = hd.Id,
                     ControllerLocation = hd.ControllerLocation,

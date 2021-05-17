@@ -5,7 +5,8 @@ using System.Linq;
 using System.Management;
 using System.Net;
 using System.Net.Sockets;
-using Haipa.Messages.Events;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.VmManagement.Data;
 
 namespace Haipa.VmManagement.Networking
@@ -40,10 +41,10 @@ namespace Haipa.VmManagement.Networking
 
     public static class VirtualNetworkQuery
     {
-        public static MachineNetworkInfo[] GetNetworksByAdapters(Guid vmId, IEnumerable<IVMNetworkAdapterWithConnection> networkAdapters)
+        public static MachineNetworkData[] GetNetworksByAdapters(Guid vmId, IEnumerable<IVMNetworkAdapterWithConnection> networkAdapters)
         {
             var scope = new ManagementScope(@"\\.\root\virtualization\v2");
-            var resultList = new List<MachineNetworkInfo>();
+            var resultList = new List<MachineNetworkData>();
 
             var networkNames = new List<string>();
 
@@ -56,7 +57,7 @@ namespace Haipa.VmManagement.Networking
                 obj.Path = path;
                 obj.Get();
 
-                var info = new MachineNetworkInfo
+                var info = new MachineNetworkData
                 {
                     Name = Networks.GenerateName(ref networkNames, networkAdapter),
                     IPAddresses = ObjectToStringArray(obj.GetPropertyValue("IPAddresses")),

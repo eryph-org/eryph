@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Haipa.Messages.Commands;
+using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Modules.Controller.Operations;
 using Haipa.StateDb;

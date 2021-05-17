@@ -2,9 +2,11 @@
 using System.IO;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
-using Haipa.VmConfig;
+using Haipa.Messages.Operations.Events;
+using Haipa.Messages.Resources.Images.Commands;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines.Config;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -12,7 +14,7 @@ using Rebus.Handlers;
 namespace Haipa.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    public class PrepareVirtualMachineImageCommandHandler : IHandleMessages<AcceptedOperationTask<PrepareVirtualMachineImageCommand>>
+    public class PrepareVirtualMachineImageCommandHandler : IHandleMessages<AcceptedOperationTaskEvent<PrepareVirtualMachineImageCommand>>
     {
         private readonly IBus _bus;
 
@@ -21,7 +23,7 @@ namespace Haipa.Modules.VmHostAgent
             _bus = bus;
         }
 
-        public Task Handle(AcceptedOperationTask<PrepareVirtualMachineImageCommand> message)
+        public Task Handle(AcceptedOperationTaskEvent<PrepareVirtualMachineImageCommand> message)
         {
             try
             {

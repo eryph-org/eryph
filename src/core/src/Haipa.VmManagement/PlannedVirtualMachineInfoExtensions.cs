@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
+using Haipa.Primitives.Resources.Machines.Config;
 using Haipa.VmManagement.Data.Planned;
 
 namespace Haipa.VmManagement

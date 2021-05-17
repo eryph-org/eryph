@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using Haipa.Messages.Commands;
+using Haipa.Messages.Resources.Commands;
 using Rebus.Bus;
 using Rebus.Handlers;
 

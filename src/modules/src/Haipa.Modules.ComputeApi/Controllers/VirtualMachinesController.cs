@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Linq;
 using System.Threading.Tasks;
-using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Modules.AspNetCore;
 using Haipa.Modules.AspNetCore.ApiProvider;
 using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;

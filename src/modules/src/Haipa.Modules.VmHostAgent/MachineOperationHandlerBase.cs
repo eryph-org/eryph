@@ -1,18 +1,21 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Haipa.Messages;
-using Haipa.Messages.Commands;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Commands;
+using Haipa.Messages.Operations.Events;
+using Haipa.Messages.Resources.Machines;
 using Haipa.VmManagement;
-using Haipa.VmManagement.Data.Full;
 using LanguageExt;
 using Rebus.Bus;
 using Rebus.Handlers;
+using VirtualMachineInfo = Haipa.VmManagement.Data.Full.VirtualMachineInfo;
+
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
 namespace Haipa.Modules.VmHostAgent
 {
-    internal abstract class MachineOperationHandlerBase<T> : IHandleMessages<AcceptedOperationTask<T>> where T: IOperationTaskCommand, IVMCommand
+    internal abstract class MachineOperationHandlerBase<T> : IHandleMessages<AcceptedOperationTaskEvent<T>> where T: IOperationTaskCommand, IVMCommand
     {
         private readonly IPowershellEngine _engine;
         private readonly IBus _bus;
@@ -26,7 +29,7 @@ namespace Haipa.Modules.VmHostAgent
         protected abstract Task<Either<PowershellFailure, Unit>> HandleCommand(
             TypedPsObject<VirtualMachineInfo> vmInfo, T command, IPowershellEngine engine);
 
-        public async Task Handle(AcceptedOperationTask<T> message)
+        public async Task Handle(AcceptedOperationTaskEvent<T> message)
         {
             var command = message.Command;
 

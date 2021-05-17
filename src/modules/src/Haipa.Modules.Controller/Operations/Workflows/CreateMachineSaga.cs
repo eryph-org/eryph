@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Haipa.Messages.Commands;
-using Haipa.Messages.Commands.OperationTasks;
 using Haipa.Messages.Operations;
+using Haipa.Messages.Operations.Events;
+using Haipa.Messages.Resources.Images.Commands;
+using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;

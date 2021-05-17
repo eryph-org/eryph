@@ -2,13 +2,14 @@
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using Haipa.Messages.Events;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.StateDb.Model;
 using JetBrains.Annotations;
 
 internal static class MachineNetworkInfoExtensions
 {
-    public static IEnumerable<MachineNetwork> ToMachineNetwork([CanBeNull] this IEnumerable<MachineNetworkInfo> networkInfos, long machineId)
+    public static IEnumerable<MachineNetwork> ToMachineNetwork([CanBeNull] this IEnumerable<MachineNetworkData> networkInfos, long machineId)
     {
         return networkInfos?.Select(mn => new MachineNetwork
         {

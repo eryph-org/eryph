@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Haipa.Messages.Events;
+using Haipa.Messages.Resources.Machines.Events;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.VmManagement;
 using Haipa.VmManagement.Data.Full;
 using Haipa.VmManagement.Networking;
@@ -44,7 +46,7 @@ namespace Haipa.Modules.VmHostAgent
                         new VirtualMachineNetworkChangedEvent
                         {
                             VMId = message.VmId,
-                            ChangedAdapter = new VirtualMachineNetworkAdapterInfo()
+                            ChangedAdapter = new VirtualMachineNetworkAdapterData()
                             {
                                 Id = a.Value.Id,
                                 AdapterName = a.Value.Name,
@@ -52,7 +54,7 @@ namespace Haipa.Modules.VmHostAgent
                                 VirtualSwitchName = a.Value.SwitchName,
                                 MACAddress = a.Value.MacAddress
                             },
-                            ChangedNetwork = new MachineNetworkInfo
+                            ChangedNetwork = new MachineNetworkData
                             {
                                 Name = Networks.GenerateName(ref networkNames, a.Value),
                                 IPAddresses = message.IPAddresses,

@@ -2,7 +2,8 @@
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
-using Haipa.VmConfig;
+using Haipa.Primitives;
+using Haipa.Primitives.Resources.Machines;
 using Haipa.VmManagement.Data;
 using Haipa.VmManagement.Data.Core;
 using Haipa.VmManagement.Data.Full;
