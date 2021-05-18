@@ -4,7 +4,7 @@ namespace Haipa.Messages.Resources.Machines
 {
     public interface IVMCommand
     {
-        long MachineId { get; set; }
+        Guid MachineId { get; set; }
         Guid VMId { get; set; }
     }
 }

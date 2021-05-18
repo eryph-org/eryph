@@ -143,7 +143,7 @@ namespace Haipa.Modules.Controller.Inventory
                         {
                             var oldMetadataId = metadata.Id;
                             metadata.Id = Guid.NewGuid();
-                            metadata.MachineId = IdGenerator.GenerateId();
+                            metadata.MachineId = Guid.NewGuid();
                             metadata.VMId = vmInfo.VMId;
 
                             await _dispatcher.StartNew(new UpdateVirtualMachineMetadataCommand
@@ -155,8 +155,8 @@ namespace Haipa.Modules.Controller.Inventory
                             });
                         }
 
-                        if (metadata.MachineId == 0)
-                            metadata.MachineId = IdGenerator.GenerateId();
+                        if (metadata.MachineId == Guid.Empty)
+                            metadata.MachineId = Guid.NewGuid();
 
                         await _vmDataService.AddNewVM(
                             VirtualMachineInfoToMachine(vmInfo, hostMachine, metadata.MachineId),
@@ -183,7 +183,7 @@ namespace Haipa.Modules.Controller.Inventory
         }
 
         private VirtualMachine VirtualMachineInfoToMachine(VirtualMachineData vmInfo, VMHostMachine hostMachine,
-            long machineId)
+            Guid machineId)
         {
             return new VirtualMachine
             {

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -9,7 +10,7 @@ using JetBrains.Annotations;
 internal static class MachineNetworkInfoExtensions
 {
     public static IEnumerable<MachineNetwork> ToMachineNetwork(
-        [CanBeNull] this IEnumerable<MachineNetworkData> networkInfos, long machineId)
+        [CanBeNull] this IEnumerable<MachineNetworkData> networkInfos, Guid machineId)
     {
         return networkInfos?.Select(mn => new MachineNetwork
         {

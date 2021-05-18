@@ -7,7 +7,7 @@ namespace Haipa.StateDb.Model
     {
         public Guid Id { get; set; }
 
-        public long MachineId { get; set; }
+        public Guid MachineId { get; set; }
         public Machine Machine { get; set; }
 
         public string Name { get; set; }

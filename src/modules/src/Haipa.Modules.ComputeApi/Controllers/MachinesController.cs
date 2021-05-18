@@ -57,7 +57,7 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [EnableMappedQuery]
         public IActionResult Get([FromODataUri] string key)
         {
-            return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == Convert.ToInt64(key))
+            return Ok(SingleResult.Create(_db.Machines.Where(c => c.Id == Guid.Parse(key))
                 .ForMappedQuery<Machine>()));
         }
 
@@ -69,7 +69,7 @@ namespace Haipa.Modules.ComputeApi.Controllers
         {
             return FindMachine(key).MapAsync(id =>
                     Accepted(_operationManager.StartNew<DestroyResourcesCommand>(
-                            new Resource(ResourceType.Machine, Convert.ToInt64(id))
+                            new Resource(ResourceType.Machine, (id))
                         )
                     )).ToAsync()
                 .Match(r => r, l => l);
@@ -101,7 +101,7 @@ namespace Haipa.Modules.ComputeApi.Controllers
         public async Task<IActionResult> Update([FromODataUri] string key,
             [FromBody] MachineProvisioningSettings settings)
         {
-            var machine = _db.Machines.FirstOrDefault(op => op.Id == Convert.ToInt64(key));
+            var machine = _db.Machines.FirstOrDefault(op => op.Id == Guid.Parse(key));
 
             if (machine == null)
                 return NotFound();
@@ -116,7 +116,7 @@ namespace Haipa.Modules.ComputeApi.Controllers
                     Config = machineConfig,
                     AgentName = machine.AgentName
                 },
-                new Resource(ResourceType.Machine, Convert.ToInt64(key))
+                new Resource(ResourceType.Machine, Guid.Parse(key))
             ).ConfigureAwait(false));
         }
 
@@ -128,7 +128,7 @@ namespace Haipa.Modules.ComputeApi.Controllers
         {
             return FindMachine(key).MapAsync(id =>
                     Accepted(_operationManager.StartNew<StartMachineCommand>(
-                        new Resource(ResourceType.Machine, Convert.ToInt64(id))))
+                        new Resource(ResourceType.Machine, id)))
                 ).ToAsync()
                 .Match(r => r, l => l);
         }
@@ -141,15 +141,15 @@ namespace Haipa.Modules.ComputeApi.Controllers
         {
             return FindMachine(key).MapAsync(id =>
                     Accepted(_operationManager.StartNew<StopMachineCommand>(
-                        new Resource(ResourceType.Machine, Convert.ToInt64(id))))
+                        new Resource(ResourceType.Machine, id)))
                 ).ToAsync()
                 .Match(r => r, l => l);
         }
 
 
-        private async Task<Either<IActionResult, long>> FindMachine(string key)
+        private async Task<Either<IActionResult, Guid>> FindMachine(string key)
         {
-            var vm = await _db.FindAsync<StateDb.Model.Machine>(Convert.ToInt64(key));
+            var vm = await _db.FindAsync<StateDb.Model.Machine>(Guid.Parse(key));
             if (vm == null)
                 return NotFound();
 

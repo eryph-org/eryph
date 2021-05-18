@@ -10,7 +10,7 @@ namespace Haipa.Modules.Controller
 {
     internal interface IVirtualMachineDataService
     {
-        Task<Option<VirtualMachine>> GetVM(long id);
+        Task<Option<VirtualMachine>> GetVM(Guid id);
         Task<VirtualMachine> AddNewVM(VirtualMachine vm, VirtualMachineMetadata metadata);
     }
 
@@ -26,7 +26,7 @@ namespace Haipa.Modules.Controller
             _metadataService = metadataService;
         }
 
-        public async Task<Option<VirtualMachine>> GetVM(long id)
+        public async Task<Option<VirtualMachine>> GetVM(Guid id)
         {
             var res = await _repository.GetByIdAsync(id);
             return res;
@@ -35,7 +35,7 @@ namespace Haipa.Modules.Controller
         public async Task<VirtualMachine> AddNewVM([NotNull] VirtualMachine vm,
             [NotNull] VirtualMachineMetadata metadata)
         {
-            if (vm.Id == 0)
+            if (vm.Id == Guid.Empty)
                 throw new ArgumentException($"{nameof(VirtualMachine.Id)} is missing", nameof(vm));
 
             if (vm.VMId == null)

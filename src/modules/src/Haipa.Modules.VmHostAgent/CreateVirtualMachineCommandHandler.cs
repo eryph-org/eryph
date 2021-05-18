@@ -39,7 +39,7 @@ namespace Haipa.Modules.VmHostAgent
             var hostSettings = HostSettingsBuilder.GetHostSettings();
 
             var planStorageSettings = Prelude.fun(() =>
-                VMStorageSettings.Plan(hostSettings, LongToString(message.Command.NewMachineId), config,
+                VMStorageSettings.Plan(hostSettings, LongToString(message.Command.StorageId), config,
                     Option<VMStorageSettings>.None).ToAsync());
 
             var getTemplate = Prelude.fun(() =>
@@ -101,7 +101,7 @@ namespace Haipa.Modules.VmHostAgent
 
         private Task<Either<PowershellFailure, VirtualMachineMetadata>> CreateMetadata(
             Option<PlannedVirtualMachineInfo> template,
-            TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config, long machineId)
+            TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config, Guid machineId)
         {
             var metadata = new VirtualMachineMetadata
             {

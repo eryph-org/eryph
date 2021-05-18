@@ -47,7 +47,7 @@ namespace Haipa.Modules.ComputeApi.Controllers
         [EnableMappedQuery]
         public IActionResult Get([FromODataUri] string key)
         {
-            return Ok(SingleResult.Create(_db.VirtualMachines.Where(c => c.Id == Convert.ToInt64(key))
+            return Ok(SingleResult.Create(_db.VirtualMachines.Where(c => c.Id == Guid.Parse(key))
                 .ForMappedQuery<VirtualMachine>()));
         }
     }

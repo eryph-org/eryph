@@ -1,7 +1,9 @@
-﻿namespace Haipa.Modules.Controller.Operations.Workflows
+﻿using System;
+
+namespace Haipa.Modules.Controller.Operations.Workflows
 {
     public class DestroyMachineSagaData : TaskWorkflowSagaData
     {
-        public long MachineId { get; set; }
+        public Guid MachineId { get; set; }
     }
 }
