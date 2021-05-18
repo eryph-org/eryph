@@ -4,6 +4,7 @@ using Haipa.Messages;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.ModuleCore;
+using Haipa.Modules.Controller.DataServices;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Resources.Machines;
 using JetBrains.Annotations;

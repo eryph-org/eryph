@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using Dbosoft.Hosuto.HostedServices;
 using Haipa.Messages;
 using Haipa.ModuleCore;
+using Haipa.Modules.Controller.DataServices;
 using Haipa.Modules.Controller.IdGenerator;
 using Haipa.Modules.Controller.Inventory;
 using Haipa.Modules.Controller.Operations;
@@ -38,10 +38,13 @@ namespace Haipa.Modules.Controller
             container.Collection.Append(typeof(IHandleMessages<>), typeof(FailedOperationHandler<>));
 
 
+            container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
             container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
             container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
 
             container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
+            container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
+            container.Register<IVirtualDiskDataService, VirtualDiskDataService>(Lifestyle.Scoped);
 
 
             container.RegisterSingleton(() => new Id64Generator());

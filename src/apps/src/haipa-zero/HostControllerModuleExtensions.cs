@@ -3,10 +3,13 @@ using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.Configuration;
 using Haipa.Modules.Controller;
-using Haipa.Resources.Machines;
+using Haipa.Modules.Controller.DataServices;
+using Haipa.Runtime.Zero.Configuration.Storage;
 using Haipa.Runtime.Zero.Configuration.VMMetadata;
+using Haipa.StateDb.Model;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
+using VirtualMachineMetadata = Haipa.Resources.Machines.VirtualMachineMetadata;
 
 namespace Haipa.Runtime.Zero
 {
@@ -24,6 +27,8 @@ namespace Haipa.Runtime.Zero
 
             container.RegisterSingleton<IConfigReaderService<VirtualMachineMetadata>, VMMetadataConfigReaderService>();
             container.RegisterSingleton<IConfigWriterService<VirtualMachineMetadata>, VMMetadataConfigWriterService>();
+            container.RegisterSingleton<IConfigReaderService<VirtualDisk>, VhdReaderService>();
+            container.RegisterSingleton<IConfigWriterService<VirtualDisk>, VhdWriterService>();
 
 
             container.Register<IPlacementCalculator, ZeroAgentPlacementCalculator>();
@@ -46,11 +51,21 @@ namespace Haipa.Runtime.Zero
                         .GetRequiredService<IConfigWriterService<VirtualMachineMetadata>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigReaderService<VirtualMachineMetadata>>, Lifestyle.Scoped);
+                    container.Register(context.ModulesHostServices
+                        .GetRequiredService<IConfigWriterService<VirtualDisk>>, Lifestyle.Scoped);
+                    container.Register(context.ModulesHostServices
+                        .GetRequiredService<IConfigReaderService<VirtualDisk>>, Lifestyle.Scoped);
+
                     container.RegisterDecorator(typeof(IVirtualMachineMetadataService),
                         typeof(MetadataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
 
+                    container.RegisterDecorator(typeof(IVirtualDiskDataService),
+                        typeof(VirtualDiskDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
+
                     container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>();
+                    container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>();
+
                 };
             }
 

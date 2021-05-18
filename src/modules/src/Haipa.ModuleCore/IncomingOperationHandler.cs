@@ -4,7 +4,6 @@ using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Commands;
 using Haipa.Messages.Operations.Events;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Rebus.Bus;
 using Rebus.Handlers;
 

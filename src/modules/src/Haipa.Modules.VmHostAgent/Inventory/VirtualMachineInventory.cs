@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Management;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Text.RegularExpressions;
@@ -13,6 +14,7 @@ using Haipa.VmManagement.Data.Full;
 using Haipa.VmManagement.Networking;
 using Haipa.VmManagement.Storage;
 using LanguageExt;
+using Microsoft.Win32;
 
 namespace Haipa.Modules.VmHostAgent.Inventory
 {
@@ -49,7 +51,8 @@ namespace Haipa.Modules.VmHostAgent.Inventory
                     {
                         Id = s.Value.Id.ToString()
                     }).ToArray(),
-                    Networks = networks.ToArray()
+                    Networks = networks.ToArray(),
+                    HardwareId = GetHostUuid() ?? GetHostMachineGuid()
                 }).ToEither();
 
             return res;
@@ -84,6 +87,49 @@ namespace Haipa.Modules.VmHostAgent.Inventory
                 };
 
             return networkInfo.ToAsync().ToEither();
+        }
+
+
+        private static string GetHostUuid()
+        {
+            var uiid = "";
+            try
+            {
+                var uuidSearcher = new ManagementObjectSearcher("SELECT UUId FROM Win32_ComputerSystemProduct");
+                foreach (var uuidSearcherResult in uuidSearcher.Get())
+                {
+                    uiid = uuidSearcherResult["UUId"] as string;
+
+                    if (uiid == "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")
+                        uiid = null;
+                    break;
+                }
+
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            return uiid;
+        }
+
+        private static string GetHostMachineGuid()
+        {
+            var guid = "";
+            try
+            {
+                using (var registryKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Cryptography"))
+                {
+                    if (registryKey != null) guid = registryKey.GetValue("MachineGuid") as string;
+                }
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            return guid;
         }
     }
 

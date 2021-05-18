@@ -3,11 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.ModuleCore;
-using Haipa.Modules.Controller.IdGenerator;
-using Haipa.Modules.Controller.Operations;
-using Haipa.StateDb;
+using Haipa.Modules.Controller.DataServices;
 using Haipa.StateDb.Model;
-using Microsoft.EntityFrameworkCore;
 using Rebus.Handlers;
 
 namespace Haipa.Modules.Controller.Inventory
@@ -15,41 +12,40 @@ namespace Haipa.Modules.Controller.Inventory
     internal class UpdateVMHostInventoryCommandHandler : UpdateInventoryCommandHandlerBase,
         IHandleMessages<UpdateVMHostInventoryCommand>
     {
-        public UpdateVMHostInventoryCommandHandler(StateStoreContext stateStoreContext, Id64Generator idGenerator,
-            IVirtualMachineMetadataService metadataService, IOperationDispatcher dispatcher,
-            IVirtualMachineDataService vmDataService) : base(stateStoreContext, idGenerator, metadataService,
-            dispatcher, vmDataService)
+        private readonly IVMHostMachineDataService _vmHostDataService;
+
+        public UpdateVMHostInventoryCommandHandler(
+            IVirtualMachineMetadataService metadataService, 
+            IOperationDispatcher dispatcher,
+            IVirtualMachineDataService vmDataService,
+            IVirtualDiskDataService vhdDataService, 
+            IVMHostMachineDataService vmHostDataService) : base(metadataService, dispatcher, vmDataService, vhdDataService)
         {
+            _vmHostDataService = vmHostDataService;
         }
 
         public async Task Handle(UpdateVMHostInventoryCommand message)
         {
-            var newMachine =
-                await StateStoreContext.VMHosts.FirstOrDefaultAsync(x => x.Name == message.HostInventory.Name)
-                ?? new VMHostMachine
+            var newMachineState = await 
+                _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId).IfNoneAsync(
+                () => new VMHostMachine
                 {
                     Id = Guid.NewGuid(),
                     AgentName = message.HostInventory.Name,
-                    Name = message.HostInventory.Name
-                };
+                    Name = message.HostInventory.Name,
+                    HardwareId = message.HostInventory.HardwareId
+                });
 
-            newMachine.Networks = message.HostInventory.Networks.ToMachineNetwork(newMachine.Id).ToList();
-            newMachine.Status = MachineStatus.Running;
+            newMachineState.Networks = message.HostInventory.Networks.ToMachineNetwork(newMachineState.Id).ToList();
+            newMachineState.Status = MachineStatus.Running;
 
-            var existingMachine =
-                await StateStoreContext.VMHosts.FirstOrDefaultAsync(x => x.Name == message.HostInventory.Name);
 
-            if (existingMachine != null)
-            {
-                MergeMachineNetworks(newMachine, existingMachine);
-            }
-            else
-            {
-                existingMachine = newMachine;
-                await StateStoreContext.AddAsync(newMachine);
-            }
+            var existingMachine = await _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
+                .IfNoneAsync(() => _vmHostDataService.AddNewVMHost(newMachineState));
 
+            MergeMachineNetworks(newMachineState, existingMachine);
             await UpdateVMs(message.VMInventory, existingMachine);
+
         }
     }
 }

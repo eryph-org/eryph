@@ -37,6 +37,14 @@ namespace Haipa.Runtime.Zero.Configuration
             return metadataConfigPath;
         }
 
+        public static string GetStorageConfigPath()
+        {
+            var vmConfigPath = GetVMConfigPath();
+            var metadataConfigPath = Path.Combine(vmConfigPath, "storage");
+
+            return metadataConfigPath;
+        }
+
 
         public static void EnsureConfiguration()
         {
@@ -44,6 +52,7 @@ namespace Haipa.Runtime.Zero.Configuration
             Config.EnsurePath(GetClientConfigPath());
             Config.EnsurePath(GetVMConfigPath());
             Config.EnsurePath(GetMetadataConfigPath());
+            Config.EnsurePath(GetStorageConfigPath());
 
             SystemClientGenerator.EnsureSystemClient();
 

@@ -36,6 +36,8 @@ namespace Haipa.StateDb.Model
         }
 
         public virtual List<VirtualMachine> VMs { get; set; }
+
+        public string HardwareId { get; set; }
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
