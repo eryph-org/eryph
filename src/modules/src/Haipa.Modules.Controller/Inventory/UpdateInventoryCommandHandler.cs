@@ -1,38 +1,34 @@
 ﻿using System.Threading.Tasks;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.ModuleCore;
-using Haipa.Modules.Controller;
-using Haipa.Modules.Controller.IdGenerator;
-using Haipa.Modules.Controller.Inventory;
-using Haipa.Modules.Controller.Operations;
-using Haipa.StateDb;
-using Microsoft.EntityFrameworkCore;
+using Haipa.Modules.Controller.DataServices;
+using JetBrains.Annotations;
 using Rebus.Handlers;
 
 namespace Haipa.Modules.Controller.Inventory
 {
-}
 
-
-internal class UpdateVMInventoryCommandHandler : UpdateInventoryCommandHandlerBase,
-    IHandleMessages<UpdateInventoryCommand>
-{
-    public UpdateVMInventoryCommandHandler(StateStoreContext stateStoreContext, Id64Generator idGenerator,
-        IVirtualMachineMetadataService metadataService, IOperationDispatcher dispatcher,
-        IVirtualMachineDataService vmDataService) : base(stateStoreContext, idGenerator, metadataService,
-        dispatcher, vmDataService)
+    [UsedImplicitly]
+    internal class UpdateVMInventoryCommandHandler : UpdateInventoryCommandHandlerBase,
+        IHandleMessages<UpdateInventoryCommand>
     {
-    }
+        private readonly IVMHostMachineDataService _vmHostDataService;
+
+        public UpdateVMInventoryCommandHandler(
+            IVirtualMachineMetadataService metadataService,
+            IOperationDispatcher dispatcher,
+            IVirtualMachineDataService vmDataService,
+            IVirtualDiskDataService vhdDataService, IVMHostMachineDataService vmHostDataService) :
+            base(metadataService, dispatcher, vmDataService, vhdDataService)
+        {
+            _vmHostDataService = vmHostDataService;
+        }
 
 
-    public async Task Handle(UpdateInventoryCommand message)
-    {
-        var hostMachine = await StateStoreContext.VMHosts
-            .FirstOrDefaultAsync(x => x.Name == message.AgentName);
-
-        if (hostMachine == null)
-            return;
-
-        await UpdateVMs(message.Inventory, hostMachine);
+        public Task Handle(UpdateInventoryCommand message)
+        {
+            return _vmHostDataService.GetVMHostByAgentName(message.AgentName)
+                .IfSomeAsync(hostMachine => UpdateVMs(message.Inventory, hostMachine));
+        }
     }
 }

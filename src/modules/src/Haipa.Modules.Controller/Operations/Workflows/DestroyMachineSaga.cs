@@ -3,6 +3,7 @@ using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Commands;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.ModuleCore;
+using Haipa.Modules.Controller.DataServices;
 using Haipa.Resources;
 using JetBrains.Annotations;
 using LanguageExt.UnsafeValueAccess;

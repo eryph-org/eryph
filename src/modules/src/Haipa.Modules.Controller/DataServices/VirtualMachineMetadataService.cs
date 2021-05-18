@@ -6,7 +6,7 @@ using JetBrains.Annotations;
 using LanguageExt;
 using Newtonsoft.Json;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.DataServices
 {
     public interface IVirtualMachineMetadataService
     {

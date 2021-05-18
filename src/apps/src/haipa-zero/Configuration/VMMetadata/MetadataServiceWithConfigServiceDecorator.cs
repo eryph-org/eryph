@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Haipa.Configuration;
-using Haipa.Modules.Controller;
+using Haipa.Modules.Controller.DataServices;
 using Haipa.Resources.Machines;
 using LanguageExt;
 

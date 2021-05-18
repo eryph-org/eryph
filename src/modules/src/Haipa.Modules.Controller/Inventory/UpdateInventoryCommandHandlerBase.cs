@@ -4,12 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.ModuleCore;
-using Haipa.Modules.Controller.IdGenerator;
-using Haipa.Modules.Controller.Operations;
+using Haipa.Modules.Controller.DataServices;
 using Haipa.Resources.Disks;
 using Haipa.Resources.Machines;
-using Haipa.StateDb;
 using Haipa.StateDb.Model;
+using LanguageExt;
 
 namespace Haipa.Modules.Controller.Inventory
 {
@@ -17,21 +16,19 @@ namespace Haipa.Modules.Controller.Inventory
     {
         private readonly IOperationDispatcher _dispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
-        protected readonly Id64Generator IdGenerator;
+        private readonly IVirtualDiskDataService _vhdDataService;
 
         protected readonly IVirtualMachineMetadataService MetadataService;
-        protected readonly StateStoreContext StateStoreContext;
 
 
-        protected UpdateInventoryCommandHandlerBase(StateStoreContext stateStoreContext, Id64Generator idGenerator,
+        protected UpdateInventoryCommandHandlerBase(
             IVirtualMachineMetadataService metadataService, IOperationDispatcher dispatcher,
-            IVirtualMachineDataService vmDataService)
+            IVirtualMachineDataService vmDataService, IVirtualDiskDataService vhdDataService)
         {
-            StateStoreContext = stateStoreContext;
-            IdGenerator = idGenerator;
             MetadataService = metadataService;
             _dispatcher = dispatcher;
             _vmDataService = vmDataService;
+            _vhdDataService = vhdDataService;
         }
 
         private static void SelectAllParentDisks(ref List<DiskInfo> parentDisks, DiskInfo disk)
@@ -56,24 +53,25 @@ namespace Haipa.Modules.Controller.Inventory
 
             var addedDisks = new List<VirtualDisk>();
 
-            VirtualDisk LookupVirtualDisk(DiskInfo diskInfo)
+            async Task<Option<VirtualDisk>> LookupVirtualDisk(DiskInfo diskInfo)
             {
-                var disksDataCandidates = StateStoreContext.VirtualDisks.Where(
+                var disksDataCandidates = await _vhdDataService.FindVHDByLocation(
+                        diskInfo.DataStore,
+                        diskInfo.Project,
+                        diskInfo.Environment,
+                        diskInfo.StorageIdentifier,
+                        diskInfo.Name)
+                    .Map(l => addedDisks.Append(l))
+                    .Map(l => l.Filter(
                         x => x.DataStore == diskInfo.DataStore &&
                              x.Project == diskInfo.Project &&
                              x.Environment == diskInfo.Environment &&
                              x.StorageIdentifier == diskInfo.StorageIdentifier &&
-                             x.Name == diskInfo.Name).AsEnumerable()
-                    .Append(addedDisks
-                        .Where(
-                            x => x.DataStore == diskInfo.DataStore &&
-                                 x.Project == diskInfo.Project &&
-                                 x.Environment == diskInfo.Environment &&
-                                 x.StorageIdentifier == diskInfo.StorageIdentifier &&
-                                 x.Name == diskInfo.Name)
-                    ).ToArray();
+                             x.Name == diskInfo.Name))
+                    .Map(x => x.ToArray());
 
-                VirtualDisk disk;
+
+                Option<VirtualDisk> disk;
                 if (disksDataCandidates.Length <= 1)
                     disk = disksDataCandidates.FirstOrDefault();
                 else
@@ -86,44 +84,53 @@ namespace Haipa.Modules.Controller.Inventory
 
             foreach (var diskInfo in diskInfos)
             {
-                var disk = LookupVirtualDisk(diskInfo);
-                if (disk == null)
+                var disk = await LookupVirtualDisk(diskInfo)
+                    .IfNoneAsync(async () =>
                 {
-                    disk = new VirtualDisk
+                    var d = new VirtualDisk
                     {
                         Id = diskInfo.Id,
+                        Name = diskInfo.Name,
                         DataStore = diskInfo.DataStore,
                         Project = diskInfo.Project,
                         Environment = diskInfo.Environment,
                         StorageIdentifier = diskInfo.StorageIdentifier
                     };
-                    await StateStoreContext.VirtualDisks.AddAsync(disk);
-                    addedDisks.Add(disk);
-                }
+                    d = await _vhdDataService.AddNewVHD(d);
+                    addedDisks.Add(d);
+                    return d;
+                });
 
                 diskInfo.Id = disk.Id; // copy id of existing record
-                disk.Name = diskInfo.Name;
                 disk.FileName = diskInfo.FileName;
                 disk.Path = diskInfo.Path;
                 disk.SizeBytes = diskInfo.SizeBytes;
+                await _vhdDataService.UpdateVhd(disk);
+
             }
 
-            //second loop to assign parents
+            //second loop to assign parents and to update state db
             foreach (var diskInfo in diskInfos)
             {
-                var currentDisk = LookupVirtualDisk(diskInfo);
-                if (currentDisk == null)
-                    continue; // should not happen
+                await LookupVirtualDisk(diskInfo).IfSomeAsync(async currentDisk =>
+               {
+                   if (diskInfo.Parent == null)
+                   {
+                       currentDisk.Parent = null;
+                       return;
+                   }
 
-                if (diskInfo.Parent == null)
-                {
-                    currentDisk.Parent = null;
-                    continue;
-                }
+                   await LookupVirtualDisk(diskInfo.Parent)
+                       .IfSomeAsync(parentDisk =>
+                       {
+                           currentDisk.Parent = parentDisk;
 
-                var parentDisk = LookupVirtualDisk(diskInfo.Parent);
-                currentDisk.Parent = parentDisk;
+                       });
+                   await _vhdDataService.UpdateVhd(currentDisk);
+
+               });
             }
+
 
             foreach (var vmInfo in vms)
             {
@@ -133,10 +140,10 @@ namespace Haipa.Modules.Controller.Inventory
 
                 optionalMetadata.IfSome(async metadata =>
                 {
-                    var existingMachine = await StateStoreContext.VirtualMachines.FindAsync(metadata.MachineId);
+                    var optionalMachine = (await _vmDataService.GetVM(metadata.MachineId));
 
                     //machine not found or metadata is assigned to new VM - a new VM resource will be created)
-                    if (existingMachine == null || metadata.VMId != vmInfo.VMId)
+                    if (optionalMachine.IsNone || metadata.VMId != vmInfo.VMId)
                     {
                         // create new metadata for machines that have been imported
                         if (metadata.VMId != vmInfo.VMId)
@@ -166,18 +173,23 @@ namespace Haipa.Modules.Controller.Inventory
                         return;
                     }
 
-                    // update data for existing machine
-                    var newMachine = VirtualMachineInfoToMachine(vmInfo, hostMachine, existingMachine.Id);
-                    existingMachine.Name = newMachine.Name;
-                    existingMachine.Status = newMachine.Status;
-                    existingMachine.Host = hostMachine;
-                    existingMachine.AgentName = newMachine.AgentName;
+                    optionalMachine.IfSome(existingMachine =>
+                    {
+                        // update data for existing machine
+                        var newMachine = VirtualMachineInfoToMachine(vmInfo, hostMachine, existingMachine.Id);
+                        existingMachine.Name = newMachine.Name;
+                        existingMachine.Status = newMachine.Status;
+                        existingMachine.Host = hostMachine;
+                        existingMachine.AgentName = newMachine.AgentName;
 
-                    existingMachine.Networks ??= new List<MachineNetwork>();
-                    MergeMachineNetworks(newMachine, existingMachine);
+                        existingMachine.Networks ??= new List<MachineNetwork>();
+                        MergeMachineNetworks(newMachine, existingMachine);
 
-                    existingMachine.NetworkAdapters = newMachine.NetworkAdapters;
-                    existingMachine.Drives = newMachine.Drives;
+                        existingMachine.NetworkAdapters = newMachine.NetworkAdapters;
+                        existingMachine.Drives = newMachine.Drives;
+                    });
+
+
                 });
             }
         }
@@ -206,7 +218,7 @@ namespace Haipa.Modules.Controller.Inventory
                     Id = d.Id,
                     MachineId = machineId,
                     Type = d.Type,
-                    AttachedDisk = d.Disk != null ? StateStoreContext.Find<VirtualDisk>(d.Disk.Id) : null
+                    AttachedDisk = d.Disk != null ? _vhdDataService.GetVHD(d.Disk.Id).GetAwaiter().GetResult().IfNoneUnsafe(()=>null): null
                 }).ToList(),
                 Networks = vmInfo.Networks?.ToMachineNetwork(machineId).ToList()
             };
@@ -235,24 +247,26 @@ namespace Haipa.Modules.Controller.Inventory
         {
             //merge Networks 
             var networkList = newMachine.Networks.ToList();
-            var existingNetworksListUniqueName = existingMachine.Networks.ToList().Distinct((x, y) => x.Name == y.Name);
+            var existingNetworksList = existingMachine.Networks?.ToList() ?? new List<MachineNetwork>();
+
+            var existingNetworksListUniqueName = existingNetworksList.Distinct((x, y) => x.Name == y.Name);
 
             foreach (var existingNetwork in existingNetworksListUniqueName)
             {
                 var networksWithSameName =
-                    existingMachine.Networks.Where(x => x.Name == existingNetwork.Name).ToArray();
+                    existingNetworksList.Where(x => x.Name == existingNetwork.Name).ToArray();
 
                 var deleteNetwork = networksWithSameName.Length > 1 || //delete if name is not unique
-                                    //delete also, if there is a reference in current machine but no longer in new machine
-                                    existingMachine.Networks.All(x => x.Name != existingNetwork.Name);
+                                                                       //delete also, if there is a reference in current machine but no longer in new machine
+                                    existingNetworksList.All(x => x.Name != existingNetwork.Name);
 
                 if (deleteNetwork)
-                    existingMachine.Networks.RemoveAll(x => x.Name == existingNetwork.Name);
+                    existingNetworksList.RemoveAll(x => x.Name == existingNetwork.Name);
             }
 
             foreach (var newNetwork in networkList.ToArray())
             {
-                var existingNetwork = existingMachine.Networks.FirstOrDefault(x => x.Name == newNetwork.Name);
+                var existingNetwork = existingNetworksList.FirstOrDefault(x => x.Name == newNetwork.Name);
                 if (existingNetwork == null) continue;
                 existingNetwork.DnsServerAddresses = newNetwork.DnsServerAddresses;
                 existingNetwork.IPv4DefaultGateway = newNetwork.IPv4DefaultGateway;
@@ -265,7 +279,8 @@ namespace Haipa.Modules.Controller.Inventory
                 networkList.Remove(newNetwork);
             }
 
-            existingMachine.Networks.AddRange(networkList);
+            existingNetworksList.AddRange(networkList);
+            existingMachine.Networks = existingNetworksList;
         }
     }
 }

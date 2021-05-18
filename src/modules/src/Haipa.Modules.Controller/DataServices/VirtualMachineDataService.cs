@@ -6,7 +6,7 @@ using JetBrains.Annotations;
 using LanguageExt;
 using VirtualMachineMetadata = Haipa.Resources.Machines.VirtualMachineMetadata;
 
-namespace Haipa.Modules.Controller
+namespace Haipa.Modules.Controller.DataServices
 {
     internal interface IVirtualMachineDataService
     {
