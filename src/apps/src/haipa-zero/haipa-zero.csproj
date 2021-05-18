@@ -44,6 +44,7 @@
   </ItemGroup>
   <PropertyGroup>
     <PackageTags>9412ee86-c21b-4eb8-bd89-f650fbf44931</PackageTags>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>TRACE</DefineConstants>
