@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Haipa.Messages.Resources.Machines.Commands;
 using Haipa.ModuleCore;
@@ -27,7 +28,7 @@ namespace Haipa.Modules.Controller.Inventory
                 await StateStoreContext.VMHosts.FirstOrDefaultAsync(x => x.Name == message.HostInventory.Name)
                 ?? new VMHostMachine
                 {
-                    Id = IdGenerator.GenerateId(),
+                    Id = Guid.NewGuid(),
                     AgentName = message.HostInventory.Name,
                     Name = message.HostInventory.Name
                 };

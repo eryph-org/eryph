@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Haipa.Resources;
 using Newtonsoft.Json;
@@ -8,7 +9,7 @@ namespace Haipa.StateDb.Model
 {
     public class Resource
     {
-        [Key] public long Id { get; set; }
+        [Key] public Guid Id { get; set; }
 
         public ResourceType ResourceType { get; set; }
 

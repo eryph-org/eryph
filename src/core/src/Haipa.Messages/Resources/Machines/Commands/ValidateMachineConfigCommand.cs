@@ -1,4 +1,5 @@
-﻿using Haipa.Messages.Operations.Commands;
+﻿using System;
+using Haipa.Messages.Operations.Commands;
 using Haipa.Resources.Machines.Config;
 
 namespace Haipa.Messages.Resources.Machines.Commands
@@ -7,6 +8,6 @@ namespace Haipa.Messages.Resources.Machines.Commands
     public class ValidateMachineConfigCommand
     {
         public MachineConfig Config { get; set; }
-        public long MachineId { get; set; }
+        public Guid MachineId { get; set; }
     }
 }

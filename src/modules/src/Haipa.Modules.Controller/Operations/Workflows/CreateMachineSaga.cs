@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Haipa.Messages.Operations.Events;
 using Haipa.Messages.Resources.Images.Commands;
 using Haipa.Messages.Resources.Machines.Commands;
@@ -84,13 +85,14 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             return FailOrRun(message, () =>
             {
                 Data.State = CreateVMState.ImagePrepared;
-                Data.MachineId = _idGenerator.GenerateId();
+                Data.MachineId = Guid.NewGuid();
 
                 return _taskDispatcher.StartNew(Data.OperationId,new CreateVirtualMachineCommand
                 {
                     Config = Data.Config,
                     NewMachineId = Data.MachineId,
-                    AgentName = Data.AgentName
+                    AgentName = Data.AgentName,
+                    StorageId = _idGenerator.GenerateId()
                 });
             });
         }
@@ -150,7 +152,7 @@ namespace Haipa.Modules.Controller.Operations.Workflows
             return _taskDispatcher.StartNew(Data.OperationId,
                 new ValidateMachineConfigCommand
                 {
-                    MachineId = 0,
+                    MachineId = Guid.Empty,
                     Config = message.Config
                 }
             );

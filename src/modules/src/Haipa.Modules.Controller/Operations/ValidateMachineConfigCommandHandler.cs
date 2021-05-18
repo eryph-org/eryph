@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Haipa.Messages.Operations;
 using Haipa.Messages.Operations.Events;
@@ -29,14 +30,14 @@ namespace Haipa.Modules.Controller.Operations
 
         private static MachineConfig NormalizeMachineConfig(
 #pragma warning restore 1998
-            long machineId, MachineConfig config)
+            Guid machineId, MachineConfig config)
         {
             var machineConfig = config;
 
             if (machineConfig.VM == null)
                 machineConfig.VM = new VirtualMachineConfig();
 
-            if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == 0)
+            if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == Guid.Empty)
                 //TODO generate a random name here
                 machineConfig.Name = "haipa-machine";
 
