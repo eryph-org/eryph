@@ -2,18 +2,14 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using Haipa.Resources.Machines;
-using Microsoft.AspNet.OData.Builder;
-using Microsoft.AspNet.OData.Query;
 
 namespace Haipa.Modules.ComputeApi.Model.V1
 {
-    [Page(PageSize = 100)]
-    [AutoExpand(DisableWhenSelectPresent = true)]
     public class VirtualMachine : Machine
     {
-        [Contained] public IEnumerable<VirtualMachineNetworkAdapter> NetworkAdapters { get; set; }
+        public IEnumerable<VirtualMachineNetworkAdapter> NetworkAdapters { get; set; }
 
-        [Contained] public IEnumerable<VirtualMachineDrive> Drives { get; set; }
+        public IEnumerable<VirtualMachineDrive> Drives { get; set; }
     }
 
     public class VirtualMachineNetworkAdapter
@@ -35,6 +31,5 @@ namespace Haipa.Modules.ComputeApi.Model.V1
 
         public Guid AttachedDiskId { get; set; }
 
-        public VirtualDisk AttachedDisk { get; set; }
     }
 }

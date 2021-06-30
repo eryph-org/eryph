@@ -1,21 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using Haipa.Resources;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+﻿using System.Collections.Generic;
 
 namespace Haipa.StateDb.Model
 {
-    public class Resource
-    {
-        [Key] public Guid Id { get; set; }
-
-        public ResourceType ResourceType { get; set; }
-
-        public string Name { get; set; }
-    }
-
     public class Machine : Resource
     {
         public string AgentName { get; set; }
@@ -28,22 +14,4 @@ namespace Haipa.StateDb.Model
         public virtual List<MachineNetwork> Networks { get; set; }
     }
 
-    public class VMHostMachine : Machine
-    {
-        public VMHostMachine()
-        {
-            MachineType = MachineType.VMHost;
-        }
-
-        public virtual List<VirtualMachine> VMs { get; set; }
-
-        public string HardwareId { get; set; }
-    }
-
-    [JsonConverter(typeof(StringEnumConverter))]
-    public enum MachineType
-    {
-        VMHost,
-        VM
-    }
 }

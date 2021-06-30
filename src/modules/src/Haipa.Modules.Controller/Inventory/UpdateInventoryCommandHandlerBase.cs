@@ -104,7 +104,7 @@ namespace Haipa.Modules.Controller.Inventory
                 diskInfo.Id = disk.Id; // copy id of existing record
                 disk.FileName = diskInfo.FileName;
                 disk.Path = diskInfo.Path;
-                disk.SizeBytes = diskInfo.SizeBytes;
+                disk.SizeBytes = diskInfo.SizeBytes; 
                 await _vhdDataService.UpdateVhd(disk);
 
             }

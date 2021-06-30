@@ -9,10 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="10.1.1" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Haipa.Modules.AspNetCore\Haipa.Modules.AspNetCore.csproj" />
   </ItemGroup>
 

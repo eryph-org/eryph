@@ -23,9 +23,12 @@ namespace Haipa.Modules.Controller.DataServices
             _repository = repository;
         }
 
-        public Task<Option<VirtualMachineMetadata>> GetMetadata(Guid id)
+        public async Task<Option<VirtualMachineMetadata>> GetMetadata(Guid id)
         {
-            return _repository.GetByIdAsync(id).Map(DeserializeMetadataEntity);
+            if (id == Guid.Empty)
+                return Option<VirtualMachineMetadata>.None;
+
+            return await _repository.GetByIdAsync(id).Map(DeserializeMetadataEntity);
         }
 
         public async Task<Unit> SaveMetadata(VirtualMachineMetadata metadata)

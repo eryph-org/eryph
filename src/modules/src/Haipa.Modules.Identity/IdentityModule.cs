@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using Dbosoft.Hosuto.Modules;
 using Haipa.IdentityDb;
+using Haipa.ModuleCore;
 using Haipa.Modules.AspNetCore;
 using Haipa.Modules.AspNetCore.ApiProvider;
-using Haipa.Modules.Identity.Configuration;
 using Haipa.Modules.Identity.Services;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.Models;
-using Microsoft.AspNet.OData.Builder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -27,10 +26,14 @@ namespace Haipa.Modules.Identity
     [ApiVersion("1.0")]
     public class IdentityModule : WebModule
     {
-        /// <summary>
-        ///     Gets the Path
-        /// </summary>
-        public override string Path => "identity";
+        private readonly IEndpointResolver _endpointResolver;
+
+        public IdentityModule(IEndpointResolver endpointResolver)
+        {
+            _endpointResolver = endpointResolver;
+        }
+
+        public override string Path => _endpointResolver.GetEndpoint("identity").ToString();
 
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
@@ -44,7 +47,7 @@ namespace Haipa.Modules.Identity
             services.AddMvc()
                 .AddApiProvider<IdentityModule>(op => op.ApiName = "Haipa Identity Api");
 
-            services.AddSingleton<IModelConfiguration, ODataModelConfiguration>();
+            //services.AddSingleton<IModelConfiguration, ODataModelConfiguration>();
 
             services.AddIdentityServer()
                 .AddJwtBearerClientAuthentication()

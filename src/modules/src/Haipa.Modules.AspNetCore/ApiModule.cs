@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Ardalis.Specification;
 using Dbosoft.Hosuto.Modules;
 using Haipa.Messages;
 using Haipa.ModuleCore;
 using Haipa.Modules.AspNetCore.ApiProvider;
-using Haipa.Modules.CommonApi.Models.V1;
+using Haipa.Modules.AspNetCore.ApiProvider.Handlers;
+using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;
 using Haipa.Rebus;
 using Haipa.StateDb;
 using JetBrains.Annotations;
@@ -20,7 +22,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using Rebus.Handlers;
-using Rebus.Logging;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
@@ -77,6 +78,19 @@ namespace Haipa.Modules.AspNetCore
         [UsedImplicitly]
         public virtual void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
+            container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
+            container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
+            container.Register(typeof(IListRequestHandler<>), typeof(ListRequestHandler<>),Lifestyle.Scoped);
+            container.Register(typeof(IGetRequestHandler<>), typeof(GetRequestHandler<>), Lifestyle.Scoped);
+            container.Register(typeof(IResourceOperationHandler<>), typeof(ResourceOperationHandler<>), Lifestyle.Scoped);
+            container.Register(typeof(INewResourceOperationHandler<>), typeof(NewResourceOperationHandler<>), Lifestyle.Scoped);
+
+            container.Register(typeof(IReadRepositoryBase<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
+
+            // ReSharper disable once PossiblyMistakenUseOfParamsMethod
+            container.RegisterSingleton(typeof(ISingleResourceSpecBuilder<>), typeof(TModule).Assembly);
+            container.RegisterSingleton(typeof(IListResourceSpecBuilder<>), typeof(TModule).Assembly);
+
             container.Collection.Register(typeof(IHandleMessages<>), typeof(TModule).Assembly);
             container.Register<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped);
 

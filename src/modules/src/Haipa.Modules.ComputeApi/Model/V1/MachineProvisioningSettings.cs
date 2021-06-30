@@ -10,4 +10,5 @@ namespace Haipa.Modules.ComputeApi.Model.V1
 
         [Required] public JObject Configuration { get; set; }
     }
+
 }

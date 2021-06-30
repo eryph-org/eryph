@@ -29,7 +29,10 @@ namespace Haipa.StateDb
 
         public async Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
         {
-            _dbContext.Entry(entity).State = EntityState.Modified;
+            var entityEntry = _dbContext.Entry(entity);
+
+            if(entityEntry.State == EntityState.Detached || entityEntry.State == EntityState.Unchanged)
+                entityEntry.State = EntityState.Modified;
         }
 
         public async Task DeleteAsync(T entity, CancellationToken cancellationToken = default)

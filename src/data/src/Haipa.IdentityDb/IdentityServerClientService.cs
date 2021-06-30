@@ -35,7 +35,7 @@ namespace Haipa.Modules.Identity.Services
 
         public IQueryable<Client> QueryClients()
         {
-            return _repository.QueryClients().ProjectTo<Client>(ProjectionMapperConfiguration);
+            return _repository.QueryClients().ToArray().AsQueryable().ProjectTo<Client>(ProjectionMapperConfiguration);
         }
 
         public async Task<Client> GetClient(string clientId)
