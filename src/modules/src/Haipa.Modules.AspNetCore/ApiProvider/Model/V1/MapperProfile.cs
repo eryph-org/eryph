@@ -1,15 +1,14 @@
 ﻿using AutoMapper;
-using Haipa.StateDb.Model;
 
-namespace Haipa.Modules.CommonApi.Models.V1
+namespace Haipa.Modules.AspNetCore.ApiProvider.Model.V1
 {
     public class MapperProfile : Profile
     {
         public MapperProfile()
         {
-            CreateMap<Operation, AspNetCore.ApiProvider.Model.V1.Operation>();
-            CreateMap<OperationLogEntry, AspNetCore.ApiProvider.Model.V1.OperationLogEntry>();
-            CreateMap<OperationResource, AspNetCore.ApiProvider.Model.V1.OperationResource>();
+            CreateMap<StateDb.Model.Operation, Operation>();
+            CreateMap<StateDb.Model.OperationLogEntry, OperationLogEntry>();
+            CreateMap<StateDb.Model.OperationResource, OperationResource>();
         }
     }
 }

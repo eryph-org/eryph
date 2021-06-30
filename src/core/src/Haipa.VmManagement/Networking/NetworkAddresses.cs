@@ -83,9 +83,19 @@ namespace Haipa.VmManagement.Networking
                 var address = ipAddresses[i];
                 var netmask = netmasks[i];
                 if (netmask.StartsWith("/"))
+                {
                     yield return IPNetwork.Parse(address + netmask).ToString();
+                }
                 else
-                    yield return IPNetwork.Parse(address, netmask).ToString();
+                {
+                    if (netmask.IndexOf('.') == -1)
+                        yield return IPNetwork.Parse($"{address}/{netmask}").ToString();
+                    else
+                    {
+                        yield return IPNetwork.Parse(address, netmask).ToString();
+                    }
+                }
+
             }
         }
 

@@ -12,6 +12,10 @@ namespace Haipa.StateDb.Model
 
         public string Name { get; set; }
 
+        public Guid NetworkId { get; set; }
+        public Network Network { get; set; }
+
+
         [Column("IpV4Addresses")] public string IpV4AddressesInternal { get; set; }
 
         [NotMapped]

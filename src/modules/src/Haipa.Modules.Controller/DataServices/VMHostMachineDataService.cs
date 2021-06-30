@@ -50,7 +50,7 @@ namespace Haipa.Modules.Controller.DataServices
 
         public async Task<Option<VMHostMachine>> GetVMHostByAgentName(string agentName)
         {
-            return (await _repository.ListAsync(new MachineSpecs<VMHostMachine>.GetByName(agentName))).FirstOrDefault();
+            return (await _repository.ListAsync(new ResourceSpecs<VMHostMachine>.GetByName(agentName))).FirstOrDefault();
         }
     }
 }

@@ -6,6 +6,8 @@ namespace Haipa.Resources
     [JsonConverter(typeof(StringEnumConverter))]
     public enum ResourceType
     {
-        Machine
+        Machine,
+        Disk,
+        Network
     }
 }

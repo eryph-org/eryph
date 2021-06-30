@@ -3,13 +3,14 @@ using System.IO;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Haipa.App;
+using Haipa.ModuleCore;
 using Haipa.Modules.CommonApi;
 using Haipa.Modules.ComputeApi;
 using Haipa.Modules.VmHostAgent;
 using Haipa.Runtime.Zero.Configuration;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
@@ -29,17 +30,27 @@ namespace Haipa.Runtime.Zero
             await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
             ZeroConfig.EnsureConfiguration();
-            const string basePath = "https://localhost:62189/";
+            const string basePath = "https://localhost:62189";
+
+            var endpoints = new Dictionary<string, string>
+            {
+                {"identity", $"{basePath}/identity"},
+                {"compute", $"{basePath}/compute"},
+                {"common", $"{basePath}/common"}, 
+            };
+
+
 
             var container = new Container();
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
             container.Bootstrap();
+            container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
             var host = ModulesHost.CreateDefaultBuilder(args)
                 .UseAspNetCore((module, webHostBuilder) =>
                 {
-                    webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add($"{basePath}{module.Path}"); })
-                        .UseUrls($"{basePath}{module.Path}");
+                    webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); })
+                        .UseUrls(module.Path);
                 })
                 .UseSimpleInjector(container)
                 .HostModule<CommonApiModule>()
@@ -47,16 +58,13 @@ namespace Haipa.Runtime.Zero
                 .AddIdentityModule(container)
                 .HostModule<VmHostAgentModule>()
                 .AddControllerModule(container)
+                .ConfigureServices(c=>c.AddSingleton(sp => container.GetInstance<IEndpointResolver>()))
                 .Build();
 
             processLock.SetMetadata(new Dictionary<string, object>
             {
                 {
-                    "endpoints", new Dictionary<string, string>
-                    {
-                        {"identity", $"{basePath}identity"},
-                        {"compute", $"{basePath}api"}
-                    }
+                    "endpoints", endpoints
                 }
             });
 

@@ -4,10 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using Dbosoft.Hosuto.Modules;
+using Haipa.Modules.AspNetCore.ApiProvider.Model;
 using Haipa.Modules.AspNetCore.ApiProvider.Swagger;
-using Microsoft.AspNet.OData;
-using Microsoft.AspNet.OData.Builder;
-using Microsoft.AspNet.OData.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
@@ -34,7 +32,7 @@ namespace Haipa.Modules.AspNetCore.ApiProvider
             services.Configure(options);
 
             mvcBuilder.AddNewtonsoftJson();
-            mvcBuilder.AddApplicationPart(typeof(VersionedMetadataController).Assembly);
+            //mvcBuilder.AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
             services.AddApiVersioning(options =>
             {
@@ -42,17 +40,14 @@ namespace Haipa.Modules.AspNetCore.ApiProvider
                 options.AssumeDefaultVersionWhenUnspecified = false;
             });
 
-            services.AddOData().EnableApiVersioning();
-
-
             services.Configure<MvcOptions>(op =>
             {
-                op.EnableEndpointRouting = false;
-                op.OutputFormatters.Insert(0, new CustomODataOutputFormatter());
+                //op.EnableEndpointRouting = false;
+                //op.OutputFormatters.Insert(0, new CustomODataOutputFormatter());
             });
 
 
-            services.AddODataApiExplorer(
+            services.AddVersionedApiExplorer(
                 options =>
                 {
                     // add the versioned api explorer, which also adds IApiVersionDescriptionProvider service
@@ -68,10 +63,10 @@ namespace Haipa.Modules.AspNetCore.ApiProvider
                 {
                     // add a custom operation filter which sets default values
                     options.OperationFilter<SwaggerDefaultValues>();
-                    options.OperationFilter<ODataErrorOperationFilter>();
-                    options.SchemaFilter<ODataErrorSchemaFilter>();
+                    options.OperationFilter<ApiErrorOperationFilter>();
+                    options.SchemaFilter<ApiErrorSchemaFilter>();
                     options.SchemaFilter<OperationSchemaFilter>();
-                    options.OperationFilter<ODataQueryOperationFilter>();
+                    options.OperationFilter<ListResponseOperationFilter>();
 
 
                     // integrate xml comments
@@ -114,8 +109,8 @@ namespace Haipa.Modules.AspNetCore.ApiProvider
                     options.CustomSchemaIds(type =>
                     {
                         var defaultName = DefaultSchemaIdSelector(type);
-                        return defaultName.EndsWith("IEnumerableODataValueEx")
-                            ? defaultName.Replace("IEnumerableODataValueEx", "List")
+                        return defaultName.EndsWith("ListResponse")
+                            ? defaultName.Replace("ListResponse", "List")
                             : defaultName;
                     });
                 });
@@ -131,35 +126,35 @@ namespace Haipa.Modules.AspNetCore.ApiProvider
         public static IApplicationBuilder UseApiProvider<TModule>(this IApplicationBuilder app, TModule module)
             where TModule : WebModule
         {
-            var modelBuilder = app.ApplicationServices.GetRequiredService<VersionedODataModelBuilder>();
+            //var modelBuilder = app.ApplicationServices.GetRequiredService<VersionedODataModelBuilder>();
             var provider = app.ApplicationServices.GetRequiredService<IApiVersionDescriptionProvider>();
 
-            var models = modelBuilder.GetEdmModels().ToArray();
+            //var models = modelBuilder.GetEdmModels().ToArray();
             //routing is not supported currently
             //as versioned OData models are currently not supported with endpoint routing.
             //see also https://github.com/microsoft/aspnet-api-versioning/issues/647). 
-            //app.UseRouting();
+            app.UseRouting();
 
             app.UseAuthentication();
             app.UseAuthorization();
 
 
             //uncomment this when endpoint routing is working again
-            //app.UseEndpoints(endpoints =>
-            //{
-            //    endpoints.MapControllers();
-            //    endpoints.Select().Expand().Filter().OrderBy().MaxTop(100).Count();
-            //    endpoints.MapVersionedODataRoutes("odata-bypath", "odata/v{version:apiVersion}", models);
-            //});
-
-            app.UseMvc(b =>
+            app.UseEndpoints(endpoints =>
             {
-                app.UseMvc(routes =>
-                {
-                    routes.Select().Expand().Filter().OrderBy().MaxTop(100).Count().SkipToken();
-                    routes.MapVersionedODataRoutes("odata-bypath", "api/v{version:apiVersion}", models);
-                });
+                endpoints.MapControllers();
+                //endpoints.Select().Expand().Filter().OrderBy().MaxTop(100).Count();
+                //endpoints.MapVersionedODataRoutes("odata-bypath", "odata/v{version:apiVersion}", models);
             });
+
+            //app.UseMvc(b =>
+            //{
+            //    app.UseMvc(routes =>
+            //    {
+            //        routes.Select().Expand().Filter().OrderBy().MaxTop(100).Count().SkipToken();
+            //        routes.MapVersionedODataRoutes("odata-bypath", "api/v{version:apiVersion}", models);
+            //    });
+            //});
 
             app.UseSwagger(c =>
             {
@@ -167,7 +162,7 @@ namespace Haipa.Modules.AspNetCore.ApiProvider
                 c.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
                 {
                     swaggerDoc.Servers = new List<OpenApiServer>
-                        {new OpenApiServer {Url = $"{httpReq.Scheme}://{httpReq.Host.Value}/{module.Path}"}};
+                        {new OpenApiServer {Url = module.Path}};
                 });
             });
             app.UseSwaggerUI(
@@ -177,7 +172,7 @@ namespace Haipa.Modules.AspNetCore.ApiProvider
 
                     // build a swagger endpoint for each discovered API version
                     foreach (var description in provider.ApiVersionDescriptions)
-                        options.SwaggerEndpoint($"/{module.Path}/swagger/{description.GroupName}/swagger.json",
+                        options.SwaggerEndpoint($"{module.Path}/swagger/{description.GroupName}/swagger.json",
                             description.GroupName.ToUpperInvariant());
                 });
 
@@ -190,11 +185,11 @@ namespace Haipa.Modules.AspNetCore.ApiProvider
                     var error = context.Features[typeof(IExceptionHandlerFeature)] as IExceptionHandlerFeature;
                     if (error?.Error != null)
                     {
-                        context.Response.StatusCode = (int) HttpStatusCode.InternalServerError;
+                        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                         context.Response.ContentType = "application/json";
-
-                        var response = error.Error.CreateODataError(!env.IsDevelopment());
-                        await context.Response.WriteAsync(JsonConvert.SerializeObject(response));
+                        var apiError = ApiError.FromException(error.Error, env.IsDevelopment());
+                       
+                        await context.Response.WriteAsync(JsonConvert.SerializeObject(apiError));
                     }
 
                     // when no error, do next.

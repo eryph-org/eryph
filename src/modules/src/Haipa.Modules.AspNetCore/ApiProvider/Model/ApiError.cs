@@ -1,36 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using JetBrains.Annotations;
-using Microsoft.OData;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Haipa.Modules.AspNetCore.ApiProvider.Model
 {
-    public class ApiErrorBody
-    {
-        [Required] [JsonProperty("code")] public string? Code { get; set; } = "";
-
-        [Required] [JsonProperty("message")] public string? Message { get; set; } = "";
-
-        [JsonProperty("target")] public string? Target { get; set; }
-
-        [JsonExtensionData] [UsedImplicitly] public IDictionary<string, JToken>? AdditionalData { get; set; }
-    }
-
-    public class ApiErrorData : ApiErrorBody
-    {
-        [JsonProperty("details")] public List<ApiErrorBody>? Details { get; set; }
-        [JsonProperty("innererror")] public InnerErrorData? InnerError { get; set; }
-
-        public class InnerErrorData
-        {
-            [JsonExtensionData] public IDictionary<string, JToken>? AdditionalData { [UsedImplicitly] get; set; }
-        }
-    }
-
     public class ApiError
     {
         public ApiError()
@@ -45,46 +17,21 @@ namespace Haipa.Modules.AspNetCore.ApiProvider.Model
             Error.Message = message;
         }
 
-        public ApiError(ODataError oDataError) : this()
-        {
-            Error = new ApiErrorData
-            {
-                Code = oDataError.ErrorCode ?? "",
-                Message = oDataError.Message ?? "",
-                Target = oDataError.Target,
-                Details = oDataError.Details?.Select(
-                    x => new ApiErrorBody
-                    {
-                        Code = x.ErrorCode ?? "",
-                        Message = x.Message ?? "",
-                        Target = x.Target
-                    }).ToList()
-            };
-
-            if (oDataError.InnerError != null)
-                Error.InnerError = new ApiErrorData.InnerErrorData
-                {
-                    AdditionalData = new Dictionary<string, JToken>(
-                        oDataError.InnerError.Properties.Select(x =>
-                            new KeyValuePair<string, JToken>(x.Key, JToken.FromObject(SerializeODataValue(x.Value)))))
-                };
-        }
-
         [JsonProperty("error")] public ApiErrorData Error { get; set; }
 
-        private static JToken SerializeODataValue(ODataValue oDataValue)
+        public static ApiError FromException(Exception exception, bool development)
         {
-            if (oDataValue is ODataPrimitiveValue pv)
-                return JToken.FromObject(pv.Value);
+           var error = new ApiError("", "Internal error");
 
-            if (oDataValue is ODataCollectionValue cv)
-                return JArray.FromObject(cv.Items);
+           if (!development)
+               return error;
 
-            if (oDataValue is ODataUntypedValue ut)
-                return JToken.Parse(ut.RawValue);
+           error.Error = new ApiErrorData
+           {
+               Message = exception.Message,
+           };
 
-            throw new InvalidOperationException(
-                $"Serializing the odata type {oDataValue.TypeAnnotation.TypeName} is not supported for error data serialization");
+           return error;
         }
     }
 }
