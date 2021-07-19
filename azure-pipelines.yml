@@ -44,8 +44,14 @@ jobs:
       command: 'publish'
       publishWebProjects: false
       projects: '**/apps/**/*-zero/*.csproj'
-      arguments: '--runtime win-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build\bin'
+      arguments: '--runtime win-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build'
       zipAfterPublish: false
+
+  - task: CmdLine@2
+    displayName: rename zero build
+    inputs:
+      script: 'ren haipa-zero bin'
+      workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build'
 
   - task: ArchiveFiles@2
     displayName: pack zero build
