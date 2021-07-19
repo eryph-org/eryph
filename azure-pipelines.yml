@@ -45,7 +45,12 @@ jobs:
       publishWebProjects: false
       projects: '**/apps/**/*-zero/*.csproj'
       arguments:  '--runtime win-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero'
-    
+  
+  - task: CmdLine@2
+    displayName: tag zero zip
+    inputs:
+      script: ren $(build.artifactstagingdirectory)\zero\*-zero.zip $(build.artifactstagingdirectory)\zero\eryph-zero-$(GITVERSION_FullSemVer).zip
+  
   - task: PublishBuildArtifacts@1
     displayName: upload zero artifact
     inputs:
