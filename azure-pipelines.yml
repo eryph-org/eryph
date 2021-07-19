@@ -17,6 +17,7 @@ jobs:
       versionSpec: '5.x'
 
   - task: NuGetCommand@2
+    displayName: solution nuget restore
     inputs:
       command: 'restore'
       restoreSolution: '**/*.sln'
