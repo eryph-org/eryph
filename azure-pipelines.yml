@@ -47,11 +47,6 @@ jobs:
       arguments:  '--runtime win-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero'
     
   - task: PublishBuildArtifacts@1
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)\cmdlet'
-    ArtifactName: 'zero'
-    publishLocation: 'Container'
     displayName: upload app artifacts
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)\zero'
