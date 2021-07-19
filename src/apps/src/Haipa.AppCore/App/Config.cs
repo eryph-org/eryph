@@ -8,7 +8,7 @@ namespace Haipa.App
         public static string GetConfigPath(string module)
         {
             var configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                $"haipa{Path.DirectorySeparatorChar}{module}");
+                $"eryph{Path.DirectorySeparatorChar}{module}");
 
             return configPath;
         }

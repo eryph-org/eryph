@@ -18,6 +18,15 @@ namespace Haipa.App
         public ProcessFileLock(string filePath, IDictionary<string, object> metadata = null)
         {
             _filePath = filePath;
+
+            var fileDir = Path.GetDirectoryName(filePath);
+
+            if (fileDir != null)
+            {
+                if (!Directory.Exists(fileDir))
+                    Directory.CreateDirectory(fileDir);
+            }
+
             _lockStream = File.Open(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
             SetMetadata(metadata);
         }
