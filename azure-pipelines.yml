@@ -35,7 +35,7 @@ jobs:
     displayName: dotnet test
     inputs:
       command: test
-      projects: '**/*Tests/*.csproj'
+      projects: 'test/**/*.csproj'
       arguments: '--configuration $(buildConfiguration) --collect "Code coverage" --no-build'
 
   - task: DotNetCoreCLI@2
@@ -43,11 +43,11 @@ jobs:
     inputs:
       command: 'publish'
       publishWebProjects: false
-      projects: '**/apps/src/*zero*/*.csproj'''
+      projects: '**/apps/**/*-zero/*.csproj'
       arguments:  '--runtime win-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero'
     
   - task: PublishBuildArtifacts@1
-    displayName: upload app artifacts
+    displayName: upload zero artifact
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)\zero'
       ArtifactName: 'zero'
