@@ -42,9 +42,13 @@
     <ProjectReference Include="..\..\..\modules\src\Haipa.Modules.VmHostAgent\Haipa.Modules.VmHostAgent.csproj" />
     <ProjectReference Include="..\..\..\core\src\Haipa.Security.Cryptography\Haipa.Security.Cryptography.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\PublishProfiles\" />
+  </ItemGroup>
   <PropertyGroup>
     <PackageTags>9412ee86-c21b-4eb8-bd89-f650fbf44931</PackageTags>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>eryph-zero</AssemblyName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>TRACE</DefineConstants>
