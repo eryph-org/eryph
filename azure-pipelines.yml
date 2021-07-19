@@ -20,6 +20,7 @@ jobs:
     displayName: dotnet restore
     inputs:
       command: 'restore'
+      projects: '**/*.csproj'
       restoreArguments: '--disable-parallel'
       feedsToUse: 'config'
       nugetConfigPath: './nuget.config'
