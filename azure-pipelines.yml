@@ -16,17 +16,12 @@ jobs:
     inputs:
       versionSpec: '5.x'
 
-  - task: DotNetCoreCLI@2
-    displayName: dotnet restore
+  - task: NuGetCommand@2
     inputs:
       command: 'restore'
-      projects: '**/*.csproj'
+      restoreSolution: '**/*.sln'
       feedsToUse: 'config'
       nugetConfigPath: './nuget.config'
-
-  - task: NuGetToolInstaller@1
-    inputs:
-      versionSpec: '4.x'
 
   - task: DotNetCoreCLI@2
     displayName: dotnet build
