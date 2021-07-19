@@ -16,18 +16,17 @@ jobs:
     inputs:
       versionSpec: '5.x'
 
-  - task: NuGetToolInstaller@1
-    inputs:
-      versionSpec: 5.x
-
   - task: DotNetCoreCLI@2
     displayName: dotnet restore
     inputs:
       command: 'restore'
       projects: '**/*.csproj'
-      restoreArguments: '--disable-parallel'
       feedsToUse: 'config'
       nugetConfigPath: './nuget.config'
+
+  - task: NuGetToolInstaller@1
+    inputs:
+      versionSpec: '4.x'
 
   - task: DotNetCoreCLI@2
     displayName: dotnet build
