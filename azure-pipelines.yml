@@ -44,15 +44,20 @@ jobs:
       command: 'publish'
       publishWebProjects: false
       projects: '**/apps/**/*-zero/*.csproj'
-      arguments:  '--runtime win-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero'
-  
-  - task: CmdLine@2
-    displayName: tag zero zip
+      arguments: '--runtime win-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build\bin'
+      zipAfterPublish: false
+
+  - task: ArchiveFiles@2
+    displayName: pack zero build
     inputs:
-      script: ren $(build.artifactstagingdirectory)\zero\*-zero.zip $(build.artifactstagingdirectory)\zero\eryph-zero-$(GITVERSION_FullSemVer).zip
-  
+      rootFolderOrFile: '$(Build.ArtifactStagingDirectory)\zero_build'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/apps/eryph-zero.$(GITVERSION_FullSemVer).zip'
+      replaceExistingArchive: true
+
   - task: PublishBuildArtifacts@1
     displayName: upload zero artifact
     inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)\zero'
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)\apps/eryph-zero*'
       ArtifactName: 'zero'
