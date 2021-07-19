@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0-windows</TargetFramework>
     <RootNamespace>Haipa.Runtime.Zero</RootNamespace>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
   </PropertyGroup>
