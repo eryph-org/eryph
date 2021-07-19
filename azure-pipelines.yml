@@ -53,11 +53,10 @@ jobs:
       rootFolderOrFile: '$(Build.ArtifactStagingDirectory)\zero_build'
       includeRootFolder: false
       archiveType: 'zip'
-      archiveFile: '$(Build.ArtifactStagingDirectory)/apps/eryph-zero.$(GITVERSION_FullSemVer).zip'
-      replaceExistingArchive: true
+      archiveFile: '$(Build.ArtifactStagingDirectory)/apps/zero/eryph-zero.$(Build.BuildNumber).zip'
 
   - task: PublishBuildArtifacts@1
     displayName: upload zero artifact
     inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)\apps/eryph-zero*'
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/apps/zero'
       ArtifactName: 'zero'
