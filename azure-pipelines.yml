@@ -59,7 +59,7 @@ jobs:
       rootFolderOrFile: '$(Build.ArtifactStagingDirectory)\zero_build'
       includeRootFolder: false
       archiveType: 'zip'
-      archiveFile: '$(Build.ArtifactStagingDirectory)/apps/zero/eryph-zero.$(Build.BuildNumber).zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/apps/zero/eryph_zero.$(Build.BuildNumber)_windows_amd64.zip'
 
   - task: PublishBuildArtifacts@1
     displayName: upload zero artifact
