@@ -13,9 +13,9 @@ using static Microsoft.AspNetCore.Http.StatusCodes;
 namespace Haipa.Modules.Identity.Endpoints.V1.Clients
 {
     [Route("v{version:apiVersion}")]
-    public class Delete : BaseAsyncEndpoint
+    public class Delete : EndpointBaseAsync
         .WithRequest<DeleteClientRequest>
-        .WithoutResponse
+        .WithoutResult
     {
         private readonly IClientService<Client> _clientService;
 

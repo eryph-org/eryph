@@ -9,9 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace Haipa.Modules.AspNetCore.ApiProvider.Endpoints
 {
     [Route("v{version:apiVersion}")]
-    public abstract class ListEndpoint<TRequest,TResult,TModel> : BaseAsyncEndpoint
+    public abstract class ListEndpoint<TRequest,TResult,TModel> : EndpointBaseAsync
         .WithRequest<TRequest>
-        .WithResponse<ListResponse<TResult>> where TModel : class
+        .WithActionResult<ListResponse<TResult>> where TModel : class
         where TRequest : ListRequest
     {
         private readonly IListRequestHandler<TModel> _listRequestHandler;

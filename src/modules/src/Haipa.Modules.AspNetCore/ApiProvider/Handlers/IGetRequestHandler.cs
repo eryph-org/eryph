@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Haipa.Data;
+using Ardalis.Specification;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Haipa.Modules.AspNetCore.ApiProvider.Handlers

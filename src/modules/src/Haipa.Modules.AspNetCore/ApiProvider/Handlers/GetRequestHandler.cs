@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using AutoMapper;
-using Haipa.Data;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 

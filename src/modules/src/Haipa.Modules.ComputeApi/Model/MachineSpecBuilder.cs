@@ -1,6 +1,5 @@
 ﻿using System;
 using Ardalis.Specification;
-using Haipa.Data;
 using Haipa.Modules.AspNetCore.ApiProvider;
 using Haipa.Modules.AspNetCore.ApiProvider.Model;
 using Haipa.StateDb.Model;

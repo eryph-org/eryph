@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Ardalis.Specification;
-using Haipa.Data;
 using Haipa.StateDb.Model;
 
 namespace Haipa.StateDb.Specifications

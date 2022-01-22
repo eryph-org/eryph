@@ -12,9 +12,9 @@ using Operation = Haipa.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Haipa.Modules.AspNetCore.ApiProvider.Endpoints
 {
     [Route("v{version:apiVersion}")]
-    public abstract class NewResourceOperationEndpoint<TRequest, TModel> : BaseAsyncEndpoint
+    public abstract class NewResourceOperationEndpoint<TRequest, TModel> : EndpointBaseAsync
         .WithRequest<TRequest>
-        .WithResponse<ListResponse<Operation>> where TModel : Resource
+        .WithActionResult<ListResponse<Operation>> where TModel : Resource
         where TRequest : RequestBase
 
     {

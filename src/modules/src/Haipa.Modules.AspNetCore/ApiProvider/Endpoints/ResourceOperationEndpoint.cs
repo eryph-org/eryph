@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
-using Haipa.Data;
+using Ardalis.Specification;
 using Haipa.Modules.AspNetCore.ApiProvider.Handlers;
 using Haipa.Modules.AspNetCore.ApiProvider.Model;
 using Haipa.StateDb.Model;
@@ -15,9 +15,9 @@ using Operation = Haipa.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Haipa.Modules.AspNetCore.ApiProvider.Endpoints
 {
     [Route("v{version:apiVersion}")]
-    public abstract class ResourceOperationEndpoint<TRequest, TModel> : BaseAsyncEndpoint
+    public abstract class ResourceOperationEndpoint<TRequest, TModel> : EndpointBaseAsync
         .WithRequest<TRequest>
-        .WithResponse<ListResponse<Operation>> where TModel : Resource
+        .WithActionResult<ListResponse<Operation>> where TModel : Resource
         where TRequest: SingleResourceRequest
 
     {

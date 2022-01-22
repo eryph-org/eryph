@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
-using Haipa.Data;
+using Ardalis.Specification;
 using Haipa.Modules.AspNetCore.ApiProvider.Handlers;
 using Haipa.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNetCore.Mvc;
@@ -9,9 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace Haipa.Modules.AspNetCore.ApiProvider.Endpoints
 {
     [Route("v{version:apiVersion}")]
-    public abstract class SingleResultEndpoint<TRequest, TResult, TModel> : BaseAsyncEndpoint
+    public abstract class SingleResultEndpoint<TRequest, TResult, TModel> : EndpointBaseAsync
         .WithRequest<TRequest>
-        .WithResponse<TResult> 
+        .WithActionResult<TResult> 
         where TModel : class
         where TRequest: RequestBase
     {
