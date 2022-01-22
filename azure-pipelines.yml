@@ -16,13 +16,10 @@ jobs:
     inputs:
       versionSpec: '5.x'
 
-  - task: NuGetCommand@2
-    displayName: solution nuget restore
+  - task: DotNetCoreCLI@2
     inputs:
       command: 'restore'
-      restoreSolution: '**/*.sln'
-      feedsToUse: 'config'
-      nugetConfigPath: './nuget.config'
+      restoreArguments: '--disable-parallel'
 
   - task: DotNetCoreCLI@2
     displayName: dotnet build
