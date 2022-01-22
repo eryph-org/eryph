@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using AutoMapper;
-using Haipa.Data;
 using Haipa.ModuleCore;
 using Haipa.Modules.AspNetCore.ApiProvider.Model;
 using Haipa.Modules.AspNetCore.ApiProvider.Model.V1;

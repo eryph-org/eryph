@@ -12,9 +12,9 @@ using static Microsoft.AspNetCore.Http.StatusCodes;
 namespace Haipa.Modules.Identity.Endpoints.V1.Clients
 {
     [Route("v{version:apiVersion}")]
-    public class Get : BaseAsyncEndpoint
+    public class Get : EndpointBaseAsync
         .WithRequest<GetClientRequest>
-        .WithResponse<Client>
+        .WithActionResult<Client>
     {
         private readonly IClientService<Client> _clientService;
 

@@ -14,9 +14,9 @@ namespace Haipa.Modules.Identity.Endpoints.V1.Clients
 {
     [Route("v{version:apiVersion}")]
 
-    public class Update : BaseAsyncEndpoint
+    public class Update : EndpointBaseAsync
         .WithRequest<UpdateClientRequest>
-        .WithResponse<Client>
+        .WithActionResult<Client>
     {
         private readonly IClientService<Client> _clientService;
 

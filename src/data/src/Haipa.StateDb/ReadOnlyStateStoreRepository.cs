@@ -61,6 +61,23 @@ namespace Haipa.StateDb
             return await ApplySpecification(specification).CountAsync(cancellationToken: cancellationToken);
         }
 
+        public virtual async Task<int> CountAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Set<T>().CountAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public virtual async Task<bool> AnyAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
+        {
+            return await ApplySpecification(specification).AnyAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public virtual async Task<bool> AnyAsync(CancellationToken cancellationToken = default)
+        {
+            return await _dbContext.Set<T>().AnyAsync(cancellationToken);
+        }
+
 
         private IQueryable<T> ApplySpecification(ISpecification<T> specification)
         {

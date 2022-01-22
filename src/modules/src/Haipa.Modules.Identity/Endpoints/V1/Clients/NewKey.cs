@@ -15,9 +15,9 @@ using static Microsoft.AspNetCore.Http.StatusCodes;
 namespace Haipa.Modules.Identity.Endpoints.V1.Clients
 {
     [Route("v{version:apiVersion}")]
-    public class NewKey : BaseAsyncEndpoint
+    public class NewKey : EndpointBaseAsync
         .WithRequest<NewClientKeyRequest>
-        .WithResponse<ClientWithSecrets>
+        .WithActionResult<ClientWithSecrets>
     {
         private readonly IClientService<Client> _clientService;
 
