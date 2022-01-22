@@ -17,8 +17,10 @@ jobs:
       versionSpec: '5.x'
 
   - task: DotNetCoreCLI@2
+    displayName: dotnet restore
     inputs:
       command: 'restore'
+      projects: '**/*.csproj'
       restoreArguments: '--disable-parallel'
 
   - task: DotNetCoreCLI@2
