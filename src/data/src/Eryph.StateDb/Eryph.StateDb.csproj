@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net60</TargetFramework>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\data\src\Eryph.Data\Eryph.Data.csproj" />
+    <ProjectReference Include="..\..\..\core\src\Eryph.VmConfig.Primitives\Eryph.Primitives.csproj" />
+  </ItemGroup>
+
+</Project>

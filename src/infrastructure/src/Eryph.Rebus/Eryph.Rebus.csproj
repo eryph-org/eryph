@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net60</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Rebus" Version="6.6.2" />
+    <PackageReference Include="Rebus.Microsoft.Extensions.Logging" Version="2.0.0" />
+    <PackageReference Include="Rebus.RabbitMq" Version="7.3.4" />
+    <PackageReference Include="Rebus.UnitOfWork" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Eryph.Core\Eryph.Core.csproj" />
+  </ItemGroup>
+
+</Project>

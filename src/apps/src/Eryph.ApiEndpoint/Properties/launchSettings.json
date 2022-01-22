@@ -1,0 +1,37 @@
+{
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:62188/",
+      "sslPort": 44392
+    }
+  },
+  "profiles": {
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "launchUrl": "api/values",
+      "environmentVariables": {
+        "MYSQL_CONNECTIONSTRING": "Server=localhost;Port=3306;Database=rebus;Uid=root;Pwd=password;SslMode=none;;",
+        "RABBITMQ_CONNECTIONSTRING": "amqp://guest:guest@localhost",
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "Eryph.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "api/values",
+      "environmentVariables": {
+        "MYSQL_CONNECTIONSTRING": "Server=localhost;Database=myDataBase",
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "http://localhost:62189/"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchBrowser": true,
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/api/values"
+    }
+  }
+}

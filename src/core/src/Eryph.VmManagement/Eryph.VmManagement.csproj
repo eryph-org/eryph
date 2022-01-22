@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Haipa.CloudInit.ConfigDrive" Version="0.5.0" />
+    <PackageReference Include="Haipa.CloudInit.ConfigDrive.NoCloud" Version="0.5.0" />
+    <PackageReference Include="Haipa.CloudInit.ConfigDrive.WindowsImaging" Version="0.5.0" />
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Eryph.VmConfig.Primitives\Eryph.Primitives.csproj" />
+  </ItemGroup>
+
+</Project>
