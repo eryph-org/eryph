@@ -1,13 +1,13 @@
 ﻿using System;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
+using Dbosoft.IdentityServer.EfCore.Storage.DbContexts;
 using Eryph.Configuration;
 using Eryph.Configuration.Model;
 using Eryph.IdentityDb;
 using Eryph.Modules.Identity;
 using Eryph.Modules.Identity.Services;
 using Eryph.Runtime.Zero.Configuration.Clients;
-using IdentityServer4.EntityFramework.DbContexts;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 

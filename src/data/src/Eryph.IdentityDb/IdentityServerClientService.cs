@@ -3,8 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using IdentityServer4.EntityFramework.Mappers;
-using IdentityServer4.Models;
+using Dbosoft.IdentityServer.EfCore.Storage.Mappers;
+using Dbosoft.IdentityServer.Storage.Models;
 
 namespace Eryph.IdentityDb
 {
@@ -21,7 +21,7 @@ namespace Eryph.IdentityDb
 
             //projection will not work with identity server profile, but by using CovertUsing we can use to default mapper from identity server
             ProjectionMapperConfiguration = new MapperConfiguration(cfg => cfg
-                .CreateMap<IdentityServer4.EntityFramework.Entities.Client, Client>()
+                .CreateMap<Dbosoft.IdentityServer.EfCore.Storage.Entities.Client, Client>()
                 .ConvertUsing(src => src.ToModel()));
 
             Mapper = mapperConfiguration.CreateMapper();

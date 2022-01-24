@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using IdentityServer4.EntityFramework.Entities;
+using Dbosoft.IdentityServer.EfCore.Storage.Entities;
 
 namespace Eryph.IdentityDb
 {

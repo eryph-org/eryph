@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using AutoMapper;
-using IdentityServer4.Models;
+using Dbosoft.IdentityServer.Storage.Models;
 
 namespace Eryph.Modules.Identity.Models
 {
