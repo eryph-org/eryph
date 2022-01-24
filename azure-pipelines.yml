@@ -49,7 +49,7 @@ jobs:
   - task: CmdLine@2
     displayName: rename zero build
     inputs:
-      script: 'ren haipa-zero bin'
+      script: 'ren eryph-zero bin'
       workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build'
 
   - task: ArchiveFiles@2

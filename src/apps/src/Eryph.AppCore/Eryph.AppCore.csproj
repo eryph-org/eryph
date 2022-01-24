@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net60</TargetFramework>
+    <RootNamespace>Eryph</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="0.4.0" />
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Eryph.Core\Eryph.Core.csproj" />
+    <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
+  </ItemGroup>
+
+</Project>

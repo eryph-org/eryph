@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net60</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dbosoft.Hosuto" Version="0.4.0" />
+            <PackageReference Include="Rebus.Async" Version="7.2.0" />
+            <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="5.3.0" />
+    
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Eryph.Core\Eryph.Core.csproj" />
+    <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
+    <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
+    <ProjectReference Include="..\..\..\data\src\Eryph.StateDb\Eryph.StateDb.csproj" />
+
+  </ItemGroup>
+</Project>

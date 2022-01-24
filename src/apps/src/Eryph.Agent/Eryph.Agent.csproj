@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.VmHostAgent\Eryph.Modules.VmHostAgent.csproj" />
+  </ItemGroup>
+
+</Project>

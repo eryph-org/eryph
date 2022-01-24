@@ -30,11 +30,11 @@ services:
     #volumes:
     #  - /storage/docker/mysql-datadir:/var/lib/mysql
 
-  haipa.controller:
-    image: ${DOCKER_REGISTRY}haipacontroller
+  eryph.controller:
+    image: ${DOCKER_REGISTRY}eryphcontroller
     build:
       context: .
-      dockerfile: src/Haipa.Controller/Dockerfile
+      dockerfile: src/Eryph.Controller/Dockerfile
     depends_on:
       - rabbit
       - mariadb
@@ -44,11 +44,11 @@ services:
       - MYSQL_CONNECTIONSTRING="Server=localhost;Port=3306;Database=rebus;Uid=root;Pwd=password;SslMode=none;"
       - RABBITMQ_CONNECTIONSTRING="amqp://guest:guest@rabbit""
 
- # Haipa.ApiEndpoint:
- #   image: ${DOCKER_REGISTRY}HaipaApiEndpoint
+ # Eryph.ApiEndpoint:
+ #   image: ${DOCKER_REGISTRY}EryphApiEndpoint
  #   build:
  #     context: .
- #     dockerfile: src/Haipa.ApiEndpoint/Dockerfile
+ #     dockerfile: src/Eryph.ApiEndpoint/Dockerfile
  #   depends_on:
  #     - rabbit
  #     - mariadb

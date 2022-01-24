@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0-windows</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
+    <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
+    <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
+    <ProjectReference Include="..\..\..\core\src\Eryph.VmManagement\Eryph.VmManagement.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,3 @@
+﻿namespace Eryph.VmManagement.Data
+{
+}
