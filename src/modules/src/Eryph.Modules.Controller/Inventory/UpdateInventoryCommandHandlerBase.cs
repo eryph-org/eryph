@@ -249,7 +249,8 @@ namespace Eryph.Modules.Controller.Inventory
             var networkList = newMachine.Networks.ToList();
             var existingNetworksList = existingMachine.Networks?.ToList() ?? new List<MachineNetwork>();
 
-            var existingNetworksListUniqueName = existingNetworksList.Distinct((x, y) => x.Name == y.Name);
+            var existingNetworksListUniqueName =
+                existingNetworksList.Distinct((x, y) => x.Name == y.Name).ToArray();
 
             foreach (var existingNetwork in existingNetworksListUniqueName)
             {
