@@ -72,7 +72,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
 
                 return _taskDispatcher.StartNew(Data.OperationId,new PrepareVirtualMachineImageCommand
                 {
-                    ImageConfig = Data.Config.Image,
+                    ImageConfig = Data.Config?.Image,
                     AgentName = r.AgentName
                 });
             });
@@ -145,7 +145,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         }
 
 
-        public override Task Initiated(CreateMachineCommand message)
+        protected override Task Initiated(CreateMachineCommand message)
         {
             Data.Config = message.Config;
             Data.State = CreateVMState.Initiated;

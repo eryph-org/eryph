@@ -8,8 +8,8 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         public bool Updated;
 
         public bool Validated;
-        public MachineConfig Config { get; set; }
+        public MachineConfig? Config { get; set; }
         public Guid MachineId { get; set; }
-        public string AgentName { get; set; }
+        public string? AgentName { get; set; }
     }
 }

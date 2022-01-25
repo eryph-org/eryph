@@ -19,7 +19,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             _taskDispatcher = taskDispatcher;
         }
 
-        public override Task Initiated(DestroyResourcesCommand message)
+        protected override Task Initiated(DestroyResourcesCommand message)
         {
             Data.State = DestroyResourceState.Initiated;
             Data.Resources = message.Resources;

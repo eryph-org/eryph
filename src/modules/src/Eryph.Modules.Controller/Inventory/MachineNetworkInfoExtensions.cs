@@ -5,14 +5,13 @@ using System.Net;
 using System.Net.Sockets;
 using Eryph.Resources.Machines;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 
 namespace Eryph.Modules.Controller.Inventory;
 
 internal static class MachineNetworkInfoExtensions
 {
-    public static IEnumerable<MachineNetwork> ToMachineNetwork(
-        [CanBeNull] this IEnumerable<MachineNetworkData> networkInfos, Guid machineId)
+    public static IEnumerable<MachineNetwork>? ToMachineNetwork(
+        this IEnumerable<MachineNetworkData>? networkInfos, Guid machineId)
     {
         return networkInfos?.Select(mn => new MachineNetwork
         {

@@ -4,6 +4,6 @@ namespace Eryph.Modules.Controller
 {
     public interface IPlacementCalculator
     {
-        string CalculateVMPlacement(MachineConfig dataConfig);
+        string CalculateVMPlacement(MachineConfig? dataConfig);
     }
 }

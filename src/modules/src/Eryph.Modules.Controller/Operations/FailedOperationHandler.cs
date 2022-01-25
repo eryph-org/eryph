@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Eryph.Messages.Operations;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;

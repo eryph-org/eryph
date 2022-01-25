@@ -7,7 +7,6 @@ using Eryph.Messages.Operations.Commands;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources;
 using Eryph.Messages.Resources.Machines;
-using Eryph.ModuleCore;
 using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -44,7 +43,8 @@ namespace Eryph.Modules.Controller.Operations
 
         public async Task Handle(CreateNewOperationTaskCommand message)
         {
-            var command = JsonConvert.DeserializeObject(message.CommandData, Type.GetType(message.CommandType));
+            var command = JsonConvert.DeserializeObject(message.CommandData, 
+                Type.GetType(message.CommandType) ?? throw new InvalidOperationException($"unknown command type '{message.CommandType}'"));
 
             var op = await _dbContext.Operations.FindAsync(message.OperationId).ConfigureAwait(false);
             if (op == null)
@@ -66,14 +66,21 @@ namespace Eryph.Modules.Controller.Operations
             }
 
             var messageType = Type.GetType(message.CommandType);
+            if (messageType == null)
+                throw new InvalidOperationException($"unknown command type '{message.CommandType}'");
+
             task.Name = messageType.Name;
-            Data.Tasks.Add(message.TaskId, messageType.AssemblyQualifiedName);
+            Data.Tasks.Add(message.TaskId, messageType.AssemblyQualifiedName!);
 
             var outboundMessage = Activator.CreateInstance(typeof(OperationTaskSystemMessage<>).MakeGenericType(messageType), 
                 command, message.OperationId, message.TaskId) ;
             
 
             var sendCommandAttribute = messageType.GetCustomAttribute<SendMessageToAttribute>();
+
+            if (sendCommandAttribute == null)
+                throw new InvalidOperationException(
+                    $"Invalid command type '{messageType}'. Type has to be decorated with SendMessageTo attribute.");
 
             switch (sendCommandAttribute.Recipient)
             {
@@ -107,7 +114,7 @@ namespace Eryph.Modules.Controller.Operations
                             return;
                         default:
                             throw new InvalidDataException(
-                                $"Don't know how to route operation task command of type {command.GetType()}");
+                                $"Don't know how to route operation task command of type {messageType}");
                     }
                 }
 
@@ -150,7 +157,9 @@ namespace Eryph.Modules.Controller.Operations
                 var taskCommandTypeName = Data.Tasks[message.TaskId];
 
                 var genericType = typeof(OperationTaskStatusEvent<>);
-                var wrappedCommandType = genericType.MakeGenericType(Type.GetType(taskCommandTypeName));
+                var wrappedCommandType = genericType.MakeGenericType(Type.GetType(taskCommandTypeName) 
+                              ?? throw new InvalidOperationException($"Unknown task command type '{taskCommandTypeName}'."));
+
                 var commandInstance = Activator.CreateInstance(wrappedCommandType, message);
                 await _bus.SendLocal(commandInstance);
             }
@@ -160,7 +169,7 @@ namespace Eryph.Modules.Controller.Operations
             if (message.TaskId == Data.PrimaryTaskId)
             {
                 op.Status = message.OperationFailed ? OperationStatus.Failed : OperationStatus.Completed;
-                string errorMessage = null;
+                string? errorMessage = null;
                 if (message.GetMessage() is ErrorData errorData)
                     errorMessage = errorData.ErrorMessage;
 
