@@ -2,7 +2,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Dbosoft.IdentityServer.Storage.Stores;
 using Dbosoft.IdentityServer.Stores;
-using Haipa.IdentityModel.Clients;
+using Eryph.IdentityModel.Clients;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Org.BouncyCastle.Crypto;
