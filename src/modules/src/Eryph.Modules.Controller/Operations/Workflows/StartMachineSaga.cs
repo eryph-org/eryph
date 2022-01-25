@@ -1,14 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using Eryph.Messages;
-using Eryph.Messages.Operations;
+﻿using System.Threading.Tasks;
 using Eryph.Messages.Operations.Events;
-using Eryph.Messages.Resources.Commands;
-using Eryph.Messages.Resources.Events;
 using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.Rebus;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;
@@ -31,7 +25,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             _vmDataService = vmDataService;
         }
 
-        public override Task Initiated(StartMachineCommand message)
+        protected override Task Initiated(StartMachineCommand message)
         {
             return _vmDataService.GetVM(message.Resource.Id).MatchAsync(
                 None: () => Fail().ToUnit(),

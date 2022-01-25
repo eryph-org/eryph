@@ -40,32 +40,32 @@ namespace Eryph.Modules.Controller.Operations
             config.Correlate<OperationTaskStatusEvent<TMessage>>(m => m.OperationId, d => d.OperationId);
         }
 
-        public abstract Task Initiated(TMessage message);
+        protected abstract Task Initiated(TMessage message);
 
-        public virtual Task InitiatingTaskCompleted()
+        private Task InitiatingTaskCompleted()
         {
             MarkAsComplete();
             return Task.CompletedTask;
         }
 
-        public virtual Task InitiatingTaskFailed()
+        private Task InitiatingTaskFailed()
         {
             MarkAsComplete();
             return Task.CompletedTask;
         }
 
-        public Task Fail(object message = null)
+        protected Task Fail(object? message = null)
         {
             return Bus.SendLocal(OperationTaskStatusEvent.Failed(Data.OperationId, Data.InitiatingTaskId, message));
         }
 
 
-        public Task Complete(object message = null)
+        protected Task Complete(object? message = null)
         {
             return Bus.SendLocal(OperationTaskStatusEvent.Completed(Data.OperationId, Data.InitiatingTaskId, message));
         }
 
-        public Task FailOrRun<T>(OperationTaskStatusEvent<T> message, Func<Task> completedFunc)
+        protected Task FailOrRun<T>(OperationTaskStatusEvent<T> message, Func<Task> completedFunc)
             where T : class, new()
         {
             if (message.OperationFailed)
@@ -74,7 +74,7 @@ namespace Eryph.Modules.Controller.Operations
             return completedFunc();
         }
 
-        public Task FailOrRun<T, TOpMessage>(OperationTaskStatusEvent<T> message, Func<TOpMessage, Task> completedFunc)
+        protected Task FailOrRun<T, TOpMessage>(OperationTaskStatusEvent<T> message, Func<TOpMessage, Task> completedFunc)
             where T : class, new()
             where TOpMessage : class
         {

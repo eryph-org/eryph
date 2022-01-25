@@ -73,11 +73,12 @@ namespace Eryph.Modules.Controller.Inventory
 
                 Option<VirtualDisk> disk;
                 if (disksDataCandidates.Length <= 1)
-                    disk = disksDataCandidates.FirstOrDefault();
+                    disk = disksDataCandidates.FirstOrDefault() ?? Option<VirtualDisk>.None;
                 else
                     disk = disksDataCandidates.FirstOrDefault(x =>
                         string.Equals(x.Path, diskInfo.Path, StringComparison.InvariantCultureIgnoreCase) &&
-                        string.Equals(x.FileName, diskInfo.FileName, StringComparison.InvariantCultureIgnoreCase));
+                        string.Equals(x.FileName, diskInfo.FileName, StringComparison.InvariantCultureIgnoreCase)) 
+                           ?? Option<VirtualDisk>.None;
 
                 return disk;
             }
@@ -218,9 +219,12 @@ namespace Eryph.Modules.Controller.Inventory
                     Id = d.Id,
                     MachineId = machineId,
                     Type = d.Type,
-                    AttachedDisk = d.Disk != null ? _vhdDataService.GetVHD(d.Disk.Id).GetAwaiter().GetResult().IfNoneUnsafe(()=>null): null
+                    //TODO: this code may needs to be improved
+                    AttachedDisk = d.Disk != null 
+                        ? _vhdDataService.GetVHD(d.Disk.Id).GetAwaiter().GetResult().IfNoneUnsafe(()=>null): null
+
                 }).ToList(),
-                Networks = vmInfo.Networks?.ToMachineNetwork(machineId).ToList()
+                Networks = (vmInfo.Networks?.ToMachineNetwork(machineId) ?? Array.Empty<MachineNetwork>()).ToList()
             };
         }
 

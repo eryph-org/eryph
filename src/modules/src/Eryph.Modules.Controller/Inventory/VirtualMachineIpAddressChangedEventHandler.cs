@@ -6,11 +6,13 @@ using System.Threading.Tasks;
 using Eryph.Messages.Resources.Machines.Events;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Inventory
 {
+    [UsedImplicitly]
     internal class VirtualMachineIpAddressChangedEventHandler : IHandleMessages<VirtualMachineNetworkChangedEvent>
     {
         private readonly StateStoreContext _stateStoreContext;
@@ -27,7 +29,7 @@ namespace Eryph.Modules.Controller.Inventory
                 .Include(x => x.Networks)
                 .FirstOrDefaultAsync(x => x.VMId == message.VMId);
 
-            var adapter = machine.NetworkAdapters
+            var adapter = machine?.NetworkAdapters
                 .FirstOrDefault(a => a.Name == message.ChangedAdapter.AdapterName);
 
             if (adapter == null)
@@ -39,13 +41,13 @@ namespace Eryph.Modules.Controller.Inventory
 
             adapter.SwitchName = message.ChangedAdapter.VirtualSwitchName;
 
-            var network = machine.Networks.FirstOrDefault(x =>
+            var network = machine?.Networks.FirstOrDefault(x =>
                 x.Name == message.ChangedNetwork.Name);
 
             if (network == null)
             {
                 network = new MachineNetwork {Id = Guid.NewGuid(), Name = message.ChangedNetwork.Name};
-                machine.Networks.Add(network);
+                machine?.Networks.Add(network);
             }
 
             network.DnsServerAddresses = message.ChangedNetwork.DnsServers;

@@ -5,10 +5,12 @@ using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb.Model;
+using JetBrains.Annotations;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Inventory
 {
+    [UsedImplicitly]
     internal class UpdateVMHostInventoryCommandHandler : UpdateInventoryCommandHandlerBase,
         IHandleMessages<UpdateVMHostInventoryCommand>
     {
@@ -36,7 +38,9 @@ namespace Eryph.Modules.Controller.Inventory
                     HardwareId = message.HostInventory.HardwareId
                 });
 
-            newMachineState.Networks = message.HostInventory.Networks.ToMachineNetwork(newMachineState.Id).ToList();
+            newMachineState.Networks = (message.HostInventory.Networks.ToMachineNetwork(newMachineState.Id) 
+                                        ?? Array.Empty<MachineNetwork>()).ToList();
+
             newMachineState.Status = MachineStatus.Running;
 
 

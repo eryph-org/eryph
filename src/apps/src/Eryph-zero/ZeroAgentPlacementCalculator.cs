@@ -6,7 +6,7 @@ namespace Eryph.Runtime.Zero
 {
     internal class ZeroAgentPlacementCalculator : IPlacementCalculator
     {
-        public string CalculateVMPlacement(MachineConfig dataConfig)
+        public string CalculateVMPlacement(MachineConfig? dataConfig)
         {
             return Environment.MachineName;
         }

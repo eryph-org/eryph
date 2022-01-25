@@ -41,7 +41,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             config.Correlate<PlacementVerificationCompletedEvent>(m => m.CorrelationId, m => m.CorrelationId);
         }
 
-        public override Task Initiated(PlaceVirtualMachineCommand message)
+        protected override Task Initiated(PlaceVirtualMachineCommand message)
         {
             Data.Config = message.Config;
             return CalculatePlacementAndRequestVerification();

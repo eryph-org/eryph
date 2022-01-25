@@ -46,7 +46,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         }
 
 
-        public override async Task Initiated(DestroyMachineCommand message)
+        protected override async Task Initiated(DestroyMachineCommand message)
         {
             Data.MachineId = message.Resource.Id;
             var res = await _vmDataService.GetVM(Data.MachineId);

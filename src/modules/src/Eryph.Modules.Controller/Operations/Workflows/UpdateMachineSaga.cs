@@ -66,23 +66,23 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             {
                 Data.Config = r.Config;
 
-                var optionalMachineData = await
+                var optionalMachineData = await (
                     from vm in _vmDataService.GetVM(Data.MachineId)
                     from metadata in _metadataService.GetMetadata(vm.MetadataId)
-                    select (vm, metadata);
+                    select (vm, metadata));
 
                 await optionalMachineData.Match(
                     Some: data =>
                     {
                         Data.Validated = true;
-
+                        var (vm, metadata) = data;
                         return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualMachineCommand
                         {
-                            VMId = data.vm.VMId,
+                            VMId = vm.VMId,
                             Config = Data.Config,
                             AgentName = Data.AgentName,
                             NewStorageId = _idGenerator.GenerateId(),
-                            MachineMetadata = data.metadata,
+                            MachineMetadata = metadata,
                         });
                     },
                     None: () => Fail(new ErrorData
@@ -100,7 +100,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                 d => d.OperationId);
         }
 
-        public override Task Initiated(UpdateMachineCommand message)
+        protected override Task Initiated(UpdateMachineCommand message)
         {
             Data.Config = message.Config;
             Data.MachineId = message.Resource.Id;
