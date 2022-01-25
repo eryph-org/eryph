@@ -12,6 +12,7 @@ using Eryph.VmManagement.Storage;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
+using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
 
@@ -23,7 +24,7 @@ namespace Eryph.Modules.VmHostAgent
     internal class CreateVirtualMachineCommandHandler : VirtualMachineConfigCommandHandler,
         IHandleMessages<OperationTask<CreateVirtualMachineCommand>>
     {
-        public CreateVirtualMachineCommandHandler(IPowershellEngine engine, IBus bus) : base(engine, bus)
+        public CreateVirtualMachineCommandHandler(IPowershellEngine engine, IBus bus, ILogger log) : base(engine, bus, log)
         {
         }
 

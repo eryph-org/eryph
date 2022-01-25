@@ -10,6 +10,7 @@ using Eryph.Resources.Machines.Config;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
+using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Transport;
 
@@ -19,16 +20,19 @@ namespace Eryph.Modules.VmHostAgent
     {
         public const string DefaultDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         protected readonly IBus Bus;
+        protected readonly ILogger _log;
+
         protected readonly IPowershellEngine Engine;
         protected Guid OperationId;
         protected Guid TaskId;
 
         protected VirtualMachineConfigCommandHandler(
             IPowershellEngine engine,
-            IBus bus)
+            IBus bus, ILogger log)
         {
             Engine = engine;
             Bus = bus;
+            _log = log;
         }
 
 
@@ -55,6 +59,8 @@ namespace Eryph.Modules.VmHostAgent
 
         protected async Task<Unit> HandleError(PowershellFailure failure)
         {
+            _log.LogError("Operation {OperationId}/{TaskId} failed. Error: {message}", OperationId, TaskId, failure.Message);
+
             await Bus.Publish(OperationTaskStatusEvent.Failed(
                 OperationId, TaskId,
                 new ErrorData {ErrorMessage = failure.Message})

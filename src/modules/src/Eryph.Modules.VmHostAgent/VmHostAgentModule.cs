@@ -33,6 +33,7 @@ namespace Eryph.Modules.VmHostAgent
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
             options.AddHostedService<WmiWatcherModuleService>();
+            options.AddLogging();
         }
 
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
