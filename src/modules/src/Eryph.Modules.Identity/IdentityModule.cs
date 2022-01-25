@@ -1,13 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using Dbosoft.Hosuto.Modules;
+using Dbosoft.IdentityServer.Configuration;
+using Dbosoft.IdentityServer.Configuration.DependencyInjection;
+using Dbosoft.IdentityServer.Configuration.DependencyInjection.BuilderExtensions;
+using Dbosoft.IdentityServer.EfCore;
+using Dbosoft.IdentityServer.EfCore.Storage.DbContexts;
+using Dbosoft.IdentityServer.Models;
+using Dbosoft.IdentityServer.Storage.Models;
 using Eryph.IdentityDb;
 using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.Identity.Services;
-using IdentityServer4.EntityFramework.DbContexts;
-using IdentityServer4.Models;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +22,7 @@ using Microsoft.Extensions.Hosting;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 using Client = Eryph.Modules.Identity.Models.V1.Client;
-using Scope = IdentityServer4.Models.ApiScope;
+using Scope = Dbosoft.IdentityServer.Storage.Models.ApiScope;
 
 namespace Eryph.Modules.Identity
 {
@@ -49,7 +55,13 @@ namespace Eryph.Modules.Identity
 
             //services.AddSingleton<IModelConfiguration, ODataModelConfiguration>();
 
-            services.AddIdentityServer()
+            services.AddIdentityServer(options =>
+                {
+                    //options.Events.RaiseSuccessEvents = true;
+                    //options.Events.RaiseFailureEvents = true;
+                    //options.Events.RaiseErrorEvents = true;
+                    //options.Events.RaiseInformationEvents = true;
+                })
                 .AddJwtBearerClientAuthentication()
                 .AddDeveloperSigningCredential()
                 .AddConfigurationStore(options =>
@@ -83,7 +95,8 @@ namespace Eryph.Modules.Identity
                         {
                             "identity:clients:write:all",
                             "identity:clients:read:all"
-                        }
+                        },
+
                     }
                 })
                 .AddInMemoryApiScopes(new[]
@@ -131,8 +144,10 @@ namespace Eryph.Modules.Identity
             app.UseApiProvider(this);
         }
 
-        public void ConfigureContainer(Container container)
+        [UsedImplicitly]
+        public void ConfigureContainer(IServiceProvider sp, Container container)
         {
+            container.Register(sp.GetRequiredService<IEndpointResolver>);
             container.Register<IClientRepository, ClientRepository<ConfigurationDbContext>>(Lifestyle.Scoped);
             container.Register<IIdentityServerClientService, IdentityServerClientService>(Lifestyle.Scoped);
             container.Register<IClientService<Client>, ClientService<Client>>(Lifestyle.Scoped);

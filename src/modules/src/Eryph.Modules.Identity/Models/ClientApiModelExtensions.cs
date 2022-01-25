@@ -2,10 +2,11 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Dbosoft.IdentityServer;
+using Dbosoft.IdentityServer.Models;
+using Dbosoft.IdentityServer.Storage.Models;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
-using IdentityServer4;
-using IdentityServer4.Models;
 using JetBrains.Annotations;
 using Org.BouncyCastle.OpenSsl;
 

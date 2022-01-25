@@ -5,6 +5,7 @@ using Ardalis.ApiEndpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
@@ -15,7 +16,6 @@ using static Microsoft.AspNetCore.Http.StatusCodes;
 namespace Eryph.Modules.Identity.Endpoints.V1.Clients
 {
     [Route("v{version:apiVersion}")]
-
     public class List : EndpointBaseAsync
         .WithoutRequest
         .WithActionResult<ListResponse<Client>>
@@ -29,6 +29,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
 
 
         [HttpGet("clients")]
+        [Authorize("identity:clients:read:all")]
         [SwaggerOperation(
             Summary = "Lists clients",
             Description = "Lists clients",
