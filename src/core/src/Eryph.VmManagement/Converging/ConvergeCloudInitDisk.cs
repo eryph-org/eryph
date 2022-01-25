@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Haipa.CloudInit.ConfigDrive.Generator;
-using Haipa.CloudInit.ConfigDrive.NoCloud;
-using Haipa.CloudInit.ConfigDrive.Processing;
+using Dbosoft.CloudInit.ConfigDrive.Generator;
+using Dbosoft.CloudInit.ConfigDrive.NoCloud;
+using Dbosoft.CloudInit.ConfigDrive.Processing;
 using Eryph.Resources.Machines.Config;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
