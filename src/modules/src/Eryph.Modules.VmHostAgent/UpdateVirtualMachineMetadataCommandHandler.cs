@@ -5,6 +5,7 @@ using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using LanguageExt;
+using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
 
@@ -13,7 +14,7 @@ namespace Eryph.Modules.VmHostAgent
     internal class UpdateVirtualMachineMetadataCommandHandler : VirtualMachineConfigCommandHandler,
         IHandleMessages<OperationTask<UpdateVirtualMachineMetadataCommand>>
     {
-        public UpdateVirtualMachineMetadataCommandHandler(IPowershellEngine engine, IBus bus) : base(engine, bus)
+        public UpdateVirtualMachineMetadataCommandHandler(IPowershellEngine engine, IBus bus, ILogger log) : base(engine, bus, log)
         {
         }
 

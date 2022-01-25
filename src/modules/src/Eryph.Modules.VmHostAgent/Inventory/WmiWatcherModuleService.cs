@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.VmManagement;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 
 namespace Eryph.Modules.VmHostAgent.Inventory
@@ -13,12 +14,15 @@ namespace Eryph.Modules.VmHostAgent.Inventory
     internal class WmiWatcherModuleService : IHostedService
     {
         private readonly IBus _bus;
+        private readonly ILogger _log;
+
         private ManagementEventWatcher _networkWatcher;
         private ManagementEventWatcher _statusWatcher;
 
-        public WmiWatcherModuleService(IBus bus)
+        public WmiWatcherModuleService(IBus bus, ILogger log)
         {
             _bus = bus;
+            _log = log;
         }
 
 
@@ -41,6 +45,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
         public void StartWatching()
         {
+            _log.LogDebug("Starting WMI Watcher");
             var scope = new ManagementScope(@"\\.\root\virtualization\v2");
 
             var query =
@@ -62,6 +67,8 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
         private void StatusWatcherOnEventArrived(object sender, EventArrivedEventArgs e)
         {
+            _log.LogTrace("status event arrived: {EventMof}", e.NewEvent.GetText(TextFormat.Mof));
+
             var instance = GetTargetInstance(e);
             var vmId = Guid.Parse(instance.GetPropertyValue("Name") as string
                                   ?? throw new InvalidOperationException());
@@ -79,6 +86,8 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
         private void _networkWatcher_EventArrived(object sender, EventArrivedEventArgs e)
         {
+            _log.LogTrace("network event arrived: {EventMof}", e.NewEvent.GetText(TextFormat.Mof));
+
             var instance = GetTargetInstance(e);
 
             var adapterId = instance.GetPropertyValue("InstanceID") as string;

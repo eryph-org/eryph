@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Management.Automation;
 using System.Threading.Tasks;
 using Eryph.Messages;
 using Eryph.Messages.Operations;
@@ -7,6 +8,7 @@ using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Images.Commands;
 using Eryph.Resources.Machines.Config;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
 
@@ -18,10 +20,11 @@ namespace Eryph.Modules.VmHostAgent
             OperationTask<PrepareVirtualMachineImageCommand>>
     {
         private readonly IBus _bus;
-
-        public PrepareVirtualMachineImageCommandHandler(IBus bus)
+        private readonly ILogger _log;
+        public PrepareVirtualMachineImageCommandHandler(IBus bus, ILogger log)
         {
             _bus = bus;
+            _log = log;
         }
 
         public Task Handle(OperationTask<PrepareVirtualMachineImageCommand> message)
@@ -52,6 +55,7 @@ namespace Eryph.Modules.VmHostAgent
             }
             catch (Exception ex)
             {
+                _log.LogError(ex, $"Command '{nameof(PrepareVirtualMachineImageCommand)}' failed.");
                 return _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId,
                     message.TaskId,
                     new ErrorData {ErrorMessage = ex.Message}));

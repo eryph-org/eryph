@@ -5,6 +5,7 @@ using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using JetBrains.Annotations;
 using LanguageExt;
+using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
 
@@ -14,15 +15,17 @@ namespace Eryph.Modules.VmHostAgent.Inventory
     internal class InventoryRequestedEventHandler : IHandleMessages<InventoryRequestedEvent>
     {
         private readonly IBus _bus;
+        private readonly ILogger _log;
 
         private readonly IPowershellEngine _engine;
         private readonly HostInventory _hostInventory;
         private readonly VirtualMachineInventory _inventory;
 
-        public InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine)
+        public InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log)
         {
             _bus = bus;
             _engine = engine;
+            _log = log;
             _inventory = new VirtualMachineInventory(_engine, HostSettingsBuilder.GetHostSettings());
             _hostInventory = new HostInventory(_engine);
         }
@@ -33,7 +36,11 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             return _engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
                     .AddCommand("get-vm"))
                 .BindAsync(VmsToInventory)
-                .ToAsync().IfRightAsync(c => _bus.Send(c));
+                .ToAsync()
+                .MatchAsync(
+                    RightAsync: c => _bus.Send(c),
+                    Left: l => { _log.LogError(l.Message); }
+                );
         }
 
 

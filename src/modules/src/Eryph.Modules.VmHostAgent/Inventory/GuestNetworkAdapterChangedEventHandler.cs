@@ -9,6 +9,7 @@ using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using JetBrains.Annotations;
 using LanguageExt;
+using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
 
@@ -19,11 +20,13 @@ namespace Eryph.Modules.VmHostAgent.Inventory
     {
         private readonly IBus _bus;
         private readonly IPowershellEngine _engine;
+        private readonly ILogger _log;
 
-        public GuestNetworkAdapterChangedEventHandler(IBus bus, IPowershellEngine engine)
+        public GuestNetworkAdapterChangedEventHandler(IBus bus, IPowershellEngine engine, ILogger log)
         {
             _bus = bus;
             _engine = engine;
+            _log = log;
         }
 
         public Task Handle(GuestNetworkAdapterChangedEvent message)
@@ -64,7 +67,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                                 DhcpEnabled = message.DhcpEnabled
                             }
                         }),
-                    Left: l => { });
+                    Left: l => { _log.LogError(l.Message); });
         }
 
 
