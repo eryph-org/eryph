@@ -44,7 +44,7 @@ jobs:
       command: 'publish'
       publishWebProjects: false
       projects: '**/apps/**/*-zero/*.csproj'
-      arguments: '--runtime win-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build'
+      arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build'
       zipAfterPublish: false
 
   - task: CmdLine@2
