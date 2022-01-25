@@ -150,11 +150,11 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             _hostSettings = hostSettings;
         }
 
-        public Task<Either<PowershellFailure, VirtualMachineData>> InventorizeVM(
+        public Task<Either<PowershellFailure,VirtualMachineData>> InventorizeVM(
             TypedPsObject<VirtualMachineInfo> vmInfo)
 
         {
-            return from vm in Prelude.RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo)
+           return from vm in Prelude.RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo)
                     .ToEither()
                 from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _hostSettings,
                     vm.Value.HardDrives)

@@ -1,6 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.Messages.Resources.Machines.Events;
+using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using JetBrains.Annotations;
@@ -47,14 +50,36 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         private Task<Either<PowershellFailure, UpdateVMHostInventoryCommand>> VmsToInventory(
             Seq<TypedPsObject<VirtualMachineInfo>> vms)
         {
-            return (from vmInventory in vms.Map(_inventory.InventorizeVM).Traverse(l => l)
-                    .Map(t => t.Traverse(l => l)).ToAsync()
-                from hostInventory in _hostInventory.InventorizeHost().ToAsync()
+            return  
+                (from hostInventory in _hostInventory.InventorizeHost().ToAsync()
+                from vmInventory in InventorizeAllVms(vms).ToAsync()
                 select new UpdateVMHostInventoryCommand
                 {
                     HostInventory = hostInventory,
                     VMInventory = vmInventory.ToList()
                 }).ToEither();
+        }
+
+        private Task<Either<PowershellFailure, IEnumerable<VirtualMachineData>>> InventorizeAllVms(
+            Seq<TypedPsObject<VirtualMachineInfo>> vms)
+        {
+            return
+                vms.Map(vm => _inventory.InventorizeVM(vm)
+                        .ToAsync().Match(
+                            Right: Prelude.Some,
+                            Left: l =>
+                            {
+                                _log.LogError(
+                                    "Inventory of virtual machine '{VMName}' (Id:{VmId}) failed. Error: {failure}",
+                                    vm.Value.Name, vm.Value.Id, l.Message);
+                                return Prelude.None;
+                            })
+
+                    )
+                    .TraverseParallel(l => l.AsEnumerable())
+                    .Map(seq => seq.Flatten())
+                    .Map(Prelude.Right<PowershellFailure, IEnumerable<VirtualMachineData>>);
+
         }
     }
 }
