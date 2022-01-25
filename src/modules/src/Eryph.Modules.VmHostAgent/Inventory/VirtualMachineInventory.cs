@@ -14,6 +14,7 @@ using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 
 namespace Eryph.Modules.VmHostAgent.Inventory
@@ -21,10 +22,12 @@ namespace Eryph.Modules.VmHostAgent.Inventory
     internal class HostInventory
     {
         private readonly IPowershellEngine _engine;
+        private readonly ILogger _log;
 
-        public HostInventory(IPowershellEngine engine)
+        public HostInventory(IPowershellEngine engine, ILogger log)
         {
             _engine = engine;
+            _log = log;
         }
 
         public async Task<Either<PowershellFailure, VMHostMachineData>> InventorizeHost()
@@ -38,12 +41,11 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                     .Map(x => (string) x.Value.Name).HeadOrNone()
                 from switchNames in Prelude
                     .Right<PowershellFailure, string[]>(switches.Select(s => (string) s.Value.Name).ToArray()).ToAsync()
-                from adapters1 in switchNames.Map(name =>
+                from adaptersSeq in switchNames.Map(name =>
                     _engine.GetObjectsAsync<dynamic>(new PsCommandBuilder().AddCommand("Get-VMNetworkAdapter")
-                        .AddParameter("ManagementOS").AddParameter("SwitchName", name)).ToAsync()).Traverse(l => l)
-                let adapters = adapters1.SelectMany(x => x)
-                from networks in adapters.Map(a => GetNetworkFromAdapter(a, standardSwitchName)).Traverse(l => l)
-                    .Map(x => x.Traverse(l => l)).ToAsync()
+                        .AddParameter("ManagementOS").AddParameter("SwitchName", name)).ToAsync()).TraverseParallel(l => l)
+                let adapters = adaptersSeq.SelectMany(x => x)
+                let networks = adapters.Map(a => GetNetworkFromAdapter(a, standardSwitchName))
                 select new VMHostMachineData
                 {
                     Name = Environment.MachineName,
@@ -51,22 +53,26 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                     {
                         Id = s.Value.Id.ToString()
                     }).ToArray(),
-                    Networks = networks.ToArray(),
+                    Networks = networks.Map(o=>o.AsEnumerable()).Flatten().ToArray(),
                     HardwareId = GetHostUuid() ?? GetHostMachineGuid()
                 }).ToEither();
 
             return res;
         }
 
-        private static Task<Either<PowershellFailure, MachineNetworkData>> GetNetworkFromAdapter(
+        private Option<MachineNetworkData> GetNetworkFromAdapter(
             TypedPsObject<dynamic> adapterInfo, Option<string> standardSwitchName)
         {
             var isStandardSwitchAdapter = adapterInfo.Value.SwitchName == standardSwitchName;
 
             var networkInfo = from adapter in NetworkInterface.GetAllNetworkInterfaces()
                     .Find(x => x.Id == (string) adapterInfo.Value.DeviceId)
-                    .ToEither(new PowershellFailure
-                        {Message = $"Could not find host network adapter for switch {adapterInfo.Value.VaSwitName}"})
+                    .Map(Option<NetworkInterface>.Some)
+                    .IfNone(() =>
+                    {
+                        _log.LogWarning($"Could not find host network adapter for switch '{adapterInfo.Value.SwitchName}'." );
+                        return Option<NetworkInterface>.None;
+                    })
                 let networks = adapter.GetIPProperties().UnicastAddresses.Select(x =>
                     IPNetwork.Parse(x.Address.ToString(), (byte) x.PrefixLength)).ToArray()
                 select new MachineNetworkData
@@ -86,7 +92,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                     Subnets = networks.Select(x => x.ToString()).ToArray()
                 };
 
-            return networkInfo.ToAsync().ToEither();
+            return networkInfo;
         }
 
 

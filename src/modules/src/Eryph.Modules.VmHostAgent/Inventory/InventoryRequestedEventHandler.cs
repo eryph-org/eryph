@@ -27,7 +27,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             _engine = engine;
             _log = log;
             _inventory = new VirtualMachineInventory(_engine, HostSettingsBuilder.GetHostSettings());
-            _hostInventory = new HostInventory(_engine);
+            _hostInventory = new HostInventory(_engine, log);
         }
 
 
