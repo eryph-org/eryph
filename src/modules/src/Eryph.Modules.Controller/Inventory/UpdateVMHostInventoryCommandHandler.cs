@@ -38,7 +38,7 @@ namespace Eryph.Modules.Controller.Inventory
                     HardwareId = message.HostInventory.HardwareId
                 });
 
-            newMachineState.Networks = (message.HostInventory.Networks.ToMachineNetwork(newMachineState.Id) 
+            newMachineState.Networks = (message.HostInventory.VirtualNetworks.ToMachineNetwork(newMachineState.Id) 
                                         ?? Array.Empty<MachineNetwork>()).ToList();
 
             newMachineState.Status = MachineStatus.Running;

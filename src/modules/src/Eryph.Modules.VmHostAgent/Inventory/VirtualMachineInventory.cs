@@ -23,6 +23,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
     {
         private readonly IPowershellEngine _engine;
         private readonly ILogger _log;
+        private readonly Guid _standardSwitchId = Guid.Parse("c08cb7b8-9b3c-408e-8e30-5e16a3aeb444");
 
         public HostInventory(IPowershellEngine engine, ILogger log)
         {
@@ -32,20 +33,25 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
         public async Task<Either<PowershellFailure, VMHostMachineData>> InventorizeHost()
         {
-            var standardSwitchId = Guid.Parse("c08cb7b8-9b3c-408e-8e30-5e16a3aeb444");
 
             var res = await (
                 from switches in _engine.GetObjectsAsync<dynamic>(new PsCommandBuilder().AddCommand("get-VMSwitch"))
                     .ToAsync()
-                let standardSwitchName = switches.Where(x => x.Value.Id == standardSwitchId)
-                    .Map(x => (string) x.Value.Name).HeadOrNone()
+                let standardSwitchName = switches.Where(x => x.Value.Id == _standardSwitchId)
+                    .Map(x => (string)x.Value.Name).HeadOrNone()
                 from switchNames in Prelude
-                    .Right<PowershellFailure, string[]>(switches.Select(s => (string) s.Value.Name).ToArray()).ToAsync()
+                    .Right<PowershellFailure, string[]>(switches.Select(s => (string)s.Value.Name).ToArray()).ToAsync()
                 from adaptersSeq in switchNames.Map(name =>
-                    _engine.GetObjectsAsync<dynamic>(new PsCommandBuilder().AddCommand("Get-VMNetworkAdapter")
-                        .AddParameter("ManagementOS").AddParameter("SwitchName", name)).ToAsync()).TraverseParallel(l => l)
-                let adapters = adaptersSeq.SelectMany(x => x)
-                let networks = adapters.Map(a => GetNetworkFromAdapter(a, standardSwitchName))
+
+                        _engine.GetObjectsAsync<dynamic>(new PsCommandBuilder().AddCommand("Get-VMNetworkAdapter")
+                            .AddParameter("ManagementOS").AddParameter("SwitchName", name)).ToAsync())
+                    .TraverseParallel(l => l)
+                let adaptersFromSwitches = adaptersSeq.SelectMany(x => x)
+                let standardSwitchAdapter = FindStandardSwitchAdapter(standardSwitchName, adaptersFromSwitches)
+                let virtualNetworks = adaptersFromSwitches.Map(a => 
+                    GetVirtualNetworkFromAdapter(a,IsStandardSwitchAdapter((string)a.Value.Id, standardSwitchAdapter)))
+                    .Map(o => o.AsEnumerable()).Flatten()
+                let hostNetworks = GetAllHostNetworks(virtualNetworks, standardSwitchAdapter)
                 select new VMHostMachineData
                 {
                     Name = Environment.MachineName,
@@ -53,46 +59,143 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                     {
                         Id = s.Value.Id.ToString()
                     }).ToArray(),
-                    Networks = networks.Map(o=>o.AsEnumerable()).Flatten().ToArray(),
+                    VirtualNetworks = virtualNetworks.ToArray(),
+                    Networks = hostNetworks.ToArray(),
                     HardwareId = GetHostUuid() ?? GetHostMachineGuid()
                 }).ToEither();
 
             return res;
         }
 
-        private Option<MachineNetworkData> GetNetworkFromAdapter(
-            TypedPsObject<dynamic> adapterInfo, Option<string> standardSwitchName)
+        private IEnumerable<MachineNetworkData> GetAllHostNetworks(IEnumerable<HostVirtualNetworkData> virtualNetworks, Option<TypedPsObject<object>> standardSwitchAdapter)
         {
-            var isStandardSwitchAdapter = adapterInfo.Value.SwitchName == standardSwitchName;
+            return NetworkInterface.GetAllNetworkInterfaces().Map(nwInterface =>
+            {
+                var (name, isStandardSwitch) =
+                    virtualNetworks.Find(virtualNetwork => virtualNetwork.DeviceId == nwInterface.Id)
+                        .Match(virtualNetwork => (virtualNetwork.Name,
+                            IsStandardSwitchAdapter(virtualNetwork.AdapterId, standardSwitchAdapter)),
+                            () => (nwInterface.Name, false) );
 
-            var networkInfo = from adapter in NetworkInterface.GetAllNetworkInterfaces()
-                    .Find(x => x.Id == (string) adapterInfo.Value.DeviceId)
+                return NetworkInterfaceToMachineNetworkData<MachineNetworkData>(nwInterface, isStandardSwitch, name);
+            });
+        }
+
+
+        private Option<HostVirtualNetworkData> GetVirtualNetworkFromAdapter(
+            TypedPsObject<dynamic> adapterInfo, bool isStandardSwitchAdapter)
+        {
+            if (adapterInfo.Value.SwitchId == _standardSwitchId && !isStandardSwitchAdapter)
+                return Option<HostVirtualNetworkData>.None;
+
+            //TODO: needs abstraction for testing
+            var networkInfo = from nwInterface in NetworkInterface.GetAllNetworkInterfaces()
+                .Find(x =>
+                    {
+                        var stats = x.GetIPStatistics();
+                        return x.Id == (string)adapterInfo.Value.DeviceId;
+                    })
                     .Map(Option<NetworkInterface>.Some)
                     .IfNone(() =>
                     {
-                        _log.LogWarning($"Could not find host network adapter for switch '{adapterInfo.Value.SwitchName}'." );
+                        _log.LogWarning(
+                            $"Could not find host network adapter for switch '{adapterInfo.Value.SwitchName}', DeviceId: '{adapterInfo.Value.DeviceId}').");
                         return Option<NetworkInterface>.None;
                     })
-                let networks = adapter.GetIPProperties().UnicastAddresses.Select(x =>
-                    IPNetwork.Parse(x.Address.ToString(), (byte) x.PrefixLength)).ToArray()
-                select new MachineNetworkData
+                let networkName = ((string)adapterInfo.Value.SwitchName).Apply(s => Regex.Match(s, @"^([\w\-]+)")).Value
+                let network =
+                    NetworkInterfaceToMachineNetworkData<HostVirtualNetworkData>(nwInterface, isStandardSwitchAdapter,
+                        networkName)
+                select network.Apply(n =>
                 {
-                    DefaultGateways = isStandardSwitchAdapter
-                        ? networks.Select(x => x.FirstUsable.ToString()).ToArray()
-                        : adapter.GetIPProperties().GatewayAddresses.Select(x => x.Address.ToString()).ToArray(),
-                    DhcpEnabled =
-                        isStandardSwitchAdapter || adapter.GetIPProperties().GetIPv4Properties().IsDhcpEnabled,
-                    DnsServers = isStandardSwitchAdapter
-                        ? networks.Select(x => x.FirstUsable.ToString()).ToArray()
-                        : adapter.GetIPProperties().DnsAddresses.Select(x => x.ToString()).ToArray(),
-                    IPAddresses =
-                        adapter.GetIPProperties().UnicastAddresses.Select(x => x.Address.ToString()).ToArray(),
-                    Name = ((string) adapterInfo.Value.SwitchName).Apply(s => Regex.Match(s, @"^([\w\-]+)")).Value
-                        .ToLowerInvariant(),
-                    Subnets = networks.Select(x => x.ToString()).ToArray()
-                };
+                    n.VirtualSwitchName = adapterInfo.Value.SwitchName;
+                    n.DeviceId = (string)adapterInfo.Value.DeviceId;
+                    n.AdapterId = (string)adapterInfo.Value.Id;
+                    return n;
+                });   
+                   
 
             return networkInfo;
+        }
+
+
+        private Option<TypedPsObject<dynamic>> FindStandardSwitchAdapter(Option<string> standardSwitchName,
+            IEnumerable<TypedPsObject<dynamic>> adapters)
+        {
+            var swAdapters = adapters.Where(a => a.Value.SwitchName == standardSwitchName).ToList();
+
+            if (swAdapters.Length() > 1)
+            {
+                var adapterNames = string.Join(',', swAdapters.Select(x => (string)x.Value.Name));
+                _log.LogDebug("Multiple candidates found for standard switch port. Port candidates: {adapterNames}", adapterNames);
+
+                // this is a dirty hack to filter out ports from Sandbox / Windows Containers
+                // at least for Sandbox additional ports are on the standard switch that have to be ignored
+                // these ports all have additional properties, so we look for a port without additional properties in registry
+
+                //TODO: needs abstraction for testing
+                foreach (var adapter in swAdapters.ToArray())
+                {
+                    var portPath = ((string)adapter.Value.Id).Replace("Microsoft:", "");
+                    var subKeys =
+                        Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Services\vmsmp\parameters\SwitchList\{portPath}")?.GetSubKeyNames();
+
+                    var adapterName = (string)adapter.Value.Name;
+
+                    if (subKeys is { Length: > 0 })
+                    {
+                        _log.LogTrace("Adapter '{adapterName}' has additional port properties - ignored", adapterName);
+                        swAdapters.Remove(adapter);
+                    }
+                    else
+                    {
+                        _log.LogTrace("Adapter '{adapterName}' has no additional port properties - accept it as standard switch port.", adapterName);
+
+                    }
+                }
+            }
+
+            if (swAdapters.Length() > 1)
+            {
+                var adapterNames = string.Join(',', swAdapters.Select(x => (string)x.Value.Name));
+                _log.LogWarning("Multiple candidates found for standard switch port. Choosing first port. Port candidates: {adapterNames}", adapterNames);
+
+            }
+
+            return swAdapters.HeadOrNone();
+        }
+
+        private static bool IsStandardSwitchAdapter(string adapterId,
+            Option<TypedPsObject<dynamic>> standardSwitchAdapter)
+        {
+            return standardSwitchAdapter.Map(sa => adapterId == sa.Value.Id)
+                .Match(s => (bool)s, () => false);
+
+        }
+
+        private static T NetworkInterfaceToMachineNetworkData<T>(NetworkInterface networkInterface,
+            bool isStandardSwitchAdapter, string name) where T: MachineNetworkData, new()
+        {
+            var networks = networkInterface.GetIPProperties().UnicastAddresses.Select(x =>
+                IPNetwork.Parse(x.Address.ToString(), (byte)x.PrefixLength)).ToArray();
+
+            return new T
+            {
+                DefaultGateways = isStandardSwitchAdapter
+                    ? networks.Select(x => x.FirstUsable.ToString()).ToArray()
+                    : networkInterface.GetIPProperties().GatewayAddresses.Select(x => x.Address.ToString()).ToArray(),
+                DhcpEnabled =
+                    isStandardSwitchAdapter || networkInterface.GetIPProperties().GetIPv4Properties().IsDhcpEnabled,
+                DnsServers = isStandardSwitchAdapter
+                    ? networks.Select(x => x.FirstUsable.ToString()).ToArray()
+                    : networkInterface.GetIPProperties().DnsAddresses.Select(x => x.ToString()).ToArray(),
+                IPAddresses =
+                    networkInterface.GetIPProperties().UnicastAddresses.Select(x => x.Address.ToString()).ToArray(),
+                Name = name
+                    .ToLowerInvariant(),
+                Subnets = networks.Select(x => x.ToString()).ToArray()
+
+            };
         }
 
 
@@ -239,5 +342,6 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                 yield return drive;
             }
         }
+
     }
 }
