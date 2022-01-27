@@ -2,7 +2,7 @@
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data;
 
-namespace Eryph.Modules.VmHostAgent.Inventory
+namespace Eryph.VmManagement.Inventory
 {
     public static class InventoryConverter
     {

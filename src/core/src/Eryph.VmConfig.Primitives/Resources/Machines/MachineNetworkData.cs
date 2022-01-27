@@ -3,6 +3,7 @@
     public class MachineNetworkData
     {
         public string Name { get; set; }
+        public string[] AdapterNames { get; set; }
 
         public string[] Subnets { get; set; }
         public string[] IPAddresses { get; set; }

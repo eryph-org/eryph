@@ -1,4 +1,5 @@
-﻿using Eryph.StateDb.Model;
+﻿using System;
+using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 
 namespace Eryph.StateDb
@@ -23,7 +24,7 @@ namespace Eryph.StateDb
         public DbSet<VirtualMachineDrive> VirtualMachineDrives { get; set; }
         public DbSet<VirtualDisk> VirtualDisks { get; set; }
 
-        public DbSet<Network> Networks { get; set; }
+        //public DbSet<Network> Networks { get; set; }
         public DbSet<Subnet> Subnets { get; set; }
 
         public DbSet<MachineNetwork> MachineNetworks { get; set; }
@@ -31,9 +32,9 @@ namespace Eryph.StateDb
 
         public DbSet<VirtualMachineMetadata> Metadata { get; set; }
 
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+
             modelBuilder.Entity<Operation>().HasMany(c => c.LogEntries);
             modelBuilder.Entity<Operation>().HasMany(c => c.Tasks);
             modelBuilder.Entity<Operation>().HasMany(c => c.Resources);
@@ -47,14 +48,18 @@ namespace Eryph.StateDb
             //modelBuilder.Entity<Agent>().HasMany(c => c.Networks)
             //.WithOne(one => one.Agent).HasForeignKey(fk => fk.AgentName);
 
-            modelBuilder.Entity<Network>().HasMany(c => c.Subnets)
-                .WithOne(one => one.Network).HasForeignKey(fk => fk.NetworkId);
+            //modelBuilder.Entity<Network>().HasMany(c => c.Subnets)
+            //    .WithOne(one => one.Network).HasForeignKey(fk => fk.NetworkId);
 
             modelBuilder.Entity<Machine>()
                 .HasMany(x => x.Networks)
                 .WithOne(x => x.Machine)
                 .HasForeignKey(x => x.MachineId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Machine>()
+                .Navigation(x => x.Networks)
+                .AutoInclude();
 
             modelBuilder.Entity<MachineNetwork>()
                 .HasKey(x => x.Id);
@@ -70,10 +75,20 @@ namespace Eryph.StateDb
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<VirtualMachine>()
+                .Navigation(x => x.NetworkAdapters)
+                .AutoInclude();
+            
+
+            modelBuilder.Entity<VirtualMachine>()
                 .HasMany(x => x.Drives)
                 .WithOne(x => x.Vm)
                 .HasForeignKey(x => x.MachineId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<VirtualMachine>()
+                .Navigation(x => x.Drives)
+                .AutoInclude();
+
 
             modelBuilder.Entity<Subnet>().HasKey(c => c.Id);
             modelBuilder.Entity<Subnet>().HasIndex(x => x.Address);
@@ -97,6 +112,13 @@ namespace Eryph.StateDb
 
             modelBuilder.Entity<VirtualMachineMetadata>()
                 .HasKey(x => x.Id);
+
+
+            //this is for SQLLite only
+            //TODO: add to SQLLite Model builder extension like in https://github.com/dbosoft/SAPHub/blob/main/src/SAPHub.StateDb/SqlModelBuilder.cs
+            modelBuilder.Entity<OperationLogEntry>().Property(e => e.Timestamp).HasConversion(
+                dateTimeOffset => dateTimeOffset.UtcDateTime,
+                dateTime => new DateTimeOffset(dateTime));
         }
     }
 }

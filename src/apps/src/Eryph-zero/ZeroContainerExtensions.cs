@@ -13,7 +13,7 @@ namespace Eryph.Runtime.Zero
         {
             container
                 .UseInMemoryBus()
-                .UseInMemoryDb();
+                .UseSqlLite();
         }
 
         public static Container UseInMemoryBus(this Container container)
@@ -27,10 +27,10 @@ namespace Eryph.Runtime.Zero
             return container;
         }
 
-        public static Container UseInMemoryDb(this Container container)
+        public static Container UseSqlLite(this Container container)
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
-            container.Register<IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
+            container.Register<IDbContextConfigurer<StateStoreContext>, SqlLiteStateStoreContextConfigurer>();
             return container;
         }
     }

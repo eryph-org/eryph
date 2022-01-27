@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Resources.Machines.Config;
@@ -9,28 +11,65 @@ namespace Eryph.VmManagement.Converging
 {
     public class ConvergeNetworkAdapters : ConvergeTaskBase
     {
+
+
         public ConvergeNetworkAdapters(ConvergeContext context) : base(context)
         {
         }
 
-        public override async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
+        public override Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
-            var adapterConfig = Context.Config.VM.NetworkAdapters;
+            var interfaceCounter = 0;
+            var adapters = Context.Config.VM.NetworkAdapters.ToArr();
 
-            var seq = adapterConfig.Map(adapter => NetworkAdapter(adapter, vmInfo)).ToSeq();
+            return Context.Config.Networks
+                .Map<MachineNetworkConfig, Either<PowershellFailure, PhysicalAdapterConfig>>
+                (n =>
+                {
+                    var networkName = n.Name ?? "default";
 
-            if (seq.IsEmpty)
-                return vmInfo;
+                    if (networkName == "default")
+                        networkName = Context.HostSettings.DefaultNetwork;
 
-            return await seq.Last;
+                    var hostNetwork = Context.HostInfo.VirtualNetworks.FirstOrDefault(x => x.Name == networkName);
+                    if (hostNetwork == null)
+                        return Prelude.Left(new PowershellFailure
+                            { Message = $"Could not find network '{n.Name}' on Host." });
+
+                    var switchConfig =
+                        Context.HostInfo.Switches.First(x => x.Id == hostNetwork.VirtualSwitchId.ToString());
+
+                    return Prelude.Right(new PhysicalAdapterConfig(n.AdapterName ?? "eth" + interfaceCounter++,
+                        switchConfig.VirtualSwitchName, null));
+
+                })
+                .MapT(c =>
+                {
+                    return adapters.Find(x => x.Name == c.AdapterName).Match(a =>
+                        {
+                            adapters = adapters.Remove(a);
+                            return c.Apply(macAddress: UseOrGenerateMacAddress(a, vmInfo));
+                        },
+                        () => c.Apply(macAddress: GenerateMacAddress(vmInfo.Value.Id, c.AdapterName)));
+
+                })
+                .Map(e => e.ToAsync())
+                .BindT(c => NetworkAdapter(c, vmInfo).ToAsync())
+                .TraverseSerial(l => l)
+                .Map(e => e.Last())
+                .ToEither();
+                
+
         }
 
 
-        public async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> NetworkAdapter(
-            VirtualMachineNetworkAdapterConfig networkAdapterConfig,
+        private async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> NetworkAdapter(
+            PhysicalAdapterConfig networkAdapterConfig,
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
+
+
             var switchName = string.IsNullOrWhiteSpace(networkAdapterConfig.SwitchName)
                 ? "Default Switch"
                 : networkAdapterConfig.SwitchName;
@@ -38,17 +77,17 @@ namespace Eryph.VmManagement.Converging
 
             var optionalAdapter = await ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
                 i => i.NetworkAdapters,
-                adapter => networkAdapterConfig.Name.Equals(adapter.Name, StringComparison.OrdinalIgnoreCase),
+                adapter => networkAdapterConfig.AdapterName.Equals(adapter.Name, StringComparison.OrdinalIgnoreCase),
                 async () =>
                 {
-                    await Context.ReportProgress($"Add Network Adapter: {networkAdapterConfig.Name}")
+                    await Context.ReportProgress($"Add Network Adapter: {networkAdapterConfig.AdapterName}")
                         .ConfigureAwait(false);
                     return await Context.Engine.GetObjectsAsync<VMNetworkAdapter>(PsCommandBuilder.Create()
                         .AddCommand("Add-VmNetworkAdapter")
                         .AddParameter("Passthru")
                         .AddParameter("VM", vmInfo.PsObject)
-                        .AddParameter("Name", networkAdapterConfig.Name)
-                        .AddParameter("StaticMacAddress", UseOrGenerateMacAddress(networkAdapterConfig, vmInfo))
+                        .AddParameter("Name", networkAdapterConfig.AdapterName)
+                        .AddParameter("StaticMacAddress", networkAdapterConfig.MacAddress)
                         .AddParameter("SwitchName", switchName)).ConfigureAwait(false);
                 }).ConfigureAwait(false);
 
@@ -96,5 +135,29 @@ namespace Eryph.VmManagement.Converging
 
             return "d2ab" + result;
         }
+
+
+        private class PhysicalAdapterConfig
+        {
+            public readonly string AdapterName;
+            public readonly string SwitchName;
+            public readonly string MacAddress;
+
+            public PhysicalAdapterConfig(string adapterName, string switchName, string macAddress)
+            {
+                AdapterName = adapterName;
+                SwitchName = switchName;
+                MacAddress = macAddress;
+            }
+
+            public PhysicalAdapterConfig Apply(string adapterName = null, string switchName=null, string macAddress = null)
+            {
+                return new PhysicalAdapterConfig(
+                    adapterName ?? AdapterName, 
+                    switchName ?? SwitchName,
+                    macAddress ?? MacAddress);
+            }
+        }
     }
+
 }

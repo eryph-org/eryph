@@ -7,8 +7,8 @@ namespace Eryph.StateDb.Model
         public Guid Id { get; set; }
 
         public string Message { get; set; }
-        public Operation Operation { get; set; }
-        public OperationTask Task { get; set; }
+        public virtual Operation Operation { get; set; }
+        public virtual OperationTask Task { get; set; }
         public DateTimeOffset Timestamp { get; set; }
     }
 }

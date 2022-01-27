@@ -9,6 +9,6 @@ namespace Eryph.StateDb.Model
         public Guid ResourceId { get; set; }
         public ResourceType ResourceType { get; set; }
 
-        public Operation Operation { get; set; }
+        public virtual Operation Operation { get; set; }
     }
 }

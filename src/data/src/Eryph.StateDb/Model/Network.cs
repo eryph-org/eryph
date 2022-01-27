@@ -4,11 +4,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Eryph.StateDb.Model
 {
-    public class Network : Resource
-    {
+    //public class Network : Resource
+    //{
 
-        public ulong VLanId { get; set; }
+    //    public ulong VLanId { get; set; }
 
-        public virtual List<Subnet> Subnets { get; set; }
-    }
+    //    public virtual List<Subnet> Subnets { get; set; }
+    //}
 }

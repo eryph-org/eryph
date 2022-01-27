@@ -9,6 +9,8 @@ using Eryph.Modules.ComputeApi;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Runtime.Zero.Configuration;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.CodeAnalysis.FlowAnalysis;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;

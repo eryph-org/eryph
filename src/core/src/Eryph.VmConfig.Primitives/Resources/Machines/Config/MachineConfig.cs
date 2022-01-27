@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
+using JetBrains.Annotations;
 
 namespace Eryph.Resources.Machines.Config
 {
+    [PublicAPI]
     public class MachineConfig
     {
         public string Name { get; set; }

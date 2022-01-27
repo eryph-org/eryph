@@ -66,8 +66,6 @@ namespace Eryph.VmManagement
                                 if (vmAdapterConfig == null) return;
                                 if (!string.IsNullOrWhiteSpace(vmAdapterConfig.MacAddress))
                                     iad.MacAddress = vmAdapterConfig.MacAddress;
-                                if (!string.IsNullOrWhiteSpace(vmAdapterConfig.SwitchName))
-                                    iad.SwitchName = vmAdapterConfig.SwitchName;
                             }
                         );
 

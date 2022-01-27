@@ -22,7 +22,8 @@ namespace Eryph.Modules.VmHostAgent
                     DefaultVirtualHardDiskPath =
                         Path.Combine(hostSettings.GetPropertyValue("DefaultVirtualHardDiskPath")?.ToString(), "Eryph"),
                     DefaultDataPath = Path.Combine(hostSettings.GetPropertyValue("DefaultExternalDataRoot")?.ToString(),
-                        "Eryph")
+                        "Eryph"),
+                    DefaultNetwork = "nat"
                 };
 
             throw new Exception("failed to query for hyper-v host settings");

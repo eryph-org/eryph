@@ -6,6 +6,7 @@ using Eryph.Messages.Resources.Machines.Events;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Inventory;
 using JetBrains.Annotations;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
@@ -21,16 +22,16 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         private readonly ILogger _log;
 
         private readonly IPowershellEngine _engine;
-        private readonly HostInventory _hostInventory;
+        private readonly IHostInfoProvider _hostInfoProvider;
         private readonly VirtualMachineInventory _inventory;
 
-        public InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log)
+        public InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log, IHostInfoProvider hostInfoProvider)
         {
             _bus = bus;
             _engine = engine;
             _log = log;
-            _inventory = new VirtualMachineInventory(_engine, HostSettingsBuilder.GetHostSettings());
-            _hostInventory = new HostInventory(_engine, log);
+            _hostInfoProvider = hostInfoProvider;
+            _inventory = new VirtualMachineInventory(_engine, HostSettingsBuilder.GetHostSettings(), hostInfoProvider);
         }
 
 
@@ -42,7 +43,10 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                 .ToAsync()
                 .MatchAsync(
                     RightAsync: c => _bus.Send(c),
-                    Left: l => { _log.LogError(l.Message); }
+                    Left: l =>
+                    {
+                        _log.LogError(l.Message);
+                    }
                 );
         }
 
@@ -51,7 +55,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             Seq<TypedPsObject<VirtualMachineInfo>> vms)
         {
             return  
-                (from hostInventory in _hostInventory.InventorizeHost().ToAsync()
+                (from hostInventory in _hostInfoProvider.GetHostInfoAsync(true).ToAsync()
                 from vmInventory in InventorizeAllVms(vms).ToAsync()
                 select new UpdateVMHostInventoryCommand
                 {

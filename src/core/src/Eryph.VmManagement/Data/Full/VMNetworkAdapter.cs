@@ -1,4 +1,5 @@
-﻿using Eryph.VmManagement.Data.Core;
+﻿using System;
+using Eryph.VmManagement.Data.Core;
 
 namespace Eryph.VmManagement.Data.Full
 {
@@ -60,7 +61,7 @@ namespace Eryph.VmManagement.Data.Full
 
         //public bool IsExternalAdapter { get; private set; }
 
-        //public Guid? SwitchId { get; private set; }
+        public Guid? SwitchId { get; private set; }
 
 
         //public VMNetworkAdapterAclSetting[] AclList { get; private set; }

@@ -38,7 +38,7 @@ namespace Eryph.Modules.Controller.Inventory
                     HardwareId = message.HostInventory.HardwareId
                 });
 
-            newMachineState.Networks = (message.HostInventory.Networks.ToMachineNetwork(newMachineState.Id) 
+            var networks = (message.HostInventory.VirtualNetworks.ToMachineNetwork(newMachineState.Id) 
                                         ?? Array.Empty<MachineNetwork>()).ToList();
 
             newMachineState.Status = MachineStatus.Running;
@@ -47,7 +47,7 @@ namespace Eryph.Modules.Controller.Inventory
             var existingMachine = await _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
                 .IfNoneAsync(() => _vmHostDataService.AddNewVMHost(newMachineState));
 
-            MergeMachineNetworks(newMachineState, existingMachine);
+            MergeMachineNetworks(networks, existingMachine);
             await UpdateVMs(message.VMInventory, existingMachine);
 
         }

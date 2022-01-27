@@ -18,7 +18,8 @@ namespace Eryph.StateDb.Specifications
 
                 Query
                     .Include(x => x.Resources)
-                    .Include(x => x.LogEntries.Where(l => l.Timestamp > requestLogTimestamp))
+                    .Include(x => x.LogEntries
+                        .Where(l => l.Timestamp > requestLogTimestamp))
                     .Include(x => x.Tasks);
             }
         }

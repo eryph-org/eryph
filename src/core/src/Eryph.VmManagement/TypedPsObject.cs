@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Management.Automation;
+using System.Security.Cryptography.X509Certificates;
 using AutoMapper;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
@@ -96,7 +97,8 @@ namespace Eryph.VmManagement
 
                     c.CreateMap(GetPsType("DvdDrive"), typeof(DvdDriveInfo));
 
-                    c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(VMNetworkAdapter));
+                    var adapterMapping = c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(VMNetworkAdapter));
+
                     c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(PlannedVMNetworkAdapter));
 
                     c.CreateMap(GetPsType(nameof(VMNetworkAdapterVlanSetting)), typeof(VMNetworkAdapterVlanSetting));

@@ -9,6 +9,7 @@ using Eryph.Resources.Machines;
 using Eryph.Resources.Machines.Config;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
@@ -196,9 +197,9 @@ namespace Eryph.Modules.VmHostAgent
 
         protected static Task<Either<PowershellFailure, VirtualMachineData>> CreateMachineInventory(
             IPowershellEngine engine, HostSettings hostSettings,
-            TypedPsObject<VirtualMachineInfo> vmInfo)
+            TypedPsObject<VirtualMachineInfo> vmInfo, IHostInfoProvider hostInfoProvider)
         {
-            var inventory = new VirtualMachineInventory(engine, hostSettings);
+            var inventory = new VirtualMachineInventory(engine, hostSettings, hostInfoProvider);
             return inventory.InventorizeVM(vmInfo).ToAsync().ToEither();
         }
     }
