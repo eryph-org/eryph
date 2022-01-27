@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
@@ -41,13 +42,21 @@ namespace Eryph.VmManagement.Inventory
                     Status = InventoryConverter.MapVmInfoStatusToVmStatus(vm.Value.State),
                     Name = vm.Value.Name,
                     Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.Value.HardDrives).ToArray(),
-                    NetworkAdapters = vm.Value.NetworkAdapters?.Map(a => new VirtualMachineNetworkAdapterData
+                    NetworkAdapters = vm.GetList(x=>x.NetworkAdapters).Map(a=>
                     {
-                        Id = a.Id,
-                        AdapterName = a.Name,
-                        VirtualSwitchName = a.SwitchName
+                        var connectedAdapter = a.Cast<ConnectedVMNetworkAdapter>();
+                        var res = new VirtualMachineNetworkAdapterData
+                        {
+                            Id = a.Value.Id,
+                            AdapterName = a.Value.Name,
+                            VirtualSwitchName = connectedAdapter.Value.SwitchName,
+                            VirtualSwitchId = connectedAdapter.Value.SwitchId,
+                        };
+                        return res;
                     }).ToArray(),
-                    Networks = VirtualNetworkQuery.GetNetworksByAdapters(vm.Value.Id, hostInfo, vm.Value.NetworkAdapters)
+                    Networks = VirtualNetworkQuery.GetNetworksByAdapters(vm.Value.Id, hostInfo, 
+                        vm.GetList(x=>x.NetworkAdapters, x=>x.Connected)
+                            .Map(x=>x.Cast<ConnectedVMNetworkAdapter>().Value))
                 }).ToEither();
         }
 

@@ -3,7 +3,16 @@ using Eryph.VmManagement.Data.Core;
 
 namespace Eryph.VmManagement.Data.Full
 {
-    public class VMNetworkAdapter : VirtualMachineDeviceInfo, IVMNetworkAdapterWithConnection
+    public class ConnectedVMNetworkAdapter : VMNetworkAdapter, IVMNetworkAdapterWithConnection
+    {
+        public string SwitchName { get; private set; }
+
+        public Guid? SwitchId { get; private set; }
+
+    }
+
+
+    public class VMNetworkAdapter : VirtualMachineDeviceInfo, IVMNetworkAdapterCore
     {
         //public bool DynamicMacAddressEnabled { get; private set; }
 
@@ -47,21 +56,19 @@ namespace Eryph.VmManagement.Data.Full
 
         //public string TestReplicaSwitchName { get; private set; }
 
-        public string SwitchName { get; private set; }
 
         //public string AdapterId { get; private set; }
 
         //public string[] StatusDescription { get; private set; }
 
 
-        //public VMNetworkAdapterOperationalStatus[] Status { get; private set; }
+        public VMNetworkAdapterOperationalStatus[] Status { get; private set; }
 
 
         //public bool IsManagementOs { get; private set; }
 
         //public bool IsExternalAdapter { get; private set; }
 
-        public Guid? SwitchId { get; private set; }
 
 
         //public VMNetworkAdapterAclSetting[] AclList { get; private set; }

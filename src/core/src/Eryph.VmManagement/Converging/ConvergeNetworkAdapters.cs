@@ -94,7 +94,7 @@ namespace Eryph.VmManagement.Converging
 
             return await optionalAdapter.BindAsync(async adapter =>
             {
-                if (adapter.Value.Connected && adapter.Value.SwitchName == switchName)
+                if (adapter.Value.Connected && adapter.Cast<ConnectedVMNetworkAdapter>().Value.SwitchName == switchName)
                     return Unit.Default;
 
                 await Context.ReportProgress(

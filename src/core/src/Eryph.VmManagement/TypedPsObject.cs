@@ -35,6 +35,11 @@ namespace Eryph.VmManagement
             return new TypedPsObject<T>(PsObject);
         }
 
+        public TypedPsObject<TNew> Cast<TNew>()
+        {
+            return new TypedPsObject<TNew>(PsObject);
+        }
+
         public TypedPsObject<TProp> GetProperty<TProp>(Expression<Func<T, TProp>> property)
         {
             var paramType = property.Parameters[0].Type; // first parameter of expression
@@ -97,7 +102,8 @@ namespace Eryph.VmManagement
 
                     c.CreateMap(GetPsType("DvdDrive"), typeof(DvdDriveInfo));
 
-                    var adapterMapping = c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(VMNetworkAdapter));
+                    c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(VMNetworkAdapter));
+                    c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(ConnectedVMNetworkAdapter));
 
                     c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(PlannedVMNetworkAdapter));
 
