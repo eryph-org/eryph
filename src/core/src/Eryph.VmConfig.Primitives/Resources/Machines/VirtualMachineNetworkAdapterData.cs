@@ -11,11 +11,4 @@ namespace Eryph.Resources.Machines
         public ushort VLanId { get; set; }
         public string MACAddress { get; set; }
     }
-
-
-    public class VMHostSwitchData
-    {
-        public string Id { get; set; }
-        public string VirtualSwitchName { get; set; }
-    }
 }

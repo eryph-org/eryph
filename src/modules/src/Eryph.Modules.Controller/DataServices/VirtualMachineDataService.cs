@@ -8,12 +8,6 @@ using VirtualMachineMetadata = Eryph.Resources.Machines.VirtualMachineMetadata;
 
 namespace Eryph.Modules.Controller.DataServices
 {
-    internal interface IVirtualMachineDataService
-    {
-        Task<Option<VirtualMachine>> GetVM(Guid id);
-        Task<VirtualMachine> AddNewVM(VirtualMachine vm, VirtualMachineMetadata metadata);
-    }
-
     internal class VirtualMachineDataService : IVirtualMachineDataService
     {
         private readonly IVirtualMachineMetadataService _metadataService;

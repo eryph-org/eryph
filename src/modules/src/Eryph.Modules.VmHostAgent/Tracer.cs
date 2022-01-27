@@ -46,8 +46,3 @@ internal class Tracer : ITracer
 
 
 }
-
-internal interface ITraceWriter
-{
-    void WriteTrace(Guid traceContext, TraceRecord[] recordsRecords);
-}

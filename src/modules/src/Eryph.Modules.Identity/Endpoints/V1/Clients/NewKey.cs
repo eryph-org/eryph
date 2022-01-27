@@ -60,11 +60,4 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
             return Ok(createdClient);
         }
     }
-
-
-    public class NewClientKeyRequest
-    {
-        [FromRoute(Name = "id")] public string Id { get; set; }
-    }
-
 }

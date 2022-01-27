@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Dbosoft.Hosuto.HostedServices;
 using Eryph.Messages;
 using Eryph.ModuleCore;
@@ -72,18 +71,5 @@ namespace Eryph.Modules.VmHostAgent
                     {TypeNameHandling = TypeNameHandling.None}))
                 .Logging(x => x.Trace()).Start());
         }
-    }
-
-    public class TraceRecord
-    {
-        public TraceData Data { get; set; }
-
-        public string Message { get; set; }
-    }
-
-    public class RecordsOfContext
-    {
-        public List<TraceRecord> Records { get; set; } = new();
-
     }
 }

@@ -6,8 +6,4 @@ namespace Eryph.StateDb
     {
         T Detach(T entity);
     }
-
-    public interface IReadonlyStateStoreRepository<T> : IReadRepositoryBase<T> where T : class
-    {
-    }
 }

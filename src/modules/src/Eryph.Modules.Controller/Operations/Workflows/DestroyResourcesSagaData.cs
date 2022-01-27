@@ -11,11 +11,4 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         public List<Resource> DestroyedResources { get; set; } = new List<Resource>();
         public List<Resource> DetachedResources { get; set; } = new List<Resource>();
     }
-
-    public enum DestroyResourceState
-    {
-        Initiated = 0,
-        ResourcesDestroyed = 5,
-        ResourcesReleased = 10
-    }
 }

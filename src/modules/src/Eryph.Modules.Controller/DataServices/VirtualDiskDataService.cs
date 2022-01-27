@@ -9,16 +9,6 @@ using LanguageExt;
 
 namespace Eryph.Modules.Controller.DataServices
 {
-    public interface IVirtualDiskDataService
-    {
-        Task<Option<VirtualDisk>> GetVHD(Guid id);
-        Task<VirtualDisk> AddNewVHD(VirtualDisk virtualDisk);
-
-        Task<IEnumerable<VirtualDisk>> FindVHDByLocation(string dataStore, string project, string environment, string storageIdentifier, string name);
-
-        Task<VirtualDisk> UpdateVhd(VirtualDisk virtualDisk);
-    }
-
     internal class VirtualDiskDataService : IVirtualDiskDataService
     {
         private readonly IStateStoreRepository<VirtualDisk> _repository;
