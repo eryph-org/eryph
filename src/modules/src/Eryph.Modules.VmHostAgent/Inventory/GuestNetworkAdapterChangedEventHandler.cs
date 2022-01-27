@@ -44,8 +44,9 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                 .BindAsync(getNetworkAdapters)
                 .BindAsync(findAdapterForMessage)
                 .BindAsync(a => 
-                    from hostInfo in _hostInfoProvider.GetHostInfoAsync()
-                    let hostNetwork = hostInfo.VirtualNetworks.FirstOrDefault(x=>x.VirtualSwitchId == a.Value.SwitchId)
+                    (from hostInfo in _hostInfoProvider.GetHostInfoAsync().ToAsync()
+                    let connectedAdapter = a.Cast<ConnectedVMNetworkAdapter>()
+                    let hostNetwork = hostInfo.VirtualNetworks.FirstOrDefault(x=>x.VirtualSwitchId == connectedAdapter.Value.SwitchId)
                     select 
                         new VirtualMachineNetworkChangedEvent
                         {
@@ -55,7 +56,8 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                                 Id = a.Value.Id,
                                 AdapterName = a.Value.Name,
                                 VLanId = (ushort) a.Value.VlanSetting.AccessVlanId,
-                                VirtualSwitchName = a.Value.SwitchName,
+                                VirtualSwitchName = connectedAdapter.Value.SwitchName,
+                                VirtualSwitchId = connectedAdapter.Value.SwitchId,
                                 MACAddress = a.Value.MacAddress
                             },
                             ChangedNetwork = new MachineNetworkData
@@ -68,7 +70,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                                 DnsServers = message.DnsServers,
                                 DhcpEnabled = message.DhcpEnabled
                             }
-                        }).ToAsync().MatchAsync(
+                        }).ToEither()).ToAsync().MatchAsync(
                     r => _bus.Publish(r),
                     l => { _log.LogError(l.Message); });
         }

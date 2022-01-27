@@ -34,7 +34,7 @@ internal class HostInventory
                 .ToAsync()
             from switchNames in Prelude
                 .Right<PowershellFailure, string[]>(switches.Select(s => (string)s.Value.Name).ToArray()).ToAsync()
-            from adapters in _engine.GetObjectsAsync<VMNetworkAdapter>(new PsCommandBuilder().AddCommand("Get-VMNetworkAdapter")
+            from adapters in _engine.GetObjectsAsync<ConnectedVMNetworkAdapter>(new PsCommandBuilder().AddCommand("Get-VMNetworkAdapter")
                 .AddParameter("ManagementOS")).ToAsync()
             let standardSwitchAdapter = FindStandardSwitchAdapter(adapters)
             let virtualNetworks = adapters.Map(a => 
@@ -57,7 +57,7 @@ internal class HostInventory
         return res;
     }
 
-    private IEnumerable<MachineNetworkData> GetAllHostNetworks(IEnumerable<HostVirtualNetworkData> virtualNetworks, Option<TypedPsObject<VMNetworkAdapter>> standardSwitchAdapter)
+    private IEnumerable<MachineNetworkData> GetAllHostNetworks(IEnumerable<HostVirtualNetworkData> virtualNetworks, Option<TypedPsObject<ConnectedVMNetworkAdapter>> standardSwitchAdapter)
     {
         return NetworkInterface.GetAllNetworkInterfaces().Map(nwInterface =>
         {
@@ -73,7 +73,7 @@ internal class HostInventory
 
 
     private Option<HostVirtualNetworkData> GetVirtualNetworkFromAdapter(
-        TypedPsObject<VMNetworkAdapter> adapterInfo, bool isStandardSwitchAdapter)
+        TypedPsObject<ConnectedVMNetworkAdapter> adapterInfo, bool isStandardSwitchAdapter)
     {
         if (adapterInfo.Value.SwitchId == _standardSwitchId && !isStandardSwitchAdapter)
             return Option<HostVirtualNetworkData>.None;
@@ -107,7 +107,7 @@ internal class HostInventory
     }
 
 
-    private Option<TypedPsObject<VMNetworkAdapter>> FindStandardSwitchAdapter(IEnumerable<TypedPsObject<VMNetworkAdapter>> adapters)
+    private Option<TypedPsObject<ConnectedVMNetworkAdapter>> FindStandardSwitchAdapter(IEnumerable<TypedPsObject<ConnectedVMNetworkAdapter>> adapters)
     {
         var swAdapters = adapters.Where(a => a.Value.SwitchId == _standardSwitchId).ToList();
 
@@ -147,7 +147,7 @@ internal class HostInventory
     }
 
     private static bool IsStandardSwitchAdapter(string adapterId,
-        Option<TypedPsObject<VMNetworkAdapter>> standardSwitchAdapter)
+        Option<TypedPsObject<ConnectedVMNetworkAdapter>> standardSwitchAdapter)
     {
         return standardSwitchAdapter.Map(sa => adapterId == sa.Value.Id)
             .Match(s => s, () => false);

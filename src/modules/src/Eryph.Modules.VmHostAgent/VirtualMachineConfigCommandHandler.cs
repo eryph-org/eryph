@@ -126,19 +126,19 @@ namespace Eryph.Modules.VmHostAgent
             var metadataIdString = "";
             if (!string.IsNullOrWhiteSpace(notes))
             {
-                var metadataIndex = notes.IndexOf("Eryph metadata id: ", StringComparison.InvariantCultureIgnoreCase);
+                var metadataIndex = notes.IndexOf("eryph metadata id: ", StringComparison.InvariantCultureIgnoreCase);
                 if (metadataIndex != -1)
                 {
-                    var metadataEnd = metadataIndex + "Eryph metadata id: ".Length + 36;
+                    var metadataEnd = metadataIndex + "eryph metadata id: ".Length + 36;
                     if (metadataEnd <= notes.Length)
-                        metadataIdString = notes.Substring(metadataIndex + "Eryph metadata id: ".Length, 36);
+                        metadataIdString = notes.Substring(metadataIndex + "eryph metadata id: ".Length, 36);
                 }
             }
 
 
             if (string.IsNullOrWhiteSpace(metadataIdString))
             {
-                var newNotes = $"Eryph metadata id: {metadata.Id}";
+                var newNotes = $"eryph metadata id: {metadata.Id}";
 
                 return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
                     .AddParameter("Notes", newNotes)).MapAsync(u => metadata);
@@ -159,9 +159,9 @@ namespace Eryph.Modules.VmHostAgent
         {
             var oldNotes = vmInfo.Value.Notes;
             if (string.IsNullOrWhiteSpace(oldNotes))
-                oldNotes = "\n\n\n\n--- DO NOT REMOVE NEXT LINE - REQUIRED FOR HAIPA ---\n";
+                oldNotes = "\n\n\n\n--- DO NOT REMOVE NEXT LINE - REQUIRED FOR ERYPH ---\n";
 
-            var startPos = oldNotes.IndexOf("Eryph metadata id: ", StringComparison.Ordinal);
+            var startPos = oldNotes.IndexOf("eryph metadata id: ", StringComparison.Ordinal);
 
             var notesBeforeMetaData = oldNotes;
             var notesAfterMetaData = "";
@@ -169,13 +169,13 @@ namespace Eryph.Modules.VmHostAgent
             if (startPos > -1)
             {
                 notesBeforeMetaData = oldNotes.Substring(0, startPos);
-                var endPos = startPos + "Eryph metadata id: ".Length + Guid.Empty.ToString().Length;
+                var endPos = startPos + "eryph metadata id: ".Length + Guid.Empty.ToString().Length;
 
                 if (endPos < oldNotes.Length)
                     notesAfterMetaData = oldNotes.Substring(endPos, oldNotes.Length - endPos);
             }
 
-            var newNotes = notesBeforeMetaData + $"Eryph metadata id: {metadataId}" + notesAfterMetaData;
+            var newNotes = notesBeforeMetaData + $"eryph metadata id: {metadataId}" + notesAfterMetaData;
 
 
             return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
