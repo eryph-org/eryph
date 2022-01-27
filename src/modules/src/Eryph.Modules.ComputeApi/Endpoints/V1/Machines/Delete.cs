@@ -24,7 +24,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
 
         protected override object CreateOperationMessage(StateDb.Model.Machine model, SingleResourceRequest request)
         {
-            return new StartMachineCommand{Resource = new Resource(ResourceType.Machine, model.Id)};
+            return new DestroyMachineCommand{ Resource = new Resource(ResourceType.Machine, model.Id)};
         }
 
 
