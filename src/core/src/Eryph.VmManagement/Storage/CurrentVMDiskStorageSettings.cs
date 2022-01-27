@@ -14,10 +14,11 @@ namespace Eryph.VmManagement.Storage
 
 
         public static Task<Either<PowershellFailure, Seq<CurrentHardDiskDriveStorageSettings>>> Detect(
-            IPowershellEngine engine, HostSettings hostSettings, IEnumerable<HardDiskDriveInfo> hdInfos)
+            IPowershellEngine engine, HostSettings hostSettings, IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> hdInfos)
         {
             var r = hdInfos
-                .ToSeq().MapToEitherAsync(hdInfo => Detect(engine, hostSettings, hdInfo))
+                .ToSeq().MapToEitherAsync(hdInfo => Detect(engine, hostSettings, 
+                    hdInfo.Cast<HardDiskDriveInfo>()))
                 .MapAsync(x => x.Where(o => o.IsSome)
                     .Map(o => o.ValueUnsafe()));
 

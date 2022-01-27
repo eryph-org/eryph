@@ -16,8 +16,8 @@ namespace Eryph.VmManagement.Networking
         }
 
 
-        public static Either<PowershellFailure, TypedPsObject<T>> FindAdapter<T>(Seq<TypedPsObject<T>> sequence,
-            string adapterId) where T : IVMNetworkAdapterCore
+        public static Either<PowershellFailure, TypedPsObject<VMNetworkAdapter>> FindAdapter(Seq<TypedPsObject<VMNetworkAdapter>> sequence,
+            string adapterId)
         {
             adapterId = adapterId.Replace("Microsoft:GuestNetwork\\", "Microsoft:");
             return sequence.Find(a => a.Value.Id == adapterId)

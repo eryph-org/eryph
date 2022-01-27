@@ -6,6 +6,8 @@ using System.Management.Automation.Runspaces;
 using System.Threading.Tasks;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
@@ -53,48 +55,40 @@ namespace Eryph.VmManagement
         public Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder,
             Action<int> reportProgress = null)
         {
-            using (var ps = CreateShell())
-            {
-                builder.Build(ps);
-
-                InitializeProgressReporting(ps, reportProgress);
-                return ps.GetObjects<T>(_log);
-            }
+            using var ps = CreateShell();
+            builder.Build(ps);
+            InitializeProgressReporting(ps, reportProgress);
+            return ps.GetObjects<T>(_log);
         }
 
         public async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder,
             Func<int, Task> reportProgress = null)
         {
-            using (var ps = CreateShell())
-            {
-                builder.Build(ps);
-                InitializeAsyncProgressReporting(ps, reportProgress);
+            using var ps = CreateShell();
 
-                return await ps.GetObjectsAsync<T>(_log).ConfigureAwait(false);
-            }
+            builder.Build(ps);
+            InitializeAsyncProgressReporting(ps, reportProgress);
+
+            return await ps.GetObjectsAsync<T>(_log).ConfigureAwait(false);
         }
 
         public Either<PowershellFailure, Unit> Run(PsCommandBuilder builder, Action<int> reportProgress = null)
         {
-            using (var ps = CreateShell())
-            {
-                builder.Build(ps);
+            using var ps = CreateShell();
+            builder.Build(ps);
                 
-                InitializeProgressReporting(ps, reportProgress);
-                return ps.Run(_log);
-            }
+            InitializeProgressReporting(ps, reportProgress);
+            return ps.Run(_log);
         }
 
         public async Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder,
             Func<int, Task> reportProgress = null)
         {
-            using (var ps = CreateShell())
-            {
-                builder.Build(ps);
+            using var ps = CreateShell();
+            builder.Build(ps);
 
-                InitializeAsyncProgressReporting(ps, reportProgress);
-                return await ps.RunAsync(_log).ConfigureAwait(false);
-            }
+            InitializeAsyncProgressReporting(ps, reportProgress);
+            return await ps.RunAsync(_log).ConfigureAwait(false);
         }
 
         public PowerShell CreateShell()
@@ -135,9 +129,10 @@ namespace Eryph.VmManagement
         }
     }
 
+
     public class PsCommandBuilder
     {
-        private readonly List<Tuple<DataType, object, string>> _dataChain = new List<Tuple<DataType, object, string>>();
+        private readonly List<(DataType dataType, object value, string name)> _dataChain = new List<(DataType, object, string)>();
 
         public static PsCommandBuilder Create()
         {
@@ -147,36 +142,43 @@ namespace Eryph.VmManagement
 
         public PsCommandBuilder AddCommand(string command)
         {
-            _dataChain.Add(new Tuple<DataType, object, string>(DataType.Command, null, command));
+            _dataChain.Add((DataType.Command, null, command));
             return this;
         }
 
         public PsCommandBuilder AddParameter(string parameter, object value)
         {
-            _dataChain.Add(new Tuple<DataType, object, string>(DataType.Parameter, value, parameter));
+            _dataChain.Add((DataType.Parameter, value, parameter));
             return this;
         }
 
         public PsCommandBuilder AddParameter(string parameter)
         {
-            _dataChain.Add(new Tuple<DataType, object, string>(DataType.SwitchParameter, null, parameter));
+            _dataChain.Add((DataType.SwitchParameter, null, parameter));
             return this;
         }
 
         public PsCommandBuilder AddArgument(object statement)
         {
-            _dataChain.Add(new Tuple<DataType, object, string>(DataType.AddArgument, statement, null));
+            _dataChain.Add((DataType.AddArgument, statement, null));
             return this;
         }
 
         public PsCommandBuilder Script(string script)
         {
-            _dataChain.Add(new Tuple<DataType, object, string>(DataType.Script, null, script));
+            _dataChain.Add((DataType.Script, null, script));
             return this;
+        }
+
+        public JToken ToJToken()
+        {
+            return JToken.FromObject(_dataChain);
         }
 
         public void Build(PowerShell ps)
         {
+            TraceContextAccessor.TraceContext?.Write(PowershellCommandTraceData.FromObject(this));
+
             foreach (var data in _dataChain)
                 switch (data.Item1)
                 {
@@ -270,9 +272,9 @@ namespace Eryph.VmManagement
         {
             if (result.IsRight) return result;
 
-            var error = ps.Streams.Error.FirstOrDefault() 
-                        ?? new ErrorRecord(
-                            new Exception("unknown powershell error"), "", ErrorCategory.NotSpecified, null);
+                var error = ps.Streams.Error.FirstOrDefault() 
+                            ?? new ErrorRecord(
+                                new Exception("unknown powershell error"), "", ErrorCategory.NotSpecified, null);
 
             var message =
                 $" Command: {error.InvocationInfo.MyCommand}, Error: {error}, Exception: {error.Exception}";

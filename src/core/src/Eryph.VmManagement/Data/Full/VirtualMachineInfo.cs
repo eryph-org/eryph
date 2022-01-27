@@ -10,11 +10,12 @@ using LanguageExt;
 
 namespace Eryph.VmManagement.Data.Full
 {
-    public sealed class VirtualMachineInfo : Record<VirtualMachineInfo>,
+
+    public sealed class VirtualMachineInfo :
         IVirtualMachineCoreInfo,
         IVMWithStateInfo,
-        IVMWithNetworkAdapterInfo<VMNetworkAdapter>,
-        IVMWithDrivesInfo<HardDiskDriveInfo>
+        IVMWithNetworkAdapterInfo,
+        IVMWithDrivesInfo
     {
         //public string ComputerName { get; private set; }
 
@@ -78,7 +79,7 @@ namespace Eryph.VmManagement.Data.Full
         //public TimeSpan Uptime { get; private set; }
 
 
-        public VirtualMachineOperationalStatus[] OperationalStatus { get; private set; }
+        //public VirtualMachineOperationalStatus[] OperationalStatus { get; private set; }
 
 
         //public VirtualMachineOperationalStatus? PrimaryOperationalStatus
@@ -95,7 +96,7 @@ namespace Eryph.VmManagement.Data.Full
         //public VirtualMachineOperationalStatus? SecondaryOperationalStatus { get; private set; }
 
 
-        public string[] StatusDescriptions { get; private set; }
+        //public string[] StatusDescriptions { get; private set; }
 
 
         //public string PrimaryStatusDescription
@@ -170,7 +171,7 @@ namespace Eryph.VmManagement.Data.Full
 
         //public string ParentSnapshotName { get; private set; }
 
-
+        
         public string Path { get; private set; }
 
         //public VMGroupInfo[] Groups { get; private set; }
@@ -186,7 +187,7 @@ namespace Eryph.VmManagement.Data.Full
 
         //public VMComPortInfo ComPort2 { get; private set; }
 
-        public DvdDriveInfo[] DVDDrives { get; private set; }
+        public VirtualMachineDeviceInfo[] DVDDrives { get; private set; }
 
 
         //public VMFibreChannelHbaInfo[] FibreChannelHostBusAdapters { get; private set; }
@@ -195,7 +196,7 @@ namespace Eryph.VmManagement.Data.Full
         //public VMFloppyDiskDriveInfo FloppyDrive { get; private set; }
 
 
-        public HardDiskDriveInfo[] HardDrives { get; private set; }
+        public VirtualMachineDeviceInfo[] HardDrives { get; private set; }
 
 
         //public VMRemoteFx3DVideoAdapterInfo RemoteFxAdapter { get; private set; }
@@ -203,7 +204,7 @@ namespace Eryph.VmManagement.Data.Full
 
         //public VirtualMachineIntegrationComponentInfo[] VMIntegrationService { get; private set; }
 
-        public VMNetworkAdapter[] NetworkAdapters { get; private set; }
+        public VirtualMachineDeviceInfo[] NetworkAdapters { get; private set; }
 
 
         //public long SizeOfSystemFiles { get; private set; }

@@ -1,7 +1,9 @@
-﻿namespace Eryph.VmManagement.Data
+﻿using Eryph.VmManagement.Data.Core;
+
+namespace Eryph.VmManagement.Data
 {
-    public interface IVMWithNetworkAdapterInfo<out T> where T : IVMNetworkAdapterCore
+    public interface IVMWithNetworkAdapterInfo
     {
-        T[] NetworkAdapters { get; }
+        VirtualMachineDeviceInfo[] NetworkAdapters { get; }
     }
 }

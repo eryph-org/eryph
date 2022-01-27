@@ -68,13 +68,13 @@ namespace Eryph.VmManagement
             return vmInfo;
         }
 
-        public static Task<Either<PowershellFailure, Option<PlannedVirtualMachineInfo>>> TemplateFromImage(
+        public static Task<Either<PowershellFailure, Option<TypedPsObject<PlannedVirtualMachineInfo>>>> TemplateFromImage(
             IPowershellEngine engine,
             HostSettings hostSettings,
             MachineImageConfig imageConfig)
         {
             if (string.IsNullOrWhiteSpace(imageConfig?.Name))
-                return RightAsync<PowershellFailure, Option<PlannedVirtualMachineInfo>>(None).ToEither();
+                return RightAsync<PowershellFailure, Option<TypedPsObject<PlannedVirtualMachineInfo>>>(None).ToEither();
 
 
             var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
@@ -91,7 +91,8 @@ namespace Eryph.VmManagement
                             .AddParameter("Path", configPath)
                         )
                         .BindAsync(x => x.HeadOrLeft(new PowershellFailure {Message = "Failed to load VM Image"}))
-                        .BindAsync(rep => ExpandTemplateData(rep.Value.VM, engine)));
+                        .BindAsync(rep => ExpandTemplateData(
+                            rep.GetProperty(x=>x.VM), engine)));
 
             return vmInfo.MapAsync(Some);
         }
@@ -176,15 +177,16 @@ namespace Eryph.VmManagement
             ).BindAsync(u => vmInfo.RecreateOrReload(engine));
         }
 
-        private static Task<Either<PowershellFailure, PlannedVirtualMachineInfo>> ExpandTemplateData(
-            PlannedVirtualMachineInfo template, IPowershellEngine engine)
+        private static Task<Either<PowershellFailure, TypedPsObject<PlannedVirtualMachineInfo>>> ExpandTemplateData(
+            TypedPsObject<PlannedVirtualMachineInfo> template, IPowershellEngine engine)
         {
-            return template.HardDrives.ToSeq().MapToEitherAsync(hd =>
-                    (from optionalDrive in VhdQuery.GetVhdInfo(engine, hd.Path).ToAsync()
+            return template.GetList(x=>x.HardDrives).MapToEitherAsync(device =>
+                    (   from hd in device.CastSafeAsync<PlannedHardDiskDriveInfo>().ToAsync()
+                        from optionalDrive in VhdQuery.GetVhdInfo(engine, hd.Value.Path).ToAsync()
                         from drive in optionalDrive.ToEither(new PowershellFailure
                                 {Message = "Failed to find realized image disk"})
                             .ToAsync()
-                        let _ = drive.Apply(d => hd.Size = d.Value.Size)
+                        let _ = drive.Apply(d => hd.Value.Size = d.Value.Size)
                         select hd).ToEither())
                 .MapT(hd => template);
         }
@@ -204,15 +206,16 @@ namespace Eryph.VmManagement
         private static async Task<Either<PowershellFailure, Unit>> RenameDisksToConvention<T>(
             IPowershellEngine engine,
             TypedPsObject<T> vmInfo)
-            where T : IVMWithDrivesInfo<HardDiskDriveInfo>
+            where T : IVMWithDrivesInfo
         {
             const string abc = "abcdefklmnopqrstvxyz";
 
             var counterSCSI = -1;
             var counterIDE = -1;
 
-            vmInfo.GetList(x => x.HardDrives).Map(disk =>
+            vmInfo.GetList(x => x.HardDrives).Map(device =>
             {
+                var disk = device.Cast<HardDiskDriveInfo>();
                 var fileName = Path.GetFileNameWithoutExtension("filename");
 
                 switch (disk.Value.ControllerType)

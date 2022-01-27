@@ -5,9 +5,10 @@ using LanguageExt;
 
 namespace Eryph.VmManagement.Data.Planned
 {
-    public sealed class PlannedVirtualMachineInfo : Record<VirtualMachineInfo>,
-        IVirtualMachineCoreInfo, IVMWithNetworkAdapterInfo<PlannedVMNetworkAdapter>,
-        IVMWithDrivesInfo<PlannedHardDiskDriveInfo>
+    public sealed class PlannedVirtualMachineInfo : Record<PlannedVirtualMachineInfo>,
+        IVirtualMachineCoreInfo, 
+        IVMWithNetworkAdapterInfo,
+        IVMWithDrivesInfo
 
     {
         public long MemoryMaximum { get; private set; }
@@ -25,14 +26,9 @@ namespace Eryph.VmManagement.Data.Planned
         public long MemoryStartup { get; private set; }
 
 
-        public DvdDriveInfo[] DVDDrives { get; private set; }
-        public PlannedHardDiskDriveInfo[] HardDrives { get; private set; }
+        public VirtualMachineDeviceInfo[] DVDDrives { get; private set; }
+        public VirtualMachineDeviceInfo[] HardDrives { get; private set; }
 
-        public PlannedVMNetworkAdapter[] NetworkAdapters { get; private set; }
-    }
-
-    public sealed class PlannedHardDiskDriveInfo : DriveInfo, IDriveInfo
-    {
-        public long Size { get; set; }
+        public VirtualMachineDeviceInfo[] NetworkAdapters { get; private set; }
     }
 }

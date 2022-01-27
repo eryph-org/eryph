@@ -3,16 +3,7 @@ using Eryph.VmManagement.Data.Core;
 
 namespace Eryph.VmManagement.Data.Full
 {
-    public class ConnectedVMNetworkAdapter : VMNetworkAdapter, IVMNetworkAdapterWithConnection
-    {
-        public string SwitchName { get; private set; }
-
-        public Guid? SwitchId { get; private set; }
-
-    }
-
-
-    public class VMNetworkAdapter : VirtualMachineDeviceInfo, IVMNetworkAdapterCore
+    public class VMNetworkAdapter : VirtualMachineDeviceInfo
     {
         //public bool DynamicMacAddressEnabled { get; private set; }
 
@@ -62,7 +53,7 @@ namespace Eryph.VmManagement.Data.Full
         //public string[] StatusDescription { get; private set; }
 
 
-        public VMNetworkAdapterOperationalStatus[] Status { get; private set; }
+        //public VMNetworkAdapterOperationalStatus[] Status { get; private set; }
 
 
         //public bool IsManagementOs { get; private set; }
@@ -84,6 +75,9 @@ namespace Eryph.VmManagement.Data.Full
 
         public VMNetworkAdapterVlanSetting VlanSetting { get; private set; }
 
+        public string SwitchName { get; private set; }
+
+        public Guid? SwitchId { get; private set; }
 
         //public VMNetworkAdapterBandwidthSetting BandwidthSetting { get; private set; }
 

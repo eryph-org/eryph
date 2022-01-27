@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Eryph.App
+namespace Eryph.Core
 {
     public class Config
     {

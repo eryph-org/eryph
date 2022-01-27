@@ -61,7 +61,7 @@ namespace Eryph.VmManagement.Converging
                 .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
             return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine,
-                    Context.HostSettings, vmInfo.Value.HardDrives).ToAsync()
+                    Context.HostSettings, vmInfo.GetList(x=>x.HardDrives)).ToAsync()
                 from _ in plannedDiskSettings.MapToEitherAsync(s => VirtualDisk(s, vmInfo, currentDiskSettings))
                     .ToAsync()
                 select Unit.Default).ToEither();
@@ -82,7 +82,7 @@ namespace Eryph.VmManagement.Converging
 
         {
             return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings
-                    .Detect(Context.Engine, Context.HostSettings, vmInfo.Value.HardDrives).ToAsync()
+                    .Detect(Context.Engine, Context.HostSettings, vmInfo.GetList(x=>x.HardDrives)).ToAsync()
                 from _ in DetachUndefinedHardDrives(vmInfo, plannedStorageSettings, currentDiskSettings).ToAsync()
                 from __ in DetachUndefinedDvdDrives(vmInfo, plannedStorageSettings).ToAsync()
                 select Unit.Default).ToEither();
@@ -105,8 +105,10 @@ namespace Eryph.VmManagement.Converging
 
             return TaskExtensions.Map(ConvergeHelpers.FindAndApply(vmInfo,
                     i => i.HardDrives,
-                    hd =>
+                    device =>
                     {
+                        var hd = device.Cast<HardDiskDriveInfo>().Value;
+
                         var plannedDiskAtControllerPos = planedDiskSettings
                             .FirstOrDefault(x =>
                                 x.ControllerLocation == hd.ControllerLocation &&
@@ -159,14 +161,15 @@ namespace Eryph.VmManagement.Converging
 
             return TaskExtensions.Map(ConvergeHelpers.FindAndApply(vmInfo,
                     i => i.DVDDrives,
-                    hd =>
+                    device =>
                     {
+                        var dvd = device.Cast<DvdDriveInfo>().Value;
                         //ignore cloud init drive, will be handled later
-                        if (hd.ControllerLocation == 63 && hd.ControllerNumber == 0)
+                        if (dvd.ControllerLocation == 63 && dvd.ControllerNumber == 0)
                             return false;
 
-                        var detach = !controllersAndLocations.ContainsKey(hd.ControllerNumber) ||
-                                     !controllersAndLocations[hd.ControllerNumber].Contains(hd.ControllerLocation);
+                        var detach = !controllersAndLocations.ContainsKey(dvd.ControllerNumber) ||
+                                     !controllersAndLocations[dvd.ControllerNumber].Contains(dvd.ControllerLocation);
 
                         return detach;
                     },
@@ -248,14 +251,15 @@ namespace Eryph.VmManagement.Converging
 
                 return await ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
                         i => i.HardDrives,
-                        disk => currentSettings.Map(x => x.AttachedVMId) == disk.Id,
+                        device => device.Cast<HardDiskDriveInfo>()
+                                .Map(disk => currentSettings.Map(x => x.AttachedVMId) == disk.Id),
                         async () =>
                         {
                             await Context
                                 .ReportProgress(
                                     $"Attaching HD Drive {driveSettings.DiskSettings.Name} to controller: {driveSettings.ControllerNumber}, Location: {driveSettings.ControllerLocation}")
                                 .ConfigureAwait(false);
-                            return await Context.Engine.GetObjectsAsync<HardDiskDriveInfo>(PsCommandBuilder.Create()
+                            return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(PsCommandBuilder.Create()
                                 .AddCommand("Add-VMHardDiskDrive")
                                 .AddParameter("VM", vmInfo.PsObject)
                                 .AddParameter("Path", vhdPath)

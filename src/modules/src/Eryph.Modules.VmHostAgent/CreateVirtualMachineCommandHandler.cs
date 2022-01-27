@@ -49,11 +49,11 @@ namespace Eryph.Modules.VmHostAgent
             var getTemplate = Prelude.fun(() =>
                 GetTemplate(Engine, hostSettings, config.Image).ToAsync());
 
-            var createVM = Prelude.fun((VMStorageSettings settings, Option<PlannedVirtualMachineInfo> template) =>
+            var createVM = Prelude.fun((VMStorageSettings settings, Option<TypedPsObject<PlannedVirtualMachineInfo>> template) =>
                 CreateVM(config, hostSettings, settings, Engine, template).ToAsync());
 
             var createMetadata = Prelude.fun(
-                (TypedPsObject<VirtualMachineInfo> vmInfo, Option<PlannedVirtualMachineInfo> plannedVM) =>
+                (TypedPsObject<VirtualMachineInfo> vmInfo, Option<TypedPsObject<PlannedVirtualMachineInfo>> plannedVM) =>
                     CreateMetadata(plannedVM, vmInfo, config, command.NewMachineId).ToAsync());
 
             var chain =
@@ -74,7 +74,7 @@ namespace Eryph.Modules.VmHostAgent
                     Bus.Publish(OperationTaskStatusEvent.Completed(OperationId, TaskId, result)).ToUnit());
         }
 
-        private static Task<Either<PowershellFailure, Option<PlannedVirtualMachineInfo>>> GetTemplate(
+        private static Task<Either<PowershellFailure, Option<TypedPsObject<PlannedVirtualMachineInfo>>>> GetTemplate(
             IPowershellEngine engine,
             HostSettings hostSettings,
             MachineImageConfig imageConfig)
@@ -85,7 +85,7 @@ namespace Eryph.Modules.VmHostAgent
 
         private static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> CreateVM(MachineConfig config,
             HostSettings hostSettings, VMStorageSettings storageSettings, IPowershellEngine engine,
-            Option<PlannedVirtualMachineInfo> optionalTemplate)
+            Option<TypedPsObject<PlannedVirtualMachineInfo>> optionalTemplate)
         {
             return from storageIdentifier in storageSettings.StorageIdentifier.ToEitherAsync(new PowershellFailure
                     {Message = "Unknown storage identifier, cannot create new virtual machine"}).ToEither()
@@ -104,7 +104,7 @@ namespace Eryph.Modules.VmHostAgent
         }
 
         private Task<Either<PowershellFailure, VirtualMachineMetadata>> CreateMetadata(
-            Option<PlannedVirtualMachineInfo> template,
+            Option<TypedPsObject<PlannedVirtualMachineInfo>> template,
             TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config, Guid machineId)
         {
             var metadata = new VirtualMachineMetadata

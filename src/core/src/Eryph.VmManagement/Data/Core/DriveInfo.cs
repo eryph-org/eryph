@@ -2,7 +2,7 @@
 
 namespace Eryph.VmManagement.Data.Core
 {
-    public abstract class DriveInfo : DriveInfoBase, IDriveInfo
+    public abstract class DriveInfo : DriveInfoBase
     {
         public int ControllerLocation { get; set; }
 

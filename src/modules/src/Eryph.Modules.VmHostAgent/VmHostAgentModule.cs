@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Dbosoft.Hosuto.HostedServices;
 using Eryph.Messages;
 using Eryph.ModuleCore;
@@ -6,11 +7,13 @@ using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.Rebus;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Logging;
+using Rebus.Pipeline;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
@@ -39,12 +42,17 @@ namespace Eryph.Modules.VmHostAgent
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.Register<StartBusModuleHandler>();
+            container.RegisterSingleton<ITracer, Tracer>();
+            container.RegisterSingleton<ITraceWriter, TelemetryTraceWriter>();
+
             container.RegisterSingleton<IPowershellEngine, PowershellEngine>();
             container.RegisterSingleton<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>();
             container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
-
+            
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingTaskMessageHandler<>));
+            container.RegisterDecorator(typeof(IHandleMessages<>), typeof(TraceDecorator<>));
+
 
             container.ConfigureRebus(configurer => configurer
                 .Transport(t =>
@@ -64,5 +72,18 @@ namespace Eryph.Modules.VmHostAgent
                     {TypeNameHandling = TypeNameHandling.None}))
                 .Logging(x => x.Trace()).Start());
         }
+    }
+
+    public class TraceRecord
+    {
+        public TraceData Data { get; set; }
+
+        public string Message { get; set; }
+    }
+
+    public class RecordsOfContext
+    {
+        public List<TraceRecord> Records { get; set; } = new();
+
     }
 }

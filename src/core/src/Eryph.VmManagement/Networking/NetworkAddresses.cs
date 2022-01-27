@@ -7,6 +7,8 @@ using System.Net;
 using System.Net.Sockets;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.Full;
 
 namespace Eryph.VmManagement.Networking
 {
@@ -40,13 +42,14 @@ namespace Eryph.VmManagement.Networking
     public static class VirtualNetworkQuery
     {
         public static MachineNetworkData[] GetNetworksByAdapters(Guid vmId, VMHostMachineData hostInfo,
-            IEnumerable<IVMNetworkAdapterWithConnection> networkAdapters)
+            IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> networkAdapters)
         {
             var scope = new ManagementScope(@"\\.\root\virtualization\v2");
             var resultList = new List<MachineNetworkData>();
 
-            foreach (var networkAdapter in networkAdapters)
+            foreach (var device in networkAdapters)
             {
+                var networkAdapter = device.Cast<VMNetworkAdapter>().Value;
                 var guestNetworkId = networkAdapter.Id.Replace("Microsoft:", "Microsoft:GuestNetwork\\")
                     .Replace("\\", "\\\\");
                 var obj = new ManagementObject();
