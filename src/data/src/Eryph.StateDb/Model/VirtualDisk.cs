@@ -12,10 +12,10 @@ namespace Eryph.StateDb.Model
 
         public long? SizeBytes { get; set; }
 
-        public VirtualDisk Parent { get; set; }
-        public List<VirtualDisk> Childs { get; set; }
-        public List<VirtualMachineDrive> AttachedDrives { get; set; }
+        public virtual VirtualDisk Parent { get; set; }
+        public virtual ICollection<VirtualDisk> Childs { get; set; }
+        public virtual ICollection<VirtualMachineDrive> AttachedDrives { get; set; }
 
-        public Guid ParentId { get; set; }
+        public Guid? ParentId { get; set; }
     }
 }

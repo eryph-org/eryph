@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using Eryph.Resources.Disks;
+using Eryph.Resources.Machines;
 using Eryph.Resources.Machines.Config;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Data;
@@ -138,6 +139,7 @@ namespace Eryph.VmManagement
 
         public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
             HostSettings hostSettings,
+            VMHostMachineData hostInfo,
             IPowershellEngine engine,
             Func<string, Task> reportProgress,
             TypedPsObject<VirtualMachineInfo> vmInfo,
@@ -145,7 +147,7 @@ namespace Eryph.VmManagement
             VMStorageSettings storageSettings)
         {
             var convergeContext =
-                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, storageSettings);
+                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, storageSettings, hostInfo);
 
             var convergeTasks = new ConvergeTaskBase[]
             {

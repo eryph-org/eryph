@@ -41,6 +41,7 @@ namespace Eryph.Modules.VmHostAgent
             container.Register<StartBusModuleHandler>();
             container.RegisterSingleton<IPowershellEngine, PowershellEngine>();
             container.RegisterSingleton<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>();
+            container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
 
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingTaskMessageHandler<>));

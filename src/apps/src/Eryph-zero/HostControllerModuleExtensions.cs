@@ -6,7 +6,9 @@ using Eryph.Modules.Controller;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Runtime.Zero.Configuration.Storage;
 using Eryph.Runtime.Zero.Configuration.VMMetadata;
+using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using VirtualMachineMetadata = Eryph.Resources.Machines.VirtualMachineMetadata;
@@ -17,7 +19,15 @@ namespace Eryph.Runtime.Zero
     {
         public static IModulesHostBuilder AddControllerModule(this IModulesHostBuilder builder, Container container)
         {
-            builder.HostModule<ControllerModule>();
+            builder.HostModule<ControllerModule>(cfg =>
+            {
+                cfg.Configure(app =>
+                {
+                    
+                    using var scope = app.Services.CreateScope();
+                    scope.ServiceProvider.GetRequiredService<StateStoreContext>().Database.Migrate();
+                });
+            });
 
             builder.ConfigureFrameworkServices((ctx, services) =>
             {

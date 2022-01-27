@@ -9,7 +9,7 @@ namespace Eryph.StateDb.Model
             MachineType = MachineType.VMHost;
         }
 
-        public virtual List<VirtualMachine> VMs { get; set; }
+        public virtual ICollection<VirtualMachine> VMs { get; set; }
 
         public string HardwareId { get; set; }
     }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Eryph.Resources.Machines;
 using Eryph.Resources.Machines.Config;
 using Eryph.VmManagement.Storage;
 
@@ -12,19 +13,22 @@ namespace Eryph.VmManagement.Converging
         public readonly HostSettings HostSettings;
         public readonly Func<string, Task> ReportProgress;
         public readonly VMStorageSettings StorageSettings;
+        public readonly VMHostMachineData HostInfo;
 
         public ConvergeContext(
             HostSettings hostSettings,
             IPowershellEngine engine,
             Func<string, Task> reportProgress,
             MachineConfig config,
-            VMStorageSettings storageSettings)
+            VMStorageSettings storageSettings, 
+            VMHostMachineData hostInfo)
         {
             HostSettings = hostSettings;
             Engine = engine;
             ReportProgress = reportProgress;
             Config = config;
             StorageSettings = storageSettings;
+            HostInfo = hostInfo;
         }
     }
 }

@@ -11,7 +11,7 @@ namespace Eryph.StateDb.Model
         public MachineType MachineType { get; set; }
 
 
-        public virtual List<MachineNetwork> Networks { get; set; }
+        public virtual ICollection<MachineNetwork> Networks { get; set; }
     }
 
 }

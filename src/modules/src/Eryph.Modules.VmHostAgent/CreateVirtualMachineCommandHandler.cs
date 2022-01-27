@@ -24,8 +24,11 @@ namespace Eryph.Modules.VmHostAgent
     internal class CreateVirtualMachineCommandHandler : VirtualMachineConfigCommandHandler,
         IHandleMessages<OperationTask<CreateVirtualMachineCommand>>
     {
-        public CreateVirtualMachineCommandHandler(IPowershellEngine engine, IBus bus, ILogger log) : base(engine, bus, log)
+        private readonly IHostInfoProvider _hostInfoProvider;
+
+        public CreateVirtualMachineCommandHandler(IPowershellEngine engine, IBus bus, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, bus, log)
         {
+            _hostInfoProvider = hostInfoProvider;
         }
 
 
@@ -58,7 +61,7 @@ namespace Eryph.Modules.VmHostAgent
                 from optionalTemplate in getTemplate()
                 from createdVM in createVM(plannedStorageSettings, optionalTemplate)
                 from metadata in createMetadata(createdVM, optionalTemplate)
-                from inventory in CreateMachineInventory(Engine, hostSettings, createdVM).ToAsync()
+                from inventory in CreateMachineInventory(Engine, hostSettings, createdVM, _hostInfoProvider).ToAsync()
                 select new ConvergeVirtualMachineResult
                 {
                     Inventory = inventory,

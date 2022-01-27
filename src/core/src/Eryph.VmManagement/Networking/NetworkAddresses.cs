@@ -39,13 +39,11 @@ namespace Eryph.VmManagement.Networking
 
     public static class VirtualNetworkQuery
     {
-        public static MachineNetworkData[] GetNetworksByAdapters(Guid vmId,
+        public static MachineNetworkData[] GetNetworksByAdapters(Guid vmId, VMHostMachineData hostInfo,
             IEnumerable<IVMNetworkAdapterWithConnection> networkAdapters)
         {
             var scope = new ManagementScope(@"\\.\root\virtualization\v2");
             var resultList = new List<MachineNetworkData>();
-
-            var networkNames = new List<string>();
 
             foreach (var networkAdapter in networkAdapters)
             {
@@ -58,9 +56,12 @@ namespace Eryph.VmManagement.Networking
                 obj.Path = path;
                 obj.Get();
 
+                var hostNetwork = hostInfo.VirtualNetworks.FirstOrDefault(x => x.VirtualSwitchId == networkAdapter.SwitchId);
+
                 var info = new MachineNetworkData
                 {
-                    Name = Networks.GenerateName(ref networkNames, networkAdapter),
+                    Name = hostNetwork?.Name,
+                    AdapterNames = new []{ networkAdapter.Name },
                     IPAddresses = ObjectToStringArray(obj.GetPropertyValue("IPAddresses")),
                     DefaultGateways = ObjectToStringArray(obj.GetPropertyValue("DefaultGateways")),
                     DnsServers = ObjectToStringArray(obj.GetPropertyValue("DNSServers")),

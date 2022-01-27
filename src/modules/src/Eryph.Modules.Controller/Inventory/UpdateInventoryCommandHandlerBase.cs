@@ -183,8 +183,7 @@ namespace Eryph.Modules.Controller.Inventory
                         existingMachine.Host = hostMachine;
                         existingMachine.AgentName = newMachine.AgentName;
 
-                        existingMachine.Networks ??= new List<MachineNetwork>();
-                        MergeMachineNetworks(newMachine, existingMachine);
+                        MergeMachineNetworks(newMachine.Networks, existingMachine);
 
                         existingMachine.NetworkAdapters = newMachine.NetworkAdapters;
                         existingMachine.Drives = newMachine.Drives;
@@ -220,8 +219,8 @@ namespace Eryph.Modules.Controller.Inventory
                     MachineId = machineId,
                     Type = d.Type,
                     //TODO: this code may needs to be improved
-                    AttachedDisk = d.Disk != null 
-                        ? _vhdDataService.GetVHD(d.Disk.Id).GetAwaiter().GetResult().IfNoneUnsafe(()=>null): null
+                    AttachedDisk = d.Disk != null
+                        ? _vhdDataService.GetVHD(d.Disk.Id).GetAwaiter().GetResult().IfNoneUnsafe(() => null) : null
 
                 }).ToList(),
                 Networks = (vmInfo.Networks?.ToMachineNetwork(machineId) ?? Array.Empty<MachineNetwork>()).ToList()
@@ -247,10 +246,10 @@ namespace Eryph.Modules.Controller.Inventory
         }
 
 
-        protected static void MergeMachineNetworks(Machine newMachine, Machine existingMachine)
+        protected static void MergeMachineNetworks(IEnumerable<MachineNetwork> newNetworks, Machine existingMachine)
         {
             //merge Networks 
-            var networkList = newMachine.Networks.ToList();
+            var networkList = newNetworks.ToList();
             var existingNetworksList = existingMachine.Networks?.ToList() ?? new List<MachineNetwork>();
 
             var existingNetworksListUniqueName =

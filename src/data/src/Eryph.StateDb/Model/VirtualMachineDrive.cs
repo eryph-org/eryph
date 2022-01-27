@@ -8,12 +8,12 @@ namespace Eryph.StateDb.Model
         public string Id { get; set; }
 
         public Guid MachineId { get; set; }
-        public VirtualMachine Vm { get; set; }
+        public virtual VirtualMachine Vm { get; set; }
 
         public VirtualMachineDriveType? Type { get; set; }
 
-        public Guid AttachedDiskId { get; set; }
+        public Guid? AttachedDiskId { get; set; }
 
-        public VirtualDisk AttachedDisk { get; set; }
+        public virtual VirtualDisk AttachedDisk { get; set; }
     }
 }

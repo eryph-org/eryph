@@ -7,8 +7,8 @@ namespace Eryph.StateDb.Model
     {
         public Guid Id { get; set; }
 
-        public Network Network { get; set; }
-        public Guid NetworkId { get; set; }
+        //public Network Network { get; set; }
+        //public Guid NetworkId { get; set; }
 
         public bool IsPublic { get; set; }
 

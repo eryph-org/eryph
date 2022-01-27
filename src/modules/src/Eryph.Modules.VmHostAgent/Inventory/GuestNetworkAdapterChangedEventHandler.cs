@@ -21,12 +21,14 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         private readonly IBus _bus;
         private readonly IPowershellEngine _engine;
         private readonly ILogger _log;
+        private readonly IHostInfoProvider _hostInfoProvider;
 
-        public GuestNetworkAdapterChangedEventHandler(IBus bus, IPowershellEngine engine, ILogger log)
+        public GuestNetworkAdapterChangedEventHandler(IBus bus, IPowershellEngine engine, ILogger log, IHostInfoProvider hostInfoProvider)
         {
             _bus = bus;
             _engine = engine;
             _log = log;
+            _hostInfoProvider = hostInfoProvider;
         }
 
         public Task Handle(GuestNetworkAdapterChangedEvent message)
@@ -37,14 +39,14 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             var getNetworkAdapters = Prelude.fun(
                 (TypedPsObject<object> vm) => NetworkAdapterQuery.GetNetworkAdapters(vm, _engine));
 
-            var networkNames = new List<string>();
-
             return GetVMs<object>(message.VmId)
                 .BindAsync(SingleOrFailure)
                 .BindAsync(getNetworkAdapters)
                 .BindAsync(findAdapterForMessage)
-                .ToAsync().MatchAsync(
-                    RightAsync: a => _bus.Publish(
+                .BindAsync(a => 
+                    from hostInfo in _hostInfoProvider.GetHostInfoAsync()
+                    let hostNetwork = hostInfo.VirtualNetworks.FirstOrDefault(x=>x.VirtualSwitchId == a.Value.SwitchId)
+                    select 
                         new VirtualMachineNetworkChangedEvent
                         {
                             VMId = message.VmId,
@@ -58,7 +60,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                             },
                             ChangedNetwork = new MachineNetworkData
                             {
-                                Name = Networks.GenerateName(ref networkNames, a.Value),
+                                Name = hostNetwork?.Name,
                                 IPAddresses = message.IPAddresses,
                                 Subnets = NetworkAddresses
                                     .AddressesAndSubnetsToSubnets(message.IPAddresses, message.Netmasks).ToArray(),
@@ -66,8 +68,9 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                                 DnsServers = message.DnsServers,
                                 DhcpEnabled = message.DhcpEnabled
                             }
-                        }),
-                    Left: l => { _log.LogError(l.Message); });
+                        }).ToAsync().MatchAsync(
+                    r => _bus.Publish(r),
+                    l => { _log.LogError(l.Message); });
         }
 
 

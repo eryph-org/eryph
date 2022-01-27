@@ -11,13 +11,12 @@ namespace Eryph.Modules.ComputeApi.Model
     {
         public ISingleResultSpecification<Machine> GetSingleResourceSpec(SingleResourceRequest request)
         {
-            return new ResourceSpecs<Machine>.GetById(
-                Guid.Parse(request.Id), b => b.Include(x => x.Networks));
+            return new ResourceSpecs<Machine>.GetById(Guid.Parse(request.Id));
         }
 
         public ISpecification<Machine> GetResourceSpec(ListRequest request)
         {
-            return new ResourceSpecs<Machine>.GetAll(b => b.Include(x => x.Networks));
+            return new ResourceSpecs<Machine>.GetAll();
 
         }
     }

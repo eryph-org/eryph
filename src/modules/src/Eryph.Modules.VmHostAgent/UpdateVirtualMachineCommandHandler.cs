@@ -2,6 +2,7 @@
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Resources.Machines;
 using Eryph.Resources.Machines.Config;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
@@ -20,8 +21,11 @@ namespace Eryph.Modules.VmHostAgent
     internal class UpdateVirtualMachineCommandHandler : VirtualMachineConfigCommandHandler,
         IHandleMessages<OperationTask<UpdateVirtualMachineCommand>>
     {
-        public UpdateVirtualMachineCommandHandler(IPowershellEngine engine, IBus bus, ILogger log) : base(engine, bus, log)
+        private readonly IHostInfoProvider _hostInfoProvider;
+
+        public UpdateVirtualMachineCommandHandler(IPowershellEngine engine, IBus bus, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, bus, log)
         {
+            _hostInfoProvider = hostInfoProvider;
         }
 
         public Task Handle(OperationTask<UpdateVirtualMachineCommand> message)
@@ -35,10 +39,11 @@ namespace Eryph.Modules.VmHostAgent
 
             var hostSettings = HostSettingsBuilder.GetHostSettings();
             var convergeVM = Prelude.fun(
-                (TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig c, VMStorageSettings storageSettings) =>
-                    VirtualMachine.Converge(hostSettings, Engine, ProgressMessage, vmInfo, c, storageSettings));
+                (TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig c, VMStorageSettings storageSettings, VMHostMachineData hostInfo) =>
+                    VirtualMachine.Converge(hostSettings, hostInfo,Engine, ProgressMessage, vmInfo, c, storageSettings));
 
             var chain =
+                from hostInfo in _hostInfoProvider.GetHostInfoAsync().ToAsync()
                 from vmList in GetVmInfo(vmId, Engine).ToAsync()
                 from vmInfo in EnsureSingleEntry(vmList, vmId).ToAsync()
                 from currentStorageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).ToAsync()
@@ -47,8 +52,8 @@ namespace Eryph.Modules.VmHostAgent
                 from metadata in EnsureMetadata(message.Command.MachineMetadata, vmInfo).ToAsync()
                 from mergedConfig in config.MergeWithImageSettings(metadata.ImageConfig).ToAsync()
                 from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).ToAsync()
-                from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings).ToAsync()
-                from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged).ToAsync()
+                from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).ToAsync()
+                from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged, _hostInfoProvider).ToAsync()
                 select new ConvergeVirtualMachineResult
                 {
                     Inventory = inventory,

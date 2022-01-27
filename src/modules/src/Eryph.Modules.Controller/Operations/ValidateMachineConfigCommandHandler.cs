@@ -75,9 +75,6 @@ namespace Eryph.Modules.Controller.Operations
                 {
                     adapterConfig.MacAddress = "";
                 }
-
-                if (string.IsNullOrWhiteSpace(adapterConfig.SwitchName))
-                    adapterConfig.SwitchName = "Default Switch";
             }
 
             foreach (var driveConfig in machineConfig.VM.Drives)
