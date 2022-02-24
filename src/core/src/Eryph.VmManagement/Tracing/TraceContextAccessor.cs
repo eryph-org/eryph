@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 
 namespace Eryph.VmManagement;
 
@@ -8,7 +9,7 @@ public class TraceContextAccessor
 
     public static TraceContext TraceContext
     {
-        get => TraceContextCurrent.Value?.Context;
+        get => TraceContextCurrent.Value.Context.GetValueOrDefault(TraceContext.Empty);
         set
         {
             var holder = TraceContextCurrent.Value;
@@ -18,7 +19,7 @@ public class TraceContextAccessor
                 holder.Context = null;
             }
 
-            if (value != null)
+            if (value.ContextId != Guid.Empty)
             {
                 // Use an object indirection to hold the HttpContext in the AsyncLocal,
                 // so it can be cleared in all ExecutionContexts when its cleared.
@@ -29,6 +30,6 @@ public class TraceContextAccessor
 
     private class TraceContextHolder
     {
-        public TraceContext Context;
+        public TraceContext? Context;
     }
 }

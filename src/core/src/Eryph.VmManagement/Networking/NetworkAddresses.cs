@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using Eryph.VmManagement.Data;
 
 namespace Eryph.VmManagement.Networking
 {

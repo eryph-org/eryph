@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
+using Eryph.Core;
 
 namespace Eryph.VmManagement;
 
 public class PsCommandBuilder
 {
-    private readonly List<(DataType dataType, object value, string name)> _dataChain = new List<(DataType, object, string)>();
+
+
+    private readonly List<BasePart> _dataChain = new();
 
     public static PsCommandBuilder Create()
     {
@@ -17,72 +19,109 @@ public class PsCommandBuilder
 
     public PsCommandBuilder AddCommand(string command)
     {
-        _dataChain.Add((DataType.Command, null, command));
+        _dataChain.Add(new CommandPart{Command = command});
         return this;
     }
 
     public PsCommandBuilder AddParameter(string parameter, object value)
     {
-        _dataChain.Add((DataType.Parameter, value, parameter));
+        _dataChain.Add(new ParameterPart{Parameter = parameter, Value = value});
         return this;
     }
 
     public PsCommandBuilder AddParameter(string parameter)
     {
-        _dataChain.Add((DataType.SwitchParameter, null, parameter));
+        _dataChain.Add(new ParameterPart { Parameter = parameter});
         return this;
     }
 
     public PsCommandBuilder AddArgument(object statement)
     {
-        _dataChain.Add((DataType.AddArgument, statement, null));
+        _dataChain.Add(new ArgumentPart{Value = statement});
         return this;
     }
 
     public PsCommandBuilder Script(string script)
     {
-        _dataChain.Add((DataType.Script, null, script));
+        _dataChain.Add(new ScriptPart{Script = script});
         return this;
     }
 
-    public JToken ToJToken()
+    public Dictionary<string,object> ToDictionary()
     {
-        return JToken.FromObject(_dataChain);
+        var data = new Dictionary<string, object>
+        {
+            {"chain", _dataChain.ToArray() }
+        };
+
+        return data;
     }
 
     public void Build(PowerShell ps)
     {
-        TraceContextAccessor.TraceContext?.Write(PowershellCommandTraceData.FromObject(this));
+        TraceContext.Current.Write(PowershellCommandTraceData.FromObject(this));
 
         foreach (var data in _dataChain)
-            switch (data.Item1)
+            switch (data)
             {
-                case DataType.Command:
-                    ps.AddCommand(data.Item3);
+                case CommandPart part: ps.AddCommand(part.Command);
                     break;
-                case DataType.Parameter:
-                    ps.AddParameter(data.Item3, data.Item2);
+                case ParameterPart part:
+                    ps.AddParameter(part.Parameter, part.Value);
                     break;
-                case DataType.SwitchParameter:
-                    ps.AddParameter(data.Item3);
+                case SwitchParameterPart part:
+                    ps.AddParameter(part.Parameter);
                     break;
-                case DataType.AddArgument:
-                    ps.AddArgument(data.Item2);
+                case ArgumentPart part:
+                    ps.AddArgument(part.Value);
                     break;
-                case DataType.Script:
-                    ps.AddScript(data.Item3);
+                case ScriptPart part:
+                    ps.AddScript(part.Script);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
     }
 
-    private enum DataType
+    public class BasePart
     {
-        Command,
-        Parameter,
-        SwitchParameter,
-        AddArgument,
-        Script
+
     }
+
+    public class ArgumentPart : BasePart
+    {
+        [PrivateIdentifier]
+        public object Value { get; init; }
+
+    }
+
+    public class ScriptPart : BasePart
+    {
+        [PrivateIdentifier]
+        public string Script { get; init; }
+
+    }
+
+    public class CommandPart : BasePart
+    {
+        public string Command { get; init; }
+
+    }
+
+    public class SwitchParameterPart : BasePart
+    {
+        public string Parameter { get; init; }
+
+    }
+
+    public class ParameterPart : BasePart
+    {
+        public string Parameter { get; init; }
+
+        [PrivateIdentifier]
+        public object Value { get; init; }
+
+    }
+
 }
+

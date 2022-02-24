@@ -9,7 +9,7 @@ public class PowershellCommandTraceData : TraceData
 
         return new PowershellCommandTraceData
         {
-            Data = builder.ToJToken()
+            Data = builder.ToDictionary()
         };
 
     }

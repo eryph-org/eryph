@@ -1,4 +1,5 @@
 ﻿using System;
+using Eryph.Core;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
@@ -21,6 +22,7 @@ namespace Eryph.VmManagement.Data.Planned
         public long ProcessorCount { get; private set; }
         public int Generation { get; private set; }
 
+        [PrivateIdentifier]
 
         public string Path { get; private set; }
         public long MemoryStartup { get; private set; }

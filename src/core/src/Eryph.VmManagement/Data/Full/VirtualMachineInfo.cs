@@ -1,6 +1,6 @@
 ﻿using System;
+using Eryph.Core;
 using Eryph.VmManagement.Data.Core;
-using LanguageExt;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Local
 
@@ -146,12 +146,15 @@ namespace Eryph.VmManagement.Data.Full
 
         //public bool IsClustered { get; private set; }
 
+        [PrivateIdentifier]
         public string Notes { get; private set; }
 
         //public DateTime CreationTime { get; private set; }
 
+        [PrivateIdentifier]
         public Guid Id { get; private set; }
 
+        [PrivateIdentifier]
         public string Name { get; private set; }
 
 
@@ -171,7 +174,7 @@ namespace Eryph.VmManagement.Data.Full
 
         //public string ParentSnapshotName { get; private set; }
 
-        
+        [PrivateIdentifier]
         public string Path { get; private set; }
 
         //public VMGroupInfo[] Groups { get; private set; }

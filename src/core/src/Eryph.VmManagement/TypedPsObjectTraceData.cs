@@ -18,7 +18,7 @@ public class TypedPsObjectTraceData : TraceData
 
         return new TypedPsObjectTraceData
         {
-            Data = JToken.FromObject(data)
+            Data = data
         };
 
     }

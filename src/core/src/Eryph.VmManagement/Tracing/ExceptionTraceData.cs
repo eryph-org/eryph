@@ -10,7 +10,7 @@ public  class ExceptionTraceData : TraceData
 
     public static ExceptionTraceData FromException(Exception ex)
     {
-        var error = new Dictionary<string, string>
+        var error = new Dictionary<string, object>
         {
             {"type", ex.GetType().ToString()},
             {"message", ex.Message},
@@ -19,7 +19,7 @@ public  class ExceptionTraceData : TraceData
 
         return new ExceptionTraceData
         {
-            Data = JToken.FromObject(error)
+            Data = error
         };
 
     }

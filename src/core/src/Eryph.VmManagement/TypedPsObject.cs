@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Management.Automation;
 using System.Threading.Tasks;
+using Eryph.Core;
 using LanguageExt;
 
 namespace Eryph.VmManagement
@@ -15,10 +16,12 @@ namespace Eryph.VmManagement
         {
             PsObject = psObject;
             Value = TypedPsObjectMapping.Map<T>(psObject);
-            TraceContextAccessor.TraceContext?.Write(TypedPsObjectTraceData.FromObject(this));
+            TraceContext.Current.Write(TypedPsObjectTraceData.FromObject(this));
         }
 
         public T Value { get; }
+
+        [PrivateIdentifier]
         public PSObject PsObject { get; }
 
         object ITypedPsObject.Value => Value;

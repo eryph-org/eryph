@@ -1,4 +1,5 @@
 ﻿using System;
+using Eryph.Core;
 using Eryph.VmManagement.Data.Core;
 
 namespace Eryph.VmManagement.Data.Full
@@ -41,6 +42,7 @@ namespace Eryph.VmManagement.Data.Full
 
         //public bool ClusterMonitored { get; private set; }
 
+        [PrivateIdentifier]
         public string MacAddress { get; private set; }
 
         //public string TestReplicaPoolName { get; private set; }
@@ -75,9 +77,11 @@ namespace Eryph.VmManagement.Data.Full
 
         public VMNetworkAdapterVlanSetting VlanSetting { get; private set; }
 
+        [PrivateIdentifier]
         public string SwitchName { get; private set; }
 
-        public Guid? SwitchId { get; private set; }
+        [PrivateIdentifier]
+        public Guid SwitchId { get; private set; }
 
         //public VMNetworkAdapterBandwidthSetting BandwidthSetting { get; private set; }
 

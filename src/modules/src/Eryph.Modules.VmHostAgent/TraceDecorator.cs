@@ -36,7 +36,7 @@ public class TraceDecorator<T> : IHandleMessages<T>
         finally
         {
             context.Dispose();
-            TraceContextAccessor.TraceContext = null;
+            TraceContextAccessor.TraceContext = TraceContext.Empty;
         }
             
     }

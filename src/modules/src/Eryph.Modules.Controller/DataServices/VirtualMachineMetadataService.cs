@@ -22,7 +22,12 @@ namespace Eryph.Modules.Controller.DataServices
             if (id == Guid.Empty)
                 return Option<VirtualMachineMetadata>.None;
 
-            return await _repository.GetByIdAsync(id).Map(DeserializeMetadataEntity);
+            var entity = await _repository.GetByIdAsync(id);
+
+            if(entity == null)
+                return Option<VirtualMachineMetadata>.None;
+
+            return DeserializeMetadataEntity(entity);
         }
 
         public async Task<Unit> SaveMetadata(VirtualMachineMetadata metadata)

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Eryph.VmManagement;
@@ -19,7 +20,7 @@ public class MessageTraceData : TraceData
 
         return new MessageTraceData
         {
-            Data = JToken.FromObject(data)
+            Data = data
         };
 
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using Eryph.Core;
 
 namespace Eryph.Messages.Resources.Events
 {
@@ -6,6 +7,8 @@ namespace Eryph.Messages.Resources.Events
     public class PlacementVerificationCompletedEvent
     {
         public Guid CorrelationId { get; set; }
+
+        [PrivateIdentifier]
         public string AgentName { get; set; }
         public bool Confirmed { get; set; }
     }

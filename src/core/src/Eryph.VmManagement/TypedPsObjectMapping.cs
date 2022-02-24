@@ -4,6 +4,7 @@ using AutoMapper;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Data.Planned;
 
 namespace Eryph.VmManagement;
 
@@ -28,12 +29,18 @@ internal static class TypedPsObjectMapping
             cfg.CreateProfile("Powershell", c =>
             {
                 c.CreateMap(GetPsType("VirtualMachine"), typeof(VirtualMachineInfo));
+                c.CreateMap(GetPsType("VirtualMachine"), typeof(PlannedVirtualMachineInfo));
+
+                c.CreateMap(GetPsType("HardDiskDrive"), typeof(PlannedHardDiskDriveInfo))
+                    .ForMember("Size", m => m.Ignore());
+
                 c.CreateMap(GetPsType("HardDiskDrive"), typeof(VirtualMachineDeviceInfo));
                 c.CreateMap(GetPsType("DvdDrive"), typeof(VirtualMachineDeviceInfo));
                 c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(VirtualMachineDeviceInfo));
 
                 c.CreateMap(GetPsType(nameof(VMSwitch)), typeof(VMSwitch));
                 c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(VMNetworkAdapter));
+                c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(PlannedVMNetworkAdapter));
                 c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(HostVMNetworkAdapter));
                 c.CreateMap(GetPsType(nameof(VMNetworkAdapterVlanSetting)), typeof(VMNetworkAdapterVlanSetting));
 

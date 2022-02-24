@@ -57,7 +57,7 @@ namespace Eryph.VmManagement.Converging
                 .Map(e => e.ToAsync())
                 .BindT(c => NetworkAdapter(c, vmInfo).ToAsync())
                 .TraverseSerial(l => l)
-                .Map(e => e.Last())
+                .Map(e => vmInfo.Recreate())
                 .ToEither();
                 
 
