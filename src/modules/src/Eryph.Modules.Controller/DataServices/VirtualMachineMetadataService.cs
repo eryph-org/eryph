@@ -8,12 +8,6 @@ using Newtonsoft.Json;
 
 namespace Eryph.Modules.Controller.DataServices
 {
-    public interface IVirtualMachineMetadataService
-    {
-        Task<Option<VirtualMachineMetadata>> GetMetadata(Guid id);
-        Task<Unit> SaveMetadata(VirtualMachineMetadata metadata);
-    }
-
     internal class VirtualMachineMetadataService : IVirtualMachineMetadataService
     {
         private readonly IStateStoreRepository<StateDb.Model.VirtualMachineMetadata> _repository;
@@ -28,7 +22,12 @@ namespace Eryph.Modules.Controller.DataServices
             if (id == Guid.Empty)
                 return Option<VirtualMachineMetadata>.None;
 
-            return await _repository.GetByIdAsync(id).Map(DeserializeMetadataEntity);
+            var entity = await _repository.GetByIdAsync(id);
+
+            if(entity == null)
+                return Option<VirtualMachineMetadata>.None;
+
+            return DeserializeMetadataEntity(entity);
         }
 
         public async Task<Unit> SaveMetadata(VirtualMachineMetadata metadata)

@@ -10,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Rebus.Config;
 using Rebus.Handlers;
-using Rebus.Logging;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Serialization.Json;
@@ -39,12 +38,17 @@ namespace Eryph.Modules.VmHostAgent
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.Register<StartBusModuleHandler>();
+            container.RegisterSingleton<ITracer, Tracer>();
+            container.RegisterSingleton<ITraceWriter, DiagnosticTraceWriter>();
+
             container.RegisterSingleton<IPowershellEngine, PowershellEngine>();
             container.RegisterSingleton<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>();
             container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
-
+            
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingTaskMessageHandler<>));
+            container.RegisterDecorator(typeof(IHandleMessages<>), typeof(TraceDecorator<>));
+
 
             container.ConfigureRebus(configurer => configurer
                 .Transport(t =>

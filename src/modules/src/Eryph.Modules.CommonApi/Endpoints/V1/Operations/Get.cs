@@ -5,7 +5,6 @@ using Ardalis.Specification;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
@@ -37,15 +36,6 @@ namespace Eryph.Modules.CommonApi.Endpoints.V1.Operations
         {
             return base.HandleAsync(request, cancellationToken);
         }
-
-    }
-
-    public class OperationRequest : SingleResourceRequest
-    {
-        /// <summary>
-        /// Filters returned log entries by the requested timestamp
-        /// </summary>
-        [FromQuery(Name = "logTimeStamp")] public DateTimeOffset LogTimestamp { get; set; }
 
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
@@ -34,17 +33,17 @@ namespace Eryph.VmManagement.Inventory
                from vm in Prelude.RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo)
                     
                 from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _hostSettings,
-                    vm.Value.HardDrives).ToAsync()
+                    vm.GetList(x=>x.HardDrives)).ToAsync()
                 select new VirtualMachineData
                 {
                     VMId = vm.Value.Id,
                     MetadataId = GetMetadataId(vm),
                     Status = InventoryConverter.MapVmInfoStatusToVmStatus(vm.Value.State),
                     Name = vm.Value.Name,
-                    Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.Value.HardDrives).ToArray(),
+                    Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x=>x.HardDrives)).ToArray(),
                     NetworkAdapters = vm.GetList(x=>x.NetworkAdapters).Map(a=>
                     {
-                        var connectedAdapter = a.Cast<ConnectedVMNetworkAdapter>();
+                        var connectedAdapter = a.Cast<VMNetworkAdapter>();
                         var res = new VirtualMachineNetworkAdapterData
                         {
                             Id = a.Value.Id,
@@ -54,9 +53,7 @@ namespace Eryph.VmManagement.Inventory
                         };
                         return res;
                     }).ToArray(),
-                    Networks = VirtualNetworkQuery.GetNetworksByAdapters(vm.Value.Id, hostInfo, 
-                        vm.GetList(x=>x.NetworkAdapters, x=>x.Connected)
-                            .Map(x=>x.Cast<ConnectedVMNetworkAdapter>().Value))
+                    Networks = VirtualNetworkQuery.GetNetworksByAdapters(vm.Value.Id, hostInfo, vm.GetList(x=>x.NetworkAdapters))
                 }).ToEither();
         }
 
@@ -102,10 +99,11 @@ namespace Eryph.VmManagement.Inventory
 
 
         private static IEnumerable<VirtualMachineDriveData> CreateHardDriveInfo(
-            Seq<CurrentHardDiskDriveStorageSettings> storageSettings, IEnumerable<HardDiskDriveInfo> hds)
+            Seq<CurrentHardDiskDriveStorageSettings> storageSettings, IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> hdDevices)
         {
-            foreach (var hd in hds)
+            foreach (var device in hdDevices)
             {
+                var hd = device.Cast<HardDiskDriveInfo>().Value;
                 var storageSetting = storageSettings.FirstOrDefault(x => x.AttachedVMId == hd.Id);
 
                 var drive = new VirtualMachineDriveData

@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Resources.Machines.Config;
+using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 
@@ -57,7 +57,7 @@ namespace Eryph.VmManagement.Converging
                 .Map(e => e.ToAsync())
                 .BindT(c => NetworkAdapter(c, vmInfo).ToAsync())
                 .TraverseSerial(l => l)
-                .Map(e => e.Last())
+                .Map(e => vmInfo.Recreate())
                 .ToEither();
                 
 
@@ -77,12 +77,14 @@ namespace Eryph.VmManagement.Converging
 
             var optionalAdapter = await ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
                 i => i.NetworkAdapters,
-                adapter => networkAdapterConfig.AdapterName.Equals(adapter.Name, StringComparison.OrdinalIgnoreCase),
+                device => device.Cast<VMNetworkAdapter>()
+                    .Map(adapter => 
+                        networkAdapterConfig.AdapterName.Equals(adapter.Name, StringComparison.OrdinalIgnoreCase)),
                 async () =>
                 {
                     await Context.ReportProgress($"Add Network Adapter: {networkAdapterConfig.AdapterName}")
                         .ConfigureAwait(false);
-                    return await Context.Engine.GetObjectsAsync<VMNetworkAdapter>(PsCommandBuilder.Create()
+                    return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(PsCommandBuilder.Create()
                         .AddCommand("Add-VmNetworkAdapter")
                         .AddParameter("Passthru")
                         .AddParameter("VM", vmInfo.PsObject)
@@ -92,9 +94,10 @@ namespace Eryph.VmManagement.Converging
                 }).ConfigureAwait(false);
 
 
-            return await optionalAdapter.BindAsync(async adapter =>
+            return await optionalAdapter.BindAsync(async device =>
             {
-                if (adapter.Value.Connected && adapter.Cast<ConnectedVMNetworkAdapter>().Value.SwitchName == switchName)
+                var adapter = device.Cast<VMNetworkAdapter>();
+                if (adapter.Value.Connected && adapter.Value.SwitchName == switchName)
                     return Unit.Default;
 
                 await Context.ReportProgress(

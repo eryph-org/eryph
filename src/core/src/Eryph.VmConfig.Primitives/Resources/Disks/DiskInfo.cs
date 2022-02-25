@@ -1,4 +1,5 @@
 ﻿using System;
+using Eryph.Core;
 
 namespace Eryph.Resources.Disks
 {
@@ -11,7 +12,11 @@ namespace Eryph.Resources.Disks
         public string Project { get; set; }
         public string Environment { get; set; }
 
+        [PrivateIdentifier]
+
         public string Path { get; set; }
+
+        [PrivateIdentifier]
         public string FileName { get; set; }
 
         public long? SizeBytes { get; set; }

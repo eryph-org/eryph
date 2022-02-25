@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Hosuto.Modules.Testing;
 using Dbosoft.IdentityServer.EfCore.Storage.DbContexts;
@@ -8,11 +6,7 @@ using Dbosoft.IdentityServer.Storage.Stores;
 using Dbosoft.IdentityServer.Stores;
 using Eryph.IdentityDb;
 using Eryph.ModuleCore;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 
 namespace Eryph.Modules.Identity.Test.Integration
@@ -45,29 +39,5 @@ namespace Eryph.Modules.Identity.Test.Integration
             return moduleHostBuilder;
         }
 
-    }
-
-    public class IdentityModuleNoAuthFactory : IdentityModuleFactory
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            base.ConfigureWebHost(builder);
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddSingleton<IAuthorizationHandler, AllowAnonymous>();
-            });
-        }
-
-
-        private class AllowAnonymous : IAuthorizationHandler
-        {
-            public Task HandleAsync(AuthorizationHandlerContext context)
-            {
-                foreach (var requirement in context.PendingRequirements.ToList())
-                    context.Succeed(requirement); //Simply pass all requirements
-
-                return Task.CompletedTask;
-            }
-        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Eryph.Core;
 using JetBrains.Annotations;
 
 namespace Eryph.Resources.Machines.Config
@@ -6,6 +7,7 @@ namespace Eryph.Resources.Machines.Config
     [PublicAPI]
     public class MachineConfig
     {
+        [PrivateIdentifier]
         public string Name { get; set; }
         public string Environment { get; set; }
         public string Project { get; set; }

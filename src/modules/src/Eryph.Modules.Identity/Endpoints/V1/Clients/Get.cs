@@ -43,9 +43,4 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
             return Ok(client);
         }
     }
-
-    public class GetClientRequest
-    {
-        [FromRoute(Name = "id")] public string Id { get; set; }
-    }
 }

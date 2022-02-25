@@ -1,6 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -12,7 +10,6 @@ using Eryph.Resources;
 using Eryph.Resources.Machines.Config;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json.Linq;
 using Swashbuckle.AspNetCore.Annotations;
 
 using static Microsoft.AspNetCore.Http.StatusCodes;
@@ -48,14 +45,6 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
             return base.HandleAsync(request, cancellationToken);
         }
 
-
-    }
-
-    public class UpdateMachineRequest : SingleResourceRequest
-    {
-        [FromBody] [Required] public Guid CorrelationId { get; set; }
-
-        [FromBody] [Required] public JObject Configuration { get; set; }
 
     }
 }

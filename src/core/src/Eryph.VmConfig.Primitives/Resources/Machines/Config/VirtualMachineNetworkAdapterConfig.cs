@@ -1,4 +1,6 @@
-﻿namespace Eryph.Resources.Machines.Config
+﻿using Eryph.Core;
+
+namespace Eryph.Resources.Machines.Config
 {
     public class VirtualMachineNetworkAdapterConfig
     {

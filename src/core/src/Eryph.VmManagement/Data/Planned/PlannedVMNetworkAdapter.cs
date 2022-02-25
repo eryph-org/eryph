@@ -2,7 +2,7 @@
 
 namespace Eryph.VmManagement.Data.Planned
 {
-    public class PlannedVMNetworkAdapter : VirtualMachineDeviceInfo, IVMNetworkAdapterCore
+    public class PlannedVMNetworkAdapter : VirtualMachineDeviceInfo
     {
         public bool DynamicMacAddressEnabled { get; private set; }
         public string MacAddress { get; private set; }

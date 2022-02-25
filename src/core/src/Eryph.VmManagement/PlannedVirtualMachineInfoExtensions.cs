@@ -4,25 +4,26 @@ using System.IO;
 using System.Linq;
 using Eryph.Resources.Machines;
 using Eryph.Resources.Machines.Config;
+using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Planned;
 
 namespace Eryph.VmManagement
 {
     public static class PlannedVirtualMachineInfoExtensions
     {
-        public static VirtualMachineConfig ToVmConfig(this PlannedVirtualMachineInfo plannedVM)
+        public static VirtualMachineConfig ToVmConfig(this TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
         {
             return new VirtualMachineConfig
             {
                 Cpu = new VirtualMachineCpuConfig
                 {
-                    Count = (int) plannedVM.ProcessorCount
+                    Count = (int) plannedVM.Value.ProcessorCount
                 },
                 Memory = new VirtualMachineMemoryConfig
                 {
-                    Startup = (int) Math.Ceiling(plannedVM.MemoryStartup / 1024d / 1024),
-                    Maximum = (int) Math.Ceiling(plannedVM.MemoryMaximum / 1024d / 1024),
-                    Minimum = (int) Math.Ceiling(plannedVM.MemoryMinimum / 1024d / 1024)
+                    Startup = (int) Math.Ceiling(plannedVM.Value.MemoryStartup / 1024d / 1024),
+                    Maximum = (int) Math.Ceiling(plannedVM.Value.MemoryMaximum / 1024d / 1024),
+                    Minimum = (int) Math.Ceiling(plannedVM.Value.MemoryMinimum / 1024d / 1024)
                 },
 
                 Drives = ConvertPlannedDrivesToConfig(plannedVM),
@@ -30,9 +31,10 @@ namespace Eryph.VmManagement
             };
         }
 
-        private static List<VirtualMachineDriveConfig> ConvertPlannedDrivesToConfig(PlannedVirtualMachineInfo plannedVM)
+        private static List<VirtualMachineDriveConfig> ConvertPlannedDrivesToConfig(TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
         {
-            var result = plannedVM.HardDrives.Select(
+            var result = plannedVM.GetList(x=>x.HardDrives)
+                .Map(x=>x.Cast<PlannedHardDiskDriveInfo>().Value).Select(
                 hardDiskDriveInfo => new VirtualMachineDriveConfig
                 {
                     Name = Path.GetFileNameWithoutExtension(hardDiskDriveInfo.Path),
@@ -40,7 +42,8 @@ namespace Eryph.VmManagement
                     Type = VirtualMachineDriveType.VHD
                 }).ToList();
 
-            result.AddRange(plannedVM.DVDDrives.Select(dvdDriveInfo => new VirtualMachineDriveConfig
+            result.AddRange(plannedVM.GetList(x=>x.DVDDrives).Select(
+                dvdDriveInfo => new VirtualMachineDriveConfig
             {
                 Type = VirtualMachineDriveType.DVD
             }));

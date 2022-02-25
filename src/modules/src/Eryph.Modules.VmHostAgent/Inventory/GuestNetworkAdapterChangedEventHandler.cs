@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Eryph.Messages.Resources.Machines.Events;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using JetBrains.Annotations;
@@ -45,8 +46,8 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                 .BindAsync(findAdapterForMessage)
                 .BindAsync(a => 
                     (from hostInfo in _hostInfoProvider.GetHostInfoAsync().ToAsync()
-                    let connectedAdapter = a.Cast<ConnectedVMNetworkAdapter>()
-                    let hostNetwork = hostInfo.VirtualNetworks.FirstOrDefault(x=>x.VirtualSwitchId == connectedAdapter.Value.SwitchId)
+                    let adapter = a.Cast<VMNetworkAdapter>()
+                    let hostNetwork = hostInfo.VirtualNetworks.FirstOrDefault(x=>x.VirtualSwitchId == adapter.Value.SwitchId)
                     select 
                         new VirtualMachineNetworkChangedEvent
                         {
@@ -55,9 +56,10 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                             {
                                 Id = a.Value.Id,
                                 AdapterName = a.Value.Name,
-                                VLanId = (ushort) a.Value.VlanSetting.AccessVlanId,
-                                VirtualSwitchName = connectedAdapter.Value.SwitchName,
-                                VirtualSwitchId = connectedAdapter.Value.SwitchId,
+                                VLanId = (ushort) a.GetProperty(x=>x.VlanSetting)
+                                    .Cast<VMNetworkAdapterVlanSetting>().Value.AccessVlanId,
+                                VirtualSwitchName = adapter.Value.SwitchName,
+                                VirtualSwitchId = adapter.Value.SwitchId,
                                 MACAddress = a.Value.MacAddress
                             },
                             ChangedNetwork = new MachineNetworkData

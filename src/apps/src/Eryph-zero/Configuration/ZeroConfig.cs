@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Eryph.App;
+using Eryph.Core;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Security.Cryptography;
 

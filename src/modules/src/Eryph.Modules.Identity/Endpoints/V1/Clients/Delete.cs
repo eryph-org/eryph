@@ -45,10 +45,4 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
             return Ok();
         }
     }
-
-
-    public class DeleteClientRequest
-    {
-        [FromRoute(Name = "id")] public string Id { get; set; }
-    }
 }

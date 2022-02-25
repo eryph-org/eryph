@@ -2,9 +2,9 @@
 
 namespace Eryph.VmManagement.Data
 {
-    public interface IVMWithDrivesInfo<out THardDrive> where THardDrive : IDriveInfo
+    public interface IVMWithDrivesInfo
     {
-        DvdDriveInfo[] DVDDrives { get; }
-        THardDrive[] HardDrives { get; }
+        VirtualMachineDeviceInfo[] DVDDrives { get; }
+        VirtualMachineDeviceInfo[] HardDrives { get; }
     }
 }

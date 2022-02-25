@@ -7,6 +7,7 @@ using System.Net.NetworkInformation;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Eryph.Resources.Machines;
+using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
@@ -30,11 +31,11 @@ internal class HostInventory
     {
 
         var res = await (
-            from switches in _engine.GetObjectsAsync<dynamic>(new PsCommandBuilder().AddCommand("get-VMSwitch"))
+            from switches in _engine.GetObjectsAsync<VMSwitch>(new PsCommandBuilder().AddCommand("get-VMSwitch"))
                 .ToAsync()
             from switchNames in Prelude
-                .Right<PowershellFailure, string[]>(switches.Select(s => (string)s.Value.Name).ToArray()).ToAsync()
-            from adapters in _engine.GetObjectsAsync<ConnectedVMNetworkAdapter>(new PsCommandBuilder().AddCommand("Get-VMNetworkAdapter")
+                .Right<PowershellFailure, string[]>(switches.Select(s => s.Value.Name).ToArray()).ToAsync()
+            from adapters in _engine.GetObjectsAsync<HostVMNetworkAdapter>(new PsCommandBuilder().AddCommand("Get-VMNetworkAdapter")
                 .AddParameter("ManagementOS")).ToAsync()
             let standardSwitchAdapter = FindStandardSwitchAdapter(adapters)
             let virtualNetworks = adapters.Map(a => 
@@ -57,7 +58,7 @@ internal class HostInventory
         return res;
     }
 
-    private IEnumerable<MachineNetworkData> GetAllHostNetworks(IEnumerable<HostVirtualNetworkData> virtualNetworks, Option<TypedPsObject<ConnectedVMNetworkAdapter>> standardSwitchAdapter)
+    private IEnumerable<MachineNetworkData> GetAllHostNetworks(IEnumerable<HostVirtualNetworkData> virtualNetworks, Option<TypedPsObject<HostVMNetworkAdapter>> standardSwitchAdapter)
     {
         return NetworkInterface.GetAllNetworkInterfaces().Map(nwInterface =>
         {
@@ -73,7 +74,7 @@ internal class HostInventory
 
 
     private Option<HostVirtualNetworkData> GetVirtualNetworkFromAdapter(
-        TypedPsObject<ConnectedVMNetworkAdapter> adapterInfo, bool isStandardSwitchAdapter)
+        TypedPsObject<HostVMNetworkAdapter> adapterInfo, bool isStandardSwitchAdapter)
     {
         if (adapterInfo.Value.SwitchId == _standardSwitchId && !isStandardSwitchAdapter)
             return Option<HostVirtualNetworkData>.None;
@@ -107,7 +108,7 @@ internal class HostInventory
     }
 
 
-    private Option<TypedPsObject<ConnectedVMNetworkAdapter>> FindStandardSwitchAdapter(IEnumerable<TypedPsObject<ConnectedVMNetworkAdapter>> adapters)
+    private Option<TypedPsObject<HostVMNetworkAdapter>> FindStandardSwitchAdapter(IEnumerable<TypedPsObject<HostVMNetworkAdapter>> adapters)
     {
         var swAdapters = adapters.Where(a => a.Value.SwitchId == _standardSwitchId).ToList();
 
@@ -147,7 +148,7 @@ internal class HostInventory
     }
 
     private static bool IsStandardSwitchAdapter(string adapterId,
-        Option<TypedPsObject<ConnectedVMNetworkAdapter>> standardSwitchAdapter)
+        Option<TypedPsObject<HostVMNetworkAdapter>> standardSwitchAdapter)
     {
         return standardSwitchAdapter.Map(sa => adapterId == sa.Value.Id)
             .Match(s => s, () => false);

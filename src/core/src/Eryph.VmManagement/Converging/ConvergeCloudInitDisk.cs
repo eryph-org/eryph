@@ -87,7 +87,11 @@ namespace Eryph.VmManagement.Converging
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             return ConvergeHelpers.FindAndApply(vmInfo, l => l.DVDDrives,
-                    drive => drive.ControllerLocation == 63 && drive.ControllerNumber == 0,
+                    device =>
+                    {
+                        var drive = device.Cast<DvdDriveInfo>();
+                        return drive.Value.ControllerLocation == 63 && drive.Value.ControllerNumber == 0;
+                    },
                     drive => Context.Engine.RunAsync(PsCommandBuilder.Create()
                         .AddCommand("Set-VMDvdDrive")
                         .AddParameter("VMDvdDrive", drive.PsObject)
@@ -101,7 +105,8 @@ namespace Eryph.VmManagement.Converging
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             return ConvergeHelpers.FindAndApply(vmInfo, l => l.DVDDrives,
-                    drive => drive.ControllerLocation == 63 && drive.ControllerNumber == 0,
+                    device =>
+                        device.Cast<DvdDriveInfo>().Map(drive => drive.ControllerLocation == 63 && drive.ControllerNumber == 0),
                     drive =>
                     {
                         return Context.Engine.RunAsync(PsCommandBuilder.Create()
@@ -120,8 +125,9 @@ namespace Eryph.VmManagement.Converging
             return
                 from dvdDrive in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
                     l => l.DVDDrives,
-                    drive => drive.ControllerLocation == 63 && drive.ControllerNumber == 0,
-                    () => Context.Engine.GetObjectsAsync<DvdDriveInfo>(
+                    device => device.Cast<DvdDriveInfo>()
+                        .Map(drive =>drive.ControllerLocation == 63 && drive.ControllerNumber == 0),
+                    () => Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
                         PsCommandBuilder.Create().AddCommand("Add-VMDvdDrive")
                             .AddParameter("VM", vmInfo.PsObject)
                             .AddParameter("ControllerNumber", 0)

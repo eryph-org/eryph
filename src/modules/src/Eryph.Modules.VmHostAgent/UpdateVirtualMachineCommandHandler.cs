@@ -43,17 +43,17 @@ namespace Eryph.Modules.VmHostAgent
                     VirtualMachine.Converge(hostSettings, hostInfo,Engine, ProgressMessage, vmInfo, c, storageSettings));
 
             var chain =
-                from hostInfo in _hostInfoProvider.GetHostInfoAsync().ToAsync()
+                from hostInfo in _hostInfoProvider.GetHostInfoAsync().WriteTrace().ToAsync()
                 from vmList in GetVmInfo(vmId, Engine).ToAsync()
                 from vmInfo in EnsureSingleEntry(vmList, vmId).ToAsync()
-                from currentStorageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).ToAsync()
+                from currentStorageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).WriteTrace().ToAsync()
                 from plannedStorageSettings in VMStorageSettings.Plan(hostSettings, LongToString(command.NewStorageId),
-                    config, currentStorageSettings).ToAsync()
-                from metadata in EnsureMetadata(message.Command.MachineMetadata, vmInfo).ToAsync()
-                from mergedConfig in config.MergeWithImageSettings(metadata.ImageConfig).ToAsync()
-                from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).ToAsync()
-                from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).ToAsync()
-                from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged, _hostInfoProvider).ToAsync()
+                    config, currentStorageSettings).WriteTrace().ToAsync()
+                from metadata in EnsureMetadata(message.Command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
+                from mergedConfig in config.MergeWithImageSettings(metadata.ImageConfig).WriteTrace().ToAsync()
+                from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).WriteTrace().ToAsync()
+                from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()
+                from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged, _hostInfoProvider).WriteTrace().ToAsync()
                 select new ConvergeVirtualMachineResult
                 {
                     Inventory = inventory,
