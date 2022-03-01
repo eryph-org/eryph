@@ -77,10 +77,10 @@ namespace Eryph.Modules.VmHostAgent
         private static Task<Either<PowershellFailure, Option<TypedPsObject<PlannedVirtualMachineInfo>>>> GetTemplate(
             IPowershellEngine engine,
             HostSettings hostSettings,
-            MachineImageConfig imageConfig)
+            string image)
         {
             //add a cache lookup here, as image data should not change
-            return VirtualMachine.TemplateFromImage(engine, hostSettings, imageConfig);
+            return VirtualMachine.TemplateFromImage(engine, hostSettings, image);
         }
 
         private static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> CreateVM(MachineConfig config,

@@ -12,7 +12,7 @@ namespace Eryph.VmManagement
         public static Task<Either<PowershellFailure, MachineConfig>> MergeWithImageSettings(
             this MachineConfig machineConfig, Option<VirtualMachineConfig> optionalImageConfig)
         {
-            if (string.IsNullOrWhiteSpace(machineConfig.Image.Name))
+            if (string.IsNullOrWhiteSpace(machineConfig.Image))
                 return Prelude.RightAsync<PowershellFailure, MachineConfig>(machineConfig).ToEither();
 
             //copy machine config to a new object

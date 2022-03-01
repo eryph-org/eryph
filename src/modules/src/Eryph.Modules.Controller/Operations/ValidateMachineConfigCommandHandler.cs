@@ -41,9 +41,6 @@ namespace Eryph.Modules.Controller.Operations
                 //TODO generate a random name here
                 machineConfig.Name = "eryph-machine";
 
-            if (machineConfig.Image == null)
-                machineConfig.Image = new MachineImageConfig();
-
 
             if (machineConfig.VM.Cpu == null)
                 machineConfig.VM.Cpu = new VirtualMachineCpuConfig();

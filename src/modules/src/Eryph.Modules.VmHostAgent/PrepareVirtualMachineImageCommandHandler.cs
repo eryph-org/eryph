@@ -1,16 +1,17 @@
 ﻿using System;
 using System.IO;
-using System.Management.Automation;
 using System.Threading.Tasks;
 using Eryph.Messages;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Images.Commands;
-using Eryph.Resources.Machines.Config;
+using Eryph.Modules.VmHostAgent.Images;
 using JetBrains.Annotations;
+using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Transport;
 
 namespace Eryph.Modules.VmHostAgent
 {
@@ -21,45 +22,71 @@ namespace Eryph.Modules.VmHostAgent
     {
         private readonly IBus _bus;
         private readonly ILogger _log;
-        public PrepareVirtualMachineImageCommandHandler(IBus bus, ILogger log)
+        private readonly IImageProvider _imageProvider;
+        public PrepareVirtualMachineImageCommandHandler(IBus bus, ILogger log, IImageProvider imageProvider)
         {
             _bus = bus;
             _log = log;
+            _imageProvider = imageProvider;
         }
 
-        public Task Handle(OperationTask<PrepareVirtualMachineImageCommand> message)
+        public async Task Handle(OperationTask<PrepareVirtualMachineImageCommand> message)
         {
+            Task<Unit> ReportProgress(string progressMessage)
+            {
+                return ProgressMessage(message.OperationId, message.TaskId, progressMessage);
+            }
+
             try
             {
-                if (message.Command.ImageConfig == null)
-                    return _bus.Publish(
+                if (message.Command.Image == null)
+                {
+                    await _bus.Publish(
                         OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId));
+                    return;
+                }
 
                 var hostSettings = HostSettingsBuilder.GetHostSettings();
                 var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
 
-                if (!Directory.Exists(imageRootPath))
-                    Directory.CreateDirectory(imageRootPath);
+                await _imageProvider.ProvideImage(imageRootPath, message.Command.Image, ReportProgress).
+                    ToAsync()
+                    .MatchAsync(r => 
+                        _bus.Publish(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, r)), 
+                        l=>
+                        {
+                            return _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
+                                l.Message));
+                        });
 
-                var imagePath = Path.Combine(imageRootPath,
-                    $"{message.Command.ImageConfig.Name}\\{message.Command.ImageConfig.Tag}");
-
-                if (Directory.Exists(imagePath))
-                    return _bus.Publish(
-                        OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId));
-
-                if (message.Command.ImageConfig.Source == MachineImageSource.Local)
-                    throw new Exception("Image not found on local source.");
-
-                return Task.CompletedTask;
             }
             catch (Exception ex)
             {
                 _log.LogError(ex, $"Command '{nameof(PrepareVirtualMachineImageCommand)}' failed.");
-                return _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId,
+                await _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId,
                     message.TaskId,
                     new ErrorData {ErrorMessage = ex.Message}));
             }
+        }
+
+        protected async Task<Unit> ProgressMessage(Guid operationId, Guid taskId, string message)
+        {
+            using (var scope = new RebusTransactionScope())
+            {
+                await _bus.Publish(new OperationTaskProgressEvent
+                {
+                    Id = Guid.NewGuid(),
+                    OperationId = operationId,
+                    TaskId = taskId,
+                    Message = message,
+                    Timestamp = DateTimeOffset.UtcNow
+                }).ConfigureAwait(false);
+
+                // commit it like this
+                await scope.CompleteAsync().ConfigureAwait(false);
+            }
+
+            return Unit.Default;
         }
     }
 }

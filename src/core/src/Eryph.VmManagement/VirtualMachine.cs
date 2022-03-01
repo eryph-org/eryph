@@ -71,15 +71,16 @@ namespace Eryph.VmManagement
         public static Task<Either<PowershellFailure, Option<TypedPsObject<PlannedVirtualMachineInfo>>>> TemplateFromImage(
             IPowershellEngine engine,
             HostSettings hostSettings,
-            MachineImageConfig imageConfig)
+            string image)
         {
-            if (string.IsNullOrWhiteSpace(imageConfig?.Name))
+            if (string.IsNullOrWhiteSpace(image))
                 return RightAsync<PowershellFailure, Option<TypedPsObject<PlannedVirtualMachineInfo>>>(None).ToEither();
 
 
             var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
-            var imagePath = Path.Combine(imageRootPath,
-                $"{imageConfig.Name}\\{imageConfig.Tag}\\");
+            var imagePathName = image.Replace('/', '\\');
+
+            var imagePath = Path.Combine(imageRootPath, imagePathName);
 
             var configRootPath = Path.Combine(imagePath, "Virtual Machines");
 
