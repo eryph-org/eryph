@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using Dbosoft.Hosuto.HostedServices;
+using Eryph.Core;
 using Eryph.Messages;
 using Eryph.ModuleCore;
 using Eryph.Modules.VmHostAgent.Images;
@@ -49,6 +50,8 @@ namespace Eryph.Modules.VmHostAgent
 
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
+            container.RegisterSingleton<IFileSystemService, FileSystemService>();
+
 
             container.Register<StartBusModuleHandler>();
             container.RegisterSingleton<ITracer, Tracer>();
@@ -97,6 +100,10 @@ namespace Eryph.Modules.VmHostAgent
 
             return HttpPolicyExtensions
                 .HandleTransientHttpError()
+                .Or<HttpRequestException>(ex =>
+                {
+                    return true;
+                })
                 .WaitAndRetryAsync(6, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2,
                     retryAttempt)));
         }

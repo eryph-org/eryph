@@ -6,6 +6,7 @@ using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Images.Commands;
 using Eryph.Modules.VmHostAgent.Images;
+using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
@@ -49,14 +50,16 @@ namespace Eryph.Modules.VmHostAgent
                 var hostSettings = HostSettingsBuilder.GetHostSettings();
                 var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
 
-                await _imageProvider.ProvideImage(imageRootPath, message.Command.Image, ReportProgress).
-                    ToAsync()
+                await _imageProvider.ProvideImage(imageRootPath, message.Command.Image, ReportProgress)
+                    .WriteTrace()
+                    .ToAsync()
                     .MatchAsync(r => 
                         _bus.Publish(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, r)), 
                         l=>
                         {
+                            _log.LogInformation("Command '{command}' failed. Message: {message}", nameof(PrepareVirtualMachineImageCommand), l.Message);
                             return _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
-                                l.Message));
+                                new ErrorData { ErrorMessage = l.Message }));
                         });
 
             }
