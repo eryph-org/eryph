@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "eryph-packer": {
+      "commandName": "Project",
+      "commandLineArgs": "push dbosoft/winsrv2016-standard/v1 \"T:\\Downloads\\b2-windows.exe\"",
+      "workingDirectory": "S:\\eryph\\images\\work"
+    }
+  }
+}

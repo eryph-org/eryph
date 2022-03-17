@@ -72,7 +72,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
 
                 return _taskDispatcher.StartNew(Data.OperationId,new PrepareVirtualMachineImageCommand
                 {
-                    ImageConfig = Data.Config?.Image,
+                    Image = Data.Config?.Image,
                     AgentName = r.AgentName
                 });
             });
@@ -83,10 +83,13 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             if (Data.State >= CreateVMState.ImagePrepared)
                 return Task.CompletedTask;
 
-            return FailOrRun(message, () =>
+            return FailOrRun<PrepareVirtualMachineImageCommand, string>(message, (image) =>
             {
                 Data.State = CreateVMState.ImagePrepared;
                 Data.MachineId = Guid.NewGuid();
+
+                if(Data.Config!= null)
+                    Data.Config.Image = image;
 
                 return _taskDispatcher.StartNew(Data.OperationId,new CreateVirtualMachineCommand
                 {

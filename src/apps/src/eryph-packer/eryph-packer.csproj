@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>Eryph.Packer</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Joveler.Compression.XZ" Version="4.1.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta3.22114.1" />
+    <PackageReference Include="System.CommandLine.Rendering" Version="0.4.0-alpha.22114.1" />
+  </ItemGroup>
+
+</Project>

@@ -12,7 +12,7 @@ namespace Eryph.Resources.Machines.Config
         public string Environment { get; set; }
         public string Project { get; set; }
 
-        public MachineImageConfig Image { get; set; }
+        public string Image { get; set; }
 
         public VirtualMachineConfig VM { get; set; }
 

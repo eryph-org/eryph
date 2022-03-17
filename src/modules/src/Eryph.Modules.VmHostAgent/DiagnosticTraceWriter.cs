@@ -100,18 +100,3 @@ internal class DiagnosticTraceWriter : ITraceWriter
  
 
     }
-
-    public class PrivateIdentifier
-    {
-        [JsonProperty("_pi")]
-        public PrivateIdentifierValue Value { get; set; }
-
-
-}
-
-public class PrivateIdentifierValue
-    {
-        public object Value { get; set; }
-        public bool Critical { get; set; }
-
-}

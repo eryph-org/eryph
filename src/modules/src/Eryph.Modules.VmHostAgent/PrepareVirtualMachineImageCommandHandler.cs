@@ -1,12 +1,9 @@
 ﻿using System;
-using System.IO;
-using System.Management.Automation;
 using System.Threading.Tasks;
 using Eryph.Messages;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Images.Commands;
-using Eryph.Resources.Machines.Config;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
@@ -21,42 +18,34 @@ namespace Eryph.Modules.VmHostAgent
     {
         private readonly IBus _bus;
         private readonly ILogger _log;
-        public PrepareVirtualMachineImageCommandHandler(IBus bus, ILogger log)
+        private readonly IImageRequestDispatcher _imageRequestDispatcher;
+        public PrepareVirtualMachineImageCommandHandler(IBus bus, ILogger log, IImageRequestDispatcher imageRequestDispatcher)
         {
             _bus = bus;
             _log = log;
+            _imageRequestDispatcher = imageRequestDispatcher;
         }
 
-        public Task Handle(OperationTask<PrepareVirtualMachineImageCommand> message)
+        public async Task Handle(OperationTask<PrepareVirtualMachineImageCommand> message)
         {
+
             try
             {
-                if (message.Command.ImageConfig == null)
-                    return _bus.Publish(
+                if (message.Command.Image == null)
+                {
+                    await _bus.Publish(
                         OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId));
+                    return;
+                }
 
-                var hostSettings = HostSettingsBuilder.GetHostSettings();
-                var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
+                _imageRequestDispatcher.NewImageRequestTask(message.OperationId, message.TaskId, message.Command.Image);
 
-                if (!Directory.Exists(imageRootPath))
-                    Directory.CreateDirectory(imageRootPath);
 
-                var imagePath = Path.Combine(imageRootPath,
-                    $"{message.Command.ImageConfig.Name}\\{message.Command.ImageConfig.Tag}");
-
-                if (Directory.Exists(imagePath))
-                    return _bus.Publish(
-                        OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId));
-
-                if (message.Command.ImageConfig.Source == MachineImageSource.Local)
-                    throw new Exception("Image not found on local source.");
-
-                return Task.CompletedTask;
             }
             catch (Exception ex)
             {
                 _log.LogError(ex, $"Command '{nameof(PrepareVirtualMachineImageCommand)}' failed.");
-                return _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId,
+                await _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId,
                     message.TaskId,
                     new ErrorData {ErrorMessage = ex.Message}));
             }
