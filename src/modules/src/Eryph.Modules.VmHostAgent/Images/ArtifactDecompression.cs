@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Joveler.Compression.XZ;
@@ -16,7 +17,7 @@ namespace Eryph.Modules.VmHostAgent.Images
             _fileSystemService = fileSystemService;
         }
 
-        public async Task Decompress(ArtifactManifestData artifactManifest, Stream stream, string imageDirectory)
+        public async Task Decompress(ArtifactManifestData artifactManifest, Stream stream, string imageDirectory, CancellationToken cancel)
         {
             switch (artifactManifest.Format)
             {
@@ -24,7 +25,7 @@ namespace Eryph.Modules.VmHostAgent.Images
                     DecompressZip(artifactManifest, stream, imageDirectory);
                     break;
                 case "xz":
-                    await DecompressXz(artifactManifest, stream, imageDirectory);
+                    await DecompressXz(artifactManifest, stream, imageDirectory, cancel);
                     break;
             }
         }
@@ -44,7 +45,7 @@ namespace Eryph.Modules.VmHostAgent.Images
 
         }
 
-        private async Task DecompressXz(ArtifactManifestData artifactManifest, Stream stream, string imageDirectory)
+        private async Task DecompressXz(ArtifactManifestData artifactManifest, Stream stream, string imageDirectory, CancellationToken cancel)
         {
             InitNativeLibrary();
 
@@ -58,7 +59,7 @@ namespace Eryph.Modules.VmHostAgent.Images
             await using var fileStream = _fileSystemService.OpenWrite(fileName);
 
             await using var xzs = new XZStream(stream, new XZDecompressOptions());
-            await xzs.CopyToAsync(fileStream);
+            await xzs.CopyToAsync(fileStream, cancel);
         }
 
         private static bool _nativeInitialized;

@@ -104,7 +104,7 @@ public class VMExportPacker
         var fileInfo = new FileInfo(compressedPath);
         var totalSize = fileInfo.Length;
 
-        var splitFiles = await SplitFile(compressedPath, 1024 * 1024 * 64, token);
+        var splitFiles = await SplitFile(compressedPath, 1024 * 1024 * 120, token);
         token.ThrowIfCancellationRequested();
 
 
@@ -124,7 +124,7 @@ public class VMExportPacker
             var hashString = GetHashString(hashAlg.Hash!);
 
             var splitFileDir = Path.GetDirectoryName(splitFile);
-            File.Move(splitFile, Path.Combine(splitFileDir, hashString));
+            File.Move(splitFile, Path.Combine(splitFileDir, $"{hashString}.part"));
             parts.Add($"sha1:{hashString}");
         }
 

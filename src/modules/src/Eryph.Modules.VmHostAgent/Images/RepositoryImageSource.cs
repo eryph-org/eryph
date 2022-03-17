@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.VmManagement;
@@ -27,7 +28,7 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
         _fileSystem = fileSystem;
     }
 
-    public Task<Either<PowershellFailure, ImageInfo>> ProvideImage(string path, ImageIdentifier imageIdentifier)
+    public Task<Either<PowershellFailure, ImageInfo>> ProvideImage(string path, ImageIdentifier imageIdentifier, CancellationToken cancel)
     {
 
         return Prelude.TryAsync(async () =>
@@ -36,7 +37,7 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
                     $"{imageIdentifier.Organization}/{imageIdentifier.ImageId}/{imageIdentifier.Tag}/manifest.json";
                 using var httpClient = _httpClientFactory.CreateClient(SourceName);
 
-                var response = await httpClient.GetAsync(manifestUrl);
+                var response = await httpClient.GetAsync(manifestUrl, cancel);
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
                     return new PowershellFailure
@@ -55,7 +56,7 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
                     return new PowershellFailure
                         { Message = $"Could not find image '{imageIdentifier.Name}' on {SourceName}." };
 
-                var manifest = ReadImageManifest(await response.Content.ReadAsStringAsync());
+                var manifest = ReadImageManifest(await response.Content.ReadAsStringAsync(cancel));
 
                 if (manifest?.Image != imageIdentifier.Name)
                 {
@@ -74,7 +75,7 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
             .ToEither();
     }
 
-    public Task<Either<PowershellFailure, ArtifactInfo>> RetrieveArtifact(ImageInfo imageInfo, string artifact)
+    public Task<Either<PowershellFailure, ArtifactInfo>> RetrieveArtifact(ImageInfo imageInfo, string artifact, CancellationToken cancel)
     {
         return Prelude.TryAsync(() =>
                 ParseArtifactName(artifact).BindAsync(async parsedArtifactId =>
@@ -86,7 +87,7 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
                         _log.LogTrace("artifact {artifact} manifest url: {url}", messageName, artifactUrl);
 
                         using var httpClient = _httpClientFactory.CreateClient(SourceName);
-                        var response = await httpClient.GetAsync(artifactUrl);
+                        var response = await httpClient.GetAsync(artifactUrl, cancel);
 
                         if (response.StatusCode == HttpStatusCode.NotFound)
                             return new PowershellFailure
@@ -104,7 +105,7 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
                             };
                         }
 
-                        var manifestContent = await response.Content.ReadAsStringAsync();
+                        var manifestContent = await response.Content.ReadAsStringAsync(cancel);
                         var hash = CreateHashAlgorithm(hashAlgName);
                         var hashString = GetHashString(hash.ComputeHash(Encoding.UTF8.GetBytes(manifestContent)));
 
@@ -129,7 +130,7 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
 
     public Task<Either<PowershellFailure, long>> RetrieveArtifactPart(ArtifactInfo artifact, string artifactPart,
         long availableSize, long totalSize,
-        Func<string, Task<Unit>> reportProgress)
+        Func<string, Task<Unit>> reportProgress, CancellationToken cancel)
     {
 
         return ParseArtifactPartName(artifactPart).BindAsync(async parsedPartName =>
@@ -139,12 +140,12 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
             var messageName = $"{artifact}/{partHash[..12]}";
 
             var artifactPartUrl =
-                $"{artifact.ImageId.Organization}/{artifact.ImageId.ImageId}/{artifact.ImageId.Tag}/{artifact.Hash}/{partHash}";
+                $"{artifact.ImageId.Organization}/{artifact.ImageId.ImageId}/{artifact.ImageId.Tag}/{artifact.Hash}/{partHash}.part";
             _log.LogTrace("artifact part {artifact}, part {artifactPart} url: {url}", artifact,
                 artifactPart, artifactPartUrl);
 
             using var httpClient = _httpClientFactory.CreateClient(SourceName);
-            var response = await httpClient.GetAsync(artifactPartUrl, HttpCompletionOption.ResponseHeadersRead);
+            var response = await httpClient.GetAsync(artifactPartUrl, HttpCompletionOption.ResponseHeadersRead, cancel);
 
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return new PowershellFailure
@@ -167,7 +168,7 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
 
             var partFile = Path.Combine(artifact.LocalPath, $"{partHash}.part");
 
-            await using var responseStream = await response.Content.ReadAsStreamAsync();
+            await using var responseStream = await response.Content.ReadAsStreamAsync(cancel);
             var hashAlg = CreateHashAlgorithm(hashAlgName);
             // ReSharper disable once ConvertToUsingDeclaration
             await using (var tempFileStream = _fileSystem.OpenWrite(partFile))
@@ -176,7 +177,7 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
                 var cryptoStream = new CryptoStream(responseStream, hashAlg, CryptoStreamMode.Read);
                 await CopyToAsync(cryptoStream, tempFileStream, reportProgress,
                     $"artifact '{artifact}' from source '{SourceName}'",
-                    availableSize, totalSize);
+                    availableSize, totalSize, cancel: cancel);
 
             }
 
@@ -203,7 +204,7 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
 
 
 
-    private async Task CopyToAsync(Stream source, Stream destination, Func<string, Task<Unit>> reportProgress, string name, long availableSize, long totalSize, int bufferSize = 65536)
+    private async Task CopyToAsync(Stream source, Stream destination, Func<string, Task<Unit>> reportProgress, string name, long availableSize, long totalSize, int bufferSize = 65536, CancellationToken cancel = default)
     {
         var buffer = new byte[bufferSize];
         int bytesRead;
@@ -212,9 +213,11 @@ internal class RepositoryImageSource : ImageSourceBase, IImageSource
         
         var lastReport = DateTime.Now - TimeSpan.FromSeconds(10-3); //send first message after 3 seconds instead of 10
 
-        while ((bytesRead = await source.ReadAsync(buffer, 0, buffer.Length)) > 0)
+        while ((bytesRead = await source.ReadAsync(buffer, 0, buffer.Length, cancel)) > 0)
         {
-            await destination.WriteAsync(buffer, 0, bytesRead);
+            cancel.ThrowIfCancellationRequested();
+
+            await destination.WriteAsync(buffer, 0, bytesRead, cancel);
             totalRead += bytesRead;
 
             var timeSinceLastReport = DateTime.Now - lastReport;

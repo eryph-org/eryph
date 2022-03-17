@@ -162,7 +162,7 @@ pushCommand.SetHandler(async (string image, FileInfo b2Uploader, DirectoryInfo w
                 $"{imageInfo.Organization}/{imageInfo.Id}/{imageInfo.Tag}/{relativeName.Replace('\\', '/')}";
 
             var startedProcess = Process.Start(b2Uploader.FullName,
-                $"upload-file eryph-images-staging \"{fileInfo.FullName}\" \"{relativeUploadName}\" ");
+                $"upload-file eryph-staging-eu \"{fileInfo.FullName}\" \"{relativeUploadName}\" ");
             await startedProcess.WaitForExitAsync();
 
             if (startedProcess.ExitCode != 0)

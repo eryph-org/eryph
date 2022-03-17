@@ -33,7 +33,8 @@ namespace Eryph.Modules.VmHostAgent
         {
             services.AddHttpClient("eryph-hub", cfg =>
             {
-                cfg.BaseAddress = new Uri("https://eryph-images-staging.dbosoft.eu/file/eryph-images-staging/");
+                //cfg.BaseAddress = new Uri("https://eryph-images-staging.dbosoft.eu/file/eryph-images-staging/");
+                cfg.BaseAddress = new Uri("https://eryph-staging-b2.b-cdn.net");
             })
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
                 .AddPolicyHandler(GetRetryPolicy());
@@ -45,6 +46,7 @@ namespace Eryph.Modules.VmHostAgent
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
             options.AddHostedService<WmiWatcherModuleService>();
+            options.AddHostedService<ImageRequestWatcherService>();
             options.AddLogging();
         }
 
@@ -66,7 +68,9 @@ namespace Eryph.Modules.VmHostAgent
             imageSourceFactory.Register<LocalImageSource>(ImagesSources.Local);
             imageSourceFactory.Register<RepositoryImageSource>(ImagesSources.EryphHub);
             container.RegisterInstance<IImageSourceFactory>(imageSourceFactory);
-            container.Register<IImageProvider, LocalFirstImageProvider>();
+            container.RegisterSingleton<IImageProvider, LocalFirstImageProvider>();
+            container.RegisterSingleton<IImageRequestDispatcher, ImageRequestRegistry>();
+            container.RegisterSingleton<IImageRequestBackgroundQueue, ImageBackgroundTaskQueue>();
 
 
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);

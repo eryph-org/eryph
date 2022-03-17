@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.VmManagement;
@@ -48,7 +48,7 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
         return artifacts;
     }
 
-    public async Task<Either<PowershellFailure, ArtifactInfo>> RetrieveArtifact(ImageInfo imageInfo, string artifact)
+    public async Task<Either<PowershellFailure, ArtifactInfo>> RetrieveArtifact(ImageInfo imageInfo, string artifact, CancellationToken cancel)
     {
 
         return await ParseArtifactName(artifact).BindAsync(async parsedArtifactName =>
@@ -76,6 +76,8 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
 
                     var manifestJsonData = _fileSystem.ReadText(cachedArtifactManifestFile);
                     var hashString = GetHashString(hashAlg.ComputeHash(Encoding.UTF8.GetBytes(manifestJsonData)));
+
+                    cancel.ThrowIfCancellationRequested();
 
                     if (hashString == hash)
                     {
@@ -106,7 +108,7 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
 
     public Task<Either<PowershellFailure, long>> RetrieveArtifactPart(ArtifactInfo artifact, string artifactPart,
         long availableSize, long totalSize,
-        Func<string, Task<Unit>> reportProgress)
+        Func<string, Task<Unit>> reportProgress, CancellationToken cancel)
     {
         return ParseArtifactPartName(artifactPart).BindAsync(async parsedArtifactPartName =>
         {
@@ -122,7 +124,7 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
             var hashAlg = CreateHashAlgorithm(hashAlgName);
             await using (var dataStream = File.OpenRead(cachedArtifactPartFile))
             {
-                await hashAlg.ComputeHashAsync(dataStream);
+                await hashAlg.ComputeHashAsync(dataStream, cancel);
             }
 
             var hashString = GetHashString(hashAlg.Hash);
@@ -145,7 +147,7 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
 
 
     public async Task<Either<PowershellFailure, Unit>> MergeArtifact(ArtifactInfo artifactInfo, ImageInfo imageInfo,
-        Func<string, Task<Unit>> reportProgress)
+        Func<string, Task<Unit>> reportProgress, CancellationToken cancel)
     {
         var imageArtifactInfo = ReadImageArtifactInfo(imageInfo);
 
@@ -170,7 +172,7 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
                 await using var multiStream = new MultiStream(streams);
                 var decompression = new ArtifactDecompression(_fileSystem);
                 await decompression.Decompress(artifactInfo.MetaData,
-                        multiStream, imageInfo.LocalPath);
+                        multiStream, imageInfo.LocalPath, cancel);
             }
             finally
             {
@@ -185,7 +187,7 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
 
             imageArtifactInfo.MergedArtifacts = imageArtifactInfo.MergedArtifacts
                 .Append(new[] { $"{artifactInfo.HashAlg}:{artifactInfo.Hash}" }).ToArray();
-            await JsonSerializer.SerializeAsync(artifactsInfoStream, imageArtifactInfo);
+            await JsonSerializer.SerializeAsync(artifactsInfoStream, imageArtifactInfo, cancellationToken: cancel);
 
             _fileSystem.DirectoryDelete(artifactInfo.LocalPath);
 
@@ -196,20 +198,20 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
 
     }
 
-    public Task<Either<PowershellFailure, ImageInfo>> ProvideImage(string path, ImageIdentifier imageIdentifier)
+    public Task<Either<PowershellFailure, ImageInfo>> ProvideImage(string path, ImageIdentifier imageIdentifier, CancellationToken cancel)
     {
-        return ProvideImage(path, imageIdentifier, false);
+        return ProvideImage(path, imageIdentifier, false, cancel);
     }
 
 
-    public Task<Either<PowershellFailure, ImageInfo>> ProvideFallbackImage(string path, ImageIdentifier imageIdentifier)
+    public Task<Either<PowershellFailure, ImageInfo>> ProvideFallbackImage(string path, ImageIdentifier imageIdentifier, CancellationToken cancel)
     {
-        return ProvideImage(path, imageIdentifier, true);
+        return ProvideImage(path, imageIdentifier, true, cancel);
     }
 
 
     private async Task<Either<PowershellFailure, ImageInfo>> ProvideImage(string path, ImageIdentifier imageIdentifier,
-        bool fallbackMode)
+        bool fallbackMode, CancellationToken cancel)
     {
         if (!fallbackMode && imageIdentifier.Tag == "latest")
             return new PowershellFailure { Message = "latest image version will be look up first on remote sources." };
@@ -222,7 +224,7 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
                         { Message = $"Image '{imageIdentifier.Name}' not found in local store." }).ToEither();
 
                 await using var manifestStream = File.OpenRead(Path.Combine(imagePath, "manifest.json"));
-                var manifest = await JsonSerializer.DeserializeAsync<ImageManifestData>(manifestStream);
+                var manifest = await JsonSerializer.DeserializeAsync<ImageManifestData>(manifestStream, cancellationToken: cancel);
 
                 return await Prelude
                     .RightAsync<PowershellFailure, ImageInfo>(new ImageInfo(imageIdentifier, imagePath, manifest))
@@ -235,14 +237,14 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
 
     }
 
-    public Task<Either<PowershellFailure, ImageInfo>> CacheImage(string path, ImageInfo imageInfo)
+    public Task<Either<PowershellFailure, ImageInfo>> CacheImage(string path, ImageInfo imageInfo, CancellationToken cancel)
     {
         return Prelude.TryAsync(async () =>
             {
                 var imagePath = BuildImagePath(imageInfo.Id, path, true);
 
                 await using var manifestStream = _fileSystem.OpenWrite(Path.Combine(imagePath, "manifest.json"));
-                await JsonSerializer.SerializeAsync(manifestStream, imageInfo.MetaData);
+                await JsonSerializer.SerializeAsync(manifestStream, imageInfo.MetaData, cancellationToken: cancel);
                 return new ImageInfo(imageInfo.Id, imagePath, imageInfo.MetaData);
 
             }).ToEither(ex => new PowershellFailure { Message = ex.Message })
@@ -251,7 +253,7 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
 
     }
 
-    public async Task<Either<PowershellFailure, ArtifactInfo>> CacheArtifact(ArtifactInfo artifactInfo, ImageInfo imageInfo)
+    public async Task<Either<PowershellFailure, ArtifactInfo>> CacheArtifact(ArtifactInfo artifactInfo, ImageInfo imageInfo, CancellationToken cancel)
     {
         if (artifactInfo.MergedWithImage)
             return artifactInfo;
@@ -262,7 +264,7 @@ internal class LocalImageSource : ImageSourceBase, ILocalImageSource
                 _fileSystem.EnsureDirectoryExists(artifactPath);
 
                 await using var manifestStream = _fileSystem.OpenWrite(Path.Combine(artifactPath, "manifest.json"));
-                await JsonSerializer.SerializeAsync(manifestStream, artifactInfo.MetaData);
+                await JsonSerializer.SerializeAsync(manifestStream, artifactInfo.MetaData, cancellationToken: cancel);
                 return new ArtifactInfo(artifactInfo.ImageId,artifactInfo.Hash, artifactInfo.HashAlg, artifactInfo.MetaData, artifactPath, false);
 
             }).ToEither(ex => new PowershellFailure { Message = ex.Message })
