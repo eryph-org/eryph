@@ -52,5 +52,22 @@ namespace Eryph.Modules.Controller.DataServices
             var res = await _repository.AddAsync(vm);
             return res;
         }
+
+        public async Task<Unit> RemoveVM(Guid id)
+        {
+            var entity = await _repository.GetByIdAsync(id);
+            if (entity == null)
+                return Unit.Default;
+            
+            await _repository.DeleteAsync(entity);
+            
+
+            if (entity.MetadataId != Guid.Empty)
+            {
+                await _metadataService.RemoveMetadata(entity.MetadataId);
+            }
+
+            return Unit.Default;
+        }
     }
 }

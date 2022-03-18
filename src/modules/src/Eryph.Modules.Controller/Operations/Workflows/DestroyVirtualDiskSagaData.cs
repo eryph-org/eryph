@@ -4,8 +4,8 @@ using LanguageExt;
 
 namespace Eryph.Modules.Controller.Operations.Workflows
 {
-    public class DestroyMachineSagaData : TaskWorkflowSagaData
+    public class DestroyVirtualDiskSagaData : TaskWorkflowSagaData
     {
-        public Guid MachineId { get; set; }
+        public Guid DiskId { get; set; }
     }
 }

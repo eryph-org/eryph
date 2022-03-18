@@ -71,7 +71,7 @@ namespace Eryph.Runtime.Zero.Configuration
 
         public void DeleteConfigFile(string id)
         {
-            var filePath = Path.Combine(ZeroConfig.GetClientConfigPath(), CoerceValidFileName(id) + ".json");
+            var filePath = Path.Combine(_basePath, CoerceValidFileName(id) + ".json");
             if (File.Exists(filePath))
                 File.Delete(filePath);
         }

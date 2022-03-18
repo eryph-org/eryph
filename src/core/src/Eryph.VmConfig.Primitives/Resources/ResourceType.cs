@@ -7,7 +7,7 @@ namespace Eryph.Resources
     public enum ResourceType
     {
         Machine,
-        Disk,
+        VirtualDisk,
         Network
     }
 }

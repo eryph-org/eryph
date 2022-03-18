@@ -9,4 +9,5 @@ public interface IVirtualMachineMetadataService
 {
     Task<Option<VirtualMachineMetadata>> GetMetadata(Guid id);
     Task<Unit> SaveMetadata(VirtualMachineMetadata metadata);
+    Task<Unit> RemoveMetadata(Guid id);
 }

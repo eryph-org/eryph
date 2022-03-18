@@ -31,5 +31,12 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
             await _configService.Update(metadata);
             return Unit.Default;
         }
+
+        public async Task<Unit> RemoveMetadata(Guid id)
+        {
+            await _decoratedService.RemoveMetadata(id);
+            await _configService.Delete(new VirtualMachineMetadata { Id = id });
+            return Unit.Default;
+        }
     }
 }

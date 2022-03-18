@@ -41,7 +41,7 @@ namespace Eryph.ModuleCore
             return (await StartNew(Guid.Empty,Activator.CreateInstance<T>(), resource)).FirstOrDefault();
         }
 
-        public Task<IEnumerable<Operation>> StartNew<T>([AllowNull] params Resource[] resources)
+        public Task<IEnumerable<Operation>> StartNew<T>(params Resource[] resources)
             where T : class, new()
         {
             return StartNew(Guid.Empty,Activator.CreateInstance<T>(), resources);
@@ -52,14 +52,13 @@ namespace Eryph.ModuleCore
             return (await StartNew(commandType, new[] { resource }))?.FirstOrDefault();
         }
 
-        public Task<IEnumerable<Operation>> StartNew(Type commandType, [AllowNull] params Resource[] resources)
+        public Task<IEnumerable<Operation>> StartNew(Type commandType, params Resource[] resources)
         {
-            return StartNew(Guid.Empty, Activator.CreateInstance(commandType), resources);
+            return StartNew(Guid.Empty, Activator.CreateInstance(commandType) ?? throw new InvalidOperationException(), resources);
         }
         
 
-        public Task<IEnumerable<Operation>> StartNew(object command,
-            [AllowNull] params Resource[] resources)
+        public Task<IEnumerable<Operation>> StartNew(object command, params Resource[] resources)
         {
             return StartNew(Guid.Empty, command, resources);
 
@@ -77,7 +76,19 @@ namespace Eryph.ModuleCore
                 existingOperation = false;
                 operationId = Guid.NewGuid();
             }
-                
+
+            // resources can be set directly or by command
+            // at end we join the resources into command but to ensure that all are handled
+            // try to collect them from command, too
+            resources ??= Array.Empty<Resource>();
+            var resourcesCommand = command as IResourcesCommand;
+            var resourceCommand = command as IResourceCommand;
+
+            if (resourcesCommand is { Resources: { } }) resources = resources.Concat(resourcesCommand.Resources).ToArray();
+            if (resourceCommand != null && resourceCommand.Resource.Id!=Guid.Empty) 
+                resources = resources.Concat(new[] { resourceCommand.Resource }).ToArray();
+
+            resources = resources.Distinct().ToArray();
 
             // if supported by the command use the correlation id as operation id
             // this will prevent that commands are send twice
@@ -88,13 +99,13 @@ namespace Eryph.ModuleCore
 
             var result = new List<Operation>();
 
-            //create a operation for each resource
-            //or, if command supports multiple resources or there are no resources - 1 operation
-            var opCount = (resources?.Length).GetValueOrDefault(1);
-            if (opCount > 1 && command is IResourcesCommand)
-                opCount = 1;
+            //create a task for each resource
+            //or, if command supports multiple resources or there are no resources - 1 task
+            var taskCount = resources.Length == 0 ? 1 : resources.Length;
+            if (taskCount > 1 && resourcesCommand!=null)
+                taskCount = 1;
 
-            for (var i = 0; i < opCount; i++)
+            for (var i = 0; i < taskCount; i++)
             {
                 if (!existingOperation)
                 {
@@ -103,7 +114,7 @@ namespace Eryph.ModuleCore
                     {
                         Id = operationId,
                         Status = OperationStatus.Queued,
-                        Resources = resources?.Select(x => new OperationResource
+                        Resources = resources.Distinct().Select(x => new OperationResource
                                 {ResourceId = x.Id, ResourceType = x.Type})
                             .ToList()
                     };
@@ -121,9 +132,19 @@ namespace Eryph.ModuleCore
                     if(operation == null)
                         throw new InvalidOperationException($"Could not find operation {operationId} in state db.");
 
-                    operation.Resources = operation.Resources?.Concat(resources?.Select(x => new OperationResource
-                        {ResourceId = x.Id, ResourceType = x.Type}) ?? Array.Empty<OperationResource>())
-                        .Distinct().ToList();
+                    foreach (var resource in resources)
+                    {
+                        if (!operation.Resources.Any(
+                                x => x.ResourceType == resource.Type && x.ResourceId == resource.Id))
+                        {
+                            operation.Resources.Add(new OperationResource
+                            {
+                                ResourceId = resource.Id,
+                                ResourceType = resource.Type
+                            });
+                        }
+                    }
+
 
                     _db.Update(operation);
                     await _db.SaveChangesAsync();
@@ -131,15 +152,15 @@ namespace Eryph.ModuleCore
                 }
 
 
-                if (command is IResourcesCommand resourcesCommand)
+                if (resourcesCommand!= null)
                 {
                     resourcesCommand.Resources = resources;
                 }
-                else
+
+                if (resourceCommand != null && resources.Length > i)
                 {
-                    var resource = resources?[i];
-                    if (resource.HasValue && command is IResourceCommand resourceCommand)
-                        resourceCommand.Resource = resource.Value;
+                    var resource = resources[i];
+                    resourceCommand.Resource = resource;
                 }
 
                 var commandJson = JsonConvert.SerializeObject(command);
@@ -181,7 +202,7 @@ namespace Eryph.ModuleCore
             if(operationId == Guid.Empty)
                 throw new ArgumentException("Invalid empty operation id", nameof(operationId));
 
-            return (await StartNew(Guid.Empty, Activator.CreateInstance<T>(), resource)).FirstOrDefault();
+            return (await StartNew(operationId, Activator.CreateInstance<T>(), resource)).FirstOrDefault();
         }
 
         public Task<IEnumerable<Operation>> StartNew<T>(Guid operationId, [AllowNull] params Resource[] resources)
@@ -190,7 +211,7 @@ namespace Eryph.ModuleCore
             if (operationId == Guid.Empty)
                 throw new ArgumentException("Invalid empty operation id", nameof(operationId));
 
-            return StartNew(Guid.Empty, Activator.CreateInstance<T>(), resources);
+            return StartNew(operationId, Activator.CreateInstance<T>(), resources);
         }
 
         public async Task<Operation?> StartNew(Guid operationId, Type operationCommandType, Resource resource = default)
@@ -198,7 +219,7 @@ namespace Eryph.ModuleCore
             if (operationId == Guid.Empty)
                 throw new ArgumentException("Invalid empty operation id", nameof(operationId));
 
-            return (await StartNew(operationCommandType, new[] { resource }))?.FirstOrDefault();
+            return (await StartNew(operationId, operationCommandType, new[] { resource }))?.FirstOrDefault();
         }
 
         public Task<IEnumerable<Operation>> StartNew(Guid operationId, Type commandType, [AllowNull] params Resource[] resources)
@@ -206,7 +227,7 @@ namespace Eryph.ModuleCore
             if (operationId == Guid.Empty)
                 throw new ArgumentException("Invalid empty operation id", nameof(operationId));
 
-            return StartNew(Guid.Empty, Activator.CreateInstance(commandType), resources);
+            return StartNew(operationId, Activator.CreateInstance(commandType), resources);
         }
 
     }

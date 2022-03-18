@@ -20,12 +20,15 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
             _io = new ConfigIO(ZeroConfig.GetStorageConfigPath());
         }
 
-        public Task Delete(VirtualDisk disk)
+        public async Task Delete(VirtualDisk disk)
         {
             var storageConfig = GetStorageConfigByDiskTemplate(disk);
             storageConfig.VirtualDisks = storageConfig.VirtualDisks.Where(x => x.Id != disk.Id).ToArray();
 
-            return _io.SaveConfigFile(storageConfig, storageConfig.Id);
+            if (storageConfig.VirtualDisks.Length == 0)
+                _io.DeleteConfigFile(storageConfig.Id);
+            else
+                await _io.SaveConfigFile(storageConfig, storageConfig.Id);
         }
 
         public Task Update(VirtualDisk disk)

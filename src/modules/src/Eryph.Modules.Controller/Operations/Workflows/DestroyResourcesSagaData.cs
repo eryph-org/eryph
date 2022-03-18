@@ -8,7 +8,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         public DestroyResourceState State { get; set; }
 
         public Resource[]? Resources { get; set; }
-        public List<Resource> DestroyedResources { get; set; } = new List<Resource>();
-        public List<Resource> DetachedResources { get; set; } = new List<Resource>();
+        public List<Resource> DestroyedResources { get; set; } = new();
+        public List<Resource> DetachedResources { get; set; } = new();
     }
 }

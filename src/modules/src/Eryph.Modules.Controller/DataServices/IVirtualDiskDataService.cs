@@ -14,4 +14,5 @@ public interface IVirtualDiskDataService
     Task<IEnumerable<VirtualDisk>> FindVHDByLocation(string dataStore, string project, string environment, string storageIdentifier, string name);
 
     Task<VirtualDisk> UpdateVhd(VirtualDisk virtualDisk);
+    Task<Unit> DeleteVHD(Guid id);
 }

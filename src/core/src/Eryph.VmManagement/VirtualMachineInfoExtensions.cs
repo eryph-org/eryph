@@ -21,6 +21,7 @@ namespace Eryph.VmManagement
         public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Remove(
             this TypedPsObject<VirtualMachineInfo> vmInfo, IPowershellEngine engine)
         {
+            
             return engine.RunAsync(new PsCommandBuilder().AddCommand("Remove-VM").AddParameter("VM", vmInfo.PsObject)
                     .AddParameter("Force"))
                 .MapAsync(u => vmInfo);
