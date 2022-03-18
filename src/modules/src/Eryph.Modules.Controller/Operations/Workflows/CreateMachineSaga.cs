@@ -72,7 +72,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
 
                 return _taskDispatcher.StartNew(Data.OperationId,new PrepareVirtualMachineImageCommand
                 {
-                    Image = Data.Config?.Image,
+                    Image = Data.Config?.VM?.Image,
                     AgentName = r.AgentName
                 });
             });
@@ -89,7 +89,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                 Data.MachineId = Guid.NewGuid();
 
                 if(Data.Config!= null)
-                    Data.Config.Image = image;
+                    Data.Config.VM.Image = image;
 
                 return _taskDispatcher.StartNew(Data.OperationId,new CreateVirtualMachineCommand
                 {

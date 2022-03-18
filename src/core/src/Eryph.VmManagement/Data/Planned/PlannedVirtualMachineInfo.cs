@@ -12,6 +12,9 @@ namespace Eryph.VmManagement.Data.Planned
         IVMWithDrivesInfo
 
     {
+
+        public bool DynamicMemoryEnabled { get; private set; }
+
         public long MemoryMaximum { get; private set; }
 
         public long MemoryMinimum { get; private set; }

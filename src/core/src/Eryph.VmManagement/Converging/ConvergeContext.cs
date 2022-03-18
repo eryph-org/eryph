@@ -14,12 +14,14 @@ namespace Eryph.VmManagement.Converging
         public readonly Func<string, Task> ReportProgress;
         public readonly VMStorageSettings StorageSettings;
         public readonly VMHostMachineData HostInfo;
+        public readonly VirtualMachineMetadata Metadata;
 
         public ConvergeContext(
             HostSettings hostSettings,
             IPowershellEngine engine,
             Func<string, Task> reportProgress,
             MachineConfig config,
+            VirtualMachineMetadata metadata,
             VMStorageSettings storageSettings, 
             VMHostMachineData hostInfo)
         {
@@ -27,6 +29,7 @@ namespace Eryph.VmManagement.Converging
             Engine = engine;
             ReportProgress = reportProgress;
             Config = config;
+            Metadata = metadata;
             StorageSettings = storageSettings;
             HostInfo = hostInfo;
         }

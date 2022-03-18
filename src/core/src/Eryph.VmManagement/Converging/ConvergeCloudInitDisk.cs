@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.CloudInit.ConfigDrive.Generator;
 using Dbosoft.CloudInit.ConfigDrive.NoCloud;
@@ -25,8 +26,6 @@ namespace Eryph.VmManagement.Converging
                 .ConfigureAwait(false);
 
 
-            if (Context.Config.Provisioning.Method == ProvisioningMethod.None || remove.IsLeft) return remove;
-
             return await Context.StorageSettings.StorageIdentifier.MatchAsync(
                 async storageIdentifier =>
                 {
@@ -38,8 +37,12 @@ namespace Eryph.VmManagement.Converging
                     await (from _ in CreateConfigDriveDirectory(Context.StorageSettings.VMPath).AsTask()
                         select _);
 
-                    GenerateConfigDriveDisk(configDriveIsoPath, Context.Config.Provisioning.Hostname,
-                        Context.Config.Provisioning.UserData);
+                    var userData = ReplaceVariables(Context.Config.Provisioning.UserData);
+
+                    GenerateConfigDriveDisk(configDriveIsoPath,
+                    Context.Config.Provisioning.Method == ProvisioningMethod.None,
+                        Context.Config.Provisioning.Hostname,
+                        userData);
 
                     return await InsertConfigDriveDisk(configDriveIsoPath, vmInfo);
                 },
@@ -49,18 +52,36 @@ namespace Eryph.VmManagement.Converging
             );
         }
 
+        private JObject ReplaceVariables(JObject userData)
+        {
+            if (userData == null)
+                return null;
+
+            var jsonBuilder = new StringBuilder(userData.ToString());
+            jsonBuilder.Replace("{{machineId}}", Context.Metadata.MachineId.ToString());
+            jsonBuilder.Replace("{{vmId}}", Context.Metadata.VMId.ToString());
+
+            return JObject.Parse(jsonBuilder.ToString());
+        }
+
 
         private static void GenerateConfigDriveDisk(string configDriveIsoPath,
+            bool minimalDrive, 
             string hostname,
             JObject userData)
         {
             try
             {
-                GeneratorBuilder.Init()
-                    .NoCloud(new NoCloudConfigDriveMetaData(hostname))
-                    .SwapFile()
-                    .UserData(userData)
-                    .Processing()
+                var builder = GeneratorBuilder.Init()
+                    .NoCloud(new NoCloudConfigDriveMetaData(hostname));
+
+                builder.SwapFile();
+
+                if(!minimalDrive)    
+                    builder.UserData(userData);
+
+
+                builder.Processing()
                     .Image().ImageFile(configDriveIsoPath)
                     .Generate();
             }

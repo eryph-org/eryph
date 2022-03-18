@@ -6,6 +6,8 @@ namespace Eryph.Resources.Machines.Config
     {
         public string Slug { get; set; }
         public string DataStore { get; set; }
+        public string Image { get; set; }
+
 
         public VirtualMachineCpuConfig Cpu { get; set; }
 

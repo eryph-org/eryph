@@ -11,7 +11,6 @@ using Eryph.VmManagement.Data.Planned;
 using Eryph.VmManagement.Storage;
 using JetBrains.Annotations;
 using LanguageExt;
-using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -47,20 +46,20 @@ namespace Eryph.Modules.VmHostAgent
                     Option<VMStorageSettings>.None).ToAsync());
 
             var getTemplate = Prelude.fun(() =>
-                GetTemplate(Engine, hostSettings, config.Image).ToAsync());
+                GetTemplate(Engine, hostSettings, config.VM.Image).ToAsync());
 
-            var createVM = Prelude.fun((VMStorageSettings settings, Option<TypedPsObject<PlannedVirtualMachineInfo>> template) =>
+            var createVM = Prelude.fun((VMStorageSettings settings, TypedPsObject<PlannedVirtualMachineInfo> template) =>
                 CreateVM(config, hostSettings, settings, Engine, template).ToAsync());
 
             var createMetadata = Prelude.fun(
-                (TypedPsObject<VirtualMachineInfo> vmInfo, Option<TypedPsObject<PlannedVirtualMachineInfo>> plannedVM) =>
+                (TypedPsObject<VirtualMachineInfo> vmInfo, TypedPsObject<PlannedVirtualMachineInfo> plannedVM) =>
                     CreateMetadata(plannedVM, vmInfo, config, command.NewMachineId).ToAsync());
 
             var chain =
                 from plannedStorageSettings in planStorageSettings()
-                from optionalTemplate in getTemplate()
-                from createdVM in createVM(plannedStorageSettings, optionalTemplate)
-                from metadata in createMetadata(createdVM, optionalTemplate)
+                from template in getTemplate()
+                from createdVM in createVM(plannedStorageSettings, template)
+                from metadata in createMetadata(createdVM, template)
                 from inventory in CreateMachineInventory(Engine, hostSettings, createdVM, _hostInfoProvider).ToAsync()
                 select new ConvergeVirtualMachineResult
                 {
@@ -74,7 +73,7 @@ namespace Eryph.Modules.VmHostAgent
                     Bus.Publish(OperationTaskStatusEvent.Completed(OperationId, TaskId, result)).ToUnit());
         }
 
-        private static Task<Either<PowershellFailure, Option<TypedPsObject<PlannedVirtualMachineInfo>>>> GetTemplate(
+        private static Task<Either<PowershellFailure, TypedPsObject<PlannedVirtualMachineInfo>>> GetTemplate(
             IPowershellEngine engine,
             HostSettings hostSettings,
             string image)
@@ -85,26 +84,19 @@ namespace Eryph.Modules.VmHostAgent
 
         private static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> CreateVM(MachineConfig config,
             HostSettings hostSettings, VMStorageSettings storageSettings, IPowershellEngine engine,
-            Option<TypedPsObject<PlannedVirtualMachineInfo>> optionalTemplate)
+            TypedPsObject<PlannedVirtualMachineInfo> template)
         {
             return from storageIdentifier in storageSettings.StorageIdentifier.ToEitherAsync(new PowershellFailure
                     {Message = "Unknown storage identifier, cannot create new virtual machine"}).ToEither()
-                from vm in optionalTemplate.MatchAsync(
-                    Some: template =>
-                        VirtualMachine.ImportTemplate(engine, hostSettings, config.Name,
+                from vm in VirtualMachine.ImportTemplate(engine, hostSettings, config.Name,
                             storageIdentifier,
                             storageSettings.VMPath,
-                            template),
-                    None: () =>
-                        VirtualMachine.Create(engine, config.Name, storageIdentifier,
-                            storageSettings.VMPath,
-                            config.VM.Memory.Startup)
-                )
+                            template)
                 select vm;
         }
 
         private Task<Either<PowershellFailure, VirtualMachineMetadata>> CreateMetadata(
-            Option<TypedPsObject<PlannedVirtualMachineInfo>> template,
+            TypedPsObject<PlannedVirtualMachineInfo> template,
             TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config, Guid machineId)
         {
             var metadata = new VirtualMachineMetadata
@@ -112,14 +104,11 @@ namespace Eryph.Modules.VmHostAgent
                 Id = Guid.NewGuid(),
                 MachineId = machineId,
                 VMId = vmInfo.Value.Id,
-                ProvisioningConfig = config.Provisioning
-            };
+                ProvisioningConfig = config.Provisioning,
+                ImageConfig = template.ToVmConfig()
+        };
 
-            if (template.IsSome)
-                metadata.ImageConfig = template.ValueUnsafe().ToVmConfig();
-
-
-            return SetMetadataId(vmInfo, metadata.Id).MapAsync(u => metadata);
+            return SetMetadataId(vmInfo, metadata.Id).MapAsync(_ => metadata);
         }
     }
 }

@@ -57,8 +57,17 @@ namespace Eryph.Modules.Controller.Operations
             if (machineConfig.Provisioning == null)
                 machineConfig.Provisioning = new VirtualMachineProvisioningConfig();
 
+            if (machineConfig.Networks == null)
+            {
+                machineConfig.Networks =
+                    new List<MachineNetworkConfig>(new[] { new MachineNetworkConfig { Name = "default" } });
+            }
+
             if (string.IsNullOrWhiteSpace(machineConfig.Provisioning.Hostname))
                 machineConfig.Provisioning.Hostname = machineConfig.Name;
+
+            if (machineConfig.Provisioning.Method == null || machineConfig.Provisioning.UserData!= null)
+                machineConfig.Provisioning.Method = ProvisioningMethod.CloudInit;
 
             foreach (var adapterConfig in machineConfig.VM.NetworkAdapters)
             {

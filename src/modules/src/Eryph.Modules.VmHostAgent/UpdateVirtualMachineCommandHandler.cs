@@ -40,7 +40,7 @@ namespace Eryph.Modules.VmHostAgent
             var hostSettings = HostSettingsBuilder.GetHostSettings();
             var convergeVM = Prelude.fun(
                 (TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig c, VMStorageSettings storageSettings, VMHostMachineData hostInfo) =>
-                    VirtualMachine.Converge(hostSettings, hostInfo,Engine, ProgressMessage, vmInfo, c, storageSettings));
+                    VirtualMachine.Converge(hostSettings, hostInfo,Engine, ProgressMessage, vmInfo, c, message.Command.MachineMetadata, storageSettings));
 
             var chain =
                 from hostInfo in _hostInfoProvider.GetHostInfoAsync().WriteTrace().ToAsync()
