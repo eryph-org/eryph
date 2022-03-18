@@ -51,8 +51,7 @@ namespace Eryph.VmManagement
                         select repRecreated
                     ).ToEither()
                 )
-                .Apply<Task<Either<PowershellFailure, TypedPsObject<VMCompatibilityReportInfo>>>,
-                    Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>>>(repEither =>
+                .Apply(repEither =>
                     from rep in repEither
                     //from template in ExpandTemplateData(rep.Value.VM, engine)
                     from vms in engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
@@ -68,13 +67,14 @@ namespace Eryph.VmManagement
             return vmInfo;
         }
 
-        public static Task<Either<PowershellFailure, Option<TypedPsObject<PlannedVirtualMachineInfo>>>> TemplateFromImage(
+        public static Task<Either<PowershellFailure, TypedPsObject<PlannedVirtualMachineInfo>>> TemplateFromImage(
             IPowershellEngine engine,
             HostSettings hostSettings,
             string image)
         {
             if (string.IsNullOrWhiteSpace(image))
-                return RightAsync<PowershellFailure, Option<TypedPsObject<PlannedVirtualMachineInfo>>>(None).ToEither();
+                return LeftAsync<PowershellFailure,TypedPsObject<PlannedVirtualMachineInfo>>(
+                    new PowershellFailure{Message = "Image name is missing."}).ToEither();
 
 
             var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
@@ -95,34 +95,7 @@ namespace Eryph.VmManagement
                         .BindAsync(rep => ExpandTemplateData(
                             rep.GetProperty(x=>x.VM), engine)));
 
-            return vmInfo.MapAsync(Some);
-        }
-
-        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Create(
-            IPowershellEngine engine,
-            string vmName,
-            string storageIdentifier,
-            string vmPath,
-            int? startupMemory)
-        {
-            var memoryStartupBytes = startupMemory.GetValueOrDefault(1024) * 1024L * 1024;
-
-            return engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
-                    .AddCommand("New-VM")
-                    .AddParameter("Name", storageIdentifier)
-                    .AddParameter("Path", vmPath)
-                    .AddParameter("MemoryStartupBytes", memoryStartupBytes)
-                    .AddParameter("Generation", 2))
-                .MapAsync(x => x.Head).MapAsync(
-                    async result =>
-                    {
-                        await engine.RunAsync(PsCommandBuilder.Create().AddCommand("Get-VMNetworkAdapter")
-                            .AddParameter("VM", result.PsObject).AddCommand("Remove-VMNetworkAdapter"));
-
-
-                        return result;
-                    })
-                .BindAsync(info => Rename(engine, info, vmName));
+            return vmInfo;
         }
 
 
@@ -146,15 +119,17 @@ namespace Eryph.VmManagement
             Func<string, Task> reportProgress,
             TypedPsObject<VirtualMachineInfo> vmInfo,
             MachineConfig machineConfig,
+            VirtualMachineMetadata metadata,
             VMStorageSettings storageSettings)
         {
             var convergeContext =
-                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, storageSettings, hostInfo);
+                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, hostInfo);
 
             var convergeTasks = new ConvergeTaskBase[]
             {
-                new ConvergeFirmware(convergeContext),
+                //new ConvergeFirmware(convergeContext),
                 new ConvergeCPU(convergeContext),
+                new ConvergeMemory(convergeContext),
                 new ConvergeDrives(convergeContext),
                 new ConvergeNetworkAdapters(convergeContext),
                 new ConvergeCloudInitDisk(convergeContext)

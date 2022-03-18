@@ -97,6 +97,15 @@ namespace Eryph.VmManagement.Converging
             return await optionalAdapter.BindAsync(async device =>
             {
                 var adapter = device.Cast<VMNetworkAdapter>();
+
+                if (adapter.Value.MacAddress != networkAdapterConfig.MacAddress)
+                {
+                    await Context.Engine.RunAsync(
+                        PsCommandBuilder.Create().AddCommand("Set-VmNetworkAdapter")
+                            .AddParameter("VMNetworkAdapter", adapter.PsObject)
+                            .AddParameter("StaticMacAddress", networkAdapterConfig.MacAddress)).ConfigureAwait(false);
+                }
+
                 if (adapter.Value.Connected && adapter.Value.SwitchName == switchName)
                     return Unit.Default;
 

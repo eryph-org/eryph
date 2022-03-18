@@ -11,6 +11,6 @@ namespace Eryph.Resources.Machines.Config
         [PrivateIdentifier(Critical = true)]
         public JObject UserData { get; set; }
 
-        public ProvisioningMethod Method { get; set; }
+        public ProvisioningMethod? Method { get; set; }
     }
 }

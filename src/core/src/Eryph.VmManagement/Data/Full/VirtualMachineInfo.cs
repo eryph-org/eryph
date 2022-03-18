@@ -136,7 +136,7 @@ namespace Eryph.VmManagement.Data.Full
 
         public CheckpointType CheckpointType { get; private set; }
 
-        //public bool DynamicMemoryEnabled { get; private set; }
+        public bool DynamicMemoryEnabled { get; private set; }
 
 
         public long MemoryMaximum { get; private set; }

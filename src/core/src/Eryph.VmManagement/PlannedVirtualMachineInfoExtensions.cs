@@ -22,8 +22,7 @@ namespace Eryph.VmManagement
                 Memory = new VirtualMachineMemoryConfig
                 {
                     Startup = (int) Math.Ceiling(plannedVM.Value.MemoryStartup / 1024d / 1024),
-                    Maximum = (int) Math.Ceiling(plannedVM.Value.MemoryMaximum / 1024d / 1024),
-                    Minimum = (int) Math.Ceiling(plannedVM.Value.MemoryMinimum / 1024d / 1024)
+                    //max and min memory is not imported from template
                 },
 
                 Drives = ConvertPlannedDrivesToConfig(plannedVM),
