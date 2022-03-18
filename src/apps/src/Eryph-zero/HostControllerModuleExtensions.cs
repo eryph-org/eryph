@@ -41,7 +41,8 @@ namespace Eryph.Runtime.Zero
             container.RegisterSingleton<IConfigWriterService<VirtualDisk>, VhdWriterService>();
 
 
-            container.Register<IPlacementCalculator, ZeroAgentPlacementCalculator>();
+            container.Register<IPlacementCalculator, ZeroAgentLocator>();
+            container.Register<IStorageManagementAgentLocator, ZeroAgentLocator>();
 
             return builder;
         }
