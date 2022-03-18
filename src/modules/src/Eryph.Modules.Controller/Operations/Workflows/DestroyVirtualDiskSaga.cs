@@ -20,12 +20,14 @@ namespace Eryph.Modules.Controller.Operations.Workflows
     {
         private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly IVirtualDiskDataService _virtualDiskDataService;
+        private readonly IStorageManagementAgentLocator _agentLocator;
 
         public DestroyVirtualDiskSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, 
-            IVirtualDiskDataService virtualDiskDataService) : base(bus)
+            IVirtualDiskDataService virtualDiskDataService, IStorageManagementAgentLocator agentLocator) : base(bus)
         {
             _taskDispatcher = taskDispatcher;
             _virtualDiskDataService = virtualDiskDataService;
+            _agentLocator = agentLocator;
         }
 
         public Task Handle(OperationTaskStatusEvent<RemoveVirtualDiskCommand> message)
@@ -69,12 +71,14 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                     //    });
                     //}
 
+                    var agentName = _agentLocator.FindAgentForDataStore(vhd.DataStore, vhd.Environment);
+
                     return _taskDispatcher.StartNew(Data.OperationId, new RemoveVirtualDiskCommand
                     {
                         DiskId = Data.DiskId,
                         Path = vhd.Path,
                         FileName = vhd.FileName,
-                        AgentName = "WASD12"
+                        AgentName = agentName
                     });
                 });
 

@@ -52,9 +52,8 @@ namespace Eryph.Modules.Controller
             container.Register<IOperationDispatcher, OperationDispatcher>();
 
             //use placement calculator of Host
-#pragma warning disable CS8634
-            container.Register(serviceProvider.GetService<IPlacementCalculator>);
-#pragma warning restore CS8634
+            container.Register(serviceProvider.GetRequiredService<IPlacementCalculator>);
+            container.Register(serviceProvider.GetRequiredService<IStorageManagementAgentLocator>);
 
 
             container.Register(() =>
