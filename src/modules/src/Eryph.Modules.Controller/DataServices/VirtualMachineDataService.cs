@@ -60,6 +60,7 @@ namespace Eryph.Modules.Controller.DataServices
                 return Unit.Default;
             
             await _repository.DeleteAsync(entity);
+            
 
             if (entity.MetadataId != Guid.Empty)
             {

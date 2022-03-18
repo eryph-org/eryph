@@ -44,5 +44,15 @@ namespace Eryph.Modules.Controller.DataServices
             await _repository.UpdateAsync(virtualDisk);
             return virtualDisk;
         }
+
+        public async Task<Unit> DeleteVHD(Guid id)
+        {
+            var res = await _repository.GetByIdAsync(id);
+
+            if(res!= null)
+                await _repository.DeleteAsync(res);
+
+            return Unit.Default;
+        }
     }
 }

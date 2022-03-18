@@ -49,10 +49,17 @@ namespace Eryph.Modules.VmHostAgent
                     return;
                 }
 
-                if (Directory.Exists(settings.VMPath))
+                settings.StorageIdentifier.IfSome(storageId =>
                 {
-                    Directory.Delete(settings.VMPath, true);
-                }
+
+                    var vmDataPath = Path.Combine(settings.VMPath, storageId);
+
+                    if (Directory.Exists(vmDataPath))
+                    {
+                        Directory.Delete(vmDataPath, true);
+                    }
+                });
+
             });
         }
     }

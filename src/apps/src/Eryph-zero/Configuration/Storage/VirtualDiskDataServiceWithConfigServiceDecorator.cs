@@ -40,10 +40,21 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
             return _decoratedService.FindVHDByLocation(dataStore, project, environment, storageIdentifier, name);
         }
 
-        public Task<VirtualDisk> UpdateVhd(VirtualDisk virtualDisk)
+        public async Task<VirtualDisk> UpdateVhd(VirtualDisk virtualDisk)
         {
-            return _decoratedService.UpdateVhd(virtualDisk);
+            var res = await _decoratedService.UpdateVhd(virtualDisk);
+            await _configService.Update(res);
+
+            return res;
         }
 
+        public async Task<Unit> DeleteVHD(Guid id)
+        {
+            var optionalData = await _decoratedService.GetVHD(id);
+            await _decoratedService.DeleteVHD(id);
+            await optionalData.IfSomeAsync(data => _configService.Delete(data));
+
+            return Unit.Default;
+        }
     }
 }

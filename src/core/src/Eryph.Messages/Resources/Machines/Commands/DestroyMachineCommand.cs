@@ -9,4 +9,11 @@ namespace Eryph.Messages.Resources.Machines.Commands
     {
         public Resource Resource { get; set; }
     }
+
+
+    [SendMessageTo(MessageRecipient.Controllers)]
+    public class DestroyVirtualDiskCommand : IResourceCommand
+    {
+        public Resource Resource { get; set; }
+    }
 }
