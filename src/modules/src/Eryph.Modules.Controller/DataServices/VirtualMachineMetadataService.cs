@@ -49,6 +49,17 @@ namespace Eryph.Modules.Controller.DataServices
             return Unit.Default;
         }
 
+        public async Task<Unit> RemoveMetadata(Guid id)
+        {
+            var entity = await _repository.GetByIdAsync(id);
+            if(entity == null)
+                return Unit.Default;
+
+            await _repository.DeleteAsync(entity);
+
+            return Unit.Default;
+        }
+
         private static Option<VirtualMachineMetadata> DeserializeMetadataEntity(
             [CanBeNull] StateDb.Model.VirtualMachineMetadata metadataEntity)
         {

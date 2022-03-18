@@ -29,9 +29,11 @@ namespace Eryph.Modules.Controller.Operations.Workflows
 
         public Task Handle(OperationTaskStatusEvent<RemoveVMCommand> message)
         {
-            return FailOrRun(message, () =>
+            return FailOrRun(message,async () =>
             {
-                return Complete(new DestroyResourcesResponse
+                await _vmDataService.RemoveVM(Data.MachineId);
+
+                await Complete(new DestroyResourcesResponse
                 {
                     DestroyedResources = new[] {new Resource(ResourceType.Machine, Data.MachineId)},
                     DetachedResources = new Resource[0]

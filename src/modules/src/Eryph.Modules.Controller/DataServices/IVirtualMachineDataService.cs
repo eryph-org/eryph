@@ -10,4 +10,7 @@ internal interface IVirtualMachineDataService
 {
     Task<Option<VirtualMachine>> GetVM(Guid id);
     Task<VirtualMachine> AddNewVM(VirtualMachine vm, VirtualMachineMetadata metadata);
+
+    Task<Unit> RemoveVM(Guid id);
+
 }
