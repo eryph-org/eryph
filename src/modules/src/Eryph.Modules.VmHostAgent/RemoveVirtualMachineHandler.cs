@@ -1,8 +1,10 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Storage;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;
@@ -20,14 +22,38 @@ namespace Eryph.Modules.VmHostAgent
         protected override Task<PsVMResult> HandleCommand(TypedPsObject<VirtualMachineInfo> vmInfo,
             RemoveVMCommand command, IPowershellEngine engine)
         {
-            return vmInfo
-                .StopIfRunning(engine)
-                .BindAsync(v => v.Remove(engine).MapAsync(_ => Unit.Default));
+            var hostSettings = HostSettingsBuilder.GetHostSettings();
+
+
+            return (from storageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).ToAsync()
+                from stoppedVM in vmInfo.StopIfRunning(engine).ToAsync()
+                from _ in stoppedVM.Remove(engine).ToAsync()
+                let __ = RemoveVMFiles(storageSettings)
+                select Unit.Default)
+                .ToEither();
+
         }
 
         protected override PsCommandBuilder CreateGetVMCommand(Guid vmId)
         {
             return base.CreateGetVMCommand(vmId).AddParameter("ErrorAction", "SilentlyContinue");
+        }
+
+        private static Unit RemoveVMFiles(Option<VMStorageSettings> storageSettings)
+
+        {
+            return storageSettings.IfSome(settings =>
+            {
+                if (settings.Frozen)
+                {
+                    return;
+                }
+
+                if (Directory.Exists(settings.VMPath))
+                {
+                    Directory.Delete(settings.VMPath, true);
+                }
+            });
         }
     }
 }
