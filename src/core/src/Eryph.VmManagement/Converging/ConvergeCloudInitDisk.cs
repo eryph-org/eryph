@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Data.SqlTypes;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Dbosoft.CloudInit.ConfigDrive;
 using Eryph.Resources.Machines.Config;
@@ -51,9 +51,11 @@ namespace Eryph.VmManagement.Converging
                     await Context.ReportProgress("Updating cloud-init config drive.").ConfigureAwait(false);
 
                     return await (from d in CreateConfigDriveDirectory(Context.StorageSettings.VMPath).ToAsync()
+                           from networkData in GenerateNetworkData(vmInfo).ToAsync()
                            from _ in GenerateConfigDriveDisk(configDriveIsoPath,
                                Context.Metadata.SensitiveDataHidden,
                                Context.Config.Provisioning.Hostname,
+                               networkData,
                                Context.Config.Provisioning.Config).ToAsync()
                            from newVmInfo in InsertConfigDriveDisk(configDriveIsoPath, vmInfo).ToAsync()
                            select newVmInfo);
@@ -65,9 +67,37 @@ namespace Eryph.VmManagement.Converging
             );
         }
 
+        private static async Task<Either<PowershellFailure, NetworkData>> GenerateNetworkData(TypedPsObject<VirtualMachineInfo> vmInfo)
+        {
+            var config = new List<object>();
+            const string regex = "(.{2})(.{2})(.{2})(.{2})(.{2})(.{2})";
+            const string replace = "$1:$2:$3:$4:$5:$6";
+
+            foreach (var adapterDevice in vmInfo.GetList(x=>x.NetworkAdapters))
+            {
+                (await adapterDevice.CastSafeAsync<VMNetworkAdapter>()).IfRight(adapter =>
+                {
+                    var macFormatted = Regex.Replace(adapter.Value.MacAddress, regex, replace).ToLowerInvariant();
+
+                    var physicalNetworkSettings = new
+                    {
+                        type = "physical",
+                        id = adapter.Value.Name,
+                        name = adapter.Value.Name,
+                        mac_address = macFormatted
+                    };
+                    config.Add(physicalNetworkSettings);
+                });
+
+            }
+
+            return new NetworkData(config);
+        }
+
         private Task<Either<PowershellFailure, Unit>> GenerateConfigDriveDisk(string configDriveIsoPath,
             bool withoutSensitive,
             string hostname,
+            NetworkData networkData,
             [CanBeNull] CloudInitConfig[] config)
         {
 
@@ -104,6 +134,8 @@ namespace Eryph.VmManagement.Converging
                             configDrive.AddUserData(userData);
                         }
                     }
+
+                    configDrive.SetNetworkData(networkData);
 
                     var isoWriter = new ConfigDriveImageWriter(configDriveIsoPath);
                     await isoWriter.WriteConfigDrive(configDrive);
@@ -176,24 +208,6 @@ namespace Eryph.VmManagement.Converging
 
             return new PowershellFailure { Message = "Timeout while waiting for cloud-init disk to be ejected." };
         }
-
-
-        //private Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> RemoveConfigDriveDisk(
-        //    TypedPsObject<VirtualMachineInfo> vmInfo)
-        //{
-        //    return ConvergeHelpers.FindAndApply(vmInfo, l => l.DVDDrives,
-        //            device =>
-        //                device.Cast<DvdDriveInfo>().Map(drive => drive.ControllerLocation == 63 && drive.ControllerNumber == 0),
-        //            drive =>
-        //            {
-        //                return Context.Engine.RunAsync(PsCommandBuilder.Create()
-        //                    .AddCommand("Remove-VMDvdDrive")
-        //                    .AddParameter("VMDvdDrive", drive.PsObject));
-        //            })
-        //        .Map(list => list.Lefts().HeadOrNone()).MatchAsync(
-        //            None: () => vmInfo.RecreateOrReload(Context.Engine),
-        //            Some: l => Prelude.LeftAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(l).ToEither());
-        //}
 
         private Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> InsertConfigDriveDisk(
             string configDriveIsoPath,

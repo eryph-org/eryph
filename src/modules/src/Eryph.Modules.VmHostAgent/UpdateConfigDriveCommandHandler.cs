@@ -33,6 +33,8 @@ internal class UpdateConfigDriveCommandHandler : VirtualMachineConfigCommandHand
 
         OperationId = message.OperationId;
         TaskId = message.TaskId;
+
+        
         var config = new MachineConfig
         {
             Provisioning = message.Command.MachineMetadata.ProvisioningConfig
