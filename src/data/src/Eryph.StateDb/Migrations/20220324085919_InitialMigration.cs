@@ -17,6 +17,7 @@ namespace Eryph.StateDb.Migrations
                     AgentName = table.Column<string>(type: "TEXT", nullable: true),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     MachineType = table.Column<int>(type: "INTEGER", nullable: false),
+                    UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: true),
                     Discriminator = table.Column<string>(type: "TEXT", nullable: false),
                     HardwareId = table.Column<string>(type: "TEXT", nullable: true),
                     VMId = table.Column<Guid>(type: "TEXT", nullable: true),

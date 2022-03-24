@@ -132,7 +132,29 @@ namespace Eryph.VmManagement
                 new ConvergeMemory(convergeContext),
                 new ConvergeDrives(convergeContext),
                 new ConvergeNetworkAdapters(convergeContext),
-                new ConvergeCloudInitDisk(convergeContext)
+            };
+
+            return convergeTasks.Fold(
+                RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
+                (info, task) => info.BindAsync(task.Converge));
+        }
+
+        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> ConvergeConfigDrive(
+            HostSettings hostSettings,
+            VMHostMachineData hostInfo,
+            IPowershellEngine engine,
+            Func<string, Task> reportProgress,
+            TypedPsObject<VirtualMachineInfo> vmInfo,
+            MachineConfig machineConfig,
+            VirtualMachineMetadata metadata,
+            VMStorageSettings storageSettings)
+        {
+            var convergeContext =
+                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, hostInfo);
+
+            var convergeTasks = new ConvergeTaskBase[]
+            {
+                new ConvergeCloudInitDisk(convergeContext),
             };
 
             return convergeTasks.Fold(

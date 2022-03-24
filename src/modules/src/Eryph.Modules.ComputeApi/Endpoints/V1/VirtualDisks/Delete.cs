@@ -31,7 +31,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks
             Summary = "Deletes a virtual disk",
             Description = "Deletes a virtual disk",
             OperationId = "VirtualDisks_Delete",
-            Tags = new[] { "VirtualDisks" })
+            Tags = new[] { "Virtual Disks" })
         ]
 
         public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] SingleResourceRequest request, CancellationToken cancellationToken = default)

@@ -16,6 +16,6 @@ namespace Eryph.Resources.Machines.Config
 
         public List<MachineNetworkConfig> Networks { get; set; }
 
-        public VirtualMachineProvisioningConfig Provisioning { get; set; }
+        public MachineProvisioningConfig Provisioning { get; set; }
     }
 }

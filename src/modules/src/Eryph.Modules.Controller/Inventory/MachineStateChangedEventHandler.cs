@@ -26,6 +26,13 @@ namespace Eryph.Modules.Controller.Inventory
                 return;
 
             vm.Status = MapVmStatusToMachineStatus(message.Status);
+
+            if (vm.Status == MachineStatus.Stopped)
+            {
+                vm.UpTime = TimeSpan.Zero;
+            }
+
+
         }
 
         private static MachineStatus MapVmStatusToMachineStatus(VmStatus status)

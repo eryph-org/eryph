@@ -18,6 +18,7 @@ using Rebus.Routing.TypeBased;
 using Rebus.Sagas.Exclusive;
 using Rebus.Serialization.Json;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 
 namespace Eryph.Modules.Controller
 {
@@ -30,7 +31,6 @@ namespace Eryph.Modules.Controller
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.Register<StartBusModuleHandler>();
-            container.Register<InventoryHandler>();
 
             container.Register<IRebusUnitOfWork, StateStoreDbUnitOfWork>(Lifestyle.Scoped);
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
@@ -88,13 +88,17 @@ namespace Eryph.Modules.Controller
                     {TypeNameHandling = TypeNameHandling.None}))
                 //.Logging(x => x.Trace())
                 .Start());
-
+                
+            
         }
 
-        public void ConfigureServices(IServiceCollection services)
+        [UsedImplicitly]
+        public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
-            services.AddHostedHandler<StartBusModuleHandler>();
-            services.AddHostedHandler<InventoryHandler>();
+            options.Services.AddHostedHandler<StartBusModuleHandler>();
+            options.AddHostedService<InventoryTimerService>();
+            options.AddLogging();
         }
+
     }
 }

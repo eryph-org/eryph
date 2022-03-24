@@ -206,6 +206,7 @@ namespace Eryph.Modules.Controller.Inventory
                 Host = hostMachine,
                 AgentName = hostMachine.AgentName,
                 MetadataId = vmInfo.MetadataId,
+                UpTime = vmInfo.UpTime,
                 NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new VirtualMachineNetworkAdapter
                 {
                     Id = a.Id,

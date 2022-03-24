@@ -26,7 +26,7 @@ namespace Eryph.VmManagement
             {
                 ps.AddScript("import-module Hyper-V -RequiredVersion 2.0.0.0");
                 ps.Invoke();
-                ps.AddScript("disable-vmeventing");
+                ps.AddScript("disable-vmeventing -Force");
                 ps.Invoke();
             }
         }

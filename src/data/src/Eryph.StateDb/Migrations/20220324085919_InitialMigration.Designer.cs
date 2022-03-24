@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Migrations
 {
     [DbContext(typeof(StateStoreContext))]
-    [Migration("20220127112059_InitialMigration")]
+    [Migration("20220324085919_InitialMigration")]
     partial class InitialMigration
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -43,6 +43,9 @@ namespace Eryph.StateDb.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
+
+                    b.Property<TimeSpan?>("UpTime")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
