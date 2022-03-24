@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eryph.Messages;
 using Eryph.Messages.Operations.Events;
@@ -18,7 +19,9 @@ namespace Eryph.Modules.Controller.Operations.Workflows
     [UsedImplicitly]
     internal class UpdateMachineSaga : OperationTaskWorkflowSaga<UpdateMachineCommand, UpdateMachineSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateMachineConfigCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>
+        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand>>
+
     {
         private readonly Id64Generator _idGenerator;
         private readonly IVirtualMachineMetadataService _metadataService;
@@ -34,6 +37,12 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             _idGenerator = idGenerator;
             _vmDataService = vmDataService;
             _metadataService = metadataService;
+        }
+
+        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand> message)
+        {
+
+            return FailOrRun(message, () => Complete());
         }
 
         public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
@@ -53,7 +62,21 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                     Inventory = new List<VirtualMachineData> {r.Inventory}
                 });
 
-                await Complete();
+                await _vmDataService.GetVM(Data.MachineId).Match(
+                    Some: data =>
+                    {
+
+                        return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualMachineConfigDriveCommand
+                        {
+                            VMId = r.Inventory.VMId,
+                            MachineId = Data.MachineId,
+                            MachineMetadata = r.MachineMetadata,
+                        });
+                    },
+                    None: () => Fail(new ErrorData
+                        { ErrorMessage = $"Could not find virtual machine with machine id {Data.MachineId}" })
+                );
+
             });
         }
 
@@ -98,6 +121,9 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                 d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId,
                 d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand>>(m => m.OperationId,
+                d => d.OperationId);
+
         }
 
         protected override Task Initiated(UpdateMachineCommand message)

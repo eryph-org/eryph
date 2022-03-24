@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Eryph.StateDb.Model
 {
@@ -12,6 +13,10 @@ namespace Eryph.StateDb.Model
 
 
         public virtual ICollection<MachineNetwork> Networks { get; set; }
+
+        public TimeSpan? UpTime { get; set; }
+
+
     }
 
 }

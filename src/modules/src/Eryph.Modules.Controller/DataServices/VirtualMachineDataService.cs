@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt;
 using VirtualMachineMetadata = Eryph.Resources.Machines.VirtualMachineMetadata;
@@ -20,13 +22,19 @@ namespace Eryph.Modules.Controller.DataServices
             _metadataService = metadataService;
         }
 
+        public async Task<Option<VirtualMachine>> GetByVMId(Guid id)
+        {
+            var res = await _repository.GetBySpecAsync(new VirtualMachineSpecs.GetByVMId(id));
+            return res!;
+        }
+
         public async Task<Option<VirtualMachine>> GetVM(Guid id)
         {
             var res = await _repository.GetByIdAsync(id);
-            return res;
+            return res!;
         }
 
-        public async Task<VirtualMachine> AddNewVM([NotNull] VirtualMachine vm,
+        public async Task<VirtualMachine> AddNewVM(VirtualMachine vm,
             [NotNull] VirtualMachineMetadata metadata)
         {
             if (vm.Id == Guid.Empty)
@@ -68,6 +76,11 @@ namespace Eryph.Modules.Controller.DataServices
             }
 
             return Unit.Default;
+        }
+
+        public async Task<IEnumerable<VirtualMachine>> GetAll()
+        {
+            return await _repository.ListAsync();
         }
     }
 }

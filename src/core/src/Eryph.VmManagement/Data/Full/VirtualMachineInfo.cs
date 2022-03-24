@@ -76,7 +76,7 @@ namespace Eryph.VmManagement.Data.Full
         //public Version IntegrationServicesVersion { get; private set; }
 
 
-        //public TimeSpan Uptime { get; private set; }
+        public TimeSpan Uptime { get; private set; }
 
 
         //public VirtualMachineOperationalStatus[] OperationalStatus { get; private set; }

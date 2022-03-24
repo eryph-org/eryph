@@ -55,7 +55,7 @@ namespace Eryph.Modules.Controller.Operations
                 machineConfig.VM.NetworkAdapters = new List<VirtualMachineNetworkAdapterConfig>();
 
             if (machineConfig.Provisioning == null)
-                machineConfig.Provisioning = new VirtualMachineProvisioningConfig();
+                machineConfig.Provisioning = new MachineProvisioningConfig();
 
             if (machineConfig.Networks == null)
             {
@@ -65,9 +65,6 @@ namespace Eryph.Modules.Controller.Operations
 
             if (string.IsNullOrWhiteSpace(machineConfig.Provisioning.Hostname))
                 machineConfig.Provisioning.Hostname = machineConfig.Name;
-
-            if (machineConfig.Provisioning.Method == null || machineConfig.Provisioning.UserData!= null)
-                machineConfig.Provisioning.Method = ProvisioningMethod.CloudInit;
 
             foreach (var adapterConfig in machineConfig.VM.NetworkAdapters)
             {

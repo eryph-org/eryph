@@ -40,6 +40,7 @@ namespace Eryph.VmManagement.Inventory
                     MetadataId = GetMetadataId(vm),
                     Status = InventoryConverter.MapVmInfoStatusToVmStatus(vm.Value.State),
                     Name = vm.Value.Name,
+                    UpTime = vm.Value.Uptime,
                     Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x=>x.HardDrives)).ToArray(),
                     NetworkAdapters = vm.GetList(x=>x.NetworkAdapters).Map(a=>
                     {

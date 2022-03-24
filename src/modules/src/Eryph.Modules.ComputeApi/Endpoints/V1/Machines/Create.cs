@@ -22,9 +22,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
 
         protected override object CreateOperationMessage(NewMachineRequest request)
         {
-            var machineConfig = request.Configuration.ToObject<MachineConfig>();
 
-            return new CreateMachineCommand{ CorrelationId = request.CorrelationId, Config = machineConfig };
+            return new CreateMachineCommand{ CorrelationId = request.CorrelationId, Config = request.Configuration };
         }
         
         [HttpPost("machines")]

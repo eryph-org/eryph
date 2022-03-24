@@ -14,6 +14,7 @@ namespace Eryph.Resources.Machines
         public Guid MachineId { get; set; }
 
         [CanBeNull] public VirtualMachineConfig ImageConfig { get; set; }
-        [CanBeNull] public VirtualMachineProvisioningConfig ProvisioningConfig { get; set; }
+        [CanBeNull] public MachineProvisioningConfig ProvisioningConfig { get; set; }
+        public bool SensitiveDataHidden { get; set; }
     }
 }

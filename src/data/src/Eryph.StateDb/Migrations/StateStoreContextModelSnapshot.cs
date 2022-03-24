@@ -42,6 +42,9 @@ namespace Eryph.StateDb.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
+                    b.Property<TimeSpan?>("UpTime")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("Machines");

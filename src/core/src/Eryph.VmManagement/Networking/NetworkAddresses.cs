@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -24,10 +26,19 @@ namespace Eryph.VmManagement.Networking
             {
                 var address = ipAddresses[i];
                 var netmask = netmasks[i];
+
                 if (netmask.StartsWith("/"))
                     yield return IPNetwork.Parse(address + netmask).ToString();
                 else
+                {
+                    if (byte.TryParse(netmask, out _))
+                    {
+                        yield return IPNetwork.Parse(address + "/" + netmask).ToString();
+                        continue;
+                    }
+
                     yield return IPNetwork.Parse(address, netmask).ToString();
+                }
             }
         }
     }
