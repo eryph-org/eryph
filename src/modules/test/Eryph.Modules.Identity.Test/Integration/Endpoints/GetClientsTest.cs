@@ -7,7 +7,6 @@ using Dbosoft.IdentityServer;
 using Dbosoft.IdentityServer.Storage.Models;
 using Eryph.IdentityDb;
 using FluentAssertions;
-using LanguageExt;
 using Moq;
 using Xunit;
 using Client = Eryph.Modules.Identity.Models.V1.Client;

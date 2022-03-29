@@ -40,10 +40,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
         public override async Task<ActionResult<ListResponse<Client>>> HandleAsync(CancellationToken cancellationToken = new CancellationToken())
         {
             var clients = _clientService.QueryClients().ToArray();
-            return new JsonResult(new ListResponse<Client> { Value = clients }, new JsonSerializerSettings
-            {
-                NullValueHandling = NullValueHandling.Ignore,
-            });
+            return new (new ListResponse<Client> { Value = clients });
         }
     }
 

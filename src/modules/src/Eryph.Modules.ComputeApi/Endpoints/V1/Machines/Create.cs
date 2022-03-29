@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -22,8 +23,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
 
         protected override object CreateOperationMessage(NewMachineRequest request)
         {
-
-            return new CreateMachineCommand{ CorrelationId = request.CorrelationId, Config = request.Configuration };
+            var config = request.Configuration.GetValueOrDefault().Deserialize<MachineConfig>(new JsonSerializerOptions{PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
+            return new CreateMachineCommand{ CorrelationId = request.CorrelationId, Config = config };
         }
         
         [HttpPost("machines")]

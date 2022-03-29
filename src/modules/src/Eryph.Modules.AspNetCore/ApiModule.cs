@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 using Ardalis.Specification;
 using Dbosoft.Hosuto.Modules;
 using Eryph.Messages;
@@ -34,7 +35,12 @@ namespace Eryph.Modules.AspNetCore
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
             IHostEnvironment env)
         {
-            services.AddMvc(op => { }).AddApiProvider<TModule>(op => op.ApiName = ApiName);
+            services.AddMvc(op => { }).AddApiProvider<TModule>(op => op.ApiName = ApiName)
+                .AddJsonOptions(opts =>
+                {
+                    opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                    opts.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                });
 
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
