@@ -30,8 +30,8 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
 
             services.AddOptions<ApiProviderOptions>();
             services.Configure(options);
-
-            mvcBuilder.AddNewtonsoftJson();
+            
+            
             //mvcBuilder.AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
             services.AddApiVersioning(options =>
@@ -44,6 +44,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             {
                 //op.EnableEndpointRouting = false;
                 //op.OutputFormatters.Insert(0, new CustomODataOutputFormatter());
+                
             });
 
 
@@ -114,8 +115,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
                             : defaultName;
                     });
                 });
-            services.AddSwaggerGenNewtonsoftSupport();
-
 
             services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
 

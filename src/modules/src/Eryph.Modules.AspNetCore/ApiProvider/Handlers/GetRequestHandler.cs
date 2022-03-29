@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Ardalis.Specification;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
 {
@@ -25,10 +24,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
             var result = await _repository.GetBySpecAsync(specificationFunc(), cancellationToken);
 
             var mappedResult = _mapper.Map<TResponse>(result);
-            return new JsonResult(mappedResult, new JsonSerializerSettings
-            {
-                NullValueHandling = NullValueHandling.Ignore
-            });
+            return new JsonResult(mappedResult);
         }
 
     }

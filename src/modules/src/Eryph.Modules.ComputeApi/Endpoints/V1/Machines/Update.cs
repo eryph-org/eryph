@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -25,7 +26,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
 
         protected override object CreateOperationMessage(StateDb.Model.Machine model, UpdateMachineRequest request )
         {
-            var machineConfig = request.Configuration.ToObject<MachineConfig>();
+            var machineConfig = request.Configuration.GetValueOrDefault().Deserialize<MachineConfig>();
 
             return new UpdateMachineCommand(){Resource = new Resource(ResourceType.Machine, model.Id), 
                 CorrelationId = request.CorrelationId, Config = machineConfig};

@@ -1,20 +1,20 @@
 ﻿using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model
 {
     public class ListResponse<T>
     {
-        [JsonProperty("count")] public string? Count { get; set; }
+        [JsonPropertyName("count")] public string? Count { get; set; }
 
 
-        [JsonProperty("nextLink")] public string? NextLink { get; set; }
+        [JsonPropertyName("nextLink")] public string? NextLink { get; set; }
 
         /// <summary>
         /// Gets or sets the OData response content in the "value".
         /// </summary>
         /// <value>The response content within "value".</value>
-        [JsonProperty("value")]
+        [JsonPropertyName("value")]
         public IEnumerable<T> Value { get; set; } = default!;
     }
 }
