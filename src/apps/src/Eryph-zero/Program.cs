@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Management;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.App;
@@ -27,7 +29,7 @@ namespace Eryph.Runtime.Zero
         ///     The Main
         /// </summary>
         /// <param name="args">The args<see cref="string[]" /></param>
-        private static async Task Main(string[] args)
+        private static async Task<int> Main(string[] args)
         {
             await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
@@ -41,7 +43,18 @@ namespace Eryph.Runtime.Zero
                 {"common", $"{basePath}/common"}, 
             };
 
-
+            try
+            {
+                HostSettingsBuilder.GetHostSettings();
+            }
+            catch (ManagementException ex)
+            {
+                if (ex.ErrorCode == ManagementStatus.InvalidNamespace)
+                {
+                    await Console.Error.WriteAsync("Hyper-V ist not installed. Install Hyper-V feature and then try again.");
+                    return -10;
+                }
+            }
 
             var container = new Container();
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
@@ -69,8 +82,9 @@ namespace Eryph.Runtime.Zero
                     "endpoints", endpoints
                 }
             });
-
+            
             await host.RunAsync();
+            return 0;
         }
     }
 }

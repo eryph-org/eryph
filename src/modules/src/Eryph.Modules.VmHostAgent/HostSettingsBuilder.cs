@@ -4,7 +4,7 @@ using System.Management;
 
 namespace Eryph.Modules.VmHostAgent
 {
-    internal class HostSettingsBuilder
+    public class HostSettingsBuilder
     {
         public static HostSettings GetHostSettings()
         {
