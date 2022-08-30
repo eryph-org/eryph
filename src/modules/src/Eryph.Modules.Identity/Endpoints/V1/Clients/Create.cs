@@ -6,6 +6,7 @@ using Eryph.ModuleCore;
 using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
+using Eryph.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -23,11 +24,13 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
     {
         private readonly IClientService<Client> _clientService;
         private readonly IEndpointResolver _endpointResolver;
-
-        public Create(IClientService<Client> clientService, IEndpointResolver endpointResolver)
+        private readonly ICertificateGenerator _certificateGenerator;
+        
+        public Create(IClientService<Client> clientService, IEndpointResolver endpointResolver, ICertificateGenerator certificateGenerator)
         {
             _clientService = clientService;
             _endpointResolver = endpointResolver;
+            _certificateGenerator = certificateGenerator;
         }
 
 
@@ -47,7 +50,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
 
             client.Id = Guid.NewGuid().ToString();
 
-            var privateKey = await client.NewClientCertificate();
+            var privateKey = await client.NewClientCertificate(_certificateGenerator);
 
             await _clientService.AddClient(client);
 

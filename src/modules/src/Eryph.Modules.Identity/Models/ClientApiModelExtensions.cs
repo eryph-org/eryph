@@ -8,6 +8,8 @@ using Dbosoft.IdentityServer.Storage.Models;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
+using LanguageExt.ClassInstances.Const;
+using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.OpenSsl;
 
 namespace Eryph.Modules.Identity.Models
@@ -43,9 +45,11 @@ namespace Eryph.Modules.Identity.Models
             };
         }
 
-        public static async Task<string> NewClientCertificate(this IClientApiModel client)
+        public static async Task<string> NewClientCertificate(this IClientApiModel client, ICertificateGenerator certificateGenerator)
         {
-            var (certificate, keyPair) = X509Generation.GenerateSelfSignedCertificate(client.Id);
+            var (certificate, keyPair) = certificateGenerator.GenerateSelfSignedCertificate(
+                new X509Name("CN="+ client.Id),
+                30*365,2048);
             client.Certificate = Convert.ToBase64String(certificate.GetEncoded());
 
             var stringBuilder = new StringBuilder();

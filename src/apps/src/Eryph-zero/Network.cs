@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
 
-namespace Eryph.Security.Cryptography
+namespace Eryph.Runtime.Zero
 {
     public static class Network
     {
