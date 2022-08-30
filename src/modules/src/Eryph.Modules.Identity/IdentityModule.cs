@@ -13,6 +13,7 @@ using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.Identity.Services;
+using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -147,6 +148,8 @@ namespace Eryph.Modules.Identity
         [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider sp, Container container)
         {
+            container.Register<IRSAProvider, RSAProvider>();
+            container.Register<ICertificateGenerator, CertificateGenerator>();
             container.Register(sp.GetRequiredService<IEndpointResolver>);
             container.Register<IClientRepository, ClientRepository<ConfigurationDbContext>>(Lifestyle.Scoped);
             container.Register<IIdentityServerClientService, IdentityServerClientService>(Lifestyle.Scoped);

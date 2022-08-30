@@ -5,6 +5,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
+using Eryph.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -20,10 +21,12 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
         .WithActionResult<ClientWithSecrets>
     {
         private readonly IClientService<Client> _clientService;
-
-        public NewKey(IClientService<Client> clientService)
+        private readonly ICertificateGenerator _certificateGenerator;
+        
+        public NewKey(IClientService<Client> clientService, ICertificateGenerator certificateGenerator)
         {
             _clientService = clientService;
+            _certificateGenerator = certificateGenerator;
         }
 
 
@@ -44,7 +47,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
                 return NotFound($"client with id {request.Id} not found.");
 
 
-            var privateKey = await client.NewClientCertificate();
+            var privateKey = await client.NewClientCertificate(_certificateGenerator);
             await _clientService.UpdateClient(client);
 
             var createdClient = new ClientWithSecrets

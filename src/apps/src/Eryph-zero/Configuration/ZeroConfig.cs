@@ -45,6 +45,11 @@ namespace Eryph.Runtime.Zero.Configuration
 
             return metadataConfigPath;
         }
+        
+        public static string GetPrivateConfigPath()
+        {
+            return Path.Combine(GetConfigPath(), "private");;
+        }
 
 
         public static void EnsureConfiguration()
@@ -55,21 +60,7 @@ namespace Eryph.Runtime.Zero.Configuration
             Config.EnsurePath(GetMetadataConfigPath());
             Config.EnsurePath(GetStorageConfigPath());
 
-            SystemClientGenerator.EnsureSystemClient();
 
-            Certificate.CreateSSL(new CertificateOptions
-            {
-                Issuer = Network.FQDN,
-                FriendlyName = "Eryph Zero Management Certificate",
-                Suffix = "CA",
-                ValidStartDate = DateTime.UtcNow,
-                ValidEndDate = DateTime.UtcNow.AddYears(5),
-                Password = "password",
-                ExportDirectory = Directory.GetCurrentDirectory(),
-                URL = "https://localhost:62189/",
-                AppID = "9412ee86-c21b-4eb8-bd89-f650fbf44931",
-                CACertName = "EryphCA.pfx"
-            });
         }
     }
 }

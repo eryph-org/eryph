@@ -3,13 +3,16 @@ using System.IO;
 using Eryph.Configuration.Model;
 using Eryph.Security.Cryptography;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.X509;
 
 namespace Eryph.Runtime.Zero.Configuration.Clients
 {
     public static class SystemClientGenerator
     {
-        public static void EnsureSystemClient()
+        public static void EnsureSystemClient(ICertificateGenerator certificateGenerator)
         {
             var systemClientDataFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.json");
             var systemClientKeyFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.key");
@@ -22,7 +25,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
                 {
                     var systemClientData =
                         JsonConvert.DeserializeObject<ClientConfigModel>(File.ReadAllText(systemClientDataFile));
-                    publicKey = CertHelper.GetPublicKey(systemClientData.X509CertificateBase64);
+                    publicKey = GetPublicKey(systemClientData.X509CertificateBase64);
                 }
                 catch (Exception)
                 {
@@ -33,7 +36,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
             if (!recreateSystemClient && File.Exists(systemClientKeyFile))
                 try
                 {
-                    privateKeyPair = CertHelper.ReadPrivateKeyFile(systemClientKeyFile);
+                    privateKeyPair = ReadPrivateKeyFile(systemClientKeyFile);
                 }
                 catch (Exception)
                 {
@@ -46,7 +49,8 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
 
             RemoveSystemClient();
 
-            var (certificate, keyPair) = X509Generation.GenerateSelfSignedCertificate("system-client");
+            var (certificate, keyPair) = certificateGenerator.GenerateSelfSignedCertificate(
+                new X509Name("CN=system-client"), 5*365, 2048);
 
             var newClient = new ClientConfigModel
             {
@@ -57,7 +61,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
 
             var clientIO = new ConfigIO(ZeroConfig.GetClientConfigPath());
             clientIO.SaveConfigFile(newClient, newClient.ClientId);
-            CertHelper.WritePrivateKeyFile(systemClientKeyFile, keyPair);
+            WritePrivateKeyFile(systemClientKeyFile, keyPair);
         }
 
         private static void RemoveSystemClient()
@@ -68,6 +72,25 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
             if (File.Exists(systemClientDataFile)) File.Delete(systemClientDataFile);
 
             if (File.Exists(systemClientKeyFile)) File.Delete(systemClientKeyFile);
+        }
+
+        private static AsymmetricCipherKeyPair ReadPrivateKeyFile(string filepath)
+        {
+            using var reader = File.OpenText(filepath);
+            return (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
+        }
+
+        private static void WritePrivateKeyFile(string filepath, AsymmetricCipherKeyPair keyPair)
+        {
+            using var writer = new StreamWriter(filepath);
+            new PemWriter(writer).WriteObject(keyPair);
+        }
+
+        private static AsymmetricKeyParameter GetPublicKey(string certData)
+        {
+            var parser = new X509CertificateParser();
+            var cert2 = parser.ReadCertificate(Convert.FromBase64String(certData));
+            return cert2.GetPublicKey();
         }
     }
 }

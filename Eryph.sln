@@ -74,6 +74,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.ModuleCore", "src\mod
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "eryph-packer", "src\apps\src\eryph-packer\eryph-packer.csproj", "{52FC6159-8AC0-4A9E-BA43-07EE43AD10F3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Security.Cryptography.Test", "src\core\test\Eryph.Security.Cryptography.Test\Eryph.Security.Cryptography.Test.csproj", "{A651AFFB-D433-4F4F-A7F7-539533BFBAD2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -188,6 +190,10 @@ Global
 		{52FC6159-8AC0-4A9E-BA43-07EE43AD10F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{52FC6159-8AC0-4A9E-BA43-07EE43AD10F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{52FC6159-8AC0-4A9E-BA43-07EE43AD10F3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A651AFFB-D433-4F4F-A7F7-539533BFBAD2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A651AFFB-D433-4F4F-A7F7-539533BFBAD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A651AFFB-D433-4F4F-A7F7-539533BFBAD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A651AFFB-D433-4F4F-A7F7-539533BFBAD2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -220,6 +226,7 @@ Global
 		{1BC81BC6-C5D8-4F07-90DE-CABCA9BBC2DA} = {07B818A5-B186-4D09-A766-9E4963F3C07E}
 		{A90AF0DD-866A-4D16-938D-9E66649BB8D6} = {E889B549-C333-46DC-B71F-9608CBA1FBAA}
 		{52FC6159-8AC0-4A9E-BA43-07EE43AD10F3} = {5F41CD29-E6EF-4810-8A84-8B9E52AEAE70}
+		{A651AFFB-D433-4F4F-A7F7-539533BFBAD2} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}
