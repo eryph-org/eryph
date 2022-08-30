@@ -29,7 +29,6 @@ namespace Eryph.Controller
             container.Register<IRebusTimeoutConfigurer, MySqlTimeoutConfigurer>();
 
             container.Register<IDbContextConfigurer<StateStoreContext>, MySqlDbContextConfigurer<StateStoreContext>>();
-
             return container;
         }
     }

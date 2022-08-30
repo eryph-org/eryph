@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="1.0.0-rc.1" />
+    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="1.0.0" />
     <!--<PackageReference Include="Microsoft.AspNetCore.App" />-->
 
   </ItemGroup>

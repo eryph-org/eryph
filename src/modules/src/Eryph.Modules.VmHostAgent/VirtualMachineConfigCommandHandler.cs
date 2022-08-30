@@ -2,11 +2,10 @@
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Machine;
 using Eryph.Messages;
 using Eryph.Messages.Operations.Events;
-using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.Resources.Machines;
-using Eryph.Resources.Machines.Config;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;

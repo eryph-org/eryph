@@ -1,6 +1,6 @@
 ﻿using System;
+using Eryph.ConfigModel.Machine;
 using Eryph.Core;
-using Eryph.Resources.Machines.Config;
 using JetBrains.Annotations;
 
 namespace Eryph.Resources.Machines

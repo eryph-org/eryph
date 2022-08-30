@@ -8,8 +8,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines;
 
 public class UpdateMachineRequest : SingleResourceRequest
 {
-    [FromBody] [Required] public Guid CorrelationId { get; set; }
+    [Required] public Guid CorrelationId { get; set; }
 
-    [FromBody] [Required] public JsonElement? Configuration { get; set; }
+    [Required] public JsonElement? Configuration { get; set; }
 
 }

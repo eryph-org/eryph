@@ -1,4 +1,5 @@
-﻿using Eryph.Resources.Disks;
+﻿using Eryph.ConfigModel.Machine;
+using Eryph.Resources.Disks;
 
 namespace Eryph.Resources.Machines
 {

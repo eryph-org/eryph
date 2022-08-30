@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Eryph.ConfigModel.Machine" Version="0.1.0-ci.14" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Eryph.Core\Eryph.Core.csproj" />
   </ItemGroup>
 

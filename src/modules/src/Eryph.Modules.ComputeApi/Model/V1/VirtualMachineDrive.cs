@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using Eryph.ConfigModel.Machine;
 using Eryph.Resources.Machines;
 
 namespace Eryph.Modules.ComputeApi.Model.V1;

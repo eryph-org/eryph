@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Eryph.Resources.Machines;
-using Eryph.Resources.Machines.Config;
-using Eryph.VmManagement.Data.Core;
+using Eryph.ConfigModel.Machine;
 using Eryph.VmManagement.Data.Planned;
 
 namespace Eryph.VmManagement
@@ -25,12 +23,12 @@ namespace Eryph.VmManagement
                     //max and min memory is not imported from template
                 },
 
-                Drives = ConvertPlannedDrivesToConfig(plannedVM),
-                NetworkAdapters = ConvertImageNetAdaptersToConfig(plannedVM)
+                Drives = ConvertPlannedDrivesToConfig(plannedVM).ToArray(),
+                NetworkAdapters = ConvertImageNetAdaptersToConfig(plannedVM).ToArray()
             };
         }
 
-        private static List<VirtualMachineDriveConfig> ConvertPlannedDrivesToConfig(TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
+        private static IEnumerable<VirtualMachineDriveConfig> ConvertPlannedDrivesToConfig(TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
         {
             var result = plannedVM.GetList(x=>x.HardDrives)
                 .Map(x=>x.Cast<PlannedHardDiskDriveInfo>().Value).Select(
@@ -50,7 +48,7 @@ namespace Eryph.VmManagement
             return result;
         }
 
-        private static List<VirtualMachineNetworkAdapterConfig> ConvertImageNetAdaptersToConfig(
+        private static IEnumerable<VirtualMachineNetworkAdapterConfig> ConvertImageNetAdaptersToConfig(
             PlannedVirtualMachineInfo plannedVM)
         {
             return plannedVM.NetworkAdapters.Select(
