@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
-using Eryph.Resources.Machines.Config;
+using Eryph.ConfigModel.Machine;
 using LanguageExt;
 
 namespace Eryph.VmManagement
@@ -45,16 +45,16 @@ namespace Eryph.VmManagement
                                 if (vmHdConfig.Size != 0) ihd.Size = vmHdConfig.Size;
                                 if (!string.IsNullOrWhiteSpace(vmHdConfig.DataStore))
                                     ihd.DataStore = vmHdConfig.DataStore;
-                                if (!string.IsNullOrWhiteSpace(vmHdConfig.ShareSlug))
-                                    ihd.ShareSlug = vmHdConfig.ShareSlug;
+                                if (!string.IsNullOrWhiteSpace(vmHdConfig.Slug))
+                                    ihd.Slug = vmHdConfig.Slug;
                             }
                         );
 
                     //add drives configured only on vm
                     var imageDriveNames = newConfig.VM.Drives.Select(x => x.Name);
-                    newConfig.VM.Drives.AddRange(machineConfig.VM.Drives.Where(vmHd =>
+                    newConfig.VM.Drives = newConfig.VM.Drives.Append(machineConfig.VM.Drives.Where(vmHd =>
                         !imageDriveNames.Any(x =>
-                            string.Equals(x, vmHd.Name, StringComparison.InvariantCultureIgnoreCase))));
+                            string.Equals(x, vmHd.Name, StringComparison.InvariantCultureIgnoreCase)))).ToArray();
 
                     //merge network adapter settings configured both on image and vm config
                     newConfig.VM.NetworkAdapters.ToSeq()
@@ -71,9 +71,9 @@ namespace Eryph.VmManagement
 
                     //add network adapters configured only on vm
                     var imageAdapterNames = newConfig.VM.NetworkAdapters.Select(x => x.Name);
-                    newConfig.VM.NetworkAdapters.AddRange(machineConfig.VM.NetworkAdapters.Where(vmHd =>
+                    newConfig.VM.NetworkAdapters = newConfig.VM.NetworkAdapters.Append(machineConfig.VM.NetworkAdapters.Where(vmHd =>
                         !imageAdapterNames.Any(x =>
-                            string.Equals(x, vmHd.Name, StringComparison.InvariantCultureIgnoreCase))));
+                            string.Equals(x, vmHd.Name, StringComparison.InvariantCultureIgnoreCase)))).ToArray();
 
                     //merge other settings
                     if (!string.IsNullOrWhiteSpace(machineConfig.VM.DataStore))

@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Machine;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines.Commands;
-using Eryph.Resources.Machines;
-using Eryph.Resources.Machines.Config;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -49,10 +48,10 @@ namespace Eryph.Modules.Controller.Operations
                 machineConfig.VM.Memory = new VirtualMachineMemoryConfig();
 
             if (machineConfig.VM.Drives == null)
-                machineConfig.VM.Drives = new List<VirtualMachineDriveConfig>();
+                machineConfig.VM.Drives = Array.Empty<VirtualMachineDriveConfig>();
 
             if (machineConfig.VM.NetworkAdapters == null)
-                machineConfig.VM.NetworkAdapters = new List<VirtualMachineNetworkAdapterConfig>();
+                machineConfig.VM.NetworkAdapters = Array.Empty<VirtualMachineNetworkAdapterConfig>();
 
             if (machineConfig.Provisioning == null)
                 machineConfig.Provisioning = new MachineProvisioningConfig();
@@ -60,7 +59,7 @@ namespace Eryph.Modules.Controller.Operations
             if (machineConfig.Networks == null)
             {
                 machineConfig.Networks =
-                    new List<MachineNetworkConfig>(new[] { new MachineNetworkConfig { Name = "default" } });
+                    new []{ new MachineNetworkConfig { Name = "default" } };
             }
 
             if (string.IsNullOrWhiteSpace(machineConfig.Provisioning.Hostname))

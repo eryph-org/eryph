@@ -1,6 +1,5 @@
 ﻿using System;
-using Eryph.Messages.Operations.Commands;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Eryph.Messages.Operations.Events
 {
@@ -57,7 +56,7 @@ namespace Eryph.Messages.Operations.Events
                 return (null, null);
 
 
-            return (JsonConvert.SerializeObject(message), message.GetType().AssemblyQualifiedName);
+            return (JsonSerializer.Serialize(message), message.GetType().AssemblyQualifiedName);
         }
 
         public object GetMessage()
@@ -65,7 +64,11 @@ namespace Eryph.Messages.Operations.Events
             if (MessageData == null || MessageType == null)
                 return null;
 
-            return JsonConvert.DeserializeObject(MessageData, Type.GetType(MessageType));
+            var type = Type.GetType(MessageType);
+
+            return type == null 
+                ? null 
+                : JsonSerializer.Deserialize(MessageData, type);
         }
     }
 

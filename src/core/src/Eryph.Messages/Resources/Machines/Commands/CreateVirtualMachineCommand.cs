@@ -1,7 +1,6 @@
 ﻿using System;
+using Eryph.ConfigModel.Machine;
 using Eryph.Core;
-using Eryph.Messages.Operations.Commands;
-using Eryph.Resources.Machines.Config;
 
 namespace Eryph.Messages.Resources.Machines.Commands
 {

@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
-using Eryph.Resources.Machines;
-using Eryph.Resources.Machines.Config;
+using Eryph.ConfigModel.Machine;
 using LanguageExt;
 
 namespace Eryph.VmManagement.Storage

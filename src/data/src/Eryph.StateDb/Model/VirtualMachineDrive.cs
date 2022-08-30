@@ -1,5 +1,5 @@
 ﻿using System;
-using Eryph.Resources.Machines;
+using Eryph.ConfigModel.Machine;
 
 namespace Eryph.StateDb.Model
 {

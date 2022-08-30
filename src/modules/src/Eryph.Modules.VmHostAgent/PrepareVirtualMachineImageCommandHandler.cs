@@ -36,7 +36,7 @@ namespace Eryph.Modules.VmHostAgent
                 if (message.Command.Image == null)
                 {
                     await _bus.Publish(
-                        OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId));
+                        OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, ""));
                     return;
                 }
 

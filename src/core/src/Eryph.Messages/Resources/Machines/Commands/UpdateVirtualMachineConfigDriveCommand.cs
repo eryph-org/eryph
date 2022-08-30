@@ -1,7 +1,5 @@
 ﻿using System;
-using Eryph.Core;
 using Eryph.Resources.Machines;
-using Eryph.Resources.Machines.Config;
 
 namespace Eryph.Messages.Resources.Machines.Commands;
 

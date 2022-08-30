@@ -1,6 +1,4 @@
 ﻿using Eryph.Core;
-using Eryph.Messages.Operations.Commands;
-using Eryph.Resources.Machines.Config;
 
 namespace Eryph.Messages.Resources.Images.Commands
 {

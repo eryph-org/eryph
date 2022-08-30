@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Eryph.Resources.Machines.Config;
+using Eryph.ConfigModel.Machine;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.SomeHelp;

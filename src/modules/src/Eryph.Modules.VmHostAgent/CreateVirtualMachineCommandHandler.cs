@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Machine;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.Resources.Machines;
-using Eryph.Resources.Machines.Config;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Data.Planned;

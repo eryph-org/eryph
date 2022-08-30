@@ -1,14 +1,13 @@
 ﻿using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Machine;
 using Eryph.Messages.Resources.Machines.Commands;
-using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.Resources;
-using Eryph.Resources.Machines.Config;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;

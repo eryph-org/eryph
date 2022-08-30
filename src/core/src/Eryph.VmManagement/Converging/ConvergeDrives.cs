@@ -2,6 +2,7 @@
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Machine;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;

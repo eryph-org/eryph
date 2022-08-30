@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Machine;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;

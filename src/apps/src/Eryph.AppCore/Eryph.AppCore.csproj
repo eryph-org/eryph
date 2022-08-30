@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="1.0.0-rc.1" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="1.0.0" />
 
   </ItemGroup>
 
