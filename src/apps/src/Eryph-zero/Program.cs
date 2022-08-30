@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Management;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.App;
@@ -28,18 +30,32 @@ internal static class Program
     {
         await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
-        var startupConfig = await StartupConfiguration(args,
+        var startupConfig = StartupConfiguration(args,
             sp => new
             {
-                BasePath = sp.GetRequiredService<IConfiguration>()["basePath"]
+                BasePath = sp.GetRequiredService<IConfiguration>()["basePath"],
+                SSLEndpointManager = sp.GetRequiredService<ISSLEndpointManager>()
             });
 
+        var basePathUrl = ConfigureUrl(startupConfig.BasePath);
+         
+
+        using var _ = await startupConfig.SSLEndpointManager
+            .EnableSslEndpoint(new SSLOptions(
+            "eryph-zero CA",
+            Network.FQDN,
+            DateTime.UtcNow.AddDays(-1),
+            365 * 5,
+            ZeroConfig.GetPrivateConfigPath(),
+            "eryphCA",
+            Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
+            basePathUrl));
 
         var endpoints = new Dictionary<string, string>
         {
-            { "identity", $"{startupConfig.BasePath}/identity" },
-            { "compute", $"{startupConfig.BasePath}/compute" },
-            { "common", $"{startupConfig.BasePath}/common" },
+            { "identity", $"{basePathUrl}identity" },
+            { "compute", $"{basePathUrl}compute" },
+            { "common", $"{basePathUrl}common" },
         };
 
         try
@@ -86,7 +102,16 @@ internal static class Program
         return 0;
     }
 
-    private static async Task<T> StartupConfiguration<T>(string[] args, Func<IServiceProvider, T> selectResult)
+    private static Uri ConfigureUrl(string basePath)
+    {
+        var uriBuilder = new UriBuilder(basePath);
+        if (uriBuilder.Port == 0)
+            uriBuilder.Port = GetAvailablePort();
+
+        return uriBuilder.Uri;
+    }
+
+    private static T StartupConfiguration<T>(string[] args, Func<IServiceProvider, T> selectResult)
     {
         var configHost = new HostBuilder()
             .ConfigureAppConfiguration((hostingContext, config) =>
@@ -95,7 +120,7 @@ internal static class Program
 
                 config.AddInMemoryCollection(new Dictionary<string, string>
                     {
-                        { "basePath", "https://localhost:8000" },
+                        { "basePath", "https://localhost:0" },
                     })
                     // ReSharper disable once StringLiteralTypo
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
@@ -120,29 +145,23 @@ internal static class Program
             })
             .Build();
 
-        var startupConfig = configHost.Services.GetRequiredService<IConfiguration>();
-        var sslEndpointManager = configHost.Services.GetRequiredService<ISSLEndpointManager>();
         var certificateGenerator = configHost.Services.GetRequiredService<ICertificateGenerator>();
-
-        var basePath = startupConfig["basePath"];
-
         var res = selectResult(configHost.Services);
 
-        configHost.Dispose();
-
+ 
         ZeroConfig.EnsureConfiguration();
         SystemClientGenerator.EnsureSystemClient(certificateGenerator);
-
-        await sslEndpointManager.EnableSslEndpoint(new SSLOptions(
-            "eryph-zero CA",
-            Network.FQDN,
-            DateTime.UtcNow.AddDays(-1),
-            365 * 5,
-            ZeroConfig.GetPrivateConfigPath(),
-            "eryphCA",
-            Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
-            new Uri(basePath)));
+        
+        configHost.Dispose();
 
         return res;
+    }
+    
+    private static readonly IPEndPoint DefaultLoopbackEndpoint = new(IPAddress.Loopback, port: 0);
+    private static int GetAvailablePort()
+    {
+        using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        socket.Bind(DefaultLoopbackEndpoint);
+        return (((IPEndPoint)socket.LocalEndPoint)!).Port;
     }
 }

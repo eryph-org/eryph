@@ -31,7 +31,7 @@ public class SSLEndpointManager : ISSLEndpointManager
     }
 
 
-    public async Task EnableSslEndpoint(SSLOptions options)
+    public async Task<SSLEndpointContext> EnableSslEndpoint(SSLOptions options)
     {
         var (newCaCertificate, caCertificate, caKeyPair) = await EnsureAuthorityExists(options.RootCertificate);
 
@@ -65,7 +65,7 @@ public class SSLEndpointManager : ISSLEndpointManager
         chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
         chain.Build(new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate)));
 
-        _endpointRegistry.RegisterSSLEndpoint(options, chain);
+        return _endpointRegistry.RegisterSSLEndpoint(options, chain);
     }
 
     private X509Certificate CreateSSLCertificate(CertificateOptions options,
