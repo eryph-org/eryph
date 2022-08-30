@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.Messages;
 using Eryph.Messages.Operations.Commands;
@@ -11,7 +12,6 @@ using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
-using Newtonsoft.Json;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
@@ -43,7 +43,7 @@ namespace Eryph.Modules.Controller.Operations
 
         public async Task Handle(CreateNewOperationTaskCommand message)
         {
-            var command = JsonConvert.DeserializeObject(message.CommandData, 
+            var command = JsonSerializer.Deserialize(message.CommandData, 
                 Type.GetType(message.CommandType) ?? throw new InvalidOperationException($"unknown command type '{message.CommandType}'"));
 
             var op = await _dbContext.Operations.FindAsync(message.OperationId).ConfigureAwait(false);

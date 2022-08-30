@@ -3,11 +3,11 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.Configuration;
 using Eryph.Configuration.Model;
 using Eryph.StateDb.Model;
-using Newtonsoft.Json;
 
 namespace Eryph.Runtime.Zero.Configuration.Storage
 {
@@ -68,7 +68,7 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
                 };
 
             var configContent = File.ReadAllText(configFile);
-            return JsonConvert.DeserializeObject<StorageConfig>(configContent);
+            return JsonSerializer.Deserialize<StorageConfig>(configContent);
 
         }
 

@@ -1,7 +1,7 @@
 ﻿using System.IO;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace Eryph.Runtime.Zero.Configuration
 {
@@ -16,7 +16,7 @@ namespace Eryph.Runtime.Zero.Configuration
 
         public Task SaveConfigFile<T>(T data, string id)
         {
-            var json = JsonConvert.SerializeObject(data);
+            var json = JsonSerializer.Serialize(data);
             var filePath = Path.Combine(_basePath, CoerceValidFileName(id) + ".json");
             return SaveFileOperation(json, filePath);
         }

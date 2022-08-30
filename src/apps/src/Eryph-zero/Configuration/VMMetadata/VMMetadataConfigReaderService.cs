@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using Eryph.Configuration;
 using Eryph.Resources.Machines;
-using Newtonsoft.Json;
 
 namespace Eryph.Runtime.Zero.Configuration.VMMetadata
 {
@@ -15,7 +15,7 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
             foreach (var configFile in configFiles)
             {
                 var configContent = File.ReadAllText(configFile);
-                var config = JsonConvert.DeserializeObject<VirtualMachineMetadata>(configContent);
+                var config = JsonSerializer.Deserialize<VirtualMachineMetadata>(configContent);
                 yield return config;
             }
         }

@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using JetBrains.Annotations;
 using LanguageExt;
-using Newtonsoft.Json;
 
 namespace Eryph.Modules.Controller.DataServices
 {
@@ -38,13 +38,13 @@ namespace Eryph.Modules.Controller.DataServices
                 await _repository.AddAsync(new StateDb.Model.VirtualMachineMetadata
                 {
                     Id = metadata.Id,
-                    Metadata = JsonConvert.SerializeObject(metadata)
+                    Metadata = JsonSerializer.Serialize(metadata)
                 });
 
                 return Unit.Default;
             }
 
-            entity.Metadata = JsonConvert.SerializeObject(metadata);
+            entity.Metadata = JsonSerializer.Serialize(metadata);
             await _repository.UpdateAsync(entity);
             return Unit.Default;
         }
@@ -63,7 +63,7 @@ namespace Eryph.Modules.Controller.DataServices
         private static Option<VirtualMachineMetadata> DeserializeMetadataEntity(
             [CanBeNull] StateDb.Model.VirtualMachineMetadata metadataEntity)
         {
-            return JsonConvert.DeserializeObject<VirtualMachineMetadata>(metadataEntity.Metadata);
+            return JsonSerializer.Deserialize<VirtualMachineMetadata>(metadataEntity.Metadata);
         }
     }
 }
