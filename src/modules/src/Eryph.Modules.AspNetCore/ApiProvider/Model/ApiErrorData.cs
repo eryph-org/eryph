@@ -12,7 +12,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model
 
         public class InnerErrorData
         {
-            [Newtonsoft.Json.JsonExtensionData] public IDictionary<string, JsonElement>? AdditionalData { [UsedImplicitly] get; set; }
+            //[Newtonsoft.Json.JsonExtensionData] public IDictionary<string, JsonElement>? AdditionalData { [UsedImplicitly] get; set; }
         }
     }
 }

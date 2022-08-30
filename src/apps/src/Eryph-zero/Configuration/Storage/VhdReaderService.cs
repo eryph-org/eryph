@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using Eryph.Configuration;
 using Eryph.Configuration.Model;
 using Eryph.StateDb.Model;
-using Newtonsoft.Json;
 
 namespace Eryph.Runtime.Zero.Configuration.Storage
 {
@@ -16,7 +16,7 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
             foreach (var configFile in configFiles)
             {
                 var configContent = File.ReadAllText(configFile);
-                var config = JsonConvert.DeserializeObject<StorageConfig>(configContent);
+                var config = JsonSerializer.Deserialize<StorageConfig>(configContent);
                 
                 if(config == null)
                     continue;

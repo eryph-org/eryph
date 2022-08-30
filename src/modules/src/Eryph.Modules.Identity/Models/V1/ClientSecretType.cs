@@ -1,10 +1,10 @@
-﻿using JetBrains.Annotations;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+﻿using System.Text.Json.Serialization;
+using JetBrains.Annotations;
+
 
 namespace Eryph.Modules.Identity.Models.V1
 {
-    [JsonConverter(typeof(StringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     [PublicAPI]
     public enum ClientSecretType
     {

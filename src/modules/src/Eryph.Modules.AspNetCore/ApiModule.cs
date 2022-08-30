@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Newtonsoft.Json;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
@@ -107,8 +106,6 @@ namespace Eryph.Modules.AspNetCore
                         x.SimpleRetryStrategy();
                         x.SetNumberOfWorkers(5);
                     })
-                    .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings
-                        {TypeNameHandling = TypeNameHandling.None}))
                     .Logging(x => x.Trace()).Start();
             });
         }

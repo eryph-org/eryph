@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration;
 using Eryph.Modules.Controller;
@@ -6,7 +7,6 @@ using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using JetBrains.Annotations;
 using LanguageExt;
-using Newtonsoft.Json;
 
 namespace Eryph.Runtime.Zero.Configuration.VMMetadata
 {
@@ -28,7 +28,7 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
             return _configReaderService.GetConfig()
                 .Map(x =>
                 {
-                    var json = JsonConvert.SerializeObject(x);
+                    var json = JsonSerializer.Serialize(x);
                     return _repository.AddAsync(new StateDb.Model.VirtualMachineMetadata
                     {
                         Id = x.Id,

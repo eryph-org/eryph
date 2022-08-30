@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace Eryph.App
 {
@@ -81,7 +81,7 @@ namespace Eryph.App
                     .Where(kv => kv.Key != "processName " && kv.Key != "processId"))
                     lockData.Add(kv.Key, kv.Value);
 
-            var dataJson = JsonConvert.SerializeObject(lockData);
+            var dataJson = JsonSerializer.Serialize(lockData);
 
             using var textWriter = new StreamWriter(_lockStream, Encoding.UTF8, 4096, true);
             textWriter.Write(dataJson);
