@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <!--MSBuild 4.0 property-->
+    <ProgramFiles32>$(MSBuildProgramFiles32)</ProgramFiles32>
+    <!--Use OS env var as a fallback:- 32 bit MSBuild 2.0/3.5 on x64 will use this-->
+    <ProgramFiles32 Condition=" '' == '$(ProgramFiles32)'"> $(ProgramFiles%28x86%29)</ProgramFiles32>
+    <!-- Handle MSBuild 2.0/3.5 running in 64 bit mode - neither of the above env vars are available. http://stackoverflow.com/questions/336633       NB this trick (Adding a literal " (x86)" to the 64 bit Program Files path) may or may not work on all versions/locales of Windows -->
+    <ProgramFiles32 Condition ="'$(ProgramFiles32)'=='' AND 'AMD64' == '$(PROCESSOR_ARCHITECTURE)'">$(ProgramFiles) (x86)</ProgramFiles32>
+    <!--Catch-all - handles .NET 2.0/3.5 non-AMD64 and .NET 2.0 on x86 -->
+    <ProgramFiles32 Condition=" '' == '$(ProgramFiles32)' ">$(ProgramFiles)</ProgramFiles32>
+    <!-- some important directories -->
+    <ProductsDir Condition=" '$(ProductsDir)' == '' ">$(MSBuildThisFileDirectory)..\Products\</ProductsDir>
+    <msiDir>$(ProgramFiles32)\Windows Kits\8.1\bin\x64</msiDir>
+    <!-- signtool configuration -->
+    <signTool>"$(msiDir)\signtool.exe"</signTool>
+    <timeStampServer>http://timestamp.digicert.com</timeStampServer>
+    <signHash>$(signHash)</signHash>
+    <signToolCall> $(signTool) sign /fd SHA256 /sha1 $(signHash) /t $(timeStampServer)</signToolCall>
+  </PropertyGroup>
+  <PropertyGroup>
+  </PropertyGroup>
+  <Target Name="SignExe" BeforeTargets="Build">
+    <Exec Command="$(signToolCall) &quot;$(TargetPath)&quot;" Condition=" '$(signHash)' != '' " />
+  </Target>
+</Project>

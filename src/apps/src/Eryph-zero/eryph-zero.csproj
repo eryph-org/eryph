@@ -67,4 +67,5 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
+  <Import Project="..\exesign.custom.targets" />
 </Project>

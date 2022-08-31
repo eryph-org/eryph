@@ -5,6 +5,7 @@ VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5161FD3F-5E58-4C46-9EC5-DC275266583A}"
 	ProjectSection(SolutionItems) = preProject
+		exesign.custom.targets = exesign.custom.targets
 		nuget.config = nuget.config
 	EndProjectSection
 EndProject
@@ -72,9 +73,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Core", "src\core\src\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.ModuleCore", "src\modules\src\Eryph.ModuleCore\Eryph.ModuleCore.csproj", "{A90AF0DD-866A-4D16-938D-9E66649BB8D6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "eryph-packer", "src\apps\src\eryph-packer\eryph-packer.csproj", "{52FC6159-8AC0-4A9E-BA43-07EE43AD10F3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "eryph-packer", "src\apps\src\eryph-packer\eryph-packer.csproj", "{52FC6159-8AC0-4A9E-BA43-07EE43AD10F3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Security.Cryptography.Test", "src\core\test\Eryph.Security.Cryptography.Test\Eryph.Security.Cryptography.Test.csproj", "{A651AFFB-D433-4F4F-A7F7-539533BFBAD2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Security.Cryptography.Test", "src\core\test\Eryph.Security.Cryptography.Test\Eryph.Security.Cryptography.Test.csproj", "{A651AFFB-D433-4F4F-A7F7-539533BFBAD2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
