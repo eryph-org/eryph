@@ -29,7 +29,7 @@ jobs:
         $secName = "Authenticode.pfx"
         $tempDirectory = $env:AGENT_TEMPDIRECTORY        
         $pfxFilePath = Join-Path $tempDirectory $secName        
-        $Password = ConvertTo-SecureString -String $env:AUTHENTICODE_HASH -AsPlainText -Force
+        $Password = ConvertTo-SecureString -String $env:AUTHENTICODE_PASSWORD -AsPlainText -Force
         $cert = Import-PfxCertificate -FilePath $pfxFilePath -CertStoreLocation Cert:\CurrentUser\My -Password $Password
         $thumbprint = $cert.Thumbprint
         Write-Host "##vso[task.setvariable variable=SignHash;]$thumbprint"
