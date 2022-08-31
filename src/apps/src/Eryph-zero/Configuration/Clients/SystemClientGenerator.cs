@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Text.Json;
 using Eryph.Configuration.Model;
 using Eryph.Security.Cryptography;
-using Newtonsoft.Json;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.OpenSsl;
@@ -24,7 +24,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
                 try
                 {
                     var systemClientData =
-                        JsonConvert.DeserializeObject<ClientConfigModel>(File.ReadAllText(systemClientDataFile));
+                        JsonSerializer.Deserialize<ClientConfigModel>(File.ReadAllText(systemClientDataFile));
                     publicKey = GetPublicKey(systemClientData.X509CertificateBase64);
                 }
                 catch (Exception)

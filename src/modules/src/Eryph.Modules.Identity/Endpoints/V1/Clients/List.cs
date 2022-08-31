@@ -7,7 +7,6 @@ using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Annotations;
 
 using static Microsoft.AspNetCore.Http.StatusCodes;
@@ -40,10 +39,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
         public override async Task<ActionResult<ListResponse<Client>>> HandleAsync(CancellationToken cancellationToken = new CancellationToken())
         {
             var clients = _clientService.QueryClients().ToArray();
-            return new JsonResult(new ListResponse<Client> { Value = clients }, new JsonSerializerSettings
-            {
-                NullValueHandling = NullValueHandling.Ignore,
-            });
+            return new (new ListResponse<Client> { Value = clients });
         }
     }
 

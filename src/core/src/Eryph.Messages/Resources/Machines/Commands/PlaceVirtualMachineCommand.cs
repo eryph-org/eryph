@@ -1,5 +1,4 @@
-﻿using Eryph.Messages.Operations.Commands;
-using Eryph.Resources.Machines.Config;
+﻿using Eryph.ConfigModel.Machine;
 
 namespace Eryph.Messages.Resources.Machines.Commands
 {

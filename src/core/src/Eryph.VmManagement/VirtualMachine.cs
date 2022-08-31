@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Eryph.ConfigModel.Machine;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
-using Eryph.Resources.Machines.Config;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;

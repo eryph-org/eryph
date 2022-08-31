@@ -10,7 +10,6 @@ using Eryph.Rebus;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Extensions.Http;
@@ -92,8 +91,6 @@ namespace Eryph.Modules.VmHostAgent
                     x.EnableSynchronousRequestReply();
                 })
                 .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>()?.Configure(s))
-                .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings
-                    {TypeNameHandling = TypeNameHandling.None}))
                 .Logging(x => x.Trace()).Start());
         }
 

@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Dbosoft.CloudInit.ConfigDrive;
-using Eryph.Resources.Machines.Config;
+using Eryph.ConfigModel.Machine;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using JetBrains.Annotations;

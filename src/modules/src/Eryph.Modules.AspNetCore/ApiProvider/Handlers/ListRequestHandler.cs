@@ -6,7 +6,6 @@ using Ardalis.Specification;
 using AutoMapper;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
 {
@@ -27,10 +26,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
             var queryResult = await _repository.ListAsync(createSpecificationFunc(request), cancellationToken);
             var result = _mapper.Map<IEnumerable<TResponse>>(queryResult);
 
-            return new JsonResult(new ListResponse<TResponse> { Value = result }, new JsonSerializerSettings
-            {
-                NullValueHandling = NullValueHandling.Ignore,
-            });
+            return new JsonResult(new ListResponse<TResponse> { Value = result });
         }
     }
 }

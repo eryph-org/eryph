@@ -4,7 +4,6 @@ using System.Management.Automation.Runspaces;
 using System.Threading.Tasks;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 

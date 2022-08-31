@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 using Ardalis.Specification;
 using Dbosoft.Hosuto.Modules;
 using Eryph.Messages;
@@ -15,7 +16,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Newtonsoft.Json;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
@@ -34,7 +34,12 @@ namespace Eryph.Modules.AspNetCore
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
             IHostEnvironment env)
         {
-            services.AddMvc(op => { }).AddApiProvider<TModule>(op => op.ApiName = ApiName);
+            services.AddMvc(op => { }).AddApiProvider<TModule>(op => op.ApiName = ApiName)
+                .AddJsonOptions(opts =>
+                {
+                    opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                    opts.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                });
 
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -101,8 +106,6 @@ namespace Eryph.Modules.AspNetCore
                         x.SimpleRetryStrategy();
                         x.SetNumberOfWorkers(5);
                     })
-                    .Serialization(x => x.UseNewtonsoftJson(new JsonSerializerSettings
-                        {TypeNameHandling = TypeNameHandling.None}))
                     .Logging(x => x.Trace()).Start();
             });
         }

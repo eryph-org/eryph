@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.Messages;
 using Eryph.Messages.Operations.Commands;
@@ -10,7 +11,6 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Rebus.Bus;
 using Resource = Eryph.Resources.Resource;
 
@@ -163,7 +163,7 @@ namespace Eryph.ModuleCore
                     resourceCommand.Resource = resource;
                 }
 
-                var commandJson = JsonConvert.SerializeObject(command);
+                var commandJson = JsonSerializer.Serialize(command);
                 var taskMessage = new CreateNewOperationTaskCommand(
                     command.GetType().AssemblyQualifiedName,
                     commandJson,

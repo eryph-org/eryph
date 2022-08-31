@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using Dbosoft.Hosuto.Modules;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Swagger;
@@ -16,7 +17,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider
@@ -30,8 +30,8 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
 
             services.AddOptions<ApiProviderOptions>();
             services.Configure(options);
-
-            mvcBuilder.AddNewtonsoftJson();
+            
+            
             //mvcBuilder.AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
             services.AddApiVersioning(options =>
@@ -44,6 +44,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             {
                 //op.EnableEndpointRouting = false;
                 //op.OutputFormatters.Insert(0, new CustomODataOutputFormatter());
+                
             });
 
 
@@ -114,8 +115,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
                             : defaultName;
                     });
                 });
-            services.AddSwaggerGenNewtonsoftSupport();
-
 
             services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
 
@@ -189,7 +188,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
                         context.Response.ContentType = "application/json";
                         var apiError = ApiError.FromException(error.Error, env.IsDevelopment());
                        
-                        await context.Response.WriteAsync(JsonConvert.SerializeObject(apiError));
+                        await context.Response.WriteAsync(JsonSerializer.Serialize(apiError));
                     }
 
                     // when no error, do next.

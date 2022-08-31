@@ -1,6 +1,6 @@
 ﻿using System;
+using Eryph.ConfigModel.Machine;
 using Eryph.Modules.Controller;
-using Eryph.Resources.Machines.Config;
 
 namespace Eryph.Runtime.Zero
 {

@@ -1,5 +1,5 @@
 ﻿using System;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model
 {
@@ -17,7 +17,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model
             Error.Message = message;
         }
 
-        [JsonProperty("error")] public ApiErrorData Error { get; set; }
+        [JsonPropertyName("error")] public ApiErrorData Error { get; set; }
 
         public static ApiError FromException(Exception exception, bool development)
         {
