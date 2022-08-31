@@ -21,6 +21,6 @@
   <PropertyGroup>
   </PropertyGroup>
   <Target Name="SignExe" BeforeTargets="Build">
-    <Exec Command="$(signToolCall) &quot;$(TargetPath)&quot;" Condition=" '$(signHash)' != '' " />
+    <Exec Command="$(signToolCall) &quot;$(TargetDir)$(TargetName).exe&quot;" Condition=" '$(signHash)' != '' " />
   </Target>
 </Project>
