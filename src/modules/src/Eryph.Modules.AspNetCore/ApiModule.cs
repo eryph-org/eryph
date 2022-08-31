@@ -34,6 +34,8 @@ namespace Eryph.Modules.AspNetCore
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
             IHostEnvironment env)
         {
+            var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
+
             services.AddMvc(op => { }).AddApiProvider<TModule>(op => op.ApiName = ApiName)
                 .AddJsonOptions(opts =>
                 {
@@ -45,7 +47,7 @@ namespace Eryph.Modules.AspNetCore
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
-                    options.Authority = "https://localhost:62189/identity";
+                    options.Authority = endpointResolver.GetEndpoint("identity").ToString();
                     options.Audience = AudienceName;
                 });
 
