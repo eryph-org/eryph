@@ -51,6 +51,9 @@ namespace Eryph.Modules.Identity
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
             IHostEnvironment env)
         {
+            var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
+            var authority = endpointResolver.GetEndpoint("identity").ToString();
+
             services.AddMvc()
                 .AddApiProvider<IdentityModule>(op => op.ApiName = "Eryph Identity Api");
 
@@ -119,7 +122,7 @@ namespace Eryph.Modules.Identity
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
-                    options.Authority = "https://localhost:62189/identity";
+                    options.Authority = authority;
                     options.Audience = "identity_api";
                 });
 
@@ -127,13 +130,15 @@ namespace Eryph.Modules.Identity
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("identity:clients:read:all",
-                    policy => policy.Requirements.Add(new HasScopeRequirement("https://localhost:62189/identity",
+                    policy => policy.Requirements.Add(new HasScopeRequirement(
+                        authority,
                         "identity:clients:read:all", "identity:clients:write:all")));
             });
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("identity:clients:write:all",
-                    policy => policy.Requirements.Add(new HasScopeRequirement("https://localhost:62189/identity",
+                    policy => policy.Requirements.Add(new HasScopeRequirement(
+                        authority,
                         "identity:clients:write:all")));
             });
         }
