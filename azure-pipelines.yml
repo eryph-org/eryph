@@ -9,7 +9,9 @@ jobs:
     vmImage: windows-2022  
 
   variables:
-    buildConfiguration: 'Release'
+   - group: 'eryph'
+   - name: buildConfiguration
+     value: 'Release'
 
   steps:
   - task: UseGitVersion@5
