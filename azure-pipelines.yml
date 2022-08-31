@@ -14,16 +14,14 @@ jobs:
      value: 'Release'
 
   steps:
-  - task: UseGitVersion@5
-    inputs:
-      versionSpec: '5.x'
-
   - task: DownloadSecureFile@1
+    displayName: download code signing certificate
     condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
       secureFile: 'Authenticode.pfx'
       
   - task: PowerShell@2
+    displayName: import code signing certificate
     condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
       targetType: 'inline'
@@ -38,6 +36,10 @@ jobs:
     env:
       AUTHENTICODE_PASSWORD: $(AuthenticodePassword)
       AUTHENTICODE__HASH: $(AuthenticodeHash)
+
+  - task: UseGitVersion@5
+    inputs:
+      versionSpec: '5.x'
 
   - task: DotNetCoreCLI@2
     displayName: dotnet restore
