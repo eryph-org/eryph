@@ -19,10 +19,12 @@ jobs:
       versionSpec: '5.x'
 
   - task: DownloadSecureFile@1
+    condition: ne(variables['Build.Reason'], 'PullRequest'))
     inputs:
       secureFile: 'Authenticode.pfx'
       
   - task: PowerShell@2
+    condition: ne(variables['Build.Reason'], 'PullRequest'))
     inputs:
       targetType: 'inline'
       script: |
@@ -32,8 +34,10 @@ jobs:
         $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
         $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable        
         $cert.Import($pfxFilePath, $env:AUTHENTICODE_PASSWORD, $flag)
+        Write-Host "##vso[task.setvariable variable=SignHash;]$AuthenticodeHash"
     env:
       AUTHENTICODE_PASSWORD: $(AuthenticodePassword)
+      AUTHENTICODE__HASH: $(AuthenticodeHash)
 
   - task: DotNetCoreCLI@2
     displayName: dotnet restore
