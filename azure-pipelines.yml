@@ -29,7 +29,7 @@ jobs:
         $pfxFilePath = Join-Path $tempDirectory $secName        
         $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
         $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable        
-        $cert.Import($pfxFilePath, "$(AuthenticodePassword)", $flag)
+        $cert.Import($pfxFilePath, "${{variables.AuthenticodePassword}}", $flag)
 
   - task: DotNetCoreCLI@2
     displayName: dotnet restore
