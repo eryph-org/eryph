@@ -7,6 +7,10 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="10.1.1" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.1.1" />
+    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="LanguageExt.Core" Version="4.0.3" />
     <PackageReference Include="IPNetwork2" Version="2.5.386" />
     <PackageReference Include="JetBrains.Annotations" Version="2021.3.0" />

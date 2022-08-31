@@ -2,6 +2,7 @@
   "profiles": {
     "eryph-zero": {
       "commandName": "Project",
+      "commandLineArgs": "--service",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }
