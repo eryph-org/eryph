@@ -53,7 +53,7 @@ jobs:
     inputs:
       command: build
       projects: '**/*.csproj'
-      arguments: '--configuration $(buildConfiguration) --no-restore /p:SignHash=$(SignHash)'
+      arguments: '--configuration $(buildConfiguration) --no-restore'
 
   - task: DotNetCoreCLI@2
     displayName: dotnet test
@@ -68,7 +68,7 @@ jobs:
       command: 'publish'
       publishWebProjects: false
       projects: '**/apps/**/*-zero/*.csproj'
-      arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build'
+      arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build /p:SignHash=$(SignHash)'
       zipAfterPublish: false
 
   - task: ArchiveFiles@2
