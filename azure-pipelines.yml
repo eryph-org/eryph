@@ -32,10 +32,10 @@ jobs:
         $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
         $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable        
         $cert.Import($pfxFilePath, $env:AUTHENTICODE_PASSWORD, $flag)
-        Write-Host "##vso[task.setvariable variable=SignHash;]$AuthenticodeHash"
+        Write-Host "##vso[task.setvariable variable=SignHash;]$env:AUTHENTICODE_HASH"
     env:
       AUTHENTICODE_PASSWORD: $(AuthenticodePassword)
-      AUTHENTICODE__HASH: $(AuthenticodeHash)
+      AUTHENTICODE_HASH: $(AuthenticodeHash)
 
   - task: UseGitVersion@5
     inputs:
@@ -54,7 +54,7 @@ jobs:
     inputs:
       command: build
       projects: '**/*.csproj'
-      arguments: '--configuration $(buildConfiguration) --no-restore'
+      arguments: '--configuration $(buildConfiguration) --no-restore /p:SignHash=$(SignHash)'
 
   - task: DotNetCoreCLI@2
     displayName: dotnet test
