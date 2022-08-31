@@ -29,13 +29,12 @@ jobs:
         $secName = "Authenticode.pfx"
         $tempDirectory = $env:AGENT_TEMPDIRECTORY        
         $pfxFilePath = Join-Path $tempDirectory $secName        
-        $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
-        $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable        
-        $cert.Import($pfxFilePath, $env:AUTHENTICODE_PASSWORD, $flag)
-        Write-Host "##vso[task.setvariable variable=SignHash;]$env:AUTHENTICODE_HASH"
+        $Password = ConvertTo-SecureString -String $env:AUTHENTICODE_PASSWORD -AsPlainText -Force
+        $cert = Import-PfxCertificate -FilePath $pfxFilePath -CertStoreLocation Cert:\CurrentUser\My -Password $Password
+        $thumbprint = $cert.Thumbprint
+        Write-Host "##vso[task.setvariable variable=SignHash;]$thumbprint"
     env:
       AUTHENTICODE_PASSWORD: $(AuthenticodePassword)
-      AUTHENTICODE_HASH: $(AuthenticodeHash)
 
   - task: UseGitVersion@5
     inputs:
