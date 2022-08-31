@@ -11,7 +11,7 @@
     <ProgramFiles32 Condition=" '' == '$(ProgramFiles32)' ">$(ProgramFiles)</ProgramFiles32>
     <!-- some important directories -->
     <ProductsDir Condition=" '$(ProductsDir)' == '' ">$(MSBuildThisFileDirectory)..\Products\</ProductsDir>
-    <msiDir>$(ProgramFiles32)\Windows Kits\8.1\bin\x64</msiDir>
+    <msiDir>$(ProgramFiles32)\Microsoft SDKs\ClickOnce</msiDir>
     <!-- signtool configuration -->
     <signTool>"$(msiDir)\signtool.exe"</signTool>
     <timeStampServer>http://timestamp.digicert.com</timeStampServer>
