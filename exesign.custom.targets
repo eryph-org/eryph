@@ -20,7 +20,7 @@
   </PropertyGroup>
   <PropertyGroup>
   </PropertyGroup>
-  <Target Name="SignExe" BeforeTargets="Build">
-    <Exec Command="$(signToolCall) &quot;$(TargetDir)$(TargetName).exe&quot;" Condition=" '$(signHash)' != '' " />
+  <Target Name="SignExe" AfterTargets="Publish">
+    <Exec Command="$(signToolCall) &quot;$(PublishDir)$(TargetName).exe&quot;" Condition=" '$(signHash)' != '' " />
   </Target>
 </Project>
