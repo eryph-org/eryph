@@ -16,6 +16,21 @@ jobs:
     inputs:
       versionSpec: '5.x'
 
+  - task: DownloadSecureFile@1
+    inputs:
+      secureFile: 'Authenticode.pfx'
+      
+  - task: PowerShell@2
+    inputs:
+      targetType: 'inline'
+      script: |
+        $secName = “Authenticode.pfx
+        $tempDirectory = $env:AGENT_TEMPDIRECTORY        
+        $pfxFilePath = Join-Path $tempDirectory $secName        
+        $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+        $flag = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable        
+        $cert.Import($pfxFilePath, "$(AuthenticodePassword)", $flag)
+
   - task: DotNetCoreCLI@2
     displayName: dotnet restore
     inputs:
