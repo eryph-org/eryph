@@ -12,6 +12,8 @@ jobs:
    - group: 'eryph'
    - name: buildConfiguration
      value: 'Release'
+   - name: signHash
+     value: ''
 
   steps:
   - task: DownloadSecureFile@1
@@ -32,7 +34,7 @@ jobs:
         $Password = ConvertTo-SecureString -String $env:AUTHENTICODE_PASSWORD -AsPlainText -Force
         $cert = Import-PfxCertificate -FilePath $pfxFilePath -CertStoreLocation Cert:\CurrentUser\My -Password $Password
         $thumbprint = $cert.Thumbprint
-        Write-Host "##vso[task.setvariable variable=SignHash;]$thumbprint"
+        Write-Host "##vso[task.setvariable variable=signHash;]$thumbprint"
     env:
       AUTHENTICODE_PASSWORD: $(AuthenticodePassword)
 
@@ -68,7 +70,7 @@ jobs:
       command: 'publish'
       publishWebProjects: false
       projects: '**/apps/**/*-zero/*.csproj'
-      arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build /p:SignHash=$(SignHash)'
+      arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build /p:SignHash=$(signHash)'
       zipAfterPublish: false
       
   - task: CmdLine@2
