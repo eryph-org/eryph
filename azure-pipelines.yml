@@ -70,7 +70,13 @@ jobs:
       projects: '**/apps/**/*-zero/*.csproj'
       arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build /p:SignHash=$(SignHash)'
       zipAfterPublish: false
-
+      
+  - task: CmdLine@2
+    displayName: rename zero build
+    inputs:
+      script: 'ren eryph-zero bin'
+      workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build'
+      
   - task: ArchiveFiles@2
     displayName: pack zero build
     inputs:
