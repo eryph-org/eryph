@@ -5,6 +5,6 @@ namespace Eryph.Runtime.Zero.HttpSys;
 
 public interface ICryptoIOServices
 {
-    Task<AsymmetricCipherKeyPair> TryReadPrivateKeyFile(string privateKeyFile);
-    Task WritePrivateKeyFile(string privateKeyFile, AsymmetricCipherKeyPair keyPair);
+    Task<AsymmetricCipherKeyPair> TryReadPrivateKeyFile(string privateKeyFile, byte[] entropy);
+    Task WritePrivateKeyFile(string privateKeyFile, AsymmetricCipherKeyPair keyPair, byte[] entropy);
 }

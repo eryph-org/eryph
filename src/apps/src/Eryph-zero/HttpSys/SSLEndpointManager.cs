@@ -2,6 +2,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading.Tasks;
 using Eryph.Security.Cryptography;
 using Org.BouncyCastle.Asn1.X509;
@@ -120,7 +121,9 @@ public class SSLEndpointManager : ISSLEndpointManager
         X509Certificate caCertificate = null;
 
         var privateKeyFile = Path.Combine(options.ExportDirectory, $"{options.FileName}.key");
-        var keyPair = await _cryptoIOServices.TryReadPrivateKeyFile(privateKeyFile);
+        var entropy = Encoding.UTF8.GetBytes(options.Name.ToString());
+
+        var keyPair = await _cryptoIOServices.TryReadPrivateKeyFile(privateKeyFile, entropy);
 
         if (keyPair != null)
         {
@@ -156,7 +159,7 @@ public class SSLEndpointManager : ISSLEndpointManager
             });
 
         _storeService.AddAsRootCertificate(caCertificate);
-        await _cryptoIOServices.WritePrivateKeyFile(privateKeyFile, keyPair);
+        await _cryptoIOServices.WritePrivateKeyFile(privateKeyFile, keyPair, entropy);
 
         return (true, caCertificate, keyPair);
     }

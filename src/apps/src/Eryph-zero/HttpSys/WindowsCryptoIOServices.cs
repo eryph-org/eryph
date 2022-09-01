@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.OpenSsl;
@@ -12,15 +13,14 @@ namespace Eryph.Runtime.Zero.HttpSys;
 public class WindowsCryptoIOServices : ICryptoIOServices
 {
     //could be static, no need to shuffle this, too as data is already machine encrypted
-    private static readonly byte[] Entropy = { 53, 31, 23, 122, 34, 123, 01, 245, 129, 251, 30 };
 
-    public async Task<AsymmetricCipherKeyPair> TryReadPrivateKeyFile(string privateKeyFile)
+    public async Task<AsymmetricCipherKeyPair> TryReadPrivateKeyFile(string privateKeyFile, byte[] entropy)
     {
         try
         {
             var encryptedKey = await File.ReadAllBytesAsync(privateKeyFile);
             using var decryptedData = new MemoryStream(
-                ProtectedData.Unprotect(encryptedKey, Entropy, DataProtectionScope.LocalMachine));
+                ProtectedData.Unprotect(encryptedKey, entropy, DataProtectionScope.LocalMachine));
             using var reader = new StreamReader(decryptedData);
             return (AsymmetricCipherKeyPair)new PemReader(reader).ReadObject();
         }
@@ -32,7 +32,7 @@ public class WindowsCryptoIOServices : ICryptoIOServices
         return null;
     }
 
-    public async Task WritePrivateKeyFile(string privateKeyFile, AsymmetricCipherKeyPair keyPair)
+    public async Task WritePrivateKeyFile(string privateKeyFile, AsymmetricCipherKeyPair keyPair, byte[] entropy)
     {
         using var memoryStream = new MemoryStream();
         await using var writer = new StreamWriter(memoryStream);
@@ -41,7 +41,7 @@ public class WindowsCryptoIOServices : ICryptoIOServices
         await writer.FlushAsync();
 
         var protectedData = ProtectedData.Protect(
-            memoryStream.ToArray(), Entropy, DataProtectionScope.LocalMachine);
+            memoryStream.ToArray(), entropy, DataProtectionScope.LocalMachine);
 
         await File.WriteAllBytesAsync(privateKeyFile, protectedData);
     }
