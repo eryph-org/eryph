@@ -1,4 +1,6 @@
-﻿using Eryph.StateDb;
+﻿using System.IO;
+using Eryph.Runtime.Zero.Configuration;
+using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore;
 
 namespace Eryph.Runtime.Zero;
@@ -12,6 +14,7 @@ public class SqlLiteStateStoreContextConfigurer : IDbContextConfigurer<StateStor
 
     public void Configure(DbContextOptionsBuilder options)
     {
-        options.UseSqlite("Data Source=state.db");
+        var path = Path.Combine(ZeroConfig.GetPrivateConfigPath(), "state.db");
+        options.UseSqlite($"Data Source=\"{path}\"");
     }
 }
