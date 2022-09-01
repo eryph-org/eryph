@@ -1,9 +1,7 @@
-﻿using System;
-using System.IO;
-using Eryph.App;
+﻿using System.IO;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using Eryph.Core;
-using Eryph.Runtime.Zero.Configuration.Clients;
-using Eryph.Security.Cryptography;
 
 namespace Eryph.Runtime.Zero.Configuration
 {
@@ -55,12 +53,40 @@ namespace Eryph.Runtime.Zero.Configuration
         public static void EnsureConfiguration()
         {
             Config.EnsurePath(GetConfigPath());
+            Config.EnsurePath(GetPrivateConfigPath(), GetPrivateDirectorySecurity());
             Config.EnsurePath(GetClientConfigPath());
             Config.EnsurePath(GetVMConfigPath());
             Config.EnsurePath(GetMetadataConfigPath());
             Config.EnsurePath(GetStorageConfigPath());
 
 
+        }
+
+        private static DirectorySecurity GetPrivateDirectorySecurity()
+        {
+            var directorySecurity = new DirectorySecurity();
+            IdentityReference adminId = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
+            var adminAccess = new FileSystemAccessRule(
+                adminId,
+                FileSystemRights.FullControl,
+                InheritanceFlags.ObjectInherit | InheritanceFlags.ContainerInherit,
+                PropagationFlags.None,
+                AccessControlType.Allow);
+
+            IdentityReference systemId = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+            var systemAccess = new FileSystemAccessRule(
+                systemId,
+                FileSystemRights.FullControl,
+                InheritanceFlags.ObjectInherit | InheritanceFlags.ContainerInherit,
+                PropagationFlags.None,
+                AccessControlType.Allow);
+
+            directorySecurity.AddAccessRule(adminAccess);
+            directorySecurity.AddAccessRule(systemAccess);
+            // set the owner and the group to admins
+            directorySecurity.SetAccessRuleProtection(true, true);
+
+            return directorySecurity;
         }
     }
 }

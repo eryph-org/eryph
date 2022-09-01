@@ -1,5 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.Versioning;
+using System.Security.AccessControl;
+using JetBrains.Annotations;
 
 namespace Eryph.Core
 {
@@ -14,10 +17,25 @@ namespace Eryph.Core
         }
 
 
+        [SupportedOSPlatform("windows")]
+        public static void EnsurePath(string path, DirectorySecurity security)
+        {
+            var directoryInfo = new DirectoryInfo(path);
+            if (!directoryInfo.Exists)
+                directoryInfo.Create(security);
+            else
+            {
+                directoryInfo.SetAccessControl(security);
+            }
+
+        }
+
         public static void EnsurePath(string path)
         {
-            if (!Directory.Exists(path))
-                Directory.CreateDirectory(path);
+            var directoryInfo = new DirectoryInfo(path);
+            if (!directoryInfo.Exists)
+                directoryInfo.Create();
+
         }
     }
 }
