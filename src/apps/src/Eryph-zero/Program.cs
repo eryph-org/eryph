@@ -58,8 +58,9 @@ internal static class Program
                     var configuration = sp.GetRequiredService<IConfiguration>();
                     return new
                     {
-                         BasePath = configuration["basePath"],
+                        BasePath = configuration["basePath"],
                         SSLEndpointManager = sp.GetRequiredService<ISSLEndpointManager>(),
+                        CryptoIO = sp.GetRequiredService<ICryptoIOServices>(),
                         CertificateGenerator = sp.GetRequiredService<ICertificateGenerator>(),
 
                     };
@@ -67,13 +68,21 @@ internal static class Program
 
 
             await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
-            ZeroConfig.EnsureConfiguration();
-            SystemClientGenerator.EnsureSystemClient(startupConfig.CertificateGenerator);
-
 
             var basePathUrl = ConfigureUrl(startupConfig.BasePath);
 
+            var endpoints = new Dictionary<string, string>
+            {
+                { "identity", $"{basePathUrl}identity" },
+                { "compute", $"{basePathUrl}compute" },
+                { "common", $"{basePathUrl}common" },
+            };
 
+            ZeroConfig.EnsureConfiguration();
+
+            await SystemClientGenerator.EnsureSystemClient(startupConfig.CertificateGenerator, startupConfig.CryptoIO, 
+                new Uri(endpoints["identity"]));
+            
             using var _ = await startupConfig.SSLEndpointManager
                 .EnableSslEndpoint(new SSLOptions(
                     "eryph-zero CA",
@@ -85,12 +94,7 @@ internal static class Program
                     Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
                     basePathUrl));
 
-            var endpoints = new Dictionary<string, string>
-            {
-                { "identity", $"{basePathUrl}identity" },
-                { "compute", $"{basePathUrl}compute" },
-                { "common", $"{basePathUrl}common" },
-            };
+
 
             processLock.SetMetadata(new Dictionary<string, object>
             {
