@@ -34,7 +34,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
             OperationId = "Clients_Update",
             Tags = new[] { "Clients" })
         ]
-        [SwaggerResponse(Status201Created, "Success", typeof(Client))]
+        [SwaggerResponse(Status200OK, "Success", typeof(Client))]
 
         public override async Task<ActionResult<Client>> HandleAsync([FromRoute] UpdateClientRequest request, CancellationToken cancellationToken = new CancellationToken())
         {
