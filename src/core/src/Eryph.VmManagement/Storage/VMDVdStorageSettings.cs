@@ -2,5 +2,6 @@
 {
     public class VMDvDStorageSettings : VMDriveStorageSettings
     {
+        public string Path { get; set; }
     }
 }
