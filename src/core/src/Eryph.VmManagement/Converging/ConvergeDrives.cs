@@ -44,6 +44,7 @@ namespace Eryph.VmManagement.Converging
                     from __ in DetachUndefinedDrives(infoReloaded, plannedDriveStorageSettings).ToAsync()
                     from infoRecreated in vmInfo.RecreateOrReload(Context.Engine).ToAsync()
                     from ___ in VirtualDisks(infoRecreated, plannedDriveStorageSettings).ToAsync()
+                    from ____ in DvdDrives(infoRecreated, plannedDriveStorageSettings).ToAsync()
                     select Unit.Default).ToEither().ConfigureAwait(false);
             }
             finally
@@ -64,6 +65,19 @@ namespace Eryph.VmManagement.Converging
             return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine,
                     Context.HostSettings, vmInfo.GetList(x=>x.HardDrives)).ToAsync()
                 from _ in plannedDiskSettings.MapToEitherAsync(s => VirtualDisk(s, vmInfo, currentDiskSettings))
+                    .ToAsync()
+                select Unit.Default).ToEither();
+        }
+        
+        private Task<LanguageExt.Either<PowershellFailure, Unit>> DvdDrives(TypedPsObject<VirtualMachineInfo> vmInfo,
+            LanguageExt.Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
+        {
+            var plannedDvdSettings = plannedDriveStorageSettings
+                .Where(x => x.Type == VirtualMachineDriveType.DVD)
+                .Cast<VMDvDStorageSettings>().ToSeq();
+
+            return (
+                from _ in plannedDvdSettings.MapToEitherAsync(s => DvdDrive(s, vmInfo))
                     .ToAsync()
                 select Unit.Default).ToEither();
         }
@@ -182,7 +196,39 @@ namespace Eryph.VmManagement.Converging
                         .ToEither());
         }
 
+        private Task<LanguageExt.Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> DvdDrive(
+            VMDvDStorageSettings dvdSettings,
+            TypedPsObject<VirtualMachineInfo> vmInfo)
+        {
+            return
+                (from dvdDrive in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
+                        l => l.DVDDrives,
+                        device => device.Cast<DvdDriveInfo>()
+                            .Map(drive =>drive.ControllerLocation == dvdSettings.ControllerLocation 
+                                         && drive.ControllerNumber == dvdSettings.ControllerNumber),
+                        async () =>
+                        {
+                            await Context
+                                .ReportProgress(
+                                    $"Attaching DVD Drive to controller: {dvdSettings.ControllerNumber}, Location: {dvdSettings.ControllerLocation}")
+                                .ConfigureAwait(false);
 
+                            return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
+                                PsCommandBuilder.Create().AddCommand("Add-VMDvdDrive")
+                                    .AddParameter("VM", vmInfo.PsObject)
+                                    .AddParameter("ControllerNumber", dvdSettings.ControllerNumber)
+                                    .AddParameter("ControllerLocation", dvdSettings.ControllerLocation)
+                                    .AddParameter("PassThru"));
+                        }).ToAsync()
+                    from _ in Context.Engine.Run(PsCommandBuilder.Create()
+                        .AddCommand("Set-VMDvdDrive")
+                        .AddParameter("VMDvdDrive", dvdDrive.PsObject)
+                        .AddParameter("Path", dvdSettings.Path)).ToAsync()
+                    from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine).ToAsync()
+                    select vmInfoRecreated).ToEither();
+            
+        }
+        
         private async Task<LanguageExt.Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> VirtualDisk(
             HardDiskDriveStorageSettings driveSettings,
             TypedPsObject<VirtualMachineInfo> vmInfo,

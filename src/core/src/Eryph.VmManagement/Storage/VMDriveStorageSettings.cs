@@ -41,7 +41,8 @@ namespace Eryph.VmManagement.Storage
                     {
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation,
-                        Type = VirtualMachineDriveType.DVD
+                        Type = VirtualMachineDriveType.DVD,
+                        Path = driveConfig.Template,
                     };
                 else
                     result = new VMDriveStorageSettings
