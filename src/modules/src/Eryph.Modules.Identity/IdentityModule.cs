@@ -18,6 +18,7 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;
@@ -34,10 +35,12 @@ namespace Eryph.Modules.Identity
     public class IdentityModule : WebModule
     {
         private readonly IEndpointResolver _endpointResolver;
+        private readonly IConfiguration _configuration;
 
-        public IdentityModule(IEndpointResolver endpointResolver)
+        public IdentityModule(IEndpointResolver endpointResolver, IConfiguration configuration)
         {
             _endpointResolver = endpointResolver;
+            _configuration = configuration;
         }
 
         public override string Path => _endpointResolver.GetEndpoint("identity").ToString();
@@ -54,6 +57,14 @@ namespace Eryph.Modules.Identity
             var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
             var authority = endpointResolver.GetEndpoint("identity").ToString();
 
+            var signingCertManager = new SigningCertificateManager(
+                serviceProvider.GetRequiredService<ICryptoIOServices>(),
+                serviceProvider.GetRequiredService<ICertificateStoreService>(),
+                serviceProvider.GetRequiredService<ICertificateGenerator>());
+
+            var signingCert = signingCertManager.GetSigningCertificate(_configuration["privateConfigPath"])
+                .GetAwaiter().GetResult();
+
             services.AddMvc()
                 .AddApiProvider<IdentityModule>(op => op.ApiName = "Eryph Identity Api");
 
@@ -67,7 +78,7 @@ namespace Eryph.Modules.Identity
                     //options.Events.RaiseInformationEvents = true;
                 })
                 .AddJwtBearerClientAuthentication()
-                .AddDeveloperSigningCredential()
+                .AddSigningCredential(signingCert)
                 .AddConfigurationStore(options =>
                 {
                     options.ConfigureDbContext = builder =>
@@ -160,5 +171,6 @@ namespace Eryph.Modules.Identity
             container.Register<IIdentityServerClientService, IdentityServerClientService>(Lifestyle.Scoped);
             container.Register<IClientService<Client>, ClientService<Client>>(Lifestyle.Scoped);
         }
+
     }
 }

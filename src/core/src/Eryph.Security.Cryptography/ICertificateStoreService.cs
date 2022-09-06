@@ -10,7 +10,7 @@ public interface ICertificateStoreService
 {
     bool IsValidRootCertificate(X509Certificate certificate);
     void AddAsRootCertificate(X509Certificate certificate);
-    void AddToMyStore(X509Certificate certificate, AsymmetricCipherKeyPair keyPair);
+    void AddToMyStore(X509Certificate certificate, AsymmetricCipherKeyPair? keyPair=null);
     void RemoveFromMyStore(X509Certificate certificate);
     void RemoveFromRootStore(X509Certificate certificate);
 
