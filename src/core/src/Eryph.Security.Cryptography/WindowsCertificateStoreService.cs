@@ -58,7 +58,7 @@ public class WindowsCertificateStoreService : ICertificateStoreService
 
     }
 
-    public void AddToMyStore(X509Certificate certificate, AsymmetricCipherKeyPair keyPair)
+    public void AddToMyStore(X509Certificate certificate, AsymmetricCipherKeyPair? keyPair=null)
     {
         using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
         machineStore.Open(OpenFlags.ReadWrite);
@@ -69,17 +69,23 @@ public class WindowsCertificateStoreService : ICertificateStoreService
         if(storedCerts.Count > 0)
             machineStore.RemoveRange(storedCerts);
 
-        var rsaParams = (RsaPrivateCrtKeyParameters) keyPair.Private;
-        var rsaKey = DotNetUtilities.ToRSA(rsaParams, new CspParameters
+        if (keyPair != null)
         {
-            KeyContainerName = Guid.NewGuid().ToString(),
-            KeyNumber = (int)KeyNumber.Exchange,
-            Flags = CspProviderFlags.UseMachineKeyStore
-        });
-        
+            var rsaParams = (RsaPrivateCrtKeyParameters)keyPair.Private;
+            var rsaKey = DotNetUtilities.ToRSA(rsaParams, new CspParameters
+            {
+                KeyContainerName = Guid.NewGuid().ToString(),
+                KeyNumber = (int)KeyNumber.Exchange,
+                Flags = CspProviderFlags.UseMachineKeyStore
+            });
+            var winCertWithKey = new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate));
+
+            machineStore.Add(winCertWithKey.CopyWithPrivateKey(rsaKey));
+            return;
+        }
+
         var winCert = new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate));
-        
-        machineStore.Add(winCert.CopyWithPrivateKey(rsaKey));
+        machineStore.Add(winCert);
 
     }
     

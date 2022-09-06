@@ -2,12 +2,11 @@ using System;
 using System.IO;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.OpenSsl;
 
-namespace Eryph.Runtime.Zero.HttpSys;
+namespace Eryph.Security.Cryptography;
 
 [SupportedOSPlatform("windows")]
 public class WindowsCryptoIOServices : ICryptoIOServices

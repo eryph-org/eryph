@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Org.BouncyCastle.Crypto;
 
-namespace Eryph.Runtime.Zero.HttpSys;
+namespace Eryph.Security.Cryptography;
 
 public interface ICryptoIOServices
 {

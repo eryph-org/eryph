@@ -1,4 +1,5 @@
 ﻿using Eryph.Rebus;
+using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Storage;
 using Rebus.Persistence.InMem;
@@ -14,6 +15,11 @@ namespace Eryph.Runtime.Zero
             container
                 .UseInMemoryBus()
                 .UseSqlLite();
+
+            container.Register<IRSAProvider, RSAProvider>();
+            container.Register<ICryptoIOServices, WindowsCryptoIOServices>();
+            container.Register<ICertificateGenerator, CertificateGenerator>();
+            container.Register<ICertificateStoreService, WindowsCertificateStoreService>();
         }
 
         public static Container UseInMemoryBus(this Container container)

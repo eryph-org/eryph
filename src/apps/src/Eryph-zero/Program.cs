@@ -127,6 +127,7 @@ internal static class Program
             var host =
 
                     builder
+
                     .ConfigureInternalHost(hb =>
                     {
                         hb.UseWindowsService(cfg=>cfg.ServiceName = "eryph-zero");
@@ -136,6 +137,15 @@ internal static class Program
                         webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); });
                     })
                     .UseSimpleInjector(container)
+                    .ConfigureAppConfiguration((_,config) =>
+                    {
+
+                        config.AddInMemoryCollection(new Dictionary<string, string>
+                        {
+                            { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
+                        });
+
+                    })
                     .HostModule<CommonApiModule>()
                     .HostModule<ComputeApiModule>()
                     .AddIdentityModule(container)
@@ -189,7 +199,7 @@ internal static class Program
 
                 config.AddInMemoryCollection(new Dictionary<string, string>
                     {
-                        { "basePath", "https://localhost:0" }
+                        { "basePath", "https://localhost:0" },
                     })
                     // ReSharper disable once StringLiteralTypo
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)

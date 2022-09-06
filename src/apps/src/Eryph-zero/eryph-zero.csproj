@@ -54,7 +54,6 @@
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.Controller\Eryph.Modules.Controller.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.Identity\Eryph.Modules.Identity.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.VmHostAgent\Eryph.Modules.VmHostAgent.csproj" />
-    <ProjectReference Include="..\..\..\core\src\Eryph.Security.Cryptography\Eryph.Security.Cryptography.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\PublishProfiles\" />
