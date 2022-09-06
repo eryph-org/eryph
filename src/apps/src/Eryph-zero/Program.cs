@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.CommandLine;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Management;
 using System.Net;
 using System.Net.Sockets;
+using System.ServiceProcess;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.App;
@@ -33,6 +36,21 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        var rootCommand = new RootCommand();
+
+        var runCommand = new Command("run");
+        runCommand.SetHandler(ctx => Run(args));
+        rootCommand.AddCommand(runCommand);
+
+        var installCommand = new Command("install");
+        installCommand.SetHandler(ctx => SelfInstall());
+        rootCommand.AddCommand(installCommand);
+
+        return await rootCommand.InvokeAsync(args);
+    }
+
+    private static async Task<int> Run(string[] args)
+    {
         var returnCode = 0;
 
         var logFilePath = Path.Combine(
@@ -41,9 +59,9 @@ internal static class Program
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.File(logFilePath, 
-                rollingInterval: RollingInterval.Day, 
-                retainedFileCountLimit: 10, 
+            .WriteTo.File(logFilePath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 10,
                 retainedFileTimeLimit: TimeSpan.FromDays(30))
             .CreateLogger();
 
@@ -80,9 +98,9 @@ internal static class Program
 
             ZeroConfig.EnsureConfiguration();
 
-            await SystemClientGenerator.EnsureSystemClient(startupConfig.CertificateGenerator, startupConfig.CryptoIO, 
+            await SystemClientGenerator.EnsureSystemClient(startupConfig.CertificateGenerator, startupConfig.CryptoIO,
                 new Uri(endpoints["identity"]));
-            
+
             using var _ = await startupConfig.SSLEndpointManager
                 .EnableSslEndpoint(new SSLOptions(
                     "eryph-zero CA",
@@ -126,25 +144,20 @@ internal static class Program
 
             var host =
 
-                    builder
+                builder
 
-                    .ConfigureInternalHost(hb =>
-                    {
-                        hb.UseWindowsService(cfg=>cfg.ServiceName = "eryph-zero");
-                    })
+                    .ConfigureInternalHost(hb => { hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero"); })
                     .UseAspNetCore((module, webHostBuilder) =>
                     {
                         webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); });
                     })
                     .UseSimpleInjector(container)
-                    .ConfigureAppConfiguration((_,config) =>
+                    .ConfigureAppConfiguration((_, config) =>
                     {
-
                         config.AddInMemoryCollection(new Dictionary<string, string>
                         {
                             { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
                         });
-
                     })
                     .HostModule<CommonApiModule>()
                     .HostModule<ComputeApiModule>()
@@ -178,7 +191,7 @@ internal static class Program
             return returnCode;
         }
 
-        
+
     }
 
     private static Uri ConfigureUrl(string basePath)
@@ -225,11 +238,12 @@ internal static class Program
             .Build();
 
         var res = selectResult(configHost.Services);
-        
+
         return res;
     }
-    
+
     private static readonly IPEndPoint DefaultLoopbackEndpoint = new(IPAddress.Loopback, port: 0);
+
     private static int GetAvailablePort()
     {
         using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -237,5 +251,190 @@ internal static class Program
         return (((IPEndPoint)socket.LocalEndPoint)!).Port;
     }
 
+    private static async Task<int> SelfInstall()
+    {
+        var targetDir =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "eryph", "zero");
+        var zeroExe = Path.Combine(targetDir, "bin", "eryph-zero.exe");
 
+        var backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "eryph", "zero.old");
+        
+        var serviceRemoved = false;
+        var serviceStopped = false;
+        var backupCreated = false;
+        try
+        {
+            var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            var parentDir = baseDir.Parent?.FullName ?? throw new IOException($"Invalid path {baseDir}");
+
+            if(Directory.Exists(backupDir))
+                Directory.Delete(backupDir, true);
+            
+            if (IsServiceRunning("eryph-zero"))
+            {
+                StopService("eryph-zero");
+                serviceStopped = true;
+            }
+
+            if (IsServiceInstalled("eryph-zero"))
+            {
+                await UnInstallService("eryph-zero");
+                serviceRemoved = true;
+            }
+
+            if (Directory.Exists(targetDir))
+            {
+                Directory.Move(targetDir, backupDir);
+                backupCreated = true;
+            }
+
+            CopyDirectory(parentDir, targetDir);
+
+#if DEBUG
+            var dirName = Directory.GetDirectories(targetDir).FirstOrDefault();
+            if (dirName != null && dirName != "bin")
+            {
+                Directory.Move(dirName, Path.Combine(targetDir, "bin"));
+            }
+#endif
+
+
+            if (!IsServiceInstalled("eryph-zero"))
+                await InstallService("eryph-zero", zeroExe, "run");
+
+            StartService("eryph-zero");
+            
+            if(Directory.Exists(backupDir))
+                Directory.Delete(backupDir, true);
+            
+            return 0;
+
+        }
+        catch (Exception ex)
+        {
+            await Console.Error.WriteAsync(ex.Message);
+
+            //undo operation
+            if (backupCreated) Directory.Move(backupDir, targetDir);
+            if (serviceRemoved) await InstallService("eryph-zero", zeroExe, "run");
+            if (serviceStopped) StartService("eryph-zero");
+
+            return -1;
+        }
+
+        
+        ServiceController GetServiceController(string serviceName)
+        {
+            return new ServiceController(serviceName);
+        }
+        
+        bool IsServiceInstalled(string serviceName)
+        {
+            try
+            {
+                using var controller = GetServiceController(serviceName);
+                // ReSharper disable once UnusedVariable
+                var dummy = controller.Status;
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        void StopService(string serviceName)
+        {
+            using var controller = GetServiceController(serviceName);
+            controller.Stop();
+            controller.WaitForStatus(ServiceControllerStatus.Stopped);
+        }
+
+        bool IsServiceRunning(string serviceName)
+        {
+            if (!IsServiceInstalled(serviceName))
+                return false;
+
+            using var controller = GetServiceController(serviceName);
+            return controller.Status == ServiceControllerStatus.Running;
+        }
+
+        void StartService(string serviceName)
+        {
+            using var controller = GetServiceController(serviceName);
+            controller.Start();
+            controller.WaitForStatus(ServiceControllerStatus.Running);
+        }
+        
+        async Task UnInstallService(string serviceName)
+        {
+            var cmd = $@"delete {serviceName}";
+            var process = Process.Start(new ProcessStartInfo("sc", cmd)
+            {
+                RedirectStandardError = true,
+                RedirectStandardOutput = true
+            });
+
+            if (process == null)
+                return;
+            
+            await process.WaitForExitAsync();
+            if (process.ExitCode != 0)
+            {
+                var output = await process.StandardError.ReadToEndAsync();
+                throw new IOException($"Failed to remove service {serviceName}. Message: {output}");
+            }
+        }
+
+        async Task InstallService(string serviceName, string path, string arguments)
+        {
+            var cmd = $@"create {serviceName} BinPath=""\""{path}\"" {arguments}"" Start=Auto";
+            var process = Process.Start(new ProcessStartInfo("sc", cmd)
+            {
+                RedirectStandardError = true
+            });
+
+            if (process == null)
+                return;
+            
+            await process.WaitForExitAsync();
+            if (process.ExitCode != 0)
+            {
+                var output = await process.StandardError.ReadToEndAsync();
+                throw new IOException($"Failed to install service {serviceName}. Message: {output}");
+
+            }
+        }
+
+        static void CopyDirectory(string sourceDir, string destinationDir)
+        {
+            // Get information about the source directory
+            var dir = new DirectoryInfo(sourceDir);
+
+            // Check if the source directory exists
+            if (!dir.Exists)
+                throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
+
+            // Cache directories before we start copying
+            var dirs = dir.GetDirectories();
+
+            // Create the destination directory
+            Directory.CreateDirectory(destinationDir);
+
+            // Get the files in the source directory and copy to the destination directory
+            foreach (var file in dir.GetFiles())
+            {
+                var targetFilePath = Path.Combine(destinationDir, file.Name);
+                file.CopyTo(targetFilePath, true);
+            }
+
+            foreach (var subDir in dirs)
+            {
+                var newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+                CopyDirectory(subDir.FullName, newDestinationDir);
+            }
+        }
+    }
 }
