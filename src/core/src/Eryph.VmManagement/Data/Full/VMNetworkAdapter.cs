@@ -81,6 +81,9 @@ namespace Eryph.VmManagement.Data.Full
         public string SwitchName { get; private set; }
 
         [PrivateIdentifier]
+        public string VMName { get; private set; }
+
+        [PrivateIdentifier]
         public Guid SwitchId { get; private set; }
 
         //public VMNetworkAdapterBandwidthSetting BandwidthSetting { get; private set; }

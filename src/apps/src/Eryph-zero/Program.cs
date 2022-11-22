@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Builder;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -8,27 +10,39 @@ using System.Management;
 using System.Net;
 using System.Net.Sockets;
 using System.ServiceProcess;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.App;
 using Eryph.ModuleCore;
 using Eryph.Modules.CommonApi;
 using Eryph.Modules.ComputeApi;
+using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
+using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
+using Eryph.VmManagement;
+using JetBrains.Annotations;
+using LanguageExt;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Configuration;
 using Microsoft.Extensions.Logging.EventLog;
 using Serilog;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
+using static Eryph.Modules.VmHostAgent.Networks.NetworkProviderManager<Eryph.Modules.VmHostAgent.Networks.ConsoleRuntime>;
+using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Modules.VmHostAgent.Networks.ConsoleRuntime>;
+using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Modules.VmHostAgent.Networks.ConsoleRuntime>;
+using static LanguageExt.Sys.Console<Eryph.Modules.VmHostAgent.Networks.ConsoleRuntime>;
 
 namespace Eryph.Runtime.Zero;
 
@@ -37,6 +51,22 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         var rootCommand = new RootCommand();
+        var debugWaitOption = new System.CommandLine.Option<bool>(name: "--debuggerWait",
+            () => false, "Stops and waits for a debugger to be attached");
+
+        rootCommand.AddGlobalOption(debugWaitOption);
+
+        var inFileOption = new System.CommandLine.Option<FileInfo?>(
+            name: "--inFile",
+            description: "Use input file instead of reading from stdin.");
+
+        var outFileOption = new System.CommandLine.Option<FileInfo?>(
+            name: "--outFile",
+            description: "Use output file instead of writing to stdout.");
+
+        var nonInteractiveOption = new System.CommandLine.Option<bool>(
+            name: "--non-interactive",
+            description: "No operator involved - commands will not query for confirmation.");
 
         var runCommand = new Command("run");
         runCommand.SetHandler(_ => Run(args));
@@ -50,15 +80,53 @@ internal static class Program
         rootCommand.AddCommand(networksCommand);
 
         var getNetworksCommand = new Command("get");
-        getNetworksCommand.SetHandler(_ => GetNetworks());
+        getNetworksCommand.AddOption(outFileOption);
+        getNetworksCommand.SetHandler(GetNetworks, outFileOption);
         networksCommand.AddCommand(getNetworksCommand);
 
-        return await rootCommand.InvokeAsync(args);
+        var importNetworksCommand = new Command("import");
+
+        var noCurrentConfigCheckOption = new System.CommandLine.Option<bool>(
+            name: "--no-current-config-check",
+            description: "Do not check if host state is valid for current config. ");
+
+        importNetworksCommand.AddOption(inFileOption);
+        importNetworksCommand.AddOption(nonInteractiveOption);
+        importNetworksCommand.AddOption(noCurrentConfigCheckOption);
+        importNetworksCommand.SetHandler(ImportNetworkConfig, inFileOption,
+            nonInteractiveOption, noCurrentConfigCheckOption);
+        networksCommand.AddCommand(importNetworksCommand);
+
+        var commandLineBuilder = new CommandLineBuilder(rootCommand);
+
+        commandLineBuilder.AddMiddleware(async (context, next) =>
+        {
+            var debugHaltOn = context.ParseResult.GetValueForOption(debugWaitOption);
+
+            if (debugHaltOn)
+            {
+                Console.WriteLine("Waiting for debugger to be attached");
+                while (!Debugger.IsAttached)
+                {
+                    await Task.Delay(500, context.GetCancellationToken());
+                }
+                Console.WriteLine("Debugger attached");
+
+            }
+
+            await next(context);
+        });
+
+        commandLineBuilder.UseDefaults();
+        var parser = commandLineBuilder.Build();
+        return await parser.InvokeAsync(args);
+
     }
 
     private static Task<int> Run(string[] args)
     {
-        return AdminGuard.CommandIsElevated(async () => {
+        return AdminGuard.CommandIsElevated(async () =>
+        {
 
             var returnCode = 0;
 
@@ -154,7 +222,12 @@ internal static class Program
                 var host =
                     builder!
 
-                        .ConfigureInternalHost(hb => { hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero"); })
+                        .ConfigureInternalHost(hb =>
+                        {
+                            hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero");
+                            hb.ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15));
+                        })
+
                         .UseAspNetCore((module, webHostBuilder) =>
                         {
                             webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); });
@@ -167,10 +240,11 @@ internal static class Program
                                 { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
                             });
                         })
-                        .HostModule<CommonApiModule>()
-                        .HostModule<ComputeApiModule>()
-                        .AddIdentityModule(container)
-                        .HostModule<VmHostAgentModule>()
+                        //.HostModule<CommonApiModule>()
+                        //.HostModule<ComputeApiModule>()
+                        //.AddIdentityModule(container)
+                        //.HostModule<VmHostAgentModule>()
+                        //.HostModule<NetworkModule>()
                         .AddControllerModule(container)
                         .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
                         .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
@@ -200,7 +274,7 @@ internal static class Program
             }
         });
 
-}
+    }
 
     private static Uri ConfigureUrl(string basePath)
     {
@@ -449,9 +523,91 @@ internal static class Program
         });
     }
 
-    private static Task<int> GetNetworks()
+    private static async Task<int> GetNetworks([CanBeNull] FileSystemInfo outFile)
     {
+        var manager = new NetworkProviderManager();
 
-        return 0;
+        return await manager.GetCurrentConfigurationYaml()
+                .MatchAsync(
+                    async config =>
+                    {
+                        if (outFile != null)
+                        {
+                            await File.WriteAllTextAsync(outFile.FullName, config);
+                        }
+                        else
+                        {
+                            Console.WriteLine(config);
+                        }
+
+                        return 0;
+                    }, l =>
+                    {
+                        Console.WriteLine(l.Message);
+                        return -1;
+                    }
+                    );
+    }
+
+    private static async Task<int> ImportNetworkConfig([CanBeNull] FileSystemInfo inFile, bool nonInteractive,
+        bool noCurrentConfigCheck)
+    {
+        var configString = "";
+        if (inFile != null)
+        {
+            configString = await File.ReadAllTextAsync(inFile.FullName);
+        }
+        else
+        {
+            try
+            {
+                if (!Console.KeyAvailable)
+                {
+                    await Console.Error.WriteLineAsync(
+                        "Error: Supply the new network config to stdin or use --inFile option to read from file");
+                    return -1;
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // ignored, expected when console is redirected
+            }
+
+            await using var reader = Console.OpenStandardInput();
+            using var textReader = new StreamReader(reader);
+            configString = await textReader.ReadToEndAsync();
+
+        }
+
+        using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
+
+        var res = (await (
+            from newConfig in importConfig(configString)
+            from currentConfig in getCurrentConfiguration()
+            from hostState in getHostStateWithProgress()
+            from syncResult in noCurrentConfigCheck
+                ? Prelude.SuccessAff((false, hostState))
+                : from currentConfigChanges in generateChanges(hostState, currentConfig)
+                  from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
+                  select r
+            from newConfigChanges in generateChanges(syncResult.HostState, newConfig)
+            from _ in applyChangesInConsole(currentConfig, newConfigChanges,
+                nonInteractive, syncResult.IsValid)
+
+            from save in saveConfigurationYaml(configString)
+            from m in writeLine("New Network configuration was imported.")
+            select Unit.Default)
+
+            .Run(new ConsoleRuntime(
+                    new NullLoggerFactory(),
+                    psEngine, new CancellationTokenSource())))
+            .Match(
+                r => 0, l =>
+            {
+                Console.Error.WriteLine("Error: " + l.Message);
+                return -1;
+            });
+
+        return res;
     }
 }

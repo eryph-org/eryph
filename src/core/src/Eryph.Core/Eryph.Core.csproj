@@ -11,9 +11,11 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="LanguageExt.Core" Version="4.0.3" />
+    <PackageReference Include="LanguageExt.Core" Version="4.4.0" />
     <PackageReference Include="IPNetwork2" Version="2.5.386" />
     <PackageReference Include="JetBrains.Annotations" Version="2021.3.0" />
+    <PackageReference Include="LanguageExt.Sys" Version="4.4.0" />
+    <PackageReference Include="LanguageExt.Transformers" Version="4.4.0" />
     <PackageReference Include="SimpleInjector" Version="5.3.2" />
     <PackageReference Include="System.Linq.Expressions" Version="4.3.0" />
   </ItemGroup>

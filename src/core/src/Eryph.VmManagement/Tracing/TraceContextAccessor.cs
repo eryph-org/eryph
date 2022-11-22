@@ -9,7 +9,7 @@ public class TraceContextAccessor
 
     public static TraceContext TraceContext
     {
-        get => TraceContextCurrent.Value.Context.GetValueOrDefault(TraceContext.Empty);
+        get => TraceContextCurrent.Value?.Context ?? TraceContext.Empty;
         set
         {
             var holder = TraceContextCurrent.Value;

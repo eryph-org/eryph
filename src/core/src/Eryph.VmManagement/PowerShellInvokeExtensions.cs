@@ -64,14 +64,16 @@ internal static class PowerShellInvokeExtensions
     private static Either<PowershellFailure, TResult> HandlePowershellErrors<TResult>(PowerShell ps,
         Either<PowershellFailure, TResult> result, ILogger log)
     {
-        if (result.IsRight) return result;
+        return result;
 
+        if (result.IsRight) return result;
+        
         var error = ps.Streams.Error.FirstOrDefault() 
                     ?? new ErrorRecord(
                         new Exception("unknown powershell error"), "", ErrorCategory.NotSpecified, null);
 
         var message =
-            $" Command: {error.InvocationInfo.MyCommand}, Error: {error}, Exception: {error.Exception}";
+            $" Command: {error.InvocationInfo?.MyCommand}, Error: {error}, Exception: {error.Exception}";
 
         log.LogError(error.Exception,message);
 

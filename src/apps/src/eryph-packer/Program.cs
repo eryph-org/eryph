@@ -111,8 +111,12 @@ infoCommand.SetHandler((string image, DirectoryInfo workdir) =>
 
 // pack command
 // ------------------------------
-packCommand.SetHandler(async (string image, DirectoryInfo vmExportDir, DirectoryInfo workdir, CancellationToken cancel) =>
+packCommand.SetHandler(async context =>
 {
+    var workdir = context.ParseResult.GetValueForOption(workDirOption);
+    var image = context.ParseResult.GetValueForArgument(imageArgument);
+    var vmExportDir = context.ParseResult.GetValueForArgument(vmExportArgument);
+    
     Directory.SetCurrentDirectory(workdir.FullName);
 
     var imageInfo = new ImageInfo(image);
@@ -124,19 +128,23 @@ packCommand.SetHandler(async (string image, DirectoryInfo vmExportDir, Directory
     var vmPacker = new VMExportPacker();
 
     var absoluteImagePath = Path.GetFullPath(imageInfo.GetImagePath());
-    var artifacts = await vmPacker.PackToArtifacts(vmExportDir, absoluteImagePath, cancel);
+    var artifacts = await vmPacker.PackToArtifacts(vmExportDir, absoluteImagePath, context.GetCancellationToken());
 
     imageInfo.SetArtifacts(artifacts.ToArray());
     Console.WriteLine(imageInfo.ToString(true));
 
 
-}, imageArgument, vmExportArgument, workDirOption);
+});
 
 
 // push command
 // ------------------------------
-pushCommand.SetHandler(async (string image, FileInfo b2Uploader, DirectoryInfo workdir, CancellationToken cancel, InvocationContext context) =>
+pushCommand.SetHandler(async context =>
 {
+    var workdir = context.ParseResult.GetValueForOption(workDirOption);
+    var image = context.ParseResult.GetValueForArgument(imageArgument);
+    var b2Uploader = context.ParseResult.GetValueForArgument(b2UploadArgument);
+
     try
     {
         Directory.SetCurrentDirectory(workdir.FullName);
@@ -177,7 +185,7 @@ pushCommand.SetHandler(async (string image, FileInfo b2Uploader, DirectoryInfo w
         Console.Error.WriteLine(ex.Message);
     }
 
-}, imageArgument, b2UploadArgument, workDirOption);
+});
 
 var commandLineBuilder = new CommandLineBuilder(rootCommand);
 commandLineBuilder.UseDefaults();

@@ -5,7 +5,16 @@
       "commandLineArgs": "run",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
-      }
+      },
+      "remoteDebugEnabled": true
+    },
+    "network update": {
+      "commandName": "Project",
+      "commandLineArgs": "networks import --inFile t:/network.yml",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": true
     }
   }
 }

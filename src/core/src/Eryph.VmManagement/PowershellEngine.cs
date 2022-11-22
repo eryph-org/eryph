@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+using System.Threading;
 using System.Threading.Tasks;
+using Eryph.VmManagement.Data.Full;
+using JetBrains.Annotations;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
+using Microsoft.PowerShell;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
@@ -11,34 +15,36 @@ namespace Eryph.VmManagement
 {
     public class PowershellEngine : IPowershellEngine, IDisposable
     {
-        private readonly RunspacePool _runspace;
+        private RunspacePool _runspace;
+        private SemaphoreSlim _semaphore = new(1);
         private ILogger _log;
 
         public PowershellEngine(ILogger log)
         {
             _log = log;
-            var iss = InitialSessionState.CreateDefault2();
-            _runspace = RunspaceFactory.CreateRunspacePool(iss);
-            _runspace.Open();
 
-            using (var ps = CreateShell())
-            {
-                ps.AddScript("import-module Hyper-V -RequiredVersion 2.0.0.0");
-                ps.Invoke();
-                ps.AddScript("disable-vmeventing -Force");
-                ps.Invoke();
-            }
         }
+
 
         public void Dispose()
         {
-            _runspace?.Dispose();
+            if ((_runspace?.IsDisposed).GetValueOrDefault(true))
+                return;
+
+            try
+            {
+                _runspace?.Dispose();
+            }
+            catch
+            {
+                // ignored
+            }
         }
 
         public Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder,
             Action<int> reportProgress = null)
         {
-            using var ps = CreateShell();
+            using var ps = CreateShell().GetAwaiter().GetResult();
             builder.Build(ps);
             InitializeProgressReporting(ps, reportProgress);
             return ps.GetObjects<T>(_log);
@@ -47,7 +53,7 @@ namespace Eryph.VmManagement
         public async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder,
             Func<int, Task> reportProgress = null)
         {
-            using var ps = CreateShell();
+            using var ps = await CreateShell();
 
             builder.Build(ps);
             InitializeAsyncProgressReporting(ps, reportProgress);
@@ -57,7 +63,7 @@ namespace Eryph.VmManagement
 
         public Either<PowershellFailure, Unit> Run(PsCommandBuilder builder, Action<int> reportProgress = null)
         {
-            using var ps = CreateShell();
+            using var ps = CreateShell().GetAwaiter().GetResult();
             builder.Build(ps);
                 
             InitializeProgressReporting(ps, reportProgress);
@@ -67,19 +73,47 @@ namespace Eryph.VmManagement
         public async Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder,
             Func<int, Task> reportProgress = null)
         {
-            using var ps = CreateShell();
+            using var ps = await CreateShell();
             builder.Build(ps);
 
             InitializeAsyncProgressReporting(ps, reportProgress);
             return await ps.RunAsync(_log).ConfigureAwait(false);
         }
 
-        public PowerShell CreateShell()
+        public async Task<PowerShell> CreateShell()
         {
-            var ps = PowerShell.Create();
-            ps.RunspacePool = _runspace;
+            await _semaphore.WaitAsync();
+            try
+            {
+                if (_runspace == null)
+                {
+                    
+                    var iss = InitialSessionState.CreateDefault();
+                    iss.ExecutionPolicy = ExecutionPolicy.RemoteSigned;
+                    iss.ApartmentState = ApartmentState.MTA;
+                    
+                    _runspace = RunspaceFactory.CreateRunspacePool(iss);
+                    await Task.Factory.FromAsync(_runspace.BeginOpen, _runspace.EndOpen, null);
 
-            return ps;
+                    using var tempShell = PowerShell.Create();
+                    tempShell.RunspacePool = _runspace;
+                    tempShell.AddScript("import-module Hyper-V -RequiredVersion 2.0.0.0");
+                    tempShell.Invoke();
+                    tempShell.AddScript("disable-vmeventing -Force");
+                    tempShell.Invoke();
+                
+                }
+
+                var ps = PowerShell.Create();
+                ps.RunspacePool = _runspace;
+
+                return ps;
+
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         private static void InitializeProgressReporting(PowerShell ps, Action<int> reportProgress)

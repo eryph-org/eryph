@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq;
 using System.Management.Automation;
+using System.Reflection;
 using AutoMapper;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
@@ -12,21 +14,32 @@ internal static class TypedPsObjectMapping
 {
     private static IMapper _mapper;
 
-    private static void EnsureMapper(PSObject psoObject)
+    private static void EnsureMapper()
     {
         if (_mapper != null)
             return;
 
-        var powershellAssembly = psoObject.BaseObject.GetType().Assembly;
+        Assembly powershellAssembly = null;
 
         Type GetPsType(string name)
         {
-            return powershellAssembly.GetType($"Microsoft.HyperV.PowerShell.{name}", true);
+            if (powershellAssembly != null)
+                return powershellAssembly.GetType($"Microsoft.HyperV.PowerShell.{name}", true);
+            foreach (var hvAssembly in AppDomain.CurrentDomain.GetAssemblies()
+                         .Where(a => a.FullName != null && a.FullName.Contains("HyperV")))
+            {
+                var tt = hvAssembly.GetType($"Microsoft.HyperV.PowerShell.{name}", false);
+                if (tt == null) continue;
+                powershellAssembly = hvAssembly;
+                return tt;
+            }
+
+            throw new InvalidOperationException("could not find Hyper-V powershell objects");
         }
 
         var config = new MapperConfiguration(cfg =>
         {
-            cfg.CreateProfile("Powershell", c =>
+            cfg.CreateProfile("HyperV", c =>
             {
                 c.CreateMap(GetPsType("VirtualMachine"), typeof(VirtualMachineInfo));
                 c.CreateMap(GetPsType("VirtualMachine"), typeof(PlannedVirtualMachineInfo));
@@ -52,7 +65,7 @@ internal static class TypedPsObjectMapping
 
     public static T Map<T>(PSObject psObject)
     {
-        EnsureMapper(psObject);
+        EnsureMapper();
 
         // ReSharper disable once RedundantCast
         return _mapper.Map<T>((object) psObject);

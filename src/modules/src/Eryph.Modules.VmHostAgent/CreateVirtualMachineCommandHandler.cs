@@ -86,13 +86,13 @@ namespace Eryph.Modules.VmHostAgent
             HostSettings hostSettings, VMStorageSettings storageSettings, IPowershellEngine engine,
             TypedPsObject<PlannedVirtualMachineInfo> template)
         {
-            return from storageIdentifier in storageSettings.StorageIdentifier.ToEitherAsync(new PowershellFailure
-                    {Message = "Unknown storage identifier, cannot create new virtual machine"}).ToEither()
+            return (from storageIdentifier in storageSettings.StorageIdentifier.ToEitherAsync(new PowershellFailure
+                    {Message = "Unknown storage identifier, cannot create new virtual machine"})
                 from vm in VirtualMachine.ImportTemplate(engine, hostSettings, config.Name,
                             storageIdentifier,
                             storageSettings.VMPath,
-                            template)
-                select vm;
+                            template).ToAsync()
+                select vm).ToEither();
         }
 
         private Task<Either<PowershellFailure, VirtualMachineMetadata>> CreateMetadata(

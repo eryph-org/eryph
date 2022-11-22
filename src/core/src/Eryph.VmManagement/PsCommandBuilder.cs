@@ -60,7 +60,7 @@ public class PsCommandBuilder
     public void Build(PowerShell ps)
     {
         TraceContext.Current.Write(PowershellCommandTraceData.FromObject(this));
-
+        
         foreach (var data in _dataChain)
             switch (data)
             {

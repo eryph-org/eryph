@@ -6,11 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.VmHostAgent.Images;
 
-internal interface IImageRequestBackgroundQueue : IBackgroundTaskQueue
-{
-
-}
-
 internal class ImageRequestWatcherService : BackgroundService
 {
     private readonly ILogger _log;

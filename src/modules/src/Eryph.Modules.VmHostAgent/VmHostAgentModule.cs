@@ -1,15 +1,20 @@
 ﻿using System;
 using System.Net.Http;
 using Dbosoft.Hosuto.HostedServices;
+using Dbosoft.OVN;
+using Dbosoft.OVN.Nodes;
 using Eryph.Core;
 using Eryph.Messages;
 using Eryph.ModuleCore;
 using Eryph.Modules.VmHostAgent.Images;
 using Eryph.Modules.VmHostAgent.Inventory;
+using Eryph.Modules.VmHostAgent.Networks;
+using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Rebus;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Extensions.Http;
@@ -17,7 +22,6 @@ using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
-using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -28,8 +32,13 @@ namespace Eryph.Modules.VmHostAgent
     {
         public string Name => "Eryph.VmHostAgent";
 
+        [UsedImplicitly]
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
+            services.Configure<HostOptions>(
+                opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+
+
             services.AddHttpClient("eryph-hub", cfg =>
             {
                 //cfg.BaseAddress = new Uri("https://eryph-images-staging.dbosoft.eu/file/eryph-images-staging/");
@@ -39,6 +48,12 @@ namespace Eryph.Modules.VmHostAgent
                 .AddPolicyHandler(GetRetryPolicy());
 
             services.AddHostedHandler<StartBusModuleHandler>();
+
+            services.AddSingleton<ISysEnvironment, SystemEnvironment>();
+            services.AddSingleton<IOVNSettings, LocalOVSWithOVNSettings>();
+            services.AddOvsNode<OVSDbNode>();
+            services.AddOvsNode<OVSSwitchNode>();
+            services.AddOvsNode<OVNChassisNode>();
         }
 
         [UsedImplicitly]
@@ -46,19 +61,29 @@ namespace Eryph.Modules.VmHostAgent
         {
             options.AddHostedService<WmiWatcherModuleService>();
             options.AddHostedService<ImageRequestWatcherService>();
+            options.AddHostedService<SyncService>();
+            options.AddHostedService<OVSChassisService>();
+
             options.AddLogging();
         }
 
+        [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
+            container.Register<ISyncClient, SyncClient>();
+            container.Register<IHostNetworkCommands<AgentRuntime>, HostNetworkCommands<AgentRuntime>>();
+            container.Register<IOVSControl, OVSControl>();
+
+
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
-
-
+            container.RegisterSingleton<IAgentControlService, AgentControlService>();
+            
             container.Register<StartBusModuleHandler>();
             container.RegisterSingleton<ITracer, Tracer>();
             container.RegisterSingleton<ITraceWriter, DiagnosticTraceWriter>();
 
             container.RegisterSingleton<IPowershellEngine, PowershellEngine>();
+
             container.RegisterSingleton<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>();
             container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
 
@@ -76,11 +101,11 @@ namespace Eryph.Modules.VmHostAgent
             container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingTaskMessageHandler<>));
             container.RegisterDecorator(typeof(IHandleMessages<>), typeof(TraceDecorator<>));
 
-
+            var localName = $"{QueueNames.VMHostAgent}.{Environment.MachineName}";
             container.ConfigureRebus(configurer => configurer
                 .Transport(t =>
                     serviceProvider.GetService<IRebusTransportConfigurer>()
-                        .Configure(t, $"{QueueNames.VMHostAgent}.{Environment.MachineName}"))
+                        .Configure(t, localName))
                 .Routing(x => x.TypeBased()
                     .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers)
                 )

@@ -2,9 +2,8 @@
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading.Tasks;
-using LanguageExt;
 
-namespace Eryph.App
+namespace Eryph.ModuleCore
 {
     public static class AdminGuard
     {

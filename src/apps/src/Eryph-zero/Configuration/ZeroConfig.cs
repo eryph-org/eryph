@@ -62,7 +62,7 @@ namespace Eryph.Runtime.Zero.Configuration
 
         }
 
-        private static DirectorySecurity GetPrivateDirectorySecurity()
+        public static DirectorySecurity GetPrivateDirectorySecurity()
         {
             var directorySecurity = new DirectorySecurity();
             IdentityReference adminId = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
