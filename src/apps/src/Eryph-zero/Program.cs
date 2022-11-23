@@ -240,11 +240,11 @@ internal static class Program
                                 { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
                             });
                         })
-                        //.HostModule<CommonApiModule>()
-                        //.HostModule<ComputeApiModule>()
-                        //.AddIdentityModule(container)
-                        //.HostModule<VmHostAgentModule>()
-                        //.HostModule<NetworkModule>()
+                        .HostModule<CommonApiModule>()
+                        .HostModule<ComputeApiModule>()
+                        .AddIdentityModule(container)
+                        .HostModule<VmHostAgentModule>()
+                        .HostModule<NetworkModule>()
                         .AddControllerModule(container)
                         .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
                         .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
