@@ -4,13 +4,13 @@ using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.ComputeApi.Model.V1
 {
-    public class Machine
+    public class Catlet
     {
         [Key] public string Id { get; set; }
 
         public string Name { get; set; }
 
-        public MachineStatus Status { get; set; }
+        public CatletStatus Status { get; set; }
 
         public IEnumerable<MachineNetwork> Networks { get; set; }
     }

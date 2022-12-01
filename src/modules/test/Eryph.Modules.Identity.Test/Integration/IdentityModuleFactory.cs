@@ -32,9 +32,9 @@ namespace Eryph.Modules.Identity.Test.Integration
             _container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
 
-            _container.RegisterInstance(new InMemoryDatabaseRoot());
-            _container
-                .Register<IDbContextConfigurer<ConfigurationDbContext>, InMemoryConfigurationStoreContextConfigurer>();
+            //_container.RegisterInstance(new InMemoryDatabaseRoot());
+            //_container
+            //    .Register<IDbContextConfigurer<ConfigurationDbContext>, InMemoryConfigurationStoreContextConfigurer>();
 
             return moduleHostBuilder;
         }

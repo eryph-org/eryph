@@ -3,8 +3,9 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Threading;
+using Eryph.Core.Network;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
-using Eryph.Modules.VmHostAgent.Networks.Settings;
+using Eryph.VmManagement.Networking.Settings;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
@@ -174,7 +175,6 @@ public static class ProviderNetworkUpdate<RT>
         // tools
         from ovsTool in default(RT).OVS
         from hostCommands in default(RT).HostNetworkCommands
-
         // collect network state of host
         from p1 in progressCallback()
         from vmSwitchExtensions in hostCommands.GetSwitchExtensions()
@@ -189,9 +189,11 @@ public static class ProviderNetworkUpdate<RT>
         from p6 in progressCallback()
         from netNat in hostCommands.GetNetNat()
         from p7 in progressCallback()
-        from ovsBridges in ovsTool.GetBridges().ToAff(l => l)
+        let cancelSource = new CancellationTokenSource(5000)
+        from ovsBridges in ovsTool.GetBridges(cancelSource.Token).ToAff(l => l)
         from p8 in progressCallback()
-        from ovsBridgePorts in ovsTool.GetPorts().ToAff(l => l)
+        let cancelSource2 = new CancellationTokenSource(5000)
+        from ovsBridgePorts in ovsTool.GetPorts(cancelSource2.Token).ToAff(l => l)
         let hostState = new HostState(vmSwitchExtensions, vmSwitches, netAdapters, allAdapterNames, overlaySwitch, netNat, ovsBridges,
             ovsBridgePorts)
         from ls in Logger<RT>.logTrace<HostState>("fetched host state: {hostState}", hostState)

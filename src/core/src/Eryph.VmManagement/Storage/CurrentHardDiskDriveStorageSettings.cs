@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Machine;
+using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;
+using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 
 namespace Eryph.VmManagement.Storage
@@ -14,19 +16,21 @@ namespace Eryph.VmManagement.Storage
         public string AttachedVMId { get; set; }
 
 
-        public static Task<Either<PowershellFailure, Seq<CurrentHardDiskDriveStorageSettings>>> Detect(
+        public static EitherAsync<Error, Seq<CurrentHardDiskDriveStorageSettings>> Detect(
             IPowershellEngine engine, HostSettings hostSettings, IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> hdInfos)
         {
             var r = hdInfos
-                .ToSeq().MapToEitherAsync(hdInfo => Detect(engine, hostSettings, 
-                    hdInfo.Cast<HardDiskDriveInfo>()))
-                .MapAsync(x => x.Where(o => o.IsSome)
+                .ToSeq().MapToEitherAsync(hdInfo => 
+                    Detect(engine, hostSettings, 
+                    hdInfo.Cast<HardDiskDriveInfo>()).ToEither())
+                .ToAsync()
+                .Map(x => x.Where(o => o.IsSome)
                     .Map(o => o.ValueUnsafe()));
 
             return r;
         }
 
-        public static Task<Either<PowershellFailure, Option<CurrentHardDiskDriveStorageSettings>>> Detect(
+        public static EitherAsync<Error, Option<CurrentHardDiskDriveStorageSettings>> Detect(
             IPowershellEngine engine, HostSettings hostSettings, HardDiskDriveInfo hdInfo)
         {
             return Prelude.Cond<HardDiskDriveInfo>(h => !string.IsNullOrWhiteSpace(h.Path))(hdInfo).Map(hd =>
@@ -47,7 +51,7 @@ namespace Eryph.VmManagement.Storage
                         ControllerNumber = hdInfo.ControllerNumber,
                         ControllerLocation = hdInfo.ControllerLocation,
                         DiskSettings = diskSettings
-                    }).Traverse(l => l).ToEither();
+                    }).Traverse(l => l).ToError();
         }
     }
 }

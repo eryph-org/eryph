@@ -90,13 +90,13 @@ namespace Eryph.Modules.Controller.Operations
                     {
                         case IVMCommand vmCommand:
                         {
-                            var machine = await _dbContext.VirtualMachines.FindAsync(vmCommand.MachineId)
+                            var machine = await _dbContext.VirtualCatlets.FindAsync(vmCommand.MachineId)
                                 .ConfigureAwait(false);
 
                             if (machine == null)
                             {
                                 await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
-                                    new ErrorData {ErrorMessage = $"VirtualMachine {vmCommand.MachineId} not found"}));
+                                    new ErrorData {ErrorMessage = $"Virtual catlet {vmCommand.MachineId} not found"}));
 
                                 return;
                             }

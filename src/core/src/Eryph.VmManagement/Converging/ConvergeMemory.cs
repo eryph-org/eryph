@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement.Converging;
 
@@ -10,7 +11,7 @@ public class ConvergeMemory : ConvergeTaskBase
     {
     }
 
-    public override async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo)
     {
         var dynamicMemoryOn = Context.Config.VM.Memory.Maximum.HasValue || Context.Config.VM.Memory.Minimum.HasValue;
@@ -76,6 +77,6 @@ public class ConvergeMemory : ConvergeTaskBase
         }
 
 
-        return await vmInfo.RecreateOrReload(Context.Engine).ConfigureAwait(false);
+        return await vmInfo.RecreateOrReload(Context.Engine).ToEither().ConfigureAwait(false);
     }
 }

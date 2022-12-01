@@ -8,7 +8,7 @@ using LanguageExt.Common;
 
 namespace Eryph.Modules.VmHostAgent;
 
-internal class SyncClient : ISyncClient
+public class SyncClient : ISyncClient
 {
     public Aff<Unit> SendSyncCommand(string command, CancellationToken cancellationToken)
     {

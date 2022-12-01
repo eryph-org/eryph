@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using LanguageExt;
 using static LanguageExt.Prelude;
+using Array = System.Array;
 
 namespace Eryph.VmManagement
 {
@@ -18,7 +19,7 @@ namespace Eryph.VmManagement
             Func<int, TEntry, Task<Either<TL, TR>>> mapperFunc)
         {
             return sequence.Map(mapperFunc).ToImmutableArray()
-                .Traverse(l => l)
+                .TraverseSerial(l => l)
                 .Bind(e =>
                 {
                     var enumerable = e as Either<TL, TR>[] ?? e.ToArray();
@@ -33,7 +34,7 @@ namespace Eryph.VmManagement
             Func<TEntry, Task<Either<TL, TR>>> mapperFunc)
         {
             return sequence.Map(mapperFunc).ToImmutableArray()
-                .Traverse(l => l)
+                .TraverseSerial(l => l)
                 .Bind(e =>
                 {
                     var enumerable = e as Either<TL, TR>[] ?? e.ToArray();
@@ -43,5 +44,6 @@ namespace Eryph.VmManagement
                             () => RightAsync<TL, Seq<TR>>(enumerable.Rights().ToSeq()).ToEither());
                 });
         }
+
     }
 }

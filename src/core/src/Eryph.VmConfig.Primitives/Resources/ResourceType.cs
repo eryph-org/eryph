@@ -8,6 +8,6 @@ namespace Eryph.Resources
     {
         Machine,
         VirtualDisk,
-        Network
+        VirtualNetwork
     }
 }

@@ -7,16 +7,16 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.ComputeApi.Model
 {
-    public class MachineSpecBuilder : ISingleResourceSpecBuilder<Machine>, IListResourceSpecBuilder<Machine>
+    public class MachineSpecBuilder : ISingleResourceSpecBuilder<Catlet>, IListResourceSpecBuilder<Catlet>
     {
-        public ISingleResultSpecification<Machine> GetSingleResourceSpec(SingleResourceRequest request)
+        public ISingleResultSpecification<Catlet> GetSingleResourceSpec(SingleResourceRequest request)
         {
-            return new ResourceSpecs<Machine>.GetById(Guid.Parse(request.Id));
+            return new ResourceSpecs<Catlet>.GetById(Guid.Parse(request.Id));
         }
 
-        public ISpecification<Machine> GetResourceSpec(ListRequest request)
+        public ISpecification<Catlet> GetResourceSpec(ListRequest request)
         {
-            return new ResourceSpecs<Machine>.GetAll();
+            return new ResourceSpecs<Catlet>.GetAll();
 
         }
     }

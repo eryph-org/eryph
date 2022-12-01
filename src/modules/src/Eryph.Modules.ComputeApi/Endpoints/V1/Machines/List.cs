@@ -15,15 +15,15 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
 {
-    public class List : ListResourceEndpoint<ListRequest,Machine, StateDb.Model.Machine>
+    public class List : ListResourceEndpoint<ListRequest,Catlet, StateDb.Model.Catlet>
     {
-        public List([NotNull] IListRequestHandler<StateDb.Model.Machine> listRequestHandler, [NotNull] IListResourceSpecBuilder<StateDb.Model.Machine> specBuilder) : base(listRequestHandler, specBuilder)
+        public List([NotNull] IListRequestHandler<StateDb.Model.Catlet> listRequestHandler, [NotNull] IListResourceSpecBuilder<StateDb.Model.Catlet> specBuilder) : base(listRequestHandler, specBuilder)
         {
         }
 
-        protected override ISpecification<StateDb.Model.Machine> CreateSpecification(ListRequest request)
+        protected override ISpecification<StateDb.Model.Catlet> CreateSpecification(ListRequest request)
         {
-            return new ResourceSpecs<StateDb.Model.Machine>.GetAll();
+            return new ResourceSpecs<StateDb.Model.Catlet>.GetAll();
         }
 
         [HttpGet("machines")]
@@ -33,8 +33,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
             OperationId = "Machines_List",
             Tags = new[] { "Machines" })
         ]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Machine>))]
-        public override Task<ActionResult<ListResponse<Machine>>> HandleAsync([FromRoute] ListRequest request, CancellationToken cancellationToken = default)
+        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Catlet>))]
+        public override Task<ActionResult<ListResponse<Catlet>>> HandleAsync([FromRoute] ListRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }

@@ -2,10 +2,10 @@
 
 namespace Eryph.Modules.ComputeApi.Model.V1
 {
-    public class VirtualMachine : Machine
+    public class VirtualCatlet : Catlet
     {
-        public IEnumerable<VirtualMachineNetworkAdapter> NetworkAdapters { get; set; }
+        public IEnumerable<VirtualCatletNetworkAdapter> NetworkAdapters { get; set; }
 
-        public IEnumerable<VirtualMachineDrive> Drives { get; set; }
+        public IEnumerable<VirtualCatletDrive> Drives { get; set; }
     }
 }

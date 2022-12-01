@@ -5,13 +5,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3">
+    <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Rebus" Version="6.6.2" />
-    <PackageReference Include="Rebus.Microsoft.Extensions.Logging" Version="2.0.0" />
-    <PackageReference Include="Rebus.RabbitMq" Version="7.3.4" />
+    <PackageReference Include="Rebus" Version="6.6.5" />
+    <PackageReference Include="Rebus.Microsoft.Extensions.Logging" Version="3.0.0" />
+    <PackageReference Include="Rebus.RabbitMq" Version="7.4.3" />
     <PackageReference Include="Rebus.UnitOfWork" Version="6.0.0" />
   </ItemGroup>
 

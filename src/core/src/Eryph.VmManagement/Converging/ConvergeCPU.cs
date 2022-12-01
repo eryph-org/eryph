@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement.Converging
 {
@@ -10,7 +11,7 @@ namespace Eryph.VmManagement.Converging
         {
         }
 
-        public override async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
+        public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var configCount = Context.Config.VM.Cpu.Count.GetValueOrDefault(1);
@@ -23,7 +24,7 @@ namespace Eryph.VmManagement.Converging
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("Count", configCount)).ConfigureAwait(false);
 
-            return await vmInfo.RecreateOrReload(Context.Engine).ConfigureAwait(false);
+            return await vmInfo.RecreateOrReload(Context.Engine).ToEither().ConfigureAwait(false);
         }
     }
 }

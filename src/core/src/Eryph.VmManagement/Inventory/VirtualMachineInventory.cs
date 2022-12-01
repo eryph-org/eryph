@@ -9,6 +9,7 @@ using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement.Inventory
 {
@@ -25,15 +26,15 @@ namespace Eryph.VmManagement.Inventory
             _hostInfoProvider = hostInfoProvider;
         }
 
-        public Task<Either<PowershellFailure,VirtualMachineData>> InventorizeVM(
+        public Task<Either<Error,VirtualMachineData>> InventorizeVM(
             TypedPsObject<VirtualMachineInfo> vmInfo)
 
         {
-           return (from hostInfo in _hostInfoProvider.GetHostInfoAsync().ToAsync()
-               from vm in Prelude.RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo)
+           return (from hostInfo in _hostInfoProvider.GetHostInfoAsync()
+               from vm in Prelude.RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo)
                     
                 from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _hostSettings,
-                    vm.GetList(x=>x.HardDrives)).ToAsync()
+                    vm.GetList(x=>x.HardDrives))
                 select new VirtualMachineData
                 {
                     VMId = vm.Value.Id,
@@ -54,7 +55,7 @@ namespace Eryph.VmManagement.Inventory
                         };
                         return res;
                     }).ToArray(),
-                    Networks = VirtualNetworkQuery.GetNetworksByAdapters(vm.Value.Id, hostInfo, vm.GetList(x=>x.NetworkAdapters))
+                    Networks = VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vm.GetList(x=>x.NetworkAdapters))
                 }).ToEither();
         }
 

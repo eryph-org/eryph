@@ -2,8 +2,10 @@
 using System.IO;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Machine;
+using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
+using LanguageExt.Common;
 using LanguageExt.SomeHelp;
 
 namespace Eryph.VmManagement.Storage
@@ -16,39 +18,41 @@ namespace Eryph.VmManagement.Storage
         public string VMPath { get; set; }
         public bool Frozen { get; set; }
 
-        public static Task<Either<PowershellFailure, Option<VMStorageSettings>>> FromVM(HostSettings hostSettings,
+        public static EitherAsync<Error, Option<VMStorageSettings>> FromVM(HostSettings hostSettings,
             TypedPsObject<VirtualMachineInfo> vm)
         {
+
             var (names, storageIdentifier) = StorageNames.FromPath(vm.Value.Path, hostSettings.DefaultDataPath);
 
-            var settings =
-                from resolvedPath in names.ResolveStorageBasePath(hostSettings.DefaultDataPath)
-                from storageSettings in ComparePath(resolvedPath, vm.Value.Path,
-                    storageIdentifier)
-                select storageSettings;
+            async Task<VMStorageSettings> FromVMAsync()
+            {
+                return await
+                    (from resolvedPath in names.ResolveStorageBasePath(hostSettings.DefaultDataPath)
+                        from storageSettings in ComparePath(resolvedPath, vm.Value.Path,
+                            storageIdentifier)
 
-            return settings.Bind(e => e.Match(
-                matchedPath => Prelude.RightAsync<PowershellFailure, VMStorageSettings>(
-                    new VMStorageSettings
-                    {
-                        StorageNames = names,
-                        StorageIdentifier = storageIdentifier,
-                        VMPath = matchedPath
-                    }).ToEither(),
-                l => Prelude.RightAsync<PowershellFailure, VMStorageSettings>(
-                    new VMStorageSettings
+                        select new VMStorageSettings
+                        {
+                            StorageNames = names,
+                            StorageIdentifier = storageIdentifier,
+                            VMPath = vm.Value.Path
+                        }).IfLeft(_ => 
+                        new VMStorageSettings
                     {
                         StorageNames = names,
                         StorageIdentifier = storageIdentifier,
                         VMPath = vm.Value.Path,
                         Frozen = true
-                    }
-                ).ToEither()
-            )).MapAsync(r => r.ToSome().ToOption());
+                    });
+
+            }
+
+            return Prelude.RightAsync<Error, VMStorageSettings>(FromVMAsync())
+                .Map(r => r.ToSome().ToOption());
         }
 
 
-        public static Task<Either<PowershellFailure, VMStorageSettings>> FromMachineConfig(MachineConfig config,
+        public static EitherAsync<Error, VMStorageSettings> FromMachineConfig(MachineConfig config,
             HostSettings hostSettings)
         {
             var projectName = Prelude.Some("default");
@@ -66,7 +70,8 @@ namespace Eryph.VmManagement.Storage
             if (!string.IsNullOrWhiteSpace(config.VM.Slug))
                 storageIdentifier = Prelude.Some(config.VM.Slug);
 
-            return names.ResolveStorageBasePath(hostSettings.DefaultDataPath).MapAsync(path => new VMStorageSettings
+            return names.ResolveStorageBasePath(hostSettings.DefaultDataPath).Map(
+                path => new VMStorageSettings
             {
                 StorageNames = names,
                 StorageIdentifier = storageIdentifier,
@@ -75,34 +80,35 @@ namespace Eryph.VmManagement.Storage
         }
 
 
-        public static Task<Either<PowershellFailure, VMStorageSettings>> Plan(
+        public static EitherAsync<Error, VMStorageSettings> Plan(
             HostSettings hostSettings,
             string newStorageId,
             MachineConfig config,
             Option<VMStorageSettings> currentStorageSettings)
         {
-            return FromMachineConfig(config, hostSettings).BindAsync(newSettings =>
-                currentStorageSettings.MatchAsync(
-                    None: () => EnsureStorageId(newStorageId, newSettings),
-                    Some: currentSettings => EnsureStorageId(newStorageId, newSettings, currentSettings)));
+            return FromMachineConfig(config, hostSettings).Bind(newSettings =>
+                currentStorageSettings.Match(
+                    None: () => EnsureStorageId(newStorageId, newSettings).ToError().ToAsync(),
+                    Some: currentSettings => EnsureStorageId(newStorageId, newSettings, currentSettings)
+                        .ToError().ToAsync()));
         }
 
-        private static Task<Either<PowershellFailure, string>> ComparePath(string firstPath, string secondPath,
+        private static EitherAsync<Error, string> ComparePath(string firstPath, string secondPath,
             Option<string> storageIdentifier)
         {
-            return storageIdentifier.ToEither(new PowershellFailure {Message = "unknown VM storage identifier"})
-                .BindAsync(id =>
+            return storageIdentifier.ToEither(Error.New("unknown VM storage identifier"))
+                .ToAsync()
+                .Bind(id =>
                 {
                     var fullPath = Path.Combine(firstPath, id);
 
                     if (!secondPath.Equals(fullPath, StringComparison.InvariantCultureIgnoreCase))
                         return Prelude
-                            .LeftAsync<PowershellFailure, string>(new PowershellFailure
-                                {Message = "Path calculation failure"})
-                            .ToEither();
+                            .LeftAsync<Error, string>(Error.New(
+                                "Path calculation failure"));
+
                     return Prelude
-                        .RightAsync<PowershellFailure, string>(firstPath)
-                        .ToEither();
+                        .RightAsync<Error, string>(firstPath);
                 });
         }
 

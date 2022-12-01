@@ -6,15 +6,22 @@ using System.Linq.Expressions;
 using System.Management.Automation;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.VmManagement.Tracing;
+using JetBrains.Annotations;
 using LanguageExt;
 
 namespace Eryph.VmManagement
 {
-    public class TypedPsObject<T> : Record<TypedPsObject<T>>, ITypedPsObject
+
+    public sealed record TypedPsObject<T> : ITypedPsObject
     {
-        public TypedPsObject(PSObject psObject)
+        private readonly IPsObjectRegistry _registry;
+
+        public TypedPsObject(PSObject psObject, IPsObjectRegistry registry )
         {
-            PsObject = psObject;
+            _registry = registry;
+            PsObject = psObject; 
+            registry.AddPsObject(PsObject);
             Value = TypedPsObjectMapping.Map<T>(psObject);
             TraceContext.Current.Write(TypedPsObjectTraceData.FromObject(this));
         }
@@ -22,7 +29,8 @@ namespace Eryph.VmManagement
         public T Value { get; }
 
         [PrivateIdentifier]
-        public PSObject PsObject { get; }
+        [CanBeNull]
+        public PSObject PsObject { get;  }
 
         object ITypedPsObject.Value => Value;
 
@@ -33,12 +41,12 @@ namespace Eryph.VmManagement
 
         public TypedPsObject<T> Recreate()
         {
-            return new TypedPsObject<T>(PsObject);
+            return new TypedPsObject<T>(PsObject, _registry);
         }
 
         public TypedPsObject<TNew> Cast<TNew>()
         {
-            return new TypedPsObject<TNew>(PsObject);
+            return new TypedPsObject<TNew>(PsObject, _registry);
         }
 
         public TR Map<TR>(Func<T, TR> mapperFunc)
@@ -53,7 +61,7 @@ namespace Eryph.VmManagement
 
         public Either<PowershellFailure, TypedPsObject<TNew>> CastSafe<TNew>()
         {
-            return Prelude.Try(() => new TypedPsObject<TNew>(PsObject))
+            return Prelude.Try(() => new TypedPsObject<TNew>(PsObject, _registry))
                 .ToEither(l => new PowershellFailure { Message = l.Message });
 
         }
@@ -68,9 +76,9 @@ namespace Eryph.VmManagement
             var paramType = property.Parameters[0].Type; // first parameter of expression
 
             var propertyMemberInfo = paramType.GetMember((property.Body as MemberExpression)?.Member.Name)[0];
-            var propertyValue = PsObject.Properties[propertyMemberInfo.Name].Value;
+            var propertyValue = PsObject?.Properties[propertyMemberInfo.Name].Value;
 
-            return new TypedPsObject<TProp>(new PSObject(propertyValue));
+            return new TypedPsObject<TProp>(new PSObject(propertyValue), _registry);
         }
 
         public Seq<TypedPsObject<TSub>> GetList<TSub>(
@@ -87,8 +95,8 @@ namespace Eryph.VmManagement
             var property = paramType.GetMember((listProperty.Body as MemberExpression)?.Member.Name)[0];
 
             return
-                Prelude.TryOption((PsObject.Properties[property.Name].Value as IEnumerable)?.Cast<object>()
-                        .Map(x => new TypedPsObject<TSub>(new PSObject(x))))
+                Prelude.TryOption((PsObject?.Properties[property.Name].Value as IEnumerable)?.Cast<object>()
+                        .Map(x => new TypedPsObject<TSub>(new PSObject(x), _registry)))
                     .Match(
                         Fail: () => new TypedPsObject<TSub>[] { },
                         Some: x => x
@@ -96,5 +104,26 @@ namespace Eryph.VmManagement
         }
 
 
+        public T ToValue()
+        {
+            return Value;
+        }
+
+
+        private void ReleaseUnmanagedResources()
+        {
+            PsObject.DisposeObject();
+        }
+
+        public void Dispose()
+        {
+            ReleaseUnmanagedResources();
+            GC.SuppressFinalize(this);
+        }
+
+        ~TypedPsObject()
+        {
+            ReleaseUnmanagedResources();
+        }
     }
 }

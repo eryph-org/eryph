@@ -10,6 +10,6 @@ public class UpdateVirtualMachineConfigDriveCommand : IVMCommand
     public Guid VMId { get; set; }
 
     public VirtualMachineMetadata MachineMetadata { get; set; }
-
+    public MachineNetworkSettings[] MachineNetworkSettings { get; set; }
 
 }

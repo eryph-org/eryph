@@ -1,4 +1,7 @@
-﻿using Eryph.Rebus;
+﻿using Dbosoft.OVN;
+using Eryph.Core;
+using Eryph.Rebus;
+using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -8,6 +11,11 @@ using SimpleInjector;
 
 namespace Eryph.Runtime.Zero
 {
+    public static class Info
+    {
+        public static InMemNetwork Network = new InMemNetwork();
+    }
+
     internal static class ZeroContainerExtensions
     {
         public static void Bootstrap(this Container container)
@@ -20,11 +28,16 @@ namespace Eryph.Runtime.Zero
             container.Register<ICryptoIOServices, WindowsCryptoIOServices>();
             container.Register<ICertificateGenerator, CertificateGenerator>();
             container.Register<ICertificateStoreService, WindowsCertificateStoreService>();
+
+            container.Register<IOVNSettings, LocalOVSWithOVNSettings>();
+            container.Register<ISysEnvironment, SystemEnvironment>();
+            container.Register<INetworkProviderManager, NetworkProviderManager>();
+
         }
 
         public static Container UseInMemoryBus(this Container container)
         {
-            container.RegisterInstance(new InMemNetwork(true));
+            container.RegisterInstance(Info.Network);
             container.RegisterInstance(new InMemorySubscriberStore());
             container.Register<IRebusTransportConfigurer, InMemoryTransportConfigurer>();
             container.Register<IRebusSagasConfigurer, InMemorySagasConfigurer>();

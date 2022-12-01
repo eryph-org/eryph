@@ -16,14 +16,14 @@ using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
 {
-    public class Update : ResourceOperationEndpoint<UpdateMachineRequest, StateDb.Model.Machine>
+    public class Update : ResourceOperationEndpoint<UpdateMachineRequest, StateDb.Model.Catlet>
     {
 
-        public Update([NotNull] IResourceOperationHandler<StateDb.Model.Machine> operationHandler) : base(operationHandler)
+        public Update([NotNull] IResourceOperationHandler<StateDb.Model.Catlet> operationHandler) : base(operationHandler)
         {
         }
 
-        protected override object CreateOperationMessage(StateDb.Model.Machine model, UpdateMachineRequest request )
+        protected override object CreateOperationMessage(StateDb.Model.Catlet model, UpdateMachineRequest request )
         {
             var machineConfig = request.Configuration.GetValueOrDefault().Deserialize<MachineConfig>();
 

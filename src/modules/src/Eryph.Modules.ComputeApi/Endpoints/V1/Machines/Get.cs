@@ -11,10 +11,10 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
 {
-    public class Get : GetResourceEndpoint<Machine, StateDb.Model.Machine>
+    public class Get : GetResourceEndpoint<Catlet, StateDb.Model.Catlet>
     {
 
-        public Get([NotNull] IGetRequestHandler<StateDb.Model.Machine> requestHandler, [NotNull] ISingleResourceSpecBuilder<StateDb.Model.Machine> specBuilder) : base(requestHandler, specBuilder)
+        public Get([NotNull] IGetRequestHandler<StateDb.Model.Catlet> requestHandler, [NotNull] ISingleResourceSpecBuilder<StateDb.Model.Catlet> specBuilder) : base(requestHandler, specBuilder)
         {
         }
 
@@ -25,9 +25,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
             OperationId = "Machines_Get",
             Tags = new[] { "Machines" })
         ]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(Machine))]
+        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(Catlet))]
 
-        public override Task<ActionResult<Machine>> HandleAsync([FromRoute] SingleResourceRequest request, CancellationToken cancellationToken = default)
+        public override Task<ActionResult<Catlet>> HandleAsync([FromRoute] SingleResourceRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }

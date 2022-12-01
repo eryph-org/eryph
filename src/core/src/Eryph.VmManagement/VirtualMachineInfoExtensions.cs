@@ -1,7 +1,9 @@
 ﻿using System.Threading.Tasks;
+using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement
 {
@@ -27,24 +29,27 @@ namespace Eryph.VmManagement
                 .MapAsync(u => vmInfo);
         }
 
-        public static Task<Either<PowershellFailure, TypedPsObject<T>>> RecreateOrReload<T>(
+        public static EitherAsync<Error, TypedPsObject<T>> RecreateOrReload<T>(
             this TypedPsObject<T> vmInfo, IPowershellEngine engine)
             where T : IVirtualMachineCoreInfo
         {
             return Prelude.Try(vmInfo.Recreate().Apply(
-                    r => Prelude.RightAsync<PowershellFailure, TypedPsObject<T>>(r).ToEither()))
+                    r => Prelude.RightAsync<Error, TypedPsObject<T>>(r).ToEither()))
                 .MatchAsync(
-                    Fail: f => vmInfo.Reload(engine),
-                    Succ: s => s);
+                    Fail: f => vmInfo.Reload(engine).ToEither(),
+                    Succ: s => s).ToAsync();
         }
 
-        public static Task<Either<PowershellFailure, TypedPsObject<T>>> Reload<T>(this TypedPsObject<T> vmInfo,
+        public static EitherAsync<Error, TypedPsObject<T>> Reload<T>(this TypedPsObject<T> vmInfo,
             IPowershellEngine engine)
             where T : IVirtualMachineCoreInfo
         {
             return engine.GetObjectsAsync<T>(
                     new PsCommandBuilder().AddCommand("Get-VM").AddParameter("Id", vmInfo.Value.Id))
-                .BindAsync(r => r.HeadOrNone().ToEither(new PowershellFailure {Message = "Failed to refresh VM data"}));
+                .BindAsync(r => r.HeadOrNone()
+                    .ToEither(new PowershellFailure {Message = "Failed to refresh VM data"}))
+                .ToAsync().ToError()                
+                ;
         }
     }
 }

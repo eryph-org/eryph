@@ -28,10 +28,10 @@ namespace Eryph.Modules.VmHostAgent
             var metadata = new VirtualMachineMetadata {Id = command.CurrentMetadataId};
 
             var chain =
-                from vmList in GetVmInfo(command.VMId, Engine).ToAsync()
-                from vmInfo in EnsureSingleEntry(vmList, command.VMId).ToAsync()
+                from vmList in GetVmInfo(command.VMId, Engine)
+                from vmInfo in EnsureSingleEntry(vmList, command.VMId)
                 from currentMetadata in EnsureMetadata(metadata, vmInfo).ToAsync()
-                from _ in SetMetadataId(vmInfo, command.NewMetadataId).ToAsync()
+                from _ in SetMetadataId(vmInfo, command.NewMetadataId)
                 select Unit.Default;
 
             return chain.MatchAsync(

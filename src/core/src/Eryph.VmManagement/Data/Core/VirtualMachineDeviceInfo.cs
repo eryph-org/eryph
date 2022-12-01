@@ -11,5 +11,6 @@ namespace Eryph.VmManagement.Data.Core
         [PrivateIdentifier]
         public virtual string Id { get; set; }
 
+
     }
 }

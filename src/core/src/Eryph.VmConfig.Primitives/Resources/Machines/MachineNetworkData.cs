@@ -5,11 +5,11 @@ namespace Eryph.Resources.Machines
     public class MachineNetworkData
     {
 
-        [PrivateIdentifier] 
-        public string Name { get; set; }
+        public string NetworkProviderName { get; set; }
+        public string PortName { get; set; }
 
         [PrivateIdentifier]
-        public string[] AdapterNames { get; set; }
+        public string AdapterName { get; set; }
 
         public string[] Subnets { get; set; }
 

@@ -16,6 +16,9 @@ namespace Eryph.Messages.Resources.Machines.Commands
 
         public VirtualMachineMetadata MachineMetadata { get; set; }
 
+        public MachineNetworkSettings[] MachineNetworkSettings { get; set; }
+
+
         [PrivateIdentifier]
         public string AgentName { get; set; }
     }

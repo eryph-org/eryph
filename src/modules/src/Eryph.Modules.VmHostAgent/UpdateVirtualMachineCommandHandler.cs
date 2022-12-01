@@ -3,10 +3,12 @@ using Eryph.ConfigModel.Machine;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Storage;
+using Eryph.VmManagement.Tracing;
 using JetBrains.Annotations;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
@@ -40,20 +42,21 @@ namespace Eryph.Modules.VmHostAgent
             var hostSettings = HostSettingsBuilder.GetHostSettings();
             var convergeVM = Prelude.fun(
                 (TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig c, VMStorageSettings storageSettings, VMHostMachineData hostInfo) =>
-                    VirtualMachine.Converge(hostSettings, hostInfo,Engine, ProgressMessage, vmInfo, c, message.Command.MachineMetadata, storageSettings));
+                    VirtualMachine.Converge(hostSettings, hostInfo,Engine, ProgressMessage, vmInfo, c, 
+                        message.Command.MachineMetadata, command.MachineNetworkSettings, storageSettings));
 
             var chain =
-                from hostInfo in _hostInfoProvider.GetHostInfoAsync().WriteTrace().ToAsync()
-                from vmList in GetVmInfo(vmId, Engine).ToAsync()
-                from vmInfo in EnsureSingleEntry(vmList, vmId).ToAsync()
-                from currentStorageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).WriteTrace().ToAsync()
+                from hostInfo in _hostInfoProvider.GetHostInfoAsync().WriteTrace()
+                from vmList in GetVmInfo(vmId, Engine)
+                from vmInfo in EnsureSingleEntry(vmList, vmId)
+                from currentStorageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).WriteTrace()
                 from plannedStorageSettings in VMStorageSettings.Plan(hostSettings, LongToString(command.NewStorageId),
-                    config, currentStorageSettings).WriteTrace().ToAsync()
+                    config, currentStorageSettings).WriteTrace()
                 from metadata in EnsureMetadata(message.Command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
-                from mergedConfig in config.MergeWithImageSettings(metadata.ImageConfig).WriteTrace().ToAsync()
-                from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).WriteTrace().ToAsync()
+                from mergedConfig in config.MergeWithImageSettings(metadata.ImageConfig).WriteTrace().ToAsync().ToError()
+                from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).WriteTrace()
                 from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()
-                from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged, _hostInfoProvider).WriteTrace().ToAsync()
+                from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged, _hostInfoProvider).WriteTrace()
                 select new ConvergeVirtualMachineResult
                 {
                     Inventory = inventory,

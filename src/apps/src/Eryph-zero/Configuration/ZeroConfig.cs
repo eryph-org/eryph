@@ -2,6 +2,7 @@
 using System.Security.AccessControl;
 using System.Security.Principal;
 using Eryph.Core;
+using Eryph.Modules.CommonApi.Endpoints.V1.Operations;
 
 namespace Eryph.Runtime.Zero.Configuration
 {
@@ -43,7 +44,16 @@ namespace Eryph.Runtime.Zero.Configuration
 
             return metadataConfigPath;
         }
-        
+
+
+        public static string GetNetworksConfigPath()
+        {
+            var privateConfigPath = GetPrivateConfigPath();
+            var networksConfigPath = Path.Combine(privateConfigPath, "networks");
+
+            return networksConfigPath;
+        }
+
         public static string GetPrivateConfigPath()
         {
             return Path.Combine(GetConfigPath(), "private");;
@@ -53,11 +63,12 @@ namespace Eryph.Runtime.Zero.Configuration
         public static void EnsureConfiguration()
         {
             Config.EnsurePath(GetConfigPath());
-            Config.EnsurePath(GetPrivateConfigPath(), GetPrivateDirectorySecurity());
+            //Config.EnsurePath(GetPrivateConfigPath(), GetPrivateDirectorySecurity());
             Config.EnsurePath(GetClientConfigPath());
             Config.EnsurePath(GetVMConfigPath());
             Config.EnsurePath(GetMetadataConfigPath());
             Config.EnsurePath(GetStorageConfigPath());
+            Config.EnsurePath(GetNetworksConfigPath());
 
 
         }

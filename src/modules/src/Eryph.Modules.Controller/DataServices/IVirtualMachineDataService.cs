@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
@@ -9,15 +11,25 @@ namespace Eryph.Modules.Controller.DataServices;
 
 internal interface IVirtualMachineDataService
 {
-    Task<Option<VirtualMachine>> GetByVMId(Guid id);
+    Task<Option<VirtualCatlet>> GetByVMId(Guid id);
 
-    Task<Option<VirtualMachine>> GetVM(Guid id);
-    Task<VirtualMachine> AddNewVM(VirtualMachine vm, VirtualMachineMetadata metadata);
+    Task<Option<VirtualCatlet>> GetVM(Guid id);
+    Task<VirtualCatlet> AddNewVM(VirtualCatlet vm, VirtualMachineMetadata metadata);
 
     Task<Unit> RemoveVM(Guid id);
 
-    Task<IEnumerable<VirtualMachine>> GetAll();
+    Task<IEnumerable<VirtualCatlet>> GetAll();
 
 
 }
 
+internal interface ISubnetDataService
+{
+    Task<Option<VirtualNetworkSubnet>> GetVirtualNetworkSubnet(
+        Guid networkId, string subnetName, CancellationToken cancellationToken);
+
+    Task<ProviderSubnet> EnsureProviderSubnetExists(
+        string providerName, string subnetName, IPNetwork ipNetwork, CancellationToken cancellationToken);
+
+
+}

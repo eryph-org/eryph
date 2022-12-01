@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using LanguageExt;
+using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 
 namespace Eryph.VmManagement.Storage
@@ -52,36 +53,36 @@ namespace Eryph.VmManagement.Storage
             return (names, storageIdentifier);
         }
 
-        public Task<Either<PowershellFailure, string>> ResolveStorageBasePath(string defaultPath)
+        public EitherAsync<Error, string> ResolveStorageBasePath(string defaultPath)
         {
-            return (
-                from dsName in DataStoreName.ToEitherAsync(new PowershellFailure
-                    {Message = "Unknown data store name. Cannot resolve path"})
-                from projectName in ProjectName.ToEitherAsync(new PowershellFailure
-                    {Message = "Unknown project name. Cannot resolve path"})
-                from environmentName in EnvironmentName.ToEitherAsync(new PowershellFailure
-                    {Message = "Unknown environment name. Cannot resolve path"})
+            return
+                from dsName in DataStoreName.ToEitherAsync(
+                    Error.New("Unknown data store name. Cannot resolve path"))
+                from projectName in ProjectName.ToEitherAsync(Error.New(
+                    "Unknown project name. Cannot resolve path"))
+                from environmentName in EnvironmentName.ToEitherAsync(Error.New(
+                    "Unknown environment name. Cannot resolve path"))
                 from dsPath in LookupVMDatastorePathInEnvironment(dsName, environmentName, defaultPath).ToAsync()
-                from projectPath in JoinPathAndProject(dsPath, projectName).ToAsync()
-                select projectPath
-            ).ToEither();
+                from projectPath in JoinPathAndProject(dsPath, projectName)
+                select projectPath;
+
         }
 
-        private static async Task<Either<PowershellFailure, string>> LookupVMDatastorePathInEnvironment(
+        private static async Task<Either<Error, string>> LookupVMDatastorePathInEnvironment(
             string datastore, string environment, string defaultPath)
         {
             return defaultPath;
         }
 
 
-        private static Task<Either<PowershellFailure, string>> JoinPathAndProject(string dsPath, string projectName)
+        private static EitherAsync<Error, string> JoinPathAndProject(string dsPath, string projectName)
         {
             var result = dsPath;
 
             if (projectName != "default")
                 result = Path.Combine(dsPath, $"eryph_p{projectName}");
 
-            return Prelude.RightAsync<PowershellFailure, string>(result).ToEither();
+            return Prelude.RightAsync<Error, string>(result);
         }
     }
 }

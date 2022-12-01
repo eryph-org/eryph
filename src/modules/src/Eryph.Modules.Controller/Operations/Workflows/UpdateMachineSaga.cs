@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Eryph.Messages;
 using Eryph.Messages.Operations.Events;
@@ -20,7 +22,8 @@ namespace Eryph.Modules.Controller.Operations.Workflows
     internal class UpdateMachineSaga : OperationTaskWorkflowSaga<UpdateMachineCommand, UpdateMachineSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateMachineConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand>>
+        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateMachineNetworksCommand>>
 
     {
         private readonly Id64Generator _idGenerator;
@@ -65,7 +68,6 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                 await _vmDataService.GetVM(Data.MachineId).Match(
                     Some: data =>
                     {
-
                         return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualMachineConfigDriveCommand
                         {
                             VMId = r.Inventory.VMId,
@@ -89,16 +91,38 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             {
                 Data.Config = r.Config;
 
-                var optionalMachineData = await (
+                var machineInfo = await _vmDataService.GetVM(Data.MachineId);
+                var projectId = machineInfo.Map(x => x.ProjectId).IfNone(Guid.Empty);
+
+                await _taskDispatcher.StartNew(Data.OperationId, new UpdateMachineNetworksCommand
+                {
+                    MachineId = Data.MachineId,
+                    Config = Data.Config,
+                    ProjectId = projectId,
+            });
+            });
+        }
+
+
+        public Task Handle(OperationTaskStatusEvent<UpdateMachineNetworksCommand> message)
+        {
+
+            return FailOrRun<UpdateMachineNetworksCommand, UpdateMachineNetworksCommandResponse>(message, 
+                async r =>
+            {
+
+                var optionalMachineData = await(
                     from vm in _vmDataService.GetVM(Data.MachineId)
                     from metadata in _metadataService.GetMetadata(vm.MetadataId)
                     select (vm, metadata));
+
 
                 await optionalMachineData.Match(
                     Some: data =>
                     {
                         Data.Validated = true;
                         var (vm, metadata) = data;
+
                         return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualMachineCommand
                         {
                             VMId = vm.VMId,
@@ -106,11 +130,13 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                             AgentName = Data.AgentName,
                             NewStorageId = _idGenerator.GenerateId(),
                             MachineMetadata = metadata,
+                            MachineNetworkSettings = r.NetworkSettings
                         });
                     },
                     None: () => Fail(new ErrorData
-                        {ErrorMessage = $"Could not find virtual machine with machine id {Data.MachineId}"})
+                    { ErrorMessage = $"Could not find virtual machine with machine id {Data.MachineId}" })
                 );
+
             });
         }
 
@@ -122,6 +148,8 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId,
                 d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand>>(m => m.OperationId,
+                d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateMachineNetworksCommand>>(m => m.OperationId,
                 d => d.OperationId);
 
         }
@@ -141,5 +169,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                 }
             );
         }
+
+
     }
 }

@@ -1,22 +1,15 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Collections.Generic;
 
-namespace Eryph.StateDb.Model
+namespace Eryph.StateDb.Model;
+
+public class Subnet
 {
-    public class Subnet
-    {
-        public Guid Id { get; set; }
+    public Guid Id { get; set; }
 
-        //public Network Network { get; set; }
-        //public Guid NetworkId { get; set; }
+    public string Name { get; set; }
 
-        public bool IsPublic { get; set; }
+    public string IpNetwork { get; set; }
 
-        public bool DhcpEnabled { get; set; }
-        public byte IpVersion { get; set; }
-        public string GatewayAddress { get; set; }
-        public string Address { get; set; }
-
-
-    }
+    public virtual List<IpPool> IpPools { get; set; }
 }

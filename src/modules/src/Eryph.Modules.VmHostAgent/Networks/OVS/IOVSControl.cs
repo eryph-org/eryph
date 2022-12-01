@@ -13,6 +13,6 @@ public interface IOVSControl
     EitherAsync<Error, Unit> RemovePort(string bridgeName, string portName, CancellationToken cancellationToken = default);
     EitherAsync<Error, Seq<Bridge>> GetBridges(CancellationToken cancellationToken = default);
     EitherAsync<Error, Seq<BridgePort>> GetPorts(CancellationToken cancellationToken = default);
-    OVSTableRecord GetOVSTable();
+    EitherAsync<Error, OVSTableRecord> GetOVSTable(CancellationToken cancellationToken = default);
     EitherAsync<Error, Unit> UpdateBridgeMapping(string bridgeMappings, CancellationToken cancellationToken);
 }

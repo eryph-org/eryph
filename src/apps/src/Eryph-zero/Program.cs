@@ -27,7 +27,6 @@ using Eryph.Security.Cryptography;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,10 +38,11 @@ using Microsoft.Extensions.Logging.EventLog;
 using Serilog;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
-using static Eryph.Modules.VmHostAgent.Networks.NetworkProviderManager<Eryph.Modules.VmHostAgent.Networks.ConsoleRuntime>;
-using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Modules.VmHostAgent.Networks.ConsoleRuntime>;
-using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Modules.VmHostAgent.Networks.ConsoleRuntime>;
-using static LanguageExt.Sys.Console<Eryph.Modules.VmHostAgent.Networks.ConsoleRuntime>;
+using static Eryph.Modules.VmHostAgent.Networks.NetworkProviderManager<Eryph.Runtime.Zero.ConsoleRuntime>;
+using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Runtime.Zero.ConsoleRuntime>;
+using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Runtime.Zero.ConsoleRuntime>;
+using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
+using Eryph.Runtime.Zero.Configuration.Networks;
 
 namespace Eryph.Runtime.Zero;
 
@@ -135,7 +135,7 @@ internal static class Program
                 "eryph", "zero", "logs", "debug.txt");
 
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
+                .MinimumLevel.Warning()
                 .WriteTo.File(logFilePath,
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 10,
@@ -167,11 +167,11 @@ internal static class Program
                 var basePathUrl = ConfigureUrl(startupConfig.BasePath);
 
                 var endpoints = new Dictionary<string, string>
-                {
-                    { "identity", $"{basePathUrl}identity" },
-                    { "compute", $"{basePathUrl}compute" },
-                    { "common", $"{basePathUrl}common" },
-                };
+                    {
+                        { "identity", $"{basePathUrl}identity" },
+                        { "compute", $"{basePathUrl}compute" },
+                        { "common", $"{basePathUrl}common" },
+                    };
 
                 ZeroConfig.EnsureConfiguration();
 
@@ -192,11 +192,11 @@ internal static class Program
 
 
                 processLock.SetMetadata(new Dictionary<string, object>
-                {
                     {
-                        "endpoints", endpoints
-                    }
-                });
+                        {
+                            "endpoints", endpoints
+                        }
+                    });
 
                 try
                 {
@@ -261,6 +261,7 @@ internal static class Program
                 //starting here all errors should be considered as recoverable
                 returnCode = -1;
 
+                Console.WriteLine(Info.Network);
 
                 await host.RunAsync();
 
@@ -287,7 +288,7 @@ internal static class Program
 
     private static T StartupConfiguration<T>(string[] args, Func<IServiceProvider, T> selectResult)
     {
-        var configHost = new HostBuilder()
+        using var configHost = new HostBuilder()
             .ConfigureAppConfiguration((hostingContext, config) =>
             {
                 var env = hostingContext.HostingEnvironment;

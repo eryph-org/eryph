@@ -14,6 +14,9 @@ namespace Eryph.StateDb
         private readonly StateStoreContext _dbContext;
         private readonly ISpecificationEvaluator _specificationEvaluator;
 
+        public IReadRepositoryBaseIO<T> IO => new ReadRepositoryBaseIO<T>(this);
+
+
         public ReadOnlyStateStoreRepository(StateStoreContext dbContext)
         {
             _dbContext = dbContext;

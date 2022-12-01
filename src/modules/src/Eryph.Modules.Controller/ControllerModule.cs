@@ -1,10 +1,13 @@
 ﻿using System;
 using Dbosoft.Hosuto.HostedServices;
+using Dbosoft.OVN;
+using Eryph.Core;
 using Eryph.Messages;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
 using Eryph.Modules.Controller.Inventory;
+using Eryph.Modules.Controller.Networks;
 using Eryph.Modules.Controller.Operations;
 using Eryph.Rebus;
 using Eryph.StateDb;
@@ -39,11 +42,17 @@ namespace Eryph.Modules.Controller
 
             container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
             container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
+            container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
+
             container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
 
             container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
             container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
             container.Register<IVirtualDiskDataService, VirtualDiskDataService>(Lifestyle.Scoped);
+            container.Register<ISubnetDataService, SubnetDataService>(Lifestyle.Scoped);
+
+            container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
+            container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
 
 
             container.RegisterSingleton(() => new Id64Generator());
@@ -53,6 +62,11 @@ namespace Eryph.Modules.Controller
             //use placement calculator of Host
             container.Register(serviceProvider.GetRequiredService<IPlacementCalculator>);
             container.Register(serviceProvider.GetRequiredService<IStorageManagementAgentLocator>);
+
+            //use network services from host
+            container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
+            container.RegisterInstance(serviceProvider.GetRequiredService<IOVNSettings>());
+            container.RegisterInstance(serviceProvider.GetRequiredService<ISysEnvironment>());
 
 
             container.Register(() =>
@@ -72,7 +86,7 @@ namespace Eryph.Modules.Controller
                 )
                 .Options(x =>
                 {
-                    x.SimpleRetryStrategy(secondLevelRetriesEnabled: true);
+                    x.SimpleRetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                     x.SetNumberOfWorkers(5);
                     x.EnableSimpleInjectorUnitOfWork();
                 })

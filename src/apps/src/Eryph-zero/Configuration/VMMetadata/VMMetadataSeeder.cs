@@ -35,7 +35,7 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
                         Metadata = json
                     });
                 })
-                .Traverse(l => l).Map(_ => _repository.SaveChangesAsync());
+                .TraverseParallel(l => l).Map(_ => _repository.SaveChangesAsync(stoppingToken));
         }
     }
 }

@@ -6,6 +6,7 @@ using LanguageExt;
 using LanguageExt.Effects.Traits;
 using Microsoft.Extensions.Logging;
 using System;
+using Eryph.Core;
 using Microsoft.Extensions.DependencyInjection;
 
 
@@ -91,7 +92,7 @@ public readonly struct AgentRuntime :
         FromServiceProvider<ISyncClient>();
 
     public Eff<AgentRuntime, INetworkProviderManager> NetworkProviderManager =>
-        Prelude.Eff<AgentRuntime, INetworkProviderManager>(_ => new NetworkProviderManager());
+        FromServiceProvider<INetworkProviderManager>();
 
     public Eff<AgentRuntime, ILogger> Logger(string category) => 
         FromServiceProvider<ILoggerFactory>().Map(lf => lf.CreateLogger(category));

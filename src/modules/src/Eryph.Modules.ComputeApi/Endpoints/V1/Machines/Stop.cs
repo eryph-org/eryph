@@ -15,14 +15,14 @@ using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
 {
-    public class Stop : ResourceOperationEndpoint<SingleResourceRequest, StateDb.Model.Machine>
+    public class Stop : ResourceOperationEndpoint<SingleResourceRequest, StateDb.Model.Catlet>
     {
 
-        public Stop([NotNull] IResourceOperationHandler<StateDb.Model.Machine> operationHandler) : base(operationHandler)
+        public Stop([NotNull] IResourceOperationHandler<StateDb.Model.Catlet> operationHandler) : base(operationHandler)
         {
         }
 
-        protected override object CreateOperationMessage(StateDb.Model.Machine model, SingleResourceRequest request)
+        protected override object CreateOperationMessage(StateDb.Model.Catlet model, SingleResourceRequest request)
         {
             return new StopMachineCommand{Resource = new Resource(ResourceType.Machine, model.Id)};
         }

@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel.Machine;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Storage;
+using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement.Converging
 {
@@ -15,6 +17,7 @@ namespace Eryph.VmManagement.Converging
         public readonly VMStorageSettings StorageSettings;
         public readonly VMHostMachineData HostInfo;
         public readonly VirtualMachineMetadata Metadata;
+        public readonly MachineNetworkSettings[] NetworkSettings;
 
         public ConvergeContext(
             HostSettings hostSettings,
@@ -23,6 +26,7 @@ namespace Eryph.VmManagement.Converging
             MachineConfig config,
             VirtualMachineMetadata metadata,
             VMStorageSettings storageSettings, 
+            MachineNetworkSettings[] networkSettings,
             VMHostMachineData hostInfo)
         {
             HostSettings = hostSettings;
@@ -31,7 +35,20 @@ namespace Eryph.VmManagement.Converging
             Config = config;
             Metadata = metadata;
             StorageSettings = storageSettings;
+            NetworkSettings = networkSettings;
             HostInfo = hostInfo;
+        }
+
+        public EitherAsync<Error, Unit> ReportProgressAsync(string message)
+        {
+            if (ReportProgress == null)
+                return Unit.Default;
+
+            return Prelude.TryAsync(async () =>
+            {
+                await ReportProgress(message);
+                return Unit.Default;
+            }).ToEither();
         }
     }
 }

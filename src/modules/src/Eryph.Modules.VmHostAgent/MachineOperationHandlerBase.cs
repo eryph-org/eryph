@@ -4,9 +4,11 @@ using Eryph.Messages;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines;
+using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
+using LanguageExt.Common;
 using Rebus.Bus;
 using Rebus.Handlers;
 
@@ -30,7 +32,7 @@ namespace Eryph.Modules.VmHostAgent
         {
             var command = message.Command;
 
-            var result = await GetVmInfo(command.VMId, _engine)
+            var result = await GetVmInfo(command.VMId, _engine).ToError()
                 .BindAsync(optVmInfo =>
                 {
                     return optVmInfo.MatchAsync(
@@ -49,10 +51,10 @@ namespace Eryph.Modules.VmHostAgent
                 }).ConfigureAwait(false);
         }
 
-        protected abstract Task<Either<PowershellFailure, Unit>> HandleCommand(
+        protected abstract Task<Either<Error, Unit>> HandleCommand(
             TypedPsObject<VirtualMachineInfo> vmInfo, T command, IPowershellEngine engine);
 
-        private async Task<Unit> HandleError(PowershellFailure failure, IOperationTaskMessage message)
+        private async Task<Unit> HandleError(Error failure, IOperationTaskMessage message)
         {
             await _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
                 new ErrorData

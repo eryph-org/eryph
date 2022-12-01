@@ -14,9 +14,9 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualMachines
 {
-    public class List : ListResourceEndpoint<ListRequest, VirtualMachine, StateDb.Model.VirtualMachine>
+    public class List : ListResourceEndpoint<ListRequest, VirtualCatlet, StateDb.Model.VirtualCatlet>
     {
-        public List([NotNull] IListRequestHandler<StateDb.Model.VirtualMachine> listRequestHandler, [NotNull] IListResourceSpecBuilder<StateDb.Model.VirtualMachine> specBuilder) : base(listRequestHandler, specBuilder)
+        public List([NotNull] IListRequestHandler<StateDb.Model.VirtualCatlet> listRequestHandler, [NotNull] IListResourceSpecBuilder<StateDb.Model.VirtualCatlet> specBuilder) : base(listRequestHandler, specBuilder)
         {
 
         }
@@ -28,8 +28,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualMachines
             OperationId = "VirtualMachines_List",
             Tags = new[] { "Virtual Machines" })
         ]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualMachine>))]
-        public override Task<ActionResult<ListResponse<VirtualMachine>>> HandleAsync([FromRoute] ListRequest request, CancellationToken cancellationToken = default)
+        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualCatlet>))]
+        public override Task<ActionResult<ListResponse<VirtualCatlet>>> HandleAsync([FromRoute] ListRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }

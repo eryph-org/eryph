@@ -13,10 +13,10 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
 {
-    public class Create : NewResourceOperationEndpoint<NewMachineRequest, StateDb.Model.Machine>
+    public class Create : NewResourceOperationEndpoint<NewMachineRequest, StateDb.Model.Catlet>
     {
 
-        public Create([NotNull] INewResourceOperationHandler<StateDb.Model.Machine> operationHandler) : base(operationHandler)
+        public Create([NotNull] INewResourceOperationHandler<StateDb.Model.Catlet> operationHandler) : base(operationHandler)
         {
         }
 

@@ -10,7 +10,7 @@
     },
     "network update": {
       "commandName": "Project",
-      "commandLineArgs": "networks import --inFile t:/network.yml",
+      "commandLineArgs": "networks get",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },

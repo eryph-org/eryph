@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-
-namespace Eryph.VmManagement;
+namespace Eryph.VmManagement.Tracing;
 
 public abstract class TraceData
 {

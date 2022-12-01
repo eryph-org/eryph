@@ -1,9 +1,11 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Inventory;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.VmManagement;
@@ -14,31 +16,36 @@ public class HostInfoProvider : IHostInfoProvider
     private readonly HostInventory _hostInventory;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
-    public HostInfoProvider(IPowershellEngine engine, ILogger log)
+    public HostInfoProvider(ILogger log, INetworkProviderManager networkProviderManager)
     {
-        _hostInventory = new HostInventory(engine, log);
+        _hostInventory = new HostInventory(log, networkProviderManager);
     }
 
-    public async Task<Either<PowershellFailure, VMHostMachineData>> GetHostInfoAsync(bool refresh = false)
+    public EitherAsync<Error, VMHostMachineData> GetHostInfoAsync(bool refresh = false)
     {
-        await _lock.WaitAsync();
-        try
+        async Task<Either<Error, VMHostMachineData>> GetHostInfoAsyncAsync()
         {
-            if (_cachedData == null || refresh)
+            await _lock.WaitAsync();
+            try
             {
-                return await _hostInventory.InventorizeHost().MapAsync(r =>
+                if (_cachedData == null || refresh)
                 {
-                    _cachedData = r;
-                    return r;
-                });
+                    return await _hostInventory.InventorizeHost().MapAsync(r =>
+                    {
+                        _cachedData = r;
+                        return r;
+                    });
 
+                }
+
+                return _cachedData;
             }
+            finally
+            {
+                _lock.Release();
+            }
+        }
 
-            return _cachedData;
-        }
-        finally
-        {
-            _lock.Release();
-        }
+        return GetHostInfoAsyncAsync().ToAsync();
     }
 }

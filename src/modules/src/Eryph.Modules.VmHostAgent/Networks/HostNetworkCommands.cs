@@ -32,7 +32,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                 .AddCommand("Get-VMSwitch")
                 .AddCommand("Get-VMSwitchExtension")
                 .AddParameter("Name", "dbosoft Open vSwitch Extension")).ToAff()
-        select vmSwitchExtensions.Map(s => s.Value);
+        select vmSwitchExtensions.Map(s => s.ToValue());
 
     public Aff<RT, Seq<HostNetworkAdapter>> GetPhysicalAdapters() =>
         from psEngine in default(RT).Powershell.ToAff()
@@ -40,14 +40,14 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             PsCommandBuilder.Create()
                 .AddCommand("Get-NetAdapter")
                 .AddParameter("-Physical")).ToAff()
-        select netAdapters.Map(s => s.Value);
+        select netAdapters.Map(s => s.ToValue());
 
     public Aff<RT, Seq<string>> GetAdapterNames() =>
         from psEngine in default(RT).Powershell.ToAff()
         from netAdapters in psEngine.GetObjectsAsync<HostNetworkAdapter>(
             PsCommandBuilder.Create()
                 .AddCommand("Get-NetAdapter")).ToAff()
-        select netAdapters.Map(s =>(string) s.Value.Name);
+        select netAdapters.Map(s => s.ToValue().Name);
 
 
     public Aff<RT, Seq<NetNat>> GetNetNat() =>
@@ -270,7 +270,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                     .AddParameter("AddressFamily", "IPv4")
                     .AddParameter("ErrorAction", "SilentlyContinue"))
 
-            .MapAsync(e => e.Map(x => x.Value))
+            .MapAsync(e => e.Map(x => x.ToValue()))
             .ToAff());
 
     }

@@ -7,7 +7,9 @@ using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
 using Eryph.Resources;
+using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -27,13 +29,15 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         private readonly Id64Generator _idGenerator;
         private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
+        private readonly IStateStore _stateStore;
 
         public CreateMachineSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, Id64Generator idGenerator,
-            IVirtualMachineDataService vmDataService) : base(bus)
+            IVirtualMachineDataService vmDataService, IStateStore stateStore) : base(bus)
         {
             _taskDispatcher = taskDispatcher;
             _idGenerator = idGenerator;
             _vmDataService = vmDataService;
+            _stateStore = stateStore;
         }
 
         public Task Handle(OperationTaskStatusEvent<CreateVirtualMachineCommand> message)
@@ -45,8 +49,19 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             {
                 Data.State = CreateVMState.Created;
 
-                var newMachine = await _vmDataService.AddNewVM(new VirtualMachine
+                var tenantId = Guid.Parse("{C1813384-8ECB-4F17-B846-821EE515D19B}");
+                var projectName = Data.Config?.Project ?? "default";
+
+                var project = await _stateStore.For<Project>()
+                    .GetBySpecAsync(new ProjectSpecs.GetByName(tenantId, projectName));
+                
+                if (project == null)
+                    throw new InvalidOperationException($"Project '{projectName}' not found.");
+
+
+                _ = await _vmDataService.AddNewVM(new VirtualCatlet
                 {
+                    ProjectId = project.Id,
                     Id = Data.MachineId,
                     AgentName = Data.AgentName,
                     VMId = r.Inventory.VMId
@@ -55,7 +70,9 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                 await _taskDispatcher.StartNew(Data.OperationId, new UpdateMachineCommand
                 {
                     Config = Data.Config,
-                    AgentName = Data.AgentName }, 
+                    AgentName = Data.AgentName
+
+                }, 
                     new Resources.Resource(ResourceType.Machine, Data.MachineId));
             });
         }

@@ -6,7 +6,7 @@ namespace Eryph.StateDb.Specifications;
 
 public static class VirtualMachineSpecs
 {
-    public sealed class GetByVMId : Specification<VirtualMachine>, ISingleResultSpecification
+    public sealed class GetByVMId : Specification<VirtualCatlet>, ISingleResultSpecification
     {
         public GetByVMId(Guid vmId)
         {

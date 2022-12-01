@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using JetBrains.Annotations;
 using LanguageExt;
+using VirtualMachineMetadata = Eryph.Resources.Machines.VirtualMachineMetadata;
 
 namespace Eryph.Modules.Controller.DataServices
 {

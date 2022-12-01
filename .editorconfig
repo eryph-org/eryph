@@ -1,0 +1,5 @@
+﻿[*.cs]
+
+# CA1063: Implement IDisposable Correctly
+dotnet_diagnostic.CA1063.severity = warning
+dotnet_diagnostic.CA2213.severity = warning

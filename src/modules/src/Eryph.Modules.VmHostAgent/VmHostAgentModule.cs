@@ -12,6 +12,7 @@ using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Rebus;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Tracing;
 using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -49,8 +50,8 @@ namespace Eryph.Modules.VmHostAgent
 
             services.AddHostedHandler<StartBusModuleHandler>();
 
-            services.AddSingleton<ISysEnvironment, SystemEnvironment>();
-            services.AddSingleton<IOVNSettings, LocalOVSWithOVNSettings>();
+            services.AddSingleton(serviceProvider.GetRequiredService<ISysEnvironment>());
+            services.AddSingleton(serviceProvider.GetRequiredService<IOVNSettings>());
             services.AddOvsNode<OVSDbNode>();
             services.AddOvsNode<OVSSwitchNode>();
             services.AddOvsNode<OVNChassisNode>();
@@ -70,25 +71,26 @@ namespace Eryph.Modules.VmHostAgent
         [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
-            container.Register<ISyncClient, SyncClient>();
+            //container.Register<ISyncClient, SyncClient>();
             container.Register<IHostNetworkCommands<AgentRuntime>, HostNetworkCommands<AgentRuntime>>();
             container.Register<IOVSControl, OVSControl>();
 
 
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
             container.RegisterSingleton<IAgentControlService, AgentControlService>();
-            
+
             container.Register<StartBusModuleHandler>();
             container.RegisterSingleton<ITracer, Tracer>();
             container.RegisterSingleton<ITraceWriter, DiagnosticTraceWriter>();
 
             container.RegisterSingleton<IPowershellEngine, PowershellEngine>();
 
-            container.RegisterSingleton<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>();
+            container.Register<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>(Lifestyle.Scoped);
+            container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
             container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
 
             var imageSourceFactory = new ImageSourceFactory(container);
-
+       
             imageSourceFactory.Register<LocalImageSource>(ImagesSources.Local);
             imageSourceFactory.Register<RepositoryImageSource>(ImagesSources.EryphHub);
             container.RegisterInstance<IImageSourceFactory>(imageSourceFactory);
@@ -111,7 +113,7 @@ namespace Eryph.Modules.VmHostAgent
                 )
                 .Options(x =>
                 {
-                    x.SimpleRetryStrategy();
+                    x.SimpleRetryStrategy(errorDetailsHeaderMaxLength:5);
                     x.SetNumberOfWorkers(5);
                     x.EnableSynchronousRequestReply();
                 })

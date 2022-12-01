@@ -19,22 +19,23 @@ internal class DiagnosticTraceWriter : ITraceWriter
         _log = log;
     }
 
-    private async void AsyncTraceWriter(Guid traceContext, DateTimeOffset started, DateTimeOffset stopped,
-        TraceRecord[] recordsRecords)
+    static readonly JsonSerializer Serializer = new JsonSerializer
     {
-        try
+        ContractResolver =
+            new PrivacyContractResolver() { NamingStrategy = new CamelCaseNamingStrategy() },
+        NullValueHandling = NullValueHandling.Ignore,
+        TypeNameHandling = TypeNameHandling.All,
+        MaxDepth = 12,
+
+    };
+
+private async void AsyncTraceWriter(Guid traceContext, DateTimeOffset started, DateTimeOffset stopped,
+        TraceRecord[] recordsRecords)
+{
+    try
         {
-            var serializer = new JsonSerializer
-            {
-                ContractResolver =
-                    new PrivacyContractResolver() { NamingStrategy = new CamelCaseNamingStrategy() },
-                NullValueHandling = NullValueHandling.Ignore,
-                TypeNameHandling = TypeNameHandling.All,
-                MaxDepth = 12,
 
-            };
-
-            var token = JToken.FromObject(recordsRecords, serializer);
+            var token = JToken.FromObject(recordsRecords, Serializer);
 
             //to exclude PI from diag data later you can use this code:
             //string Hash(string input)
@@ -80,7 +81,7 @@ internal class DiagnosticTraceWriter : ITraceWriter
             await using var sw = new StreamWriter(path, Encoding.UTF8,
                 new FileStreamOptions { Access = FileAccess.Write, Mode = FileMode.CreateNew });
             using var jsonWriter = new JsonTextWriter(sw);
-            serializer.Serialize(jsonWriter, data);
+            Serializer.Serialize(jsonWriter, data);
             sw.Close();
 
         }

@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
-using Eryph.Modules.VmHostAgent.Networks.Settings;
+using Eryph.VmManagement.Networking.Settings;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;

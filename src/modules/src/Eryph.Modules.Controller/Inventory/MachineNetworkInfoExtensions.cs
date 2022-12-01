@@ -10,13 +10,12 @@ namespace Eryph.Modules.Controller.Inventory;
 
 internal static class MachineNetworkInfoExtensions
 {
-    public static IEnumerable<MachineNetwork>? ToMachineNetwork(
+    public static IEnumerable<ReportedNetwork>? ToReportedNetwork(
         this IEnumerable<MachineNetworkData>? networkInfos, Guid machineId)
     {
-        return networkInfos?.Select(mn => new MachineNetwork
+        return networkInfos?.Select(mn => new ReportedNetwork
         {
-            MachineId = machineId,
-            Name = mn.Name,
+            CatletId = machineId,
             DnsServerAddresses = mn.DnsServers,
             IpV4Addresses = mn.IPAddresses.Select(IPAddress.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetwork)

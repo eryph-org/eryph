@@ -59,6 +59,7 @@ internal static class TypedPsObjectMapping
 
             });
         });
+        config.CompileMappings();
 
         _mapper = new Mapper(config);
     }

@@ -8,6 +8,10 @@ namespace Eryph.StateDb.Model
     {
         [Key] public Guid Id { get; set; }
 
+        public Guid ProjectId { get; set; }
+
+        public Project Project { get; set; }
+
         public ResourceType ResourceType { get; set; }
 
         public string Name { get; set; }

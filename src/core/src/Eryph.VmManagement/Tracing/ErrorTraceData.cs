@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Eryph.VmManagement;
+namespace Eryph.VmManagement.Tracing;
 
 public class ErrorTraceData : TraceData
 {

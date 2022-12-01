@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement.Data.Core;
@@ -7,8 +8,7 @@ using LanguageExt;
 
 namespace Eryph.Modules.VmHostAgent.Networks
 {
-    public record HostState(
-        Seq<VMSwitchExtension> VMSwitchExtensions,
+    public  record HostState(Seq<VMSwitchExtension> VMSwitchExtensions,
         Seq<VMSwitch> VMSwitches,
         Seq<HostNetworkAdapter> NetAdapters,
         Seq<string> AllNetAdaptersNames,
@@ -16,4 +16,5 @@ namespace Eryph.Modules.VmHostAgent.Networks
         Seq<NetNat> NetNat,
         Seq<Bridge> OVSBridges,
         Seq<BridgePort> OvsBridgePorts);
+
 }

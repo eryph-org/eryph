@@ -11,11 +11,11 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualMachines
 {
-    public class Get : GetResourceEndpoint<VirtualMachine, StateDb.Model.VirtualMachine>
+    public class Get : GetResourceEndpoint<VirtualCatlet, StateDb.Model.VirtualCatlet>
     {
 
-        public Get([NotNull] IGetRequestHandler<StateDb.Model.VirtualMachine> requestHandler, 
-            [NotNull] ISingleResourceSpecBuilder<StateDb.Model.VirtualMachine> specBuilder) : base(requestHandler, specBuilder)
+        public Get([NotNull] IGetRequestHandler<StateDb.Model.VirtualCatlet> requestHandler, 
+            [NotNull] ISingleResourceSpecBuilder<StateDb.Model.VirtualCatlet> specBuilder) : base(requestHandler, specBuilder)
         {
         }
 
@@ -26,9 +26,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualMachines
             OperationId = "VirtualMachines_Get",
             Tags = new[] { "Virtual Machines" })
         ]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(VirtualMachine))]
+        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(VirtualCatlet))]
 
-        public override Task<ActionResult<VirtualMachine>> HandleAsync([FromRoute] SingleResourceRequest request, CancellationToken cancellationToken = default)
+        public override Task<ActionResult<VirtualCatlet>> HandleAsync([FromRoute] SingleResourceRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }

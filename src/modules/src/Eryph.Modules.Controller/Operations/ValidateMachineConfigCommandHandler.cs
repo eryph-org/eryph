@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Machine;
 using Eryph.Messages.Operations;
@@ -59,7 +62,16 @@ namespace Eryph.Modules.Controller.Operations
             if (machineConfig.Networks == null)
             {
                 machineConfig.Networks =
-                    new []{ new MachineNetworkConfig { Name = "default" } };
+                    new []{ new MachineNetworkConfig
+                    {
+                        Name = "default"
+                    } };
+            }
+
+            for (var i = 0; i < machineConfig.Networks.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(machineConfig.Networks[i].AdapterName))
+                    machineConfig.Networks[i].AdapterName = $"eth{i}";
             }
 
             if (string.IsNullOrWhiteSpace(machineConfig.Provisioning.Hostname))
@@ -90,5 +102,6 @@ namespace Eryph.Modules.Controller.Operations
 
             return machineConfig;
         }
+
     }
 }

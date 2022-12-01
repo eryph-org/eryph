@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Eryph.VmManagement;
+namespace Eryph.VmManagement.Tracing;
 
 public class TraceContextAccessor
 {

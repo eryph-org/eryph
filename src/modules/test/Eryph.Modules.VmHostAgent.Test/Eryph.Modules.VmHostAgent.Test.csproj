@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="FluentAssertions" Version="6.4.0" />
-    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3">
+    <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\apps\src\eryph-zero\eryph-zero.csproj" />
     <ProjectReference Include="..\..\src\Eryph.Modules.VmHostAgent\Eryph.Modules.VmHostAgent.csproj" />
   </ItemGroup>
 

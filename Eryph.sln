@@ -5,6 +5,7 @@ VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5161FD3F-5E58-4C46-9EC5-DC275266583A}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
 		exesign.custom.targets = exesign.custom.targets
 		nuget.config = nuget.config
 	EndProjectSection
@@ -79,7 +80,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Security.Cryptography
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.NetworkModule", "src\modules\src\Eryph.Modules.NetworkModule\Eryph.Modules.NetworkModule.csproj", "{8BECD5A8-104E-47DC-8C94-DC50A6C5BAAA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.VmHostAgent.Test", "src\modules\test\Eryph.Modules.VmHostAgent.Test\Eryph.Modules.VmHostAgent.Test.csproj", "{4CF54668-F3F0-403E-BA26-EC9F15D325BD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.VmHostAgent.Test", "src\modules\test\Eryph.Modules.VmHostAgent.Test\Eryph.Modules.VmHostAgent.Test.csproj", "{4CF54668-F3F0-403E-BA26-EC9F15D325BD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowershellStandalone", "test\PowershellStandalone\PowershellStandalone.csproj", "{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -207,6 +210,10 @@ Global
 		{4CF54668-F3F0-403E-BA26-EC9F15D325BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4CF54668-F3F0-403E-BA26-EC9F15D325BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4CF54668-F3F0-403E-BA26-EC9F15D325BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -242,6 +249,7 @@ Global
 		{A651AFFB-D433-4F4F-A7F7-539533BFBAD2} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{8BECD5A8-104E-47DC-8C94-DC50A6C5BAAA} = {E889B549-C333-46DC-B71F-9608CBA1FBAA}
 		{4CF54668-F3F0-403E-BA26-EC9F15D325BD} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

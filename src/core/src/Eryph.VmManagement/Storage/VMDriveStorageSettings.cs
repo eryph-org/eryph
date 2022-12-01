@@ -1,7 +1,8 @@
 ﻿using System.IO;
-using System.Threading.Tasks;
 using Eryph.ConfigModel.Machine;
+using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement.Storage
 {
@@ -13,15 +14,15 @@ namespace Eryph.VmManagement.Storage
         public int ControllerNumber { get; set; }
 
 
-        public static Task<Either<PowershellFailure, Seq<VMDriveStorageSettings>>> PlanDriveStorageSettings(
+        public static EitherAsync<Error, Seq<VMDriveStorageSettings>> PlanDriveStorageSettings(
             HostSettings hostSettings, MachineConfig config, VMStorageSettings storageSettings)
         {
             return config.VM.Drives
                 .ToSeq().MapToEitherAsync((index, c) =>
-                    FromDriveConfig(hostSettings, storageSettings, c, index));
+                    FromDriveConfig(hostSettings, storageSettings, c, index).ToEither()).ToAsync();
         }
 
-        public static Task<Either<PowershellFailure, VMDriveStorageSettings>> FromDriveConfig(
+        public static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
             HostSettings hostSettings, VMStorageSettings storageSettings, VirtualMachineDriveConfig driveConfig,
             int index)
         {
@@ -52,7 +53,7 @@ namespace Eryph.VmManagement.Storage
                         Type = driveConfig.Type.GetValueOrDefault(VirtualMachineDriveType.PHD)
                     };
 
-                return Prelude.RightAsync<PowershellFailure, VMDriveStorageSettings>(result).ToEither();
+                return Prelude.RightAsync<Error, VMDriveStorageSettings>(result);
             }
 
             //so far for the simple part, now the complicated case - a vhd disk...
@@ -75,11 +76,10 @@ namespace Eryph.VmManagement.Storage
 
 
             return
-                (from resolvedPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath).ToAsync()
-                    from identifier in storageIdentifier.ToEither(new PowershellFailure
-                            {Message = $"Unexpected missing storage identifier for disk '{driveConfig.Name}'."})
+                (from resolvedPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath)
+                    from identifier in storageIdentifier.ToEither(
+                        Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
                         .ToAsync()
-                        .ToEither().ToAsync()
                     let planned = new HardDiskDriveStorageSettings
                     {
                         Type = driveConfig.Type.Value,
@@ -111,7 +111,7 @@ namespace Eryph.VmManagement.Storage
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation
                     }
-                    select planned as VMDriveStorageSettings).ToEither();
+                    select planned as VMDriveStorageSettings);
         }
     }
 }

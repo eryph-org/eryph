@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Machine;
+using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
@@ -11,6 +12,7 @@ using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Data.Planned;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
+using LanguageExt.Common;
 using static LanguageExt.Prelude;
 
 
@@ -18,7 +20,7 @@ namespace Eryph.VmManagement
 {
     public static class VirtualMachine
     {
-        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> ImportTemplate(
+        public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ImportTemplate(
             IPowershellEngine engine,
             HostSettings hostSettings,
             string vmName,
@@ -39,27 +41,26 @@ namespace Eryph.VmManagement
                     .AddParameter("VhdDestinationPath", vhdPath)
                     .AddParameter("Copy")
                     .AddParameter("GenerateNewID")
-                )
-                .BindAsync(x => x.HeadOrLeft(new PowershellFailure {Message = "Failed to Import VM Image"}))
-                .BindAsync(rep => (
-                        from _ in Rename(engine, rep.GetProperty(x => x.VM), vmName).ToAsync()
-                        from __ in ResetMetadata(engine, rep.GetProperty(x => x.VM)).ToAsync()
-                        from ___ in RenamePlannedNetAdaptersToConvention(engine, rep.GetProperty(x => x.VM)).ToAsync()
-                        from ____ in DisconnectNetworkAdapters(engine, rep.GetProperty(x => x.VM)).ToAsync()
-                        from repRecreated in RightAsync<PowershellFailure, TypedPsObject<VMCompatibilityReportInfo>>(
+                ).ToError().ToAsync()
+                .Bind(x => x.HeadOrLeft(Error.New("Failed to Import VM Image")).ToAsync())
+                .Bind(rep => (
+                        from _ in Rename(engine, rep.GetProperty(x => x.VM), vmName)
+                        from __ in ResetMetadata(engine, rep.GetProperty(x => x.VM))
+                        from ___ in RenamePlannedNetAdaptersToConvention(engine, rep.GetProperty(x => x.VM))
+                        from ____ in DisconnectNetworkAdapters(engine, rep.GetProperty(x => x.VM))
+                        from repRecreated in RightAsync<Error, TypedPsObject<VMCompatibilityReportInfo>>(
                             rep.Recreate())
                         select repRecreated
-                    ).ToEither()
+                    )
                 )
                 .Apply(repEither =>
                     from rep in repEither
                     //from template in ExpandTemplateData(rep.Value.VM, engine)
                     from vms in engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
                         .AddCommand("Import-VM")
-                        .AddParameter("CompatibilityReport", rep.PsObject))
-                    from vm in vms.HeadOrLeft(new PowershellFailure {Message = "Failed to import VM Image"}).ToAsync()
-                        .ToEither()
-                    from _ in RenameDisksToConvention(engine, vm)
+                        .AddParameter("CompatibilityReport", rep.PsObject)).ToError().ToAsync()
+                    from vm in vms.HeadOrLeft(Error.New("Failed to import VM Image")).ToAsync()
+                    from _ in RenameDisksToConvention(engine, vm).ToAsync()
                     from vmReloaded in vm.Reload(engine)
                     select vmReloaded);
 
@@ -67,14 +68,14 @@ namespace Eryph.VmManagement
             return vmInfo;
         }
 
-        public static Task<Either<PowershellFailure, TypedPsObject<PlannedVirtualMachineInfo>>> TemplateFromImage(
+        public static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> TemplateFromImage(
             IPowershellEngine engine,
             HostSettings hostSettings,
             string image)
         {
             if (string.IsNullOrWhiteSpace(image))
-                return LeftAsync<PowershellFailure,TypedPsObject<PlannedVirtualMachineInfo>>(
-                    new PowershellFailure{Message = "Image name is missing."}).ToEither();
+                return LeftAsync<Error,TypedPsObject<PlannedVirtualMachineInfo>>(
+                    Error.New("Image name is missing."));
 
 
             var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
@@ -85,21 +86,21 @@ namespace Eryph.VmManagement
             var configRootPath = Path.Combine(imagePath, "Virtual Machines");
 
             var vmInfo = Directory.GetFiles(configRootPath, "*.vmcx")
-                .HeadOrLeft(new PowershellFailure {Message = "Failed to find image configuration file"}).AsTask()
-                .BindAsync(configPath =>
+                .HeadOrLeft(Error.New("Failed to find image configuration file")).ToAsync()
+                .Bind(configPath =>
                     engine.GetObjectsAsync<VMCompatibilityReportInfo>(PsCommandBuilder.Create()
                             .AddCommand("Compare-VM")
                             .AddParameter("Path", configPath)
-                        )
-                        .BindAsync(x => x.HeadOrLeft(new PowershellFailure {Message = "Failed to load VM Image"}))
-                        .BindAsync(rep => ExpandTemplateData(
+                        ).ToError().ToAsync()
+                        .Bind(x => x.HeadOrLeft(Error.New("Failed to load VM Image")).ToAsync())
+                        .Bind(rep => ExpandTemplateData(
                             rep.GetProperty(x=>x.VM), engine)));
 
             return vmInfo;
         }
 
 
-        public static Task<Either<PowershellFailure, TypedPsObject<T>>> Rename<T>(
+        public static EitherAsync<Error, TypedPsObject<T>> Rename<T>(
             IPowershellEngine engine,
             TypedPsObject<T> vmInfo,
             string newName)
@@ -109,10 +110,10 @@ namespace Eryph.VmManagement
                 .AddCommand("Rename-VM")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("NewName", newName)
-            ).BindAsync(u => vmInfo.RecreateOrReload(engine));
+            ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
-        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
+        public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
             HostSettings hostSettings,
             VMHostMachineData hostInfo,
             IPowershellEngine engine,
@@ -120,10 +121,11 @@ namespace Eryph.VmManagement
             TypedPsObject<VirtualMachineInfo> vmInfo,
             MachineConfig machineConfig,
             VirtualMachineMetadata metadata,
+            MachineNetworkSettings[] networkSetting,
             VMStorageSettings storageSettings)
         {
             var convergeContext =
-                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, hostInfo);
+                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, networkSetting, hostInfo);
 
             var convergeTasks = new ConvergeTaskBase[]
             {
@@ -135,11 +137,11 @@ namespace Eryph.VmManagement
             };
 
             return convergeTasks.Fold(
-                RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
+                RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
                 (info, task) => info.BindAsync(task.Converge));
         }
 
-        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> ConvergeConfigDrive(
+        public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> ConvergeConfigDrive(
             HostSettings hostSettings,
             VMHostMachineData hostInfo,
             IPowershellEngine engine,
@@ -147,10 +149,11 @@ namespace Eryph.VmManagement
             TypedPsObject<VirtualMachineInfo> vmInfo,
             MachineConfig machineConfig,
             VirtualMachineMetadata metadata,
+            MachineNetworkSettings[] networkSettings,
             VMStorageSettings storageSettings)
         {
             var convergeContext =
-                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, hostInfo);
+                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, networkSettings, hostInfo);
 
             var convergeTasks = new ConvergeTaskBase[]
             {
@@ -158,12 +161,12 @@ namespace Eryph.VmManagement
             };
 
             return convergeTasks.Fold(
-                RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
+                RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
                 (info, task) => info.BindAsync(task.Converge));
         }
 
 
-        private static Task<Either<PowershellFailure, TypedPsObject<T>>> ResetMetadata<T>(
+        private static EitherAsync<Error, TypedPsObject<T>> ResetMetadata<T>(
             IPowershellEngine engine,
             TypedPsObject<T> vmInfo)
             where T : IVirtualMachineCoreInfo
@@ -172,10 +175,10 @@ namespace Eryph.VmManagement
                 .AddCommand("Set-VM")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("Notes", "")
-            ).BindAsync(u => vmInfo.RecreateOrReload(engine));
+            ).ToAsync().ToError().Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
-        private static Task<Either<PowershellFailure, TypedPsObject<PlannedVirtualMachineInfo>>> ExpandTemplateData(
+        private static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> ExpandTemplateData(
             TypedPsObject<PlannedVirtualMachineInfo> template, IPowershellEngine engine)
         {
             return template.GetList(x=>x.HardDrives).MapToEitherAsync(device =>
@@ -186,10 +189,10 @@ namespace Eryph.VmManagement
                             .ToAsync()
                         let _ = drive.Apply(d => hd.Value.Size = d.Value.Size)
                         select hd).ToEither())
-                .MapT(hd => template);
+                .MapT(hd => template).ToError().ToAsync();
         }
 
-        private static Task<Either<PowershellFailure, TypedPsObject<T>>> DisconnectNetworkAdapters<T>(
+        private static EitherAsync<Error, TypedPsObject<T>> DisconnectNetworkAdapters<T>(
             IPowershellEngine engine,
             TypedPsObject<T> vmInfo)
             where T : IVirtualMachineCoreInfo
@@ -198,10 +201,10 @@ namespace Eryph.VmManagement
                 .AddCommand("Get-VMNetworkAdapter")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddCommand("Disconnect-VMNetworkAdapter")
-            ).BindAsync(u => vmInfo.RecreateOrReload(engine));
+            ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
-        private static async Task<Either<PowershellFailure, Unit>> RenameDisksToConvention<T>(
+        private static async Task<Either<Error, Unit>> RenameDisksToConvention<T>(
             IPowershellEngine engine,
             TypedPsObject<T> vmInfo)
             where T : IVMWithDrivesInfo
@@ -238,7 +241,7 @@ namespace Eryph.VmManagement
         }
 
 
-        private static Task<Either<PowershellFailure, Unit>> RenamePlannedNetAdaptersToConvention(
+        private static EitherAsync<Error, Unit> RenamePlannedNetAdaptersToConvention(
             IPowershellEngine engine,
             TypedPsObject<PlannedVirtualMachineInfo> vmInfo)
         {
@@ -252,7 +255,7 @@ namespace Eryph.VmManagement
                 return engine.RunAsync(new PsCommandBuilder()
                     .AddCommand("Rename-VMNetworkAdapter")
                     .AddParameter("VMNetworkAdapter", adapter.PsObject).AddParameter("NewName", adapterName));
-            }).MapAsync(seq => Unit.Default);
+            }).ToError().MapAsync(seq => Unit.Default).ToAsync();
         }
     }
 }

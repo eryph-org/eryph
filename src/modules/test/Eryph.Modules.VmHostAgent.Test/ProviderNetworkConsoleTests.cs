@@ -1,12 +1,14 @@
 ﻿using System.Net;
 using Dbosoft.OVN.Model;
+using Eryph.Core;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
-using Eryph.Modules.VmHostAgent.Networks.Settings;
+using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Networking.Settings;
 using FluentAssertions;
 using LanguageExt;
 using LanguageExt.Common;
@@ -372,7 +374,7 @@ namespace Eryph.Modules.VmHostAgent.Test
             ovsControlMock.Setup(x => x.GetPorts(CancellationToken.None))
                 .Returns(hostState.OvsBridgePorts);
 
-            ovsControlMock.Setup(x => x.GetOVSTable())
+            ovsControlMock.Setup(x => x.GetOVSTable(It.IsAny<CancellationToken>()))
                 .Returns(new OVSTableRecord());
 
             ovsControlMock.Setup(x => x.AddBridge("br-nat",

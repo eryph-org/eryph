@@ -30,7 +30,7 @@ namespace Eryph.Modules.Controller.Inventory
         {
             var newMachineState = await 
                 _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId).IfNoneAsync(
-                () => new VMHostMachine
+                () => new VirtualCatletHost
                 {
                     Id = Guid.NewGuid(),
                     AgentName = message.HostInventory.Name,
@@ -38,16 +38,16 @@ namespace Eryph.Modules.Controller.Inventory
                     HardwareId = message.HostInventory.HardwareId
                 });
 
-            var networks = (message.HostInventory.VirtualNetworks.ToMachineNetwork(newMachineState.Id) 
-                                        ?? Array.Empty<MachineNetwork>()).ToList();
+            //var networks = (message.HostInventory.VirtualNetworks.ToMachineNetwork(newMachineState.Id) 
+            //                            ?? Array.Empty<MachineNetwork>()).ToList();
 
-            newMachineState.Status = MachineStatus.Running;
+            newMachineState.Status = CatletStatus.Running;
 
 
             var existingMachine = await _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
                 .IfNoneAsync(() => _vmHostDataService.AddNewVMHost(newMachineState));
 
-            MergeMachineNetworks(networks, existingMachine);
+            //MergeMachineNetworks(networks, existingMachine);
             await UpdateVMs(message.VMInventory, existingMachine);
 
         }
