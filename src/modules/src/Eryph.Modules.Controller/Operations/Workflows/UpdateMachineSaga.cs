@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Eryph.Messages;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
@@ -23,7 +22,8 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         IHandleMessages<OperationTaskStatusEvent<ValidateMachineConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateMachineNetworksCommand>>
+        IHandleMessages<OperationTaskStatusEvent<UpdateMachineNetworksCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>
 
     {
         private readonly Id64Generator _idGenerator;
@@ -42,44 +42,36 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             _metadataService = metadataService;
         }
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand> message)
+        protected override void CorrelateMessages(ICorrelationConfig<UpdateMachineSagaData> config)
         {
+            base.CorrelateMessages(config);
+            config.Correlate<OperationTaskStatusEvent<ValidateMachineConfigCommand>>(m => m.OperationId,
+                d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId,
+                d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand>>(m => m.OperationId,
+                d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateMachineNetworksCommand>>(m => m.OperationId,
+                d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateNetworksCommand>>(m => m.OperationId,
+                d => d.OperationId);
 
-            return FailOrRun(message, () => Complete());
         }
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
+        protected override Task Initiated(UpdateMachineCommand message)
         {
-            if (Data.Updated)
-                return Task.CompletedTask;
+            Data.Config = message.Config;
+            Data.MachineId = message.Resource.Id;
+            Data.AgentName = message.AgentName;
 
-            return FailOrRun<UpdateVirtualMachineCommand, ConvergeVirtualMachineResult>(message, async r =>
-            {
-                Data.Updated = true;
 
-                await _metadataService.SaveMetadata(r.MachineMetadata);
-
-                await Bus.Send(new UpdateInventoryCommand
+            return _taskDispatcher.StartNew(Data.OperationId,
+                new ValidateMachineConfigCommand
                 {
-                    AgentName = Data.AgentName,
-                    Inventory = new List<VirtualMachineData> {r.Inventory}
-                });
-
-                await _vmDataService.GetVM(Data.MachineId).Match(
-                    Some: data =>
-                    {
-                        return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualMachineConfigDriveCommand
-                        {
-                            VMId = r.Inventory.VMId,
-                            MachineId = Data.MachineId,
-                            MachineMetadata = r.MachineMetadata,
-                        });
-                    },
-                    None: () => Fail(new ErrorData
-                        { ErrorMessage = $"Could not find virtual machine with machine id {Data.MachineId}" })
-                );
-
-            });
+                    MachineId = message.Resource.Id,
+                    Config = message.Config,
+                }
+            );
         }
 
         public Task Handle(OperationTaskStatusEvent<ValidateMachineConfigCommand> message)
@@ -92,14 +84,17 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                 Data.Config = r.Config;
 
                 var machineInfo = await _vmDataService.GetVM(Data.MachineId);
-                var projectId = machineInfo.Map(x => x.ProjectId).IfNone(Guid.Empty);
+                Data.ProjectId = machineInfo.Map(x => x.ProjectId).IfNone(Guid.Empty);
 
-                await _taskDispatcher.StartNew(Data.OperationId, new UpdateMachineNetworksCommand
-                {
-                    MachineId = Data.MachineId,
-                    Config = Data.Config,
-                    ProjectId = projectId,
-            });
+                if (Data.ProjectId == Guid.Empty)
+                    await Fail("Could not identity project of Catlet.");
+                else
+                    await _taskDispatcher.StartNew(Data.OperationId, new UpdateMachineNetworksCommand
+                    {
+                        MachineId = Data.MachineId,
+                        Config = Data.Config,
+                        ProjectId = Data.ProjectId,
+                    });
             });
         }
 
@@ -140,36 +135,56 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             });
         }
 
-        protected override void CorrelateMessages(ICorrelationConfig<UpdateMachineSagaData> config)
+        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
         {
-            base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<ValidateMachineConfigCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<UpdateMachineNetworksCommand>>(m => m.OperationId,
-                d => d.OperationId);
+            if (Data.Updated)
+                return Task.CompletedTask;
 
-        }
+            return FailOrRun<UpdateVirtualMachineCommand, ConvergeVirtualMachineResult>(message, async r =>
+            {
+                Data.Updated = true;
 
-        protected override Task Initiated(UpdateMachineCommand message)
-        {
-            Data.Config = message.Config;
-            Data.MachineId = message.Resource.Id;
-            Data.AgentName = message.AgentName;
+                await _metadataService.SaveMetadata(r.MachineMetadata);
 
-
-            return _taskDispatcher.StartNew(Data.OperationId, 
-                new ValidateMachineConfigCommand
+                await Bus.Send(new UpdateInventoryCommand
                 {
-                    MachineId = message.Resource.Id,
-                    Config = message.Config,
-                }
-            );
+                    AgentName = Data.AgentName,
+                    Inventory = new List<VirtualMachineData> { r.Inventory }
+                });
+
+                await _vmDataService.GetVM(Data.MachineId).Match(
+                    Some: data =>
+                    {
+                        return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualMachineConfigDriveCommand
+                        {
+                            VMId = r.Inventory.VMId,
+                            MachineId = Data.MachineId,
+                            MachineMetadata = r.MachineMetadata,
+                        });
+                    },
+                    None: () => Fail(new ErrorData
+                        { ErrorMessage = $"Could not find virtual machine with machine id {Data.MachineId}" })
+                );
+
+            });
         }
 
 
+        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand> message)
+        {
+            return FailOrRun(message, () =>
+                _taskDispatcher.StartNew(Data.OperationId, new UpdateNetworksCommand
+                {
+                    Projects = new[] { Data.ProjectId }
+                })
+
+                );
+
+        }
+
+        public Task Handle(OperationTaskStatusEvent<UpdateNetworksCommand> message)
+        {
+            return FailOrRun(message, () => Complete());
+        }
     }
 }

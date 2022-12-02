@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Machine;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
@@ -27,7 +25,7 @@ namespace Eryph.VmManagement.Converging
             var adapters = Context.Config.VM.NetworkAdapters.ToArr();
 
             return Context.Config.Networks
-                .Map<MachineNetworkConfig, Either<Error, PhysicalAdapterConfig>>
+                .Map
                 (n =>
                 {
                     return Context.NetworkSettings.Find(x => x.AdapterName == n.AdapterName)
@@ -92,19 +90,39 @@ namespace Eryph.VmManagement.Converging
             {
                 var adapter = device.Cast<VMNetworkAdapter>();
 
+                var res = await Context.Engine.RunAsync(
+                    PsCommandBuilder.Create()
+                        .Script(OVSPortScript)).ToError().ConfigureAwait(false); ;
+
+                if (res.IsLeft)
+                    return res;
+
+                res = await Context.Engine.RunAsync(
+                    PsCommandBuilder.Create()
+                        .AddCommand("Set-VMNetworkAdapterOVSPort")
+                        .AddParameter("VMNetworkAdapter", adapter.PsObject)
+                        .AddParameter("OVSPortName", networkAdapterConfig.PortName)).ToError().ConfigureAwait(false);
+
+                if (res.IsLeft)
+                    return res;
+
                 if (adapter.Value.MacAddress != networkAdapterConfig.MacAddress)
                 {
-                    await Context.Engine.RunAsync(
+                    res = await Context.Engine.RunAsync(
                         PsCommandBuilder.Create().AddCommand("Set-VmNetworkAdapter")
                             .AddParameter("VMNetworkAdapter", adapter.PsObject)
-                            .AddParameter("StaticMacAddress", networkAdapterConfig.MacAddress)).ConfigureAwait(false);
-                }
+                            .AddParameter("StaticMacAddress", networkAdapterConfig.MacAddress)).ToError().ConfigureAwait(false);
 
+                    if (res.IsLeft)
+                        return res;
+
+                }
+                
                 if (adapter.Value.Connected && adapter.Value.SwitchName == switchName)
                     return Unit.Default;
 
                 await Context.ReportProgress(
-                        $"Connecting Network Adapter {adapter.Value.Name} to network {networkAdapterConfig.NetworkName}")
+                        $"Connected Network Adapter {adapter.Value.Name} to network {networkAdapterConfig.NetworkName}")
                     .ConfigureAwait(false);
                 return await Context.Engine.RunAsync(
                     PsCommandBuilder.Create().AddCommand("Connect-VmNetworkAdapter")
@@ -144,6 +162,108 @@ namespace Eryph.VmManagement.Converging
                     networkName ?? NetworkName);
             }
         }
-    }
+ 
 
+
+    private const string OVSPortScript = @"
+
+            $WMI_JOB_STATUS_STARTED = 4096
+            $WMI_JOB_STATE_RUNNING = 4
+            $WMI_JOB_STATE_COMPLETED = 7
+
+
+            function CheckWMIReturnValue($retVal)
+            {
+                if ($retVal.ReturnValue -ne 0)
+                {
+                    if ($retVal.ReturnValue -eq $WMI_JOB_STATUS_STARTED)
+                    {
+                        do
+                        {
+                            $job = [wmi]$retVal.Job
+                        }
+                        while ($job.JobState -eq $WMI_JOB_STATE_RUNNING)
+
+                        if ($job.JobState -ne $WMI_JOB_STATE_COMPLETED)
+                        {
+                            echo $job.ReturnValue
+                            $errorString = ""Job Failed. Job State: "" + $job.JobState.ToString()
+                            if ($job.__CLASS -eq ""Msvm_ConcreteJob"")
+                            {
+                                $errorString += "" Error Code: "" + $job.ErrorCode.ToString()
+                                $errorString += "" Error Details: "" + $job.ErrorDescription
+                            }
+                            else
+                            {
+                                $error = $job.GetError()
+                                if ($error.Error)
+                                {
+                                    $errorString += "" Error:"" + $error.Error
+                                }
+                            }
+                            throw $errorString
+                        }
+                    }
+                    else
+                    {
+                        throw ""Job Failed. Return Value: {0}"" -f $job.ReturnValue
+                    }
+                }
+            }
+
+
+            function Set-VMNetworkAdapterOVSPort
+            {
+                [CmdletBinding()]
+                param
+                (
+                    [parameter(Mandatory=$true, ValueFromPipeline=$true)]
+                    [Microsoft.HyperV.PowerShell.VMNetworkAdapter]$VMNetworkAdapter,
+
+                    [parameter(Mandatory=$true)]
+                    [ValidateLength(1, 48)]
+                    [string]$OVSPortName
+                )
+                process
+                {
+                    $ns = ""root\virtualization\v2""
+                    $EscapedId = $VMNetworkAdapter.Id.Replace('\', '\\')
+
+                    $sd = Get-CimInstance -namespace $ns -class Msvm_EthernetPortAllocationSettingData -Filter ""ElementName = '$OVSPortName'""
+                    if($sd)
+                    {
+                        if($sd.InstanceId.Contains($VMNetworkAdapter.Id))
+                        {
+                            return;
+                        }
+                        throw ""Cannot assign the overlay port name '$OVSPortName' as it is already assigned to an other port.""
+                    }
+
+                    $sd = Get-CimInstance -namespace $ns -class Msvm_EthernetPortAllocationSettingData -Filter ""InstanceId like '$EscapedId%'""
+
+                    if($sd)
+                    {
+                        $sd.ElementName = $OVSPortName
+
+                        $cimSerializer = [Microsoft.Management.Infrastructure.Serialization.CimSerializer]::Create()
+                        $serializedInstance = $cimSerializer.Serialize($sd, [Microsoft.Management.Infrastructure.Serialization.InstanceSerializationOptions]::None)
+                        $embeddedInstanceString = [System.Text.Encoding]::Unicode.GetString($serializedInstance)
+
+                        $vsms = Get-CimInstance -namespace $ns -class Msvm_VirtualSystemManagementService
+                        $retVal = Invoke-CimMethod -CimInstance $vsms -MethodName ModifyResourceSettings @{ResourceSettings = @($embeddedInstanceString)}
+
+                        try
+                        {
+                            CheckWMIReturnValue $retVal
+                        }
+                        catch
+                        {
+                            throw ""Assigning overlay port name '$OVSPortName' failed""
+                        }
+                    }
+                }
+            }
+
+            ";
+    }
 }

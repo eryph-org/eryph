@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,4 +31,17 @@ public interface IStateStore
     public void LoadProperty<T, TProperty>(T entry, Expression<Func<T, TProperty>> propertyExpression)
         where T : class
         where TProperty : class;
+
+
+    public Task LoadCollectionAsync<T, TProperty>(T entry, Expression<Func<T, IEnumerable<TProperty>>> propertyExpression,
+        CancellationToken cancellationToken = default)
+        where T : class
+        where TProperty : class;
+
+    public void LoadCollection<T, TProperty>(T entry, Expression<Func<T, IEnumerable<TProperty>>> propertyExpression)
+        where T : class
+        where TProperty : class;
+
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
 }

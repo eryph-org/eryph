@@ -130,7 +130,8 @@ namespace Eryph.VmManagement.Converging
                                 _ => UserDataContentType.CloudConfig
                             };
 
-                            var userData = new UserData(contentType, ReplaceVariables(cloudInitConfig.Content),
+                            var userData = new UserData(contentType, 
+                                ReplaceVariables(cloudInitConfig.Content).TrimEnd('\0'),
                                 cloudInitConfig.FileName,
                                 Encoding.UTF8);
                             configDrive.AddUserData(userData);

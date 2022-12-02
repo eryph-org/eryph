@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Migrations
 {
     [DbContext(typeof(StateStoreContext))]
-    [Migration("20221130195342_Initial")]
-    partial class Initial
+    [Migration("20221202095044_Initial2")]
+    partial class Initial2
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -75,7 +75,7 @@ namespace Eryph.StateDb.Migrations
                     b.Property<Guid?>("NetworkPortId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("SubnetId")
+                    b.Property<Guid?>("SubnetId")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -123,6 +123,32 @@ namespace Eryph.StateDb.Migrations
                     b.HasIndex("SubnetId");
 
                     b.ToTable("IpPools");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.NetworkPort", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Discriminator")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MacAddress")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MacAddress")
+                        .IsUnique();
+
+                    b.ToTable("NetworkPorts");
+
+                    b.HasDiscriminator<string>("Discriminator").HasValue("NetworkPort");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Operation", b =>
@@ -428,6 +454,9 @@ namespace Eryph.StateDb.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("IpNetwork")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 
@@ -447,58 +476,6 @@ namespace Eryph.StateDb.Migrations
                     b.ToTable("VirtualNetworks");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkPort", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Discriminator")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MacAddress")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("NetworkId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NetworkId");
-
-                    b.ToTable("VirtualNetworkPorts");
-
-                    b.HasDiscriminator<string>("Discriminator").HasValue("VirtualNetworkPort");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkPort", b =>
-                {
-                    b.HasBaseType("Eryph.StateDb.Model.VirtualNetworkPort");
-
-                    b.Property<Guid?>("CatletId")
-                        .HasColumnType("TEXT");
-
-                    b.HasIndex("CatletId");
-
-                    b.HasDiscriminator().HasValue("CatletNetworkPort");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.GatewayNetworkPort", b =>
-                {
-                    b.HasBaseType("Eryph.StateDb.Model.VirtualNetworkPort");
-
-                    b.Property<Guid>("GatewayNetworkId")
-                        .HasColumnType("TEXT");
-
-                    b.HasIndex("GatewayNetworkId");
-
-                    b.HasDiscriminator().HasValue("GatewayNetworkPort");
-                });
-
             modelBuilder.Entity("Eryph.StateDb.Model.IpPoolAssignment", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.IpAssignment");
@@ -512,13 +489,6 @@ namespace Eryph.StateDb.Migrations
                     b.HasIndex("PoolId");
 
                     b.HasDiscriminator().HasValue("IpPoolAssignment");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.ProviderNetworkPort", b =>
-                {
-                    b.HasBaseType("Eryph.StateDb.Model.VirtualNetworkPort");
-
-                    b.HasDiscriminator().HasValue("ProviderNetworkPort");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.ProviderSubnet", b =>
@@ -562,9 +532,30 @@ namespace Eryph.StateDb.Migrations
                     b.HasDiscriminator().HasValue("VirtualCatletHost");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkPort", b =>
+                {
+                    b.HasBaseType("Eryph.StateDb.Model.NetworkPort");
+
+                    b.Property<Guid>("NetworkId")
+                        .HasColumnType("TEXT");
+
+                    b.HasIndex("NetworkId");
+
+                    b.HasDiscriminator().HasValue("VirtualNetworkPort");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkSubnet", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Subnet");
+
+                    b.Property<int>("DhcpLeaseTime")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DnsServersV4")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MTU")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("NetworkId")
                         .HasColumnType("TEXT");
@@ -572,6 +563,44 @@ namespace Eryph.StateDb.Migrations
                     b.HasIndex("NetworkId");
 
                     b.HasDiscriminator().HasValue("VirtualNetworkSubnet");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkPort", b =>
+                {
+                    b.HasBaseType("Eryph.StateDb.Model.VirtualNetworkPort");
+
+                    b.Property<Guid?>("CatletId")
+                        .HasColumnType("TEXT");
+
+                    b.HasIndex("CatletId");
+
+                    b.HasDiscriminator().HasValue("CatletNetworkPort");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.NetworkRouterPort", b =>
+                {
+                    b.HasBaseType("Eryph.StateDb.Model.VirtualNetworkPort");
+
+                    b.Property<Guid>("RoutedNetworkId")
+                        .HasColumnType("TEXT");
+
+                    b.HasIndex("RoutedNetworkId")
+                        .IsUnique();
+
+                    b.HasDiscriminator().HasValue("NetworkRouterPort");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.ProviderRouterPort", b =>
+                {
+                    b.HasBaseType("Eryph.StateDb.Model.VirtualNetworkPort");
+
+                    b.Property<string>("PoolName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubnetName")
+                        .HasColumnType("TEXT");
+
+                    b.HasDiscriminator().HasValue("ProviderRouterPort");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
@@ -587,16 +616,14 @@ namespace Eryph.StateDb.Migrations
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.VirtualNetworkPort", "NetworkPort")
+                    b.HasOne("Eryph.StateDb.Model.NetworkPort", "NetworkPort")
                         .WithMany("IpAssignments")
                         .HasForeignKey("NetworkPortId")
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Eryph.StateDb.Model.Subnet", "Subnet")
                         .WithMany()
-                        .HasForeignKey("SubnetId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("SubnetId");
 
                     b.Navigation("NetworkPort");
 
@@ -717,38 +744,6 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Project");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkPort", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.VirtualNetwork", "Network")
-                        .WithMany("NetworkPorts")
-                        .HasForeignKey("NetworkId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Network");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkPort", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.Catlet", "Catlet")
-                        .WithMany("NetworkPorts")
-                        .HasForeignKey("CatletId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("Catlet");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.GatewayNetworkPort", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.VirtualNetwork", "GatewayNetwork")
-                        .WithMany()
-                        .HasForeignKey("GatewayNetworkId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("GatewayNetwork");
-                });
-
             modelBuilder.Entity("Eryph.StateDb.Model.IpPoolAssignment", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.IpPool", "Pool")
@@ -769,6 +764,17 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Host");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkPort", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.VirtualNetwork", "Network")
+                        .WithMany("NetworkPorts")
+                        .HasForeignKey("NetworkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Network");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkSubnet", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.VirtualNetwork", "Network")
@@ -780,6 +786,27 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Network");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkPort", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Catlet", "Catlet")
+                        .WithMany("NetworkPorts")
+                        .HasForeignKey("CatletId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Catlet");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.NetworkRouterPort", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.VirtualNetwork", "RoutedNetwork")
+                        .WithOne("RouterPort")
+                        .HasForeignKey("Eryph.StateDb.Model.NetworkRouterPort", "RoutedNetworkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RoutedNetwork");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
                 {
                     b.Navigation("NetworkPorts");
@@ -788,6 +815,11 @@ namespace Eryph.StateDb.Migrations
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpPool", b =>
+                {
+                    b.Navigation("IpAssignments");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.NetworkPort", b =>
                 {
                     b.Navigation("IpAssignments");
                 });
@@ -829,12 +861,9 @@ namespace Eryph.StateDb.Migrations
                 {
                     b.Navigation("NetworkPorts");
 
-                    b.Navigation("Subnets");
-                });
+                    b.Navigation("RouterPort");
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkPort", b =>
-                {
-                    b.Navigation("IpAssignments");
+                    b.Navigation("Subnets");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatlet", b =>

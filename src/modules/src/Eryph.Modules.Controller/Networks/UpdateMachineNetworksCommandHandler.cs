@@ -1,13 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Modules.Controller.Inventory;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -17,6 +20,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Transport;
 
 namespace Eryph.Modules.Controller.Networks;
 
@@ -28,7 +32,8 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
     private readonly IStateStore _stateStore;
     private readonly ICatletIpManager _ipManager;
 
-    public UpdateMachineNetworksCommandHandler(IBus bus, ICatletIpManager ipManager, IStateStore stateStore)
+    public UpdateMachineNetworksCommandHandler(IBus bus, ICatletIpManager ipManager, 
+        IStateStore stateStore)
     {
         _bus = bus;
         _ipManager = ipManager;
@@ -37,6 +42,8 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
 
     public async Task Handle(OperationTask<UpdateMachineNetworksCommand> message)
     {
+        await ProgressMessage(message.OperationId, message.TaskId, "Updating Catlet network settings");
+
         await message.Command.Config.Networks.Map(cfg =>
                 
                 from network in _stateStore.ReadBySpecAsync<VirtualNetwork, VirtualNetworkSpecs.GetByName>(
@@ -58,7 +65,7 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
                     networkPort, 
                     message.Command.Config.Networks, 
                     cancelToken.Token)
-
+                
                 select new MachineNetworkSettings
                 {
                     NetworkProviderName = network.NetworkProvider,
@@ -75,15 +82,34 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
             .TraverseParallel(l => l)
             .Map(settings => new UpdateMachineNetworksCommandResponse { NetworkSettings = settings.ToArray() })
             .MatchAsync(
-                LeftAsync: l => _bus.SendLocal(
-                    OperationTaskStatusEvent.Failed(
-                        message.OperationId, message.TaskId, l.Message)),
+                LeftAsync: l =>
+                {
+                    return _bus.SendLocal(
+                        OperationTaskStatusEvent.Failed(
+                            message.OperationId, message.TaskId, l.Message));
+                },
                 RightAsync: map => _bus.SendLocal(
                     OperationTaskStatusEvent.Completed(
                         message.OperationId, message.TaskId, map))
 
             );
 
+    }
+
+    private async Task ProgressMessage(Guid operationId, Guid taskId, string message)
+    {
+        using var scope = new RebusTransactionScope();
+        await _bus.Publish(new OperationTaskProgressEvent
+        {
+            Id = Guid.NewGuid(),
+            OperationId = operationId,
+            TaskId = taskId,
+            Message = message,
+            Timestamp = DateTimeOffset.UtcNow
+        }).ConfigureAwait(false);
+
+        // commit it like this
+        await scope.CompleteAsync().ConfigureAwait(false);
     }
 
     private EitherAsync<Error, CatletNetworkPort> GetOrAddAdapterPort(VirtualNetwork network, Guid catletId, string adapterName, 
@@ -100,7 +126,8 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
                         Id = Guid.NewGuid(),
                         CatletId = catletId,
                         Name = portName,
-                        NetworkId = network.Id
+                        NetworkId = network.Id,
+                        IpAssignments = new List<IpAssignment>()
 
                     };
                     return _stateStore.For<VirtualNetworkPort>().AddAsync(port, cancellationToken);
@@ -110,6 +137,14 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
 
     }
 
+    private static string FormatMacAddress(string input)
+    {
+        const string regex = "(.{2})(.{2})(.{2})(.{2})(.{2})(.{2})";
+        const string replace = "$1:$2:$3:$4:$5:$6";
+
+        return Regex.Replace(input, regex, replace).ToLowerInvariant();
+
+    }
 
     private static string GenerateMacAddress(Guid valueId, string adapterName)
     {
@@ -131,14 +166,13 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
         return "d2ab" + result;
     }
 
-
     private static Unit UpdatePort(CatletNetworkPort networkPort, string adapterName, string fixedMacAddress)
     {
         if (!string.IsNullOrEmpty(fixedMacAddress))
-            networkPort.MacAddress = fixedMacAddress;
+            networkPort.MacAddress = FormatMacAddress(fixedMacAddress);
         else
         {
-            networkPort.MacAddress ??= GenerateMacAddress(networkPort.CatletId.GetValueOrDefault(), adapterName);
+            networkPort.MacAddress ??= FormatMacAddress(GenerateMacAddress(networkPort.CatletId.GetValueOrDefault(), adapterName));
         }
 
         return Unit.Default;

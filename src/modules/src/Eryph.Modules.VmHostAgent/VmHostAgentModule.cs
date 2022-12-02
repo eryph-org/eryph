@@ -71,7 +71,7 @@ namespace Eryph.Modules.VmHostAgent
         [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
-            //container.Register<ISyncClient, SyncClient>();
+            container.Register<ISyncClient, SyncClient>();
             container.Register<IHostNetworkCommands<AgentRuntime>, HostNetworkCommands<AgentRuntime>>();
             container.Register<IOVSControl, OVSControl>();
 

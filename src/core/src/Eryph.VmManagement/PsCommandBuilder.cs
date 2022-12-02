@@ -19,7 +19,6 @@ public class PsCommandBuilder
         return new PsCommandBuilder();
     }
 
-
     public PsCommandBuilder AddCommand(string command)
     {
         _dataChain.Add(new CommandPart{Command = command});

@@ -118,6 +118,7 @@ namespace Eryph.VmManagement
                             }))
                     }));
 
+
                     _runspace = RunspaceFactory.CreateRunspacePool(iss);
                     await Task.Factory.FromAsync(_runspace.BeginOpen, _runspace.EndOpen, null);
 
@@ -168,5 +169,9 @@ namespace Eryph.VmManagement
         {
             _createdObjects = _createdObjects.Add(new WeakReference<PSObject>(psObject));
         }
+
+
     }
+
+
 }

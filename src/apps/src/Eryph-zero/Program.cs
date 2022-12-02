@@ -221,11 +221,9 @@ internal static class Program
 
                 var host =
                     builder!
-
                         .ConfigureInternalHost(hb =>
                         {
                             hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero");
-                            hb.ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15));
                         })
 
                         .UseAspNetCore((module, webHostBuilder) =>
@@ -256,12 +254,11 @@ internal static class Program
                             logging.AddConfiguration(
                                 context.Configuration.GetSection("Logging"));
                         })
+                        .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
                         .Build();
 
                 //starting here all errors should be considered as recoverable
                 returnCode = -1;
-
-                Console.WriteLine(Info.Network);
 
                 await host.RunAsync();
 

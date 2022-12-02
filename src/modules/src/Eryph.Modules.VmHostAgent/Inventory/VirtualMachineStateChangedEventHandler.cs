@@ -1,5 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Eryph.Messages.Resources.Machines.Events;
+using Eryph.Resources.Machines;
+using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Inventory;
 using Rebus.Bus;
 using Rebus.Handlers;

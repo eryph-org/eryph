@@ -28,27 +28,27 @@ namespace Eryph.Modules.Controller.Inventory
 
         public async Task Handle(UpdateVMHostInventoryCommand message)
         {
-            var newMachineState = await 
-                _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId).IfNoneAsync(
-                () => new VirtualCatletHost
-                {
-                    Id = Guid.NewGuid(),
-                    AgentName = message.HostInventory.Name,
-                    Name = message.HostInventory.Name,
-                    HardwareId = message.HostInventory.HardwareId
-                });
+            //var newMachineState = await 
+            //    _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId).IfNoneAsync(
+            //    () => new VirtualCatletHost
+            //    {
+            //        Id = Guid.NewGuid(),
+            //        AgentName = message.HostInventory.Name,
+            //        Name = message.HostInventory.Name,
+            //        HardwareId = message.HostInventory.HardwareId
+            //    });
 
-            //var networks = (message.HostInventory.VirtualNetworks.ToMachineNetwork(newMachineState.Id) 
-            //                            ?? Array.Empty<MachineNetwork>()).ToList();
+            ////var networks = (message.HostInventory.VirtualNetworks.ToMachineNetwork(newMachineState.Id) 
+            ////                            ?? Array.Empty<MachineNetwork>()).ToList();
 
-            newMachineState.Status = CatletStatus.Running;
+            //newMachineState.Status = CatletStatus.Running;
 
 
-            var existingMachine = await _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
-                .IfNoneAsync(() => _vmHostDataService.AddNewVMHost(newMachineState));
+            //var existingMachine = await _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
+            //    .IfNoneAsync(() => _vmHostDataService.AddNewVMHost(newMachineState));
 
-            //MergeMachineNetworks(networks, existingMachine);
-            await UpdateVMs(message.VMInventory, existingMachine);
+            ////MergeMachineNetworks(networks, existingMachine);
+            //await UpdateVMs(message.VMInventory, existingMachine);
 
         }
     }

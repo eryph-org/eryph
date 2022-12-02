@@ -23,13 +23,3 @@ internal interface IVirtualMachineDataService
 
 }
 
-internal interface ISubnetDataService
-{
-    Task<Option<VirtualNetworkSubnet>> GetVirtualNetworkSubnet(
-        Guid networkId, string subnetName, CancellationToken cancellationToken);
-
-    Task<ProviderSubnet> EnsureProviderSubnetExists(
-        string providerName, string subnetName, IPNetwork ipNetwork, CancellationToken cancellationToken);
-
-
-}

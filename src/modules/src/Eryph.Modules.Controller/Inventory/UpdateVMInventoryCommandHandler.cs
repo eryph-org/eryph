@@ -25,10 +25,10 @@ namespace Eryph.Modules.Controller.Inventory
         }
 
 
-        public Task Handle(UpdateInventoryCommand message)
+        public async Task Handle(UpdateInventoryCommand message)
         {
-            return _vmHostDataService.GetVMHostByAgentName(message.AgentName)
-                .IfSomeAsync(hostMachine => UpdateVMs(message.Inventory, hostMachine));
+            //return _vmHostDataService.GetVMHostByAgentName(message.AgentName)
+            //    .IfSomeAsync(hostMachine => UpdateVMs(message.Inventory, hostMachine));
         }
     }
 }

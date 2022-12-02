@@ -1,6 +1,8 @@
 ﻿namespace Eryph.StateDb.Model;
 
-public class ProviderNetworkPort : VirtualNetworkPort
+public class ProviderRouterPort : VirtualNetworkPort
 {
+    public string SubnetName { get; set; }
+    public string PoolName { get; set; }
 
 }

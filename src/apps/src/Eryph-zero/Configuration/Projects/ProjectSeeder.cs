@@ -65,15 +65,43 @@ namespace Eryph.Runtime.Zero.Configuration.Project
 
             if (network == null)
             {
-                network = new VirtualNetwork
+                var networkId = Guid.NewGuid();
+                var routerPort = new NetworkRouterPort
                 {
                     Id = Guid.NewGuid(),
+                    MacAddress = "d2:e7:a7:37:40:f9",
+                    IpAssignments = new List<IpAssignment>(new[]
+                    {
+                        new IpAssignment
+                        {
+                            Id = Guid.NewGuid(),
+                            IpAddress = "10.0.0.1",
+                        }
+                    }),
+                    Name = "default",
+                    RoutedNetworkId = networkId,
+                    NetworkId = networkId,
+                };
+
+                network = new VirtualNetwork
+                {
+                    Id = networkId,
                     Name = "default",
                     ProjectId = projectId,
+                    IpNetwork = "10.0.0.0/20",
                     NetworkProvider = "default",
+                    RouterPort = routerPort,
                     NetworkPorts = new List<VirtualNetworkPort>
                     {
-                        new ProviderNetworkPort() { Name = "provider", Id = Guid.NewGuid()}
+                        routerPort,
+                        new ProviderRouterPort()
+                        {
+                            Name = "provider", 
+                            Id = Guid.NewGuid(), 
+                            SubnetName = "default", 
+                            PoolName = "default",
+                            MacAddress = "d2:e7:a7:37:40:f8"
+                        }
 
                     },
                     Subnets = new List<VirtualNetworkSubnet>(new[]{new VirtualNetworkSubnet
@@ -81,6 +109,9 @@ namespace Eryph.Runtime.Zero.Configuration.Project
                         Id = Guid.NewGuid(),
                         IpNetwork = "10.0.0.0/20",
                         Name = "default",
+                        DhcpLeaseTime = 3600,
+                        MTU = 1400,
+                        DnsServersV4 = "9.9.9.9,8.8.8.8",
                         IpPools = new List<IpPool>(new []
                         {
                             new IpPool

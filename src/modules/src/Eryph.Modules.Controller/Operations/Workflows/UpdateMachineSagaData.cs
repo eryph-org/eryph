@@ -11,5 +11,6 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         public MachineConfig? Config { get; set; }
         public Guid MachineId { get; set; }
         public string? AgentName { get; set; }
+        public Guid ProjectId { get; set; }
     }
 }

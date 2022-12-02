@@ -107,7 +107,7 @@ internal static class PowerShellInvokeExtensions
         Either<PowershellFailure, TResult> result, ILogger log)
     {
 
-        if (result.IsRight)
+        if (result.IsLeft)
         {
             ps.Streams.ClearStreams();
             return result;

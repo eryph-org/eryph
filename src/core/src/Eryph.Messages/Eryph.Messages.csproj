@@ -15,6 +15,7 @@
   <ItemGroup>
     <Folder Include="Events\" />
     <Folder Include="Resources\Images\Events\" />
+    <Folder Include="Resources\Networks\Events\" />
   </ItemGroup>
 
 

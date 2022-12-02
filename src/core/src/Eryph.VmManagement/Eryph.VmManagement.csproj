@@ -4,6 +4,7 @@
     <TargetFramework>net6.0-windows</TargetFramework>
   </PropertyGroup>
 
+
   <ItemGroup>
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive" Version="1.0.0-rc.11" />
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.NoCloud" Version="1.0.0-rc.11" />

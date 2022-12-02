@@ -49,7 +49,7 @@ namespace Eryph.Modules.Controller
             container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
             container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
             container.Register<IVirtualDiskDataService, VirtualDiskDataService>(Lifestyle.Scoped);
-            container.Register<ISubnetDataService, SubnetDataService>(Lifestyle.Scoped);
+            container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
 
             container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
             container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
@@ -107,6 +107,7 @@ namespace Eryph.Modules.Controller
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
             options.Services.AddHostedHandler<StartBusModuleHandler>();
+            options.Services.AddHostedHandler<RealizeNetworkProviderHandler>();
             options.AddHostedService<InventoryTimerService>();
             options.AddLogging();
         }

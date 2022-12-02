@@ -431,8 +431,8 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                                               return true;
 
                                           var currentIp = ips[0];
-                                          var res = currentIp.PrefixLength != newBridge.Network.Cidr ||
-                                                 currentIp.IpAddress != newBridge.IPAddress.ToString();
+                                          var res = currentIp.PrefixLength == newBridge.Network.Cidr &&
+                                                 currentIp.IpAddress == newBridge.IPAddress.ToString();
 
                                           if (!res)
                                           {
@@ -442,7 +442,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
                                           }
 
-                                          return res;
+                                          return !res;
 
                                       })
                                   : SuccessAff(true)

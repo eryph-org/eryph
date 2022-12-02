@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
 
@@ -14,11 +17,5 @@ public static class SubnetSpecs
         }
     }
 
-    public sealed class GetByProvider : Specification<ProviderSubnet>, ISingleResultSpecification
-    {
-        public GetByProvider(string providerName, string subnetName)
-        {
-            Query.Where(x => x.ProviderName == providerName && x.Name == subnetName);
-        }
-    }
+
 }

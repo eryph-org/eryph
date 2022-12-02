@@ -19,6 +19,34 @@ public static class VirtualNetworkQuery
                 networkAdapters.Select(x=>x.Cast<VMNetworkAdapter>().Value));
     }
 
+    public static IEnumerable<string> FindOvsPortNames(IEnumerable<VMNetworkAdapter> networkAdapters)
+    {
+        var scope = new ManagementScope(@"\\.\root\virtualization\v2");
+
+        foreach (var networkAdapter in networkAdapters)
+        {
+            var portId = networkAdapter.Id.Replace("\\", "\\\\");
+
+            using var portSettingsObj = new ManagementObject();
+            portSettingsObj.Path = new ManagementPath(scope.Path +
+                                                      $":Msvm_EthernetPortAllocationSettingData.InstanceID=\"{portId}\"");
+
+            string adapterPortName = null;
+
+            try
+            {
+                portSettingsObj.Get();
+                adapterPortName = portSettingsObj.GetPropertyValue("ElementName") as string;
+            }
+            catch (ManagementException)
+            {
+                // expected if not found
+            }
+
+            yield return adapterPortName;
+        }
+    }
+
     public static MachineNetworkData[] GetNetworksByAdapters(VMHostMachineData hostInfo,
         IEnumerable<VMNetworkAdapter> networkAdapters)
     {

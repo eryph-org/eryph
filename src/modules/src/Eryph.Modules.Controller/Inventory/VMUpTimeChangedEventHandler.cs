@@ -27,34 +27,34 @@ namespace Eryph.Modules.Controller.Inventory
             _vmDataService = vmDataService;
         }
 
-        public Task Handle(VMUpTimeChangedEvent message)
+        public async Task Handle(VMUpTimeChangedEvent message)
         {
-            return _vmDataService.GetByVMId(message.VmId).IfSomeAsync(vm =>
-            {
-                vm.UpTime = message.UpTime;
+            ////return _vmDataService.GetByVMId(message.VmId).IfSomeAsync(vm =>
+            ////{
+            ////    vm.UpTime = message.UpTime;
 
-                return _metadataService.GetMetadata(vm.MetadataId).IfSomeAsync(async metaData =>
-                {
-                    if (metaData.SensitiveDataHidden)
-                        return;
+            ////    return _metadataService.GetMetadata(vm.MetadataId).IfSomeAsync(async metaData =>
+            ////    {
+            ////        if (metaData.SensitiveDataHidden)
+            ////            return;
 
-                    var anySensitive = metaData.ProvisioningConfig?.Config.Any(x => x.Sensitive);
+            ////        var anySensitive = metaData.ProvisioningConfig?.Config.Any(x => x.Sensitive);
 
-                    if (!anySensitive.GetValueOrDefault())
-                        return;
+            ////        if (!anySensitive.GetValueOrDefault())
+            ////            return;
 
-                    if (vm.UpTime.GetValueOrDefault().TotalMinutes >= 5)
-                    {
-                        metaData.SensitiveDataHidden = true;
-                        await _metadataService.SaveMetadata(metaData);
+            ////        if (vm.UpTime.GetValueOrDefault().TotalMinutes >= 5)
+            ////        {
+            ////            metaData.SensitiveDataHidden = true;
+            ////            await _metadataService.SaveMetadata(metaData);
 
-                        await _opDispatcher.StartNew<UpdateConfigDriveCommand>(
-                            new Resource(ResourceType.Machine, vm.Id));
-                    }
+            ////            await _opDispatcher.StartNew<UpdateConfigDriveCommand>(
+            ////                new Resource(ResourceType.Machine, vm.Id));
+            ////        }
 
-                });
+            ////    });
 
-            });
+            //});
 
 
 

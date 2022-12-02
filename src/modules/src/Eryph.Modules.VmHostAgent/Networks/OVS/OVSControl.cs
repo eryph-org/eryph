@@ -60,6 +60,11 @@ public class OVSControl : OVSControlTool, IOVSControl
         return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\"", false, cancellationToken).Map(_ => Unit.Default);
     }
 
+    public EitherAsync<Error, Unit> AddPortWithIFaceId(string bridgeName, string portName, CancellationToken cancellationToken = default)
+    {
+        return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\" -- set interface \"{portName}\" external_ids:iface-id={portName}", false, cancellationToken).Map(_ => Unit.Default);
+    }
+
     public EitherAsync<Error, Unit> RemovePort(string bridgeName, string portName, CancellationToken cancellationToken = default)
     {
         return RunCommand($" --if-exists del-port \"{bridgeName}\" \"{portName}\"", false, cancellationToken).Map(_ => Unit.Default);
@@ -69,6 +74,13 @@ public class OVSControl : OVSControlTool, IOVSControl
     {
         return FindRecords<Bridge>("Bridge", Map<string, OVSQuery>.Empty, cancellationToken: cancellationToken);
     }
+
+    public EitherAsync<Error, Interface> GetInterface(string interfaceName,
+        CancellationToken cancellationToken = default)
+    {
+        return GetRecord<Interface>("Interface", interfaceName, cancellationToken: cancellationToken);
+    }
+
 
     public EitherAsync<Error, Seq<BridgePort>> GetPorts(CancellationToken cancellationToken = default)
     {

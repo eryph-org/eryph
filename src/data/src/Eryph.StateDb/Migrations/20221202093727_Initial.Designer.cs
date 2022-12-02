@@ -3,6 +3,7 @@ using System;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Migrations
 {
     [DbContext(typeof(StateStoreContext))]
-    partial class StateStoreContextModelSnapshot : ModelSnapshot
+    [Migration("20221202093727_Initial")]
+    partial class Initial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.11");
@@ -499,6 +501,19 @@ namespace Eryph.StateDb.Migrations
                     b.HasDiscriminator().HasValue("ProviderSubnet");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.RouterNetworkPort", b =>
+                {
+                    b.HasBaseType("Eryph.StateDb.Model.NetworkPort");
+
+                    b.Property<Guid>("NetworkId")
+                        .HasColumnType("TEXT");
+
+                    b.HasIndex("NetworkId")
+                        .IsUnique();
+
+                    b.HasDiscriminator().HasValue("RouterNetworkPort");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatlet", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Catlet");
@@ -535,7 +550,8 @@ namespace Eryph.StateDb.Migrations
                     b.HasBaseType("Eryph.StateDb.Model.NetworkPort");
 
                     b.Property<Guid>("NetworkId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("TEXT")
+                        .HasColumnName("VirtualNetworkPort_NetworkId");
 
                     b.HasIndex("NetworkId");
 
@@ -573,19 +589,6 @@ namespace Eryph.StateDb.Migrations
                     b.HasIndex("CatletId");
 
                     b.HasDiscriminator().HasValue("CatletNetworkPort");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.NetworkRouterPort", b =>
-                {
-                    b.HasBaseType("Eryph.StateDb.Model.VirtualNetworkPort");
-
-                    b.Property<Guid>("RoutedNetworkId")
-                        .HasColumnType("TEXT");
-
-                    b.HasIndex("RoutedNetworkId")
-                        .IsUnique();
-
-                    b.HasDiscriminator().HasValue("NetworkRouterPort");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.ProviderRouterPort", b =>
@@ -753,6 +756,17 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Pool");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.RouterNetworkPort", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.VirtualNetwork", "Network")
+                        .WithOne("RouterPort")
+                        .HasForeignKey("Eryph.StateDb.Model.RouterNetworkPort", "NetworkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Network");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatlet", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.VirtualCatletHost", "Host")
@@ -792,17 +806,6 @@ namespace Eryph.StateDb.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Catlet");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.NetworkRouterPort", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.VirtualNetwork", "RoutedNetwork")
-                        .WithOne("RouterPort")
-                        .HasForeignKey("Eryph.StateDb.Model.NetworkRouterPort", "RoutedNetworkId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("RoutedNetwork");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>

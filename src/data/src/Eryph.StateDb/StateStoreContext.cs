@@ -27,10 +27,11 @@ namespace Eryph.StateDb
 
         public DbSet<VirtualNetwork> VirtualNetworks { get; set; }
 
+        public DbSet<NetworkPort> NetworkPorts { get; set; }
+
         public DbSet<VirtualNetworkPort> VirtualNetworkPorts { get; set; }
         public DbSet<CatletNetworkPort> CatletNetworkPorts { get; set; }
-        public DbSet<ProviderNetworkPort> ProviderNetworkPorts { get; set; }
-        public DbSet<GatewayNetworkPort> GatewayNetworkPorts { get; set; }
+        public DbSet<ProviderRouterPort> ProviderNetworkPorts { get; set; }
 
         public DbSet<ProviderSubnet> ProviderSubnets { get; set; }
         public DbSet<VirtualNetworkSubnet> VirtualNetworkSubnets { get; set; }
@@ -119,6 +120,13 @@ namespace Eryph.StateDb
                 .HasForeignKey(x => x.NetworkId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<NetworkRouterPort>()
+                .HasOne(x => x.RoutedNetwork)
+                .WithOne(x => x.RouterPort)
+                .HasForeignKey<NetworkRouterPort>(x=>x.RoutedNetworkId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
             modelBuilder.Entity<VirtualNetwork>()
                 .Navigation(x => x.NetworkPorts);
 
@@ -133,17 +141,22 @@ namespace Eryph.StateDb
                 .Navigation(x => x.Subnets);
 
 
-            modelBuilder.Entity<VirtualNetworkPort>()
+            modelBuilder.Entity<NetworkPort>()
                 .HasKey(x=>x.Id);
 
-            modelBuilder.Entity<VirtualNetworkPort>()
+            modelBuilder.Entity<NetworkPort>()
                 .HasMany(x => x.IpAssignments)
                 .WithOne(x => x.NetworkPort)
-                .HasForeignKey(x=>x.NetworkPortId)
+                .HasForeignKey(x => x.NetworkPortId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<VirtualNetworkPort>()
+
+            modelBuilder.Entity<NetworkPort>()
                 .Navigation(x => x.IpAssignments);
+
+            modelBuilder.Entity<NetworkPort>()
+                .HasIndex(x => x.MacAddress)
+                .IsUnique();
 
 
             modelBuilder.Entity<Subnet>()

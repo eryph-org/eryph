@@ -24,22 +24,22 @@ namespace Eryph.Modules.Controller.Inventory
 
         public async Task Handle(VirtualMachineNetworkChangedEvent message)
         {
-            var machine = await _stateStoreContext.VirtualCatlets
-                .Include(vm => vm.NetworkAdapters)
-                //.Include(x => x.Networks)
-                .FirstOrDefaultAsync(x => x.VMId == message.VMId);
+            //var machine = await _stateStoreContext.VirtualCatlets
+            //    .Include(vm => vm.NetworkAdapters)
+            //    //.Include(x => x.Networks)
+            //    .FirstOrDefaultAsync(x => x.VMId == message.VMId);
 
-            var adapter = machine?.NetworkAdapters
-                .FirstOrDefault(a => a.Name == message.ChangedAdapter.AdapterName);
+            //var adapter = machine?.NetworkAdapters
+            //    .FirstOrDefault(a => a.Name == message.ChangedAdapter.AdapterName);
 
-            if (adapter == null)
-            {
-                adapter = new VirtualCatletNetworkAdapter
-                    {Id = message.ChangedAdapter.Id, Name = message.ChangedAdapter.AdapterName, Vm = machine};
-                _stateStoreContext.Add(adapter);
-            }
+            //if (adapter == null)
+            //{
+            //    adapter = new VirtualCatletNetworkAdapter
+            //        {Id = message.ChangedAdapter.Id, Name = message.ChangedAdapter.AdapterName, Vm = machine};
+            //    _stateStoreContext.Add(adapter);
+            //}
 
-            adapter.SwitchName = message.ChangedAdapter.VirtualSwitchName;
+            //adapter.SwitchName = message.ChangedAdapter.VirtualSwitchName;
 
             //var network = machine?.Networks.FirstOrDefault(x =>
             //    x.Name == message.ChangedNetwork.Name);

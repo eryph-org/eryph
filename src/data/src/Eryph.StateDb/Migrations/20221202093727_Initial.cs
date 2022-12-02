@@ -197,6 +197,7 @@ namespace Eryph.StateDb.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     NetworkProvider = table.Column<string>(type: "TEXT", nullable: true),
+                    IpNetwork = table.Column<string>(type: "TEXT", nullable: true),
                     ProjectId = table.Column<Guid>(type: "TEXT", nullable: false),
                     ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: true)
@@ -285,6 +286,43 @@ namespace Eryph.StateDb.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "NetworkPorts",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MacAddress = table.Column<string>(type: "TEXT", nullable: true),
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    Discriminator = table.Column<string>(type: "TEXT", nullable: false),
+                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    VirtualNetworkPort_NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    CatletId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    SubnetName = table.Column<string>(type: "TEXT", nullable: true),
+                    PoolName = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NetworkPorts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_NetworkPorts_Catlets_CatletId",
+                        column: x => x.CatletId,
+                        principalTable: "Catlets",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_NetworkPorts_VirtualNetworks_NetworkId",
+                        column: x => x.NetworkId,
+                        principalTable: "VirtualNetworks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_NetworkPorts_VirtualNetworks_VirtualNetworkPort_NetworkId",
+                        column: x => x.VirtualNetworkPort_NetworkId,
+                        principalTable: "VirtualNetworks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Subnet",
                 columns: table => new
                 {
@@ -293,48 +331,16 @@ namespace Eryph.StateDb.Migrations
                     IpNetwork = table.Column<string>(type: "TEXT", nullable: true),
                     Discriminator = table.Column<string>(type: "TEXT", nullable: false),
                     ProviderName = table.Column<string>(type: "TEXT", nullable: true),
-                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    DhcpLeaseTime = table.Column<int>(type: "INTEGER", nullable: true),
+                    MTU = table.Column<int>(type: "INTEGER", nullable: true),
+                    DnsServersV4 = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Subnet", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Subnet_VirtualNetworks_NetworkId",
-                        column: x => x.NetworkId,
-                        principalTable: "VirtualNetworks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "VirtualNetworkPorts",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MacAddress = table.Column<string>(type: "TEXT", nullable: true),
-                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    Discriminator = table.Column<string>(type: "TEXT", nullable: false),
-                    CatletId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    GatewayNetworkId = table.Column<Guid>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_VirtualNetworkPorts", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_VirtualNetworkPorts_Catlets_CatletId",
-                        column: x => x.CatletId,
-                        principalTable: "Catlets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_VirtualNetworkPorts_VirtualNetworks_GatewayNetworkId",
-                        column: x => x.GatewayNetworkId,
-                        principalTable: "VirtualNetworks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_VirtualNetworkPorts_VirtualNetworks_NetworkId",
                         column: x => x.NetworkId,
                         principalTable: "VirtualNetworks",
                         principalColumn: "Id",
@@ -370,7 +376,7 @@ namespace Eryph.StateDb.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SubnetId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    SubnetId = table.Column<Guid>(type: "TEXT", nullable: true),
                     IpAddress = table.Column<string>(type: "TEXT", nullable: true),
                     NetworkPortId = table.Column<Guid>(type: "TEXT", nullable: true),
                     Discriminator = table.Column<string>(type: "TEXT", nullable: false),
@@ -387,17 +393,16 @@ namespace Eryph.StateDb.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_IpAssignment_Subnet_SubnetId",
-                        column: x => x.SubnetId,
-                        principalTable: "Subnet",
+                        name: "FK_IpAssignment_NetworkPorts_NetworkPortId",
+                        column: x => x.NetworkPortId,
+                        principalTable: "NetworkPorts",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_IpAssignment_VirtualNetworkPorts_NetworkPortId",
-                        column: x => x.NetworkPortId,
-                        principalTable: "VirtualNetworkPorts",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        name: "FK_IpAssignment_Subnet_SubnetId",
+                        column: x => x.SubnetId,
+                        principalTable: "Subnet",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
@@ -441,6 +446,28 @@ namespace Eryph.StateDb.Migrations
                 column: "TaskId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_NetworkPorts_CatletId",
+                table: "NetworkPorts",
+                column: "CatletId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NetworkPorts_MacAddress",
+                table: "NetworkPorts",
+                column: "MacAddress",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NetworkPorts_NetworkId",
+                table: "NetworkPorts",
+                column: "NetworkId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_NetworkPorts_VirtualNetworkPort_NetworkId",
+                table: "NetworkPorts",
+                column: "VirtualNetworkPort_NetworkId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_OperationResources_OperationId",
                 table: "OperationResources",
                 column: "OperationId");
@@ -481,21 +508,6 @@ namespace Eryph.StateDb.Migrations
                 column: "ParentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_VirtualNetworkPorts_CatletId",
-                table: "VirtualNetworkPorts",
-                column: "CatletId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VirtualNetworkPorts_GatewayNetworkId",
-                table: "VirtualNetworkPorts",
-                column: "GatewayNetworkId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VirtualNetworkPorts_NetworkId",
-                table: "VirtualNetworkPorts",
-                column: "NetworkId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_VirtualNetworks_ProjectId",
                 table: "VirtualNetworks",
                 column: "ProjectId");
@@ -528,7 +540,7 @@ namespace Eryph.StateDb.Migrations
                 name: "IpPools");
 
             migrationBuilder.DropTable(
-                name: "VirtualNetworkPorts");
+                name: "NetworkPorts");
 
             migrationBuilder.DropTable(
                 name: "OperationTasks");
