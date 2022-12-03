@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using LanguageExt.TypeClasses;
 
 namespace Eryph.StateDb.Model
 {
@@ -9,31 +9,7 @@ namespace Eryph.StateDb.Model
         public Guid NetworkId { get; set; }
         public virtual VirtualNetwork Network { get; set; }
 
+        public FloatingNetworkPort FloatingPort { get; set; }
+        public Guid? FloatingPortId { get; set; }
     }
-
-    public class NetworkRouterPort : VirtualNetworkPort
-    {
-
-        public Guid RoutedNetworkId { get; set; }
-        public virtual VirtualNetwork RoutedNetwork { get; set; }
-
-    }
-
-
-    public abstract class NetworkPort
-    {
-        public Guid Id { get; set; }
-        public string MacAddress { get; set; }
-
-        public string Name { get; set; }
-        public virtual List<IpAssignment> IpAssignments { get; set; }
-
-    }
-
-    public class ProviderNetworkPort : NetworkPort
-    {
-        public string ProviderName { get; set; }
-
-    }
-
 }

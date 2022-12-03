@@ -22,10 +22,12 @@ namespace Eryph.Modules.Controller;
 public class RealizeNetworkProviderHandler : IHostedServiceHandler
 {
     private readonly Container _container;
+    private readonly ILogger _logger;
 
-    public RealizeNetworkProviderHandler(Container container)
+    public RealizeNetworkProviderHandler(Container container, ILogger<RealizeNetworkProviderHandler> logger)
     {
         _container = container;
+        _logger = logger;
     }
     public async Task Execute(CancellationToken stoppingToken)
     {
@@ -108,6 +110,8 @@ public class RealizeNetworkProviderHandler : IHostedServiceHandler
         var res = await UpdateProjectNetworkPlan(projects.Id);
         await stateStore.For<ProviderSubnet>().SaveChangesAsync(stoppingToken);
 
+        res.IfLeft(l => _logger.LogError(
+            "Failed to apply network plans: {message}", l.Message));
 
     }
 

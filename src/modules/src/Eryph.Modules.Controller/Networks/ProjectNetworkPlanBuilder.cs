@@ -20,6 +20,8 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
     private readonly IIpPoolManager _ipPoolManager;
     private readonly IStateStore _stateStore;
 
+    private record FloatingPortInfo(FloatingNetworkPort Port);
+
     private record ProviderRouterPortInfo(ProviderRouterPort Port, VirtualNetwork Network, ProviderSubnetInfo Subnet);
     private record ProviderSubnetInfo(ProviderSubnet Subnet, NetworkProviderSubnet Config);
 
@@ -50,6 +52,8 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
             from providerRouterPorts in GetProviderRouterPorts(networks, providerSubnets, cancellationToken)
 
             let catletPorts = FindPortsOfType<CatletNetworkPort>(networks)
+            from floatingPorts in GetFloatingPorts(catletPorts, providerSubnets, cancellationToken)
+
 
             let p1 = AddProjectRouterAndPorts(networkPlan, networks)
             let p2 = AddExternalNetSwitches(p1, providerSubnets, overLayProviders)
@@ -57,12 +61,11 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
             let p4 = AddNetworksAsSwitches(p3, networks)
             let p5 = AddSubnetsAsDhcpOptions(p4, networks)
             let p6 = AddCatletPorts(p5, catletPorts)
+            let p7 = AddFloatingPorts(p6, floatingPorts)
 
-            select p6;
+            select p7;
 
     }
-
-
 
     private EitherAsync<Error, Seq<ProviderRouterPortInfo>> GetProviderRouterPorts(
         Seq<VirtualNetwork> networks, Seq<ProviderSubnetInfo> providerSubnets, 
@@ -71,7 +74,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
 
                 // ensure that every port has a ip address
                 .Map(port => port.IpAssignments.Count == 0
-                    ? AcquireIpAddress(port, network, providerSubnets, cancellationToken)
+                    ? AcquireRouterPortIpAddress(port, network, providerSubnets, cancellationToken)
                         .Map(p => new ProviderRouterPortInfo(p, network, EmptyProviderSubnetInfo))
                     : new ProviderRouterPortInfo(port, network, EmptyProviderSubnetInfo)))
             .Flatten().TraverseSerial(l => l)
@@ -80,8 +83,29 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
             .Bind(infoSeq => infoSeq.Map(info => providerSubnets
                 .Find(x => x.Subnet.ProviderName == info.Network.NetworkProvider && x.Subnet.Name == info.Port.SubnetName)
                 .ToEitherAsync(Error.New(
-                    $"Network '{info.Network.Name}' configuration error: subnet {info.Port} of network provider {info.Network.NetworkProvider} not found."))
+                    $"Network '{info.Network.Name}' configuration error: subnet {info.Port.SubnetName} of network provider {info.Network.NetworkProvider} not found."))
                 .Map(providerSubnet => info with { Subnet = providerSubnet })).TraverseParallel(l => l));
+
+    private EitherAsync<Error, Seq<FloatingPortInfo>> GetFloatingPorts(
+        Seq<CatletNetworkPort> catletPorts, Seq<ProviderSubnetInfo> providerSubnets,
+        CancellationToken cancellationToken)
+    {
+        return catletPorts
+            .Filter(x => x.FloatingPort != null)
+            .Map(x => x.FloatingPort)
+            .Map(port => port.IpAssignments.Count == 0
+                    ? AcquireFloatingPortIpAddress(port, providerSubnets, cancellationToken)
+                        .Map(p => new FloatingPortInfo(p))
+                    : new FloatingPortInfo(port))
+            .TraverseSerial(l => l)
+            // find and add provider subnet 
+            .Bind(infoSeq => infoSeq.Map(info => providerSubnets
+                .Find(x => x.Subnet.ProviderName == info.Port.ProviderName &&
+                           x.Subnet.Name == info.Port.SubnetName)
+                .ToEitherAsync(Error.New(
+                    $"Port '{info.Port.Name}' configuration error: subnet {info.Port.SubnetName} of network provider {info.Port.ProviderName} not found."))
+                .Map(_ => info )).TraverseParallel(l => l));
+    }
 
 
     private EitherAsync<Error, Seq<ProviderSubnetInfo>> GetProviderSubnets(
@@ -192,6 +216,25 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
             .Apply(s => JoinPlans(s, networkPlan));
 
 
+    private static NetworkPlan AddFloatingPorts(NetworkPlan networkPlan, Seq<FloatingPortInfo> ports)
+    {
+        return ports
+            .Where(x=>x.Port.IpAssignments?.Count > 0)
+            .Where(x => x.Port.AssignedPort?.IpAssignments?.Count > 0)
+            .Map(portInfo =>
+            {
+                var externalIpAddress = portInfo.Port.IpAssignments.First().IpAddress.Apply(IPAddress.Parse);
+                var internalIp = portInfo.Port.AssignedPort.IpAssignments.First().IpAddress;
+
+                return networkPlan.AddNATRule($"project-{networkPlan.Id}", "dnat_and_snat",
+                    externalIpAddress, portInfo.Port.MacAddress,
+                    internalIp, portInfo.Port.AssignedPort.Name);
+
+            })
+            .Apply(s => JoinPlans(s, networkPlan));
+
+    }
+
     private static NetworkPlan AddProjectRouterAndPorts(NetworkPlan networkPlan, Seq<VirtualNetwork> networks)
     {
         networkPlan = networkPlan.AddRouter($"project-{networkPlan.Id}");
@@ -219,7 +262,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
 
     }
 
-    private EitherAsync<Error, ProviderRouterPort> AcquireIpAddress(ProviderRouterPort port, VirtualNetwork network,
+    private EitherAsync<Error, ProviderRouterPort> AcquireRouterPortIpAddress(ProviderRouterPort port, VirtualNetwork network,
         Seq<ProviderSubnetInfo> providerSubnets, CancellationToken cancellationToken)
     {
         return from providerSubnet in providerSubnets
@@ -229,6 +272,19 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
             from ip in _ipPoolManager.AcquireIp(providerSubnet.Subnet.Id, port.PoolName, cancellationToken)
             let _ = AddIpToPort(port, ip)
             select  port;
+    }
+
+    private EitherAsync<Error, FloatingNetworkPort> AcquireFloatingPortIpAddress(
+        FloatingNetworkPort port, 
+        Seq<ProviderSubnetInfo> providerSubnets, CancellationToken cancellationToken)
+    {
+        return from providerSubnet in providerSubnets
+                .Find(x => x.Subnet.ProviderName == port.ProviderName && x.Subnet.Name == port.SubnetName)
+                .ToEitherAsync(Error.New(
+                    $"Floating port '{port.Name}' configuration error: subnet {port.SubnetName} of network provider {port.ProviderName} not found."))
+            from ip in _ipPoolManager.AcquireIp(providerSubnet.Subnet.Id, port.PoolName, cancellationToken)
+            let _ = AddIpToPort(port, ip)
+            select port;
     }
 
     private static NetworkPort AddIpToPort(NetworkPort port, IpAssignment ipAssignment)

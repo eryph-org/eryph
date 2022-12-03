@@ -31,7 +31,7 @@ namespace Eryph.StateDb
 
         public DbSet<VirtualNetworkPort> VirtualNetworkPorts { get; set; }
         public DbSet<CatletNetworkPort> CatletNetworkPorts { get; set; }
-        public DbSet<ProviderRouterPort> ProviderNetworkPorts { get; set; }
+        public DbSet<ProviderRouterPort> ProviderRouterPorts { get; set; }
 
         public DbSet<ProviderSubnet> ProviderSubnets { get; set; }
         public DbSet<VirtualNetworkSubnet> VirtualNetworkSubnets { get; set; }
@@ -110,7 +110,6 @@ namespace Eryph.StateDb
                 .Navigation(x => x.NetworkPorts);
 
 
-
             modelBuilder.Entity<VirtualNetwork>()
                 .HasKey(x => x.Id);
 
@@ -149,6 +148,23 @@ namespace Eryph.StateDb
                 .WithOne(x => x.NetworkPort)
                 .HasForeignKey(x => x.NetworkPortId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+
+            modelBuilder.Entity<FloatingNetworkPort>()
+                .HasOne(x => x.AssignedPort)
+                .WithOne(x => x.FloatingPort)
+                .HasForeignKey<VirtualNetworkPort>(x => x.FloatingPortId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<FloatingNetworkPort>()
+                .Property(x => x.PoolName).HasColumnName(nameof(FloatingNetworkPort.PoolName));
+            modelBuilder.Entity<FloatingNetworkPort>()
+                .Property(x => x.SubnetName).HasColumnName(nameof(FloatingNetworkPort.SubnetName));
+
+            modelBuilder.Entity<ProviderRouterPort>()
+                .Property(x => x.SubnetName).HasColumnName(nameof(ProviderRouterPort.SubnetName));
+            modelBuilder.Entity<ProviderRouterPort>()
+                .Property(x => x.PoolName).HasColumnName(nameof(ProviderRouterPort.PoolName));
 
 
             modelBuilder.Entity<NetworkPort>()

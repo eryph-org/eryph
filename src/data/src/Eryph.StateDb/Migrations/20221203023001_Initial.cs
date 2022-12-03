@@ -290,14 +290,17 @@ namespace Eryph.StateDb.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ProviderName = table.Column<string>(type: "TEXT", nullable: true),
                     MacAddress = table.Column<string>(type: "TEXT", nullable: true),
                     Name = table.Column<string>(type: "TEXT", nullable: true),
                     Discriminator = table.Column<string>(type: "TEXT", nullable: false),
-                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    VirtualNetworkPort_NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CatletId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    AssignedPortId = table.Column<Guid>(type: "TEXT", nullable: true),
                     SubnetName = table.Column<string>(type: "TEXT", nullable: true),
-                    PoolName = table.Column<string>(type: "TEXT", nullable: true)
+                    PoolName = table.Column<string>(type: "TEXT", nullable: true),
+                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    FloatingPortId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    CatletId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    RoutedNetworkId = table.Column<Guid>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -309,14 +312,20 @@ namespace Eryph.StateDb.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
+                        name: "FK_NetworkPorts_NetworkPorts_FloatingPortId",
+                        column: x => x.FloatingPortId,
+                        principalTable: "NetworkPorts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
                         name: "FK_NetworkPorts_VirtualNetworks_NetworkId",
                         column: x => x.NetworkId,
                         principalTable: "VirtualNetworks",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_NetworkPorts_VirtualNetworks_VirtualNetworkPort_NetworkId",
-                        column: x => x.VirtualNetworkPort_NetworkId,
+                        name: "FK_NetworkPorts_VirtualNetworks_RoutedNetworkId",
+                        column: x => x.RoutedNetworkId,
                         principalTable: "VirtualNetworks",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -451,6 +460,12 @@ namespace Eryph.StateDb.Migrations
                 column: "CatletId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_NetworkPorts_FloatingPortId",
+                table: "NetworkPorts",
+                column: "FloatingPortId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_MacAddress",
                 table: "NetworkPorts",
                 column: "MacAddress",
@@ -459,13 +474,13 @@ namespace Eryph.StateDb.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_NetworkId",
                 table: "NetworkPorts",
-                column: "NetworkId",
-                unique: true);
+                column: "NetworkId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_NetworkPorts_VirtualNetworkPort_NetworkId",
+                name: "IX_NetworkPorts_RoutedNetworkId",
                 table: "NetworkPorts",
-                column: "VirtualNetworkPort_NetworkId");
+                column: "RoutedNetworkId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_OperationResources_OperationId",

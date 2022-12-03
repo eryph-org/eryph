@@ -9,8 +9,6 @@ using System.Threading.Tasks;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines.Commands;
-using Eryph.Modules.Controller.DataServices;
-using Eryph.Modules.Controller.Inventory;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -50,8 +48,17 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
                     new VirtualNetworkSpecs.GetByName(message.Command.ProjectId, cfg.Name)
                     ,Error.New($"Network '{cfg.Name}' not found in project {message.Command.ProjectId}"))
 
+                let c1 = new CancellationTokenSource(5000)
+
                 from networkPort in GetOrAddAdapterPort(
-                        network, message.Command.MachineId, cfg.AdapterName, CancellationToken.None)
+                        network, message.Command.MachineId, cfg.AdapterName, c1.Token)
+
+                let c2 = new CancellationTokenSource(5000)
+
+                from floatingPort in GetOrAddFloatingPort(
+                        networkPort, Option<string>.None,
+                        "default", "default",
+                        "default", c2.Token).ToAsync()
 
                 let fixedMacAddress =
                     message.Command.Config.VM.NetworkAdapters.Find(x => x.Name == cfg.AdapterName)
@@ -59,12 +66,12 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
                         .IfNone("")
                 let _ = UpdatePort(networkPort, cfg.AdapterName, fixedMacAddress)
 
-                let cancelToken = new CancellationTokenSource()
+                let c3 = new CancellationTokenSource(5000)
                 from ips in _ipManager.ConfigurePortIps(
                     message.Command.ProjectId, 
                     networkPort, 
                     message.Command.Config.Networks, 
-                    cancelToken.Token)
+                    c3.Token)
                 
                 select new MachineNetworkSettings
                 {
@@ -137,6 +144,46 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
 
     }
 
+    private async Task<Either<Error, FloatingNetworkPort>> GetOrAddFloatingPort(CatletNetworkPort adapterPort,
+        Option<string> portName, string providerName, string providerSubnetName, string providerPoolName,
+        CancellationToken cancellationToken)
+
+    {
+        await _stateStore.LoadPropertyAsync(adapterPort, x => x.FloatingPort, cancellationToken);
+
+        if (adapterPort.FloatingPort != null)
+        {
+            var floatingPort = adapterPort.FloatingPort;
+            if (floatingPort.ProviderName != providerName || floatingPort.SubnetName !=
+                providerSubnetName || floatingPort.PoolName != providerPoolName)
+            {
+                adapterPort.FloatingPort = null;
+
+                if (portName.IsNone) // not a named port, then remove
+                    await _stateStore.For<FloatingNetworkPort>().DeleteAsync(floatingPort, cancellationToken);
+            }
+
+        }
+
+        if (adapterPort.FloatingPort != null)
+            return adapterPort.FloatingPort;
+
+        var port = new FloatingNetworkPort
+        {
+            Id = Guid.NewGuid(),
+            Name = portName.IfNone(adapterPort.Name),
+            ProviderName = providerName,
+            SubnetName = providerSubnetName,
+            PoolName = providerPoolName,
+            MacAddress = FormatMacAddress(GenerateMacAddress(Guid.NewGuid(), ""))
+        };
+
+        adapterPort.FloatingPort = port;
+
+        return await _stateStore.For<FloatingNetworkPort>().AddAsync(port, cancellationToken);
+
+    }
+
     private static string FormatMacAddress(string input)
     {
         const string regex = "(.{2})(.{2})(.{2})(.{2})(.{2})(.{2})";
@@ -151,7 +198,7 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
         var id = $"{valueId}_{adapterName}";
         var crc = new Crc32();
 
-        string result = null;
+        string? result = null;
 
         var arrayData = Encoding.ASCII.GetBytes(id);
         var arrayResult = crc.ComputeHash(arrayData);
