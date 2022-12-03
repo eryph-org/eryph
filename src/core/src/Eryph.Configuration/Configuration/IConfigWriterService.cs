@@ -4,8 +4,8 @@ namespace Eryph.Configuration
 {
     public interface IConfigWriterService<in TConfig>
     {
-        Task Delete(TConfig config);
-        Task Update(TConfig config);
-        Task Add(TConfig config);
+        Task Delete(TConfig config, string projectName);
+        Task Update(TConfig config, string projectName);
+        Task Add(TConfig config, string projectName);
     }
 }

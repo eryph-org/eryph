@@ -29,7 +29,6 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
                         Name = virtualDiskConfig.Name,
                         DataStore = config.DataStore,
                         Environment = config.Environment,
-                        Project = config.Project,
                         StorageIdentifier = config.StorageIdentifier
                     };
                 }

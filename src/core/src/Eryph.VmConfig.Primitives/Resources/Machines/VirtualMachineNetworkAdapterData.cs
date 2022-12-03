@@ -9,6 +9,6 @@ namespace Eryph.Resources.Machines
         public string VirtualSwitchName { get; set; }
         public Guid? VirtualSwitchId { get; set; }
         public ushort VLanId { get; set; }
-        public string MACAddress { get; set; }
+        public string MacAddress { get; set; }
     }
 }

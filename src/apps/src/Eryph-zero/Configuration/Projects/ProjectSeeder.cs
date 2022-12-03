@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration;
+using Eryph.Core;
 using Eryph.Modules.Controller;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -30,7 +31,7 @@ namespace Eryph.Runtime.Zero.Configuration.Project
 
         public async Task Execute(CancellationToken stoppingToken)
         {
-            var tenantId = Guid.Parse("{C1813384-8ECB-4F17-B846-821EE515D19B}");
+            var tenantId = EryphConstants.DefaultTenantId;
 
             var tenant = await _tenantRepository.GetByIdAsync(tenantId, stoppingToken);
 

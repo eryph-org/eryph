@@ -2,6 +2,7 @@
 using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.StateDb;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 
@@ -18,17 +19,18 @@ namespace Eryph.Modules.Controller.Inventory
             IVirtualMachineMetadataService metadataService,
             IOperationDispatcher dispatcher,
             IVirtualMachineDataService vmDataService,
-            IVirtualDiskDataService vhdDataService, IVMHostMachineDataService vmHostDataService) :
-            base(metadataService, dispatcher, vmDataService, vhdDataService)
+            IVirtualDiskDataService vhdDataService, IVMHostMachineDataService vmHostDataService,
+            IStateStore stateStore) :
+            base(metadataService, dispatcher, vmDataService, vhdDataService, stateStore)
         {
             _vmHostDataService = vmHostDataService;
         }
 
 
-        public async Task Handle(UpdateInventoryCommand message)
+        public Task Handle(UpdateInventoryCommand message)
         {
-            //return _vmHostDataService.GetVMHostByAgentName(message.AgentName)
-            //    .IfSomeAsync(hostMachine => UpdateVMs(message.Inventory, hostMachine));
+            return _vmHostDataService.GetVMHostByAgentName(message.AgentName)
+                .IfSomeAsync(hostMachine => UpdateVMs(message.Inventory, hostMachine));
         }
     }
 }

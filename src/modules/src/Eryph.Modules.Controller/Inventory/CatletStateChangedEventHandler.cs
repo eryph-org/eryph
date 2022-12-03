@@ -20,22 +20,23 @@ namespace Eryph.Modules.Controller.Inventory
 
         public async Task Handle(VMStateChangedEvent message)
         {
-            var vm = await _stateStoreContext.VirtualCatlets.FirstOrDefaultAsync(x=> x.VMId == message.VmId);
+            var vCatlet = await _stateStoreContext.VirtualCatlets.FirstOrDefaultAsync(x=> x.VMId == message.VmId);
 
-            if (vm == null)
+            if (vCatlet == null)
                 return;
 
-            vm.Status = MapVmStatusToMachineStatus(message.Status);
+            vCatlet.Status = MapVmStatusToCatletStatus(message.Status);
 
-            if (vm.Status == CatletStatus.Stopped)
+            if (vCatlet.Status == CatletStatus.Stopped)
             {
-                vm.UpTime = TimeSpan.Zero;
+                vCatlet.UpTime = TimeSpan.Zero;
             }
 
+            //uow will commit
 
         }
 
-        private static CatletStatus MapVmStatusToMachineStatus(VmStatus status)
+        private static CatletStatus MapVmStatusToCatletStatus(VmStatus status)
         {
             switch (status)
             {

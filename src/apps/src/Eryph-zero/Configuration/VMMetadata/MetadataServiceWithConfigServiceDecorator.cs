@@ -28,14 +28,14 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
         public async Task<Unit> SaveMetadata(VirtualMachineMetadata metadata)
         {
             await _decoratedService.SaveMetadata(metadata);
-            await _configService.Update(metadata);
+            await _configService.Update(metadata, "");
             return Unit.Default;
         }
 
         public async Task<Unit> RemoveMetadata(Guid id)
         {
             await _decoratedService.RemoveMetadata(id);
-            await _configService.Delete(new VirtualMachineMetadata { Id = id });
+            await _configService.Delete(new VirtualMachineMetadata { Id = id }, "");
             return Unit.Default;
         }
     }

@@ -9,7 +9,7 @@ namespace Eryph.Resources.Disks
         public string Name { get; set; }
         public string StorageIdentifier { get; set; }
         public string DataStore { get; set; }
-        public string Project { get; set; }
+        public string ProjectName { get; set; }
         public string Environment { get; set; }
 
         [PrivateIdentifier]

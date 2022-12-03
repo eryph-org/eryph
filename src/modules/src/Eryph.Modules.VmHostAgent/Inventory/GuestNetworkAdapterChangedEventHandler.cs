@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Machines.Events;
@@ -7,7 +6,6 @@ using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
-using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using JetBrains.Annotations;
@@ -62,7 +60,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                                     .Cast<VMNetworkAdapterVlanSetting>().Value.AccessVlanId,
                                 VirtualSwitchName = adapter.Value.SwitchName,
                                 VirtualSwitchId = adapter.Value.SwitchId,
-                                MACAddress = a.Value.MacAddress
+                                MacAddress = a.Value.MacAddress
                             },
                             ChangedNetwork = VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, new []{adapter.Value})
                                 .FirstOrDefault()
