@@ -47,15 +47,16 @@ internal class IpPoolManager : IIpPoolManager
             if (totalAssigned >= space)
                 throw new InvalidOperationException($"IpPool {pool.Id} has no more free ips.");
 
-            var localStartNumber = startNumber;
 
             async Task FindFreeNumber()
             {
-                while (localStartNumber + lastNumber < endNumber)
+                // ReSharper disable once AccessToModifiedClosure
+                while (startNumber + lastNumber < endNumber)
                 {
 
                     var minNumber = (await
                         _stateStore.Read<IpPoolAssignment>()
+                            // ReSharper disable once AccessToModifiedClosure
                             .GetBySpecAsync(new IpPoolSpecs.GetMinNumberStartingAt(pool.Id, lastNumber),
                                 cancellationToken))?.Number;
 
@@ -76,7 +77,7 @@ internal class IpPoolManager : IIpPoolManager
             if (startNumber + lastNumber > endNumber)
             {
                 //rollover (there has to be a gap as there are free numbers)
-                startNumber = 0;
+                lastNumber = 0;
                 await FindFreeNumber().ConfigureAwait(false);
             }
 

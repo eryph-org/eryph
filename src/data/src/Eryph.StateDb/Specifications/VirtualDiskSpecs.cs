@@ -24,6 +24,8 @@ namespace Eryph.StateDb.Specifications
                          x.Environment == environment &&
                          x.StorageIdentifier == storageIdentifier &&
                          x.Name == name);
+
+                Query.Include(x => x.Project);
             }
         }
 

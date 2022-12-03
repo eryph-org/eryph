@@ -53,7 +53,7 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
                 from networkPort in GetOrAddAdapterPort(
                         network, message.Command.MachineId, cfg.AdapterName, c1.Token)
 
-                let c2 = new CancellationTokenSource(5000)
+                let c2 = new CancellationTokenSource()
 
                 from floatingPort in GetOrAddFloatingPort(
                         networkPort, Option<string>.None,
@@ -66,7 +66,7 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
                         .IfNone("")
                 let _ = UpdatePort(networkPort, cfg.AdapterName, fixedMacAddress)
 
-                let c3 = new CancellationTokenSource(5000)
+                let c3 = new CancellationTokenSource()
                 from ips in _ipManager.ConfigurePortIps(
                     message.Command.ProjectId, 
                     networkPort, 

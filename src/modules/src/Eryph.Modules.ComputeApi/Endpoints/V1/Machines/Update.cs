@@ -19,16 +19,17 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
     public class Update : ResourceOperationEndpoint<UpdateMachineRequest, StateDb.Model.Catlet>
     {
 
+
         public Update([NotNull] IResourceOperationHandler<StateDb.Model.Catlet> operationHandler) : base(operationHandler)
         {
         }
 
         protected override object CreateOperationMessage(StateDb.Model.Catlet model, UpdateMachineRequest request )
         {
-            var machineConfig = request.Configuration.GetValueOrDefault().Deserialize<MachineConfig>();
+            var config = request.Configuration.GetValueOrDefault().Deserialize<MachineConfig>(new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 
             return new UpdateMachineCommand(){Resource = new Resource(ResourceType.Machine, model.Id), 
-                CorrelationId = request.CorrelationId, Config = machineConfig};
+                CorrelationId = request.CorrelationId, Config = config};
         }
 
 

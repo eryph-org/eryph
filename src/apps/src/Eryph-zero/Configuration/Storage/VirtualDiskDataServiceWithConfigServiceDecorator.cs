@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Eryph.Configuration;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using LanguageExt;
 
@@ -12,13 +13,14 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
     {
         private readonly IVirtualDiskDataService _decoratedService;
         private readonly IConfigWriterService<VirtualDisk> _configService;
-
+        private readonly IStateStore _stateStore;
 
         public VirtualDiskDataServiceWithConfigServiceDecorator(IVirtualDiskDataService decoratedService,
-            IConfigWriterService<VirtualDisk> configService)
+            IConfigWriterService<VirtualDisk> configService, IStateStore stateStore)
         {
             _decoratedService = decoratedService;
             _configService = configService;
+            _stateStore = stateStore;
         }
 
 
@@ -52,7 +54,11 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
         {
             var optionalData = await _decoratedService.GetVHD(id);
             await _decoratedService.DeleteVHD(id);
-            await optionalData.IfSomeAsync(data => _configService.Delete(data,data.Project.Name ));
+            await optionalData.IfSomeAsync(data =>
+            {
+                _stateStore.LoadProperty(data, x=>x.Project);
+                return _configService.Delete(data, data.Project.Name);
+            });
 
             return Unit.Default;
         }

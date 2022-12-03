@@ -195,8 +195,7 @@ namespace Eryph.Modules.Controller.Inventory
                         existingMachine.Host = hostMachine;
                         existingMachine.AgentName = newMachine.AgentName;
 
-                        //UpdateReportedNetworks(vmInfo.NetworkAdapters, existingMachine);
-
+                        existingMachine.ReportedNetworks = newMachine.ReportedNetworks;
                         existingMachine.NetworkAdapters = newMachine.NetworkAdapters;
                         existingMachine.Drives = newMachine.Drives;
                     });
@@ -280,59 +279,5 @@ namespace Eryph.Modules.Controller.Inventory
             }
         }
 
-
-        protected void UpdateReportedNetworks(IEnumerable<VirtualNetwork> newNetworks, Catlet existingMachine)
-        {
-            StateStore.LoadCollection(existingMachine, x=>x.ReportedNetworks);
-
-            //existingMachine.ReportedNetworks ??= new List<ReportedNetwork>();
-            //existingMachine.ReportedNetworks.Clear();
-
-            //foreach (var newNetwork in newNetworks)
-            //{
-            //    existingMachine.ReportedNetworks.Add(new ReportedNetwork
-            //    {
-            //        DnsServerAddresses = newNetwork
-            //    });
-            //}
-
-            //merge Networks 
-            //var networkList = newNetworks.ToList();
-            //var existingNetworksList = existingMachine.Networks?.ToList() ?? new List<MachineNetwork>();
-
-            //var existingNetworksListUniqueName =
-            //    existingNetworksList.Distinct((x, y) => x.Name == y.Name).ToArray();
-
-            //foreach (var existingNetwork in existingNetworksListUniqueName)
-            //{
-            //    var networksWithSameName =
-            //        existingNetworksList.Where(x => x.Name == existingNetwork.Name).ToArray();
-
-            //    var deleteNetwork = networksWithSameName.Length > 1 || //delete if name is not unique
-            //                                                           //delete also, if there is a reference in current machine but no longer in new machine
-            //                        existingNetworksList.All(x => x.Name != existingNetwork.Name);
-
-            //    if (deleteNetwork)
-            //        existingNetworksList.RemoveAll(x => x.Name == existingNetwork.Name);
-            //}
-
-            //foreach (var newNetwork in networkList.ToArray())
-            //{
-            //    var existingNetwork = existingNetworksList.FirstOrDefault(x => x.Name == newNetwork.Name);
-            //    if (existingNetwork == null) continue;
-            //    existingNetwork.DnsServerAddresses = newNetwork.DnsServerAddresses;
-            //    existingNetwork.IPv4DefaultGateway = newNetwork.IPv4DefaultGateway;
-            //    existingNetwork.IPv4DefaultGateway = newNetwork.IPv6DefaultGateway;
-            //    existingNetwork.IpV4Addresses = newNetwork.IpV4Addresses;
-            //    existingNetwork.IpV6Addresses = newNetwork.IpV6Addresses;
-            //    existingNetwork.IpV4Subnets = newNetwork.IpV4Subnets;
-            //    existingNetwork.IpV6Subnets = newNetwork.IpV6Subnets;
-
-            //    networkList.Remove(newNetwork);
-            //}
-
-            //existingNetworksList.AddRange(networkList);
-            //existingMachine.Networks = existingNetworksList;
-        }
     }
 }

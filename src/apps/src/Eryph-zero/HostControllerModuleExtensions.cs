@@ -4,7 +4,7 @@ using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
 using Eryph.Modules.Controller;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.Runtime.Zero.Configuration.Project;
+using Eryph.Runtime.Zero.Configuration.Projects;
 using Eryph.Runtime.Zero.Configuration.Storage;
 using Eryph.Runtime.Zero.Configuration.VMMetadata;
 using Eryph.StateDb;

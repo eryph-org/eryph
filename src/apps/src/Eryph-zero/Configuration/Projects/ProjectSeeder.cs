@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration;
@@ -10,62 +9,67 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 
-namespace Eryph.Runtime.Zero.Configuration.Project
+namespace Eryph.Runtime.Zero.Configuration.Projects
 {
     [UsedImplicitly]
     internal class ProjectSeeder : IConfigSeeder<ControllerModule>
     {
-        private readonly IStateStoreRepository<Tenant> _tenantRepository;
+        private readonly IStateStore _stateStore;
+        private readonly ILogger _logger;
 
-        private readonly IStateStoreRepository<StateDb.Model.Project> _projectRepository;
-        private readonly IStateStoreRepository<VirtualNetwork> _networkRepository;
-
-        public ProjectSeeder(IStateStoreRepository<StateDb.Model.Project> projectRepository,
-            IStateStoreRepository<VirtualNetwork> networkRepository, IStateStoreRepository<Tenant> tenantRepository)
+        public ProjectSeeder(IStateStore stateStore, ILogger logger)
         {
-            _projectRepository = projectRepository;
-            _networkRepository = networkRepository;
-            _tenantRepository = tenantRepository;
+            _stateStore = stateStore;
+            _logger = logger;
         }
 
         public async Task Execute(CancellationToken stoppingToken)
         {
             var tenantId = EryphConstants.DefaultTenantId;
+            _logger.LogDebug("Entering state db project seeder");
 
-            var tenant = await _tenantRepository.GetByIdAsync(tenantId, stoppingToken);
+            var tenant = await _stateStore.For<Tenant>().GetByIdAsync(tenantId, stoppingToken);
 
             if (tenant == null)
             {
+                _logger.LogInformation("Default tenant '{tenantId}' not found in state db. Creating tenant record.", EryphConstants.DefaultTenantId);
+                
                 tenant = new Tenant { Id = tenantId };
-                await _tenantRepository.AddAsync(tenant, stoppingToken);
-                await _tenantRepository.SaveChangesAsync(stoppingToken);
+                await _stateStore.For<Tenant>().AddAsync(tenant, stoppingToken);
+                await _stateStore.For<Tenant>().SaveChangesAsync(stoppingToken);
             }
 
-            var project = await _projectRepository.GetBySpecAsync(
+            var project = await _stateStore.For<Project>().GetBySpecAsync(
                 new ProjectSpecs.GetByName(tenantId, "default")
                 , stoppingToken);
 
             if (project == null)
             {
-                project = new StateDb.Model.Project
+                _logger.LogInformation("Default project '{projectId}' not found in state db. Creating project record.", EryphConstants.DefaultProjectId);
+
+                project = new Project
                 {
-                    Id = Guid.NewGuid(),
+                    Id = EryphConstants.DefaultProjectId,
                     Name = "default",
                     TenantId = tenantId
                 };
-                await _projectRepository.AddAsync(project, stoppingToken);
+                await _stateStore.For<Project>().AddAsync(project, stoppingToken);
             }
 
-            await _projectRepository.SaveChangesAsync(stoppingToken);
+            await _stateStore.For<Project>().SaveChangesAsync(stoppingToken);
             var projectId = project.Id;
 
-            var network = await _networkRepository.GetBySpecAsync(
+            var network = await _stateStore.For<VirtualNetwork>().GetBySpecAsync(
                 new VirtualNetworkSpecs.GetByName(projectId, "default")
                 , stoppingToken);
 
+
             if (network == null)
             {
+                _logger.LogInformation("Default network not found in state db. Creating network record.");
+
                 var networkId = Guid.NewGuid();
                 var routerPort = new NetworkRouterPort
                 {
@@ -112,7 +116,7 @@ namespace Eryph.Runtime.Zero.Configuration.Project
                         Name = "default",
                         DhcpLeaseTime = 3600,
                         MTU = 1400,
-                        DnsServersV4 = "9.9.9.9,8.8.8.8",
+                        DnsServersV4 = "9.9.9.9 8.8.8.8",
                         IpPools = new List<IpPool>(new []
                         {
                             new IpPool
@@ -127,16 +131,17 @@ namespace Eryph.Runtime.Zero.Configuration.Project
                         })
                     }})
                 };
-                await _networkRepository.AddAsync(network, stoppingToken);
+                await _stateStore.For<VirtualNetwork>().AddAsync(network, stoppingToken);
             }
 
             try
             {
-                await _networkRepository.SaveChangesAsync(stoppingToken);
+                await _stateStore.For<VirtualNetwork>().SaveChangesAsync(stoppingToken);
             }
             catch (Exception ex)
             {
-
+                _logger.LogCritical(ex,"Failed to seed state db projects.");
+                throw;
             }
         }
     }
