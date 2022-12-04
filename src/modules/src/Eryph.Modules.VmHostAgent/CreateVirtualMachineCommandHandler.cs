@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines.Commands;
@@ -21,7 +21,7 @@ using Rebus.Handlers;
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class CreateVirtualMachineCommandHandler : VirtualMachineConfigCommandHandler,
+    internal class CreateVirtualMachineCommandHandler : VirtualCatletConfigCommandHandler,
         IHandleMessages<OperationTask<CreateVirtualMachineCommand>>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
@@ -47,7 +47,7 @@ namespace Eryph.Modules.VmHostAgent
                     Option<VMStorageSettings>.None));
 
             var getTemplate = Prelude.fun(() =>
-                GetTemplate(Engine, hostSettings, config.VM.Image));
+                GetTemplate(Engine, hostSettings, config.VCatlet.Image));
 
             var createVM = Prelude.fun((VMStorageSettings settings, TypedPsObject<PlannedVirtualMachineInfo> template) =>
                 CreateVM(config, hostSettings, settings, Engine, template));
@@ -83,7 +83,7 @@ namespace Eryph.Modules.VmHostAgent
             return VirtualMachine.TemplateFromImage(engine, hostSettings, image);
         }
 
-        private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(MachineConfig config,
+        private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(CatletConfig config,
             HostSettings hostSettings, VMStorageSettings storageSettings, IPowershellEngine engine,
             TypedPsObject<PlannedVirtualMachineInfo> template)
         {
@@ -98,14 +98,14 @@ namespace Eryph.Modules.VmHostAgent
 
         private EitherAsync<Error, VirtualMachineMetadata> CreateMetadata(
             TypedPsObject<PlannedVirtualMachineInfo> template,
-            TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config, Guid machineId)
+            TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig config, Guid machineId)
         {
             var metadata = new VirtualMachineMetadata
             {
                 Id = Guid.NewGuid(),
                 MachineId = machineId,
                 VMId = vmInfo.Value.Id,
-                ProvisioningConfig = config.Provisioning,
+                RaisingConfig = config.Raising,
                 ImageConfig = template.ToVmConfig()
         };
 

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -28,7 +28,7 @@ internal class CatletIpManager : ICatletIpManager
     public EitherAsync<Error, IPAddress[]> ConfigurePortIps(
         Guid projectId,
         CatletNetworkPort port,
-        MachineNetworkConfig[] networkConfigs, CancellationToken cancellationToken)
+        CatletNetworkConfig[] networkConfigs, CancellationToken cancellationToken)
     {
 
         var portNetworks = networkConfigs.Map(x =>
@@ -102,7 +102,7 @@ internal class CatletIpManager : ICatletIpManager
             });
     }
 
-    private async Task<Either<Error, Option<IpAssignment>>> CheckAssignmentConfigured(IpAssignment assignment, MachineNetworkConfig[] networkConfigs)
+    private async Task<Either<Error, Option<IpAssignment>>> CheckAssignmentConfigured(IpAssignment assignment, CatletNetworkConfig[] networkConfigs)
     {
         var networkName = "";
         var poolName = "";

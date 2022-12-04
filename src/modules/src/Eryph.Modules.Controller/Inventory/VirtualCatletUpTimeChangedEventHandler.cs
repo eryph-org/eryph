@@ -38,7 +38,7 @@ namespace Eryph.Modules.Controller.Inventory
                     if (metaData.SensitiveDataHidden)
                         return;
 
-                    var anySensitive = metaData.ProvisioningConfig?.Config.Any(x => x.Sensitive);
+                    var anySensitive = metaData.RaisingConfig?.Config.Any(x => x.Sensitive);
 
                     if (!anySensitive.GetValueOrDefault())
                         return;

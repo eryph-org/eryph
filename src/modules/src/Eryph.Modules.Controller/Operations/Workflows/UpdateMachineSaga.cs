@@ -19,9 +19,9 @@ namespace Eryph.Modules.Controller.Operations.Workflows
 {
     [UsedImplicitly]
     internal class UpdateMachineSaga : OperationTaskWorkflowSaga<UpdateMachineCommand, UpdateMachineSagaData>,
-        IHandleMessages<OperationTaskStatusEvent<ValidateMachineConfigCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateMachineNetworksCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>
 
@@ -45,11 +45,11 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         protected override void CorrelateMessages(ICorrelationConfig<UpdateMachineSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<ValidateMachineConfigCommand>>(m => m.OperationId,
+            config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.OperationId,
                 d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId,
                 d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand>>(m => m.OperationId,
+            config.Correlate<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>(m => m.OperationId,
                 d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<UpdateMachineNetworksCommand>>(m => m.OperationId,
                 d => d.OperationId);
@@ -66,7 +66,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
 
 
             return _taskDispatcher.StartNew(Data.OperationId,
-                new ValidateMachineConfigCommand
+                new ValidateCatletConfigCommand
                 {
                     MachineId = message.Resource.Id,
                     Config = message.Config,
@@ -74,12 +74,12 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             );
         }
 
-        public Task Handle(OperationTaskStatusEvent<ValidateMachineConfigCommand> message)
+        public Task Handle(OperationTaskStatusEvent<ValidateCatletConfigCommand> message)
         {
             if (Data.Validated)
                 return Task.CompletedTask;
 
-            return FailOrRun<ValidateMachineConfigCommand, ValidateMachineConfigCommand>(message, async r =>
+            return FailOrRun<ValidateCatletConfigCommand, ValidateCatletConfigCommand>(message, async r =>
             {
                 Data.Config = r.Config;
 
@@ -155,7 +155,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                 await _vmDataService.GetVM(Data.MachineId).Match(
                     Some: data =>
                     {
-                        return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualMachineConfigDriveCommand
+                        return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualCatletConfigDriveCommand
                         {
                             VMId = r.Inventory.VMId,
                             MachineId = Data.MachineId,
@@ -170,7 +170,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         }
 
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineConfigDriveCommand> message)
+        public Task Handle(OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand> message)
         {
             return FailOrRun(message, () =>
                 _taskDispatcher.StartNew(Data.OperationId, new UpdateNetworksCommand

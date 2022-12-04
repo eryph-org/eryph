@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines.Commands;
@@ -18,8 +18,8 @@ using Rebus.Handlers;
 namespace Eryph.Modules.VmHostAgent;
 
 [UsedImplicitly]
-internal class UpdateConfigDriveCommandHandler : VirtualMachineConfigCommandHandler,
-    IHandleMessages<OperationTask<UpdateVirtualMachineConfigDriveCommand>>
+internal class UpdateConfigDriveCommandHandler : VirtualCatletConfigCommandHandler,
+    IHandleMessages<OperationTask<UpdateVirtualCatletConfigDriveCommand>>
 {
     private readonly IHostInfoProvider _hostInfoProvider;
 
@@ -28,7 +28,7 @@ internal class UpdateConfigDriveCommandHandler : VirtualMachineConfigCommandHand
         _hostInfoProvider = hostInfoProvider;
     }
 
-    public Task Handle(OperationTask<UpdateVirtualMachineConfigDriveCommand> message)
+    public Task Handle(OperationTask<UpdateVirtualCatletConfigDriveCommand> message)
     {
         var command = message.Command;
         var vmId = command.VMId;
@@ -37,9 +37,9 @@ internal class UpdateConfigDriveCommandHandler : VirtualMachineConfigCommandHand
         TaskId = message.TaskId;
 
         
-        var config = new MachineConfig
+        var config = new CatletConfig
         {
-            Provisioning = message.Command.MachineMetadata.ProvisioningConfig
+            Raising = message.Command.MachineMetadata.RaisingConfig
         };
 
         var hostSettings = HostSettingsBuilder.GetHostSettings();

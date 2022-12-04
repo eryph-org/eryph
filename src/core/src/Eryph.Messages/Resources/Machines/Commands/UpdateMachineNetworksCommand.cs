@@ -1,7 +1,6 @@
 ﻿using System;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Resources.Machines;
-using LanguageExt;
 
 namespace Eryph.Messages.Resources.Machines.Commands;
 
@@ -9,7 +8,7 @@ namespace Eryph.Messages.Resources.Machines.Commands;
 public class UpdateMachineNetworksCommand
 {
     public Guid ProjectId { get; set; }
-    public MachineConfig Config { get; set; }
+    public CatletConfig Config { get; set; }
     public Guid MachineId { get; set; }
 }
 

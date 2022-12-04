@@ -2,7 +2,7 @@
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Messages;
 using Eryph.Messages.Operations.Events;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
@@ -18,7 +18,7 @@ using Rebus.Transport;
 
 namespace Eryph.Modules.VmHostAgent
 {
-    internal abstract class VirtualMachineConfigCommandHandler
+    internal abstract class VirtualCatletConfigCommandHandler
     {
         public const string DefaultDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         protected readonly IBus Bus;
@@ -28,7 +28,7 @@ namespace Eryph.Modules.VmHostAgent
         protected Guid OperationId;
         protected Guid TaskId;
 
-        protected VirtualMachineConfigCommandHandler(
+        protected VirtualCatletConfigCommandHandler(
             IPowershellEngine engine,
             IBus bus, ILogger log)
         {
@@ -183,7 +183,7 @@ namespace Eryph.Modules.VmHostAgent
 
 
         protected static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> EnsureNameConsistent(
-            TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config, IPowershellEngine engine)
+            TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig config, IPowershellEngine engine)
         {
             return Prelude.Cond<(string currentName, string newName)>(names =>
                     !string.IsNullOrWhiteSpace(names.newName) &&

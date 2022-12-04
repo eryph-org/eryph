@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Dbosoft.CloudInit.ConfigDrive;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -56,9 +56,9 @@ namespace Eryph.VmManagement.Converging
                         from networkData in GenerateNetworkData(vmInfo).ToAsync()
                         from _ in GenerateConfigDriveDisk(configDriveIsoPath,
                             Context.Metadata.SensitiveDataHidden,
-                            Context.Config.Provisioning.Hostname,
+                            Context.Config.Raising.Hostname,
                             networkData,
-                            Context.Config.Provisioning.Config).ToAsync()
+                            Context.Config.Raising.Config).ToAsync()
                         from newVmInfo in InsertConfigDriveDisk(configDriveIsoPath, vmInfo).ToAsync()
                         select newVmInfo);
 

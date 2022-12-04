@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
@@ -22,7 +22,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Machines
 
         protected override object CreateOperationMessage(NewMachineRequest request)
         {
-            var config = request.Configuration.GetValueOrDefault().Deserialize<MachineConfig>(new JsonSerializerOptions{PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
+            var config = request.Configuration.GetValueOrDefault().Deserialize<CatletConfig>(new JsonSerializerOptions{PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
             return new CreateMachineCommand{ CorrelationId = request.CorrelationId, Config = config };
         }
         

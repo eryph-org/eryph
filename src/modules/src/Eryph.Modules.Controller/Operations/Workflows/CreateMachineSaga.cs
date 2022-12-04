@@ -19,7 +19,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
 {
     [UsedImplicitly]
     internal class CreateMachineSaga : OperationTaskWorkflowSaga<CreateMachineCommand, CreateMachineSagaData>,
-        IHandleMessages<OperationTaskStatusEvent<ValidateMachineConfigCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PlaceVirtualMachineCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CreateVirtualMachineCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateMachineCommand>>,
@@ -89,7 +89,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
 
                 return _taskDispatcher.StartNew(Data.OperationId,new PrepareVirtualMachineImageCommand
                 {
-                    Image = Data.Config?.VM?.Image,
+                    Image = Data.Config?.VCatlet?.Image,
                     AgentName = r.AgentName
                 });
             });
@@ -106,7 +106,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                 Data.MachineId = Guid.NewGuid();
 
                 if(Data.Config!= null)
-                    Data.Config.VM.Image = image;
+                    Data.Config.VCatlet.Image = image;
 
                 return _taskDispatcher.StartNew(Data.OperationId,new CreateVirtualMachineCommand
                 {
@@ -130,12 +130,12 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             });
         }
 
-        public Task Handle(OperationTaskStatusEvent<ValidateMachineConfigCommand> message)
+        public Task Handle(OperationTaskStatusEvent<ValidateCatletConfigCommand> message)
         {
             if (Data.State >= CreateVMState.ConfigValidated)
                 return Task.CompletedTask;
 
-            return FailOrRun<ValidateMachineConfigCommand, ValidateMachineConfigCommand>(message, r =>
+            return FailOrRun<ValidateCatletConfigCommand, ValidateCatletConfigCommand>(message, r =>
             {
                 Data.Config = r.Config;
                 Data.State = CreateVMState.ConfigValidated;
@@ -153,7 +153,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         {
             base.CorrelateMessages(config);
 
-            config.Correlate<OperationTaskStatusEvent<ValidateMachineConfigCommand>>(m => m.OperationId,
+            config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.OperationId,
                 d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<PlaceVirtualMachineCommand>>(m => m.OperationId,
                 d => d.OperationId);
@@ -171,7 +171,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             Data.State = CreateVMState.Initiated;
 
             return _taskDispatcher.StartNew(Data.OperationId,
-                new ValidateMachineConfigCommand
+                new ValidateCatletConfigCommand
                 {
                     MachineId = Guid.Empty,
                     Config = message.Config

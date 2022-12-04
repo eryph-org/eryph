@@ -1,11 +1,11 @@
 ﻿using System;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 
 namespace Eryph.Modules.Controller.Operations.Workflows
 {
     public class CreateMachineSagaData : TaskWorkflowSagaData
     {
-        public MachineConfig? Config { get; set; }
+        public CatletConfig? Config { get; set; }
         public string? AgentName { get; set; }
 
         public CreateVMState State { get; set; }

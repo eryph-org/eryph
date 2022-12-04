@@ -61,7 +61,7 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
                         "default", c2.Token).ToAsync()
 
                 let fixedMacAddress =
-                    message.Command.Config.VM.NetworkAdapters.Find(x => x.Name == cfg.AdapterName)
+                    message.Command.Config.VCatlet.NetworkAdapters.Find(x => x.Name == cfg.AdapterName)
                         .Map(x => x.MacAddress)
                         .IfNone("")
                 let _ = UpdatePort(networkPort, cfg.AdapterName, fixedMacAddress)

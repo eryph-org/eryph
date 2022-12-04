@@ -1,4 +1,4 @@
-﻿using Eryph.ConfigModel.Machine;
+﻿using Eryph.ConfigModel.Catlets;
 using Eryph.Resources.Disks;
 
 namespace Eryph.Resources.Machines
@@ -13,7 +13,7 @@ namespace Eryph.Resources.Machines
 
         public ControllerType ControllerType { get; set; }
 
-        public VirtualMachineDriveType? Type { get; set; }
+        public VirtualCatletDriveType? Type { get; set; }
 
         public bool Frozen { get; set; }
 

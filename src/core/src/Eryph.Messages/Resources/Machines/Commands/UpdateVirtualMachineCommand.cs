@@ -1,5 +1,5 @@
 ﻿using System;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Resources.Machines;
 
@@ -8,7 +8,7 @@ namespace Eryph.Messages.Resources.Machines.Commands
     [SendMessageTo(MessageRecipient.VMHostAgent)]
     public class UpdateVirtualMachineCommand : IHostAgentCommand
     {
-        public MachineConfig Config { get; set; }
+        public CatletConfig Config { get; set; }
 
         public Guid VMId { get; set; }
 

@@ -2,22 +2,22 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.VmManagement.Data.Planned;
 
 namespace Eryph.VmManagement
 {
     public static class PlannedVirtualMachineInfoExtensions
     {
-        public static VirtualMachineConfig ToVmConfig(this TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
+        public static VirtualCatletConfig ToVmConfig(this TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
         {
-            return new VirtualMachineConfig
+            return new VirtualCatletConfig
             {
-                Cpu = new VirtualMachineCpuConfig
+                Cpu = new VirtualCatletCpuConfig
                 {
                     Count = (int) plannedVM.Value.ProcessorCount
                 },
-                Memory = new VirtualMachineMemoryConfig
+                Memory = new VirtualCatletMemoryConfig
                 {
                     Startup = (int) Math.Ceiling(plannedVM.Value.MemoryStartup / 1024d / 1024),
                     //max and min memory is not imported from template
@@ -28,31 +28,31 @@ namespace Eryph.VmManagement
             };
         }
 
-        private static IEnumerable<VirtualMachineDriveConfig> ConvertPlannedDrivesToConfig(TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
+        private static IEnumerable<VirtualCatletDriveConfig> ConvertPlannedDrivesToConfig(TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
         {
             var result = plannedVM.GetList(x=>x.HardDrives)
                 .Map(x=>x.Cast<PlannedHardDiskDriveInfo>().Value).Select(
-                hardDiskDriveInfo => new VirtualMachineDriveConfig
+                hardDiskDriveInfo => new VirtualCatletDriveConfig
                 {
                     Name = Path.GetFileNameWithoutExtension(hardDiskDriveInfo.Path),
                     Size = (int) Math.Ceiling(hardDiskDriveInfo.Size / 1024d / 1024 / 1024),
-                    Type = VirtualMachineDriveType.VHD
+                    Type = VirtualCatletDriveType.VHD
                 }).ToList();
 
             result.AddRange(plannedVM.GetList(x=>x.DVDDrives).Select(
-                dvdDriveInfo => new VirtualMachineDriveConfig
+                dvdDriveInfo => new VirtualCatletDriveConfig
             {
-                Type = VirtualMachineDriveType.DVD
+                Type = VirtualCatletDriveType.DVD
             }));
 
             return result;
         }
 
-        private static IEnumerable<VirtualMachineNetworkAdapterConfig> ConvertImageNetAdaptersToConfig(
+        private static IEnumerable<VirtualCatletNetworkAdapterConfig> ConvertImageNetAdaptersToConfig(
             PlannedVirtualMachineInfo plannedVM)
         {
             return plannedVM.NetworkAdapters.Select(
-                adapterInfo => new VirtualMachineNetworkAdapterConfig
+                adapterInfo => new VirtualCatletNetworkAdapterConfig
                 {
                     Name = adapterInfo.Name
                 }).ToList();

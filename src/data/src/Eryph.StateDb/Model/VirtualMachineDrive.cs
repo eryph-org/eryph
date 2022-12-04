@@ -1,5 +1,5 @@
 ﻿using System;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 
 namespace Eryph.StateDb.Model
 {
@@ -10,7 +10,7 @@ namespace Eryph.StateDb.Model
         public Guid MachineId { get; set; }
         public virtual VirtualCatlet Vm { get; set; }
 
-        public VirtualMachineDriveType? Type { get; set; }
+        public VirtualCatletDriveType? Type { get; set; }
 
         public Guid? AttachedDiskId { get; set; }
 

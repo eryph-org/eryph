@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
@@ -10,7 +10,7 @@ namespace Eryph.VmManagement.Converging
 {
     public class ConvergeContext
     {
-        public readonly MachineConfig Config;
+        public readonly CatletConfig Config;
         public readonly IPowershellEngine Engine;
         public readonly HostSettings HostSettings;
         public readonly Func<string, Task> ReportProgress;
@@ -23,7 +23,7 @@ namespace Eryph.VmManagement.Converging
             HostSettings hostSettings,
             IPowershellEngine engine,
             Func<string, Task> reportProgress,
-            MachineConfig config,
+            CatletConfig config,
             VirtualMachineMetadata metadata,
             VMStorageSettings storageSettings, 
             MachineNetworkSettings[] networkSettings,

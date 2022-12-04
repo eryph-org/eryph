@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Threading;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;
@@ -12,7 +12,7 @@ namespace Eryph.Modules.Controller.Networks
     {
         public EitherAsync<Error, IPAddress[]> ConfigurePortIps(
             Guid tenantId, CatletNetworkPort port,
-            MachineNetworkConfig[] networkConfigs, CancellationToken cancellationToken);
+            CatletNetworkConfig[] networkConfigs, CancellationToken cancellationToken);
 
     }
 

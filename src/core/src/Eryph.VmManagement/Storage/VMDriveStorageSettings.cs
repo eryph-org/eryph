@@ -1,6 +1,5 @@
 ﻿using System.IO;
-using Eryph.ConfigModel.Machine;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
+using Eryph.ConfigModel.Catlets;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -8,22 +7,22 @@ namespace Eryph.VmManagement.Storage
 {
     public class VMDriveStorageSettings
     {
-        public VirtualMachineDriveType Type { get; set; }
+        public VirtualCatletDriveType Type { get; set; }
 
         public int ControllerLocation { get; set; }
         public int ControllerNumber { get; set; }
 
 
         public static EitherAsync<Error, Seq<VMDriveStorageSettings>> PlanDriveStorageSettings(
-            HostSettings hostSettings, MachineConfig config, VMStorageSettings storageSettings)
+            HostSettings hostSettings, CatletConfig config, VMStorageSettings storageSettings)
         {
-            return config.VM.Drives
+            return config.VCatlet.Drives
                 .ToSeq().MapToEitherAsync((index, c) =>
                     FromDriveConfig(hostSettings, storageSettings, c, index).ToEither()).ToAsync();
         }
 
         public static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
-            HostSettings hostSettings, VMStorageSettings storageSettings, VirtualMachineDriveConfig driveConfig,
+            HostSettings hostSettings, VMStorageSettings storageSettings, VirtualCatletDriveConfig driveConfig,
             int index)
         {
             const int
@@ -34,15 +33,15 @@ namespace Eryph.VmManagement.Storage
 
 
             //if it is not a vhd, we only need controller settings
-            if (driveConfig.Type != VirtualMachineDriveType.VHD)
+            if (driveConfig.Type != VirtualCatletDriveType.VHD)
             {
                 VMDriveStorageSettings result;
-                if (driveConfig.Type == VirtualMachineDriveType.DVD)
+                if (driveConfig.Type == VirtualCatletDriveType.DVD)
                     result = new VMDvDStorageSettings
                     {
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation,
-                        Type = VirtualMachineDriveType.DVD,
+                        Type = VirtualCatletDriveType.DVD,
                         Path = driveConfig.Template,
                     };
                 else
@@ -50,7 +49,7 @@ namespace Eryph.VmManagement.Storage
                     {
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation,
-                        Type = driveConfig.Type.GetValueOrDefault(VirtualMachineDriveType.PHD)
+                        Type = driveConfig.Type.GetValueOrDefault(VirtualCatletDriveType.PHD)
                     };
 
                 return Prelude.RightAsync<Error, VMDriveStorageSettings>(result);

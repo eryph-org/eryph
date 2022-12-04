@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -22,7 +22,7 @@ namespace Eryph.VmManagement.Converging
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var interfaceCounter = 0;
-            var adapters = Context.Config.VM.NetworkAdapters.ToArr();
+            var adapters = Context.Config.VCatlet.NetworkAdapters.ToArr();
 
             return Context.Config.Networks
                 .Map

@@ -14,7 +14,7 @@ namespace Eryph.VmManagement.Converging
         public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
-            var configCount = Context.Config.VM.Cpu.Count.GetValueOrDefault(1);
+            var configCount = Context.Config.VCatlet.Cpu.Count.GetValueOrDefault(1);
             if (vmInfo.Value.ProcessorCount == configCount) return vmInfo;
 
             await Context.ReportProgress($"Configure VM Processor: Count: {configCount}").ConfigureAwait(false);

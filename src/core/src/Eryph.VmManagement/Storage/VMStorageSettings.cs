@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
@@ -52,7 +52,7 @@ namespace Eryph.VmManagement.Storage
         }
 
 
-        public static EitherAsync<Error, VMStorageSettings> FromMachineConfig(MachineConfig config,
+        public static EitherAsync<Error, VMStorageSettings> FromCatletConfig(CatletConfig config,
             HostSettings hostSettings)
         {
             var projectName = Prelude.Some("default");
@@ -67,8 +67,8 @@ namespace Eryph.VmManagement.Storage
                 DataStoreName = dataStoreName
             };
 
-            if (!string.IsNullOrWhiteSpace(config.VM.Slug))
-                storageIdentifier = Prelude.Some(config.VM.Slug);
+            if (!string.IsNullOrWhiteSpace(config.VCatlet.Slug))
+                storageIdentifier = Prelude.Some(config.VCatlet.Slug);
 
             return names.ResolveStorageBasePath(hostSettings.DefaultDataPath).Map(
                 path => new VMStorageSettings
@@ -83,10 +83,10 @@ namespace Eryph.VmManagement.Storage
         public static EitherAsync<Error, VMStorageSettings> Plan(
             HostSettings hostSettings,
             string newStorageId,
-            MachineConfig config,
+            CatletConfig config,
             Option<VMStorageSettings> currentStorageSettings)
         {
-            return FromMachineConfig(config, hostSettings).Bind(newSettings =>
+            return FromCatletConfig(config, hostSettings).Bind(newSettings =>
                 currentStorageSettings.Match(
                     None: () => EnsureStorageId(newStorageId, newSettings).ToError().ToAsync(),
                     Some: currentSettings => EnsureStorageId(newStorageId, newSettings, currentSettings)

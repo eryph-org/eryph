@@ -1,12 +1,13 @@
 ﻿using System;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
+
 
 namespace Eryph.Messages.Resources.Machines.Commands
 {
     [SendMessageTo(MessageRecipient.Controllers)]
-    public class ValidateMachineConfigCommand
+    public class ValidateCatletConfigCommand
     {
-        public MachineConfig Config { get; set; }
+        public CatletConfig Config { get; set; }
         public Guid MachineId { get; set; }
     }
 }

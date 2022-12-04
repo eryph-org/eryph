@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
@@ -44,7 +45,7 @@ namespace Eryph.VmManagement.Storage
                 select
                     new CurrentHardDiskDriveStorageSettings
                     {
-                        Type = VirtualMachineDriveType.VHD,
+                        Type = VirtualCatletDriveType.VHD,
                         AttachPath = snapshotPath.IsSome ? snapshotPath : vhdPath,
                         Frozen = snapshotPath.IsSome,
                         AttachedVMId = hdInfo.Id,

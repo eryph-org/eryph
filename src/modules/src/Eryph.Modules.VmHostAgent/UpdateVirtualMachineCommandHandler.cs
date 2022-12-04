@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Machines.Commands;
@@ -20,7 +20,7 @@ using Rebus.Handlers;
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class UpdateVirtualMachineCommandHandler : VirtualMachineConfigCommandHandler,
+    internal class UpdateVirtualMachineCommandHandler : VirtualCatletConfigCommandHandler,
         IHandleMessages<OperationTask<UpdateVirtualMachineCommand>>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
@@ -41,7 +41,7 @@ namespace Eryph.Modules.VmHostAgent
 
             var hostSettings = HostSettingsBuilder.GetHostSettings();
             var convergeVM = Prelude.fun(
-                (TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig c, VMStorageSettings storageSettings, VMHostMachineData hostInfo) =>
+                (TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig c, VMStorageSettings storageSettings, VMHostMachineData hostInfo) =>
                     VirtualMachine.Converge(hostSettings, hostInfo,Engine, ProgressMessage, vmInfo, c, 
                         message.Command.MachineMetadata, command.MachineNetworkSettings, storageSettings));
 

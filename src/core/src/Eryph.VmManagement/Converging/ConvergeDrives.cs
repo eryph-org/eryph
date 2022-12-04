@@ -2,7 +2,8 @@
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
@@ -59,7 +60,7 @@ namespace Eryph.VmManagement.Converging
             Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
         {
             var plannedDiskSettings = plannedDriveStorageSettings
-                .Where(x => x.Type == VirtualMachineDriveType.VHD || x.Type == VirtualMachineDriveType.SharedVHD)
+                .Where(x => x.Type == VirtualCatletDriveType.VHD || x.Type == VirtualCatletDriveType.SharedVHD)
                 .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
             return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine,
@@ -72,7 +73,7 @@ namespace Eryph.VmManagement.Converging
             Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
         {
             var plannedDvdSettings = plannedDriveStorageSettings
-                .Where(x => x.Type == VirtualMachineDriveType.DVD)
+                .Where(x => x.Type == VirtualCatletDriveType.DVD)
                 .Cast<VMDvDStorageSettings>().ToSeq();
 
             return (
@@ -109,7 +110,7 @@ namespace Eryph.VmManagement.Converging
 
         {
             var planedDiskSettings = plannedStorageSettings.Where(x =>
-                    x.Type == VirtualMachineDriveType.VHD || x.Type == VirtualMachineDriveType.SharedVHD)
+                    x.Type == VirtualCatletDriveType.VHD || x.Type == VirtualCatletDriveType.SharedVHD)
                 .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
             var attachedPaths = planedDiskSettings.Map(s => s.AttachPath).Map(x => x.IfNone(""))
@@ -167,7 +168,7 @@ namespace Eryph.VmManagement.Converging
             TypedPsObject<VirtualMachineInfo> vmInfo, Seq<VMDriveStorageSettings> plannedStorageSettings)
 
         {
-            var controllersAndLocations = plannedStorageSettings.Where(x => x.Type == VirtualMachineDriveType.DVD)
+            var controllersAndLocations = plannedStorageSettings.Where(x => x.Type == VirtualCatletDriveType.DVD)
                 .Map(x => new {x.ControllerNumber, x.ControllerLocation})
                 .GroupBy(x => x.ControllerNumber)
                 .ToImmutableDictionary(x => x.Key, x => x.Map(y => y.ControllerLocation).ToImmutableArray());

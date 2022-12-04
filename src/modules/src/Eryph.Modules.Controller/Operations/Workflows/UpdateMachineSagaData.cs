@@ -1,5 +1,5 @@
 ﻿using System;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 
 namespace Eryph.Modules.Controller.Operations.Workflows
 {
@@ -8,7 +8,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         public bool Updated;
 
         public bool Validated;
-        public MachineConfig? Config { get; set; }
+        public CatletConfig? Config { get; set; }
         public Guid MachineId { get; set; }
         public string? AgentName { get; set; }
         public Guid ProjectId { get; set; }

@@ -1,12 +1,12 @@
 ﻿using System;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Modules.Controller;
 
 namespace Eryph.Runtime.Zero
 {
     internal class ZeroAgentLocator : IPlacementCalculator, IStorageManagementAgentLocator
     {
-        public string CalculateVMPlacement(MachineConfig? dataConfig)
+        public string CalculateVMPlacement(CatletConfig? dataConfig)
         {
             return Environment.MachineName;
         }

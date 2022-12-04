@@ -1,9 +1,9 @@
-﻿using Eryph.ConfigModel.Machine;
+﻿using Eryph.ConfigModel.Catlets;
 
 namespace Eryph.Modules.Controller
 {
     public interface IPlacementCalculator
     {
-        string CalculateVMPlacement(MachineConfig? dataConfig);
+        string CalculateVMPlacement(CatletConfig? dataConfig);
     }
 }

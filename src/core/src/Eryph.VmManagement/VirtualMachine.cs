@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
@@ -119,7 +119,7 @@ namespace Eryph.VmManagement
             IPowershellEngine engine,
             Func<string, Task> reportProgress,
             TypedPsObject<VirtualMachineInfo> vmInfo,
-            MachineConfig machineConfig,
+            CatletConfig machineConfig,
             VirtualMachineMetadata metadata,
             MachineNetworkSettings[] networkSetting,
             VMStorageSettings storageSettings)
@@ -147,7 +147,7 @@ namespace Eryph.VmManagement
             IPowershellEngine engine,
             Func<string, Task> reportProgress,
             TypedPsObject<VirtualMachineInfo> vmInfo,
-            MachineConfig machineConfig,
+            CatletConfig machineConfig,
             VirtualMachineMetadata metadata,
             MachineNetworkSettings[] networkSettings,
             VMStorageSettings storageSettings)

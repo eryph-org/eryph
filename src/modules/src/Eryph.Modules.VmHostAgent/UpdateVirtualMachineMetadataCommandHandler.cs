@@ -11,7 +11,7 @@ using Rebus.Handlers;
 
 namespace Eryph.Modules.VmHostAgent
 {
-    internal class UpdateVirtualMachineMetadataCommandHandler : VirtualMachineConfigCommandHandler,
+    internal class UpdateVirtualMachineMetadataCommandHandler : VirtualCatletConfigCommandHandler,
         IHandleMessages<OperationTask<UpdateVirtualMachineMetadataCommand>>
     {
         public UpdateVirtualMachineMetadataCommandHandler(IPowershellEngine engine, IBus bus, ILogger log) : base(engine, bus, log)
