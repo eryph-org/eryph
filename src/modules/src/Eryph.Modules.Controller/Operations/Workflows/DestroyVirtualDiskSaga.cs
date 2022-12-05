@@ -1,8 +1,8 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Messages.Operations.Events;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
-using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Resources;

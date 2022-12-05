@@ -4,6 +4,7 @@ using Eryph.Messages;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Images.Commands;
+using Eryph.Modules.VmHostAgent.Images;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;

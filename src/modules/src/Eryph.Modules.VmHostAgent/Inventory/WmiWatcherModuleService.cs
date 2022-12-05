@@ -2,7 +2,7 @@
 using System.Management;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Messages.Resources.Machines.Events;
+using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.VmManagement;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

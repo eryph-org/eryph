@@ -1,4 +1,4 @@
-﻿namespace Eryph.VmManagement.Networking.Settings;
+﻿namespace Eryph.Core.Network;
 
 public class NetworkProviderIpPool
 {

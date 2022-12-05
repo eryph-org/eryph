@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Messages.Operations.Events;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
-using Eryph.Messages.Resources.Machines.Commands;
 using Eryph.ModuleCore;
 using Eryph.Resources;
 using JetBrains.Annotations;
@@ -17,7 +17,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
     [UsedImplicitly]
     internal class DestroyResourcesSaga : 
         OperationTaskWorkflowSaga<DestroyResourcesCommand, DestroyResourcesSagaData>,
-        IHandleMessages<OperationTaskStatusEvent<DestroyMachineCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<DestroyCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>
 
     {
@@ -31,7 +31,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
         protected override void CorrelateMessages(ICorrelationConfig<DestroyResourcesSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<DestroyMachineCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<DestroyCatletCommand>>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>(m => m.OperationId, d => d.OperationId);
 
         }
@@ -45,7 +45,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
             foreach (var resource in Data.Resources)
                 return resource.Type switch
                 {
-                    ResourceType.Machine => _taskDispatcher.StartNew<DestroyMachineCommand>(Data.OperationId, resource),
+                    ResourceType.Machine => _taskDispatcher.StartNew<DestroyCatletCommand>(Data.OperationId, resource),
                     ResourceType.VirtualDisk => _taskDispatcher.StartNew<DestroyVirtualDiskCommand>(Data.OperationId, resource),
                     _ => throw new ArgumentOutOfRangeException()
                 };
@@ -60,9 +60,9 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                 (response) => CollectAndCheckCompleted(response.DestroyedResources, response.DetachedResources));
         }
 
-        public Task Handle(OperationTaskStatusEvent<DestroyMachineCommand> message)
+        public Task Handle(OperationTaskStatusEvent<DestroyCatletCommand> message)
         {
-            return FailOrRun<DestroyMachineCommand, DestroyResourcesResponse>(message,
+            return FailOrRun<DestroyCatletCommand, DestroyResourcesResponse>(message,
                 (response) => CollectAndCheckCompleted(response.DestroyedResources, response.DetachedResources));
         }
 

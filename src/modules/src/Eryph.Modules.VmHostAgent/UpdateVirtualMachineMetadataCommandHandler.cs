@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using LanguageExt;
@@ -25,7 +25,7 @@ namespace Eryph.Modules.VmHostAgent
             OperationId = message.OperationId;
             TaskId = message.TaskId;
 
-            var metadata = new VirtualMachineMetadata {Id = command.CurrentMetadataId};
+            var metadata = new VirtualCatletMetadata {Id = command.CurrentMetadataId};
 
             var chain =
                 from vmList in GetVmInfo(command.VMId, Engine)

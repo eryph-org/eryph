@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Eryph.Messages;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Catlets.Commands;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;

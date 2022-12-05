@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Eryph.Messages.Operations.Events;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using JetBrains.Annotations;
@@ -38,7 +38,7 @@ namespace Eryph.Modules.Controller.Operations.Workflows
                             {
 
                                 VMId = s.VMId,
-                                MachineId = s.Id,
+                                CatletId = s.Id,
                                 MachineMetadata = metadata
                             }).ToUnit()));
         }

@@ -2,7 +2,6 @@
 using System.IO;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;

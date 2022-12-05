@@ -1,4 +1,4 @@
-﻿using Eryph.Messages.Resources.Machines.Commands;
+﻿using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using Rebus.Bus;

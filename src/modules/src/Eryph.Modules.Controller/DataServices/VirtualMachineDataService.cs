@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt;
-using VirtualMachineMetadata = Eryph.Resources.Machines.VirtualMachineMetadata;
 
 namespace Eryph.Modules.Controller.DataServices
 {
@@ -35,7 +35,7 @@ namespace Eryph.Modules.Controller.DataServices
         }
 
         public async Task<VirtualCatlet> AddNewVM(VirtualCatlet vm,
-            [NotNull] VirtualMachineMetadata metadata)
+            [NotNull] VirtualCatletMetadata metadata)
         {
             if (vm.ProjectId == Guid.Empty)
                 throw new ArgumentException($"{nameof(VirtualCatlet.ProjectId)} is missing", nameof(vm));

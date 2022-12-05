@@ -1,6 +1,4 @@
-﻿using Eryph.Modules.VmHostAgent.Images;
-
-namespace Eryph.Modules.VmHostAgent;
+﻿namespace Eryph.Modules.VmHostAgent.Images;
 
 internal class ImageBackgroundTaskQueue : BackgroundTaskQueue, IImageRequestBackgroundQueue
 {

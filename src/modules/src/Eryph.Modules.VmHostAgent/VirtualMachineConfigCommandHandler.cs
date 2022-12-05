@@ -116,8 +116,8 @@ namespace Eryph.Modules.VmHostAgent
         }
 
 
-        protected Task<Either<Error, VirtualMachineMetadata>> EnsureMetadata(
-            VirtualMachineMetadata metadata,
+        protected Task<Either<Error, VirtualCatletMetadata>> EnsureMetadata(
+            VirtualCatletMetadata metadata,
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var notes = vmInfo.Value.Notes;
@@ -150,7 +150,7 @@ namespace Eryph.Modules.VmHostAgent
             if (metadataId != metadata.Id)
                 throw new InvalidOperationException("Inconsistent metadata id between VM and expected metadata id.");
 
-            return Prelude.RightAsync<Error, VirtualMachineMetadata>(metadata).ToEither();
+            return Prelude.RightAsync<Error, VirtualCatletMetadata>(metadata).ToEither();
         }
 
         protected EitherAsync<Error, Unit> SetMetadataId(TypedPsObject<VirtualMachineInfo> vmInfo,

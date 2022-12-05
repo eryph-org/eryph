@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;

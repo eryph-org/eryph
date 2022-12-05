@@ -4,7 +4,7 @@ using Eryph.Resources.Machines;
 
 namespace Eryph.Runtime.Zero.Configuration.VMMetadata
 {
-    internal class VMMetadataConfigWriterService : IConfigWriterService<VirtualMachineMetadata>
+    internal class VMMetadataConfigWriterService : IConfigWriterService<VirtualCatletMetadata>
     {
         private readonly ConfigIO _io;
 
@@ -13,18 +13,18 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
             _io = new ConfigIO(ZeroConfig.GetMetadataConfigPath());
         }
 
-        public Task Delete(VirtualMachineMetadata metadata, string projectName)
+        public Task Delete(VirtualCatletMetadata metadata, string projectName)
         {
             _io.DeleteConfigFile(metadata.Id.ToString());
             return Task.CompletedTask;
         }
 
-        public Task Update(VirtualMachineMetadata metadata, string projectName)
+        public Task Update(VirtualCatletMetadata metadata, string projectName)
         {
             return _io.SaveConfigFile(metadata, metadata.Id.ToString());
         }
 
-        public Task Add(VirtualMachineMetadata metadata, string projectName)
+        public Task Add(VirtualCatletMetadata metadata, string projectName)
         {
             return _io.SaveConfigFile(metadata, metadata.Id.ToString());
         }

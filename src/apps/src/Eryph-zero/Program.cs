@@ -13,6 +13,7 @@ using System.ServiceProcess;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
+using Dbosoft.OVN;
 using Eryph.App;
 using Eryph.ModuleCore;
 using Eryph.Modules.CommonApi;
@@ -43,6 +44,7 @@ using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Runt
 using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 using Eryph.Runtime.Zero.Configuration.Networks;
+using LanguageExt.Common;
 
 namespace Eryph.Runtime.Zero;
 
@@ -343,51 +345,60 @@ internal static class Program
             var backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "eryph", "zero.old");
 
-            var serviceRemoved = false;
-            var serviceStopped = false;
+            var sysEnv = new SystemEnvironment(new NullLoggerFactory());
+            var serviceManager = sysEnv.GetServiceManager("eryph-zero");
+
             var backupCreated = false;
+
             try
             {
                 var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
                 var parentDir = baseDir.Parent?.FullName ?? throw new IOException($"Invalid path {baseDir}");
 
+                var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+
                 if (Directory.Exists(backupDir))
                     Directory.Delete(backupDir, true);
 
-                if (IsServiceRunning("eryph-zero"))
+                EitherAsync<Error, Unit> CopyService()
                 {
-                    StopService("eryph-zero");
-                    serviceStopped = true;
-                }
+                    return Prelude.Try(() =>
+                    {
+                        if (Directory.Exists(targetDir))
+                        {
+                            Directory.Move(targetDir, backupDir);
+                            backupCreated = true;
+                        }
 
-                if (IsServiceInstalled("eryph-zero"))
-                {
-                    await UnInstallService("eryph-zero");
-                    serviceRemoved = true;
-                }
-
-                if (Directory.Exists(targetDir))
-                {
-                    Directory.Move(targetDir, backupDir);
-                    backupCreated = true;
-                }
-
-                CopyDirectory(parentDir, targetDir);
+                        CopyDirectory(parentDir, targetDir);
 
 #if DEBUG
-                var dirName = Directory.GetDirectories(targetDir).FirstOrDefault();
-                if (dirName != null && dirName != "bin")
-                {
-                    Directory.Move(dirName, Path.Combine(targetDir, "bin"));
-                }
+                        var dirName = Directory.GetDirectories(targetDir).FirstOrDefault();
+                        if (dirName != null && dirName != "bin")
+                        {
+                            Directory.Move(dirName, Path.Combine(targetDir, "bin"));
+                        }
 #endif
+                        return Unit.Default;
+                    }).ToEitherAsync();
 
 
-                if (!IsServiceInstalled("eryph-zero"))
-                    await InstallService("eryph-zero", zeroExe, "run");
+                }
 
-                StartService("eryph-zero");
+                var installOrUpdate =
+                    from serviceExists in serviceManager.ServiceExists()
+                    from uStopped in serviceExists
+                        ? serviceManager.EnsureServiceStopped(cancelSource.Token)
+                        : Unit.Default
+                    from uCopy in CopyService()
+                    from uInstalled in serviceExists
+                        ? serviceManager.UpdateService($"{zeroExe} run", cancelSource.Token)
+                        : serviceManager.CreateService("eryph-zero", $"{zeroExe} run", cancelSource.Token)
+                    from uStarted in serviceManager.EnsureServiceStarted(cancelSource.Token)
+                    select Unit.Default;
 
+                _ = await installOrUpdate.IfLeft(l => l.Throw());
+                
                 if (Directory.Exists(backupDir))
                     Directory.Delete(backupDir, true);
 
@@ -399,125 +410,37 @@ internal static class Program
                 await Console.Error.WriteAsync(ex.Message);
 
                 //undo operation
-                if (backupCreated) Directory.Move(backupDir, targetDir);
-                if (serviceRemoved) await InstallService("eryph-zero", zeroExe, "run");
-                if (serviceStopped) StartService("eryph-zero");
+                if (backupCreated)
+                    Directory.Move(backupDir, targetDir);
 
+
+                var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+
+                var rollback =
+                    from serviceExists in serviceManager.ServiceExists()
+                    from uStopped in serviceExists
+                        ? serviceManager.EnsureServiceStopped(cancelSource.Token)
+                        : Unit.Default
+                    from uCopy in Prelude.Try(() =>
+                    {
+                        Directory.Move(backupDir, targetDir);
+                        return Unit.Default;
+                    } ).ToEitherAsync()
+
+                    from uStarted in serviceManager.EnsureServiceStarted(cancelSource.Token)
+                    select Unit.Default;
+
+                _ = await rollback.IfLeft(l =>
+                {
+                    Console.Error.WriteLine($"Error in rollback of service update: {l.Message}");
+                });
+                
                 return -1;
             }
 
 
-            ServiceController GetServiceController(string serviceName)
-            {
-                return new ServiceController(serviceName);
-            }
+ 
 
-            bool IsServiceInstalled(string serviceName)
-            {
-                try
-                {
-                    using var controller = GetServiceController(serviceName);
-                    // ReSharper disable once UnusedVariable
-                    var dummy = controller.Status;
-                    return true;
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
-            }
-
-            void StopService(string serviceName)
-            {
-                using var controller = GetServiceController(serviceName);
-                controller.Stop();
-                controller.WaitForStatus(ServiceControllerStatus.Stopped);
-            }
-
-            bool IsServiceRunning(string serviceName)
-            {
-                if (!IsServiceInstalled(serviceName))
-                    return false;
-
-                using var controller = GetServiceController(serviceName);
-                return controller.Status == ServiceControllerStatus.Running;
-            }
-
-            void StartService(string serviceName)
-            {
-                using var controller = GetServiceController(serviceName);
-                controller.Start();
-                controller.WaitForStatus(ServiceControllerStatus.Running);
-            }
-
-            async Task UnInstallService(string serviceName)
-            {
-                var cmd = $@"delete {serviceName}";
-                var process = Process.Start(new ProcessStartInfo("sc", cmd)
-                {
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true
-                });
-
-                if (process == null)
-                    return;
-
-                await process.WaitForExitAsync();
-                if (process.ExitCode != 0)
-                {
-                    var output = await process.StandardError.ReadToEndAsync();
-                    throw new IOException($"Failed to remove service {serviceName}. Message: {output}");
-                }
-            }
-
-            async Task InstallService(string serviceName, string path, string arguments)
-            {
-                var cmd = $@"create {serviceName} BinPath=""\""{path}\"" {arguments}"" Start=Auto";
-                var process = Process.Start(new ProcessStartInfo("sc", cmd)
-                {
-                    RedirectStandardError = true
-                });
-
-                if (process == null)
-                    return;
-
-                await process.WaitForExitAsync();
-                if (process.ExitCode != 0)
-                {
-                    var output = await process.StandardError.ReadToEndAsync();
-                    throw new IOException($"Failed to install service {serviceName}. Message: {output}");
-
-                }
-            }
-
-            static void CopyDirectory(string sourceDir, string destinationDir)
-            {
-                // Get information about the source directory
-                var dir = new DirectoryInfo(sourceDir);
-
-                // Check if the source directory exists
-                if (!dir.Exists)
-                    throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
-
-                // Cache directories before we start copying
-                var dirs = dir.GetDirectories();
-
-                // Create the destination directory
-                Directory.CreateDirectory(destinationDir);
-
-                // Get the files in the source directory and copy to the destination directory
-                foreach (var file in dir.GetFiles())
-                {
-                    var targetFilePath = Path.Combine(destinationDir, file.Name);
-                    file.CopyTo(targetFilePath, true);
-                }
-
-                foreach (var subDir in dirs)
-                {
-                    var newDestinationDir = Path.Combine(destinationDir, subDir.Name);
-                    CopyDirectory(subDir.FullName, newDestinationDir);
-                }
-            }
         });
     }
 
@@ -607,5 +530,35 @@ internal static class Program
             });
 
         return res;
+    }
+
+
+    static void CopyDirectory(string sourceDir, string destinationDir)
+    {
+        // Get information about the source directory
+        var dir = new DirectoryInfo(sourceDir);
+
+        // Check if the source directory exists
+        if (!dir.Exists)
+            throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
+
+        // Cache directories before we start copying
+        var dirs = dir.GetDirectories();
+
+        // Create the destination directory
+        Directory.CreateDirectory(destinationDir);
+
+        // Get the files in the source directory and copy to the destination directory
+        foreach (var file in dir.GetFiles())
+        {
+            var targetFilePath = Path.Combine(destinationDir, file.Name);
+            file.CopyTo(targetFilePath, true);
+        }
+
+        foreach (var subDir in dirs)
+        {
+            var newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+            CopyDirectory(subDir.FullName, newDestinationDir);
+        }
     }
 }

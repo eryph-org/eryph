@@ -1,7 +1,7 @@
 ﻿using LanguageExt;
 using LanguageExt.Effects.Traits;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace PowershellStandalone;
 
 public interface HasHostNetworkCommands<RT>
     where RT : struct, HasHostNetworkCommands<RT>, HasCancel<RT>

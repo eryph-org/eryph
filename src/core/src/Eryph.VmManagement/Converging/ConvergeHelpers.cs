@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using LanguageExt;
 using LanguageExt.Common;
 

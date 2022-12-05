@@ -1,12 +1,10 @@
-﻿using System.Threading;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
-using Eryph.VmManagement;
+﻿using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace PowershellStandalone;
 
 public readonly struct ConsoleRuntime : 
     HasPowershell<ConsoleRuntime>, 

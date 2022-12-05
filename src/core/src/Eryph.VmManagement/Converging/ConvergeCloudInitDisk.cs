@@ -6,7 +6,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Dbosoft.CloudInit.ConfigDrive;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using JetBrains.Annotations;

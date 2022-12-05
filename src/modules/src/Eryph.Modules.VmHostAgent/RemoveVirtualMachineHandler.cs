@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
@@ -14,14 +14,14 @@ using Rebus.Bus;
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class RemoveVirtualMachineHandler : MachineOperationHandlerBase<RemoveVMCommand>
+    internal class RemoveVirtualMachineHandler : MachineOperationHandlerBase<RemoveVirtualCatletCommand>
     {
         public RemoveVirtualMachineHandler(IBus bus, IPowershellEngine engine) : base(bus, engine)
         {
         }
 
         protected override Task<Either<Error, Unit>> HandleCommand(TypedPsObject<VirtualMachineInfo> vmInfo,
-            RemoveVMCommand command, IPowershellEngine engine)
+            RemoveVirtualCatletCommand command, IPowershellEngine engine)
         {
             var hostSettings = HostSettingsBuilder.GetHostSettings();
 

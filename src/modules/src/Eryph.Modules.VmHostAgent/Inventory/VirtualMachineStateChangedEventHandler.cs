@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Eryph.Messages.Resources.Machines.Events;
+using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Inventory;

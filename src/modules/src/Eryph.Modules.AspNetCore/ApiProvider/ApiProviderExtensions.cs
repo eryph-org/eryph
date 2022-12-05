@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -30,8 +31,8 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
 
             services.AddOptions<ApiProviderOptions>();
             services.Configure(options);
-            
-            
+
+
             //mvcBuilder.AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
             services.AddApiVersioning(options =>
@@ -44,8 +45,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             {
                 //op.EnableEndpointRouting = false;
                 //op.OutputFormatters.Insert(0, new CustomODataOutputFormatter());
-                
-            });
+  });
 
 
             services.AddVersionedApiExplorer(

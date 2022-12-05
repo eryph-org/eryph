@@ -1,4 +1,4 @@
-﻿using Eryph.VmManagement.Networking.Settings;
+﻿using Eryph.Core.Network;
 using LanguageExt;
 using LanguageExt.Common;
 

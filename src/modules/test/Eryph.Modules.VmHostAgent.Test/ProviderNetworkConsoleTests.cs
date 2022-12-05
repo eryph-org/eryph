@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Dbosoft.OVN.Model;
 using Eryph.Core;
+using Eryph.Core.Network;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
@@ -8,7 +9,6 @@ using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
-using Eryph.VmManagement.Networking.Settings;
 using FluentAssertions;
 using LanguageExt;
 using LanguageExt.Common;

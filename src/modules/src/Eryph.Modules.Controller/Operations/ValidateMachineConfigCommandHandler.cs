@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Catlets.Commands;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;

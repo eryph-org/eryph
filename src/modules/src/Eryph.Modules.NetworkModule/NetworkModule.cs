@@ -11,8 +11,6 @@ namespace Eryph.Modules.Network
     [UsedImplicitly]
     public class NetworkModule
     {
-        public string Name => "Eryph.Network";
-
 
         [UsedImplicitly]
         public void ConfigureServices(IServiceProvider sp, IServiceCollection services)

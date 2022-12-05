@@ -1,4 +1,4 @@
-﻿namespace Eryph.Modules.VmHostAgent.Networks.Powershell;
+﻿namespace PowershellStandalone;
 
 public class NetIpAddress
 {

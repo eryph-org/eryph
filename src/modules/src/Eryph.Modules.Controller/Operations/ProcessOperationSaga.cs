@@ -7,7 +7,7 @@ using Eryph.Messages;
 using Eryph.Messages.Operations.Commands;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources;
-using Eryph.Messages.Resources.Machines;
+using Eryph.Messages.Resources.Catlets;
 using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -90,13 +90,13 @@ namespace Eryph.Modules.Controller.Operations
                     {
                         case IVMCommand vmCommand:
                         {
-                            var machine = await _dbContext.VirtualCatlets.FindAsync(vmCommand.MachineId)
+                            var machine = await _dbContext.VirtualCatlets.FindAsync(vmCommand.CatletId)
                                 .ConfigureAwait(false);
 
                             if (machine == null)
                             {
                                 await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
-                                    new ErrorData {ErrorMessage = $"Virtual catlet {vmCommand.MachineId} not found"}));
+                                    new ErrorData {ErrorMessage = $"Virtual catlet {vmCommand.CatletId} not found"}));
 
                                 return;
                             }

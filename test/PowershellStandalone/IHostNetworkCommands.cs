@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
+﻿using System.Net;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
-using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace PowershellStandalone;
 
 public interface IHostNetworkCommands<RT> where RT : struct, HasCancel<RT>
 {

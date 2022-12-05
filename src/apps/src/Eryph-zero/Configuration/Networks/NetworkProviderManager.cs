@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using Eryph.Core;
-using Eryph.VmManagement.Networking.Settings;
+using Eryph.Core.Network;
 using LanguageExt;
 using LanguageExt.Common;
 using YamlDotNet.Serialization;

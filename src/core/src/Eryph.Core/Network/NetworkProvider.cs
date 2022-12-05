@@ -1,5 +1,4 @@
-﻿using Eryph.VmManagement.Networking.Settings;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using YamlDotNet.Serialization;
@@ -14,6 +13,7 @@ public class NetworkProvider
     public string TypeString { get; set; }
 
     public string BridgeName { get; set; }
+    public string SwitchName { get; set; }
 
     public string[] Adapters { get; set; }
 

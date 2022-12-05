@@ -6,16 +6,16 @@ using Eryph.Resources.Machines;
 
 namespace Eryph.Runtime.Zero.Configuration.VMMetadata
 {
-    internal class VMMetadataConfigReaderService : IConfigReaderService<VirtualMachineMetadata>
+    internal class VMMetadataConfigReaderService : IConfigReaderService<VirtualCatletMetadata>
     {
-        public IEnumerable<VirtualMachineMetadata> GetConfig()
+        public IEnumerable<VirtualCatletMetadata> GetConfig()
         {
             var configFiles = Directory.GetFiles(ZeroConfig.GetMetadataConfigPath(), "*.json");
 
             foreach (var configFile in configFiles)
             {
                 var configContent = File.ReadAllText(configFile);
-                var config = JsonSerializer.Deserialize<VirtualMachineMetadata>(configContent);
+                var config = JsonSerializer.Deserialize<VirtualCatletMetadata>(configContent);
                 yield return config;
             }
         }

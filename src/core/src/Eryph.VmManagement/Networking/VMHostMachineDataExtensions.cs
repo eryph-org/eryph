@@ -2,7 +2,6 @@
 using System.Linq;
 using Eryph.Core.Network;
 using Eryph.Resources.Machines;
-using Eryph.VmManagement.Networking.Settings;
 using JetBrains.Annotations;
 
 namespace Eryph.VmManagement.Networking;

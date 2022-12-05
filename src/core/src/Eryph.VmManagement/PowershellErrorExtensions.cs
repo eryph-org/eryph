@@ -1,9 +1,8 @@
 ﻿using System.Threading.Tasks;
-using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.Modules.VmHostAgent.Networks.Powershell;
+namespace Eryph.VmManagement;
 
 public static class PowershellErrorExtensions
 {

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
@@ -22,7 +22,7 @@ namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
     internal class CreateVirtualMachineCommandHandler : VirtualCatletConfigCommandHandler,
-        IHandleMessages<OperationTask<CreateVirtualMachineCommand>>
+        IHandleMessages<OperationTask<CreateVirtualCatletCommand>>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
 
@@ -32,7 +32,7 @@ namespace Eryph.Modules.VmHostAgent
         }
 
 
-        public Task Handle(OperationTask<CreateVirtualMachineCommand> message)
+        public Task Handle(OperationTask<CreateVirtualCatletCommand> message)
         {
             var command = message.Command;
             var config = command.Config;
@@ -62,7 +62,7 @@ namespace Eryph.Modules.VmHostAgent
                 from createdVM in createVM(plannedStorageSettings, template)
                 from metadata in createMetadata(createdVM, template)
                 from inventory in CreateMachineInventory(Engine, hostSettings, createdVM, _hostInfoProvider)
-                select new ConvergeVirtualMachineResult
+                select new ConvergeVirtualCatletResult
                 {
                     Inventory = inventory,
                     MachineMetadata = metadata
@@ -88,7 +88,7 @@ namespace Eryph.Modules.VmHostAgent
             TypedPsObject<PlannedVirtualMachineInfo> template)
         {
             return (from storageIdentifier in storageSettings.StorageIdentifier.ToEitherAsync(Error.New(
-                    "Unknown storage identifier, cannot create new virtual machine"))
+                    "Unknown storage identifier, cannot create new virtual catlet"))
                 from vm in VirtualMachine.ImportTemplate(engine, hostSettings, config.Name,
                     storageIdentifier,
                     storageSettings.VMPath,
@@ -96,11 +96,11 @@ namespace Eryph.Modules.VmHostAgent
                 select vm);
         }
 
-        private EitherAsync<Error, VirtualMachineMetadata> CreateMetadata(
+        private EitherAsync<Error, VirtualCatletMetadata> CreateMetadata(
             TypedPsObject<PlannedVirtualMachineInfo> template,
             TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig config, Guid machineId)
         {
-            var metadata = new VirtualMachineMetadata
+            var metadata = new VirtualCatletMetadata
             {
                 Id = Guid.NewGuid(),
                 MachineId = machineId,

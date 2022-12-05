@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Eryph.Messages.Operations.Commands;
-using Eryph.Messages.Resources.Machines;
+using Eryph.Messages.Resources.Catlets;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;

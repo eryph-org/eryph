@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
@@ -22,7 +22,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks
 
         protected override object CreateOperationMessage(StateDb.Model.VirtualDisk model, SingleResourceRequest request)
         {
-            return new DestroyMachineCommand{ Resource = new Resource(ResourceType.VirtualDisk, model.Id)};
+            return new DestroyCatletCommand{ Resource = new Resource(ResourceType.VirtualDisk, model.Id)};
         }
 
 

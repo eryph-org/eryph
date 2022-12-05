@@ -1,6 +1,4 @@
-﻿using Eryph.Core.Network;
-
-namespace Eryph.VmManagement.Networking.Settings;
+﻿namespace Eryph.Core.Network;
 
 public class NetworkProvidersConfiguration
 {
@@ -21,6 +19,6 @@ network_providers:
     ip_pools:
     - name: default
       first_ip: 10.249.248.10
-      last_ip: 10.249.249.100
+      last_ip: 10.249.251.241
 ";
 }

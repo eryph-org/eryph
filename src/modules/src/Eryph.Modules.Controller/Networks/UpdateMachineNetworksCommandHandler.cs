@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -95,11 +95,12 @@ public class UpdateMachineNetworksCommandHandler : IHandleMessages<OperationTask
                         OperationTaskStatusEvent.Failed(
                             message.OperationId, message.TaskId, l.Message));
                 },
-                RightAsync: map => _bus.SendLocal(
-                    OperationTaskStatusEvent.Completed(
-                        message.OperationId, message.TaskId, map))
-
-            );
+                RightAsync: map =>
+                {
+                    return _bus.SendLocal(
+                        OperationTaskStatusEvent.Completed(
+                            message.OperationId, message.TaskId, map));
+                });
 
     }
 

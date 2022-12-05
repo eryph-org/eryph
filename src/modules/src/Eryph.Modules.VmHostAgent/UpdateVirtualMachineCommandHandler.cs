@@ -2,7 +2,7 @@
 using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
@@ -57,7 +57,7 @@ namespace Eryph.Modules.VmHostAgent
                 from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).WriteTrace()
                 from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()
                 from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged, _hostInfoProvider).WriteTrace()
-                select new ConvergeVirtualMachineResult
+                select new ConvergeVirtualCatletResult
                 {
                     Inventory = inventory,
                     MachineMetadata = metadata
@@ -66,7 +66,7 @@ namespace Eryph.Modules.VmHostAgent
                 LeftAsync: HandleError,
                 RightAsync: async result =>
                 {
-                    await ProgressMessage($"Virtual machine '{result.Inventory.Name}' has been converged.")
+                    await ProgressMessage($"Virtual catlet '{result.Inventory.Name}' has been converged.")
                         .ConfigureAwait(false);
 
                     return await Bus.Publish(OperationTaskStatusEvent.Completed(OperationId, TaskId, result))

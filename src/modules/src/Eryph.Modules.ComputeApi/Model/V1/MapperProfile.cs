@@ -8,7 +8,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
         {
             string userRole = null;
 
-            CreateMap<StateDb.Model.VirtualNetwork, MachineNetwork>();
+            CreateMap<StateDb.Model.VirtualNetwork, CatletNetwork>();
 
             CreateMap<StateDb.Model.Catlet, Catlet>();
             CreateMap<StateDb.Model.VirtualCatlet, VirtualCatlet>();

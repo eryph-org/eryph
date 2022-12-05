@@ -8,7 +8,6 @@ using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using Eryph.VmManagement.Networking.Settings;
 using LanguageExt;
 using LanguageExt.Common;
 
