@@ -11,9 +11,10 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualCatlets
 {
-    public class List : ListResourceEndpoint<ListRequest, VirtualCatlet, StateDb.Model.VirtualCatlet>
+    public class List : ListEntityEndpoint<ListRequest, VirtualCatlet, StateDb.Model.VirtualCatlet>
     {
-        public List([NotNull] IListRequestHandler<StateDb.Model.VirtualCatlet> listRequestHandler, [NotNull] IListResourceSpecBuilder<StateDb.Model.VirtualCatlet> specBuilder) : base(listRequestHandler, specBuilder)
+        public List([NotNull] IListRequestHandler<StateDb.Model.VirtualCatlet> listRequestHandler, 
+            [NotNull] IListEntitySpecBuilder<ListRequest,StateDb.Model.VirtualCatlet> specBuilder) : base(listRequestHandler, specBuilder)
         {
 
         }

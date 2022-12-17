@@ -11,10 +11,12 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
 {
-    public class Get : GetResourceEndpoint<Catlet, StateDb.Model.Catlet>
+    public class Get : GetEntityEndpoint<SingleEntityRequest,Catlet, StateDb.Model.Catlet>
     {
 
-        public Get([NotNull] IGetRequestHandler<StateDb.Model.Catlet> requestHandler, [NotNull] ISingleResourceSpecBuilder<StateDb.Model.Catlet> specBuilder) : base(requestHandler, specBuilder)
+        public Get([NotNull] IGetRequestHandler<StateDb.Model.Catlet, Catlet> requestHandler, [NotNull] 
+            ISingleEntitySpecBuilder<SingleEntityRequest,StateDb.Model.Catlet> specBuilder) 
+            : base(requestHandler, specBuilder)
         {
         }
 
@@ -27,7 +29,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
         ]
         [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(Catlet))]
 
-        public override Task<ActionResult<Catlet>> HandleAsync([FromRoute] SingleResourceRequest request, CancellationToken cancellationToken = default)
+        public override Task<ActionResult<Catlet>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }

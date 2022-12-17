@@ -14,4 +14,15 @@ namespace Eryph.Modules.ComputeApi.Model.V1
 
         public IEnumerable<CatletNetwork> Networks { get; set; }
     }
+
+    public class VirtualCatletConfiguration
+    {
+        public VirtualCatletConfiguration()
+        {
+        }
+
+        public string Configuration { get; set; }
+
+
+    }
 }

@@ -13,16 +13,11 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.CommonApi.Endpoints.V1.Operations
 {
-    public class Get : SingleResultEndpoint<OperationRequest, Operation, StateDb.Model.Operation>
+    public class Get : GetEntityEndpoint<OperationRequest, Operation, StateDb.Model.Operation>
     {
-        public Get([NotNull]IGetRequestHandler<StateDb.Model.Operation> requestHandler) : base(requestHandler)
+        public Get([NotNull] IGetRequestHandler<StateDb.Model.Operation, Operation> requestHandler, 
+            [NotNull] ISingleEntitySpecBuilder<OperationRequest, StateDb.Model.Operation> specBuilder) : base(requestHandler, specBuilder)
         {
-        }
-
-
-        protected override ISingleResultSpecification<StateDb.Model.Operation> CreateSpecification(OperationRequest request)
-        {
-            return new OperationSpecs.GetById(Guid.Parse(request.Id), true, request.LogTimestamp);
         }
 
         [HttpGet("operations/{id}")]
@@ -36,6 +31,7 @@ namespace Eryph.Modules.CommonApi.Endpoints.V1.Operations
         {
             return base.HandleAsync(request, cancellationToken);
         }
+
 
     }
 }

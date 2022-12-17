@@ -19,7 +19,6 @@ using Microsoft.Extensions.Hosting;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
-using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -35,6 +34,7 @@ namespace Eryph.Modules.AspNetCore
             IHostEnvironment env)
         {
             var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
+            services.AddSingleton(endpointResolver);
 
             services.AddMvc(op => { }).AddApiProvider<TModule>(op => op.ApiName = ApiName)
                 .AddJsonOptions(opts =>
@@ -49,6 +49,9 @@ namespace Eryph.Modules.AspNetCore
                 {
                     options.Authority = endpointResolver.GetEndpoint("identity").ToString();
                     options.Audience = AudienceName;
+
+                    if (env.IsDevelopment())
+                        options.RequireHttpsMetadata = false;
                 });
 
 // build symbol to disable any authentication, will also require environment to be set to Development
@@ -83,15 +86,22 @@ namespace Eryph.Modules.AspNetCore
             container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
             container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
             container.Register(typeof(IListRequestHandler<>), typeof(ListRequestHandler<>),Lifestyle.Scoped);
-            container.Register(typeof(IGetRequestHandler<>), typeof(GetRequestHandler<>), Lifestyle.Scoped);
-            container.Register(typeof(IResourceOperationHandler<>), typeof(ResourceOperationHandler<>), Lifestyle.Scoped);
-            container.Register(typeof(INewResourceOperationHandler<>), typeof(NewResourceOperationHandler<>), Lifestyle.Scoped);
+            
+            container.RegisterConditional(typeof(IGetRequestHandler<,>),
+                typeof(GetRequestHandler<,>), Lifestyle.Scoped,
+                c => !c.Handled);
+
+            container.Register(typeof(IOperationRequestHandler<>), typeof(EntityOperationRequestHandler<>), Lifestyle.Scoped);
+            container.Register(typeof(ICreateEntityRequestHandler<>), typeof(CreateEntityRequestHandler<>), Lifestyle.Scoped);
 
             container.Register(typeof(IReadRepositoryBase<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
 
             // ReSharper disable once PossiblyMistakenUseOfParamsMethod
-            container.RegisterSingleton(typeof(ISingleResourceSpecBuilder<>), typeof(TModule).Assembly);
-            container.RegisterSingleton(typeof(IListResourceSpecBuilder<>), typeof(TModule).Assembly);
+            container.Register(typeof(ISingleEntitySpecBuilder<,>), typeof(TModule).Assembly);
+            container.Register(typeof(IListEntitySpecBuilder<,>), typeof(TModule).Assembly);
+
+            container.RegisterConditional(typeof(ISingleEntitySpecBuilder<,>), typeof(GenericResourceSpecBuilder<>),
+                c=> !c.Handled);
 
             container.Collection.Register(typeof(IHandleMessages<>), typeof(TModule).Assembly);
             container.Register<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped);

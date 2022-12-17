@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Resources.Machines;
 

@@ -84,6 +84,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.VmHostAgent.T
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowershellStandalone", "test\PowershellStandalone\PowershellStandalone.csproj", "{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.CommonApi.Tests", "src\modules\test\Eryph.Modules.CommonApi.Tests\Eryph.Modules.CommonApi.Tests.csproj", "{036EC2BD-8968-46D4-9FFD-901F3BB1FA70}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -214,6 +216,10 @@ Global
 		{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{036EC2BD-8968-46D4-9FFD-901F3BB1FA70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{036EC2BD-8968-46D4-9FFD-901F3BB1FA70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{036EC2BD-8968-46D4-9FFD-901F3BB1FA70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{036EC2BD-8968-46D4-9FFD-901F3BB1FA70}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -250,6 +256,7 @@ Global
 		{8BECD5A8-104E-47DC-8C94-DC50A6C5BAAA} = {E889B549-C333-46DC-B71F-9608CBA1FBAA}
 		{4CF54668-F3F0-403E-BA26-EC9F15D325BD} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{036EC2BD-8968-46D4-9FFD-901F3BB1FA70} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

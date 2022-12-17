@@ -20,8 +20,9 @@ namespace Eryph.StateDb.Model
 
         public virtual List<VirtualCatletNetworkAdapter> NetworkAdapters { get; set; }
 
-        public virtual List<VirtualMachineDrive> Drives { get; set; }
+        public virtual List<VirtualCatletDrive> Drives { get; set; }
 
 
     }
+
 }

@@ -49,7 +49,7 @@ namespace Eryph.Modules.Controller.Inventory
                         await _metadataService.SaveMetadata(metaData);
 
                         await _opDispatcher.StartNew<UpdateConfigDriveCommand>(
-                            new Resource(ResourceType.Machine, vm.Id));
+                            new Resource(ResourceType.Catlet, vm.Id));
                     }
 
                 });

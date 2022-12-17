@@ -6,10 +6,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
 {
-    public interface IGetRequestHandler<TModel> where TModel : class
+
+
+    public interface IGetRequestHandler<TEntity, TResponse> where TEntity : class
     {
-        Task<ActionResult<TResponse>> HandleGetRequest<TResponse>(
-            Func<ISingleResultSpecification<TModel>> specificationFunc,
+        Task<ActionResult<TResponse>> HandleGetRequest(
+            Func<ISingleResultSpecification<TEntity>> specificationFunc,
             CancellationToken cancellationToken);
 
     }

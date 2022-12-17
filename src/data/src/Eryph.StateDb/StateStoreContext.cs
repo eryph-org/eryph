@@ -12,17 +12,20 @@ namespace Eryph.StateDb
         {
         }
 
+
         public DbSet<Operation> Operations { get; set; }
         public DbSet<OperationLogEntry> Logs { get; set; }
         public DbSet<OperationTask> OperationTasks { get; set; }
         public DbSet<OperationResource> OperationResources { get; set; }
 
+        public DbSet<Resource> Resources { get; set; }
+        
         public DbSet<Catlet> Catlets { get; set; }
         public DbSet<VirtualCatlet> VirtualCatlets { get; set; }
         public DbSet<VirtualCatletHost> VirtualCatletHosts { get; set; }
 
         public DbSet<VirtualCatletNetworkAdapter> VirtualCatletNetworkAdapters { get; set; }
-        public DbSet<VirtualMachineDrive> VirtualCatletDrives { get; set; }
+        public DbSet<VirtualCatletDrive> VirtualCatletDrives { get; set; }
         public DbSet<VirtualDisk> VirtualDisks { get; set; }
 
         public DbSet<VirtualNetwork> VirtualNetworks { get; set; }
@@ -53,6 +56,7 @@ namespace Eryph.StateDb
             modelBuilder.Entity<Operation>().HasMany(c => c.LogEntries);
             modelBuilder.Entity<Operation>().HasMany(c => c.Tasks);
             modelBuilder.Entity<Operation>().HasMany(c => c.Resources);
+            modelBuilder.Entity<Operation>().HasMany(c => c.Projects);
 
 
 
@@ -72,26 +76,22 @@ namespace Eryph.StateDb
                 .HasKey(x=>x.Id);
 
             modelBuilder.Entity<Project>()
-                .HasMany(x => x.Catlets)
+                .HasMany(x => x.Resources)
                 .WithOne(x => x.Project)
                 .HasForeignKey(x=>x.ProjectId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Project>()
-                .Navigation(x => x.Catlets);
+            modelBuilder.Entity<Resource>()
+                .HasKey(x => x.Id);
 
-
-            modelBuilder.Entity<Project>()
-                .HasMany(x => x.VirtualNetworks)
-                .WithOne(x => x.Project)
-                .HasForeignKey(x=>x.ProjectId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Project>()
-                .Navigation(x => x.VirtualNetworks);
+            modelBuilder.Entity<Resource>()
+                .ToTable("Resources");
 
             modelBuilder.Entity<Catlet>()
-                .HasMany(x => x.ReportedNetworks)
+                .ToTable("Catlets");
+
+            modelBuilder.Entity<Catlet>()
+               .HasMany(x => x.ReportedNetworks)
                 .WithOne(x => x.Catlet)
                 .HasForeignKey(x => x.CatletId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -109,11 +109,8 @@ namespace Eryph.StateDb
             modelBuilder.Entity<Catlet>()
                 .Navigation(x => x.NetworkPorts);
 
-
             modelBuilder.Entity<VirtualNetwork>()
-                .HasKey(x => x.Id);
-
-            modelBuilder.Entity<VirtualNetwork>()
+                .ToTable("VNetworks")
                 .HasMany(x => x.NetworkPorts)
                 .WithOne(x => x.Network)
                 .HasForeignKey(x => x.NetworkId)
@@ -205,6 +202,12 @@ namespace Eryph.StateDb
                 .HasKey(x => x.Id);
 
 
+            modelBuilder.Entity<VirtualCatletHost>()
+                .ToTable("VCatletHosts");
+
+            modelBuilder.Entity<VirtualCatlet>()
+                .ToTable("VCatlets");
+            
             modelBuilder.Entity<VirtualCatlet>()
                 .HasOne(x => x.Host)
                 .WithMany(x => x.VirtualCatlets);
@@ -233,16 +236,19 @@ namespace Eryph.StateDb
             modelBuilder.Entity<VirtualCatletNetworkAdapter>().HasKey("MachineId", "Id");
 
 
-            modelBuilder.Entity<VirtualMachineDrive>()
+            modelBuilder.Entity<VirtualCatletDrive>()
+                .ToTable("VDrives")
                 .HasKey(x => x.Id);
 
-            modelBuilder.Entity<VirtualMachineDrive>()
+            modelBuilder.Entity<VirtualCatletDrive>()
                 .HasOne(x => x.AttachedDisk)
                 .WithMany(x => x.AttachedDrives)
                 .HasForeignKey(x => x.AttachedDiskId);
 
 
-            modelBuilder.Entity<VirtualDisk>().HasKey(x => x.Id);
+            modelBuilder.Entity<VirtualDisk>()
+                .ToTable("VDisks");
+                
             modelBuilder.Entity<VirtualDisk>().HasOne(x => x.Parent)
                 .WithMany(x => x.Childs)
                 .HasForeignKey(x => x.ParentId);

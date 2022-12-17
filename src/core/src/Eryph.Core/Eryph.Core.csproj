@@ -7,6 +7,9 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="12.0.0" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.1.0-ci.34" />
+    <PackageReference Include="Eryph.ConfigModel.Core" Version="0.1.0-ci.34" />
+    <PackageReference Include="Eryph.ConfigModel.Networks" Version="0.1.0-ci.34" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

@@ -6,7 +6,9 @@ using Dbosoft.IdentityServer.Storage.Stores;
 using Dbosoft.IdentityServer.Stores;
 using Eryph.IdentityDb;
 using Eryph.ModuleCore;
+using Eryph.Security.Cryptography;
 using Microsoft.EntityFrameworkCore.Storage;
+using Moq;
 using SimpleInjector;
 
 namespace Eryph.Modules.Identity.Test.Integration
@@ -31,6 +33,15 @@ namespace Eryph.Modules.Identity.Test.Integration
 
             _container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
+
+            var cryptoIOMock = new Mock<ICryptoIOServices>();
+            _container.RegisterInstance(cryptoIOMock.Object);
+
+            var certStoreMock = new Mock<ICertificateStoreService>();
+            _container.RegisterInstance(certStoreMock.Object);
+
+            var cerGenMock = new Mock<ICertificateGenerator>();
+            _container.RegisterInstance(cerGenMock.Object);
 
             //_container.RegisterInstance(new InMemoryDatabaseRoot());
             //_container

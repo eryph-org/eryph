@@ -1,31 +1,32 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.Resources;
+using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
+using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
+using Resource = Eryph.Resources.Resource;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
 {
-    public class Update : ResourceOperationEndpoint<UpdateCatletRequest, StateDb.Model.Catlet>
+    public class Update : ResourceOperationEndpoint<UpdateCatletRequest, Catlet>
     {
-        
-        public Update([NotNull] IResourceOperationHandler<StateDb.Model.Catlet> operationHandler) : base(operationHandler)
+
+        public Update([NotNull] IOperationRequestHandler<Catlet> operationHandler, 
+            [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder) : base(operationHandler, specBuilder)
         {
         }
 
-        protected override object CreateOperationMessage(StateDb.Model.Catlet model, UpdateCatletRequest request )
+        protected override object CreateOperationMessage(Catlet model, UpdateCatletRequest request )
         {
 
             var jsonString = request.Configuration.GetValueOrDefault().ToString();
@@ -33,8 +34,12 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
             var config = CatletConfigDictionaryConverter.Convert(configDictionary);
 
-            return new UpdateCatletCommand(){Resource = new Resource(ResourceType.Machine, model.Id), 
-                CorrelationId = request.CorrelationId, Config = config};
+            return new UpdateCatletCommand{Resource = new Resource(ResourceType.Catlet, model.Id),
+                CorrelationId = request.CorrelationId == Guid.Empty
+                    ? new Guid()
+                    : request.CorrelationId,
+                Config = config
+            };
         }
 
 
@@ -50,7 +55,6 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
         {
             return base.HandleAsync(request, cancellationToken);
         }
-
 
     }
 }

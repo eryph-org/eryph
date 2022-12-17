@@ -1,27 +1,32 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.Resources;
+using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
+using Resource = Eryph.Resources.Resource;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
 {
-    public class Stop : ResourceOperationEndpoint<SingleResourceRequest, StateDb.Model.Catlet>
+    public class Stop : ResourceOperationEndpoint<SingleEntityRequest, Catlet>
     {
 
-        public Stop([NotNull] IResourceOperationHandler<StateDb.Model.Catlet> operationHandler) : base(operationHandler)
+
+        public Stop([NotNull]IOperationRequestHandler<Catlet> operationHandler, 
+            [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder) : base(operationHandler, specBuilder)
         {
         }
 
-        protected override object CreateOperationMessage(StateDb.Model.Catlet model, SingleResourceRequest request)
+        protected override object CreateOperationMessage(Catlet model, SingleEntityRequest request)
         {
-            return new StopCatletCommand{Resource = new Resource(ResourceType.Machine, model.Id)};
+            return new StopCatletCommand{Resource = new Resource(ResourceType.Catlet, model.Id)};
         }
 
 
@@ -33,7 +38,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             Tags = new[] { "Catlets" })
         ]
 
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] SingleResourceRequest request, CancellationToken cancellationToken = default)
+        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }

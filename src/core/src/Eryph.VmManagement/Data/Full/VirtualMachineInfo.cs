@@ -1,4 +1,5 @@
 ﻿using System;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.VmManagement.Data.Core;
 

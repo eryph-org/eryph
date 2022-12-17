@@ -7,16 +7,16 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.ComputeApi.Model
 {
-    public class VirtualDiskSpecBuilder : ISingleResourceSpecBuilder<VirtualDisk>, IListResourceSpecBuilder<VirtualDisk>
+    public class VirtualDiskSpecBuilder : ISingleEntitySpecBuilder<SingleEntityRequest,VirtualDisk>, IListEntitySpecBuilder<ListRequest,VirtualDisk>
     {
-        public ISingleResultSpecification<VirtualDisk> GetSingleResourceSpec(SingleResourceRequest request)
+        public ISingleResultSpecification<VirtualDisk> GetSingleEntitySpec(SingleEntityRequest request)
         {
             return new ResourceSpecs<VirtualDisk>.GetById(
                 Guid.Parse(request.Id), b => 
                     b.Include(x => x.AttachedDrives));
         }
 
-        public ISpecification<VirtualDisk> GetResourceSpec(ListRequest request)
+        public ISpecification<VirtualDisk> GetEntitiesSpec(ListRequest request)
         {
             return new ResourceSpecs<VirtualDisk>.GetAll(b =>
                     b.Include(x => x.AttachedDrives));

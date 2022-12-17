@@ -15,8 +15,8 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
         where TModel : class
         where TRequest: RequestBase
     {
-        private readonly IGetRequestHandler<TModel> _requestHandler;
-        public SingleResultEndpoint(IGetRequestHandler<TModel> requestHandler)
+        private readonly IGetRequestHandler<TModel, TResult> _requestHandler;
+        public SingleResultEndpoint(IGetRequestHandler<TModel, TResult> requestHandler)
         {
             _requestHandler = requestHandler;
         }
@@ -25,7 +25,8 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
 
         public override Task<ActionResult<TResult>> HandleAsync(TRequest request, CancellationToken cancellationToken = default)
         {
-            return _requestHandler.HandleGetRequest<TResult>(() => CreateSpecification(request), cancellationToken );
+            return _requestHandler.HandleGetRequest(
+                () => CreateSpecification(request), cancellationToken );
         }
     }
 

@@ -12,7 +12,6 @@ public class Project
     public Guid TenantId { get; set; }
     public virtual Tenant Tenant { get; set; }
 
-    public virtual List<VirtualNetwork> VirtualNetworks { get; set; }
-    public virtual List<Catlet> Catlets { get; set; }
+    public virtual List<Resource> Resources { get; set; }
 
 }

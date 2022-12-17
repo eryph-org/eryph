@@ -1,26 +1,21 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Ardalis.Specification;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
-using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.CommonApi.Endpoints.V1.Operations
 {
-    public class List : ListEndpoint<OperationsListRequest, Operation, StateDb.Model.Operation>
+    public class List : ListEntityEndpoint<OperationsListRequest, Operation, StateDb.Model.Operation>
     {
-        public List([NotNull] IListRequestHandler<StateDb.Model.Operation> listRequestHandler) : base(listRequestHandler)
+        public List([NotNull] IListRequestHandler<StateDb.Model.Operation> listRequestHandler, 
+            [NotNull] IListEntitySpecBuilder<OperationsListRequest, StateDb.Model.Operation> specBuilder) : base(listRequestHandler, specBuilder)
         {
-        }
-
-        protected override ISpecification<StateDb.Model.Operation> CreateSpecification(OperationsListRequest request)
-        {
-            return new OperationSpecs.GetAll(true, request.LogTimestamp);
         }
 
         [HttpGet("operations")]

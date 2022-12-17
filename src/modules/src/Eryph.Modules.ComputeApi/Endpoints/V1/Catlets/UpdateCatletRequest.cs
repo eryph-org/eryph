@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
-public class UpdateCatletRequest : SingleResourceRequest
+public class UpdateCatletRequest : SingleEntityRequest
 {
     [Required] public Guid CorrelationId { get; set; }
 

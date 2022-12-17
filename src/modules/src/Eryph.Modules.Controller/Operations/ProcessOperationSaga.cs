@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
@@ -152,7 +153,7 @@ namespace Eryph.Modules.Controller.Operations
             if (op == null || task == null)
                 return;
 
-            if (task.Status == OperationTaskStatus.Queued || task.Status == OperationTaskStatus.Running)
+            if (task.Status is OperationTaskStatus.Queued or OperationTaskStatus.Running)
             {
                 var taskCommandTypeName = Data.Tasks[message.TaskId];
 
@@ -174,6 +175,14 @@ namespace Eryph.Modules.Controller.Operations
                     errorMessage = errorData.ErrorMessage;
 
                 op.StatusMessage = string.IsNullOrWhiteSpace(errorMessage) ? op.Status.ToString() : errorMessage;
+
+
+                if (message.GetMessage() is ProjectReference projectReference)
+                {
+                    op.Projects ??= new List<OperationProject>();
+                    op.Projects.Add(new OperationProject { Id = new Guid(), ProjectId = projectReference.ProjectId });
+                }
+
                 MarkAsComplete();
             }
         }

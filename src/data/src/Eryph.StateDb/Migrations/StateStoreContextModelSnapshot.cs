@@ -17,46 +17,6 @@ namespace Eryph.StateDb.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.11");
 
-            modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AgentName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("CatletType")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Discriminator")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ResourceType")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<TimeSpan?>("UpTime")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProjectId");
-
-                    b.ToTable("Catlets");
-
-                    b.HasDiscriminator<string>("Discriminator").HasValue("Catlet");
-                });
-
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -196,6 +156,27 @@ namespace Eryph.StateDb.Migrations
                     b.ToTable("Logs");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationProject", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("OperationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("OperationProject");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.OperationResource", b =>
                 {
                     b.Property<Guid>("Id")
@@ -304,6 +285,28 @@ namespace Eryph.StateDb.Migrations
                     b.ToTable("ReportedNetworks");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.Resource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ResourceType")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("Resources", (string)null);
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.Subnet", b =>
                 {
                     b.Property<Guid>("Id")
@@ -338,6 +341,29 @@ namespace Eryph.StateDb.Migrations
                     b.ToTable("Tenants");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatletDrive", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("AttachedDiskId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("MachineId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttachedDiskId");
+
+                    b.HasIndex("MachineId");
+
+                    b.ToTable("VDrives", (string)null);
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatletNetworkAdapter", b =>
                 {
                     b.Property<Guid>("MachineId")
@@ -363,78 +389,6 @@ namespace Eryph.StateDb.Migrations
                     b.ToTable("VirtualCatletNetworkAdapters");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DataStore")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("DiskType")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Environment")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FileName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("ParentId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Path")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Project")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ResourceType")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<long?>("SizeBytes")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("StorageIdentifier")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ParentId");
-
-                    b.ToTable("VirtualDisks");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualMachineDrive", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("AttachedDiskId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("MachineId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("Type")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AttachedDiskId");
-
-                    b.HasIndex("MachineId");
-
-                    b.ToTable("VirtualCatletDrives");
-                });
-
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualMachineMetadata", b =>
                 {
                     b.Property<Guid>("Id")
@@ -449,32 +403,23 @@ namespace Eryph.StateDb.Migrations
                     b.ToTable("Metadata");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.HasBaseType("Eryph.StateDb.Model.Resource");
+
+                    b.Property<string>("AgentName")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("IpNetwork")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("NetworkProvider")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ResourceType")
+                    b.Property<int>("CatletType")
                         .HasColumnType("INTEGER");
 
-                    b.HasKey("Id");
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
 
-                    b.HasIndex("ProjectId");
+                    b.Property<TimeSpan?>("UpTime")
+                        .HasColumnType("TEXT");
 
-                    b.ToTable("VirtualNetworks");
+                    b.ToTable("Catlets", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.FloatingNetworkPort", b =>
@@ -519,35 +464,50 @@ namespace Eryph.StateDb.Migrations
                     b.HasDiscriminator().HasValue("ProviderSubnet");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatlet", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
                 {
-                    b.HasBaseType("Eryph.StateDb.Model.Catlet");
+                    b.HasBaseType("Eryph.StateDb.Model.Resource");
 
-                    b.Property<Guid?>("HostId")
+                    b.Property<string>("DataStore")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("MetadataId")
+                    b.Property<int>("DiskType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Environment")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ParentId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Path")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("VMId")
+                    b.Property<long?>("SizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StorageIdentifier")
                         .HasColumnType("TEXT");
 
-                    b.HasIndex("HostId");
+                    b.HasIndex("ParentId");
 
-                    b.HasDiscriminator().HasValue("VirtualCatlet");
+                    b.ToTable("VDisks", (string)null);
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatletHost", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>
                 {
-                    b.HasBaseType("Eryph.StateDb.Model.Catlet");
+                    b.HasBaseType("Eryph.StateDb.Model.Resource");
 
-                    b.Property<string>("HardwareId")
+                    b.Property<string>("IpNetwork")
                         .HasColumnType("TEXT");
 
-                    b.HasDiscriminator().HasValue("VirtualCatletHost");
+                    b.Property<string>("NetworkProvider")
+                        .HasColumnType("TEXT");
+
+                    b.ToTable("VNetworks", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkPort", b =>
@@ -631,15 +591,35 @@ namespace Eryph.StateDb.Migrations
                     b.HasDiscriminator().HasValue("ProviderRouterPort");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatlet", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.Project", "Project")
-                        .WithMany("Catlets")
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                    b.HasBaseType("Eryph.StateDb.Model.Catlet");
 
-                    b.Navigation("Project");
+                    b.Property<Guid?>("HostId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("MetadataId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("VMId")
+                        .HasColumnType("TEXT");
+
+                    b.HasIndex("HostId");
+
+                    b.ToTable("VCatlets", (string)null);
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatletHost", b =>
+                {
+                    b.HasBaseType("Eryph.StateDb.Model.Catlet");
+
+                    b.Property<string>("HardwareId")
+                        .HasColumnType("TEXT");
+
+                    b.ToTable("VCatletHosts", (string)null);
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>
@@ -684,6 +664,23 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Task");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationProject", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Operation", "Operation")
+                        .WithMany("Projects")
+                        .HasForeignKey("OperationId");
+
+                    b.HasOne("Eryph.StateDb.Model.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Operation");
+
+                    b.Navigation("Project");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.OperationResource", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.Operation", "Operation")
@@ -724,27 +721,18 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Catlet");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatletNetworkAdapter", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.Resource", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.VirtualCatlet", "Vm")
-                        .WithMany("NetworkAdapters")
-                        .HasForeignKey("MachineId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.HasOne("Eryph.StateDb.Model.Project", "Project")
+                        .WithMany("Resources")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Vm");
+                    b.Navigation("Project");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.VirtualDisk", "Parent")
-                        .WithMany("Childs")
-                        .HasForeignKey("ParentId");
-
-                    b.Navigation("Parent");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualMachineDrive", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatletDrive", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.VirtualDisk", "AttachedDisk")
                         .WithMany("AttachedDrives")
@@ -761,15 +749,24 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Vm");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatletNetworkAdapter", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.Project", "Project")
-                        .WithMany("VirtualNetworks")
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                    b.HasOne("Eryph.StateDb.Model.VirtualCatlet", "Vm")
+                        .WithMany("NetworkAdapters")
+                        .HasForeignKey("MachineId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Project");
+                    b.Navigation("Vm");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Resource", null)
+                        .WithOne()
+                        .HasForeignKey("Eryph.StateDb.Model.Catlet", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpPoolAssignment", b =>
@@ -783,13 +780,28 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Pool");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatlet", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.VirtualCatletHost", "Host")
-                        .WithMany("VirtualCatlets")
-                        .HasForeignKey("HostId");
+                    b.HasOne("Eryph.StateDb.Model.Resource", null)
+                        .WithOne()
+                        .HasForeignKey("Eryph.StateDb.Model.VirtualDisk", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.Navigation("Host");
+                    b.HasOne("Eryph.StateDb.Model.VirtualDisk", "Parent")
+                        .WithMany("Childs")
+                        .HasForeignKey("ParentId");
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Resource", null)
+                        .WithOne()
+                        .HasForeignKey("Eryph.StateDb.Model.VirtualNetwork", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkPort", b =>
@@ -842,11 +854,28 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("RoutedNetwork");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatlet", b =>
                 {
-                    b.Navigation("NetworkPorts");
+                    b.HasOne("Eryph.StateDb.Model.VirtualCatletHost", "Host")
+                        .WithMany("VirtualCatlets")
+                        .HasForeignKey("HostId");
 
-                    b.Navigation("ReportedNetworks");
+                    b.HasOne("Eryph.StateDb.Model.Catlet", null)
+                        .WithOne()
+                        .HasForeignKey("Eryph.StateDb.Model.VirtualCatlet", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Host");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatletHost", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Catlet", null)
+                        .WithOne()
+                        .HasForeignKey("Eryph.StateDb.Model.VirtualCatletHost", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpPool", b =>
@@ -863,6 +892,8 @@ namespace Eryph.StateDb.Migrations
                 {
                     b.Navigation("LogEntries");
 
+                    b.Navigation("Projects");
+
                     b.Navigation("Resources");
 
                     b.Navigation("Tasks");
@@ -870,9 +901,7 @@ namespace Eryph.StateDb.Migrations
 
             modelBuilder.Entity("Eryph.StateDb.Model.Project", b =>
                 {
-                    b.Navigation("Catlets");
-
-                    b.Navigation("VirtualNetworks");
+                    b.Navigation("Resources");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Subnet", b =>
@@ -883,6 +912,18 @@ namespace Eryph.StateDb.Migrations
             modelBuilder.Entity("Eryph.StateDb.Model.Tenant", b =>
                 {
                     b.Navigation("Projects");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
+                {
+                    b.Navigation("NetworkPorts");
+
+                    b.Navigation("ReportedNetworks");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.FloatingNetworkPort", b =>
+                {
+                    b.Navigation("AssignedPort");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
@@ -899,11 +940,6 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("RouterPort");
 
                     b.Navigation("Subnets");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.FloatingNetworkPort", b =>
-                {
-                    b.Navigation("AssignedPort");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualCatlet", b =>

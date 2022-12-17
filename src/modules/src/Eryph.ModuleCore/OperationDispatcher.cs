@@ -77,6 +77,12 @@ namespace Eryph.ModuleCore
                 operationId = Guid.NewGuid();
             }
 
+            var projects = new List<Guid>();
+
+            if(command is IHasProjectId hasProjectId)
+                projects.Add(hasProjectId.ProjectId);
+
+
             // resources can be set directly or by command
             // at end we join the resources into command but to ensure that all are handled
             // try to collect them from command, too
@@ -90,6 +96,7 @@ namespace Eryph.ModuleCore
 
             resources = resources.Distinct().ToArray();
 
+
             // if supported by the command use the correlation id as operation id
             // this will prevent that commands are send twice
             if (command is IHasCorrelationId correlatedCommand)
@@ -98,7 +105,7 @@ namespace Eryph.ModuleCore
                     : correlatedCommand.CorrelationId;
 
             var result = new List<Operation>();
-
+            
             //create a task for each resource
             //or, if command supports multiple resources or there are no resources - 1 task
             var taskCount = resources.Length == 0 ? 1 : resources.Length;
@@ -109,15 +116,26 @@ namespace Eryph.ModuleCore
             {
                 if (!existingOperation)
                 {
+                    var resourceIds = resources.Select(x => x.Id);
+                    var projectsOfResources = await _db.Resources
+                        .Where(x => resourceIds.Contains(x.Id)).Select(x => x.ProjectId)
+                        .Distinct()
+                        .ToArrayAsync();
+                    projects.AddRange(projectsOfResources);
+                    projects = projects.Distinct().ToList();
 
                     var operation = new Operation
                     {
                         Id = operationId,
                         Status = OperationStatus.Queued,
-                        Resources = resources.Distinct().Select(x => new OperationResource
+                        Resources = resources.Select(x => new OperationResource
                                 {ResourceId = x.Id, ResourceType = x.Type})
+                            .ToList(),
+                        Projects = projects.Select(p => new OperationProject{ Id = Guid.NewGuid(), ProjectId = p })
                             .ToList()
                     };
+
+                    
 
                     _db.Add(operation);
                     result.Add(operation);
@@ -145,6 +163,20 @@ namespace Eryph.ModuleCore
                         }
                     }
 
+                    var resourceIds = resources.Select(x => x.Id)
+                        .Append(operation.Resources.Select(x => x.ResourceId))
+                        .Distinct();
+
+                    var projectsOfResources = await _db.Resources
+                        .Where(x => resourceIds.Contains(x.Id)).Select(x => x.ProjectId)
+                        .Distinct()
+                        .ToArrayAsync();
+                    projects.AddRange(projectsOfResources);
+                    projects = projects.Distinct().ToList();
+
+                    //operation.Projects = projects.Select(p => new OperationProject
+                    //        { Id = Guid.NewGuid(), ProjectId = p })
+                    //    .ToList();
 
                     _db.Update(operation);
                     await _db.SaveChangesAsync();

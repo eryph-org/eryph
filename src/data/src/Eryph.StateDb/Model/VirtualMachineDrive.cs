@@ -3,7 +3,7 @@ using Eryph.ConfigModel.Catlets;
 
 namespace Eryph.StateDb.Model
 {
-    public class VirtualMachineDrive
+    public class VirtualCatletDrive
     {
         public string Id { get; set; }
 

@@ -233,6 +233,7 @@ namespace Eryph.Modules.Controller.Inventory
             {
                 Id = machineId,
                 Project = project,
+                ProjectId = project.Id,
                 VMId = vmInfo.VMId,
                 Name = vmInfo.Name,
                 Status = MapVmStatusToMachineStatus(vmInfo.Status),
@@ -247,7 +248,7 @@ namespace Eryph.Modules.Controller.Inventory
                     Name = a.AdapterName,
                     SwitchName = a.VirtualSwitchName
                 }).ToList(),
-                Drives = vmInfo.Drives.Select(d => new VirtualMachineDrive
+                Drives = vmInfo.Drives.Select(d => new VirtualCatletDrive
                 {
                     Id = d.Id,
                     MachineId = machineId,
