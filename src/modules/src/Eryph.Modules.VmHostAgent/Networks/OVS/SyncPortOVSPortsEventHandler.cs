@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.OVN;
 using Eryph.Modules.VmHostAgent.Inventory;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;

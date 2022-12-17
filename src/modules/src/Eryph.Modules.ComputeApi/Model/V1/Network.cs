@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using Eryph.StateDb.Model;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Eryph.Modules.ComputeApi.Model.V1
 {

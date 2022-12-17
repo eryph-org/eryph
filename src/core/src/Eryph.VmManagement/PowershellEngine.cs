@@ -30,6 +30,9 @@ namespace Eryph.VmManagement
 
         public void Dispose()
         {
+            _semaphore?.Dispose();
+            _semaphore = null;
+
             if ((_runspace?.IsDisposed).GetValueOrDefault(true))
                 return;
 
@@ -37,6 +40,7 @@ namespace Eryph.VmManagement
             {
                 _runspace?.Close();
                 _runspace?.Dispose();
+                _runspace = null;
 
                 foreach (var reference in _createdObjects)
                 {

@@ -44,8 +44,9 @@ namespace Eryph.Modules.Controller.Operations
 
         public async Task Handle(CreateNewOperationTaskCommand message)
         {
-            var command = JsonSerializer.Deserialize(message.CommandData, 
-                Type.GetType(message.CommandType) ?? throw new InvalidOperationException($"unknown command type '{message.CommandType}'"));
+            var command = JsonSerializer.Deserialize(message.CommandData,
+                Type.GetType(message.CommandType) ??
+                throw new InvalidOperationException($"unknown command type '{message.CommandType}'"));
 
             var op = await _dbContext.Operations.FindAsync(message.OperationId).ConfigureAwait(false);
             if (op == null)
@@ -73,9 +74,10 @@ namespace Eryph.Modules.Controller.Operations
             task.Name = messageType.Name;
             Data.Tasks.Add(message.TaskId, messageType.AssemblyQualifiedName!);
 
-            var outboundMessage = Activator.CreateInstance(typeof(OperationTaskSystemMessage<>).MakeGenericType(messageType), 
-                command, message.OperationId, message.TaskId) ;
-            
+            var outboundMessage = Activator.CreateInstance(
+                typeof(OperationTaskSystemMessage<>).MakeGenericType(messageType),
+                command, message.OperationId, message.InitiatingTaskId, message.TaskId);
+
 
             var sendCommandAttribute = messageType.GetCustomAttribute<SendMessageToAttribute>();
 
@@ -96,13 +98,15 @@ namespace Eryph.Modules.Controller.Operations
 
                             if (machine == null)
                             {
-                                await Handle(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
-                                    new ErrorData {ErrorMessage = $"Virtual catlet {vmCommand.CatletId} not found"}));
+                                await Handle(OperationTaskStatusEvent.Failed(message.OperationId,
+                                    message.InitiatingTaskId, message.TaskId,
+                                    new ErrorData { ErrorMessage = $"Virtual catlet {vmCommand.CatletId} not found" }));
 
                                 return;
                             }
 
-                            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{machine.AgentName}", outboundMessage)
+                            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{machine.AgentName}",
+                                    outboundMessage)
                                 .ConfigureAwait(false);
 
                             return;
@@ -158,8 +162,9 @@ namespace Eryph.Modules.Controller.Operations
                 var taskCommandTypeName = Data.Tasks[message.TaskId];
 
                 var genericType = typeof(OperationTaskStatusEvent<>);
-                var wrappedCommandType = genericType.MakeGenericType(Type.GetType(taskCommandTypeName) 
-                              ?? throw new InvalidOperationException($"Unknown task command type '{taskCommandTypeName}'."));
+                var wrappedCommandType = genericType.MakeGenericType(Type.GetType(taskCommandTypeName)
+                                                                     ?? throw new InvalidOperationException(
+                                                                         $"Unknown task command type '{taskCommandTypeName}'."));
 
                 var commandInstance = Activator.CreateInstance(wrappedCommandType, message);
                 await _bus.SendLocal(commandInstance);
@@ -201,48 +206,5 @@ namespace Eryph.Modules.Controller.Operations
             config.Correlate<OperationTaskAcceptedEvent>(m => m.OperationId, d => d.OperationId);
             config.Correlate<OperationTaskStatusEvent>(m => m.OperationId, d => d.OperationId);
         }
-
-        //public async Task Handle(OperationCompletedEvent message)
-        //{
-        //    var op = await _dbContext.Operations.FindAsync(message.OperationId).ConfigureAwait(false);
-
-        //    if (op == null)
-        //        return;
-
-        //    op.Status = message.Failed ? OperationStatus.Failed : OperationStatus.Completed;
-        //    op.StatusMessage = !string.IsNullOrWhiteSpace(message.Message) ? message.Message : op.Status.ToString();
-
-        //    await _dbContext.SaveChangesAsync();
-
-        //    MarkAsComplete();
-        //}
     }
-
-    //[UsedImplicitly]
-    //public class DefaultOperationTaskStatusEventHandler<T> : IHandleMessages<OperationTaskStatusEvent<T>> where T: OperationTaskMessage
-    //{
-    //    private readonly IBus _bus;
-
-    //    public DefaultOperationTaskStatusEventHandler(IBus bus)
-    //    {
-    //        _bus = bus;
-    //    }
-
-
-    //    public async Task Handle(OperationTaskStatusEvent<T> message)
-    //    {
-
-    //        string statusMessage = null;
-
-    //        if (message.GetMessage() is ErrorData errorData)
-    //            statusMessage = errorData.ErrorMessage;
-
-    //        await _bus.SendLocal(new OperationCompletedEvent
-    //        {
-    //            Failed = message.OperationFailed,
-    //            Message = statusMessage,
-    //            OperationId = message.OperationId
-    //        }).ConfigureAwait(false);
-    //    }
-    //}
 }

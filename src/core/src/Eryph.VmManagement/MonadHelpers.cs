@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using LanguageExt;
 using static LanguageExt.Prelude;
-using Array = System.Array;
 
 namespace Eryph.VmManagement
 {

@@ -5,7 +5,6 @@ using Eryph.Configuration.Model;
 using Eryph.IdentityDb;
 using Eryph.Modules.Identity;
 using Eryph.Modules.Identity.Models;
-using Eryph.Modules.Identity.Services;
 using JetBrains.Annotations;
 
 namespace Eryph.Runtime.Zero.Configuration.Clients

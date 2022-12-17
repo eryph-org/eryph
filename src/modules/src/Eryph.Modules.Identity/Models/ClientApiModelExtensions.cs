@@ -5,10 +5,8 @@ using System.Threading.Tasks;
 using Dbosoft.IdentityServer;
 using Dbosoft.IdentityServer.Models;
 using Dbosoft.IdentityServer.Storage.Models;
-using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
-using LanguageExt.ClassInstances.Const;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.OpenSsl;
 

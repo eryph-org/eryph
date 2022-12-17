@@ -1,8 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
-using Eryph.ConfigModel.Catlets;
-using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 using LanguageExt.Common;

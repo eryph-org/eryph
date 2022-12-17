@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
 

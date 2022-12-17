@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Management.Automation;
 using Eryph.ConfigModel;
-using Eryph.Core;
 using Eryph.VmManagement.Tracing;
 
 namespace Eryph.VmManagement;

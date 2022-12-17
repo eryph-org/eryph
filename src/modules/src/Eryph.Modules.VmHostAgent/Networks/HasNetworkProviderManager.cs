@@ -1,5 +1,4 @@
 ﻿using Eryph.Core;
-using Eryph.VmManagement;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 

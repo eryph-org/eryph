@@ -19,12 +19,10 @@ namespace Eryph.Modules.Controller.Projects
     internal class DestroyProjectSaga : OperationTaskWorkflowSaga<DestroyProjectCommand, DestroyProjectSagaData>,
         IHandleMessages<OperationTaskStatusEvent<DestroyResourcesCommand>>
     {
-        private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly IStateStore _stateStore;
 
-        public DestroyProjectSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IStateStore stateStore) : base(bus)
+        public DestroyProjectSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IStateStore stateStore) : base(bus, taskDispatcher)
         {
-            _taskDispatcher = taskDispatcher;
             _stateStore = stateStore;
         }
 
@@ -57,7 +55,7 @@ namespace Eryph.Modules.Controller.Projects
                 return;
             }
 
-            await _taskDispatcher.StartNew(Data.OperationId, new DestroyResourcesCommand
+            await StartNewTask(new DestroyResourcesCommand
             {
                 Resources = project.Resources.Select(x=> new Resource(x.ResourceType, x.Id)).ToArray()
             });

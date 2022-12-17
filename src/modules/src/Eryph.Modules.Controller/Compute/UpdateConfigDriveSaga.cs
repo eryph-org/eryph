@@ -17,12 +17,10 @@ namespace Eryph.Modules.Controller.Compute
         OperationTaskWorkflowSaga<UpdateConfigDriveCommand, UpdateConfigDriveSagaData>,
         IHandleMessages<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>
     {
-        private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IVirtualMachineMetadataService _metadataService;
-        public UpdateConfigDriveSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IVirtualMachineDataService vmDataService, IVirtualMachineMetadataService metadataService) : base(bus)
+        public UpdateConfigDriveSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IVirtualMachineDataService vmDataService, IVirtualMachineMetadataService metadataService) : base(bus, taskDispatcher)
         {
-            _taskDispatcher = taskDispatcher;
             _vmDataService = vmDataService;
             _metadataService = metadataService;
         }
@@ -34,8 +32,7 @@ namespace Eryph.Modules.Controller.Compute
                 Some: s => _metadataService.GetMetadata(s.MetadataId).Match(
                     None: () => Fail().ToUnit(),
                     Some: metadata =>
-                        _taskDispatcher.StartNew(Data.OperationId,
-                            new UpdateVirtualCatletConfigDriveCommand
+                        StartNewTask(new UpdateVirtualCatletConfigDriveCommand
                             {
 
                                 VMId = s.VMId,
@@ -53,7 +50,7 @@ namespace Eryph.Modules.Controller.Compute
         protected override void CorrelateMessages(ICorrelationConfig<UpdateConfigDriveSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>(m => m.OperationId, m => m.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
         }
 
 

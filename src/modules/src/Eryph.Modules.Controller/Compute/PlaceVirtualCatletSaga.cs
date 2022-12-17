@@ -4,6 +4,7 @@ using Eryph.Messages;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
 using Eryph.Messages.Resources.Events;
+using Eryph.ModuleCore;
 using Eryph.Modules.Controller.Operations;
 using Eryph.Rebus;
 using JetBrains.Annotations;
@@ -20,7 +21,8 @@ namespace Eryph.Modules.Controller.Compute
     {
         private readonly IPlacementCalculator _placementCalculator;
 
-        public PlaceVirtualCatletSaga(IBus bus, IPlacementCalculator placementCalculator) : base(bus)
+        public PlaceVirtualCatletSaga(IBus bus, IPlacementCalculator placementCalculator, 
+            IOperationTaskDispatcher taskDispatcher) : base(bus, taskDispatcher)
         {
             _placementCalculator = placementCalculator;
         }

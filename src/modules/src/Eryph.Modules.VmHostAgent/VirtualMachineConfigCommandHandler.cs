@@ -3,9 +3,8 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Messages;
-using Eryph.Messages.Operations.Events;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
+using Eryph.Messages.Operations;
+using Eryph.ModuleCore;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
@@ -14,19 +13,18 @@ using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
-using Rebus.Transport;
+using Rebus.Handlers;
 
 namespace Eryph.Modules.VmHostAgent
 {
-    internal abstract class VirtualCatletConfigCommandHandler
+    internal abstract class VirtualCatletConfigCommandHandler<TMessage, TResult>: IHandleMessages<OperationTask<TMessage>> 
+        where TMessage : class, new()
     {
         public const string DefaultDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         protected readonly IBus Bus;
         protected readonly ILogger Log;
-
         protected readonly IPowershellEngine Engine;
-        protected Guid OperationId;
-        protected Guid TaskId;
+        protected OperationTask<TMessage> Message;
 
         protected VirtualCatletConfigCommandHandler(
             IPowershellEngine engine,
@@ -37,39 +35,22 @@ namespace Eryph.Modules.VmHostAgent
             Log = log;
         }
 
-
-        protected async Task<Unit> ProgressMessage(string message)
+        public Task Handle(OperationTask<TMessage> message)
         {
-            using (var scope = new RebusTransactionScope())
-            {
-                await Bus.Publish(new OperationTaskProgressEvent
-                {
-                    Id = Guid.NewGuid(),
-                    OperationId = OperationId,
-                    TaskId = TaskId,
-                    Message = message,
-                    Timestamp = DateTimeOffset.UtcNow
-                }).ConfigureAwait(false);
+            Message = message;
+            return HandleCommand(message.Command)
+                .FailOrComplete(Bus, message);
 
-                // commit it like this
-                await scope.CompleteAsync().ConfigureAwait(false);
-            }
+        }
 
+        protected async Task<Unit> ProgressMessage(string progressMessage)
+        {
+            await Bus.ProgressMessage(Message, progressMessage);
             return Unit.Default;
         }
 
+        protected abstract EitherAsync<Error, TResult> HandleCommand(TMessage command);
 
-        protected async Task<Unit> HandleError(Error failure)
-        {
-            Log.LogError("Operation {OperationId}/{TaskId} failed. Error: {message}", OperationId, TaskId, failure.Message);
-
-            await Bus.Publish(OperationTaskStatusEvent.Failed(
-                OperationId, TaskId,
-                new ErrorData {ErrorMessage = failure.Message})
-            ).ConfigureAwait(false);
-
-            return Unit.Default;
-        }
 
         public static string LongToString(BigInteger subject, int @base = 36, string digits = DefaultDigits)
         {
@@ -201,5 +182,7 @@ namespace Eryph.Modules.VmHostAgent
             var inventory = new VirtualMachineInventory(engine, hostSettings, hostInfoProvider);
             return inventory.InventorizeVM(vmInfo).ToAsync();
         }
+
+
     }
 }

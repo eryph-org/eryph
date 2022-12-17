@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
@@ -8,7 +7,6 @@ using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Operations;
 using Eryph.Resources;
 using JetBrains.Annotations;
-using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
@@ -24,7 +22,7 @@ namespace Eryph.Modules.Controller.Compute
         private readonly IStorageManagementAgentLocator _agentLocator;
 
         public DestroyVirtualDiskSaga(IBus bus, IOperationTaskDispatcher taskDispatcher,
-            IVirtualDiskDataService virtualDiskDataService, IStorageManagementAgentLocator agentLocator) : base(bus)
+            IVirtualDiskDataService virtualDiskDataService, IStorageManagementAgentLocator agentLocator) : base(bus, taskDispatcher)
         {
             _taskDispatcher = taskDispatcher;
             _virtualDiskDataService = virtualDiskDataService;
@@ -47,7 +45,7 @@ namespace Eryph.Modules.Controller.Compute
         protected override void CorrelateMessages(ICorrelationConfig<DestroyVirtualDiskSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<RemoveVirtualDiskCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<RemoveVirtualDiskCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
 
         }
 
@@ -74,7 +72,7 @@ namespace Eryph.Modules.Controller.Compute
 
                     var agentName = _agentLocator.FindAgentForDataStore(vhd.DataStore, vhd.Environment);
 
-                    return _taskDispatcher.StartNew(Data.OperationId, new RemoveVirtualDiskCommand
+                    return StartNewTask(new RemoveVirtualDiskCommand
                     {
                         DiskId = Data.DiskId,
                         Path = vhd.Path,

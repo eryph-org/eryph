@@ -1,6 +1,5 @@
 ﻿using System;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 
 namespace Eryph.StateDb

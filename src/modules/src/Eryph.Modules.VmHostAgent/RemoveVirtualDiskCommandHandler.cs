@@ -1,10 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Eryph.Messages;
 using Eryph.Messages.Operations;
-using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.ModuleCore;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
@@ -40,15 +39,13 @@ public class RemoveVirtualDiskCommandHandler : IHandleMessages<OperationTask<Rem
                 }
             }
 
-            await _bus.Publish(OperationTaskStatusEvent.Completed(message.OperationId,
-                message.TaskId));
+            await _bus.CompleteTask(message);
         }
         catch (Exception ex)
         {
             _log.LogError(ex, $"Command '{nameof(RemoveVirtualDiskCommand)}' failed.");
-            await _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId,
-                message.TaskId,
-                new ErrorData { ErrorMessage = ex.Message }));
+            await _bus.FailTask(message, ex.Message);
+
         }
     }
 }

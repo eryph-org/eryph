@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Eryph.Resources.Machines;
+﻿using Eryph.Resources.Machines;
 using LanguageExt;
 using LanguageExt.Common;
 

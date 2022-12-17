@@ -14,16 +14,20 @@ namespace Eryph.Messages.Operations.Commands
         {
         }
 
-        public OperationTaskSystemMessage(TMessage message, Guid operationId, Guid taskId)
+        public OperationTaskSystemMessage(TMessage message, Guid operationId, Guid initiatingTaskId, Guid taskId)
         {
             Message = message;
             OperationId = operationId;
+            InitiatingTaskId = initiatingTaskId;
             TaskId = taskId;
         }
 
         public TMessage Message { get; set; }
 
         public Guid OperationId { get; set; }
+        public Guid InitiatingTaskId { get; set; }
+
+
         public Guid TaskId { get; set; }
     }
 }

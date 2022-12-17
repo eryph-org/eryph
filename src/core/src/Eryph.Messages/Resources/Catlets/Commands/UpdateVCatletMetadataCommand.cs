@@ -1,11 +1,10 @@
 ﻿using System;
 using Eryph.ConfigModel;
-using Eryph.Core;
 
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
     [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class UpdateVirtualMachineMetadataCommand :  IHostAgentCommand
+    public class UpdateVCatletMetadataCommand :  IHostAgentCommand
     {
         public Guid NewMetadataId { get; set; }
         public Guid CurrentMetadataId { get; set; }

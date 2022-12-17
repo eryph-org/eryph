@@ -1,13 +1,7 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.StateDb;
-using Eryph.StateDb.Model;
 using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Inventory

@@ -15,7 +15,9 @@ namespace Eryph.VmManagement.Storage
                 return Option<TypedPsObject<VhdInfo>>.None;
 
             var res = await engine
-                .GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path))
+                .GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path)
+                    .AddParameter("ErrorAction", "SilentlyContinue")
+                )
                 .MapAsync(s => s.HeadOrNone());
             return res;
         }

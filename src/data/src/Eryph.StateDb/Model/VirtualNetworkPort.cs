@@ -1,5 +1,4 @@
 ﻿using System;
-using LanguageExt.TypeClasses;
 
 namespace Eryph.StateDb.Model
 {

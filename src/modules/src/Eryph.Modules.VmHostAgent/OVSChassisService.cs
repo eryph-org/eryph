@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Eryph.Modules.VmHostAgent.Networks;
-using Eryph.VmManagement;
 using LanguageExt;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Operations;
-using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.ModuleCore;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -27,7 +23,7 @@ namespace Eryph.Modules.Controller.Operations
         public Task Handle(OperationTask<ValidateCatletConfigCommand> message)
         {
             message.Command.Config = NormalizeCatletConfig(message.Command.MachineId, message.Command.Config);
-            return _bus.SendLocal(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, message.Command));
+            return _bus.CompleteTask(message, message.Command);
         }
 
         private static CatletConfig NormalizeCatletConfig(

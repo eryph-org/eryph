@@ -1,13 +1,8 @@
 using System.Collections.Generic;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Hosuto.Modules.Testing;
-using Dbosoft.IdentityServer.EfCore.Storage.DbContexts;
-using Dbosoft.IdentityServer.Storage.Stores;
-using Dbosoft.IdentityServer.Stores;
-using Eryph.IdentityDb;
 using Eryph.ModuleCore;
 using Eryph.Security.Cryptography;
-using Microsoft.EntityFrameworkCore.Storage;
 using Moq;
 using SimpleInjector;
 

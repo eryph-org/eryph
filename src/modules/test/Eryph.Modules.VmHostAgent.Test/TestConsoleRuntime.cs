@@ -2,7 +2,6 @@
 using Eryph.Core;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
-using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Effects.Traits;
 using LanguageExt.Sys;

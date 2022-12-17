@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Messages.Operations;
-using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
@@ -14,15 +11,14 @@ using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
-using Rebus.Handlers;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class CreateVirtualMachineCommandHandler : VirtualCatletConfigCommandHandler,
-        IHandleMessages<OperationTask<CreateVirtualCatletCommand>>
+    internal class CreateVirtualMachineCommandHandler : 
+        VirtualCatletConfigCommandHandler<CreateVirtualCatletCommand, ConvergeVirtualCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
 
@@ -31,19 +27,14 @@ namespace Eryph.Modules.VmHostAgent
             _hostInfoProvider = hostInfoProvider;
         }
 
-
-        public Task Handle(OperationTask<CreateVirtualCatletCommand> message)
+        protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(CreateVirtualCatletCommand command)
         {
-            var command = message.Command;
             var config = command.Config;
-
-            OperationId = message.OperationId;
-            TaskId = message.TaskId;
 
             var hostSettings = HostSettingsBuilder.GetHostSettings();
 
             var planStorageSettings = Prelude.fun(() =>
-                VMStorageSettings.Plan(hostSettings, LongToString(message.Command.StorageId), config,
+                VMStorageSettings.Plan(hostSettings, LongToString(command.StorageId), config,
                     Option<VMStorageSettings>.None));
 
             var getTemplate = Prelude.fun(() =>
@@ -56,7 +47,7 @@ namespace Eryph.Modules.VmHostAgent
                 (TypedPsObject<VirtualMachineInfo> vmInfo, TypedPsObject<PlannedVirtualMachineInfo> plannedVM) =>
                     CreateMetadata(plannedVM, vmInfo, config, command.NewMachineId));
 
-            var chain =
+            return
                 from plannedStorageSettings in planStorageSettings()
                 from template in getTemplate()
                 from createdVM in createVM(plannedStorageSettings, template)
@@ -67,11 +58,6 @@ namespace Eryph.Modules.VmHostAgent
                     Inventory = inventory,
                     MachineMetadata = metadata
                 };
-
-            return chain.Match(
-                Left: HandleError,
-                Right: result =>
-                    Bus.Publish(OperationTaskStatusEvent.Completed(OperationId, TaskId, result)).ToUnit());
         }
 
         private static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> GetTemplate(

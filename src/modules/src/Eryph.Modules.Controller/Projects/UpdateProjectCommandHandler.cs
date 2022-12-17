@@ -1,9 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Eryph.Core;
-using Eryph.Messages;
 using Eryph.Messages.Operations;
-using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Projects;
+using Eryph.ModuleCore;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Rebus.Bus;
@@ -31,9 +29,7 @@ namespace Eryph.Modules.Controller.Projects
                 project.Name = message.Command.Name;
             
 
-            await _bus.SendLocal(
-                OperationTaskStatusEvent.Completed(
-                    message.OperationId, message.TaskId));
+            await _bus.CompleteTask(message);
         }
     }
 }

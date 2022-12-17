@@ -1,3 +1,1 @@
-﻿using System;
-
-namespace Eryph.StateDb.Model;
+﻿namespace Eryph.StateDb.Model;

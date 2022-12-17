@@ -2,7 +2,6 @@
 using System.Security.AccessControl;
 using System.Security.Principal;
 using Eryph.Core;
-using Eryph.Modules.CommonApi.Endpoints.V1.Operations;
 
 namespace Eryph.Runtime.Zero.Configuration
 {

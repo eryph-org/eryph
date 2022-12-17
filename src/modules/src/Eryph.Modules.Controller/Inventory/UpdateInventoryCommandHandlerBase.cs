@@ -162,7 +162,7 @@ namespace Eryph.Modules.Controller.Inventory
                             metadata.VMId = vmInfo.VMId;
                             
 
-                            await _dispatcher.StartNew(new UpdateVirtualMachineMetadataCommand
+                            await _dispatcher.StartNew(new UpdateVCatletMetadataCommand
                             {
                                 AgentName = hostMachine.AgentName,
                                 CurrentMetadataId = oldMetadataId,

@@ -1,7 +1,6 @@
 ﻿using System;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Core;
 using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.Catlets.Commands

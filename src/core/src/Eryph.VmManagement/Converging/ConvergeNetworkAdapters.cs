@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;

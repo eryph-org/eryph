@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.Messages;
 using Eryph.Messages.Operations;
-using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Catlets;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
+using Eryph.ModuleCore;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
@@ -16,54 +14,37 @@ using Rebus.Handlers;
 
 namespace Eryph.Modules.VmHostAgent
 {
-    internal abstract class MachineOperationHandlerBase<T> : IHandleMessages<OperationTask<T>>
+    internal abstract class VCatletOperationHandlerBase<T> : IHandleMessages<OperationTask<T>>
         where T : class, IVMCommand, new()
     {
         private readonly IBus _bus;
         private readonly IPowershellEngine _engine;
 
-        protected MachineOperationHandlerBase(IBus bus, IPowershellEngine engine)
+        protected VCatletOperationHandlerBase(IBus bus, IPowershellEngine engine)
         {
             _bus = bus;
             _engine = engine;
         }
 
-        public async Task Handle(OperationTask<T> message)
+        public Task Handle(OperationTask<T> message)
         {
             var command = message.Command;
 
-            var result = await GetVmInfo(command.VMId, _engine).ToError()
+            return GetVmInfo(command.VMId, _engine).ToError()
                 .BindAsync(optVmInfo =>
                 {
                     return optVmInfo.MatchAsync(
                         Some: s => HandleCommand(s, command, _engine),
                         None: () => Unit.Default);
-                }).ConfigureAwait(false);
+                })
+                .ToAsync()
+                .FailOrComplete(_bus, message);
 
-            await result.MatchAsync(
-                LeftAsync: f => HandleError(f, message),
-                RightAsync: async _ =>
-                {
-                    await _bus.Publish(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId))
-                        .ConfigureAwait(false);
-
-                    return Unit.Default;
-                }).ConfigureAwait(false);
         }
 
         protected abstract Task<Either<Error, Unit>> HandleCommand(
             TypedPsObject<VirtualMachineInfo> vmInfo, T command, IPowershellEngine engine);
 
-        private async Task<Unit> HandleError(Error failure, IOperationTaskMessage message)
-        {
-            await _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId, message.TaskId,
-                new ErrorData
-                {
-                    ErrorMessage = failure.Message
-                })).ConfigureAwait(false);
-
-            return Unit.Default;
-        }
 
         private Task<Either<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>>> GetVmInfo(Guid vmId,
             IPowershellEngine engine)

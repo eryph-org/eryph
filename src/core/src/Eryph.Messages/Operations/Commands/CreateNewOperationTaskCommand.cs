@@ -10,11 +10,13 @@ namespace Eryph.Messages.Operations.Commands
         {
         }
 
-        public CreateNewOperationTaskCommand(string commandType, string commandData, Guid operationId, Guid taskId)
+        public CreateNewOperationTaskCommand(string commandType, string commandData, 
+            Guid operationId, Guid initiatingTaskId, Guid taskId)
         {
             CommandType = commandType;
             CommandData = commandData;
             OperationId = operationId;
+            InitiatingTaskId = initiatingTaskId;
             TaskId = taskId;
         }
 
@@ -22,6 +24,7 @@ namespace Eryph.Messages.Operations.Commands
         public string CommandType { get; set; }
 
         public Guid OperationId { get; set; }
+        public Guid InitiatingTaskId { get; set; }
         public Guid TaskId { get; set; }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -9,7 +8,6 @@ using Eryph.Messages.Resources.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.Operations;
 using Eryph.Resources;
-using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -25,18 +23,16 @@ namespace Eryph.Modules.Controller.Compute
         IHandleMessages<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>
 
     {
-        private readonly IOperationTaskDispatcher _taskDispatcher;
 
-        public DestroyResourcesSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus)
+        public DestroyResourcesSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus, taskDispatcher)
         {
-            _taskDispatcher = taskDispatcher;
         }
 
         protected override void CorrelateMessages(ICorrelationConfig<DestroyResourcesSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<DestroyCatletCommand>>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<DestroyCatletCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
 
         }
 
@@ -60,7 +56,7 @@ namespace Eryph.Modules.Controller.Compute
                         secondGroup.Add(resource);
                         break;
                     case ResourceType.VirtualNetwork:
-                        secondGroup.Add(resource);
+                        //secondGroup.Add(resource);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -89,6 +85,7 @@ namespace Eryph.Modules.Controller.Compute
                     DestroyedResources = Data.DestroyedResources.ToArray(),
                     DetachedResources = Data.DetachedResources.ToArray()
                 });
+                return;
             }
 
             Data.Resources = Data.DestroyGroups[0].ToArray();
@@ -99,10 +96,10 @@ namespace Eryph.Modules.Controller.Compute
                 {
 
                     case ResourceType.Catlet:
-                        await _taskDispatcher.StartNew<DestroyCatletCommand>(Data.OperationId, resource);
+                        await StartNewTask<DestroyCatletCommand>(resource);
                         break;
                     case ResourceType.VirtualDisk:
-                        await _taskDispatcher.StartNew<DestroyVirtualDiskCommand>(Data.OperationId, resource);
+                        await StartNewTask<DestroyVirtualDiskCommand>(resource);
                         break;
                     case ResourceType.VirtualNetwork:
                         break;

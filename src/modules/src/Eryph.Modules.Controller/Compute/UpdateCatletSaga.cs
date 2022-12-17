@@ -21,7 +21,7 @@ namespace Eryph.Modules.Controller.Compute
     [UsedImplicitly]
     internal class UpdateCatletSaga : OperationTaskWorkflowSaga<UpdateCatletCommand, UpdateCatletSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateVCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>
@@ -29,15 +29,13 @@ namespace Eryph.Modules.Controller.Compute
     {
         private readonly Id64Generator _idGenerator;
         private readonly IVirtualMachineMetadataService _metadataService;
-        private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
 
 
         public UpdateCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, Id64Generator idGenerator,
             IVirtualMachineDataService vmDataService,
-            IVirtualMachineMetadataService metadataService) : base(bus)
+            IVirtualMachineMetadataService metadataService) : base(bus, taskDispatcher)
         {
-            _taskDispatcher = taskDispatcher;
             _idGenerator = idGenerator;
             _vmDataService = vmDataService;
             _metadataService = metadataService;
@@ -46,16 +44,16 @@ namespace Eryph.Modules.Controller.Compute
         protected override void CorrelateMessages(ICorrelationConfig<UpdateCatletSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<UpdateVirtualMachineCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<UpdateNetworksCommand>>(m => m.OperationId,
-                d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<UpdateVCatletCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<UpdateNetworksCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
 
         }
 
@@ -66,8 +64,7 @@ namespace Eryph.Modules.Controller.Compute
             Data.AgentName = message.AgentName;
 
 
-            return _taskDispatcher.StartNew(Data.OperationId,
-                new ValidateCatletConfigCommand
+            return StartNewTask(new ValidateCatletConfigCommand
                 {
                     MachineId = message.Resource.Id,
                     Config = message.Config,
@@ -91,7 +88,7 @@ namespace Eryph.Modules.Controller.Compute
                 if (Data.ProjectId == Guid.Empty)
                     await Fail("Could not identity project of Catlet.");
                 else
-                    await _taskDispatcher.StartNew(Data.OperationId, new UpdateCatletNetworksCommand
+                    await StartNewTask(new UpdateCatletNetworksCommand
                     {
                         CatletId = Data.CatletId,
                         Config = Data.Config,
@@ -119,7 +116,7 @@ namespace Eryph.Modules.Controller.Compute
                     {
                         var (vm, metadata) = data;
 
-                        return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualMachineCommand
+                        return StartNewTask(new UpdateVCatletCommand
                         {
                             VMId = vm.VMId,
                             Config = Data.Config,
@@ -136,12 +133,12 @@ namespace Eryph.Modules.Controller.Compute
             });
         }
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVirtualMachineCommand> message)
+        public Task Handle(OperationTaskStatusEvent<UpdateVCatletCommand> message)
         {
             if (Data.Updated)
                 return Task.CompletedTask;
 
-            return FailOrRun<UpdateVirtualMachineCommand, ConvergeVirtualCatletResult>(message, async r =>
+            return FailOrRun<UpdateVCatletCommand, ConvergeVirtualCatletResult>(message, async r =>
             {
                 Data.Updated = true;
 
@@ -156,7 +153,7 @@ namespace Eryph.Modules.Controller.Compute
                 await _vmDataService.GetVM(Data.CatletId).Match(
                     Some: data =>
                     {
-                        return _taskDispatcher.StartNew(Data.OperationId, new UpdateVirtualCatletConfigDriveCommand
+                        return StartNewTask(new UpdateVirtualCatletConfigDriveCommand
                         {
                             VMId = r.Inventory.VMId,
                             CatletId = Data.CatletId,
@@ -174,7 +171,7 @@ namespace Eryph.Modules.Controller.Compute
         public Task Handle(OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand> message)
         {
             return FailOrRun(message, () =>
-                _taskDispatcher.StartNew(Data.OperationId, new UpdateNetworksCommand
+                StartNewTask(new UpdateNetworksCommand
                 {
                     Projects = new[] { Data.ProjectId }
                 })

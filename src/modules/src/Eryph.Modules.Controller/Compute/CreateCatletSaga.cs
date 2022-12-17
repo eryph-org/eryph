@@ -28,14 +28,12 @@ namespace Eryph.Modules.Controller.Compute
 
     {
         private readonly Id64Generator _idGenerator;
-        private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IStateStore _stateStore;
 
         public CreateCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, Id64Generator idGenerator,
-            IVirtualMachineDataService vmDataService, IStateStore stateStore) : base(bus)
+            IVirtualMachineDataService vmDataService, IStateStore stateStore) : base(bus, taskDispatcher)
         {
-            _taskDispatcher = taskDispatcher;
             _idGenerator = idGenerator;
             _vmDataService = vmDataService;
             _stateStore = stateStore;
@@ -68,7 +66,7 @@ namespace Eryph.Modules.Controller.Compute
                     VMId = r.Inventory.VMId
                 }, r.MachineMetadata);
 
-                await _taskDispatcher.StartNew(Data.OperationId, new UpdateCatletCommand
+                await StartNewTask(new UpdateCatletCommand
                 {
                     Config = Data.Config,
                     AgentName = Data.AgentName
@@ -88,7 +86,7 @@ namespace Eryph.Modules.Controller.Compute
                 Data.State = CreateVMState.Placed;
                 Data.AgentName = r.AgentName;
 
-                return _taskDispatcher.StartNew(Data.OperationId, new PrepareVirtualMachineImageCommand
+                return StartNewTask(new PrepareVirtualMachineImageCommand
                 {
                     Image = Data.Config?.VCatlet?.Image,
                     AgentName = r.AgentName
@@ -109,7 +107,7 @@ namespace Eryph.Modules.Controller.Compute
                 if (Data.Config != null)
                     Data.Config.VCatlet.Image = image;
 
-                return _taskDispatcher.StartNew(Data.OperationId, new CreateVirtualCatletCommand
+                return StartNewTask(new CreateVirtualCatletCommand
                 {
                     Config = Data.Config,
                     NewMachineId = Data.MachineId,
@@ -142,8 +140,7 @@ namespace Eryph.Modules.Controller.Compute
                 Data.State = CreateVMState.ConfigValidated;
 
 
-                return _taskDispatcher.StartNew(Data.OperationId,
-                    new PlaceVirtualCatletCommand
+                return StartNewTask(new PlaceVirtualCatletCommand
                     {
                         Config = Data.Config
                     });
@@ -154,15 +151,15 @@ namespace Eryph.Modules.Controller.Compute
         {
             base.CorrelateMessages(config);
 
-            config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<CreateVirtualCatletCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>(m => m.OperationId,
-                d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<UpdateCatletCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<CreateVirtualCatletCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<UpdateCatletCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
         }
 
 
@@ -171,8 +168,7 @@ namespace Eryph.Modules.Controller.Compute
             Data.Config = message.Config;
             Data.State = CreateVMState.Initiated;
 
-            return _taskDispatcher.StartNew(Data.OperationId,
-                new ValidateCatletConfigCommand
+            return StartNewTask(new ValidateCatletConfigCommand
                 {
                     MachineId = Guid.Empty,
                     Config = message.Config

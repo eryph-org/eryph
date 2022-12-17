@@ -4,7 +4,6 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Eryph.StateDb
 {

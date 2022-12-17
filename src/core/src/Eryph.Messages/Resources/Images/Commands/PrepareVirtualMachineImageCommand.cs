@@ -1,5 +1,4 @@
 ﻿using Eryph.ConfigModel;
-using Eryph.Core;
 
 namespace Eryph.Messages.Resources.Images.Commands
 {

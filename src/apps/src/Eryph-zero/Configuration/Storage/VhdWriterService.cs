@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.Configuration;
-using Eryph.Configuration.Model;
 using Eryph.StateDb.Model;
 
 namespace Eryph.Runtime.Zero.Configuration.Storage

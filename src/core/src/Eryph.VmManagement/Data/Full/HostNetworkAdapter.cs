@@ -1,5 +1,4 @@
 ﻿using System;
-using Eryph.Core;
 
 namespace Eryph.VmManagement.Data.Full;
 

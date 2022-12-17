@@ -7,4 +7,6 @@ public class CreateProjectCommand : IHasCorrelationId
 {
     public string Name { get; set; }
     public Guid CorrelationId { get; set; }
+
+    public bool NoDefaultNetwork { get; set; }
 }

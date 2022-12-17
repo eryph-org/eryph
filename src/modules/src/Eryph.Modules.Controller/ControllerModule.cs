@@ -18,7 +18,6 @@ using Rebus.Handlers;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Sagas.Exclusive;
-using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -56,7 +55,7 @@ namespace Eryph.Modules.Controller
 
 
             container.RegisterSingleton(() => new Id64Generator());
-            container.Register<IOperationTaskDispatcher, OperationDispatcher>();
+            container.Register<IOperationTaskDispatcher, OperationTaskDispatcher>();
             container.Register<IOperationDispatcher, OperationDispatcher>();
 
             //use placement calculator of Host

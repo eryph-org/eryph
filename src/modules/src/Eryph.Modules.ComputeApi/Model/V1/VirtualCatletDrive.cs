@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Resources.Machines;
 
 namespace Eryph.Modules.ComputeApi.Model.V1;
 

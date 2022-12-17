@@ -1,7 +1,5 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.CommonApi.Endpoints.V1.Projects;

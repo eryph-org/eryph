@@ -2,7 +2,6 @@
 using System.IO;
 using System.Runtime.Versioning;
 using System.Security.AccessControl;
-using JetBrains.Annotations;
 
 namespace Eryph.Core
 {

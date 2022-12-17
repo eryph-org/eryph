@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Management.Automation;
 using System.Reflection;
 using Eryph.ConfigModel;
-using Eryph.Core;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;

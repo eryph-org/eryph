@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Events;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data;

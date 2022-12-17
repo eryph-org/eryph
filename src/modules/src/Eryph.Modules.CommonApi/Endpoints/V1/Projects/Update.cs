@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Projects;
-using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;

@@ -6,7 +6,6 @@ using System.Linq.Expressions;
 using System.Management.Automation;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
-using Eryph.Core;
 using Eryph.VmManagement.Tracing;
 using JetBrains.Annotations;
 using LanguageExt;

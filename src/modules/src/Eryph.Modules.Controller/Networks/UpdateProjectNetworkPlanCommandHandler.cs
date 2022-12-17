@@ -6,6 +6,7 @@ using Dbosoft.OVN.OSCommands.OVN;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Networks.Commands;
+using Eryph.ModuleCore;
 using Eryph.StateDb;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
@@ -72,15 +73,11 @@ public class UpdateProjectNetworkPlanCommandHandler : IHandleMessages<OperationT
             new NetworkPlanRealizer(new OVNControlTool(_sysEnvironment, _ovnSettings.NorthDBConnection), _logger);
 
         await networkPlanRealizer.ApplyNetworkPlan(networkPlan, cancelSource.Token)
-            .Match(
-                plan => _bus.SendLocal(
-                    OperationTaskStatusEvent.Completed(
-                        message.OperationId, message.TaskId, new UpdateProjectNetworkPlanResponse
-                        {
-                            ProjectId = message.Command.ProjectId
-                        }))
-                , l => l.Throw()
-            );
+            .Map(_ => new UpdateProjectNetworkPlanResponse
+            {
+                ProjectId = message.Command.ProjectId
+            })
+            .FailOrComplete(_bus, message);
     }
 
     private async Task ProgressMessage(Guid operationId, Guid taskId, string message)

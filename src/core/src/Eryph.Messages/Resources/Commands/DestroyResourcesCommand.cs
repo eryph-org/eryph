@@ -1,5 +1,4 @@
-﻿using Eryph.Messages.Operations.Commands;
-using Eryph.Resources;
+﻿using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.Commands
 {

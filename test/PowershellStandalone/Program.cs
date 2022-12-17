@@ -1,10 +1,8 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-using System.DirectoryServices.ActiveDirectory;
 using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Effects.Traits;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PowershellStandalone;
 using static LanguageExt.Prelude;

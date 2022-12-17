@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Operations;
-using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.ModuleCore;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -18,7 +16,6 @@ using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Transport;
 
 namespace Eryph.Modules.Controller.Networks;
 
@@ -40,25 +37,25 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
     public async Task Handle(OperationTask<UpdateCatletNetworksCommand> message)
     {
-        await ProgressMessage(message.OperationId, message.TaskId, "Updating Catlet network settings");
+        await _bus.ProgressMessage(message, "Updating Catlet network settings");
 
         await message.Command.Config.Networks.Map(cfg =>
-                
+
                 from network in _stateStore.ReadBySpecAsync<VirtualNetwork, VirtualNetworkSpecs.GetByName>(
                     new VirtualNetworkSpecs.GetByName(message.Command.ProjectId, cfg.Name)
-                    ,Error.New($"Network '{cfg.Name}' not found in project {message.Command.ProjectId}"))
+                    , Error.New($"Network '{cfg.Name}' not found in project {message.Command.ProjectId}"))
 
                 let c1 = new CancellationTokenSource(5000)
 
                 from networkPort in GetOrAddAdapterPort(
-                        network, message.Command.CatletId, cfg.AdapterName, c1.Token)
+                    network, message.Command.CatletId, cfg.AdapterName, c1.Token)
 
                 let c2 = new CancellationTokenSource()
 
                 from floatingPort in GetOrAddFloatingPort(
-                        networkPort, Option<string>.None,
-                        "default", "default",
-                        "default", c2.Token).ToAsync()
+                    networkPort, Option<string>.None,
+                    "default", "default",
+                    "default", c2.Token).ToAsync()
 
                 let fixedMacAddress =
                     message.Command.Config.VCatlet.NetworkAdapters.Find(x => x.Name == cfg.AdapterName)
@@ -68,11 +65,11 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
                 let c3 = new CancellationTokenSource()
                 from ips in _ipManager.ConfigurePortIps(
-                    message.Command.ProjectId, 
-                    networkPort, 
-                    message.Command.Config.Networks, 
+                    message.Command.ProjectId,
+                    networkPort,
+                    message.Command.Config.Networks,
                     c3.Token)
-                
+
                 select new MachineNetworkSettings
                 {
                     NetworkProviderName = network.NetworkProvider,
@@ -80,7 +77,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     AdapterName = cfg.AdapterName,
                     PortName = networkPort.Name,
                     MacAddress = networkPort.MacAddress,
-                    AddressesV4 = string.Join(',', ips.Where(x=>x.AddressFamily == AddressFamily.InterNetwork)),
+                    AddressesV4 = string.Join(',', ips.Where(x => x.AddressFamily == AddressFamily.InterNetwork)),
                     AddressesV6 = string.Join(',', ips.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6))
 
                 }
@@ -88,37 +85,10 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
             )
             .TraverseParallel(l => l)
             .Map(settings => new UpdateCatletNetworksCommandResponse { NetworkSettings = settings.ToArray() })
-            .MatchAsync(
-                LeftAsync: l =>
-                {
-                    return _bus.SendLocal(
-                        OperationTaskStatusEvent.Failed(
-                            message.OperationId, message.TaskId, l.Message));
-                },
-                RightAsync: map =>
-                {
-                    return _bus.SendLocal(
-                        OperationTaskStatusEvent.Completed(
-                            message.OperationId, message.TaskId, map));
-                });
+            .FailOrComplete(_bus, message);
 
     }
 
-    private async Task ProgressMessage(Guid operationId, Guid taskId, string message)
-    {
-        using var scope = new RebusTransactionScope();
-        await _bus.Publish(new OperationTaskProgressEvent
-        {
-            Id = Guid.NewGuid(),
-            OperationId = operationId,
-            TaskId = taskId,
-            Message = message,
-            Timestamp = DateTimeOffset.UtcNow
-        }).ConfigureAwait(false);
-
-        // commit it like this
-        await scope.CompleteAsync().ConfigureAwait(false);
-    }
 
     private EitherAsync<Error, CatletNetworkPort> GetOrAddAdapterPort(VirtualNetwork network, Guid catletId, string adapterName, 
         CancellationToken cancellationToken)
@@ -176,7 +146,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
             ProviderName = providerName,
             SubnetName = providerSubnetName,
             PoolName = providerPoolName,
-            MacAddress = FormatMacAddress(GenerateMacAddress(Guid.NewGuid(), ""))
+            MacAddress = MacAddresses.FormatMacAddress(MacAddresses.GenerateMacAddress(Guid.NewGuid().ToString()))
         };
 
         adapterPort.FloatingPort = port;
@@ -185,42 +155,15 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
     }
 
-    private static string FormatMacAddress(string input)
-    {
-        const string regex = "(.{2})(.{2})(.{2})(.{2})(.{2})(.{2})";
-        const string replace = "$1:$2:$3:$4:$5:$6";
-
-        return Regex.Replace(input, regex, replace).ToLowerInvariant();
-
-    }
-
-    private static string GenerateMacAddress(Guid valueId, string adapterName)
-    {
-        var id = $"{valueId}_{adapterName}";
-        var crc = new Crc32();
-
-        string? result = null;
-
-        var arrayData = Encoding.ASCII.GetBytes(id);
-        var arrayResult = crc.ComputeHash(arrayData);
-        foreach (var t in arrayResult)
-        {
-            var temp = Convert.ToString(t, 16);
-            if (temp.Length == 1)
-                temp = $"0{temp}";
-            result += temp;
-        }
-
-        return "d2ab" + result;
-    }
 
     private static Unit UpdatePort(CatletNetworkPort networkPort, string adapterName, string fixedMacAddress)
     {
         if (!string.IsNullOrEmpty(fixedMacAddress))
-            networkPort.MacAddress = FormatMacAddress(fixedMacAddress);
+            networkPort.MacAddress = MacAddresses.FormatMacAddress(fixedMacAddress);
         else
         {
-            networkPort.MacAddress ??= FormatMacAddress(GenerateMacAddress(networkPort.CatletId.GetValueOrDefault(), adapterName));
+            networkPort.MacAddress ??= MacAddresses.FormatMacAddress(MacAddresses.GenerateMacAddress(
+                $"{networkPort.CatletId.GetValueOrDefault()}_{adapterName}"));
         }
 
         return Unit.Default;

@@ -1,8 +1,6 @@
 ﻿using System;
-using Ardalis.Specification;
 using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore;
-using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.ComputeApi.Handlers;
 using Eryph.Modules.ComputeApi.Model.V1;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using Eryph.Core.Network;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;

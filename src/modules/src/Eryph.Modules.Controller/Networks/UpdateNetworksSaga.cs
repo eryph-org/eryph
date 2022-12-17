@@ -17,18 +17,16 @@ namespace Eryph.Modules.Controller.Networks
         IHandleMessages<OperationTaskStatusEvent<UpdateProjectNetworkPlanCommand>>
 
     {
-        private readonly IOperationTaskDispatcher _taskDispatcher;
 
-        public UpdateNetworksSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus)
+        public UpdateNetworksSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus, taskDispatcher)
         {
-            _taskDispatcher = taskDispatcher;
         }
 
         protected override void CorrelateMessages(ICorrelationConfig<UpdateNetworksSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<UpdateProjectNetworkPlanCommand>>(m => m.OperationId,
-                d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<UpdateProjectNetworkPlanCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
 
         }
 
@@ -38,7 +36,7 @@ namespace Eryph.Modules.Controller.Networks
 
             foreach (var project in message.Projects)
             {
-                await _taskDispatcher.StartNew(Data.OperationId,
+                await StartNewTask(
                     new UpdateProjectNetworkPlanCommand
                     {
                         ProjectId = project

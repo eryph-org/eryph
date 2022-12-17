@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.Messages;
 using Eryph.Messages.Operations;
-using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Images.Commands;
+using Eryph.ModuleCore;
 using Eryph.Modules.VmHostAgent.Images;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
@@ -34,21 +33,18 @@ namespace Eryph.Modules.VmHostAgent
             {
                 if (message.Command.Image == null)
                 {
-                    await _bus.Publish(
-                        OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, ""));
+                    await _bus.CompleteTask(message, "");
                     return;
                 }
 
-                _imageRequestDispatcher.NewImageRequestTask(message.OperationId, message.TaskId, message.Command.Image);
+                _imageRequestDispatcher.NewImageRequestTask(message, message.Command.Image);
 
 
             }
             catch (Exception ex)
             {
                 _log.LogError(ex, $"Command '{nameof(PrepareVirtualMachineImageCommand)}' failed.");
-                await _bus.Publish(OperationTaskStatusEvent.Failed(message.OperationId,
-                    message.TaskId,
-                    new ErrorData {ErrorMessage = ex.Message}));
+                await _bus.FailTask(message, ex.Message);
             }
         }
     }

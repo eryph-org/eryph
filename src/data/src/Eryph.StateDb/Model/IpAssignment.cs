@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Numerics;
 
 namespace Eryph.StateDb.Model;
 

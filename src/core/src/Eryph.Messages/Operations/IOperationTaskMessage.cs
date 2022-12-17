@@ -8,6 +8,9 @@ namespace Eryph.Messages.Operations
     public interface IOperationTaskMessage
     {
         Guid OperationId { get; }
+
+        Guid InitiatingTaskId { get; }
+
         Guid TaskId { get;  }
     }
 

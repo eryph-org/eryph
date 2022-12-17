@@ -11,7 +11,6 @@ using Eryph.Modules.Controller.Operations;
 using Eryph.Resources;
 using JetBrains.Annotations;
 using LanguageExt.UnsafeValueAccess;
-using Microsoft.Extensions.Logging.Abstractions;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
@@ -23,13 +22,11 @@ namespace Eryph.Modules.Controller.Compute
         IHandleMessages<OperationTaskStatusEvent<RemoveVirtualCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DestroyResourcesCommand>>
     {
-        private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
 
         public DestroyCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher,
-            IVirtualMachineDataService vmDataService) : base(bus)
+            IVirtualMachineDataService vmDataService) : base(bus, taskDispatcher)
         {
-            _taskDispatcher = taskDispatcher;
             _vmDataService = vmDataService;
         }
 
@@ -50,8 +47,7 @@ namespace Eryph.Modules.Controller.Compute
 
                 await _vmDataService.RemoveVM(Data.MachineId);
 
-                await _taskDispatcher.StartNew<DestroyResourcesCommand>(Data.OperationId,
-                    detachedDisks.Select(g => new Resource(ResourceType.VirtualDisk, g)).ToArray());
+                await StartNewTask<DestroyResourcesCommand>(detachedDisks.Select(g => new Resource(ResourceType.VirtualDisk, g)).ToArray());
 
             });
         }
@@ -59,8 +55,8 @@ namespace Eryph.Modules.Controller.Compute
         protected override void CorrelateMessages(ICorrelationConfig<DestroyCatletSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<RemoveVirtualCatletCommand>>(m => m.OperationId, d => d.OperationId);
-            config.Correlate<OperationTaskStatusEvent<DestroyResourcesCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<RemoveVirtualCatletCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<DestroyResourcesCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
         }
 
 
@@ -76,7 +72,7 @@ namespace Eryph.Modules.Controller.Compute
                 return;
             }
 
-            await _taskDispatcher.StartNew(Data.OperationId, new RemoveVirtualCatletCommand
+            await StartNewTask(new RemoveVirtualCatletCommand
             {
                 CatletId = Data.MachineId,
                 VMId = data.VMId

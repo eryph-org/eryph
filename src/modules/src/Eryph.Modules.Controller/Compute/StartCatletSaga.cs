@@ -17,12 +17,11 @@ namespace Eryph.Modules.Controller.Compute
         OperationTaskWorkflowSaga<StartCatletCommand, StartCatletSagaData>,
         IHandleMessages<OperationTaskStatusEvent<StartVirtualCatletCommand>>
     {
-        private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
 
-        public StartCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IVirtualMachineDataService vmDataService) : base(bus)
+        public StartCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, 
+            IVirtualMachineDataService vmDataService) : base(bus, taskDispatcher)
         {
-            _taskDispatcher = taskDispatcher;
             _vmDataService = vmDataService;
         }
 
@@ -30,8 +29,7 @@ namespace Eryph.Modules.Controller.Compute
         {
             return _vmDataService.GetVM(message.Resource.Id).MatchAsync(
                 None: () => Fail().ToUnit(),
-                Some: s => _taskDispatcher.StartNew(Data.OperationId,
-                    new StartVirtualCatletCommand { CatletId = message.Resource.Id, VMId = s.VMId }).ToUnit());
+                Some: s => StartNewTask(new StartVirtualCatletCommand { CatletId = message.Resource.Id, VMId = s.VMId }).ToUnit());
         }
 
         public Task Handle(OperationTaskStatusEvent<StartVirtualCatletCommand> message)
@@ -43,7 +41,7 @@ namespace Eryph.Modules.Controller.Compute
         protected override void CorrelateMessages(ICorrelationConfig<StartCatletSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<StartVirtualCatletCommand>>(m => m.OperationId, m => m.OperationId);
+            config.Correlate<OperationTaskStatusEvent<StartVirtualCatletCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
         }
 
 

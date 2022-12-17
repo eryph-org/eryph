@@ -1,6 +1,5 @@
 ﻿using Eryph.VmManagement;
 using LanguageExt;
-using LanguageExt.Effects.Traits;
 
 namespace Eryph.Modules.VmHostAgent.Networks.Powershell;
 

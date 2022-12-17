@@ -7,6 +7,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 using OperationLogEntry = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.OperationLogEntry;
 using OperationResource = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.OperationResource;
+using Project = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Swagger
 {
@@ -19,6 +20,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Swagger
                 || context.Type.FullName == typeof(OperationLogEntry).FullName
                 || context.Type.FullName == typeof(OperationStatus).FullName
                 || context.Type.FullName == typeof(OperationResource).FullName
+                || context.Type.FullName == typeof(Project).FullName
                 || context.Type.FullName == typeof(ResourceType).FullName)
                 schema.Extensions.Add("x-ms-external", new OpenApiBoolean(true));
         }

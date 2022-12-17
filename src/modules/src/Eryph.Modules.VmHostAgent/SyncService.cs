@@ -12,8 +12,8 @@ using Microsoft.Extensions.Logging;
 namespace Eryph.Modules.VmHostAgent;
 
 internal class SyncService : BackgroundService
-{ 
-    readonly ILogger _logger;
+{
+    private readonly ILogger _logger;
     private readonly IAgentControlService _controlService;
 
     public SyncService(ILogger<SyncService> logger, IAgentControlService controlService)
