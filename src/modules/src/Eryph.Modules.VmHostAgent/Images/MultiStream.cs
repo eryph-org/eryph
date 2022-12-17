@@ -10,8 +10,8 @@ internal class MultiStream : Stream
 {
     private readonly Stream[] _streams;
     private long _position;
-    private int _currentStreamIndex = 0;
-    private long _length = 0;
+    private int _currentStreamIndex;
+    private readonly long _length;
 
     public MultiStream(IEnumerable<Stream> streams)
     {

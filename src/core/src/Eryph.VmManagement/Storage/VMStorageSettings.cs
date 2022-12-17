@@ -15,6 +15,8 @@ namespace Eryph.VmManagement.Storage
         public Option<string> StorageIdentifier { get; set; }
 
         public string VMPath { get; set; }
+        public string DefaultVhdPath { get; set; }
+
         public bool Frozen { get; set; }
 
         public static EitherAsync<Error, Option<VMStorageSettings>> FromVM(HostSettings hostSettings,
@@ -27,6 +29,7 @@ namespace Eryph.VmManagement.Storage
             {
                 return await
                     (from resolvedPath in names.ResolveStorageBasePath(hostSettings.DefaultDataPath)
+                        from importVhdPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath)
                         from storageSettings in ComparePath(resolvedPath, vm.Value.Path,
                             storageIdentifier)
 
@@ -34,13 +37,15 @@ namespace Eryph.VmManagement.Storage
                         {
                             StorageNames = names,
                             StorageIdentifier = storageIdentifier,
-                            VMPath = vm.Value.Path
+                            VMPath = vm.Value.Path,
+                            DefaultVhdPath = importVhdPath,
                         }).IfLeft(_ => 
                         new VMStorageSettings
                     {
                         StorageNames = names,
                         StorageIdentifier = storageIdentifier,
                         VMPath = vm.Value.Path,
+                        DefaultVhdPath = vm.Value.Path,
                         Frozen = true
                     });
 
@@ -54,7 +59,8 @@ namespace Eryph.VmManagement.Storage
         public static EitherAsync<Error, VMStorageSettings> FromCatletConfig(CatletConfig config,
             HostSettings hostSettings)
         {
-            var projectName = Prelude.Some("default");
+            var projectName = Prelude.Some(string.IsNullOrWhiteSpace(config.Project) 
+                ? "default": config.Project);
             var environmentName = Prelude.Some("default");
             var dataStoreName = Prelude.Some("default");
             var storageIdentifier = Option<string>.None;
@@ -69,13 +75,15 @@ namespace Eryph.VmManagement.Storage
             if (!string.IsNullOrWhiteSpace(config.VCatlet.Slug))
                 storageIdentifier = Prelude.Some(config.VCatlet.Slug);
 
-            return names.ResolveStorageBasePath(hostSettings.DefaultDataPath).Map(
-                path => new VMStorageSettings
-            {
-                StorageNames = names,
-                StorageIdentifier = storageIdentifier,
-                VMPath = path
-            });
+            return from dataPath in  names.ResolveStorageBasePath(hostSettings.DefaultDataPath)
+                   from importVhdPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath)
+                   select new VMStorageSettings
+                {
+                    StorageNames = names,
+                    StorageIdentifier = storageIdentifier,
+                    VMPath = dataPath,
+                    DefaultVhdPath = importVhdPath 
+                };
         }
 
 
@@ -136,7 +144,8 @@ namespace Eryph.VmManagement.Storage
                 {
                     StorageNames = first.StorageNames,
                     StorageIdentifier = storageIdentifier,
-                    VMPath = first.VMPath
+                    VMPath = first.VMPath,
+                    DefaultVhdPath = first.DefaultVhdPath
                 });
         }
     }

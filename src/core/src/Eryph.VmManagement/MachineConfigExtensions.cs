@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Management.Automation;
 using System.Threading.Tasks;
 using AutoMapper;
 using Eryph.ConfigModel.Catlets;
@@ -41,7 +43,14 @@ namespace Eryph.VmManagement
                             {
                                 var vmHdConfig = machineConfig.VCatlet.Drives.FirstOrDefault(x => x.Name == ihd.Name);
 
-                                if (vmHdConfig == null) return;
+                                // add a reference to image drive
+                                if (vmHdConfig == null || string.IsNullOrEmpty(vmHdConfig.Template))
+                                {
+                                    ihd.Template = $"image:{machineConfig.VCatlet.Image}:{ihd.Name}";
+                                }
+
+                                if (vmHdConfig == null)
+                                    return;
 
                                 if (vmHdConfig.Size != 0) ihd.Size = vmHdConfig.Size;
                                 if (!string.IsNullOrWhiteSpace(vmHdConfig.DataStore))

@@ -5,7 +5,7 @@ using Eryph.ConfigModel.Catlets;
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
     [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class CreateVirtualCatletCommand : IHostAgentCommand
+    public class CreateVCatletCommand : IHostAgentCommand
     {
         public CatletConfig Config { get; set; }
         public Guid NewMachineId { get; set; }

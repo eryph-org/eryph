@@ -10,4 +10,12 @@ namespace Eryph.Messages.Resources.Images.Commands
         [PrivateIdentifier]
         public string AgentName { get; set; }
     }
+
+    public class PrepareVirtualMachineImageResponse
+    {
+        public string RequestedImage { get; set; }
+
+        public string ResolvedImage { get; set; }
+
+    }
 }

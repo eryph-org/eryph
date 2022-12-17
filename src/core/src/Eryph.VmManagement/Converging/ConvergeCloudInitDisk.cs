@@ -33,7 +33,7 @@ namespace Eryph.VmManagement.Converging
         private string ReplaceVariables(string userData)
         {
             var sb = new StringBuilder(userData);
-            sb.Replace("{{machineId}}", Context.Metadata.MachineId.ToString());
+            sb.Replace("{{catletId}}", Context.Metadata.MachineId.ToString());
             sb.Replace("{{vmId}}", Context.Metadata.VMId.ToString());
 
             return sb.ToString();

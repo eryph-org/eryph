@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Images.Commands;
@@ -15,6 +18,7 @@ using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Eryph.Modules.Controller.Compute
 {
@@ -22,7 +26,7 @@ namespace Eryph.Modules.Controller.Compute
     internal class CreateCatletSaga : OperationTaskWorkflowSaga<CreateCatletCommand, CreateCatletSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<CreateVirtualCatletCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<CreateVCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>
 
@@ -39,16 +43,16 @@ namespace Eryph.Modules.Controller.Compute
             _stateStore = stateStore;
         }
 
-        public Task Handle(OperationTaskStatusEvent<CreateVirtualCatletCommand> message)
+        public Task Handle(OperationTaskStatusEvent<CreateVCatletCommand> message)
         {
             if (Data.State >= CreateVMState.Created)
                 return Task.CompletedTask;
 
-            return FailOrRun<CreateVirtualCatletCommand, ConvergeVirtualCatletResult>(message, async r =>
+            return FailOrRun<CreateVCatletCommand, ConvergeVirtualCatletResult>(message, async r =>
             {
                 Data.State = CreateVMState.Created;
 
-                var tenantId = Guid.Parse("{C1813384-8ECB-4F17-B846-821EE515D19B}");
+                var tenantId = EryphConstants.DefaultTenantId;
                 var projectName = Data.Config?.Project ?? "default";
 
                 var project = await _stateStore.For<Project>()
@@ -81,16 +85,39 @@ namespace Eryph.Modules.Controller.Compute
             if (Data.State >= CreateVMState.Placed)
                 return Task.CompletedTask;
 
-            return FailOrRun<PlaceVirtualCatletCommand, PlaceVirtualCatletResult>(message, r =>
+            return FailOrRun<PlaceVirtualCatletCommand, PlaceVirtualCatletResult>(message,
+                async r =>
             {
                 Data.State = CreateVMState.Placed;
                 Data.AgentName = r.AgentName;
 
-                return StartNewTask(new PrepareVirtualMachineImageCommand
+                Data.ImageNames = new List<string>();
+                if(!string.IsNullOrWhiteSpace(Data.Config?.VCatlet?.Image))
+                    Data.ImageNames.Add(Data.Config?.VCatlet?.Image??"");
+
+                Data.ImageNames.AddRange( Data.Config?.VCatlet?.Drives
+                    .Select(x => x.Template)
+                    .Where(t => t!=null && t.StartsWith("image:") && t.Split(':').Length>=2)
+                    .Select(t =>t.Split(':')[1]) ?? Enumerable.Empty<string>());
+
+                // no images required - go directly to create
+                if (Data.ImageNames.Count == 0)
                 {
-                    Image = Data.Config?.VCatlet?.Image,
-                    AgentName = r.AgentName
-                });
+                    await CreateCatlet();
+                    return;
+                }
+
+                Data.ImageNames = Data.ImageNames.Distinct().ToList();
+
+                foreach (var imageName in Data.ImageNames)
+                {
+                    await StartNewTask(new PrepareVirtualMachineImageCommand
+                    {
+                        Image = imageName,
+                        AgentName = r.AgentName
+                    });
+                }
+
             });
         }
 
@@ -99,21 +126,47 @@ namespace Eryph.Modules.Controller.Compute
             if (Data.State >= CreateVMState.ImagePrepared)
                 return Task.CompletedTask;
 
-            return FailOrRun<PrepareVirtualMachineImageCommand, string>(message, (image) =>
+            return FailOrRun<PrepareVirtualMachineImageCommand, PrepareVirtualMachineImageResponse>(message, 
+                (response) =>
             {
-                Data.State = CreateVMState.ImagePrepared;
-                Data.MachineId = Guid.NewGuid();
 
                 if (Data.Config != null)
-                    Data.Config.VCatlet.Image = image;
-
-                return StartNewTask(new CreateVirtualCatletCommand
                 {
-                    Config = Data.Config,
-                    NewMachineId = Data.MachineId,
-                    AgentName = Data.AgentName,
-                    StorageId = _idGenerator.GenerateId()
-                });
+                    if(Data.Config.VCatlet.Image == response.RequestedImage)
+                        Data.Config.VCatlet.Image = response.ResolvedImage;
+
+                    foreach (var catletDriveConfig in Data.Config.VCatlet.Drives)
+                    {
+                        if (catletDriveConfig.Template != null && 
+                            catletDriveConfig.Template.StartsWith("image:") &&
+                            catletDriveConfig.Template.Contains(response.RequestedImage))
+                        {
+                            catletDriveConfig.Template = catletDriveConfig.Template.Replace(response.RequestedImage, response.ResolvedImage);
+                        }
+
+                    }
+                }
+
+                if(Data.ImageNames.Contains(response.RequestedImage))
+                    Data.ImageNames.Remove(response.RequestedImage);
+
+                return Data.ImageNames.Count == 0 
+                    ? CreateCatlet() 
+                    : Task.CompletedTask;
+            });
+        }
+
+        private Task CreateCatlet()
+        {
+            Data.State = CreateVMState.ImagePrepared;
+            Data.MachineId = Guid.NewGuid();
+
+            return StartNewTask(new CreateVCatletCommand
+            {
+                Config = Data.Config,
+                NewMachineId = Data.MachineId,
+                AgentName = Data.AgentName,
+                StorageId = _idGenerator.GenerateId()
             });
         }
 
@@ -155,7 +208,7 @@ namespace Eryph.Modules.Controller.Compute
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<CreateVirtualCatletCommand>>(m => m.InitiatingTaskId,
+            config.Correlate<OperationTaskStatusEvent<CreateVCatletCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);

@@ -33,7 +33,11 @@ namespace Eryph.Modules.VmHostAgent
             {
                 if (message.Command.Image == null)
                 {
-                    await _bus.CompleteTask(message, "");
+                    await _bus.CompleteTask(message, new PrepareVirtualMachineImageResponse()
+                    {
+                        RequestedImage = "",
+                        ResolvedImage = ""
+                    });
                     return;
                 }
 

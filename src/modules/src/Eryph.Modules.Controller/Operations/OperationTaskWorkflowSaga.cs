@@ -44,7 +44,7 @@ namespace Eryph.Modules.Controller.Operations
         protected override void CorrelateMessages(ICorrelationConfig<TSagaData> config)
         {
             config.Correlate<OperationTask<TMessage>>(m => m.TaskId, d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<TMessage>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<TMessage>>(m => m.TaskId, d => d.SagaTaskId);
         }
 
         protected abstract Task Initiated(TMessage message);

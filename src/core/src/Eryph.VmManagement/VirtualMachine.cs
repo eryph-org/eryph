@@ -19,18 +19,47 @@ namespace Eryph.VmManagement
 {
     public static class VirtualMachine
     {
+
+        public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Create(
+            IPowershellEngine engine,
+            string vmName,
+            string storageIdentifier,
+            string vmPath,
+            int? startupMemory)
+        {
+            var memoryStartupBytes = startupMemory.GetValueOrDefault(1024) * 1024L * 1024;
+
+            return engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
+                    .AddCommand("New-VM")
+                    .AddParameter("Name", storageIdentifier)
+                    .AddParameter("Path", vmPath)
+                    .AddParameter("MemoryStartupBytes", memoryStartupBytes)
+                    .AddParameter("Generation", 2))
+                .MapAsync(x => x.Head).MapAsync(
+                    async result =>
+                    {
+                        await engine.RunAsync(PsCommandBuilder.Create().AddCommand("Get-VMNetworkAdapter")
+                            .AddParameter("VM", result.PsObject).AddCommand("Remove-VMNetworkAdapter"));
+
+                        return result;
+                    })
+                .ToAsync()
+                .ToError()
+                .Bind(info => Rename(engine, info, vmName));
+        }
+
         public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ImportTemplate(
             IPowershellEngine engine,
             HostSettings hostSettings,
             string vmName,
             string storageIdentifier,
-            string vmPath,
+            VMStorageSettings storageSettings,
             PlannedVirtualMachineInfo template)
         {
             var configPath = Path.Combine(template.Path, "Virtual Machines", $"{template.Id}.vmcx");
 
-            var vmStorePath = Path.Combine(vmPath, storageIdentifier);
-            var vhdPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, storageIdentifier);
+            var vmStorePath = Path.Combine(storageSettings.VMPath, storageIdentifier);
+            var vhdPath = Path.Combine(storageSettings.DefaultVhdPath, storageIdentifier);
 
             var vmInfo = engine.GetObjectsAsync<VMCompatibilityReportInfo>(PsCommandBuilder.Create()
                     .AddCommand("Compare-VM")
@@ -43,6 +72,7 @@ namespace Eryph.VmManagement
                 ).ToError().ToAsync()
                 .Bind(x => x.HeadOrLeft(Error.New("Failed to Import VM Image")).ToAsync())
                 .Bind(rep => (
+                        from uD in RemoveAllPlannedDrives(engine, rep.GetProperty(x => x.VM))
                         from _ in Rename(engine, rep.GetProperty(x => x.VM), vmName)
                         from __ in ResetMetadata(engine, rep.GetProperty(x => x.VM))
                         from ___ in RenamePlannedNetAdaptersToConvention(engine, rep.GetProperty(x => x.VM))
@@ -72,9 +102,9 @@ namespace Eryph.VmManagement
             HostSettings hostSettings,
             string image)
         {
-            if (string.IsNullOrWhiteSpace(image))
-                return LeftAsync<Error,TypedPsObject<PlannedVirtualMachineInfo>>(
-                    Error.New("Image name is missing."));
+            if(string.IsNullOrEmpty(image))
+                return LeftAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>>(
+                        Error.New("Cannot create template from image - image name is missing."));
 
 
             var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
@@ -98,6 +128,16 @@ namespace Eryph.VmManagement
             return vmInfo;
         }
 
+        public static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> RemoveAllPlannedDrives(
+            IPowershellEngine engine,
+            TypedPsObject<PlannedVirtualMachineInfo> vmInfo)
+        {
+            return engine.RunAsync(PsCommandBuilder.Create()
+                .AddInput(vmInfo.GetList(x=>x.HardDrives)
+                    .Select(x=>x.PsObject).ToArray())
+                .AddCommand("Remove-VMHardDiskDrive")
+            ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
+        }
 
         public static EitherAsync<Error, TypedPsObject<T>> Rename<T>(
             IPowershellEngine engine,

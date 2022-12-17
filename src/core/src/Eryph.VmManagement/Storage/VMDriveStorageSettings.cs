@@ -57,10 +57,10 @@ namespace Eryph.VmManagement.Storage
 
             //so far for the simple part, now the complicated case - a vhd disk...
 
-            var projectName = Prelude.Some("default");
-            var environmentName = Prelude.Some("default");
-            var dataStoreName = Prelude.Some("default");
-            var storageIdentifier = Option<string>.None;
+            var projectName = storageSettings.StorageNames.ProjectName;
+            var environmentName = storageSettings.StorageNames.EnvironmentName;
+            var dataStoreName = storageSettings.StorageNames.DataStoreName;
+            var storageIdentifier = storageSettings.StorageIdentifier;
 
             var names = new StorageNames
             {
@@ -68,10 +68,6 @@ namespace Eryph.VmManagement.Storage
                 EnvironmentName = environmentName,
                 DataStoreName = dataStoreName
             };
-
-
-            if (storageIdentifier.IsNone)
-                storageIdentifier = storageSettings.StorageIdentifier;
 
 
             return
@@ -90,16 +86,8 @@ namespace Eryph.VmManagement.Storage
                             ParentSettings =
                                 string.IsNullOrWhiteSpace(driveConfig.Template)
                                     ? Option<DiskStorageSettings>.None
-                                    : Option<DiskStorageSettings>.Some(new DiskStorageSettings
-                                    {
-                                        StorageNames = StorageNames.FromPath(driveConfig.Template,
-                                            hostSettings.DefaultVirtualHardDiskPath).Names,
-                                        StorageIdentifier = StorageNames.FromPath(driveConfig.Template,
-                                            hostSettings.DefaultVirtualHardDiskPath).StorageIdentifier,
-                                        Path = Path.GetDirectoryName(driveConfig.Template),
-                                        FileName = Path.GetFileName(driveConfig.Template),
-                                        Name = Path.GetFileNameWithoutExtension(driveConfig.Template)
-                                    }),
+                                    : DiskStorageSettings
+                                        .FromTemplateString(hostSettings, driveConfig.Template),
                             Path = Path.Combine(resolvedPath, identifier),
                             FileName = $"{driveConfig.Name}.vhdx",
                             // ReSharper disable once StringLiteralTypo

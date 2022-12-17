@@ -40,7 +40,7 @@ namespace Eryph.Runtime.Zero
             container.RegisterInstance(Info.Network);
             container.RegisterInstance(new InMemorySubscriberStore());
             container.Register<IRebusTransportConfigurer, InMemoryTransportConfigurer>();
-            container.Register<IRebusSagasConfigurer, InMemorySagasConfigurer>();
+            container.Register<IRebusSagasConfigurer, FileSystemSagasConfigurer>();
             container.Register<IRebusSubscriptionConfigurer, InMemorySubscriptionConfigurer>();
             container.Register<IRebusTimeoutConfigurer, InMemoryTimeoutConfigurer>();
             return container;

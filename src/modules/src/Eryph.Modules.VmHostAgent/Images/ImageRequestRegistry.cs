@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Operations;
+using Eryph.Messages.Resources.Images.Commands;
 using Eryph.ModuleCore;
 using Eryph.VmManagement;
 using LanguageExt;
@@ -14,6 +15,9 @@ internal class ImageRequestRegistry : IImageRequestDispatcher
     private readonly IBus _bus;
     private readonly IImageRequestBackgroundQueue _queue;
     private readonly IImageProvider _imageProvider;
+
+    private record ListingTask(Guid OperationId, Guid InitiatingTaskId, Guid TaskId) : IOperationTaskMessage;
+
 
     public ImageRequestRegistry(IBus bus, IImageRequestBackgroundQueue queue, IImageProvider imageProvider)
     {
@@ -56,12 +60,6 @@ internal class ImageRequestRegistry : IImageRequestDispatcher
 
     }
 
-
-    private record ListingTask(Guid OperationId, Guid InitiatingTaskId, Guid TaskId) : IOperationTaskMessage
-    {
-
-    }
-
     public Task<Unit> ReportProgress(string image, string message)
     {
         return _imageQueue.Value.Find(image).IfSomeAsync(async  listening =>
@@ -75,7 +73,7 @@ internal class ImageRequestRegistry : IImageRequestDispatcher
         });
     }
 
-    public Task EndRequest(string image, Either<PowershellFailure, string> result)
+    public Task EndRequest(string image, Either<PowershellFailure, PrepareVirtualMachineImageResponse> result)
     {
         return _imageQueue.Value.Find(image).IfSomeAsync(async listening =>
         {

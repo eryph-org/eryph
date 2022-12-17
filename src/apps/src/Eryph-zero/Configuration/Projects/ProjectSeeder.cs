@@ -116,7 +116,7 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
                         Name = "default",
                         DhcpLeaseTime = 3600,
                         MTU = 1400,
-                        DnsServersV4 = "9.9.9.9 8.8.8.8",
+                        DnsServersV4 = "9.9.9.9,8.8.8.8",
                         IpPools = new List<IpPool>(new []
                         {
                             new IpPool

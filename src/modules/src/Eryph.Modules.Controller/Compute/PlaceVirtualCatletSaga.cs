@@ -58,7 +58,7 @@ namespace Eryph.Modules.Controller.Compute
                 Fail(new ErrorData { ErrorMessage = "Failed to find any candidate for VM placement" });
 
             //request verification by VM Agent
-            Data.CorrelationId = new Guid();
+            Data.CorrelationId = Guid.NewGuid();
 
             return Bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{placementCandidate}",
                 new VerifyPlacementCalculationCommand { CorrelationId = Data.CorrelationId });

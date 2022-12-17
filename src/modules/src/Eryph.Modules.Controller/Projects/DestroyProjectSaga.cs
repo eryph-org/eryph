@@ -1,5 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Eryph.Core;
+using Eryph.Messages;
 using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Projects;
 using Eryph.Messages.Resources.Commands;
@@ -37,6 +39,12 @@ namespace Eryph.Modules.Controller.Projects
         protected override async Task Initiated(DestroyProjectCommand message)
         {
             Data.ProjectId = message.ProjectId;
+
+            if (Data.ProjectId == EryphConstants.DefaultProjectId)
+            {
+                await Fail(new ErrorData { ErrorMessage = "Default project cannot be deleted" });
+                return;
+            }
 
             var project = await _stateStore.For<Project>().GetByIdAsync(Data.ProjectId);
 

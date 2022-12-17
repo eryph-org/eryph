@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Common;
@@ -31,15 +32,46 @@ namespace Eryph.VmManagement.Storage
             {
                 var pathAfterDataStore = path.Remove(0, dataStorePath.ValueUnsafe().Length).TrimStart('\\');
 
-                var pathRoot = Path.GetPathRoot(pathAfterDataStore);
-                if (pathRoot.StartsWith("eryph_p")) projectName = pathRoot.Remove(0, "eryph_p".Length);
+                var pathRoot = pathAfterDataStore.Split(Path.DirectorySeparatorChar).FirstOrDefault() ??
+                               pathAfterDataStore;
+
+                if (pathRoot.StartsWith("p_"))
+                {
+                    projectName = pathRoot.Remove(0, "p_".Length).ToLowerInvariant();
+                    pathAfterDataStore = pathAfterDataStore.Remove(0,pathRoot.Length + 1); // remove root + \\;
+                }
+
+                var lastPart = pathAfterDataStore
+                    .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+
+                if (lastPart != null && lastPart.Contains('.')) // assuming a filename if this contains a dot
+                {
+                    pathAfterDataStore  = pathAfterDataStore.Remove(pathAfterDataStore.LastIndexOf(lastPart,
+                        StringComparison.InvariantCulture)).TrimEnd('\\');
+
+                }
+
 
                 var idCandidate = pathAfterDataStore;
-
+                var idIsImageRef = false;
                 if (idCandidate.Contains(Path.DirectorySeparatorChar))
-                    idCandidate = Path.GetDirectoryName(pathAfterDataStore);
+                {
+                    // image path, resolve back to referenced image
+                    if (idCandidate.StartsWith("images\\", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        idCandidate = idCandidate.Remove(0, "images\\".Length);
+                        var imagePathParts = idCandidate.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+                        if (imagePathParts.Length == 4)
+                        {
+                            idCandidate = imagePathParts[0] + "/" + imagePathParts[1]+ "/" + imagePathParts[2];
+                            idIsImageRef = true;
+                        }
+                    }
 
-                if (!string.IsNullOrWhiteSpace(idCandidate) && pathRoot != idCandidate)
+                    idCandidate = idIsImageRef ? $"image:{idCandidate}" : null;
+                }
+
+                if (!string.IsNullOrWhiteSpace(idCandidate))
                     storageIdentifier = idCandidate;
             }
 
@@ -80,7 +112,7 @@ namespace Eryph.VmManagement.Storage
             var result = dsPath;
 
             if (projectName != "default")
-                result = Path.Combine(dsPath, $"eryph_p{projectName}");
+                result = Path.Combine(dsPath, $"p_{projectName}");
 
             return Prelude.RightAsync<Error, string>(result);
         }

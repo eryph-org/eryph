@@ -196,7 +196,8 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
                         ("server_mac", network.RouterPort.MacAddress ),
                         ("lease_time", subnet.DhcpLeaseTime == 0 ? "3600" : subnet.DhcpLeaseTime.ToString() ),
                         ("mtu", subnet.MTU == 0 ? "1400" : subnet.MTU.ToString() ),
-                        ("dns_server", string.IsNullOrWhiteSpace(subnet.DnsServersV4) ? "9.9.9.9" : subnet.DnsServersV4 ),
+                        ("dns_server", string.IsNullOrWhiteSpace(subnet.DnsServersV4) ? "9.9.9.9" :
+                            $"{{{string.Join(',', subnet.DnsServersV4.Split(','))}}}"),
                         ("router", networkIp.IpAddress )
 
                     }

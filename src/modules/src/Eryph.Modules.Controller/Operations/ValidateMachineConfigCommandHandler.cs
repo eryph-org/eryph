@@ -36,8 +36,7 @@ namespace Eryph.Modules.Controller.Operations
                 machineConfig.VCatlet = new VirtualCatletConfig();
 
             if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == Guid.Empty)
-                //TODO generate a random name here
-                machineConfig.Name = "eryph-machine";
+                machineConfig.Name = $"catlet";
 
 
             if (machineConfig.VCatlet.Cpu == null)

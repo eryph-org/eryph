@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Core;
@@ -187,6 +188,9 @@ namespace Eryph.Modules.Controller.Inventory
 
                     optionalMachine.IfSome(existingMachine =>
                     {
+                        StateStore.LoadProperty(existingMachine, x=> x.Project);
+                        Debug.Assert(existingMachine.Project != null);
+
                         // update data for existing machine
                         var newMachine = VirtualMachineInfoToVCatlet(vmInfo,
                             hostMachine, existingMachine.Id, existingMachine.Project);

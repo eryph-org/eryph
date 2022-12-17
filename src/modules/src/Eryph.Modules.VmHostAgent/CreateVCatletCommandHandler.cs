@@ -17,17 +17,17 @@ using Rebus.Bus;
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class CreateVirtualMachineCommandHandler : 
-        VirtualCatletConfigCommandHandler<CreateVirtualCatletCommand, ConvergeVirtualCatletResult>
+    internal class CreateVCatletCommandHandler : 
+        VirtualCatletConfigCommandHandler<CreateVCatletCommand, ConvergeVirtualCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
 
-        public CreateVirtualMachineCommandHandler(IPowershellEngine engine, IBus bus, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, bus, log)
+        public CreateVCatletCommandHandler(IPowershellEngine engine, IBus bus, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, bus, log)
         {
             _hostInfoProvider = hostInfoProvider;
         }
 
-        protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(CreateVirtualCatletCommand command)
+        protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(CreateVCatletCommand command)
         {
             var config = command.Config;
 
@@ -40,11 +40,11 @@ namespace Eryph.Modules.VmHostAgent
             var getTemplate = Prelude.fun(() =>
                 GetTemplate(Engine, hostSettings, config.VCatlet.Image));
 
-            var createVM = Prelude.fun((VMStorageSettings settings, TypedPsObject<PlannedVirtualMachineInfo> template) =>
+            var createVM = Prelude.fun((VMStorageSettings settings, Option<TypedPsObject<PlannedVirtualMachineInfo>> template) =>
                 CreateVM(config, hostSettings, settings, Engine, template));
 
             var createMetadata = Prelude.fun(
-                (TypedPsObject<VirtualMachineInfo> vmInfo, TypedPsObject<PlannedVirtualMachineInfo> plannedVM) =>
+                (TypedPsObject<VirtualMachineInfo> vmInfo, Option<TypedPsObject<PlannedVirtualMachineInfo>> plannedVM) =>
                     CreateMetadata(plannedVM, vmInfo, config, command.NewMachineId));
 
             return
@@ -60,30 +60,39 @@ namespace Eryph.Modules.VmHostAgent
                 };
         }
 
-        private static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> GetTemplate(
+        private static EitherAsync<Error, Option<TypedPsObject<PlannedVirtualMachineInfo>>> GetTemplate(
             IPowershellEngine engine,
             HostSettings hostSettings,
             string image)
         {
+            if (string.IsNullOrWhiteSpace(image))
+                return Prelude.RightAsync<Error, Option<TypedPsObject<PlannedVirtualMachineInfo>>>(
+                    Option<TypedPsObject<PlannedVirtualMachineInfo>>.None);
+
             //add a cache lookup here, as image data should not change
-            return VirtualMachine.TemplateFromImage(engine, hostSettings, image);
+            return VirtualMachine.TemplateFromImage(engine, hostSettings, image).Map(Prelude.Some);
         }
 
         private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(CatletConfig config,
             HostSettings hostSettings, VMStorageSettings storageSettings, IPowershellEngine engine,
-            TypedPsObject<PlannedVirtualMachineInfo> template)
+            Option<TypedPsObject<PlannedVirtualMachineInfo>> optionalTemplate)
         {
             return (from storageIdentifier in storageSettings.StorageIdentifier.ToEitherAsync(Error.New(
                     "Unknown storage identifier, cannot create new virtual catlet"))
-                from vm in VirtualMachine.ImportTemplate(engine, hostSettings, config.Name,
+
+                from vm in
+                    optionalTemplate.Match( 
+                        None: () => VirtualMachine.Create(engine, config.Name, storageIdentifier,
+                                storageSettings.VMPath, config.VCatlet.Memory.Startup),
+                        Some: template => VirtualMachine.ImportTemplate(engine, hostSettings, config.Name,
                     storageIdentifier,
-                    storageSettings.VMPath,
-                    template)
+                    storageSettings,
+                    template))
                 select vm);
         }
 
         private EitherAsync<Error, VirtualCatletMetadata> CreateMetadata(
-            TypedPsObject<PlannedVirtualMachineInfo> template,
+            Option<TypedPsObject<PlannedVirtualMachineInfo>> optionalTemplate,
             TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig config, Guid machineId)
         {
             var metadata = new VirtualCatletMetadata
@@ -92,7 +101,8 @@ namespace Eryph.Modules.VmHostAgent
                 MachineId = machineId,
                 VMId = vmInfo.Value.Id,
                 RaisingConfig = config.Raising,
-                ImageConfig = template.ToVmConfig()
+                ImageConfig = optionalTemplate.MatchUnsafe(
+                    None: () => null, Some: t => t.ToVmConfig())
         };
 
             return SetMetadataId(vmInfo, metadata.Id).Map(_ => metadata);
