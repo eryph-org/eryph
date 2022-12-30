@@ -4,6 +4,7 @@ using Ardalis.ApiEndpoints;
 using Ardalis.Specification;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints

@@ -6,12 +6,9 @@ namespace Eryph.Modules.ComputeApi.Model.V1
 {
     public class CatletNetwork
     {
-        [Key] public Guid Id { get; set; }
-
-        public string CatletId { get; set; }
 
         public string Name { get; set; }
-
+        public string Provider { get; set; }
 
         public IEnumerable<string> IpV4Addresses { get; set; }
         public IEnumerable<string> IpV6Addresses { get; set; }

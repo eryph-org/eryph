@@ -15,7 +15,6 @@ using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.OVN;
 using Eryph.App;
 using Eryph.ModuleCore;
-using Eryph.Modules.CommonApi;
 using Eryph.Modules.ComputeApi;
 using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
@@ -171,6 +170,8 @@ internal static class Program
                         { "identity", $"{basePathUrl}identity" },
                         { "compute", $"{basePathUrl}compute" },
                         { "common", $"{basePathUrl}common" },
+                        { "network", $"{basePathUrl}network" },
+
                     };
 
                 ZeroConfig.EnsureConfiguration();
@@ -238,7 +239,6 @@ internal static class Program
                                 { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
                             });
                         })
-                        .HostModule<CommonApiModule>()
                         .HostModule<ComputeApiModule>()
                         .AddIdentityModule(container)
                         .HostModule<VmHostAgentModule>()
@@ -267,6 +267,7 @@ internal static class Program
             catch (Exception ex)
             {
                 Log.Logger.Fatal(ex, "eryph-zero failure");
+                await Console.Error.WriteAsync(ex.Message);
 
                 return returnCode;
             }

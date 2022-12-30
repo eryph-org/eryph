@@ -8,6 +8,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -20,11 +21,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
         {
         }
 
-        protected override ISpecification<StateDb.Model.Catlet> CreateSpecification(ListRequest request)
-        {
-            return new ResourceSpecs<StateDb.Model.Catlet>.GetAll();
-        }
-
+        [Authorize(Policy = "compute:catlets:read")]
         [HttpGet("catlets")]
         [SwaggerOperation(
             Summary = "List all catlets",

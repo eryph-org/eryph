@@ -24,7 +24,7 @@ namespace Eryph.Modules.Controller.DataServices
 
         public async Task<Option<VirtualCatlet>> GetByVMId(Guid id)
         {
-            var res = await _repository.GetBySpecAsync(new VirtualMachineSpecs.GetByVMId(id));
+            var res = await _repository.GetBySpecAsync(new VCatletSpecs.GetByVMId(id));
             return res!;
         }
 

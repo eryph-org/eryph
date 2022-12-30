@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Ardalis.Specification;
+using Eryph.Core;
 using Eryph.StateDb.Model;
 
 namespace Eryph.StateDb.Specifications
@@ -38,8 +39,15 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class GetAll : Specification<Operation>
         {
-            public GetAll(string expanded, DateTimeOffset requestLogTimestamp)
+            public GetAll(Guid tenantId, Guid[] roles, AccessRight requiredAccess, string expanded, DateTimeOffset requestLogTimestamp)
             {
+                Query.Where(x=>x.TenantId == tenantId);
+
+                if (!roles.Contains(EryphConstants.SuperAdminRole))
+                    Query.Where(x => x.Projects.Any(projectRef =>
+                        projectRef.Project.Roles.Any(y => roles.Contains(y.RoleId) && y.AccessRight >= requiredAccess)));
+
+
                 Query.OrderBy(x => x.Id);
                 ExpandFields(Query, expanded, requestLogTimestamp);
 
@@ -48,9 +56,23 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class GetById : Specification<Operation>, ISingleResultSpecification<Operation>
         {
-            public GetById(Guid id, string expanded, DateTimeOffset requestLogTimestamp)
+            public GetById(Guid id, Guid tenantId, Guid[] roles, AccessRight requiredAccess,  string expanded, DateTimeOffset requestLogTimestamp)
             {
-                Query.Where(x => x.Id == id);
+                Query.Where(x => x.Id == id &&
+                                 x.Projects.Any(project => project.Project.TenantId == tenantId));
+
+                if (!roles.Contains(EryphConstants.SuperAdminRole))
+                    Query.Where(x => x.Projects.Any(projectRef=> 
+                        projectRef.Project.Roles.Any(y => roles.Contains(y.RoleId) && y.AccessRight >= requiredAccess)));
+
+                ExpandFields(Query, expanded, requestLogTimestamp);
+
+
+            }
+
+            public GetById(Guid id, Guid tenantId, string expanded, DateTimeOffset requestLogTimestamp)
+            {
+                Query.Where(x => x.Id == id && x.TenantId == tenantId);
                 ExpandFields(Query, expanded, requestLogTimestamp);
 
 

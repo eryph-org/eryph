@@ -12,11 +12,11 @@ using VirtualCatlet = Eryph.StateDb.Model.VirtualCatlet;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualCatlets
 {
-    public class GetConfig : GetEntityEndpoint<SingleEntityRequest,VirtualCatletConfiguration, VirtualCatlet>
+    public class GetConfig : GetEntityEndpoint<SingleEntityRequest, VirtualCatletConfiguration, VirtualCatlet>
     {
 
-        public GetConfig([NotNull] IGetRequestHandler<VirtualCatlet, VirtualCatletConfiguration> requestHandler, 
-            [NotNull]ISingleEntitySpecBuilder<SingleEntityRequest,VirtualCatlet> specBuilder) : base(requestHandler, specBuilder)
+        public GetConfig([NotNull] IGetRequestHandler<VirtualCatlet, VirtualCatletConfiguration> requestHandler,
+            [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, VirtualCatlet> specBuilder) : base(requestHandler, specBuilder)
         {
         }
 
@@ -27,7 +27,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualCatlets
             OperationId = "VCatlets_GetConfig",
             Tags = new[] { "Virtual Catlets" })
         ]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(VirtualCatlet))]
+
+        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(VirtualCatletConfiguration))]
 
         public override Task<ActionResult<VirtualCatletConfiguration>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
         {

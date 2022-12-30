@@ -7,15 +7,14 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
 using ProjectModel = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 
-namespace Eryph.Modules.CommonApi.Endpoints.V1.Projects
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
 {
-    public class List : ListEntityEndpoint<ProjectsListRequest, ProjectModel, StateDb.Model.Project>
+    public class List : ListEntityEndpoint<AllProjectsListRequest, ProjectModel, StateDb.Model.Project>
     {
         public List([NotNull]IListRequestHandler<StateDb.Model.Project> listRequestHandler, 
-            [NotNull] IListEntitySpecBuilder<ProjectsListRequest, StateDb.Model.Project> specBuilder) : base(listRequestHandler, specBuilder)
+            [NotNull] IListEntitySpecBuilder<AllProjectsListRequest, StateDb.Model.Project> specBuilder) : base(listRequestHandler, specBuilder)
         {
         }
         
@@ -27,7 +26,7 @@ namespace Eryph.Modules.CommonApi.Endpoints.V1.Projects
             Tags = new[] { "Projects" })
         ]
         [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<ProjectModel>))]
-        public override Task<ActionResult<ListResponse<ProjectModel>>> HandleAsync([FromRoute] ProjectsListRequest request, CancellationToken cancellationToken = default)
+        public override Task<ActionResult<ListResponse<ProjectModel>>> HandleAsync([FromRoute] AllProjectsListRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }

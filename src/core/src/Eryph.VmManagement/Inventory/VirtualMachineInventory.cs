@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
+using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
@@ -35,13 +36,19 @@ namespace Eryph.VmManagement.Inventory
                     
                 from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _hostSettings,
                     vm.GetList(x=>x.HardDrives))
-                select new VirtualMachineData
+                from cpuData in GetCpuData(vmInfo)
+               from memoryData in GetMemoryData(vmInfo)
+               from firmwareData in GetFirmwareData(vmInfo)
+               select new VirtualMachineData
                 {
                     VMId = vm.Value.Id,
                     MetadataId = GetMetadataId(vm),
                     Status = InventoryConverter.MapVmInfoStatusToVmStatus(vm.Value.State),
                     Name = vm.Value.Name,
                     UpTime = vm.Value.Uptime,
+                    Cpu = cpuData,
+                    Memory = memoryData,
+                    Firmware = firmwareData,
                     Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x=>x.HardDrives)).ToArray(),
                     NetworkAdapters = vm.GetList(x=>x.NetworkAdapters).Map(a=>
                     {
@@ -57,6 +64,44 @@ namespace Eryph.VmManagement.Inventory
                     }).ToArray(),
                     Networks = VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vm.GetList(x=>x.NetworkAdapters))
                 }).ToEither();
+        }
+
+        private EitherAsync<Error, VirtualMachineCpuData> GetCpuData(TypedPsObject<VirtualMachineInfo> vmInfo)
+        {
+            return _engine.GetObjectsAsync<VirtualMachineCpuData>(
+                    new PsCommandBuilder().AddInput(vmInfo.PsObject).AddCommand("Get-VMProcessor"))
+                .ToError().ToAsync().Bind(
+                    r => r.HeadOrLeft(Error.New(Errors.SequenceEmpty)).ToAsync())
+                .Map(r => r.ToValue());
+        }
+
+        private EitherAsync<Error, VirtualMachineMemoryData> GetMemoryData(TypedPsObject<VirtualMachineInfo> vmInfo)
+        {
+            return _engine.GetObjectsAsync<VirtualMachineMemoryData>(
+                    new PsCommandBuilder().AddInput(vmInfo.PsObject).AddCommand("Get-VMMemory"))
+                .ToError().ToAsync().Bind(
+                    r => r.HeadOrLeft(Error.New(Errors.SequenceEmpty)).ToAsync())
+                .Map(r => r.ToValue());
+        }
+
+        private EitherAsync<Error, VirtualMachineFirmwareData> GetFirmwareData(TypedPsObject<VirtualMachineInfo> vmInfo)
+        {
+            if (vmInfo.Value.Generation == 1)
+                return Prelude.RightAsync<Error, VirtualMachineFirmwareData>(new VirtualMachineFirmwareData());
+
+            return _engine.GetObjectsAsync<VMFirmwareInfo>(
+                    new PsCommandBuilder().AddInput(vmInfo.PsObject).AddCommand("Get-VMFirmware"))
+                .ToError().ToAsync().Map(
+                    r => r.HeadOrNone())
+                .Map(r => r.Match(
+                    None: () => new VirtualMachineFirmwareData(),
+                    Some: info => new VirtualMachineFirmwareData
+                    {
+                        SecureBoot = info.Value.SecureBoot == OnOffState.On,
+                        SecureBootTemplate = info.Value.SecureBootTemplate
+                    }
+                    
+                    ));
         }
 
         private static DiskInfo CreateDiskInfo(DiskStorageSettings storageSettings)

@@ -9,6 +9,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -34,7 +35,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
                     : request.CorrelationId, 
                     Config = config };
         }
-        
+
+        [Authorize(Policy = "compute:catlets:write")]
         [HttpPost("catlets")]
         [SwaggerOperation(
             Summary = "Creates a new catlet",

@@ -117,7 +117,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
 
             services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
 
-
             return mvcBuilder;
         }
 
@@ -156,7 +155,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
 
             app.UseSwagger(c =>
             {
-                c.SerializeAsV2 = true;
+                c.SerializeAsV2 = false;
                 c.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
                 {
                     swaggerDoc.Servers = new List<OpenApiServer>

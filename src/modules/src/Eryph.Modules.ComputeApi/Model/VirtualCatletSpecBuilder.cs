@@ -1,22 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using Ardalis.Specification;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
+using Microsoft.AspNetCore.Http;
 
 namespace Eryph.Modules.ComputeApi.Model
 {
-    public class VirtualCatletSpecBuilder : ISingleEntitySpecBuilder<SingleEntityRequest,VirtualCatlet>, IListEntitySpecBuilder<ListRequest,VirtualCatlet>
+    public class VirtualCatletSpecBuilder : ResourceSpecBuilder<VirtualCatlet>
     {
-        public ISingleResultSpecification<VirtualCatlet> GetSingleEntitySpec(SingleEntityRequest request)
+        public VirtualCatletSpecBuilder(IUserRightsProvider userRightsProvider) : base(userRightsProvider)
         {
-            return new ResourceSpecs<VirtualCatlet>.GetById(Guid.Parse(request.Id));
-        }
-
-        public ISpecification<VirtualCatlet> GetEntitiesSpec(ListRequest request)
-        {
-            return new ResourceSpecs<VirtualCatlet>.GetAll();
         }
     }
 }

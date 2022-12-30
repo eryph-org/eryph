@@ -1,6 +1,7 @@
 ﻿using Ardalis.Specification;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
@@ -20,7 +21,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
 
         protected override ISingleResultSpecification<TEntity> CreateSpecification(TRequest request)
         {
-            return _specBuilder.GetSingleEntitySpec(request);
+            return _specBuilder.GetSingleEntitySpec(request, AccessRight.Read);
         }
 
         

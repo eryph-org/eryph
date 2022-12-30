@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
@@ -45,7 +46,7 @@ namespace Eryph.Modules.VmHostAgent
 
             var createMetadata = Prelude.fun(
                 (TypedPsObject<VirtualMachineInfo> vmInfo, Option<TypedPsObject<PlannedVirtualMachineInfo>> plannedVM) =>
-                    CreateMetadata(plannedVM, vmInfo, config, command.NewMachineId));
+                    CreateMetadata(Engine,plannedVM, vmInfo, config, command.NewMachineId));
 
             return
                 from plannedStorageSettings in planStorageSettings()
@@ -92,20 +93,26 @@ namespace Eryph.Modules.VmHostAgent
         }
 
         private EitherAsync<Error, VirtualCatletMetadata> CreateMetadata(
+            IPowershellEngine engine,
             Option<TypedPsObject<PlannedVirtualMachineInfo>> optionalTemplate,
             TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig config, Guid machineId)
         {
-            var metadata = new VirtualCatletMetadata
+            async Task<VirtualCatletMetadata> CreateMetadataAsync()
             {
-                Id = Guid.NewGuid(),
-                MachineId = machineId,
-                VMId = vmInfo.Value.Id,
-                RaisingConfig = config.Raising,
-                ImageConfig = optionalTemplate.MatchUnsafe(
-                    None: () => null, Some: t => t.ToVmConfig())
-        };
+                return new VirtualCatletMetadata
+                {
+                    Id = Guid.NewGuid(),
+                    MachineId = machineId,
+                    VMId = vmInfo.Value.Id,
+                    RaisingConfig = config.Raising,
+                    ImageConfig = await optionalTemplate.MatchUnsafe(
+                        None: () => null, Some: async t => await t.ToVmConfig(engine,config.VCatlet.Image))!
+                };
 
-            return SetMetadataId(vmInfo, metadata.Id).Map(_ => metadata);
+            }
+            
+            return Prelude.RightAsync<Error, VirtualCatletMetadata>(CreateMetadataAsync())
+                .Bind(metadata => SetMetadataId(vmInfo, metadata.Id).Map(_ => metadata));
         }
     }
 }

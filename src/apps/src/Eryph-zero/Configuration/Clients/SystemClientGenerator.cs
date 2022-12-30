@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.Configuration.Model;
+using Eryph.Core;
 using Eryph.Security.Cryptography;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
@@ -61,7 +62,9 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
             {
                 ClientId = "system-client",
                 X509CertificateBase64 = Convert.ToBase64String(certificate.GetEncoded()),
-                AllowedScopes = new[] {"openid", "compute_api", "common_api", "identity:clients:write:all"}
+                AllowedScopes = new[] {"openid", "common_api", "compute:write", "identity:clients:write:all"},
+                TenantId = EryphConstants.DefaultTenantId.ToString(),
+                Roles = new []{EryphConstants.SuperAdminRole.ToString()}
             };
 
             var clientIO = new ConfigIO(ZeroConfig.GetClientConfigPath());

@@ -27,7 +27,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
-    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.CommonApi\Eryph.Modules.CommonApi.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.ComputeApi\Eryph.Modules.ComputeApi.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.StateDb.MySql\Eryph.StateDb.MySql.csproj" />
   </ItemGroup>

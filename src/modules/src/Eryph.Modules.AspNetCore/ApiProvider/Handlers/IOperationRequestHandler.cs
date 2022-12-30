@@ -11,7 +11,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
     public interface IOperationRequestHandler<TModel> where TModel: class
     {
         Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(
-            Func<ISingleResultSpecification<TModel>> specificationFunc, 
+            Func<ISingleResultSpecification<TModel>?> specificationFunc, 
             Func<TModel, object> createOperationFunc, 
             CancellationToken cancellationToken);
     }

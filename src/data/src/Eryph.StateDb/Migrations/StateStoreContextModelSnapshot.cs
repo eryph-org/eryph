@@ -124,6 +124,11 @@ namespace Eryph.StateDb.Migrations
                     b.Property<string>("StatusMessage")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("TenantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue(new Guid("c1813384-8ecb-4f17-b846-821ee515d19b"));
+
                     b.HasKey("Id");
 
                     b.ToTable("Operations");
@@ -241,6 +246,22 @@ namespace Eryph.StateDb.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Projects");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.ProjectRoles", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AccessRight")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("RoleId", "ProjectId");
+
+                    b.ToTable("ProjectRoles");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.ReportedNetwork", b =>
@@ -401,6 +422,24 @@ namespace Eryph.StateDb.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Metadata");
+                });
+
+            modelBuilder.Entity("ProjectProjectRoles", b =>
+                {
+                    b.Property<Guid>("ProjectsId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RolesRoleId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("RolesProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ProjectsId", "RolesRoleId", "RolesProjectId");
+
+                    b.HasIndex("RolesRoleId", "RolesProjectId");
+
+                    b.ToTable("ProjectProjectRoles");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
@@ -595,14 +634,32 @@ namespace Eryph.StateDb.Migrations
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Catlet");
 
+                    b.Property<int>("CpuCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Features")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("HostId")
                         .HasColumnType("TEXT");
+
+                    b.Property<long>("MaximumMemory")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("MetadataId")
                         .HasColumnType("TEXT");
 
+                    b.Property<long>("MinimumMemory")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Path")
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("SecureBootTemplate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("StartupMemory")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("VMId")
                         .HasColumnType("TEXT");
@@ -758,6 +815,21 @@ namespace Eryph.StateDb.Migrations
                         .IsRequired();
 
                     b.Navigation("Vm");
+                });
+
+            modelBuilder.Entity("ProjectProjectRoles", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Project", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Eryph.StateDb.Model.ProjectRoles", null)
+                        .WithMany()
+                        .HasForeignKey("RolesRoleId", "RolesProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>

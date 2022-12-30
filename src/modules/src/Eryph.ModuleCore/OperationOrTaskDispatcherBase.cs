@@ -32,7 +32,7 @@ public abstract class OperationOrTaskDispatcherBase
     }
 
 
-    protected async Task<IEnumerable<Operation>> StartOpOrTask(Guid operationId, 
+    protected async Task<IEnumerable<Operation>> StartOpOrTask(Guid tenantId, Guid operationId, 
         Guid initiatingTaskId, object command,
         [AllowNull] params Resource[] resources)
     {
@@ -101,7 +101,8 @@ public abstract class OperationOrTaskDispatcherBase
                             { ResourceId = x.Id, ResourceType = x.Type })
                         .ToList(),
                     Projects = projects.Select(p => new OperationProject { Id = Guid.NewGuid(), ProjectId = p })
-                        .ToList()
+                        .ToList(),
+                    TenantId = tenantId
                 };
 
 

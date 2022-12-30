@@ -3,6 +3,7 @@ using System.Linq;
 using System.Management.Automation;
 using System.Reflection;
 using AutoMapper;
+using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -56,6 +57,11 @@ internal static class TypedPsObjectMapping
                 c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(PlannedVMNetworkAdapter));
                 c.CreateMap(GetPsType(nameof(VMNetworkAdapter)), typeof(HostVMNetworkAdapter));
                 c.CreateMap(GetPsType(nameof(VMNetworkAdapterVlanSetting)), typeof(VMNetworkAdapterVlanSetting));
+
+
+                c.CreateMap(GetPsType("VMProcessor"), typeof(VirtualMachineCpuData));
+                c.CreateMap(GetPsType("VMMemory"), typeof(VirtualMachineMemoryData));
+                c.CreateMap(GetPsType("VMFirmware"), typeof(VMFirmwareInfo));
 
             });
         });

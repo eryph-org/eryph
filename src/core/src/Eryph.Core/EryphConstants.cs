@@ -9,5 +9,6 @@ namespace Eryph.Core
 
         public const string OverlaySwitchName = "eryph_overlay";
 
+        public static readonly Guid SuperAdminRole = Guid.Parse("{E5E83176-7543-4D01-BAEA-08A00EA064A6}");
     }
 }

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.IdentityServer;
@@ -39,6 +41,12 @@ namespace Eryph.Modules.Identity.Models
                         Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
                         Value = client.Certificate
                     }
+                },
+                Claims = new List<ClientClaim>
+                {
+                    new("tenant", client.Tenant),
+                    new("roles", string.Join(',', client.Roles))
+
                 }
             };
         }

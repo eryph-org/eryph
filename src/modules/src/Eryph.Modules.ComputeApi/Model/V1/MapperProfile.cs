@@ -10,6 +10,14 @@ namespace Eryph.Modules.ComputeApi.Model.V1
 
             CreateMap<StateDb.Model.VirtualNetwork, CatletNetwork>();
 
+            CreateMap<StateDb.Model.VirtualNetwork, VirtualNetwork>()
+            .ForMember(x => x.ProviderName,
+                x => x.MapFrom(y => y.NetworkProvider))
+            .ForMember(x => x.ProjectId, x => x.MapFrom(y => y.ProjectId))
+            .ForMember(x => x.TenantId, x => x
+                .MapFrom(y => y.Project.TenantId))
+            ;
+
             CreateMap<StateDb.Model.Catlet, Catlet>();
             CreateMap<StateDb.Model.VirtualCatlet, VirtualCatlet>();
             CreateMap<StateDb.Model.VirtualCatletDrive, VirtualCatletDrive>();

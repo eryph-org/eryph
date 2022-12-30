@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using Eryph.Modules.ComputeApi;
 using FluentAssertions;
 using Xunit;
 
@@ -10,7 +11,7 @@ namespace Eryph.Modules.CommonApi.Tests.Integration.Endpoints;
 
 public class GetOperationTest : IClassFixture<ApiModuleFactory>
 {
-    private readonly WebModuleFactory<CommonApiModule> _factory;
+    private readonly WebModuleFactory<ComputeApiModule> _factory;
 
     public GetOperationTest(ApiModuleFactory factory)
     {

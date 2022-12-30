@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Eryph.Modules.CommonApi;
 using Eryph.Modules.ComputeApi;
 using Eryph.StateDb.MySql;
 using Microsoft.Extensions.Hosting;
@@ -22,7 +21,6 @@ namespace Eryph.ApiEndpoint
                 .UseSimpleInjector(container)
                 .UseAspNetCore((module, webHostBuilder) => { })
                 .HostModule<ComputeApiModule>()
-                .HostModule<CommonApiModule>()
                 .RunConsoleAsync();
         }
     }

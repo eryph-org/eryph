@@ -15,5 +15,18 @@ public static class VirtualNetworkSpecs
 
     }
 
+    public sealed class GetForProjectConfig : Specification<VirtualNetwork>
+    {
+        public GetForProjectConfig(Guid projectId)
+        {
+            Query.Where(x => x.ProjectId == projectId)
+                .Include(x => x.NetworkPorts)
+                .Include(x => x.Subnets)
+                .Include(x => x.RouterPort).ThenInclude(x => x.FloatingPort)
+                .Include(x => x.Subnets)
+                .ThenInclude(x => x.IpPools);
 
+        }
+
+    }
 }

@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
-namespace Eryph.Modules.CommonApi.Endpoints.V1.Projects
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
 {
     public class Create : NewOperationRequestEndpoint<NewProjectRequest, Project> 
     {

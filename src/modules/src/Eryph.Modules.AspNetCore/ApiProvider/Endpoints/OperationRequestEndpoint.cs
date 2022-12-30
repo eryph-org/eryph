@@ -4,6 +4,7 @@ using Ardalis.ApiEndpoints;
 using Ardalis.Specification;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -32,7 +33,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
 
         private ISingleResultSpecification<TEntity> CreateSpecification(TRequest request)
         {
-            return _specBuilder.GetSingleEntitySpec(request);
+            return _specBuilder.GetSingleEntitySpec(request, AccessRight.Write);
         }
 
 

@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using ProjectModel = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 
-namespace Eryph.Modules.CommonApi.Endpoints.V1.Projects
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
 {
     public class Get : GetEntityEndpoint<SingleEntityRequest, ProjectModel, Project>
     {

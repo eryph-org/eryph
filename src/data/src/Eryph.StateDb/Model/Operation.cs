@@ -6,6 +6,8 @@ namespace Eryph.StateDb.Model
     public class Operation
     {
         public Guid Id { get; set; }
+        public Guid TenantId { get; set; }
+
         public virtual List<OperationLogEntry> LogEntries { get; set; }
         public virtual List<OperationTask> Tasks { get; set; }
         public virtual List<OperationResource> Resources { get; set; }

@@ -163,7 +163,8 @@ namespace Eryph.Modules.Controller.Inventory
                             metadata.VMId = vmInfo.VMId;
                             
 
-                            await _dispatcher.StartNew(new UpdateVCatletMetadataCommand
+                            await _dispatcher.StartNew(EryphConstants.DefaultTenantId,
+                                new UpdateVCatletMetadataCommand
                             {
                                 AgentName = hostMachine.AgentName,
                                 CurrentMetadataId = oldMetadataId,
@@ -202,6 +203,11 @@ namespace Eryph.Modules.Controller.Inventory
                         existingMachine.ReportedNetworks = newMachine.ReportedNetworks;
                         existingMachine.NetworkAdapters = newMachine.NetworkAdapters;
                         existingMachine.Drives = newMachine.Drives;
+                        existingMachine.CpuCount = newMachine.CpuCount;
+                        existingMachine.StartupMemory = newMachine.StartupMemory;
+                        existingMachine.MinimumMemory = newMachine.MinimumMemory;
+                        existingMachine.StartupMemory = newMachine.StartupMemory;
+                        existingMachine.Features = newMachine.Features;
                     });
 
 
@@ -245,6 +251,11 @@ namespace Eryph.Modules.Controller.Inventory
                 AgentName = hostMachine.AgentName,
                 MetadataId = vmInfo.MetadataId,
                 UpTime = vmInfo.UpTime,
+                CpuCount = vmInfo.Cpu?.Count ?? 0,
+                StartupMemory = vmInfo.Memory?.Startup ?? 0,
+                MinimumMemory = vmInfo.Memory?.Minimum ?? 0,
+                MaximumMemory = vmInfo.Memory?.Startup ?? 0,
+                Features = MapFeatures(vmInfo),
                 NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new VirtualCatletNetworkAdapter
                 {
                     Id = a.Id,
@@ -264,6 +275,22 @@ namespace Eryph.Modules.Controller.Inventory
                 }).ToList(),
                 ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(machineId) ?? Array.Empty<ReportedNetwork>()).ToList()
             };
+        }
+
+        private static List<VCatletFeature> MapFeatures(VirtualMachineData vmInfo)
+        {
+            var features = new List<VCatletFeature>();
+
+            if(vmInfo.Memory?.DynamicMemoryEnabled ?? false)
+                features.Add(VCatletFeature.DynamicMemory);
+
+            if(vmInfo.Firmware?.SecureBoot ?? false)
+                features.Add(VCatletFeature.SecureBoot);
+            if (vmInfo.Cpu?.ExposeVirtualizationExtensions ?? false)
+                features.Add(VCatletFeature.NestedVirtualization);
+
+
+            return features;
         }
 
         private static CatletStatus MapVmStatusToMachineStatus(VmStatus status)

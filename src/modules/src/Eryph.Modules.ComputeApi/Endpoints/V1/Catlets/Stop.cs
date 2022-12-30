@@ -8,6 +8,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Resources;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -29,7 +30,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             return new StopCatletCommand{Resource = new Resource(ResourceType.Catlet, model.Id)};
         }
 
-
+        [Authorize(Policy = "compute:catlets:stop")]
         [HttpPut("catlets/{id}/stop")]
         [SwaggerOperation(
             Summary = "Stops a catlet",

@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Eryph.Modules.CommonApi\Eryph.Modules.CommonApi.csproj" />
+    <ProjectReference Include="..\..\src\Eryph.Modules.ComputeApi\Eryph.Modules.ComputeApi.csproj" />
   </ItemGroup>
 
 </Project>

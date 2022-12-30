@@ -9,7 +9,7 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace Eryph.Modules.CommonApi.Endpoints.V1.Operations
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations
 {
     public class List : ListEntityEndpoint<OperationsListRequest, Operation, StateDb.Model.Operation>
     {

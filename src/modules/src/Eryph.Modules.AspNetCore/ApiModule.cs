@@ -30,7 +30,7 @@ namespace Eryph.Modules.AspNetCore
         public abstract string AudienceName { get; }
 
         [UsedImplicitly]
-        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
+        public virtual void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
             IHostEnvironment env)
         {
             var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
@@ -86,7 +86,11 @@ namespace Eryph.Modules.AspNetCore
             container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
             container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
             container.Register(typeof(IListRequestHandler<>), typeof(ListRequestHandler<>),Lifestyle.Scoped);
-            
+            container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
+
+            container.Register<IUserRightsProvider, UserRightsProvider>(Lifestyle.Scoped);
+
+
             container.RegisterConditional(typeof(IGetRequestHandler<,>),
                 typeof(GetRequestHandler<,>), Lifestyle.Scoped,
                 c => !c.Handled);
@@ -100,8 +104,8 @@ namespace Eryph.Modules.AspNetCore
             container.Register(typeof(ISingleEntitySpecBuilder<,>), typeof(TModule).Assembly);
             container.Register(typeof(IListEntitySpecBuilder<,>), typeof(TModule).Assembly);
 
-            container.RegisterConditional(typeof(ISingleEntitySpecBuilder<,>), typeof(GenericResourceSpecBuilder<>),
-                c=> !c.Handled);
+            //container.RegisterConditional(typeof(ISingleEntitySpecBuilder<,>), typeof(GenericResourceSpecBuilder<>),
+            //    c=> !c.Handled);
 
             container.Collection.Register(typeof(IHandleMessages<>), typeof(TModule).Assembly);
             container.Register<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped);

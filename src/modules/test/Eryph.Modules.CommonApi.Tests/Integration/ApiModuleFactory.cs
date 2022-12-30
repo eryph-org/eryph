@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.ModuleCore;
+using Eryph.Modules.ComputeApi;
 using Eryph.Rebus;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -15,7 +16,7 @@ using SimpleInjector.Lifestyles;
 
 namespace Eryph.Modules.CommonApi.Tests.Integration
 {
-    public class ApiModuleFactory : WebModuleFactory<CommonApiModule>
+    public class ApiModuleFactory : WebModuleFactory<ComputeApiModule>
     {
         private readonly Container _container = new();
         
@@ -32,6 +33,8 @@ namespace Eryph.Modules.CommonApi.Tests.Integration
                 {"identity", "http://localhost/identity"},
                 {"compute", "http://localhost/compute"},
                 {"common", "http://localhost/common"},
+                {"network", "http://localhost/network"},
+
             };
 
             _container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
@@ -50,7 +53,7 @@ namespace Eryph.Modules.CommonApi.Tests.Integration
         }
 
 
-        public WebModuleFactory<CommonApiModule> SetupStateStore(Action<StateStoreContext> configure)
+        public WebModuleFactory<ComputeApiModule> SetupStateStore(Action<StateStoreContext> configure)
         {
 
             var factory = WithModuleConfiguration(options =>

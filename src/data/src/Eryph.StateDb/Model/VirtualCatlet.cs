@@ -22,7 +22,23 @@ namespace Eryph.StateDb.Model
 
         public virtual List<VirtualCatletDrive> Drives { get; set; }
 
+        public int CpuCount { get; set; }
 
+        public long StartupMemory { get; set; }
+        public long MinimumMemory { get; set; }
+        public long MaximumMemory { get; set; }
+
+        public string SecureBootTemplate { get; set; }
+
+        public List<VCatletFeature> Features { get; set; }
+    }
+
+
+    public enum VCatletFeature
+    {
+        SecureBoot,
+        DynamicMemory,
+        NestedVirtualization
     }
 
 }

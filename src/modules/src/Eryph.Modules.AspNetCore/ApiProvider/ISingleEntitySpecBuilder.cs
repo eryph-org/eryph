@@ -1,5 +1,6 @@
 ﻿using Ardalis.Specification;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider
 {
@@ -7,6 +8,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
         where TRequest : SingleEntityRequest
     {
 
-        ISingleResultSpecification<T> GetSingleEntitySpec(TRequest request);
+        ISingleResultSpecification<T> GetSingleEntitySpec(TRequest request, AccessRight accessRight);
     }
 }

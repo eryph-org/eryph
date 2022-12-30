@@ -16,37 +16,37 @@ namespace Eryph.ModuleCore
         {
         }
 
-        public async Task<Operation?> StartNew(object command)
+        public async Task<Operation?> StartNew(Guid tenantId, object command)
         {
-            return (await StartOpOrTask(Guid.Empty, Guid.Empty, command, null)).FirstOrDefault();
+            return (await StartOpOrTask(tenantId, Guid.Empty, Guid.Empty, command, null)).FirstOrDefault();
         }
 
-        public async Task<Operation?> StartNew<T>(Resource resource = default)
+        public async Task<Operation?> StartNew<T>(Guid tenantId, Resource resource = default)
             where T : class, new()
         {
-            return (await StartOpOrTask(Guid.Empty, Guid.Empty, Activator.CreateInstance<T>(), resource)).FirstOrDefault();
+            return (await StartOpOrTask(tenantId, Guid.Empty, Guid.Empty, Activator.CreateInstance<T>(), resource)).FirstOrDefault();
         }
 
-        public Task<IEnumerable<Operation>> StartNew<T>(params Resource[] resources)
+        public Task<IEnumerable<Operation>> StartNew<T>(Guid tenantId, params Resource[] resources)
             where T : class, new()
         {
-            return StartOpOrTask(Guid.Empty, Guid.Empty,  Activator.CreateInstance<T>(), resources);
+            return StartOpOrTask(tenantId, Guid.Empty, Guid.Empty,  Activator.CreateInstance<T>(), resources);
         }
 
-        public async Task<Operation?> StartNew(Type commandType, Resource resource = default)
+        public async Task<Operation?> StartNew(Guid tenantId, Type commandType, Resource resource = default)
         {
-            return (await StartNew(commandType, new[] { resource }))?.FirstOrDefault();
+            return (await StartNew(tenantId, commandType, new[] { resource }))?.FirstOrDefault();
         }
 
-        public Task<IEnumerable<Operation>> StartNew(Type commandType, params Resource[] resources)
+        public Task<IEnumerable<Operation>> StartNew(Guid tenantId, Type commandType, params Resource[] resources)
         {
-            return StartOpOrTask(Guid.Empty, Guid.Empty, Activator.CreateInstance(commandType) ?? throw new InvalidOperationException(), resources);
+            return StartOpOrTask(tenantId, Guid.Empty, Guid.Empty, Activator.CreateInstance(commandType) ?? throw new InvalidOperationException(), resources);
         }
 
 
-        public Task<IEnumerable<Operation>> StartNew(object command, params Resource[] resources)
+        public Task<IEnumerable<Operation>> StartNew(Guid tenantId, object command, params Resource[] resources)
         {
-            return StartOpOrTask(Guid.Empty, Guid.Empty,  command, resources);
+            return StartOpOrTask(tenantId, Guid.Empty, Guid.Empty,  command, resources);
 
         }
 

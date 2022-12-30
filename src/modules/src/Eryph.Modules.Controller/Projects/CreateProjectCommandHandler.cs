@@ -23,7 +23,7 @@ namespace Eryph.Modules.Controller.Projects
         private readonly IStateStore _stateStore;
         private readonly IBus _bus;
         private readonly INetworkProviderManager _networkProviderManager;
-
+        
         public CreateProjectCommandHandler(IStateStore stateStore, IBus bus, INetworkProviderManager networkProviderManager)
         {
             _stateStore = stateStore;

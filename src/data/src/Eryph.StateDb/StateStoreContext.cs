@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Xml.Schema;
+using Eryph.Core;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,6 +51,9 @@ namespace Eryph.StateDb
         public DbSet<VirtualMachineMetadata> Metadata { get; set; }
         public DbSet<Project> Projects { get; set; }
 
+        public DbSet<ProjectRoles> ProjectRoles { get; set; }
+
+
         public DbSet<Tenant> Tenants { get; set; }
 
 
@@ -57,6 +64,9 @@ namespace Eryph.StateDb
             modelBuilder.Entity<Operation>().HasMany(c => c.Resources);
             modelBuilder.Entity<Operation>().HasMany(c => c.Projects);
 
+            modelBuilder.Entity<Operation>()
+                .Property(x => x.TenantId)
+                .HasDefaultValue(EryphConstants.DefaultTenantId);
 
 
             modelBuilder.Entity<Tenant>()
@@ -79,6 +89,13 @@ namespace Eryph.StateDb
                 .WithOne(x => x.Project)
                 .HasForeignKey(x=>x.ProjectId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ProjectRoles>()
+                .HasKey(x => new { x.RoleId, x.ProjectId });
+
+            modelBuilder.Entity<Project>()
+                .HasMany(x => x.Roles)
+                .WithMany(x => x.Projects);
 
             modelBuilder.Entity<Resource>()
                 .HasKey(x => x.Id);
@@ -231,6 +248,16 @@ namespace Eryph.StateDb
             modelBuilder.Entity<VirtualCatlet>()
                 .Navigation(x => x.Drives)
                 .AutoInclude();
+
+            modelBuilder.Entity<VirtualCatlet>()
+                .Property(e => e.Features)
+                .HasConversion(
+                    v => string.Join(',', v),
+                    v => v.Split(',',
+                            StringSplitOptions.RemoveEmptyEntries)
+                        .Map(Enum.Parse<VCatletFeature>)
+                        .ToList());
+
 
             modelBuilder.Entity<VirtualCatletNetworkAdapter>().HasKey("MachineId", "Id");
 

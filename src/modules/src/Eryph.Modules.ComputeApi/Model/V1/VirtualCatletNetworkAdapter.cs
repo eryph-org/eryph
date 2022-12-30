@@ -4,7 +4,6 @@ namespace Eryph.Modules.ComputeApi.Model.V1;
 
 public class VirtualCatletNetworkAdapter
 {
-    [Key] public string Id { get; set; }
 
     public string Name { get; set; }
     
