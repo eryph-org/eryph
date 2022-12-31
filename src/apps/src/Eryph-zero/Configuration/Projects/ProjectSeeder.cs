@@ -103,6 +103,7 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
                         {
                             Name = "provider", 
                             Id = Guid.NewGuid(), 
+                            ProviderName = "default",
                             SubnetName = "default", 
                             PoolName = "default",
                             MacAddress = "d2:e7:a7:37:40:f8"

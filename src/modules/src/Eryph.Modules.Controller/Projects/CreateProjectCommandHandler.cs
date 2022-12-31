@@ -120,6 +120,7 @@ namespace Eryph.Modules.Controller.Projects
                                 {
                                     Name = "provider",
                                     Id = Guid.NewGuid(),
+                                    ProviderName = "default",
                                     SubnetName = "default",
                                     PoolName = "default",
                                     MacAddress = MacAddresses.FormatMacAddress(
