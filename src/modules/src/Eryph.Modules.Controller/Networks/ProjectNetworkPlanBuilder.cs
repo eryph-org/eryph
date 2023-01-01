@@ -45,7 +45,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
                     .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
                     .ToSeq()
 
-            from networks in GetAllNetworks(projectId, cancellationToken)
+            from networks in GetAllOverlayNetworks(projectId, overLayProviders, cancellationToken)
 
             from providerSubnets in GetProviderSubnets(overLayProviders, networks, cancellationToken)
             from providerRouterPorts in GetProviderRouterPorts(networks, providerSubnets, cancellationToken)
@@ -139,8 +139,13 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
 
     }
 
-    private EitherAsync<Error, Seq<VirtualNetwork>> GetAllNetworks(Guid projectId, CancellationToken cancellationToken) =>
-        _stateStore.For<VirtualNetwork>().IO.ListAsync(new NetplanBuilderSpecs.GetAllNetworks(projectId), cancellationToken);
+    private EitherAsync<Error, Seq<VirtualNetwork>> GetAllOverlayNetworks(Guid projectId,
+        Seq<NetworkProvider> overLayProviders, CancellationToken cancellationToken) =>
+        _stateStore.For<VirtualNetwork>().IO
+            .ListAsync(new NetplanBuilderSpecs.GetAllNetworks(projectId), cancellationToken)
+            .Map(s =>
+                s.Filter(x => overLayProviders.Any(p => p.Name == x.NetworkProvider)));
+
 
 
     private static NetworkPlan AddProviderRouterPorts(NetworkPlan networkPlan, Seq<ProviderRouterPortInfo> ports)

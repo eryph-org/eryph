@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Threading;
+using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.VmManagement;
@@ -144,7 +145,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                         .DisconnectNetworkAdapters(overlayVMAdapters)),
                     _ => true,
                     () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ReconnectNetworkAdapters(overlayVMAdapters, "eryph_overlay"))
+                        .ReconnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName))
                     ,
                     NetworkChangeOperation.DisconnectVMAdapters);
             }
@@ -185,7 +186,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             {
                 AddOperation(
                     () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ReconnectNetworkAdapters(overlayVMAdapters, "eryph_overlay")),
+                        .ReconnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)),
                     NetworkChangeOperation.ConnectVMAdapters);
             }
 
@@ -212,7 +213,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     o =>
                         o!.Contains(NetworkChangeOperation.RemoveOverlaySwitch),
                     () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ReconnectNetworkAdapters(overlayVMAdapters, "eryph_overlay")),
+                        .ReconnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)),
                     NetworkChangeOperation.DisconnectVMAdapters);
             }
 

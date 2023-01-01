@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core;
+using Eryph.Core.Network;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
@@ -26,13 +29,16 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
     private readonly IBus _bus;
     private readonly IStateStore _stateStore;
     private readonly ICatletIpManager _ipManager;
+    private readonly INetworkProviderManager _providerManager;
+
 
     public UpdateCatletNetworksCommandHandler(IBus bus, ICatletIpManager ipManager, 
-        IStateStore stateStore)
+        IStateStore stateStore, INetworkProviderManager providerManager)
     {
         _bus = bus;
         _ipManager = ipManager;
         _stateStore = stateStore;
+        _providerManager = providerManager;
     }
 
     public async Task Handle(OperationTask<UpdateCatletNetworksCommand> message)
@@ -45,6 +51,13 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     new VirtualNetworkSpecs.GetByName(message.Command.ProjectId, cfg.Name)
                     , Error.New($"Network '{cfg.Name}' not found in project {message.Command.ProjectId}"))
 
+                from networkProviders in _providerManager.GetCurrentConfiguration()
+                from networkProvider in networkProviders.NetworkProviders.Find(x=>x.Name == network.NetworkProvider)
+                    .ToEither(Error.New($"network provider {network.NetworkProvider} not found"))
+                    .ToAsync()
+
+                let isFlatNetwork = networkProvider.Type == NetworkProviderType.Flat
+
                 let c1 = new CancellationTokenSource(5000)
 
                 from networkPort in GetOrAddAdapterPort(
@@ -52,10 +65,12 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
                 let c2 = new CancellationTokenSource()
 
-                from floatingPort in GetOrAddFloatingPort(
+                from floatingPort in isFlatNetwork 
+                    ? Prelude.RightAsync<Error, Unit>(Prelude.unit)
+                    : GetOrAddFloatingPort(
                     networkPort, Option<string>.None,
                     "default", "default",
-                    "default", c2.Token).ToAsync()
+                    "default", c2.Token).ToAsync().Map(_ => Unit.Default)
 
                 let fixedMacAddress =
                     message.Command.Config.VCatlet.NetworkAdapters.Find(x => x.Name == cfg.AdapterName)
@@ -64,7 +79,9 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                 let _ = UpdatePort(networkPort, cfg.AdapterName, fixedMacAddress)
 
                 let c3 = new CancellationTokenSource()
-                from ips in _ipManager.ConfigurePortIps(
+                from ips in isFlatNetwork
+                    ? Prelude.RightAsync<Error, IPAddress[]>(Array.Empty<IPAddress>())
+                    : _ipManager.ConfigurePortIps(
                     message.Command.ProjectId,
                     networkPort,
                     message.Command.Config.Networks,

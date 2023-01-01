@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
@@ -18,7 +20,12 @@ public static class VMHostMachineDataExtensions
     [CanBeNull]
     public static string FindSwitchName(this VMHostMachineData hostInfo, string providerName)
     {
+        var providerConfig = hostInfo.NetworkProviderConfiguration.NetworkProviders.FirstOrDefault(x => x.Name == providerName);
+        if (providerConfig == null || providerConfig.Type == NetworkProviderType.Invalid) 
+            return null;
 
-        return "eryph_overlay";
+        return providerConfig.Type == NetworkProviderType.Flat 
+            ? providerConfig.SwitchName 
+            : EryphConstants.OverlaySwitchName;
     }
 }

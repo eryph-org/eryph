@@ -14,10 +14,10 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
 {
-    public class Create : NewOperationRequestEndpoint<UpdateProjectNetworksRequest, StateDb.Model.Project>
+    public class Update : NewOperationRequestEndpoint<UpdateProjectNetworksRequest, StateDb.Model.Project>
     {
 
-        public Create([NotNull] ICreateEntityRequestHandler<StateDb.Model.Project> operationHandler) : base(operationHandler)
+        public Update([NotNull] ICreateEntityRequestHandler<StateDb.Model.Project> operationHandler) : base(operationHandler)
         {
         }
 

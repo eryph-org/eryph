@@ -68,7 +68,7 @@ public class NetworkProviderManager : INetworkProviderManager
     {
         return Prelude.TryAsync(async () =>
             {
-                var path = Path.Combine(Config.GetConfigPath("hostagent"), "networks");
+                var path = ZeroConfig.GetNetworksConfigPath();
                 Config.EnsurePath(path);
 
                 var configFilePath = Path.Combine(path, "p_networks.yml");

@@ -29,7 +29,8 @@ internal class HostInventory
             select new VMHostMachineData
             {
                 Name = Environment.MachineName,
-                HardwareId = GetHostUuid() ?? GetHostMachineGuid()
+                HardwareId = GetHostUuid() ?? GetHostMachineGuid(),
+                NetworkProviderConfiguration = providerConfig
             }).ToEither();
 
         return res;

@@ -290,13 +290,13 @@ namespace Eryph.Modules.VmHostAgent.Test
                         Enabled = true,
                         Id = Guid.NewGuid().ToString(),
                         SwitchId = switchId,
-                        SwitchName = "eryph_overlay"
+                        SwitchName = EryphConstants.OverlaySwitchName
                     }
                 }.ToSeq(),
                 new[]{new VMSwitch
                 {
                     Id = switchId,
-                    Name = "eryph_overlay",
+                    Name = EryphConstants.OverlaySwitchName,
                     NetAdapterInterfaceGuid = null
                 }}.ToSeq(),
                 new[]
@@ -341,7 +341,7 @@ namespace Eryph.Modules.VmHostAgent.Test
                 .Returns(realConfigManager.ParseConfigurationYaml);
 
             var overlaySwitch = hostState.VMSwitches
-                .FirstOrDefault(x => x.Name == "eryph_overlay");
+                .FirstOrDefault(x => x.Name == EryphConstants.OverlaySwitchName);
 
             if (overlaySwitch != null)
             {

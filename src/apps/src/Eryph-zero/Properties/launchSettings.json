@@ -10,7 +10,7 @@
     },
     "network update": {
       "commandName": "Project",
-      "commandLineArgs": "networks get",
+      "commandLineArgs": "networks",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },

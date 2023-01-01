@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.OVN;
+using Eryph.Core;
 using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
@@ -76,7 +77,7 @@ internal class SyncPortOVSPortsEventHandler : IHandleMessages<VirtualMachineStat
         var getNetworkAdapters = Prelude.fun(
             (TypedPsObject<object> vm) => NetworkAdapterQuery.GetNetworkAdapters(vm, _engine).ToAsync()
                 .Map(r => r
-                    .Where(a => a.Value.SwitchName == "eryph_overlay")
+                    .Where(a => a.Value.SwitchName == EryphConstants.OverlaySwitchName)
                     .Select(a => a.Value))
         );
 

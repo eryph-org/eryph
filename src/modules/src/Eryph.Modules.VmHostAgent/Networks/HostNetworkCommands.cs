@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
@@ -140,7 +141,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
     public Aff<RT,Unit> CreateOverlaySwitch(IEnumerable<string> adapters)
     {
         var createSwitchCommand = PsCommandBuilder.Create().AddCommand("new-VMSwitch")
-            .AddParameter("Name", "eryph_overlay");
+            .AddParameter("Name", EryphConstants.OverlaySwitchName);
 
         var enumerable = adapters as string[] ?? adapters.ToArray();
         var createTeam = () => Aff<Unit>.Success(Unit.Default);
@@ -155,14 +156,14 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                     createTeam = () => ps.RunAsync(
                             PsCommandBuilder.Create()
                                 .AddCommand("New-NetSwitchTeam")
-                                .AddParameter("Name", "eryph_overlay")
+                                .AddParameter("Name", EryphConstants.OverlaySwitchName)
                                 .AddParameter("TeamMembers", enumerable)
 
                             )
                         .ToAsync()
                         .ToAff(l => Error.New(l.Message));
 
-                    adapterName = "eryph_overlay";
+                    adapterName = EryphConstants.OverlaySwitchName;
                 }
                 else
                     adapterName = enumerable[0];
@@ -221,7 +222,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                                 None: () => ps.GetObjectsAsync<HostNetworkAdapter>(
                                         PsCommandBuilder.Create()
                                             .AddCommand("Get-NetSwitchTeamMember")
-                                            .AddParameter("Team", "eryph_overlay"))
+                                            .AddParameter("Team", EryphConstants.OverlaySwitchName))
                                     .ToAff()
                                     .Map(members =>
                                     {
@@ -238,11 +239,11 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from psEngine in default(RT).Powershell.ToAff()
         from uSwitch in psEngine.RunAsync(PsCommandBuilder.Create()
             .AddCommand("Remove-VMSwitch")
-            .AddParameter("Name", "eryph_overlay")
+            .AddParameter("Name", EryphConstants.OverlaySwitchName)
             .AddParameter("Force")).ToAff()
         from uTeam in psEngine.RunAsync(PsCommandBuilder.Create()
                 .AddCommand("Remove-NetSwitchTeam")
-                .AddParameter("Name", "eryph_overlay")
+                .AddParameter("Name", EryphConstants.OverlaySwitchName)
                 .AddParameter("ErrorAction", "SilentlyContinue"))
             .ToAff()
         select Unit.Default;
