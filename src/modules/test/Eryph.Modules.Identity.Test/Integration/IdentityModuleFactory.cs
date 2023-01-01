@@ -1,8 +1,12 @@
 using System.Collections.Generic;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.Hosuto.Modules.Testing;
+using Dbosoft.IdentityServer.EfCore.Storage.DbContexts;
+using Eryph.IdentityDb;
 using Eryph.ModuleCore;
+using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
+using Microsoft.EntityFrameworkCore.Storage;
 using Moq;
 using SimpleInjector;
 
@@ -21,26 +25,18 @@ namespace Eryph.Modules.Identity.Test.Integration
 
             var endpoints = new Dictionary<string, string>
             {
-                {"identity", "http://localhost/identity"},
-                {"compute", "http://localhost/compute"},
-                {"common", "http://localhost/common"},
+                {"identity", "https://localhost/identity"},
+                {"compute", "https://localhost/compute"},
+                {"common", "https://localhost/common"},
             };
 
             _container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
+            _container.RegisterSingleton<ISigningCertificateManager, TestCertificateManager>();
 
-            var cryptoIOMock = new Mock<ICryptoIOServices>();
-            _container.RegisterInstance(cryptoIOMock.Object);
-
-            var certStoreMock = new Mock<ICertificateStoreService>();
-            _container.RegisterInstance(certStoreMock.Object);
-
-            var cerGenMock = new Mock<ICertificateGenerator>();
-            _container.RegisterInstance(cerGenMock.Object);
-
-            //_container.RegisterInstance(new InMemoryDatabaseRoot());
-            //_container
-            //    .Register<IDbContextConfigurer<ConfigurationDbContext>, InMemoryConfigurationStoreContextConfigurer>();
+            _container.RegisterInstance(new InMemoryDatabaseRoot());
+            _container
+                .Register<IDbContextConfigurer<ConfigurationDbContext>, InMemoryConfigurationStoreContextConfigurer>();
 
             return moduleHostBuilder;
         }

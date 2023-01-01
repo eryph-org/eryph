@@ -52,6 +52,8 @@ namespace Eryph.Modules.Controller
 
             container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
             container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
+            container.Register<INetworkConfigValidator, NetworkConfigValidator>(Lifestyle.Scoped);
+            container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
 
 
             container.RegisterSingleton(() => new Id64Generator());

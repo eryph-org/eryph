@@ -82,7 +82,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.VmHostAgent.T
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowershellStandalone", "test\PowershellStandalone\PowershellStandalone.csproj", "{31FBB6DD-0FB1-472A-AC71-B16DE5B3C8DC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.CommonApi.Tests", "src\modules\test\Eryph.Modules.CommonApi.Tests\Eryph.Modules.CommonApi.Tests.csproj", "{036EC2BD-8968-46D4-9FFD-901F3BB1FA70}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.ComputeApi.Tests", "src\modules\test\Eryph.Modules.ComputeApi.Tests\Eryph.Modules.ComputeApi.Tests.csproj", "{036EC2BD-8968-46D4-9FFD-901F3BB1FA70}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

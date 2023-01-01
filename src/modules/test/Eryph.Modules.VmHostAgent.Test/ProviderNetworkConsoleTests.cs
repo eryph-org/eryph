@@ -360,6 +360,8 @@ namespace Eryph.Modules.VmHostAgent.Test
                 .Returns(Prelude.SuccessAff(hostState.VMSwitches));
             hostCommandsMock.Setup(x => x.GetPhysicalAdapters())
                 .Returns(Prelude.SuccessAff(hostState.NetAdapters));
+            hostCommandsMock.Setup(x => x.GetAdapterNames())
+                .Returns(Prelude.SuccessAff(hostState.NetAdapters.Select(x=>x.Name)));
             hostCommandsMock.Setup(x => x.FindOverlaySwitch(
                     It.IsAny<Seq<VMSwitch>>(),
                     It.IsAny<Seq<VMSwitchExtension>>(),
@@ -376,6 +378,13 @@ namespace Eryph.Modules.VmHostAgent.Test
 
             ovsControlMock.Setup(x => x.GetOVSTable(It.IsAny<CancellationToken>()))
                 .Returns(new OVSTableRecord());
+
+            ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
+                .Returns(hostState.OVSBridges);
+
+            ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
+                .Returns(hostState.OvsBridgePorts);
+
 
             ovsControlMock.Setup(x => x.AddBridge("br-nat",
                     It.IsAny<CancellationToken>()))

@@ -11,7 +11,7 @@ using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Eryph.Modules.Identity.Services
 {
-    public class SigningCertificateManager
+    public class SigningCertificateManager : ISigningCertificateManager
     {
         private readonly ICertificateGenerator _certificateGenerator;
         private readonly ICryptoIOServices _cryptoIOServices;

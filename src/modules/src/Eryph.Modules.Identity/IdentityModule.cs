@@ -56,11 +56,7 @@ namespace Eryph.Modules.Identity
         {
             var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
             var authority = endpointResolver.GetEndpoint("identity").ToString();
-
-            var signingCertManager = new SigningCertificateManager(
-                serviceProvider.GetRequiredService<ICryptoIOServices>(),
-                serviceProvider.GetRequiredService<ICertificateStoreService>(),
-                serviceProvider.GetRequiredService<ICertificateGenerator>());
+            var signingCertManager = serviceProvider.GetRequiredService<ISigningCertificateManager>();
 
             var signingCert = signingCertManager.GetSigningCertificate(_configuration["privateConfigPath"])
                 .GetAwaiter().GetResult();
@@ -78,6 +74,7 @@ namespace Eryph.Modules.Identity
                     //options.Events.RaiseInformationEvents = true;
                 })
                 .AddJwtBearerClientAuthentication()
+                .AddDeveloperSigningCredential()
                 .AddSigningCredential(signingCert)
                 .AddConfigurationStore(options =>
                 {
