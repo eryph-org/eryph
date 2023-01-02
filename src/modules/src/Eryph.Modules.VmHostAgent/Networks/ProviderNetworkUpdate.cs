@@ -70,8 +70,7 @@ public static class ProviderNetworkUpdate<RT>
     public static bool canBeAutoApplied(NetworkChanges<RT> changes) =>
        ! changes.Operations.Select(x => x.Operation)
             .Any(x => UnsafeChanges.Contains(x));
-            
-
+    
     public static Aff<RT, NetworkChanges<RT>> generateChanges(
         HostState hostState,
         NetworkProvidersConfiguration newConfig) =>

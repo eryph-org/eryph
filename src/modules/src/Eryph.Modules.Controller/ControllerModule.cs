@@ -54,7 +54,7 @@ namespace Eryph.Modules.Controller
             container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
             container.Register<INetworkConfigValidator, NetworkConfigValidator>(Lifestyle.Scoped);
             container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
-
+            container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
             container.RegisterSingleton(() => new Id64Generator());
             container.Register<IOperationTaskDispatcher, OperationTaskDispatcher>();

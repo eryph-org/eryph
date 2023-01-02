@@ -11,7 +11,7 @@ public interface INetworkConfigValidator
 
     IAsyncEnumerable<string> ValidateChanges(Guid projectId,
         ProjectNetworksConfig config,
-        NetworkProvidersConfiguration providerConfig);
+        NetworkProvider[] networkProviders);
 
-    IEnumerable<string> ValidateConfig(ProjectNetworksConfig config, NetworkProvidersConfiguration providerConfig);
+    IEnumerable<string> ValidateConfig(ProjectNetworksConfig config, NetworkProvider[] networkProviders);
 }

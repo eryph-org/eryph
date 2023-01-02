@@ -511,10 +511,12 @@ internal static class Program
                   from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
                   select r
             from newConfigChanges in generateChanges(syncResult.HostState, newConfig)
+            from validateImpact in validateNetworkImpact(newConfig)
             from _ in applyChangesInConsole(currentConfig, newConfigChanges,
                 nonInteractive, syncResult.IsValid)
 
             from save in saveConfigurationYaml(configString)
+            from sync in syncNetworks()
             from m in writeLine("New Network configuration was imported.")
             select Unit.Default)
 

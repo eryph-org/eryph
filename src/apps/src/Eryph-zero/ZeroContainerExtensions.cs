@@ -1,4 +1,5 @@
-﻿using Dbosoft.OVN;
+﻿using System.Reflection;
+using Dbosoft.OVN;
 using Eryph.Core;
 using Eryph.Rebus;
 using Eryph.Runtime.Zero.Configuration.Networks;
@@ -32,7 +33,7 @@ namespace Eryph.Runtime.Zero
             container.Register<IOVNSettings, LocalOVSWithOVNSettings>();
             container.Register<ISysEnvironment, SystemEnvironment>();
             container.Register<INetworkProviderManager, NetworkProviderManager>();
-
+            container.RegisterSingleton<INetworkSyncService, NetworkSyncServiceBridgeService>();
         }
 
         public static Container UseInMemoryBus(this Container container)

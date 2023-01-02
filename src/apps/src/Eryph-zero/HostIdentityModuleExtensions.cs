@@ -27,7 +27,7 @@ namespace Eryph.Runtime.Zero
 
             container.RegisterSingleton<IConfigReaderService<ClientConfigModel>, ClientConfigReaderService>();
             container.RegisterSingleton<IConfigWriterService<ClientConfigModel>, ClientConfigWriterService>();
-            container.RegisterSingleton<ISigningCertificateManager, SigningCertificateManager>();
+            container.Register<ISigningCertificateManager, SigningCertificateManager>();
 
             container
                 .Register<IDbContextConfigurer<ConfigurationDbContext>, InMemoryConfigurationStoreContextConfigurer>();

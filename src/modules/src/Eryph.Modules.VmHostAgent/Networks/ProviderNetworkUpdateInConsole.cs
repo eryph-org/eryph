@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Serialization;
+using System.Threading;
 using Eryph.Core.Network;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using LanguageExt;
@@ -175,6 +176,36 @@ public static class ProviderNetworkUpdateInConsole<RT>
             select (isValid, newHostState);
 
 
+    }
+
+    public static Aff<RT, Unit> syncNetworks()
+    {
+        return from m1 in Console<RT>.writeLine("Syncing project networks. This could take a while.")
+            from sync in default(RT).AgentSync
+                .Bind(agent => agent.SendSyncCommand("REBUILD_NETWORKS", CancellationToken.None))
+            select Unit.Default;
+    }
+
+    public static Aff<RT, Unit> validateNetworkImpact(NetworkProvidersConfiguration newConfig)
+    {
+        return default(RT).AgentSync.Bind(agentSync =>
+        {
+            var cancelSource = new CancellationTokenSource(10000);
+            return agentSync.ValidateChanges(newConfig.NetworkProviders, cancelSource.Token)
+                .Bind(messages =>
+                {
+                    if(messages.Length == 0) return Prelude.unitEff;
+
+                    return
+                        from m1 in Console<RT>.writeEmptyLine
+                        from m2 in Console<RT>.writeLine("Active network settings are incompatible with new configuration:")
+
+                        from ml in messages.Map(m => Console<RT>.writeLine($" - {m}")).Traverse(l => l)
+                            .Bind(_ => Prelude.FailEff<Unit>(
+                                Error.New("Incompatible network settings detected")))
+                        select Unit.Default;
+                });
+        });
     }
 
     public static Aff<RT, Unit> applyChangesInConsole(

@@ -2,8 +2,11 @@
 using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core;
+using Eryph.Core.Network;
 using Eryph.ModuleCore;
 using LanguageExt;
 using Microsoft.Extensions.Hosting;
@@ -11,15 +14,29 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.VmHostAgent;
 
+internal class SyncServiceCommand
+{
+    public string CommandName { get; set; }
+    public JsonElement? Data { get; set; }
+}
+
+internal class SyncServiceResponse
+{
+    public string Response { get; set; }
+    public JsonElement? Data { get; set; }
+}
+
 internal class SyncService : BackgroundService
 {
     private readonly ILogger _logger;
     private readonly IAgentControlService _controlService;
-
-    public SyncService(ILogger<SyncService> logger, IAgentControlService controlService)
+    private readonly INetworkSyncService _networkSyncService;
+    public SyncService(ILogger<SyncService> logger, 
+        IAgentControlService controlService, INetworkSyncService networkSyncService)
     {
         _logger = logger;
         _controlService = controlService;
+        _networkSyncService = networkSyncService;
     }
 
 
@@ -45,18 +62,19 @@ internal class SyncService : BackgroundService
                 var ss = new StreamString(pipeServer);
 
 
-                var command = await ss.ReadString(stoppingToken);
+                var commandString= await ss.ReadString(stoppingToken);
+                var command = JsonSerializer.Deserialize<SyncServiceCommand>(commandString);
 
                 var hasPermission = false;
                 var commandValid = true;
-                switch (command)
+                switch (command?.CommandName)
                 {
                     case "STATUS":
                     {
                         hasPermission = true;
                         break;
                     }
-                    case "RECREATE_PORTS": break;
+                    case "VALIDATE_CHANGES": break;
                     case "REBUILD_NETWORKS": break;
                     case "STOP_OVN": break;
                     case "START_OVN": break;
@@ -79,16 +97,16 @@ internal class SyncService : BackgroundService
                 }
 
                 if (!commandValid)
-                    await ss.WriteString("INVALID", stoppingToken);
+                    await ss.WriteResponse(new SyncServiceResponse{Response = "INVALID"}, stoppingToken);
                 else
                 {
                     if (hasPermission)
                     {
                         var response = await RunCommand(command);
-                        await ss.WriteString(response, stoppingToken);
+                        await ss.WriteResponse(response, stoppingToken);
                     }
                     else
-                        await ss.WriteString("PERMISSION_DENIED", stoppingToken);
+                        await ss.WriteResponse(new SyncServiceResponse { Response = "PERMISSION_DENIED" }, stoppingToken);
                 }
 
                 pipeServer.WaitForPipeDrain();
@@ -112,15 +130,35 @@ internal class SyncService : BackgroundService
         }
     }
 
-    private async Task<string> RunCommand(string command)
+    private async Task<SyncServiceResponse> RunCommand(SyncServiceCommand command)
     {
         AgentService service;
         AgentServiceOperation operation;
-        switch (command)
+        switch (command.CommandName)
         {
-            case "STATUS": return "RUNNING";
-            case "RECREATE_PORTS": return "DONE";
-            case "REBUILD_NETWORKS": return "DONE";
+            case "STATUS": return new SyncServiceResponse
+            {
+                Response = "DONE", Data = JsonSerializer.SerializeToElement(true)
+            };
+            case "VALIDATE_CHANGES":
+                var networkProviders = command.Data.HasValue 
+                    ? command.Data.Value.Deserialize<NetworkProvider[]>()
+                    : Array.Empty<NetworkProvider>();
+                return await _networkSyncService.ValidateChanges(networkProviders)
+                    .Match(r =>
+                        {
+                            return new SyncServiceResponse
+                            {
+                                Response = "DONE",
+                                Data = JsonSerializer.SerializeToElement(r)
+                            };
+                        },
+                        _ => new SyncServiceResponse{ Response = "FAILED"});
+            case "REBUILD_NETWORKS":
+                return new SyncServiceResponse {
+                Response = await _networkSyncService.SyncNetworks(CancellationToken.None)
+                        .Match(r => "DONE",
+                            _ => "FAILED")};
             case "STOP_OVN":
                 service = AgentService.OVNController;
                 operation = AgentServiceOperation.Stop;
@@ -129,13 +167,13 @@ internal class SyncService : BackgroundService
                 service = AgentService.OVNController;
                 operation = AgentServiceOperation.Start;
                 break;
-            default: return "INVALID";
+            default: return new SyncServiceResponse { Response = "INVALID" };
         }
 
         var succeeded = await _controlService.SendControlEvent(
             service, operation, CancellationToken.None);
 
-        return succeeded ? "DONE" : "FAILED";
+        return new SyncServiceResponse { Response = succeeded ? "DONE" : "FAILED" };
 
     }
 

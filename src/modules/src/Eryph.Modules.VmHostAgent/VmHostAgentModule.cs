@@ -74,7 +74,7 @@ namespace Eryph.Modules.VmHostAgent
             container.Register<ISyncClient, SyncClient>();
             container.Register<IHostNetworkCommands<AgentRuntime>, HostNetworkCommands<AgentRuntime>>();
             container.Register<IOVSControl, OVSControl>();
-
+            container.RegisterInstance(serviceProvider.GetRequiredService<INetworkSyncService>());
 
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
             container.RegisterSingleton<IAgentControlService, AgentControlService>();

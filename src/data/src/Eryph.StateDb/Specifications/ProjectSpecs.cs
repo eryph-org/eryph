@@ -52,7 +52,9 @@ public static class ProjectSpecs
                     roles.Contains(y.RoleId) && y.AccessRight >= requiredAccess));
         }
 
-
+        public GetAll()
+        {
+        }
     }
 
 }

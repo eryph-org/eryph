@@ -76,10 +76,10 @@ namespace Eryph.Modules.Controller.Networks
                         return new NetworkProvidersConfiguration();
                     });
 
-            var messages = _validator.ValidateConfig(Data.Config,providerConfig).ToArray();
+            var messages = _validator.ValidateConfig(Data.Config,providerConfig.NetworkProviders).ToArray();
 
             if (messages.Length == 0) 
-                messages = await AsyncToArray(_validator.ValidateChanges(project.Id, Data.Config, providerConfig));
+                messages = await AsyncToArray(_validator.ValidateChanges(project.Id, Data.Config, providerConfig.NetworkProviders));
 
             if (messages.Length == 0)
             {

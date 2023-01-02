@@ -65,7 +65,7 @@ namespace Eryph.Modules.Controller.Networks
 
         public async IAsyncEnumerable<string> ValidateChanges(Guid projectId,
             ProjectNetworksConfig config,
-            NetworkProvidersConfiguration providerConfig)
+            NetworkProvider[] networkProviders)
         {
             var savedNetworks = await _stateStore
                 .For<VirtualNetwork>()
@@ -100,7 +100,7 @@ namespace Eryph.Modules.Controller.Networks
                 var providerSubnet = networkConfig.Provider?.Subnet ?? "default";
                 var providerIpPool = networkConfig.Provider?.IpPool ?? "default";
 
-                var networkProvider = providerConfig.NetworkProviders.First(x => x.Name == providerName);
+                var networkProvider = networkProviders.First(x => x.Name == providerName);
                 if (networkProvider.Type == NetworkProviderType.Flat) continue;
 
                 var countOfCatletPorts = network.NetworkPorts.Count(x => x is CatletNetworkPort);
@@ -214,7 +214,7 @@ namespace Eryph.Modules.Controller.Networks
             }
         }
 
-        public IEnumerable<string> ValidateConfig(ProjectNetworksConfig config, NetworkProvidersConfiguration providerConfig)
+        public IEnumerable<string> ValidateConfig(ProjectNetworksConfig config, NetworkProvider[] networkProviders)
         {
             var ipNetworksOfNetworks =
                 config.Networks.Select(x =>
@@ -233,7 +233,7 @@ namespace Eryph.Modules.Controller.Networks
                 var providerSubnetName = networkConfig.Provider?.Subnet ?? "default";
                 var providerIpPoolName = networkConfig.Provider?.IpPool ?? "default";
 
-                var networkProvider = providerConfig.NetworkProviders.FirstOrDefault(x => x.Name == providerName);
+                var networkProvider = networkProviders.FirstOrDefault(x => x.Name == providerName);
 
                 if (networkProvider == null)
                 {
@@ -248,8 +248,9 @@ namespace Eryph.Modules.Controller.Networks
                         yield return $"network '{networkConfig.Name}': provider subnets and ip pools are not supported for flat networks.";
                     }
 
-                    if (networkConfig.Subnets.Length > 0)
-                        yield return $"network '{networkConfig.Name}': subnet config not supported for flat networks.";
+                    //do not check - subnets will be removed silently
+                    //if (networkConfig.Subnets.Length > 0)
+                    //    yield return $"network '{networkConfig.Name}': subnet config not supported for flat networks.";
 
                 }
                 else
