@@ -5,9 +5,7 @@ using Dbosoft.IdentityServer.EfCore.Storage.DbContexts;
 using Eryph.IdentityDb;
 using Eryph.ModuleCore;
 using Eryph.Modules.Identity.Services;
-using Eryph.Security.Cryptography;
 using Microsoft.EntityFrameworkCore.Storage;
-using Moq;
 using SimpleInjector;
 
 namespace Eryph.Modules.Identity.Test.Integration

@@ -17,7 +17,7 @@ public class IdentityModuleNoAuthFactory : IdentityModuleFactory
         base.ConfigureWebHost(builder);
         builder.ConfigureTestServices(services =>
         {
-            ServiceCollectionServiceExtensions.AddSingleton<IAuthorizationHandler, AllowAnonymous>(services);
+            services.AddSingleton<IAuthorizationHandler, AllowAnonymous>();
         });
     }
 

@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVN;
-using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.ModuleCore.Networks;
@@ -40,16 +39,23 @@ internal class NetworkSyncService : INetworkSyncService
             var realizer = scope.GetInstance<INetworkConfigRealizer>();
             var stateStore = scope.GetInstance<IStateStore>();
 
-            var projects = await stateStore.Read<Project>().ListAsync(new ProjectSpecs.GetAll());
+            var projects = await stateStore.Read<Project>().ListAsync(new ProjectSpecs.GetAll(), cancellationToken);
 
             foreach (var project in projects)
             {
-
-                var networks = await stateStore.For<VirtualNetwork>()
+                try
+                {
+                    var networks = await stateStore.For<VirtualNetwork>()
                     .ListAsync(new VirtualNetworkSpecs.GetForProjectConfig(project.Id), cancellationToken);
 
-                var projectConfig = networks.ToNetworksConfig(project.Name);
-                await realizer.UpdateNetwork(project.Id, projectConfig, providersConfiguration);
+                    var projectConfig = networks.ToNetworksConfig(project.Name);
+                    await realizer.UpdateNetwork(project.Id, projectConfig, providersConfiguration);
+                    await stateStore.SaveChangesAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError(ex, "Failed to save network changes for project {projectId} ({projectName})", project.Id, project.Name);
+                }
 
             }
 
@@ -151,8 +157,12 @@ internal class NetworkSyncService : INetworkSyncService
             var res = await UpdateProjectNetworkPlan(projects.Id);
             await stateStore.For<ProviderSubnet>().SaveChangesAsync(cancellationToken);
 
-            res.IfLeft(l => _log.LogError(
-                "Failed to apply network plans: {message}", l.Message));
+            res.IfLeft(l =>
+            {
+                _log.LogError(
+                    "Failed to apply network plans: {message}", l.Message);
+                _log.LogDebug("Failed to apply network plans: {error}", l);
+            });
 
             return Unit.Default;
         }
@@ -191,8 +201,12 @@ internal class NetworkSyncService : INetworkSyncService
 
             var changeMessages = new List<string>();
 
+
             foreach (var project in projects)
             {
+                var tenantMsg = project.TenantId != EryphConstants.DefaultTenantId
+                    ? $"tenant '{project.TenantId}', "
+                    : "";
 
                 var networks = await stateStore.For<VirtualNetwork>()
                     .ListAsync(new VirtualNetworkSpecs.GetForProjectConfig(project.Id));
@@ -201,7 +215,7 @@ internal class NetworkSyncService : INetworkSyncService
                 projectConfig = validationService.NormalizeConfig(projectConfig);
 
                 var messages = validationService.ValidateConfig(projectConfig, networkProviders)
-                    .Select(msg => $"project {project.Name}: {msg}").ToArray();
+                    .Select(msg => $"{tenantMsg}project '{project.Name}' - {msg}").ToArray();
 
                 changeMessages.AddRange(messages);
 
@@ -209,7 +223,7 @@ internal class NetworkSyncService : INetworkSyncService
                 await foreach (var message in validationService.ValidateChanges(project.Id, projectConfig,
                                    networkProviders))
                 {
-                    changeMessages.Add($"project {project.Name}: {message}");
+                    changeMessages.Add($"{tenantMsg}project '{project.Name}': '{message}'");
                 }
 
             }

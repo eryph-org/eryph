@@ -195,14 +195,13 @@ public static class ProviderNetworkUpdateInConsole<RT>
                 .Bind(messages =>
                 {
                     if(messages.Length == 0) return Prelude.unitEff;
-
+                    
                     return
                         from m1 in Console<RT>.writeEmptyLine
                         from m2 in Console<RT>.writeLine("Active network settings are incompatible with new configuration:")
-
                         from ml in messages.Map(m => Console<RT>.writeLine($" - {m}")).Traverse(l => l)
-                            .Bind(_ => Prelude.FailEff<Unit>(
-                                Error.New("Incompatible network settings detected")))
+                        from m3 in Console<RT>.writeEmptyLine
+                        from error in Prelude.FailEff<Unit>(Error.New("Incompatible network settings detected. You have to remove these settings before applying the new configuration."))
                         select Unit.Default;
                 });
         });

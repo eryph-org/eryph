@@ -49,7 +49,7 @@ namespace Eryph.ModuleCore.Networks
                                 }).ToArray() : null
 
                             };
-                        }).ToArray() : null
+                        }).ToArray() : Array.Empty<NetworkSubnetConfig>()
 
                     };
 

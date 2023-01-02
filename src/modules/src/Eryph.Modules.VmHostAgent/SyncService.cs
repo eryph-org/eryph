@@ -24,6 +24,7 @@ internal class SyncServiceResponse
 {
     public string Response { get; set; }
     public JsonElement? Data { get; set; }
+    public string Error { get; set; }
 }
 
 internal class SyncService : BackgroundService
@@ -145,20 +146,25 @@ internal class SyncService : BackgroundService
                     ? command.Data.Value.Deserialize<NetworkProvider[]>()
                     : Array.Empty<NetworkProvider>();
                 return await _networkSyncService.ValidateChanges(networkProviders)
-                    .Match(r =>
+                    .Match(r => new SyncServiceResponse
                         {
-                            return new SyncServiceResponse
-                            {
-                                Response = "DONE",
-                                Data = JsonSerializer.SerializeToElement(r)
-                            };
+                            Response = "DONE",
+                            Data = JsonSerializer.SerializeToElement(r)
                         },
-                        _ => new SyncServiceResponse{ Response = "FAILED"});
+                        l =>
+                        {
+                            _logger.LogDebug("sync command VALIDATE_CHANGES failed, Error: {@error}", l);
+
+                            return new SyncServiceResponse { Response = "FAILED", Error = l.Message };
+                        });
             case "REBUILD_NETWORKS":
-                return new SyncServiceResponse {
-                Response = await _networkSyncService.SyncNetworks(CancellationToken.None)
-                        .Match(r => "DONE",
-                            _ => "FAILED")};
+                return await _networkSyncService.SyncNetworks(CancellationToken.None)
+                        .Match(r => new SyncServiceResponse { Response = "DONE" },
+                            l =>
+                            {
+                                _logger.LogDebug("sync command REBUILD_NETWORKS failed, Error: {@error}", l );
+                                return new SyncServiceResponse { Response = "FAILED", Error = l.Message };
+                            });
             case "STOP_OVN":
                 service = AgentService.OVNController;
                 operation = AgentServiceOperation.Stop;

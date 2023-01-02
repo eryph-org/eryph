@@ -189,7 +189,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
 
 
     private static NetworkPlan AddSubnetsAsDhcpOptions(NetworkPlan networkPlan, Seq<VirtualNetwork> networks) =>
-        (from network in networks
+        (from network in networks.Where(x=>x.RouterPort!=null && x.RouterPort.IpAssignments.Count > 0)
             let networkIp = network.RouterPort.IpAssignments.First()
          from subnet in network.Subnets
             let p1 = networkPlan.AddDHCPOptions(
@@ -246,9 +246,12 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
         return networks.Map(network =>
         {
             var ipNetwork = IPNetwork.Parse(network.IpNetwork);
+            if (network.RouterPort == null || network.RouterPort.IpAssignments?.Count == 0)
+                return networkPlan;
+
             return networkPlan.AddRouterPort(network.Id.ToString(),
                 $"project-{networkPlan.Id}", network.RouterPort.MacAddress, 
-                network.RouterPort.IpAssignments.First().IpAddress.Apply(IPAddress.Parse), ipNetwork);
+                network.RouterPort.IpAssignments!.First().IpAddress.Apply(IPAddress.Parse), ipNetwork);
         }).Apply(s => JoinPlans(s, networkPlan));
 
     }

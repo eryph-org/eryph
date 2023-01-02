@@ -38,7 +38,7 @@ namespace Eryph.Modules.VmHostAgent
                         command.MachineMetadata, command.MachineNetworkSettings, storageSettings));
 
             return
-                from hostInfo in _hostInfoProvider.GetHostInfoAsync().WriteTrace()
+                from hostInfo in _hostInfoProvider.GetHostInfoAsync(true).WriteTrace()
                 from vmList in GetVmInfo(vmId, Engine)
                 from vmInfo in EnsureSingleEntry(vmList, vmId)
                 from currentStorageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).WriteTrace()

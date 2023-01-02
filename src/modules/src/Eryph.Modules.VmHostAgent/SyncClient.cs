@@ -68,8 +68,8 @@ public class SyncClient : ISyncClient
 
             return responseObject?.Response switch
             {
-                "INVALID" => throw new InvalidOperationException($"Agent command {command} is invalid"),
-                "FAILED" => throw new InvalidOperationException($"Agent command {command} failed"),
+                "INVALID" => throw new InvalidOperationException($"Host agent command {command} is invalid"),
+                "FAILED" => throw new InvalidOperationException($"Host agent command {command} failed. Error: '{responseObject.Error??"unknown"}'"),
                 "PERMISSION_DENIED" => throw new UnauthorizedAccessException(),
                 _ => !(responseObject?.Data).HasValue
                     ? Option<TResponse>.None

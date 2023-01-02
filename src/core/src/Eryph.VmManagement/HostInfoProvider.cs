@@ -33,6 +33,8 @@ public class HostInfoProvider : IHostInfoProvider
                     return await _hostInventory.InventorizeHost().MapAsync(r =>
                     {
                         _cachedData = r;
+
+
                         return r;
                     });
 
