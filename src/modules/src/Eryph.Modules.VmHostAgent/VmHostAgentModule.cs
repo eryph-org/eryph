@@ -6,6 +6,7 @@ using Dbosoft.OVN.Nodes;
 using Eryph.Core;
 using Eryph.Messages;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Networks;
 using Eryph.Modules.VmHostAgent.Images;
 using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.Modules.VmHostAgent.Networks;
@@ -77,7 +78,7 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkSyncService>());
 
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
-            container.RegisterSingleton<IAgentControlService, AgentControlService>();
+            container.RegisterInstance(serviceProvider.GetRequiredService<IAgentControlService>());
 
             container.Register<StartBusModuleHandler>();
             container.RegisterSingleton<ITracer, Tracer>();
@@ -118,7 +119,7 @@ namespace Eryph.Modules.VmHostAgent
                     x.EnableSynchronousRequestReply();
                 })
                 .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>()?.Configure(s))
-                .Logging(x => x.Trace()).Start());
+                .Logging(x => x.Serilog()).Start());
         }
 
         private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()

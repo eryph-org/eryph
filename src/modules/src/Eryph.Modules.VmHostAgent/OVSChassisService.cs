@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
+using Eryph.ModuleCore.Networks;
 using Eryph.Modules.VmHostAgent.Networks;
 using LanguageExt;
 using Microsoft.Extensions.Hosting;
@@ -18,14 +19,16 @@ namespace Eryph.Modules.VmHostAgent;
 
 public class OVSChassisService : IHostedService
 {
+    private readonly ISysEnvironment _sysEnvironment;
     private readonly IAgentControlService _controlService;
     private readonly IOVSService<OVNChassisNode> _ovnChassisNode;
-    private readonly IOVSService<OVSDbNode> _ovsDBNode;
+    private readonly IOVSService<OVSDbNode> _ovsDbNode;
     private readonly IOVSService<OVSSwitchNode> _ovsVSwitchNode;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
     public OVSChassisService(
+        ISysEnvironment sysEnvironment,
         ILogger<OVSChassisService> logger,
         IAgentControlService controlService, 
         IOVSService<OVNChassisNode> ovnChassisNode, 
@@ -33,9 +36,10 @@ public class OVSChassisService : IHostedService
         IOVSService<OVSSwitchNode> ovsVSwitchNode, 
         IServiceProvider serviceProvider)
     {
+        _sysEnvironment = sysEnvironment;
         this._controlService = controlService;
         _ovnChassisNode = ovnChassisNode;
-        _ovsDBNode = ovsDbNode;
+        _ovsDbNode = ovsDbNode;
         _ovsVSwitchNode = ovsVSwitchNode;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -78,12 +82,46 @@ public class OVSChassisService : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _controlService.Register(this, OnControlEvent);
+        await _ovsDbNode.StartAsync(cancellationToken);
 
-        await _ovsDBNode.StartAsync(cancellationToken);
-        await _ovsVSwitchNode.StartAsync(cancellationToken);
-        await _ovnChassisNode.StartAsync(cancellationToken);
-
+        StartOnOwnThread();
         await UpdateNetworkProviders();
+
+    }
+
+    private void StartOnOwnThread()
+    {
+        Task.Factory.StartNew(async () =>
+        {
+            while (true)
+            {
+                try
+                {
+                    var extensionEnabled = _sysEnvironment.GetOvsExtensionManager().IsExtensionEnabled();
+
+                    if (!extensionEnabled)
+                    {
+                        await Task.Delay(2000);
+                        continue;
+                    }
+
+                    var cancelSource = new CancellationTokenSource(30000);
+                    await _ovsVSwitchNode.StartAsync(cancelSource.Token);
+                    cancelSource = new CancellationTokenSource(30000);
+                    await _ovnChassisNode.StartAsync(cancelSource.Token);
+
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogCritical(ex, "Failed to start ovs chassis");
+                }
+
+                break;
+            }
+        }, TaskCreationOptions.LongRunning);
+
+
+
 
     }
 
@@ -92,9 +130,9 @@ public class OVSChassisService : IHostedService
         _controlService.UnRegister(this);
 
         await Task.WhenAll(
-            StopWitchCatch(_ovnChassisNode,true, "Failed to stop OVN chassis node.", cancellationToken),
+            StopWitchCatch(_ovnChassisNode, true, "Failed to stop OVN chassis node.", cancellationToken),
             StopWitchCatch(_ovsVSwitchNode, false, "Failed to stop vswitch node.", cancellationToken),
-            StopWitchCatch(_ovsDBNode, false, "Failed to stop chassis db node.", cancellationToken)
+            StopWitchCatch(_ovsDbNode, false, "Failed to stop chassis db node.", cancellationToken)
 
         );
 

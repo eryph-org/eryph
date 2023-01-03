@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Networks;
 using LanguageExt;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

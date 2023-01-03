@@ -14,6 +14,7 @@ using Eryph.StateDb;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
@@ -98,7 +99,7 @@ namespace Eryph.Modules.Controller
                     s.EnforceExclusiveAccess();
                 })
                 .Subscriptions(s => serviceProvider.GetRequiredService<IRebusSubscriptionConfigurer>().Configure(s))
-                //.Logging(x => x.Trace())
+                .Logging(x => x.Serilog())
                 .Start());
                 
             

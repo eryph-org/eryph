@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
 using Dbosoft.OVN;
 using Eryph.Core;
+using Eryph.ModuleCore.Networks;
+using Eryph.Modules.VmHostAgent;
 using Eryph.Rebus;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Security.Cryptography;
@@ -34,6 +36,7 @@ namespace Eryph.Runtime.Zero
             container.Register<ISysEnvironment, SystemEnvironment>();
             container.Register<INetworkProviderManager, NetworkProviderManager>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncServiceBridgeService>();
+            container.RegisterSingleton<IAgentControlService, AgentControlService>();
         }
 
         public static Container UseInMemoryBus(this Container container)

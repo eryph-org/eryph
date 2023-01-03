@@ -42,6 +42,9 @@ using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<E
 using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using LanguageExt.Common;
+using Serilog.Exceptions;
+using Serilog.Templates;
+using Serilog.Templates.Themes;
 
 namespace Eryph.Runtime.Zero;
 
@@ -134,11 +137,16 @@ internal static class Program
                 "eryph", "zero", "logs", "debug.txt");
 
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Warning()
-                .WriteTo.File(logFilePath,
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console(new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff} {@l:u3}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}", theme: TemplateTheme.Literate))
+                .WriteTo.File(
+                    new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} {@l:u3}] [SourceContext] {#if ovsLogLevel is not null}[OVS {sender}:{ovsLogLevel}] {#end}{@m}\n{@x}"),
+                    logFilePath,
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 10,
                     retainedFileTimeLimit: TimeSpan.FromDays(30))
+                
                 .CreateLogger();
 
             try
@@ -247,15 +255,9 @@ internal static class Program
                         .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
                         .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
                             EventLogSettings, EventLogLoggerProvider>)
-                        .ConfigureLogging((context, logging) =>
-                        {
-                            logging.AddSerilog();
-                            // See: https://github.com/dotnet/runtime/issues/47303
-                            logging.AddConfiguration(
-                                context.Configuration.GetSection("Logging"));
-                        })
                         .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
-                        .Build();
+                        .UseSerilog(dispose: true)
+                    .Build();
 
                 //starting here all errors should be considered as recoverable
                 returnCode = -1;

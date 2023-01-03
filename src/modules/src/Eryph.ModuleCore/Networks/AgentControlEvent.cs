@@ -1,4 +1,4 @@
-﻿namespace Eryph.Modules.VmHostAgent;
+﻿namespace Eryph.ModuleCore.Networks;
 
 public record AgentControlEvent
 {
