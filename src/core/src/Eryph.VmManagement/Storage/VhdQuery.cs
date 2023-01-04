@@ -65,7 +65,8 @@ namespace Eryph.VmManagement.Storage
                                 Option<TypedPsObject<VhdInfo>> ActualVhd)>(eitherVhdInfo.LeftAsEnumerable()
                                 .FirstOrDefault());
 
-                    info = eitherVhdInfo.IfLeft(new TypedPsObject<VhdInfo>(null, (IPsObjectRegistry) engine));
+                    info = eitherVhdInfo.IfLeft(new TypedPsObject<VhdInfo>(null, 
+                        (IPsObjectRegistry) engine, engine.ObjectMapping));
 
 
                     if (string.Equals(Path.GetExtension(info.Value.Path), ".avhdx", StringComparison.OrdinalIgnoreCase))

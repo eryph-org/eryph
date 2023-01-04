@@ -45,6 +45,7 @@ using LanguageExt.Common;
 using Serilog.Exceptions;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
+using Serilog.Events;
 
 namespace Eryph.Runtime.Zero;
 
@@ -137,11 +138,12 @@ internal static class Program
                 "eryph", "zero", "logs", "debug.txt");
 
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
+                .MinimumLevel.Verbose()
                 .Enrich.FromLogContext()
-                .WriteTo.Console(new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff} {@l:u3}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}", theme: TemplateTheme.Literate))
+                .WriteTo.Console(new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff} {@l:u3}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}", theme: TemplateTheme.Literate),
+                    restrictedToMinimumLevel: LogEventLevel.Debug)
                 .WriteTo.File(
-                    new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} {@l:u3}] [SourceContext] {#if ovsLogLevel is not null}[OVS {sender}:{ovsLogLevel}] {#end}{@m}\n{@x}"),
+                    new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} {@l:u3}] [{SourceContext}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}"),
                     logFilePath,
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 10,

@@ -131,8 +131,8 @@ public class OVSChassisService : IHostedService
 
         await Task.WhenAll(
             StopWitchCatch(_ovnChassisNode, true, "Failed to stop OVN chassis node.", cancellationToken),
-            StopWitchCatch(_ovsVSwitchNode, false, "Failed to stop vswitch node.", cancellationToken),
-            StopWitchCatch(_ovsDbNode, false, "Failed to stop chassis db node.", cancellationToken)
+            DisconnectWitchCatch(_ovsVSwitchNode, "Failed to stop vswitch node."),
+            DisconnectWitchCatch(_ovsDbNode, "Failed to stop chassis db node.")
 
         );
 
@@ -144,6 +144,18 @@ public class OVSChassisService : IHostedService
         try
         {
             await service.StopAsync(ensureNodeStopped, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, errorMessage);
+        }
+    }
+
+    private async Task DisconnectWitchCatch<TNode>(IOVSService<TNode> service, string errorMessage) where TNode : IOVSNode
+    {
+        try
+        {
+            await service.DisconnectDemons();
         }
         catch (Exception ex)
         {

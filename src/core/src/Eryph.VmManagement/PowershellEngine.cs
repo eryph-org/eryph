@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Threading;
@@ -9,6 +10,7 @@ using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Microsoft.PowerShell;
 using Microsoft.PowerShell.Commands;
+using Microsoft.Win32;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
@@ -24,7 +26,7 @@ namespace Eryph.VmManagement
         public PowershellEngine(ILogger log)
         {
             _log = log;
-
+            ObjectMapping = new TypedPsObjectMapping(_log);
         }
 
 
@@ -63,7 +65,7 @@ namespace Eryph.VmManagement
             using var ps = CreateShell().GetAwaiter().GetResult();
             var input = builder.Build(ps);
             InitializeProgressReporting(ps, reportProgress);
-            return ps.GetObjects<T>(input, _log, this);
+            return ps.GetObjects<T>(input, _log, this, ObjectMapping);
         }
 
         public async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(
@@ -76,7 +78,7 @@ namespace Eryph.VmManagement
             var input = builder.Build(ps);
             InitializeAsyncProgressReporting(ps, reportProgress);
 
-            var res = await ps.GetObjectsAsync<T>(input, _log, this).ConfigureAwait(false);
+            var res = await ps.GetObjectsAsync<T>(input, _log, this, ObjectMapping).ConfigureAwait(false);
             
             return res;
         }
@@ -100,6 +102,8 @@ namespace Eryph.VmManagement
             return await ps.RunAsync(input, _log).ConfigureAwait(false);
         }
 
+        public TypedPsObjectMapping ObjectMapping { get; }
+
         public async Task<PowerShell> CreateShell()
         {
             await _semaphore.WaitAsync();
@@ -111,6 +115,12 @@ namespace Eryph.VmManagement
                     var iss = InitialSessionState.CreateDefault();
 
                     iss.ExecutionPolicy = ExecutionPolicy.RemoteSigned;
+
+                    if (IsWindows2016.Value)
+                    {
+                        var psDefaultParameterValues = new Hashtable { { "Import-Module:SkipEditionCheck", true } };
+                        iss.Variables.Add(new SessionStateVariableEntry("PSDefaultParameterValues", psDefaultParameterValues, ""));
+                    }
                     iss.ImportPSModule(new List<ModuleSpecification>(new []
                     {
                         new ModuleSpecification(new Hashtable(
@@ -174,6 +184,19 @@ namespace Eryph.VmManagement
             _createdObjects = _createdObjects.Add(new WeakReference<PSObject>(psObject));
         }
 
+
+        private static readonly Lazy<bool> IsWindows2016 = new(
+            () =>
+            {
+                // Weirdly, ProductName reg key is easiest way to distinguish Server 2016 and Server 2019.
+                // It's not exposed via things like System.Environment.OSVersion
+                // Example values: "Windows 10 Enterprise"  "Windows Server 2016 Datacenter"
+                string productName = (string)Registry.GetValue(
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion",
+                    valueName: "ProductName",
+                    defaultValue: null);
+                return productName?.Contains("Server 2016", StringComparison.OrdinalIgnoreCase) ?? false;
+            });
 
     }
 

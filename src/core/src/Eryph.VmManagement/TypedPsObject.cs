@@ -16,13 +16,15 @@ namespace Eryph.VmManagement
     public sealed record TypedPsObject<T> : ITypedPsObject
     {
         private readonly IPsObjectRegistry _registry;
+        private readonly TypedPsObjectMapping _mapping;
 
-        public TypedPsObject(PSObject psObject, IPsObjectRegistry registry )
+        public TypedPsObject(PSObject psObject, IPsObjectRegistry registry, TypedPsObjectMapping mapping )
         {
             _registry = registry;
+            _mapping = mapping;
             PsObject = psObject; 
             registry.AddPsObject(PsObject);
-            Value = TypedPsObjectMapping.Map<T>(psObject);
+            Value = mapping.Map<T>(psObject);
             TraceContext.Current.Write(TypedPsObjectTraceData.FromObject(this));
         }
 
@@ -41,12 +43,12 @@ namespace Eryph.VmManagement
 
         public TypedPsObject<T> Recreate()
         {
-            return new TypedPsObject<T>(PsObject, _registry);
+            return new TypedPsObject<T>(PsObject, _registry, _mapping);
         }
 
         public TypedPsObject<TNew> Cast<TNew>()
         {
-            return new TypedPsObject<TNew>(PsObject, _registry);
+            return new TypedPsObject<TNew>(PsObject, _registry, _mapping);
         }
 
         public TR Map<TR>(Func<T, TR> mapperFunc)
@@ -61,7 +63,7 @@ namespace Eryph.VmManagement
 
         public Either<PowershellFailure, TypedPsObject<TNew>> CastSafe<TNew>()
         {
-            return Prelude.Try(() => new TypedPsObject<TNew>(PsObject, _registry))
+            return Prelude.Try(() => new TypedPsObject<TNew>(PsObject, _registry, _mapping))
                 .ToEither(l => new PowershellFailure { Message = l.Message });
 
         }
@@ -78,7 +80,7 @@ namespace Eryph.VmManagement
             var propertyMemberInfo = paramType.GetMember((property.Body as MemberExpression)?.Member.Name)[0];
             var propertyValue = PsObject?.Properties[propertyMemberInfo.Name].Value;
 
-            return new TypedPsObject<TProp>(new PSObject(propertyValue), _registry);
+            return new TypedPsObject<TProp>(new PSObject(propertyValue), _registry, _mapping);
         }
 
         public Seq<TypedPsObject<TSub>> GetList<TSub>(
@@ -96,7 +98,7 @@ namespace Eryph.VmManagement
 
             return
                 Prelude.TryOption((PsObject?.Properties[property.Name].Value as IEnumerable)?.Cast<object>()
-                        .Map(x => new TypedPsObject<TSub>(new PSObject(x), _registry)))
+                        .Map(x => new TypedPsObject<TSub>(new PSObject(x), _registry,_mapping)))
                     .Match(
                         Fail: () => new TypedPsObject<TSub>[] { },
                         Some: x => x

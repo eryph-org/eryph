@@ -13,19 +13,21 @@ using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
+using SimpleInjector;
+using SimpleInjector.Lifestyles;
 
 namespace Eryph.Runtime.Zero.Configuration.Projects
 {
     [UsedImplicitly]
     internal class ProjectSeeder : IConfigSeeder<ControllerModule>
     {
-        private readonly IStateStore _stateStore;
+        private readonly Container _container;
         private readonly ILogger _logger;
         private readonly INetworkProviderManager _networkProviderManager;
 
-        public ProjectSeeder(IStateStore stateStore, ILogger logger, INetworkProviderManager networkProviderManager)
+        public ProjectSeeder(Container container, ILogger logger, INetworkProviderManager networkProviderManager)
         {
-            _stateStore = stateStore;
+            _container = container;
             _logger = logger;
             _networkProviderManager = networkProviderManager;
         }
@@ -34,16 +36,18 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
         {
             var tenantId = EryphConstants.DefaultTenantId;
             _logger.LogDebug("Entering state db project seeder");
+            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
+            var stateStore = scope.GetInstance<IStateStore>();
 
-            var tenant = await _stateStore.For<Tenant>().GetByIdAsync(tenantId, stoppingToken);
+            var tenant = await stateStore.For<Tenant>().GetByIdAsync(tenantId, stoppingToken);
 
             if (tenant == null)
             {
                 _logger.LogInformation("Default tenant '{tenantId}' not found in state db. Creating tenant record.", EryphConstants.DefaultTenantId);
                 
                 tenant = new Tenant { Id = tenantId };
-                await _stateStore.For<Tenant>().AddAsync(tenant, stoppingToken);
-                await _stateStore.For<Tenant>().SaveChangesAsync(stoppingToken);
+                await stateStore.For<Tenant>().AddAsync(tenant, stoppingToken);
+                await stateStore.For<Tenant>().SaveChangesAsync(stoppingToken);
             }
 
             var networkProvider = (await _networkProviderManager.GetCurrentConfiguration().IfLeft(_ =>
@@ -54,7 +58,7 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
                 ?? new NetworkProvider{ Name = "default" };
 
 
-            var project = await _stateStore.For<Project>().GetBySpecAsync(
+            var project = await stateStore.For<Project>().GetBySpecAsync(
                 new ProjectSpecs.GetByName(tenantId, "default")
                 , stoppingToken);
 
@@ -68,13 +72,13 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
                     Name = "default",
                     TenantId = tenantId
                 };
-                await _stateStore.For<Project>().AddAsync(project, stoppingToken);
+                await stateStore.For<Project>().AddAsync(project, stoppingToken);
             }
 
-            await _stateStore.For<Project>().SaveChangesAsync(stoppingToken);
+            await stateStore.For<Project>().SaveChangesAsync(stoppingToken);
             var projectId = project.Id;
 
-            var network = await _stateStore.For<VirtualNetwork>().GetBySpecAsync(
+            var network = await stateStore.For<VirtualNetwork>().GetBySpecAsync(
                 new VirtualNetworkSpecs.GetByName(projectId, "default")
                 , stoppingToken);
 
@@ -163,12 +167,12 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
                     };
                 }
 
-                await _stateStore.For<VirtualNetwork>().AddAsync(network, stoppingToken);
+                await stateStore.For<VirtualNetwork>().AddAsync(network, stoppingToken);
             }
 
             try
             {
-                await _stateStore.For<VirtualNetwork>().SaveChangesAsync(stoppingToken);
+                await stateStore.For<VirtualNetwork>().SaveChangesAsync(stoppingToken);
             }
             catch (Exception ex)
             {

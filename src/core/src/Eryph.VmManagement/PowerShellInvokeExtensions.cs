@@ -4,6 +4,7 @@ using System.Linq;
 using System.Management.Automation;
 using System.Threading.Tasks;
 using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.VmManagement;
@@ -11,13 +12,13 @@ namespace Eryph.VmManagement;
 internal static class PowerShellInvokeExtensions
 {
     public static Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(
-        this PowerShell ps, IEnumerable input,  ILogger log, IPsObjectRegistry registry)
+        this PowerShell ps, IEnumerable input,  ILogger log, IPsObjectRegistry registry, TypedPsObjectMapping mapping)
     {
-        return InvokeGetObjects(ps, ps.InvokeTyped<T>(input, registry), log);
+        return InvokeGetObjects(ps, ps.InvokeTyped<T>(input, registry, mapping), log);
     }
 
     public static async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(
-        this PowerShell ps, IEnumerable input, ILogger log, IPsObjectRegistry registry)
+        this PowerShell ps, IEnumerable input, ILogger log, IPsObjectRegistry registry, TypedPsObjectMapping mapping)
     {
         using var inputData = new PSDataCollection<PSObject>();
 
@@ -38,13 +39,15 @@ internal static class PowerShellInvokeExtensions
                     : ps.InvokeAsync(inputData);
             }).Try().ConfigureAwait(false);
 
-        var result = tryResult.Match<Either<PowershellFailure, Seq<TypedPsObject<T>>>>(
+        var result = tryResult.Match(
             Succ: s =>
             {
-                
-                var res = s.ToArray().Map(x => new TypedPsObject<T>(x, registry)).ToSeq();
-                s.Dispose();
-                return res;
+                return Prelude.Try( () =>
+                {
+                    var r = s.ToArray().Map(x => new TypedPsObject<T>(x, registry, mapping)).ToSeq();
+                    s.Dispose();
+                    return r;
+                }).ToEither(ex => new PowershellFailure{Message = ex.Message});
             },
             Fail: ex => ExceptionToPowershellFailure(ex, log));
 
@@ -134,12 +137,13 @@ internal static class PowerShellInvokeExtensions
         return result;
     }
 
-    public static Try<Seq<TypedPsObject<T>>> InvokeTyped<T>(this PowerShell ps, IEnumerable input, IPsObjectRegistry registry)
+    public static Try<Seq<TypedPsObject<T>>> InvokeTyped<T>(this PowerShell ps, IEnumerable input, 
+        IPsObjectRegistry registry, TypedPsObjectMapping mapping)
     {
         return Prelude.Try( () =>
         {
             var invoked =  ps.Invoke(input);
-            var typed = invoked.Map(x => new TypedPsObject<T>(x, registry)).ToSeq();
+            var typed = invoked.Map(x => new TypedPsObject<T>(x, registry, mapping)).ToSeq();
             
             return typed;
         });
