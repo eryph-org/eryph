@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Web.Services.Description;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
@@ -49,7 +50,6 @@ namespace Eryph.Modules.VmHostAgent
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
                 .AddPolicyHandler(GetRetryPolicy());
 
-            services.AddHostedHandler<StartBusModuleHandler>();
 
             services.AddSingleton(serviceProvider.GetRequiredService<ISysEnvironment>());
             services.AddSingleton(serviceProvider.GetRequiredService<IOVNSettings>());
@@ -61,12 +61,14 @@ namespace Eryph.Modules.VmHostAgent
         [UsedImplicitly]
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
-            options.AddHostedService<WmiWatcherModuleService>();
-            options.AddHostedService<ImageRequestWatcherService>();
             options.AddHostedService<SyncService>();
             options.AddHostedService<OVSChassisService>();
-
+            options.AddHostedService<WmiWatcherModuleService>();
+            options.AddHostedService<ImageRequestWatcherService>();
             options.AddLogging();
+
+            options.Services.AddHostedHandler<StartBusModuleHandler>();
+
         }
 
         [UsedImplicitly]

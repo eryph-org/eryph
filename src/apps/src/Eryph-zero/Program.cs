@@ -29,7 +29,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Configuration;
 using Microsoft.Extensions.Logging.EventLog;
@@ -42,10 +41,10 @@ using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<E
 using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using LanguageExt.Common;
-using Serilog.Exceptions;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
 using Serilog.Events;
+using Microsoft.Extensions.Hosting.WindowsServices;
 
 namespace Eryph.Runtime.Zero;
 
@@ -166,7 +165,7 @@ internal static class Program
                             SSLEndpointManager = sp.GetRequiredService<ISSLEndpointManager>(),
                             CryptoIO = sp.GetRequiredService<ICryptoIOServices>(),
                             CertificateGenerator = sp.GetRequiredService<ICertificateGenerator>(),
-
+                            OVSPackageDir = configuration["ovsPackagePath"]
                         };
                     });
 
@@ -209,23 +208,28 @@ internal static class Program
                         }
                     });
 
-                try
+
+                // do not check in service mode - during startup some features may be unavailable
+                if (!WindowsServiceHelpers.IsWindowsService())
                 {
-                    HostSettingsBuilder.GetHostSettings();
-                }
-                catch (ManagementException ex)
-                {
-                    if (ex.ErrorCode == ManagementStatus.InvalidNamespace)
+                    try
                     {
-                        await Console.Error.WriteAsync(
-                            "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
-                        return -10;
+                        HostSettingsBuilder.GetHostSettings();
+                    }
+                    catch (ManagementException ex)
+                    {
+                        if (ex.ErrorCode == ManagementStatus.InvalidNamespace)
+                        {
+                            await Console.Error.WriteAsync(
+                                "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
+                            return -10;
+                        }
                     }
                 }
 
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-                container.Bootstrap();
+                container.Bootstrap(startupConfig.OVSPackageDir);
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
                 var builder = ModulesHost.CreateDefaultBuilder(args) as ModulesHostBuilder;
@@ -249,11 +253,11 @@ internal static class Program
                                 { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
                             });
                         })
-                        .HostModule<ComputeApiModule>()
-                        .AddIdentityModule(container)
                         .HostModule<VmHostAgentModule>()
                         .HostModule<NetworkModule>()
                         .AddControllerModule(container)
+                        .HostModule<ComputeApiModule>()
+                        .AddIdentityModule(container)
                         .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
                         .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
                             EventLogSettings, EventLogLoggerProvider>)
@@ -290,7 +294,7 @@ internal static class Program
 
     private static T StartupConfiguration<T>(string[] args, Func<IServiceProvider, T> selectResult)
     {
-        using var configHost = new HostBuilder()
+        using var configHost = Host.CreateDefaultBuilder()
             .ConfigureAppConfiguration((hostingContext, config) =>
             {
                 var env = hostingContext.HostingEnvironment;
@@ -374,14 +378,7 @@ internal static class Program
                         }
 
                         CopyDirectory(parentDir, targetDir);
-
-#if DEBUG
-                        var dirName = Directory.GetDirectories(targetDir).FirstOrDefault();
-                        if (dirName != null && dirName != "bin")
-                        {
-                            Directory.Move(dirName, Path.Combine(targetDir, "bin"));
-                        }
-#endif
+                        
                         return Unit.Default;
                     }).ToEitherAsync();
 
@@ -393,6 +390,7 @@ internal static class Program
                     from uStopped in serviceExists
                         ? serviceManager.EnsureServiceStopped(cancelSource.Token)
                         : Unit.Default
+                    from _ in Prelude.Try(()=>OVSPackage.UnpackAndProvide(true)).ToEitherAsync()
                     from uCopy in CopyService()
                     from uInstalled in serviceExists
                         ? serviceManager.UpdateService($"{zeroExe} run", cancelSource.Token)
@@ -405,6 +403,7 @@ internal static class Program
                 if (Directory.Exists(backupDir))
                     Directory.Delete(backupDir, true);
 
+
                 return 0;
 
             }
@@ -413,9 +412,6 @@ internal static class Program
                 await Console.Error.WriteAsync(ex.Message);
 
                 //undo operation
-                if (backupCreated)
-                    Directory.Move(backupDir, targetDir);
-
 
                 var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
 
@@ -426,11 +422,19 @@ internal static class Program
                         : Unit.Default
                     from uCopy in Prelude.Try(() =>
                     {
-                        Directory.Move(backupDir, targetDir);
+                        if (backupCreated)
+                        {
+                            if (Directory.Exists(targetDir))
+                                Directory.Delete(targetDir, true);
+                            Directory.Move(backupDir, targetDir);
+                        }
                         return Unit.Default;
                     } ).ToEitherAsync()
 
-                    from uStarted in serviceManager.EnsureServiceStarted(cancelSource.Token)
+                    from serviceExists2 in serviceManager.ServiceExists()
+                    from uStarted in serviceExists2 
+                        ? serviceManager.EnsureServiceStarted(cancelSource.Token)
+                        : Unit.Default
                     select Unit.Default;
 
                 _ = await rollback.IfLeft(l =>
