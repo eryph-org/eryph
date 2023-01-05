@@ -82,7 +82,6 @@ jobs:
   - task: CopyFiles@2
     displayName: copy development ovs package to zero build
     inputs:
-      SourceFolder: '$(agent.builddirectory)'
       Contents: 'ovspackage.zip'
       TargetFolder: '$(Build.ArtifactStagingDirectory)\zero_build'
 
