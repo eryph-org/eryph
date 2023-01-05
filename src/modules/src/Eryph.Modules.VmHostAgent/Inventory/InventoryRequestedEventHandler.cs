@@ -1,14 +1,15 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Eryph.Messages.Resources.Machines.Commands;
-using Eryph.Messages.Resources.Machines.Events;
+using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -38,7 +39,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         public Task Handle(InventoryRequestedEvent message)
         {
             return _engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
-                    .AddCommand("get-vm"))
+                    .AddCommand("get-vm")).ToError()
                 .BindAsync(VmsToInventory)
                 .ToAsync()
                 .MatchAsync(
@@ -51,11 +52,11 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         }
 
 
-        private Task<Either<PowershellFailure, UpdateVMHostInventoryCommand>> VmsToInventory(
+        private Task<Either<Error, UpdateVMHostInventoryCommand>> VmsToInventory(
             Seq<TypedPsObject<VirtualMachineInfo>> vms)
         {
             return  
-                (from hostInventory in _hostInfoProvider.GetHostInfoAsync(true).ToAsync()
+                (from hostInventory in _hostInfoProvider.GetHostInfoAsync(true)
                 from vmInventory in InventorizeAllVms(vms).ToAsync()
                 select new UpdateVMHostInventoryCommand
                 {
@@ -64,7 +65,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                 }).ToEither();
         }
 
-        private Task<Either<PowershellFailure, IEnumerable<VirtualMachineData>>> InventorizeAllVms(
+        private Task<Either<Error, IEnumerable<VirtualMachineData>>> InventorizeAllVms(
             Seq<TypedPsObject<VirtualMachineInfo>> vms)
         {
             return
@@ -82,7 +83,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                     )
                     .TraverseParallel(l => l.AsEnumerable())
                     .Map(seq => seq.Flatten())
-                    .Map(Prelude.Right<PowershellFailure, IEnumerable<VirtualMachineData>>);
+                    .Map(Prelude.Right<Error, IEnumerable<VirtualMachineData>>);
 
         }
     }

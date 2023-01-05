@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using Eryph.Messages.Resources.Machines.Events;
+using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.VmManagement.Inventory;
 using Rebus.Bus;
 using Rebus.Handlers;

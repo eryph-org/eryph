@@ -1,14 +1,13 @@
-﻿using Eryph.Core;
+﻿using Eryph.ConfigModel;
+using Eryph.Core.Network;
 
 namespace Eryph.Resources.Machines
 {
     public class VMHostMachineData : MachineData
     {
-        public VMHostSwitchData[] Switches { get; set; }
-
         [PrivateIdentifier]
         public string HardwareId { get; set; }
 
-        public HostVirtualNetworkData[] VirtualNetworks { get; set; }
-}
+        public NetworkProvidersConfiguration NetworkProviderConfiguration { get; set; }
+    }
 }

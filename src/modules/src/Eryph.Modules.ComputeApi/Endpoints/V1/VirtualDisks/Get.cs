@@ -11,10 +11,11 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks
 {
-    public class Get : GetResourceEndpoint<VirtualDisk, StateDb.Model.VirtualDisk>
+    public class Get : GetEntityEndpoint<SingleEntityRequest,VirtualDisk, StateDb.Model.VirtualDisk>
     {
 
-        public Get([NotNull] IGetRequestHandler<StateDb.Model.VirtualDisk> requestHandler, [NotNull] ISingleResourceSpecBuilder<StateDb.Model.VirtualDisk> specBuilder) : base(requestHandler, specBuilder)
+        public Get([NotNull] IGetRequestHandler<StateDb.Model.VirtualDisk, VirtualDisk> requestHandler, 
+            [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest,StateDb.Model.VirtualDisk> specBuilder) : base(requestHandler, specBuilder)
         {
         }
 
@@ -27,7 +28,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks
         ]
         [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(VirtualDisk))]
 
-        public override Task<ActionResult<VirtualDisk>> HandleAsync([FromRoute] SingleResourceRequest request, CancellationToken cancellationToken = default)
+        public override Task<ActionResult<VirtualDisk>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }

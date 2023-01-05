@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.Configuration;
-using Eryph.Configuration.Model;
 using Eryph.StateDb.Model;
 
 namespace Eryph.Runtime.Zero.Configuration.Storage
@@ -20,9 +19,9 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
             _io = new ConfigIO(ZeroConfig.GetStorageConfigPath());
         }
 
-        public async Task Delete(VirtualDisk disk)
+        public async Task Delete(VirtualDisk disk, string projectName)
         {
-            var storageConfig = GetStorageConfigByDiskTemplate(disk);
+            var storageConfig = GetStorageConfigByDiskTemplate(disk, projectName);
             storageConfig.VirtualDisks = storageConfig.VirtualDisks.Where(x => x.Id != disk.Id).ToArray();
 
             if (storageConfig.VirtualDisks.Length == 0)
@@ -31,26 +30,26 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
                 await _io.SaveConfigFile(storageConfig, storageConfig.Id);
         }
 
-        public Task Update(VirtualDisk disk)
+        public Task Update(VirtualDisk disk, string projectName)
         {
-            var storageConfig = GetStorageConfigByDiskTemplate(disk);
+            var storageConfig = GetStorageConfigByDiskTemplate(disk, projectName);
             storageConfig.VirtualDisks = storageConfig.VirtualDisks.Where(x => x.Id != disk.Id)
                 .Append(new[] {new StorageVhdConfig {Id = disk.Id, Name = disk.Name, LastSeen = DateTime.UtcNow}}).ToArray();
 
             return _io.SaveConfigFile(storageConfig, storageConfig.Id);
         }
 
-        public Task Add(VirtualDisk disk)
+        public Task Add(VirtualDisk disk, string projectName)
         {
-            return Update(disk);
+            return Update(disk, projectName);
         }
 
-        private StorageConfig GetStorageConfigByDiskTemplate(VirtualDisk virtualDisk)
+        private StorageConfig GetStorageConfigByDiskTemplate(VirtualDisk virtualDisk, string projectName)
         {
             var nameBuilder = new StringBuilder();
             nameBuilder.Append(virtualDisk.Environment ?? "$$empty$$");
             nameBuilder.Append(virtualDisk.DataStore ?? "$$empty$$");
-            nameBuilder.Append(virtualDisk.Project ?? "$$empty$$");
+            nameBuilder.Append(projectName ?? "$$empty$$");
             nameBuilder.Append(virtualDisk.StorageIdentifier ?? "$$empty$$");
             var hashedName = Hash(nameBuilder.ToString()).ToLowerInvariant();
 
@@ -62,7 +61,7 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
                     Id = hashedName,
                     Environment = virtualDisk.Environment,
                     DataStore = virtualDisk.DataStore,
-                    Project = virtualDisk.Project,
+                    Project = projectName,
                     StorageIdentifier = virtualDisk.StorageIdentifier,
                     VirtualDisks = System.Array.Empty<StorageVhdConfig>()
                 };
@@ -75,7 +74,7 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
 
         private static string Hash(string input)
         {
-            using var sha1 = new SHA1Managed();
+            using var sha1 = SHA1.Create();
             var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
             var sb = new StringBuilder(hash.Length * 2);
 

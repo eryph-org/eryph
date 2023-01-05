@@ -9,5 +9,7 @@ namespace Eryph.Modules.Identity.Models
         string Description { get; set; }
         string Certificate { get; set; }
         List<string> AllowedScopes { get; set; }
+        List<string> Roles { get; set; }
+        string Tenant { get; set; }
     }
 }

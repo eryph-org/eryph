@@ -72,7 +72,7 @@ namespace Eryph.App
 
             var lockData = new Dictionary<string, object>();
 
-            var process = Process.GetCurrentProcess();
+            using var process = Process.GetCurrentProcess();
             lockData.Add("processName", process.ProcessName);
             lockData.Add("processId", process.Id);
 
@@ -88,4 +88,6 @@ namespace Eryph.App
             textWriter.Flush();
         }
     }
+
+
 }

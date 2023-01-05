@@ -2,7 +2,6 @@
 using System.IO;
 using System.Text.Json;
 using Eryph.Configuration;
-using Eryph.Configuration.Model;
 using Eryph.StateDb.Model;
 
 namespace Eryph.Runtime.Zero.Configuration.Storage
@@ -29,7 +28,6 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
                         Name = virtualDiskConfig.Name,
                         DataStore = config.DataStore,
                         Environment = config.Environment,
-                        Project = config.Project,
                         StorageIdentifier = config.StorageIdentifier
                     };
                 }

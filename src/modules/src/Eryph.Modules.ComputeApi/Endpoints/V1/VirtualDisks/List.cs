@@ -1,21 +1,20 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Ardalis.Specification;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
-using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks
 {
-    public class List : ListResourceEndpoint<ListRequest, VirtualDisk, StateDb.Model.VirtualDisk>
+    public class List : ListEntityEndpoint<ListRequest, VirtualDisk, StateDb.Model.VirtualDisk>
     {
-        public List([NotNull] IListRequestHandler<StateDb.Model.VirtualDisk> listRequestHandler, [NotNull] IListResourceSpecBuilder<StateDb.Model.VirtualDisk> specBuilder) : base(listRequestHandler, specBuilder)
+        public List([NotNull] IListRequestHandler<StateDb.Model.VirtualDisk> listRequestHandler, 
+            [NotNull] IListEntitySpecBuilder<ListRequest,StateDb.Model.VirtualDisk> specBuilder) : base(listRequestHandler, specBuilder)
         {
         }
 

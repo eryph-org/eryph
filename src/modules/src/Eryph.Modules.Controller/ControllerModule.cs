@@ -1,21 +1,24 @@
 ﻿using System;
 using Dbosoft.Hosuto.HostedServices;
+using Dbosoft.OVN;
+using Eryph.Core;
 using Eryph.Messages;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
 using Eryph.Modules.Controller.Inventory;
+using Eryph.Modules.Controller.Networks;
 using Eryph.Modules.Controller.Operations;
 using Eryph.Rebus;
 using Eryph.StateDb;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
 using Rebus.Routing.TypeBased;
 using Rebus.Sagas.Exclusive;
-using Rebus.Serialization.Json;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -39,20 +42,33 @@ namespace Eryph.Modules.Controller
 
             container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
             container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
+            container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
+
             container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
 
             container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
             container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
             container.Register<IVirtualDiskDataService, VirtualDiskDataService>(Lifestyle.Scoped);
+            container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
 
+            container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
+            container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
+            container.Register<INetworkConfigValidator, NetworkConfigValidator>(Lifestyle.Scoped);
+            container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
+            container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
             container.RegisterSingleton(() => new Id64Generator());
-            container.Register<IOperationTaskDispatcher, OperationDispatcher>();
+            container.Register<IOperationTaskDispatcher, OperationTaskDispatcher>();
             container.Register<IOperationDispatcher, OperationDispatcher>();
 
             //use placement calculator of Host
             container.Register(serviceProvider.GetRequiredService<IPlacementCalculator>);
             container.Register(serviceProvider.GetRequiredService<IStorageManagementAgentLocator>);
+
+            //use network services from host
+            container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
+            container.RegisterInstance(serviceProvider.GetRequiredService<IOVNSettings>());
+            container.RegisterInstance(serviceProvider.GetRequiredService<ISysEnvironment>());
 
 
             container.Register(() =>
@@ -72,7 +88,7 @@ namespace Eryph.Modules.Controller
                 )
                 .Options(x =>
                 {
-                    x.SimpleRetryStrategy(secondLevelRetriesEnabled: true);
+                    x.SimpleRetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                     x.SetNumberOfWorkers(5);
                     x.EnableSimpleInjectorUnitOfWork();
                 })
@@ -83,7 +99,7 @@ namespace Eryph.Modules.Controller
                     s.EnforceExclusiveAccess();
                 })
                 .Subscriptions(s => serviceProvider.GetRequiredService<IRebusSubscriptionConfigurer>().Configure(s))
-                //.Logging(x => x.Trace())
+                .Logging(x => x.Serilog())
                 .Start());
                 
             
@@ -93,6 +109,7 @@ namespace Eryph.Modules.Controller
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
             options.Services.AddHostedHandler<StartBusModuleHandler>();
+            options.Services.AddHostedHandler<RealizeNetworkProviderHandler>();
             options.AddHostedService<InventoryTimerService>();
             options.AddLogging();
         }

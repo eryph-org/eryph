@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="1.0.0" />
-    <PackageReference Include="Dbosoft.Hosuto.Testing.AspNetCore" Version="1.0.0" />
+    <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="1.1.0" />
+    <PackageReference Include="Dbosoft.Hosuto.Testing.AspNetCore" Version="1.1.0" />
     <PackageReference Include="FluentAssertions" Version="6.4.0" />
-    <PackageReference Include="Eryph.IdentityModel" Version="0.4.0" />
-    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3">
+    <PackageReference Include="Eryph.IdentityModel" Version="0.5.1" />
+    <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -28,6 +28,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Eryph.Modules.Identity\Eryph.Modules.Identity.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="testsigning.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

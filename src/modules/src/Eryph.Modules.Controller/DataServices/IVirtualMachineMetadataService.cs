@@ -7,7 +7,7 @@ namespace Eryph.Modules.Controller.DataServices;
 
 public interface IVirtualMachineMetadataService
 {
-    Task<Option<VirtualMachineMetadata>> GetMetadata(Guid id);
-    Task<Unit> SaveMetadata(VirtualMachineMetadata metadata);
+    Task<Option<VirtualCatletMetadata>> GetMetadata(Guid id);
+    Task<Unit> SaveMetadata(VirtualCatletMetadata metadata);
     Task<Unit> RemoveMetadata(Guid id);
 }

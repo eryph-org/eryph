@@ -36,4 +36,14 @@ public class Client : IClientApiModel
     ///     allowed scopes of client
     /// </summary>
     public List<string> AllowedScopes { get; set; }
+
+
+    /// <summary>
+    ///     Roles of client
+    /// </summary>
+    public List<string> Roles { get; set; }
+
+    public string Tenant { get; set; }
+
+
 }

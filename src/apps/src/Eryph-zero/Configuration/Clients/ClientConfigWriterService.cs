@@ -13,18 +13,18 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
             _io = new ConfigIO(ZeroConfig.GetClientConfigPath());
         }
 
-        public Task Delete(ClientConfigModel client)
+        public Task Delete(ClientConfigModel client, string projectName)
         {
             _io.DeleteConfigFile(client.ClientId);
             return Task.CompletedTask;
         }
 
-        public Task Update(ClientConfigModel client)
+        public Task Update(ClientConfigModel client, string projectName)
         {
             return _io.SaveConfigFile(client, client.ClientId);
         }
 
-        public Task Add(ClientConfigModel client)
+        public Task Add(ClientConfigModel client, string projectName)
         {
             return _io.SaveConfigFile(client, client.ClientId);
         }

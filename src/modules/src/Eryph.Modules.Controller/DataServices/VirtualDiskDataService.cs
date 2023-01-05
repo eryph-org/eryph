@@ -11,16 +11,16 @@ namespace Eryph.Modules.Controller.DataServices
 {
     internal class VirtualDiskDataService : IVirtualDiskDataService
     {
-        private readonly IStateStoreRepository<VirtualDisk> _repository;
+        private readonly IStateStore _stateStore;
 
-        public VirtualDiskDataService(IStateStoreRepository<VirtualDisk> repository)
+        public VirtualDiskDataService(IStateStore stateStore)
         {
-            _repository = repository;
+            _stateStore = stateStore;
         }
 
         public async Task<Option<VirtualDisk>> GetVHD(Guid id)
         {
-            var res = await _repository.GetByIdAsync(id);
+            var res = await _stateStore.For<VirtualDisk>().GetByIdAsync(id);
             return res;
         }
 
@@ -29,28 +29,30 @@ namespace Eryph.Modules.Controller.DataServices
             if (virtualDisk.Id == Guid.Empty)
                 throw new ArgumentException($"{nameof(VirtualDisk.Id)} is missing", nameof(virtualDisk));
 
-            var res = await _repository.AddAsync(virtualDisk);
+
+            var res = await _stateStore.For<VirtualDisk>().AddAsync(virtualDisk);
             return res;
         }
 
-        public async Task<IEnumerable<VirtualDisk>> FindVHDByLocation(string dataStore, string project, string environment, string storageIdentifier, string name)
+        public async Task<IEnumerable<VirtualDisk>> FindVHDByLocation(
+            string dataStore, string projectName, string environment, string storageIdentifier, string name)
         {
-            return await _repository.ListAsync(
-                new VirtualDiskSpecs.GetByLocation(dataStore, project, environment, storageIdentifier, name));
+            return await _stateStore.For<VirtualDisk>().ListAsync(
+                new VirtualDiskSpecs.GetByLocation(dataStore, projectName, environment, storageIdentifier, name));
         }
 
         public async Task<VirtualDisk> UpdateVhd(VirtualDisk virtualDisk)
         {
-            await _repository.UpdateAsync(virtualDisk);
+            await _stateStore.For<VirtualDisk>().UpdateAsync(virtualDisk);
             return virtualDisk;
         }
 
         public async Task<Unit> DeleteVHD(Guid id)
         {
-            var res = await _repository.GetByIdAsync(id);
+            var res = await _stateStore.For<VirtualDisk>().GetByIdAsync(id);
 
             if(res!= null)
-                await _repository.DeleteAsync(res);
+                await _stateStore.For<VirtualDisk>().DeleteAsync(res);
 
             return Unit.Default;
         }

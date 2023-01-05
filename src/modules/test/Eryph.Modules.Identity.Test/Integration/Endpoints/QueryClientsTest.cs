@@ -36,6 +36,7 @@ public class QueryClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
             {
                 container.Options.AllowOverridingRegistrations = true;
                 container.RegisterInstance(serviceMock.Object);
+
             });
         });
 

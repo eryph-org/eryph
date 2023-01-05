@@ -6,8 +6,8 @@ namespace Eryph.Resources
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum ResourceType
     {
-        Machine,
+        Catlet,
         VirtualDisk,
-        Network
+        VirtualNetwork
     }
 }

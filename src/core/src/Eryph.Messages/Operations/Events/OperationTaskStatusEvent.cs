@@ -12,10 +12,11 @@ namespace Eryph.Messages.Operations.Events
         {
         }
 
-        protected OperationTaskStatusEvent(Guid operationId, Guid taskId, bool failed, string messageType,
+        protected OperationTaskStatusEvent(Guid operationId, Guid initiatingTaskId, Guid taskId, bool failed, string messageType,
             string messageData)
         {
             OperationId = operationId;
+            InitiatingTaskId = initiatingTaskId;
             TaskId = taskId;
             OperationFailed = failed;
             MessageData = messageData;
@@ -27,27 +28,28 @@ namespace Eryph.Messages.Operations.Events
         public bool OperationFailed { get; set; }
         public Guid OperationId { get; set; }
         public Guid TaskId { get; set; }
+        public Guid InitiatingTaskId { get; set; }
 
-        public static OperationTaskStatusEvent Failed(Guid operationId, Guid taskId)
+        public static OperationTaskStatusEvent Failed(Guid operationId, Guid initiatingTaskId, Guid taskId)
         {
-            return new OperationTaskStatusEvent(operationId, taskId, true, null, null);
+            return new OperationTaskStatusEvent(operationId, initiatingTaskId, taskId, true, null, null);
         }
 
-        public static OperationTaskStatusEvent Failed(Guid operationId, Guid taskId, object message)
+        public static OperationTaskStatusEvent Failed(Guid operationId, Guid initiatingTaskId, Guid taskId, object message)
         {
             var (data, typeName) = SerializeMessage(message);
-            return new OperationTaskStatusEvent(operationId, taskId, true, typeName, data);
+            return new OperationTaskStatusEvent(operationId, initiatingTaskId, taskId, true, typeName, data);
         }
 
-        public static OperationTaskStatusEvent Completed(Guid operationId, Guid taskId)
+        public static OperationTaskStatusEvent Completed(Guid operationId, Guid initiatingTaskId, Guid taskId)
         {
-            return new OperationTaskStatusEvent(operationId, taskId, false, null, null);
+            return new OperationTaskStatusEvent(operationId, initiatingTaskId, taskId, false, null, null);
         }
 
-        public static OperationTaskStatusEvent Completed(Guid operationId, Guid taskId, object message)
+        public static OperationTaskStatusEvent Completed(Guid operationId, Guid initiatingTaskId, Guid taskId, object message)
         {
             var (data, typeName) = SerializeMessage(message);
-            return new OperationTaskStatusEvent(operationId, taskId, false, typeName, data);
+            return new OperationTaskStatusEvent(operationId, initiatingTaskId,taskId, false, typeName, data);
         }
 
         private static (string data, string type) SerializeMessage(object message)
@@ -74,12 +76,13 @@ namespace Eryph.Messages.Operations.Events
 
     public class OperationTaskStatusEvent<T> : OperationTaskStatusEvent where T : class, new()
     {
+
         public OperationTaskStatusEvent()
         {
         }
 
         public OperationTaskStatusEvent(OperationTaskStatusEvent message) :
-            base(message.OperationId, message.TaskId, message.OperationFailed, message.MessageType, message.MessageData)
+            base(message.OperationId, message.InitiatingTaskId, message.TaskId, message.OperationFailed, message.MessageType, message.MessageData)
         {
         }
     }

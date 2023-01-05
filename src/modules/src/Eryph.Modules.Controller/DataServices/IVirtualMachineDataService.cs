@@ -1,22 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Eryph.Resources.Machines;
 using Eryph.StateDb.Model;
 using LanguageExt;
-using VirtualMachineMetadata = Eryph.Resources.Machines.VirtualMachineMetadata;
 
 namespace Eryph.Modules.Controller.DataServices;
 
 internal interface IVirtualMachineDataService
 {
-    Task<Option<VirtualMachine>> GetByVMId(Guid id);
+    Task<Option<VirtualCatlet>> GetByVMId(Guid id);
 
-    Task<Option<VirtualMachine>> GetVM(Guid id);
-    Task<VirtualMachine> AddNewVM(VirtualMachine vm, VirtualMachineMetadata metadata);
+    Task<Option<VirtualCatlet>> GetVM(Guid id);
+    Task<VirtualCatlet> AddNewVM(VirtualCatlet vm, VirtualCatletMetadata metadata);
 
     Task<Unit> RemoveVM(Guid id);
 
-    Task<IEnumerable<VirtualMachine>> GetAll();
+    Task<IEnumerable<VirtualCatlet>> GetAll();
 
 
 }

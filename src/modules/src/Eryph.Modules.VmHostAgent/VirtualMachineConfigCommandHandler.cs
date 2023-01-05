@@ -2,72 +2,55 @@
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
-using Eryph.Messages;
-using Eryph.Messages.Operations.Events;
+using Eryph.ConfigModel.Catlets;
+using Eryph.Messages.Operations;
+using Eryph.ModuleCore;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
 using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
-using Rebus.Transport;
+using Rebus.Handlers;
 
 namespace Eryph.Modules.VmHostAgent
 {
-    internal abstract class VirtualMachineConfigCommandHandler
+    internal abstract class VirtualCatletConfigCommandHandler<TMessage, TResult>: IHandleMessages<OperationTask<TMessage>> 
+        where TMessage : class, new()
     {
         public const string DefaultDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         protected readonly IBus Bus;
-        protected readonly ILogger _log;
-
+        protected readonly ILogger Log;
         protected readonly IPowershellEngine Engine;
-        protected Guid OperationId;
-        protected Guid TaskId;
+        protected OperationTask<TMessage> Message;
 
-        protected VirtualMachineConfigCommandHandler(
+        protected VirtualCatletConfigCommandHandler(
             IPowershellEngine engine,
             IBus bus, ILogger log)
         {
             Engine = engine;
             Bus = bus;
-            _log = log;
+            Log = log;
         }
 
-
-        protected async Task<Unit> ProgressMessage(string message)
+        public Task Handle(OperationTask<TMessage> message)
         {
-            using (var scope = new RebusTransactionScope())
-            {
-                await Bus.Publish(new OperationTaskProgressEvent
-                {
-                    Id = Guid.NewGuid(),
-                    OperationId = OperationId,
-                    TaskId = TaskId,
-                    Message = message,
-                    Timestamp = DateTimeOffset.UtcNow
-                }).ConfigureAwait(false);
+            Message = message;
+            return HandleCommand(message.Command)
+                .FailOrComplete(Bus, message);
 
-                // commit it like this
-                await scope.CompleteAsync().ConfigureAwait(false);
-            }
+        }
 
+        protected async Task<Unit> ProgressMessage(string progressMessage)
+        {
+            await Bus.ProgressMessage(Message, progressMessage);
             return Unit.Default;
         }
 
+        protected abstract EitherAsync<Error, TResult> HandleCommand(TMessage command);
 
-        protected async Task<Unit> HandleError(PowershellFailure failure)
-        {
-            _log.LogError("Operation {OperationId}/{TaskId} failed. Error: {message}", OperationId, TaskId, failure.Message);
-
-            await Bus.Publish(OperationTaskStatusEvent.Failed(
-                OperationId, TaskId,
-                new ErrorData {ErrorMessage = failure.Message})
-            ).ConfigureAwait(false);
-
-            return Unit.Default;
-        }
 
         public static string LongToString(BigInteger subject, int @base = 36, string digits = DefaultDigits)
         {
@@ -91,18 +74,16 @@ namespace Eryph.Modules.VmHostAgent
             return result.ToString();
         }
 
-#pragma warning disable 1998
-        protected async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> EnsureSingleEntry(
+        protected EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> EnsureSingleEntry(
             Seq<TypedPsObject<VirtualMachineInfo>> list, Guid id)
-#pragma warning restore 1998
         {
-            return list.Count > 1
-                ? Prelude.Left(new PowershellFailure {Message = $"VM id '{id}' is not unique."})
-                : list.HeadOrNone().ToEither(new PowershellFailure {Message = $"VM id '{id}' is not found."});
+            return (list.Count > 1
+                ? Prelude.Left(Error.New($"VM id '{id}' is not unique."))
+                : list.HeadOrNone().ToEither(Error.New($"VM id '{id}' is not found."))).ToAsync();
         }
 
 
-        protected static Task<Either<PowershellFailure, Seq<TypedPsObject<VirtualMachineInfo>>>> GetVmInfo(Guid id,
+        protected static EitherAsync<Error, Seq<TypedPsObject<VirtualMachineInfo>>> GetVmInfo(Guid id,
             IPowershellEngine engine)
         {
             return Prelude.Cond<Guid>(c => c != Guid.Empty)(id).MatchAsync(
@@ -112,12 +93,12 @@ namespace Eryph.Modules.VmHostAgent
                     //this a bit dangerous, because there may be other errors causing the 
                     //command to fail. However there seems to be no other way except parsing error response
                     .AddParameter("ErrorAction", "SilentlyContinue")
-                ));
+                )).ToError().ToAsync();
         }
 
 
-        protected Task<Either<PowershellFailure, VirtualMachineMetadata>> EnsureMetadata(
-            VirtualMachineMetadata metadata,
+        protected Task<Either<Error, VirtualCatletMetadata>> EnsureMetadata(
+            VirtualCatletMetadata metadata,
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var notes = vmInfo.Value.Notes;
@@ -140,7 +121,7 @@ namespace Eryph.Modules.VmHostAgent
                 var newNotes = $"eryph metadata id: {metadata.Id}";
 
                 return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("Notes", newNotes)).MapAsync(u => metadata);
+                    .AddParameter("Notes", newNotes)).MapAsync(u => metadata).ToError();
             }
 
             if (!Guid.TryParse(metadataIdString, out var metadataId))
@@ -150,10 +131,10 @@ namespace Eryph.Modules.VmHostAgent
             if (metadataId != metadata.Id)
                 throw new InvalidOperationException("Inconsistent metadata id between VM and expected metadata id.");
 
-            return Prelude.RightAsync<PowershellFailure, VirtualMachineMetadata>(metadata).ToEither();
+            return Prelude.RightAsync<Error, VirtualCatletMetadata>(metadata).ToEither();
         }
 
-        protected Task<Either<PowershellFailure, Unit>> SetMetadataId(TypedPsObject<VirtualMachineInfo> vmInfo,
+        protected EitherAsync<Error, Unit> SetMetadataId(TypedPsObject<VirtualMachineInfo> vmInfo,
             Guid metadataId)
         {
             var oldNotes = vmInfo.Value.Notes;
@@ -178,28 +159,30 @@ namespace Eryph.Modules.VmHostAgent
 
 
             return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("Notes", newNotes));
+                .AddParameter("Notes", newNotes)).ToAsync().ToError();
         }
 
 
-        protected static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> EnsureNameConsistent(
-            TypedPsObject<VirtualMachineInfo> vmInfo, MachineConfig config, IPowershellEngine engine)
+        protected static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> EnsureNameConsistent(
+            TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig config, IPowershellEngine engine)
         {
             return Prelude.Cond<(string currentName, string newName)>(names =>
                     !string.IsNullOrWhiteSpace(names.newName) &&
                     !names.newName.Equals(names.currentName, StringComparison.InvariantCulture))((vmInfo.Value.Name,
                     config.Name))
-                .MatchAsync(
+                .Match(
                     None: () => vmInfo,
                     Some: some => VirtualMachine.Rename(engine, vmInfo, config.Name));
         }
 
-        protected static Task<Either<PowershellFailure, VirtualMachineData>> CreateMachineInventory(
+        protected static EitherAsync<Error, VirtualMachineData> CreateMachineInventory(
             IPowershellEngine engine, HostSettings hostSettings,
             TypedPsObject<VirtualMachineInfo> vmInfo, IHostInfoProvider hostInfoProvider)
         {
             var inventory = new VirtualMachineInventory(engine, hostSettings, hostInfoProvider);
-            return inventory.InventorizeVM(vmInfo).ToAsync().ToEither();
+            return inventory.InventorizeVM(vmInfo).ToAsync();
         }
+
+
     }
 }

@@ -3,7 +3,7 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Eryph.Controller
+namespace Eryph.Runtime.Zero
 {
     /// <summary>
     ///     This type is required for EfCore migrations.

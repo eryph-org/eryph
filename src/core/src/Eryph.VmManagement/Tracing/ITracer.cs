@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Eryph.VmManagement;
+namespace Eryph.VmManagement.Tracing;
 
 public interface ITracer
 {

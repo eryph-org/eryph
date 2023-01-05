@@ -4,6 +4,8 @@ using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
 using Eryph.Modules.Controller;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Resources.Machines;
+using Eryph.Runtime.Zero.Configuration.Projects;
 using Eryph.Runtime.Zero.Configuration.Storage;
 using Eryph.Runtime.Zero.Configuration.VMMetadata;
 using Eryph.StateDb;
@@ -11,7 +13,6 @@ using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
-using VirtualMachineMetadata = Eryph.Resources.Machines.VirtualMachineMetadata;
 
 namespace Eryph.Runtime.Zero
 {
@@ -35,8 +36,8 @@ namespace Eryph.Runtime.Zero
                 services.AddTransient<IModuleServicesFilter<ControllerModule>, ControllerModuleFilters>();
             });
 
-            container.RegisterSingleton<IConfigReaderService<VirtualMachineMetadata>, VMMetadataConfigReaderService>();
-            container.RegisterSingleton<IConfigWriterService<VirtualMachineMetadata>, VMMetadataConfigWriterService>();
+            container.RegisterSingleton<IConfigReaderService<VirtualCatletMetadata>, VMMetadataConfigReaderService>();
+            container.RegisterSingleton<IConfigWriterService<VirtualCatletMetadata>, VMMetadataConfigWriterService>();
             container.RegisterSingleton<IConfigReaderService<VirtualDisk>, VhdReaderService>();
             container.RegisterSingleton<IConfigWriterService<VirtualDisk>, VhdWriterService>();
 
@@ -59,9 +60,9 @@ namespace Eryph.Runtime.Zero
                     next(context, container);
 
                     container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigWriterService<VirtualMachineMetadata>>, Lifestyle.Scoped);
+                        .GetRequiredService<IConfigWriterService<VirtualCatletMetadata>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigReaderService<VirtualMachineMetadata>>, Lifestyle.Scoped);
+                        .GetRequiredService<IConfigReaderService<VirtualCatletMetadata>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigWriterService<VirtualDisk>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
@@ -74,6 +75,7 @@ namespace Eryph.Runtime.Zero
                         typeof(VirtualDiskDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
 
                     container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
+                    container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>();
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>();
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>();
 

@@ -56,11 +56,7 @@ namespace Eryph.Modules.Identity
         {
             var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
             var authority = endpointResolver.GetEndpoint("identity").ToString();
-
-            var signingCertManager = new SigningCertificateManager(
-                serviceProvider.GetRequiredService<ICryptoIOServices>(),
-                serviceProvider.GetRequiredService<ICertificateStoreService>(),
-                serviceProvider.GetRequiredService<ICertificateGenerator>());
+            var signingCertManager = serviceProvider.GetRequiredService<ISigningCertificateManager>();
 
             var signingCert = signingCertManager.GetSigningCertificate(_configuration["privateConfigPath"])
                 .GetAwaiter().GetResult();
@@ -78,6 +74,7 @@ namespace Eryph.Modules.Identity
                     //options.Events.RaiseInformationEvents = true;
                 })
                 .AddJwtBearerClientAuthentication()
+                .AddDeveloperSigningCredential()
                 .AddSigningCredential(signingCert)
                 .AddConfigurationStore(options =>
                 {
@@ -91,7 +88,7 @@ namespace Eryph.Modules.Identity
                     {
                         Scopes = new List<string>
                         {
-                            "compute_api"
+                            "common_api",
                         }
                     },
 
@@ -99,7 +96,10 @@ namespace Eryph.Modules.Identity
                     {
                         Scopes = new List<string>
                         {
-                            "common_api"
+                            "compute:write",
+                            "compute:read",
+                            "compute:catlets:read",
+                            "compute:catlets:write"
                         }
                     },
 
@@ -120,7 +120,13 @@ namespace Eryph.Modules.Identity
                     new Scope("compute_api"),
 
                     new Scope("identity:clients:write:all", "Full access to clients"),
-                    new Scope("identity:clients:read:all", "Read only access to clients")
+                    new Scope("identity:clients:read:all", "Read only access to clients"),
+
+                    new Scope("compute:read", "Read only access to all compute resources"),
+                    new Scope("compute:write", "Full access to all compute resources"),
+
+                    new Scope("compute:catlets:read", "Read only access to catlets"),
+                    new Scope("compute:catlets:write", "Full access access to catlets")
                 })
                 //.AddInMemoryCaching()
                 .AddInMemoryIdentityResources(

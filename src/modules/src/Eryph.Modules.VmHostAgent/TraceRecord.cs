@@ -1,5 +1,5 @@
 ﻿using System;
-using Eryph.VmManagement;
+using Eryph.VmManagement.Tracing;
 
 namespace Eryph.Modules.VmHostAgent;
 

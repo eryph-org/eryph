@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Eryph.VmManagement;
+namespace Eryph.VmManagement.Tracing;
 
 public  class ExceptionTraceData : TraceData
 {

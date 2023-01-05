@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Eryph.Modules.Network</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
+    <ProjectReference Include="..\..\..\data\src\Eryph.StateDb\Eryph.StateDb.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dbosoft.OVN.Hosting" Version="0.1.0-ci.46" />
+    <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

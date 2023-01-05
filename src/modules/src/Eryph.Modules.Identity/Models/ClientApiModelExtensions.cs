@@ -1,14 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.IdentityServer;
 using Dbosoft.IdentityServer.Models;
 using Dbosoft.IdentityServer.Storage.Models;
-using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
-using LanguageExt.ClassInstances.Const;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.OpenSsl;
 
@@ -41,6 +41,12 @@ namespace Eryph.Modules.Identity.Models
                         Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
                         Value = client.Certificate
                     }
+                },
+                Claims = new List<ClientClaim>
+                {
+                    new("tenant", client.Tenant),
+                    new("roles", string.Join(',', client.Roles))
+
                 }
             };
         }

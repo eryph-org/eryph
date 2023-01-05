@@ -7,5 +7,7 @@
         public string Description { get; set; }
         public string X509CertificateBase64 { get; set; }
         public string[] AllowedScopes { get; set; }
+        public string[] Roles { get; set; }
+        public string TenantId { get; set; }
     }
 }

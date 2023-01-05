@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using System.Management;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Messages.Resources.Machines.Events;
+using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.VmManagement;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
@@ -90,10 +86,10 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                 // for longer running machines the inventory job takes care of updating up time. 
                 // It has to be only accurate during early start phase to check if deployment has succeeded and to handle sensitive data
                 // timeout for cloud-init.
-                var vmSearcher = new ManagementObjectSearcher(@"\\.\root\virtualization\v2",
+                using var vmSearcher = new ManagementObjectSearcher(@"\\.\root\virtualization\v2",
                     "SELECT Name,OnTimeInMilliseconds FROM MSVM_ComputerSystem where OnTimeInMilliseconds <> NULL AND OnTimeInMilliseconds < 3600000");
 
-                var vms = vmSearcher.Get();
+                using var vms = vmSearcher.Get();
 
                 foreach (var vm in vms)
                 {
@@ -102,7 +98,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
                     var upTimeInMilliseconds = (ulong)vm.GetPropertyValue("OnTimeInMilliseconds");
 
-                    _bus.Publish(new VMUpTimeChangedEvent()
+                    _bus.Publish(new VCatletUpTimeChangedEvent()
                     {
                         VmId = vmId,
                         UpTime = TimeSpan.FromMilliseconds(upTimeInMilliseconds)
@@ -139,11 +135,11 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         {
             _log.LogTrace("network event arrived: {EventMof}", e.NewEvent.GetText(TextFormat.Mof));
 
-            var instance = GetTargetInstance(e);
+            using var instance = GetTargetInstance(e);
 
             var adapterId = instance.GetPropertyValue("InstanceID") as string;
             var pathParts = adapterId?.Split('\\');
-            if (pathParts == null || pathParts.Length != 3)
+            if (pathParts is not { Length: 3 })
                 return;
 
             var vmId = Guid.Parse(pathParts[1]);
@@ -152,19 +148,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             {
                 VmId = vmId,
                 AdapterId = adapterId,
-                IPAddresses = ObjectToStringArray(instance.GetPropertyValue("IPAddresses")),
-                Netmasks = ObjectToStringArray(instance.GetPropertyValue("Subnets")),
-                DefaultGateways = ObjectToStringArray(instance.GetPropertyValue("DefaultGateways")),
-                DnsServers = ObjectToStringArray(instance.GetPropertyValue("DNSServers")),
-                DhcpEnabled = (bool) instance.GetPropertyValue("DHCPEnabled")
             });
-        }
-
-        private static string[] ObjectToStringArray(object value)
-        {
-            if (value != null && value is IEnumerable enumerable) return enumerable.Cast<string>().ToArray();
-
-            return new string[0];
         }
 
         private static ManagementBaseObject GetTargetInstance(EventArrivedEventArgs e)

@@ -1,11 +1,11 @@
 ﻿using System;
-using Eryph.ConfigModel.Machine;
-using Eryph.Core;
+using Eryph.ConfigModel;
+using Eryph.ConfigModel.Catlets;
 using JetBrains.Annotations;
 
 namespace Eryph.Resources.Machines
 {
-    public sealed class VirtualMachineMetadata
+    public sealed class VirtualCatletMetadata
     {
         public Guid Id { get; set; }
 
@@ -13,8 +13,8 @@ namespace Eryph.Resources.Machines
         public Guid VMId { get; set; }
         public Guid MachineId { get; set; }
 
-        [CanBeNull] public VirtualMachineConfig ImageConfig { get; set; }
-        [CanBeNull] public MachineProvisioningConfig ProvisioningConfig { get; set; }
+        [CanBeNull] public VirtualCatletConfig ImageConfig { get; set; }
+        [CanBeNull] public CatletRaisingConfig RaisingConfig { get; set; }
         public bool SensitiveDataHidden { get; set; }
     }
 }

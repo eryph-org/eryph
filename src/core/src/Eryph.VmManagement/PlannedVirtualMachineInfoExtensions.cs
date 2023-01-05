@@ -2,57 +2,67 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Eryph.ConfigModel.Machine;
+using System.Threading.Tasks;
+using Eryph.ConfigModel.Catlets;
 using Eryph.VmManagement.Data.Planned;
+using Eryph.VmManagement.Storage;
+using LanguageExt;
 
 namespace Eryph.VmManagement
 {
     public static class PlannedVirtualMachineInfoExtensions
     {
-        public static VirtualMachineConfig ToVmConfig(this TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
+        public static async Task<VirtualCatletConfig> ToVmConfig(this TypedPsObject<PlannedVirtualMachineInfo> plannedVM, IPowershellEngine engine, string imageName)
         {
-            return new VirtualMachineConfig
+            return new VirtualCatletConfig
             {
-                Cpu = new VirtualMachineCpuConfig
+                Image = imageName,
+                Cpu = new VirtualCatletCpuConfig
                 {
                     Count = (int) plannedVM.Value.ProcessorCount
                 },
-                Memory = new VirtualMachineMemoryConfig
+                Memory = new VirtualCatletMemoryConfig
                 {
                     Startup = (int) Math.Ceiling(plannedVM.Value.MemoryStartup / 1024d / 1024),
                     //max and min memory is not imported from template
                 },
 
-                Drives = ConvertPlannedDrivesToConfig(plannedVM).ToArray(),
+                Drives = (await ConvertPlannedDrivesToConfig(engine, plannedVM)).ToArray(),
                 NetworkAdapters = ConvertImageNetAdaptersToConfig(plannedVM).ToArray()
             };
         }
 
-        private static IEnumerable<VirtualMachineDriveConfig> ConvertPlannedDrivesToConfig(TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
+        private static async Task<IEnumerable<VirtualCatletDriveConfig>> ConvertPlannedDrivesToConfig(IPowershellEngine engine, 
+            TypedPsObject<PlannedVirtualMachineInfo> plannedVM)
         {
-            var result = plannedVM.GetList(x=>x.HardDrives)
-                .Map(x=>x.Cast<PlannedHardDiskDriveInfo>().Value).Select(
-                hardDiskDriveInfo => new VirtualMachineDriveConfig
-                {
-                    Name = Path.GetFileNameWithoutExtension(hardDiskDriveInfo.Path),
-                    Size = (int) Math.Ceiling(hardDiskDriveInfo.Size / 1024d / 1024 / 1024),
-                    Type = VirtualMachineDriveType.VHD
-                }).ToList();
+            var result = await plannedVM.GetList(x => x.HardDrives)
+                .Map(x =>
+
+                    from plannedDrive in x.CastSafe<PlannedHardDiskDriveInfo>().ToAsync().ToError()
+                    from optionalDrive in VhdQuery.GetVhdInfo(engine, plannedDrive.Value.Path).ToAsync().ToError()
+                    select new VirtualCatletDriveConfig
+                    {
+                        Name = Path.GetFileNameWithoutExtension(plannedDrive.Value.Path),
+                        Size = optionalDrive.Match(None: () => 0,
+                            Some: d => (int)Math.Ceiling(d.Value.Size / 1024d / 1024 / 1024)),
+                        Type = VirtualCatletDriveType.VHD
+                    }).TraverseSerial(l => l)
+                .IfLeft(l => Enumerable.Empty<VirtualCatletDriveConfig>().ToSeq()).Map(s => s.ToList());
 
             result.AddRange(plannedVM.GetList(x=>x.DVDDrives).Select(
-                dvdDriveInfo => new VirtualMachineDriveConfig
+                _ => new VirtualCatletDriveConfig
             {
-                Type = VirtualMachineDriveType.DVD
+                Type = VirtualCatletDriveType.DVD
             }));
 
             return result;
         }
 
-        private static IEnumerable<VirtualMachineNetworkAdapterConfig> ConvertImageNetAdaptersToConfig(
+        private static IEnumerable<VirtualCatletNetworkAdapterConfig> ConvertImageNetAdaptersToConfig(
             PlannedVirtualMachineInfo plannedVM)
         {
             return plannedVM.NetworkAdapters.Select(
-                adapterInfo => new VirtualMachineNetworkAdapterConfig
+                adapterInfo => new VirtualCatletNetworkAdapterConfig
                 {
                     Name = adapterInfo.Name
                 }).ToList();

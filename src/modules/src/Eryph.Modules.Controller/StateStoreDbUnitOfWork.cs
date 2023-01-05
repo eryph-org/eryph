@@ -6,7 +6,7 @@ using JetBrains.Annotations;
 namespace Eryph.Modules.Controller
 {
     [UsedImplicitly]
-    public class StateStoreDbUnitOfWork : IRebusUnitOfWork
+    public sealed class StateStoreDbUnitOfWork : IRebusUnitOfWork
     {
         private readonly StateStoreContext _dbContext;
 

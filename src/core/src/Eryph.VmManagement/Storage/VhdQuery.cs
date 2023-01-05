@@ -15,7 +15,9 @@ namespace Eryph.VmManagement.Storage
                 return Option<TypedPsObject<VhdInfo>>.None;
 
             var res = await engine
-                .GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path))
+                .GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path)
+                    .AddParameter("ErrorAction", "SilentlyContinue")
+                )
                 .MapAsync(s => s.HeadOrNone());
             return res;
         }
@@ -63,7 +65,8 @@ namespace Eryph.VmManagement.Storage
                                 Option<TypedPsObject<VhdInfo>> ActualVhd)>(eitherVhdInfo.LeftAsEnumerable()
                                 .FirstOrDefault());
 
-                    info = eitherVhdInfo.IfLeft(new TypedPsObject<VhdInfo>(null));
+                    info = eitherVhdInfo.IfLeft(new TypedPsObject<VhdInfo>(null, 
+                        (IPsObjectRegistry) engine, engine.ObjectMapping));
 
 
                     if (string.Equals(Path.GetExtension(info.Value.Path), ".avhdx", StringComparison.OrdinalIgnoreCase))

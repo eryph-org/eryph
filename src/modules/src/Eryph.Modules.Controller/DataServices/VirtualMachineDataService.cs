@@ -1,47 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt;
-using VirtualMachineMetadata = Eryph.Resources.Machines.VirtualMachineMetadata;
 
 namespace Eryph.Modules.Controller.DataServices
 {
     internal class VirtualMachineDataService : IVirtualMachineDataService
     {
         private readonly IVirtualMachineMetadataService _metadataService;
-        private readonly IStateStoreRepository<VirtualMachine> _repository;
+        private readonly IStateStoreRepository<VirtualCatlet> _repository;
 
-        public VirtualMachineDataService(IStateStoreRepository<VirtualMachine> repository,
+        public VirtualMachineDataService(IStateStoreRepository<VirtualCatlet> repository,
             IVirtualMachineMetadataService metadataService)
         {
             _repository = repository;
             _metadataService = metadataService;
         }
 
-        public async Task<Option<VirtualMachine>> GetByVMId(Guid id)
+        public async Task<Option<VirtualCatlet>> GetByVMId(Guid id)
         {
-            var res = await _repository.GetBySpecAsync(new VirtualMachineSpecs.GetByVMId(id));
+            var res = await _repository.GetBySpecAsync(new VCatletSpecs.GetByVMId(id));
             return res!;
         }
 
-        public async Task<Option<VirtualMachine>> GetVM(Guid id)
+        public async Task<Option<VirtualCatlet>> GetVM(Guid id)
         {
             var res = await _repository.GetByIdAsync(id);
             return res!;
         }
 
-        public async Task<VirtualMachine> AddNewVM(VirtualMachine vm,
-            [NotNull] VirtualMachineMetadata metadata)
+        public async Task<VirtualCatlet> AddNewVM(VirtualCatlet vm,
+            [NotNull] VirtualCatletMetadata metadata)
         {
+            if (vm.ProjectId == Guid.Empty)
+                throw new ArgumentException($"{nameof(VirtualCatlet.ProjectId)} is missing", nameof(vm));
+
             if (vm.Id == Guid.Empty)
-                throw new ArgumentException($"{nameof(VirtualMachine.Id)} is missing", nameof(vm));
+                throw new ArgumentException($"{nameof(VirtualCatlet.Id)} is missing", nameof(vm));
 
             if (vm.VMId == null)
-                throw new ArgumentException($"{nameof(VirtualMachine.VMId)} is missing", nameof(vm));
+                throw new ArgumentException($"{nameof(VirtualCatlet.VMId)} is missing", nameof(vm));
 
             if (metadata.Id == null)
                 throw new ArgumentException($"{nameof(metadata.Id)} is missing", nameof(metadata));
@@ -78,7 +81,7 @@ namespace Eryph.Modules.Controller.DataServices
             return Unit.Default;
         }
 
-        public async Task<IEnumerable<VirtualMachine>> GetAll()
+        public async Task<IEnumerable<VirtualCatlet>> GetAll()
         {
             return await _repository.ListAsync();
         }

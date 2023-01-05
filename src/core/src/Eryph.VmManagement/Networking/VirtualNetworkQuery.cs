@@ -12,37 +12,89 @@ namespace Eryph.VmManagement.Networking;
 
 public static class VirtualNetworkQuery
 {
-    public static MachineNetworkData[] GetNetworksByAdapters(Guid vmId, VMHostMachineData hostInfo,
+    public static MachineNetworkData[] GetNetworksByAdapters(VMHostMachineData hostInfo,
         IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> networkAdapters)
+    {
+        return GetNetworksByAdapters(hostInfo,
+                networkAdapters.Select(x=>x.Cast<VMNetworkAdapter>().Value));
+    }
+
+    public static IEnumerable<string> FindOvsPortNames(IEnumerable<VMNetworkAdapter> networkAdapters)
+    {
+        var scope = new ManagementScope(@"\\.\root\virtualization\v2");
+
+        foreach (var networkAdapter in networkAdapters)
+        {
+            var portId = networkAdapter.Id.Replace("\\", "\\\\");
+
+            using var portSettingsObj = new ManagementObject();
+            portSettingsObj.Path = new ManagementPath(scope.Path +
+                                                      $":Msvm_EthernetPortAllocationSettingData.InstanceID=\"{portId}\"");
+
+            string adapterPortName = null;
+
+            try
+            {
+                portSettingsObj.Get();
+                adapterPortName = portSettingsObj.GetPropertyValue("ElementName") as string;
+            }
+            catch (ManagementException)
+            {
+                // expected if not found
+            }
+
+            yield return adapterPortName;
+        }
+    }
+
+    public static MachineNetworkData[] GetNetworksByAdapters(VMHostMachineData hostInfo,
+        IEnumerable<VMNetworkAdapter> networkAdapters)
     {
         var scope = new ManagementScope(@"\\.\root\virtualization\v2");
         var resultList = new List<MachineNetworkData>();
 
-        foreach (var device in networkAdapters)
+        foreach (var networkAdapter in networkAdapters)
         {
-            var networkAdapter = device.Cast<VMNetworkAdapter>().Value;
             var guestNetworkId = networkAdapter.Id.Replace("Microsoft:", "Microsoft:GuestNetwork\\")
                 .Replace("\\", "\\\\");
-            var obj = new ManagementObject();
-            var path = new ManagementPath(scope.Path +
-                                          $":Msvm_GuestNetworkAdapterConfiguration.InstanceID=\"{guestNetworkId}\"");
 
-            obj.Path = path;
-            obj.Get();
+            var portId = networkAdapter.Id.Replace("\\", "\\\\");
 
-            var hostNetwork = hostInfo.VirtualNetworks.FirstOrDefault(x => x.VirtualSwitchId == networkAdapter.SwitchId);
+            using var guestAdapterObj = new ManagementObject();
+            guestAdapterObj.Path = new ManagementPath(scope.Path +
+                                                      $":Msvm_GuestNetworkAdapterConfiguration.InstanceID=\"{guestNetworkId}\"");
+            guestAdapterObj.Get();
+
+            using var portSettingsObj = new ManagementObject();
+            portSettingsObj.Path = new ManagementPath(scope.Path +
+                                                      $":Msvm_EthernetPortAllocationSettingData.InstanceID=\"{portId}\"");
+
+            string adapterPortName = null;
+
+            try
+            {
+                portSettingsObj.Get();
+                adapterPortName = portSettingsObj.GetPropertyValue("ElementName") as string;
+            }
+            catch (ManagementException)
+            {
+                // expected if not found
+            }
+
+            var networkProvider = hostInfo.FindNetworkProvider(networkAdapter.SwitchId, adapterPortName);
 
             var info = new MachineNetworkData
             {
-                Name = hostNetwork?.Name,
-                AdapterNames = new []{ networkAdapter.Name },
-                IPAddresses = ObjectToStringArray(obj.GetPropertyValue("IPAddresses")),
-                DefaultGateways = ObjectToStringArray(obj.GetPropertyValue("DefaultGateways")),
-                DnsServers = ObjectToStringArray(obj.GetPropertyValue("DNSServers")),
-                DhcpEnabled = (bool) obj.GetPropertyValue("DHCPEnabled")
+                NetworkProviderName = networkProvider?.Name,
+                PortName = adapterPortName,
+                AdapterName = networkAdapter.Name,
+                IPAddresses = ObjectToStringArray(guestAdapterObj.GetPropertyValue("IPAddresses")),
+                DefaultGateways = ObjectToStringArray(guestAdapterObj.GetPropertyValue("DefaultGateways")),
+                DnsServers = ObjectToStringArray(guestAdapterObj.GetPropertyValue("DNSServers")),
+                DhcpEnabled = (bool) guestAdapterObj.GetPropertyValue("DHCPEnabled")
             };
             info.Subnets = AddressesAndSubnetsToSubnets(info.IPAddresses,
-                ObjectToStringArray(obj.GetPropertyValue("Subnets"))).ToArray();
+                ObjectToStringArray(guestAdapterObj.GetPropertyValue("Subnets"))).ToArray();
 
             resultList.Add(info);
         }
@@ -78,6 +130,8 @@ public static class VirtualNetworkQuery
     {
         if (value != null && value is IEnumerable enumerable) return enumerable.Cast<string>().ToArray();
 
-        return new string[0];
+        return Array.Empty<string>();
     }
+
+
 }

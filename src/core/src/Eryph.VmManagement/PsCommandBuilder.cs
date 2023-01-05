@@ -1,13 +1,16 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Management.Automation;
-using Eryph.Core;
+using Eryph.ConfigModel;
+using Eryph.VmManagement.Tracing;
 
 namespace Eryph.VmManagement;
 
 public class PsCommandBuilder
 {
 
+    private readonly List<object> _input = new();
 
     private readonly List<BasePart> _dataChain = new();
 
@@ -15,7 +18,6 @@ public class PsCommandBuilder
     {
         return new PsCommandBuilder();
     }
-
 
     public PsCommandBuilder AddCommand(string command)
     {
@@ -57,13 +59,15 @@ public class PsCommandBuilder
         return data;
     }
 
-    public void Build(PowerShell ps)
+    public IEnumerable Build(PowerShell ps)
     {
         TraceContext.Current.Write(PowershellCommandTraceData.FromObject(this));
-
+        
         foreach (var data in _dataChain)
+        {
             switch (data)
             {
+
                 case CommandPart part: ps.AddCommand(part.Command);
                     break;
                 case ParameterPart part:
@@ -81,6 +85,15 @@ public class PsCommandBuilder
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        return _input;
+    }
+
+    public PsCommandBuilder AddInput(object value)
+    {
+        _input.Add(value);
+        return this;
     }
 
     public class BasePart
@@ -94,6 +107,7 @@ public class PsCommandBuilder
         public object Value { get; init; }
 
     }
+
 
     public class ScriptPart : BasePart
     {
@@ -122,6 +136,7 @@ public class PsCommandBuilder
         public object Value { get; init; }
 
     }
+
 
 }
 

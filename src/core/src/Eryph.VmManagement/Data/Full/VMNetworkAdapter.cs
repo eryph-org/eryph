@@ -1,5 +1,5 @@
 ﻿using System;
-using Eryph.Core;
+using Eryph.ConfigModel;
 using Eryph.VmManagement.Data.Core;
 
 namespace Eryph.VmManagement.Data.Full
@@ -79,6 +79,9 @@ namespace Eryph.VmManagement.Data.Full
 
         [PrivateIdentifier]
         public string SwitchName { get; private set; }
+
+        [PrivateIdentifier]
+        public string VMName { get; private set; }
 
         [PrivateIdentifier]
         public Guid SwitchId { get; private set; }

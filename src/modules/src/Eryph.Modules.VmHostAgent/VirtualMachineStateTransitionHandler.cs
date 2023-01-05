@@ -1,16 +1,16 @@
 ﻿using System.Threading.Tasks;
-using Eryph.Messages.Operations.Commands;
-using Eryph.Messages.Resources.Machines;
+using Eryph.Messages.Resources.Catlets;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.Common;
 using Rebus.Bus;
 
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal abstract class VirtualMachineStateTransitionHandler<T> : MachineOperationHandlerBase<T>
+    internal abstract class VirtualMachineStateTransitionHandler<T> : VCatletOperationHandlerBase<T>
         where T : class, IVMCommand, new()
     {
         public VirtualMachineStateTransitionHandler(IBus bus, IPowershellEngine engine) : base(bus, engine)
@@ -19,14 +19,14 @@ namespace Eryph.Modules.VmHostAgent
 
         protected abstract string TransitionPowerShellCommand { get; }
 
-        protected override async Task<Either<PowershellFailure, Unit>> HandleCommand(
+        protected override async Task<Either<Error, Unit>> HandleCommand(
             TypedPsObject<VirtualMachineInfo> vmInfo,
             T command, IPowershellEngine engine)
         {
             var result = await engine.RunAsync(new PsCommandBuilder().AddCommand(TransitionPowerShellCommand)
                 .AddParameter("VM", vmInfo.PsObject)).ConfigureAwait(false);
 
-            return result;
+            return result.ToError();
         }
     }
 }

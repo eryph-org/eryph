@@ -1,5 +1,5 @@
 ﻿using System;
-using Eryph.Core;
+using Eryph.ConfigModel;
 using Eryph.VmManagement.Data.Core;
 
 // ReSharper disable UnusedAutoPropertyAccessor.Local

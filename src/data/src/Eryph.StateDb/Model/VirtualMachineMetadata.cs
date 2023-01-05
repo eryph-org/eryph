@@ -8,4 +8,6 @@ namespace Eryph.StateDb.Model
 
         public string Metadata { get; set; }
     }
+
+
 }

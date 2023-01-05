@@ -8,12 +8,20 @@ namespace Eryph.Modules.ComputeApi.Model.V1
         {
             string userRole = null;
 
-            CreateMap<StateDb.Model.MachineNetwork, MachineNetwork>();
+            CreateMap<StateDb.Model.VirtualNetwork, CatletNetwork>();
 
-            CreateMap<StateDb.Model.Machine, Machine>();
-            CreateMap<StateDb.Model.VirtualMachine, VirtualMachine>();
-            CreateMap<StateDb.Model.VirtualMachineDrive, VirtualMachineDrive>();
-            CreateMap<StateDb.Model.VirtualMachineNetworkAdapter, VirtualMachineNetworkAdapter>();
+            CreateMap<StateDb.Model.VirtualNetwork, VirtualNetwork>()
+            .ForMember(x => x.ProviderName,
+                x => x.MapFrom(y => y.NetworkProvider))
+            .ForMember(x => x.ProjectId, x => x.MapFrom(y => y.ProjectId))
+            .ForMember(x => x.TenantId, x => x
+                .MapFrom(y => y.Project.TenantId))
+            ;
+
+            CreateMap<StateDb.Model.Catlet, Catlet>();
+            CreateMap<StateDb.Model.VirtualCatlet, VirtualCatlet>();
+            CreateMap<StateDb.Model.VirtualCatletDrive, VirtualCatletDrive>();
+            CreateMap<StateDb.Model.VirtualCatletNetworkAdapter, VirtualCatletNetworkAdapter>();
             CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>().ForMember(x => x.Path,
                 o => { o.MapFrom(s => userRole == "Admin" ? s.Path : null); });
         }

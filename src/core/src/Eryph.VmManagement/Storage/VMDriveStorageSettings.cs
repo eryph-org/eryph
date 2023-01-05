@@ -1,28 +1,28 @@
 ﻿using System.IO;
-using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement.Storage
 {
     public class VMDriveStorageSettings
     {
-        public VirtualMachineDriveType Type { get; set; }
+        public VirtualCatletDriveType Type { get; set; }
 
         public int ControllerLocation { get; set; }
         public int ControllerNumber { get; set; }
 
 
-        public static Task<Either<PowershellFailure, Seq<VMDriveStorageSettings>>> PlanDriveStorageSettings(
-            HostSettings hostSettings, MachineConfig config, VMStorageSettings storageSettings)
+        public static EitherAsync<Error, Seq<VMDriveStorageSettings>> PlanDriveStorageSettings(
+            HostSettings hostSettings, CatletConfig config, VMStorageSettings storageSettings)
         {
-            return config.VM.Drives
+            return config.VCatlet.Drives
                 .ToSeq().MapToEitherAsync((index, c) =>
-                    FromDriveConfig(hostSettings, storageSettings, c, index));
+                    FromDriveConfig(hostSettings, storageSettings, c, index).ToEither()).ToAsync();
         }
 
-        public static Task<Either<PowershellFailure, VMDriveStorageSettings>> FromDriveConfig(
-            HostSettings hostSettings, VMStorageSettings storageSettings, VirtualMachineDriveConfig driveConfig,
+        public static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
+            HostSettings hostSettings, VMStorageSettings storageSettings, VirtualCatletDriveConfig driveConfig,
             int index)
         {
             const int
@@ -33,15 +33,15 @@ namespace Eryph.VmManagement.Storage
 
 
             //if it is not a vhd, we only need controller settings
-            if (driveConfig.Type != VirtualMachineDriveType.VHD)
+            if (driveConfig.Type != VirtualCatletDriveType.VHD)
             {
                 VMDriveStorageSettings result;
-                if (driveConfig.Type == VirtualMachineDriveType.DVD)
+                if (driveConfig.Type == VirtualCatletDriveType.DVD)
                     result = new VMDvDStorageSettings
                     {
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation,
-                        Type = VirtualMachineDriveType.DVD,
+                        Type = VirtualCatletDriveType.DVD,
                         Path = driveConfig.Template,
                     };
                 else
@@ -49,18 +49,18 @@ namespace Eryph.VmManagement.Storage
                     {
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation,
-                        Type = driveConfig.Type.GetValueOrDefault(VirtualMachineDriveType.PHD)
+                        Type = driveConfig.Type.GetValueOrDefault(VirtualCatletDriveType.PHD)
                     };
 
-                return Prelude.RightAsync<PowershellFailure, VMDriveStorageSettings>(result).ToEither();
+                return Prelude.RightAsync<Error, VMDriveStorageSettings>(result);
             }
 
             //so far for the simple part, now the complicated case - a vhd disk...
 
-            var projectName = Prelude.Some("default");
-            var environmentName = Prelude.Some("default");
-            var dataStoreName = Prelude.Some("default");
-            var storageIdentifier = Option<string>.None;
+            var projectName = storageSettings.StorageNames.ProjectName;
+            var environmentName = storageSettings.StorageNames.EnvironmentName;
+            var dataStoreName = storageSettings.StorageNames.DataStoreName;
+            var storageIdentifier = storageSettings.StorageIdentifier;
 
             var names = new StorageNames
             {
@@ -70,16 +70,11 @@ namespace Eryph.VmManagement.Storage
             };
 
 
-            if (storageIdentifier.IsNone)
-                storageIdentifier = storageSettings.StorageIdentifier;
-
-
             return
-                (from resolvedPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath).ToAsync()
-                    from identifier in storageIdentifier.ToEither(new PowershellFailure
-                            {Message = $"Unexpected missing storage identifier for disk '{driveConfig.Name}'."})
+                (from resolvedPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath)
+                    from identifier in storageIdentifier.ToEither(
+                        Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
                         .ToAsync()
-                        .ToEither().ToAsync()
                     let planned = new HardDiskDriveStorageSettings
                     {
                         Type = driveConfig.Type.Value,
@@ -91,16 +86,8 @@ namespace Eryph.VmManagement.Storage
                             ParentSettings =
                                 string.IsNullOrWhiteSpace(driveConfig.Template)
                                     ? Option<DiskStorageSettings>.None
-                                    : Option<DiskStorageSettings>.Some(new DiskStorageSettings
-                                    {
-                                        StorageNames = StorageNames.FromPath(driveConfig.Template,
-                                            hostSettings.DefaultVirtualHardDiskPath).Names,
-                                        StorageIdentifier = StorageNames.FromPath(driveConfig.Template,
-                                            hostSettings.DefaultVirtualHardDiskPath).StorageIdentifier,
-                                        Path = Path.GetDirectoryName(driveConfig.Template),
-                                        FileName = Path.GetFileName(driveConfig.Template),
-                                        Name = Path.GetFileNameWithoutExtension(driveConfig.Template)
-                                    }),
+                                    : DiskStorageSettings
+                                        .FromTemplateString(hostSettings, driveConfig.Template),
                             Path = Path.Combine(resolvedPath, identifier),
                             FileName = $"{driveConfig.Name}.vhdx",
                             // ReSharper disable once StringLiteralTypo
@@ -111,7 +98,7 @@ namespace Eryph.VmManagement.Storage
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation
                     }
-                    select planned as VMDriveStorageSettings).ToEither();
+                    select planned as VMDriveStorageSettings);
         }
     }
 }

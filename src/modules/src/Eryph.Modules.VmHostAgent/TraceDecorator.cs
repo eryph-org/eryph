@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.VmManagement;
+using Eryph.VmManagement.Tracing;
 using Rebus.Handlers;
 using Rebus.Pipeline;
 

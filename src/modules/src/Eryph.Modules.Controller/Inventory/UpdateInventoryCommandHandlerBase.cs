@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Core;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
+using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using LanguageExt;
 
 namespace Eryph.Modules.Controller.Inventory
@@ -19,16 +23,19 @@ namespace Eryph.Modules.Controller.Inventory
         private readonly IVirtualDiskDataService _vhdDataService;
 
         protected readonly IVirtualMachineMetadataService MetadataService;
-
+        protected readonly IStateStore StateStore;
 
         protected UpdateInventoryCommandHandlerBase(
             IVirtualMachineMetadataService metadataService, IOperationDispatcher dispatcher,
-            IVirtualMachineDataService vmDataService, IVirtualDiskDataService vhdDataService)
+            IVirtualMachineDataService vmDataService, 
+            IVirtualDiskDataService vhdDataService,
+            IStateStore stateStore)
         {
             MetadataService = metadataService;
             _dispatcher = dispatcher;
             _vmDataService = vmDataService;
             _vhdDataService = vhdDataService;
+            StateStore = stateStore;
         }
 
         private static void SelectAllParentDisks(ref List<DiskInfo> parentDisks, DiskInfo disk)
@@ -39,8 +46,9 @@ namespace Eryph.Modules.Controller.Inventory
             parentDisks.Add(disk);
         }
 
-        protected async Task UpdateVMs(IEnumerable<VirtualMachineData> vmList, VMHostMachine hostMachine)
+        protected async Task UpdateVMs(IEnumerable<VirtualMachineData> vmList, VirtualCatletHost hostMachine)
         {
+
             var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
 
             var diskInfos = vms.SelectMany(x => x.Drives.Select(d => d.Disk)).ToList();
@@ -57,19 +65,18 @@ namespace Eryph.Modules.Controller.Inventory
             {
                 var disksDataCandidates = await _vhdDataService.FindVHDByLocation(
                         diskInfo.DataStore,
-                        diskInfo.Project,
+                        diskInfo.ProjectName,
                         diskInfo.Environment,
                         diskInfo.StorageIdentifier,
                         diskInfo.Name)
                     .Map(l => addedDisks.Append(l))
                     .Map(l => l.Filter(
                         x => x.DataStore == diskInfo.DataStore &&
-                             x.Project == diskInfo.Project &&
+                             x.Project.Name == diskInfo.ProjectName &&
                              x.Environment == diskInfo.Environment &&
                              x.StorageIdentifier == diskInfo.StorageIdentifier &&
                              x.Name == diskInfo.Name))
                     .Map(x => x.ToArray());
-
 
                 Option<VirtualDisk> disk;
                 if (disksDataCandidates.Length <= 1)
@@ -77,7 +84,7 @@ namespace Eryph.Modules.Controller.Inventory
                 else
                     disk = disksDataCandidates.FirstOrDefault(x =>
                         string.Equals(x.Path, diskInfo.Path, StringComparison.InvariantCultureIgnoreCase) &&
-                        string.Equals(x.FileName, diskInfo.FileName, StringComparison.InvariantCultureIgnoreCase)) 
+                        string.Equals(x.FileName, diskInfo.FileName, StringComparison.InvariantCultureIgnoreCase))
                            ?? Option<VirtualDisk>.None;
 
                 return disk;
@@ -88,14 +95,15 @@ namespace Eryph.Modules.Controller.Inventory
                 var disk = await LookupVirtualDisk(diskInfo)
                     .IfNoneAsync(async () =>
                 {
+
                     var d = new VirtualDisk
                     {
                         Id = diskInfo.Id,
                         Name = diskInfo.Name,
                         DataStore = diskInfo.DataStore,
-                        Project = diskInfo.Project,
                         Environment = diskInfo.Environment,
-                        StorageIdentifier = diskInfo.StorageIdentifier
+                        StorageIdentifier = diskInfo.StorageIdentifier,
+                        Project = await FindRequiredProject(diskInfo.ProjectName)
                     };
                     d = await _vhdDataService.AddNewVHD(d);
                     addedDisks.Add(d);
@@ -105,7 +113,7 @@ namespace Eryph.Modules.Controller.Inventory
                 diskInfo.Id = disk.Id; // copy id of existing record
                 disk.FileName = diskInfo.FileName;
                 disk.Path = diskInfo.Path;
-                disk.SizeBytes = diskInfo.SizeBytes; 
+                disk.SizeBytes = diskInfo.SizeBytes;
                 await _vhdDataService.UpdateVhd(disk);
 
             }
@@ -153,8 +161,10 @@ namespace Eryph.Modules.Controller.Inventory
                             metadata.Id = Guid.NewGuid();
                             metadata.MachineId = Guid.NewGuid();
                             metadata.VMId = vmInfo.VMId;
+                            
 
-                            await _dispatcher.StartNew(new UpdateVirtualMachineMetadataCommand
+                            await _dispatcher.StartNew(EryphConstants.DefaultTenantId,
+                                new UpdateVCatletMetadataCommand
                             {
                                 AgentName = hostMachine.AgentName,
                                 CurrentMetadataId = oldMetadataId,
@@ -166,8 +176,11 @@ namespace Eryph.Modules.Controller.Inventory
                         if (metadata.MachineId == Guid.Empty)
                             metadata.MachineId = Guid.NewGuid();
 
+                        // TODO: add lookup of project from vm location
+                        var project = await FindRequiredProject("default");
+
                         await _vmDataService.AddNewVM(
-                            VirtualMachineInfoToMachine(vmInfo, hostMachine, metadata.MachineId),
+                            VirtualMachineInfoToVCatlet(vmInfo, hostMachine, metadata.MachineId, project),
                             metadata);
 
 
@@ -176,17 +189,25 @@ namespace Eryph.Modules.Controller.Inventory
 
                     optionalMachine.IfSome(existingMachine =>
                     {
+                        StateStore.LoadProperty(existingMachine, x=> x.Project);
+                        Debug.Assert(existingMachine.Project != null);
+
                         // update data for existing machine
-                        var newMachine = VirtualMachineInfoToMachine(vmInfo, hostMachine, existingMachine.Id);
+                        var newMachine = VirtualMachineInfoToVCatlet(vmInfo,
+                            hostMachine, existingMachine.Id, existingMachine.Project);
                         existingMachine.Name = newMachine.Name;
                         existingMachine.Status = newMachine.Status;
                         existingMachine.Host = hostMachine;
                         existingMachine.AgentName = newMachine.AgentName;
 
-                        MergeMachineNetworks(newMachine.Networks, existingMachine);
-
+                        existingMachine.ReportedNetworks = newMachine.ReportedNetworks;
                         existingMachine.NetworkAdapters = newMachine.NetworkAdapters;
                         existingMachine.Drives = newMachine.Drives;
+                        existingMachine.CpuCount = newMachine.CpuCount;
+                        existingMachine.StartupMemory = newMachine.StartupMemory;
+                        existingMachine.MinimumMemory = newMachine.MinimumMemory;
+                        existingMachine.StartupMemory = newMachine.StartupMemory;
+                        existingMachine.Features = newMachine.Features;
                     });
 
 
@@ -194,12 +215,35 @@ namespace Eryph.Modules.Controller.Inventory
             }
         }
 
-        private VirtualMachine VirtualMachineInfoToMachine(VirtualMachineData vmInfo, VMHostMachine hostMachine,
-            Guid machineId)
+        protected async Task<Option<Project>> FindProject(string projectIdentifier)
         {
-            return new VirtualMachine
+            var isGuid = Guid.TryParse(projectIdentifier, out var projectId);
+
+            if (isGuid)
+                return await StateStore.For<Project>().GetByIdAsync(projectId);
+
+            return await StateStore.For<Project>()
+                .GetBySpecAsync(new ProjectSpecs.GetByName(EryphConstants.DefaultTenantId, projectIdentifier));
+        }
+
+        protected async Task<Project> FindRequiredProject(string projectIdentifier)
+        {
+            var foundProject = await FindProject(projectIdentifier);
+
+            if(foundProject.IsNone)
+                throw new NotFoundException($"Project '{projectIdentifier}' not found.");
+
+            return foundProject.IfNone(new Project());
+        }
+
+        private VirtualCatlet VirtualMachineInfoToVCatlet(VirtualMachineData vmInfo, VirtualCatletHost hostMachine,
+            Guid machineId, Project project)
+        {
+            return new VirtualCatlet
             {
                 Id = machineId,
+                Project = project,
+                ProjectId = project.Id,
                 VMId = vmInfo.VMId,
                 Name = vmInfo.Name,
                 Status = MapVmStatusToMachineStatus(vmInfo.Status),
@@ -207,14 +251,19 @@ namespace Eryph.Modules.Controller.Inventory
                 AgentName = hostMachine.AgentName,
                 MetadataId = vmInfo.MetadataId,
                 UpTime = vmInfo.UpTime,
-                NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new VirtualMachineNetworkAdapter
+                CpuCount = vmInfo.Cpu?.Count ?? 0,
+                StartupMemory = vmInfo.Memory?.Startup ?? 0,
+                MinimumMemory = vmInfo.Memory?.Minimum ?? 0,
+                MaximumMemory = vmInfo.Memory?.Startup ?? 0,
+                Features = MapFeatures(vmInfo),
+                NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new VirtualCatletNetworkAdapter
                 {
                     Id = a.Id,
                     MachineId = machineId,
                     Name = a.AdapterName,
                     SwitchName = a.VirtualSwitchName
                 }).ToList(),
-                Drives = vmInfo.Drives.Select(d => new VirtualMachineDrive
+                Drives = vmInfo.Drives.Select(d => new VirtualCatletDrive
                 {
                     Id = d.Id,
                     MachineId = machineId,
@@ -224,68 +273,43 @@ namespace Eryph.Modules.Controller.Inventory
                         ? _vhdDataService.GetVHD(d.Disk.Id).GetAwaiter().GetResult().IfNoneUnsafe(() => null) : null
 
                 }).ToList(),
-                Networks = (vmInfo.Networks?.ToMachineNetwork(machineId) ?? Array.Empty<MachineNetwork>()).ToList()
+                ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(machineId) ?? Array.Empty<ReportedNetwork>()).ToList()
             };
         }
 
-        private static MachineStatus MapVmStatusToMachineStatus(VmStatus status)
+        private static List<VCatletFeature> MapFeatures(VirtualMachineData vmInfo)
+        {
+            var features = new List<VCatletFeature>();
+
+            if(vmInfo.Memory?.DynamicMemoryEnabled ?? false)
+                features.Add(VCatletFeature.DynamicMemory);
+
+            if(vmInfo.Firmware?.SecureBoot ?? false)
+                features.Add(VCatletFeature.SecureBoot);
+            if (vmInfo.Cpu?.ExposeVirtualizationExtensions ?? false)
+                features.Add(VCatletFeature.NestedVirtualization);
+
+
+            return features;
+        }
+
+        private static CatletStatus MapVmStatusToMachineStatus(VmStatus status)
         {
             switch (status)
             {
                 case VmStatus.Stopped:
-                    return MachineStatus.Stopped;
+                    return CatletStatus.Stopped;
                 case VmStatus.Running:
-                    return MachineStatus.Running;
+                    return CatletStatus.Running;
                 case VmStatus.Pending:
-                    return MachineStatus.Pending;
+                    return CatletStatus.Pending;
                 case VmStatus.Error:
-                    return MachineStatus.Error;
+                    return CatletStatus.Error;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(status), status, null);
             }
         }
 
-
-        protected static void MergeMachineNetworks(IEnumerable<MachineNetwork> newNetworks, Machine existingMachine)
-        {
-            //merge Networks 
-            var networkList = newNetworks.ToList();
-            var existingNetworksList = existingMachine.Networks?.ToList() ?? new List<MachineNetwork>();
-
-            var existingNetworksListUniqueName =
-                existingNetworksList.Distinct((x, y) => x.Name == y.Name).ToArray();
-
-            foreach (var existingNetwork in existingNetworksListUniqueName)
-            {
-                var networksWithSameName =
-                    existingNetworksList.Where(x => x.Name == existingNetwork.Name).ToArray();
-
-                var deleteNetwork = networksWithSameName.Length > 1 || //delete if name is not unique
-                                                                       //delete also, if there is a reference in current machine but no longer in new machine
-                                    existingNetworksList.All(x => x.Name != existingNetwork.Name);
-
-                if (deleteNetwork)
-                    existingNetworksList.RemoveAll(x => x.Name == existingNetwork.Name);
-            }
-
-            foreach (var newNetwork in networkList.ToArray())
-            {
-                var existingNetwork = existingNetworksList.FirstOrDefault(x => x.Name == newNetwork.Name);
-                if (existingNetwork == null) continue;
-                existingNetwork.DnsServerAddresses = newNetwork.DnsServerAddresses;
-                existingNetwork.IPv4DefaultGateway = newNetwork.IPv4DefaultGateway;
-                existingNetwork.IPv4DefaultGateway = newNetwork.IPv6DefaultGateway;
-                existingNetwork.IpV4Addresses = newNetwork.IpV4Addresses;
-                existingNetwork.IpV6Addresses = newNetwork.IpV6Addresses;
-                existingNetwork.IpV4Subnets = newNetwork.IpV4Subnets;
-                existingNetwork.IpV6Subnets = newNetwork.IpV6Subnets;
-
-                networkList.Remove(newNetwork);
-            }
-
-            existingNetworksList.AddRange(networkList);
-            existingMachine.Networks = existingNetworksList;
-        }
     }
 }

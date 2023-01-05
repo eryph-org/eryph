@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Eryph.Messages.Resources.Machines.Events;
+using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
@@ -10,6 +9,7 @@ using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -45,9 +45,8 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                 .BindAsync(getNetworkAdapters)
                 .BindAsync(findAdapterForMessage)
                 .BindAsync(a => 
-                    (from hostInfo in _hostInfoProvider.GetHostInfoAsync().ToAsync()
+                    (from hostInfo in _hostInfoProvider.GetHostInfoAsync()
                     let adapter = a.Cast<VMNetworkAdapter>()
-                    let hostNetwork = hostInfo.VirtualNetworks.FirstOrDefault(x=>x.VirtualSwitchId == adapter.Value.SwitchId)
                     select 
                         new VirtualMachineNetworkChangedEvent
                         {
@@ -60,33 +59,25 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                                     .Cast<VMNetworkAdapterVlanSetting>().Value.AccessVlanId,
                                 VirtualSwitchName = adapter.Value.SwitchName,
                                 VirtualSwitchId = adapter.Value.SwitchId,
-                                MACAddress = a.Value.MacAddress
+                                MacAddress = a.Value.MacAddress
                             },
-                            ChangedNetwork = new MachineNetworkData
-                            {
-                                Name = hostNetwork?.Name,
-                                IPAddresses = message.IPAddresses,
-                                Subnets = NetworkAddresses
-                                    .AddressesAndSubnetsToSubnets(message.IPAddresses, message.Netmasks).ToArray(),
-                                DefaultGateways = message.DefaultGateways,
-                                DnsServers = message.DnsServers,
-                                DhcpEnabled = message.DhcpEnabled
-                            }
+                            ChangedNetwork = VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, new []{adapter.Value})
+                                .FirstOrDefault()
                         }).ToEither()).ToAsync().MatchAsync(
                     r => _bus.Publish(r),
                     l => { _log.LogError(l.Message); });
         }
 
 
-        private static Either<PowershellFailure, TypedPsObject<T>> SingleOrFailure<T>(Seq<TypedPsObject<T>> sequence)
+        private static Either<Error, TypedPsObject<T>> SingleOrFailure<T>(Seq<TypedPsObject<T>> sequence)
         {
-            return sequence.HeadOrNone().ToEither(new PowershellFailure());
+            return sequence.HeadOrNone().ToEither(Errors.SequenceEmpty);
         }
 
-        private Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetVMs<T>(Guid vmId)
+        private Task<Either<Error, Seq<TypedPsObject<T>>>> GetVMs<T>(Guid vmId)
         {
             return _engine.GetObjectsAsync<T>(new PsCommandBuilder()
-                .AddCommand("Get-VM").AddParameter("Id", vmId));
+                .AddCommand("Get-VM").AddParameter("Id", vmId)).ToError();
         }
     }
 }

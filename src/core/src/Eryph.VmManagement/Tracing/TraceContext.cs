@@ -1,7 +1,6 @@
 ﻿using System;
-using JetBrains.Annotations;
 
-namespace Eryph.VmManagement;
+namespace Eryph.VmManagement.Tracing;
 
 public readonly struct TraceContext : IDisposable
 {

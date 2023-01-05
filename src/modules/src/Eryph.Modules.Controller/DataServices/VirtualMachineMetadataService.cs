@@ -17,20 +17,20 @@ namespace Eryph.Modules.Controller.DataServices
             _repository = repository;
         }
 
-        public async Task<Option<VirtualMachineMetadata>> GetMetadata(Guid id)
+        public async Task<Option<VirtualCatletMetadata>> GetMetadata(Guid id)
         {
             if (id == Guid.Empty)
-                return Option<VirtualMachineMetadata>.None;
+                return Option<VirtualCatletMetadata>.None;
 
             var entity = await _repository.GetByIdAsync(id);
 
             if(entity == null)
-                return Option<VirtualMachineMetadata>.None;
+                return Option<VirtualCatletMetadata>.None;
 
             return DeserializeMetadataEntity(entity);
         }
 
-        public async Task<Unit> SaveMetadata(VirtualMachineMetadata metadata)
+        public async Task<Unit> SaveMetadata(VirtualCatletMetadata metadata)
         {
             var entity = await _repository.GetByIdAsync(metadata.Id);
             if (entity == null)
@@ -60,10 +60,10 @@ namespace Eryph.Modules.Controller.DataServices
             return Unit.Default;
         }
 
-        private static Option<VirtualMachineMetadata> DeserializeMetadataEntity(
+        private static Option<VirtualCatletMetadata> DeserializeMetadataEntity(
             [CanBeNull] StateDb.Model.VirtualMachineMetadata metadataEntity)
         {
-            return JsonSerializer.Deserialize<VirtualMachineMetadata>(metadataEntity.Metadata);
+            return JsonSerializer.Deserialize<VirtualCatletMetadata>(metadataEntity.Metadata);
         }
     }
 }

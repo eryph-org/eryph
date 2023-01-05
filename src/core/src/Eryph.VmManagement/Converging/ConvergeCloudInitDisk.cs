@@ -5,11 +5,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Dbosoft.CloudInit.ConfigDrive;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement.Converging
 {
@@ -20,7 +21,7 @@ namespace Eryph.VmManagement.Converging
         {
         }
 
-        public override Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
+        public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             return (from vm in EjectConfigDriveDisk(vmInfo).ToAsync()
@@ -32,42 +33,42 @@ namespace Eryph.VmManagement.Converging
         private string ReplaceVariables(string userData)
         {
             var sb = new StringBuilder(userData);
-            sb.Replace("{{machineId}}", Context.Metadata.MachineId.ToString());
+            sb.Replace("{{catletId}}", Context.Metadata.MachineId.ToString());
             sb.Replace("{{vmId}}", Context.Metadata.VMId.ToString());
 
             return sb.ToString();
         }
 
-        public async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> UpdateConfigDriveDisk(
+        public async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> UpdateConfigDriveDisk(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
 
             return await Context.StorageSettings.StorageIdentifier.MatchAsync(
                 async storageIdentifier =>
                 {
-                    var configDriveIsoPath = Path.Combine(Context.StorageSettings.VMPath, storageIdentifier,
+                    var configDriveIsoPath = Path.Combine(Context.StorageSettings.VMPath,
                         "configdrive.iso");
 
                     await Context.ReportProgress("Updating cloud-init config drive.").ConfigureAwait(false);
 
                     return await (from d in CreateConfigDriveDirectory(Context.StorageSettings.VMPath).ToAsync()
-                           from networkData in GenerateNetworkData(vmInfo).ToAsync()
-                           from _ in GenerateConfigDriveDisk(configDriveIsoPath,
-                               Context.Metadata.SensitiveDataHidden,
-                               Context.Config.Provisioning.Hostname,
-                               networkData,
-                               Context.Config.Provisioning.Config).ToAsync()
-                           from newVmInfo in InsertConfigDriveDisk(configDriveIsoPath, vmInfo).ToAsync()
-                           select newVmInfo);
-                    
+                        from networkData in GenerateNetworkData(vmInfo).ToAsync()
+                        from _ in GenerateConfigDriveDisk(configDriveIsoPath,
+                            Context.Metadata.SensitiveDataHidden,
+                            Context.Config.Raising.Hostname,
+                            networkData,
+                            Context.Config.Raising.Config).ToAsync()
+                        from newVmInfo in InsertConfigDriveDisk(configDriveIsoPath, vmInfo).ToAsync()
+                        select newVmInfo);
+
                 },
                 () => Context.ReportProgress("Missing storage identifier - cannot generate cloud-init config drive.")
                     .ToUnit().MapAsync(_ =>
-                        Prelude.RightAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither())
+                        Prelude.RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither())
             );
         }
 
-        private static async Task<Either<PowershellFailure, NetworkData>> GenerateNetworkData(TypedPsObject<VirtualMachineInfo> vmInfo)
+        private static async Task<Either<Error, NetworkData>> GenerateNetworkData(TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var config = new List<object>();
             const string regex = "(.{2})(.{2})(.{2})(.{2})(.{2})(.{2})";
@@ -94,7 +95,7 @@ namespace Eryph.VmManagement.Converging
             return new NetworkData(config);
         }
 
-        private Task<Either<PowershellFailure, Unit>> GenerateConfigDriveDisk(string configDriveIsoPath,
+        private Task<Either<Error, Unit>> GenerateConfigDriveDisk(string configDriveIsoPath,
             bool withoutSensitive,
             string hostname,
             NetworkData networkData,
@@ -128,7 +129,8 @@ namespace Eryph.VmManagement.Converging
                                 _ => UserDataContentType.CloudConfig
                             };
 
-                            var userData = new UserData(contentType, ReplaceVariables(cloudInitConfig.Content),
+                            var userData = new UserData(contentType, 
+                                ReplaceVariables(cloudInitConfig.Content).TrimEnd('\0'),
                                 cloudInitConfig.FileName,
                                 Encoding.UTF8);
                             configDrive.AddUserData(userData);
@@ -142,28 +144,28 @@ namespace Eryph.VmManagement.Converging
 
                     return Unit.Default;
                 }).ToEither(l => new PowershellFailure { Message = l.Message })
-                .ToEither();
+                .ToEither().ToError();
 
 
         }
 
 
-        private static Either<PowershellFailure, Unit> CreateConfigDriveDirectory(string configDrivePath)
+        private static Either<Error, Unit> CreateConfigDriveDirectory(string configDrivePath)
         {
             if (Directory.Exists(configDrivePath)) return Unit.Default;
 
             var tryResult = Prelude.Try(Directory.CreateDirectory(configDrivePath)).Try();
 
             if (tryResult.IsFaulted)
-                return new PowershellFailure {Message = $"Failed to create directory {configDrivePath}"};
+                return Error.New($"Failed to create directory {configDrivePath}");
 
             return Unit.Default;
         }
 
-        private async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> EjectConfigDriveDisk(
+        private async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> EjectConfigDriveDisk(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
-            async Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Eject()
+            async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Eject()
             {
                 var res = await ConvergeHelpers.FindAndApply(vmInfo, l => l.DVDDrives,
                         device =>
@@ -176,8 +178,8 @@ namespace Eryph.VmManagement.Converging
                             .AddParameter("VMDvdDrive", drive.PsObject)
                             .AddParameter("Path", null)))
                     .Map(list => list.ToArr().Lefts().HeadOrNone()).MatchAsync(
-                        None: () => vmInfo.RecreateOrReload(Context.Engine),
-                        Some: l => Prelude.LeftAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(l)
+                        None: () => vmInfo.RecreateOrReload(Context.Engine).ToEither(),
+                        Some: l => Prelude.LeftAsync<Error, TypedPsObject<VirtualMachineInfo>>(l.Message)
                             .ToEither());
 
                 return res;
@@ -206,10 +208,10 @@ namespace Eryph.VmManagement.Converging
 
             }
 
-            return new PowershellFailure { Message = "Timeout while waiting for cloud-init disk to be ejected." };
+            return  Error.New("Timeout while waiting for cloud-init disk to be ejected.");
         }
 
-        private Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> InsertConfigDriveDisk(
+        private Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> InsertConfigDriveDisk(
             string configDriveIsoPath,
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
@@ -229,8 +231,8 @@ namespace Eryph.VmManagement.Converging
                 from _ in Context.Engine.Run(PsCommandBuilder.Create()
                     .AddCommand("Set-VMDvdDrive")
                     .AddParameter("VMDvdDrive", dvdDrive.PsObject)
-                    .AddParameter("Path", configDriveIsoPath)).ToAsync()
-                from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine).ToAsync()
+                    .AddParameter("Path", configDriveIsoPath)).ToAsync().ToError()
+                from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
                 select vmInfoRecreated).ToEither();
         }
     }

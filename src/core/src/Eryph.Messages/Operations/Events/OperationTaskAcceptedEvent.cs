@@ -7,6 +7,7 @@ namespace Eryph.Messages.Operations.Events
     {
         public string AgentName { get; set; }
         public Guid OperationId { get; set; }
+        public Guid InitiatingTaskId { get; set; }
         public Guid TaskId { get; set; }
     }
 }

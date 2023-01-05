@@ -1,4 +1,6 @@
-﻿namespace Eryph.VmManagement;
+﻿using Eryph.VmManagement.Tracing;
+
+namespace Eryph.VmManagement;
 
 public class PowershellCommandTraceData : TraceData
 {

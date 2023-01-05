@@ -1,7 +1,6 @@
 ﻿using System;
-using Eryph.Core;
+using Eryph.ConfigModel;
 using Eryph.VmManagement.Data.Core;
-using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 
 namespace Eryph.VmManagement.Data.Planned

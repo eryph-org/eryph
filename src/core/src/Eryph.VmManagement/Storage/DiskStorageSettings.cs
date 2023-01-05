@@ -1,4 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Drawing;
+using System.IO;
+using System.Threading.Tasks;
 using LanguageExt;
 
 namespace Eryph.VmManagement.Storage
@@ -16,6 +19,52 @@ namespace Eryph.VmManagement.Storage
 
         public long SizeBytes { get; set; }
 
+        public static Option<DiskStorageSettings> FromTemplateString(HostSettings hostSettings, string templateString)
+        {
+            if (!templateString.StartsWith("image:"))
+            {
+                return new DiskStorageSettings
+                {
+                    StorageNames = StorageNames.FromPath(templateString,
+                        hostSettings.DefaultVirtualHardDiskPath).Names,
+                    StorageIdentifier = StorageNames.FromPath(templateString,
+                        hostSettings.DefaultVirtualHardDiskPath).StorageIdentifier,
+                    Path = System.IO.Path.GetDirectoryName(templateString),
+                    FileName = System.IO.Path.GetFileName(templateString),
+                    Name = System.IO.Path.GetFileNameWithoutExtension(templateString)
+                };
+            }
+
+            var parts = templateString.Split(':', StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length < 2)
+            {
+                return Option<DiskStorageSettings>.None;
+            }
+
+            var imageName = parts[1].Replace('/', '\\');
+            var diskName = "sda";
+
+            if (parts.Length == 3)
+            {
+                diskName = parts[2];
+            }
+
+            var imageDiskPath = System.IO.Path.Combine(hostSettings.DefaultVirtualHardDiskPath,
+                "images", imageName, "Virtual Hard Disks", $"{diskName}.vhdx");
+
+            return new DiskStorageSettings
+            {
+                StorageNames = StorageNames.FromPath(imageDiskPath,
+                    hostSettings.DefaultVirtualHardDiskPath).Names,
+                StorageIdentifier = StorageNames.FromPath(imageDiskPath,
+                    hostSettings.DefaultVirtualHardDiskPath).StorageIdentifier,
+                Path = System.IO.Path.GetDirectoryName(imageDiskPath),
+                FileName = System.IO.Path.GetFileName(imageDiskPath),
+                Name = System.IO.Path.GetFileNameWithoutExtension(imageDiskPath)
+            };
+
+        }
 
         public static Task<Either<PowershellFailure, Option<DiskStorageSettings>>> FromVhdPath(IPowershellEngine engine,
             HostSettings hostSettings, Option<string> optionalPath)

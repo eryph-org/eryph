@@ -2,15 +2,15 @@
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
-using Eryph.Resources.Machines;
+using Eryph.ConfigModel.Catlets;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Storage;
+using LanguageExt;
+using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Prelude = LanguageExt.Prelude;
-using TaskExtensions = LanguageExt.TaskExtensions;
 using Unit = LanguageExt.Unit;
 
 namespace Eryph.VmManagement.Converging
@@ -21,96 +21,94 @@ namespace Eryph.VmManagement.Converging
         {
         }
 
-        public override async Task<LanguageExt.Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
+        public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             if (Context.StorageSettings.Frozen)
-                return Prelude.Right<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo);
+                return Prelude.Right<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo);
 
             var currentCheckpointType = vmInfo.Value.CheckpointType;
 
             try
             {
-                await (
+                 await (
                     //prevent snapshots creating during running disk converge
-                    from _ in SetVMCheckpointType(vmInfo, CheckpointType.Disabled, Context.Engine).ToAsync()
+                    from _ in SetVMCheckpointType(vmInfo, CheckpointType.Disabled, Context.Engine)
                     //make a plan
                     from plannedDriveStorageSettings in VMDriveStorageSettings
-                        .PlanDriveStorageSettings(Context.HostSettings, Context.Config, Context.StorageSettings)
-                        .ToAsync()
+                        .PlanDriveStorageSettings(Context.HostSettings, Context.Config, Context.StorageSettings) 
                     //ensure that the changes reflect the current VM settings
-                    from infoReloaded in vmInfo.Reload(Context.Engine).ToAsync()
+                    from infoReloaded in vmInfo.Reload(Context.Engine)
                     //detach removed disks
-                    from __ in DetachUndefinedDrives(infoReloaded, plannedDriveStorageSettings).ToAsync()
-                    from infoRecreated in vmInfo.RecreateOrReload(Context.Engine).ToAsync()
-                    from ___ in VirtualDisks(infoRecreated, plannedDriveStorageSettings).ToAsync()
-                    from ____ in DvdDrives(infoRecreated, plannedDriveStorageSettings).ToAsync()
+                    from __ in DetachUndefinedDrives(infoReloaded, plannedDriveStorageSettings)
+                    from infoRecreated in vmInfo.RecreateOrReload(Context.Engine)
+                    from ___ in VirtualDisks(infoRecreated, plannedDriveStorageSettings)
+                    from ____ in DvdDrives(infoRecreated, plannedDriveStorageSettings)
                     select Unit.Default).ToEither().ConfigureAwait(false);
             }
             finally
             {
-                await SetVMCheckpointType(vmInfo, currentCheckpointType, Context.Engine).ConfigureAwait(false);
+                await SetVMCheckpointType(vmInfo, currentCheckpointType, Context.Engine).ToEither().ConfigureAwait(false);
             }
 
-            return await vmInfo.Reload(Context.Engine).ConfigureAwait(false);
+            return await vmInfo.Reload(Context.Engine).ToEither().ConfigureAwait(false);
         }
 
-        private Task<LanguageExt.Either<PowershellFailure, Unit>> VirtualDisks(TypedPsObject<VirtualMachineInfo> vmInfo,
-            LanguageExt.Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
+        private EitherAsync<Error, Unit> VirtualDisks(TypedPsObject<VirtualMachineInfo> vmInfo,
+            Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
         {
             var plannedDiskSettings = plannedDriveStorageSettings
-                .Where(x => x.Type == VirtualMachineDriveType.VHD || x.Type == VirtualMachineDriveType.SharedVHD)
+                .Where(x => x.Type == VirtualCatletDriveType.VHD || x.Type == VirtualCatletDriveType.SharedVHD)
                 .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
             return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine,
-                    Context.HostSettings, vmInfo.GetList(x=>x.HardDrives)).ToAsync()
-                from _ in plannedDiskSettings.MapToEitherAsync(s => VirtualDisk(s, vmInfo, currentDiskSettings))
-                    .ToAsync()
-                select Unit.Default).ToEither();
+                    Context.HostSettings, vmInfo.GetList(x=>x.HardDrives))
+                from _ in plannedDiskSettings.MapToEitherAsync(s => VirtualDisk(s, vmInfo, currentDiskSettings).ToEither()).ToAsync()
+                select Unit.Default);
         }
         
-        private Task<LanguageExt.Either<PowershellFailure, Unit>> DvdDrives(TypedPsObject<VirtualMachineInfo> vmInfo,
-            LanguageExt.Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
+        private EitherAsync<Error, Unit> DvdDrives(TypedPsObject<VirtualMachineInfo> vmInfo,
+            Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
         {
             var plannedDvdSettings = plannedDriveStorageSettings
-                .Where(x => x.Type == VirtualMachineDriveType.DVD)
+                .Where(x => x.Type == VirtualCatletDriveType.DVD)
                 .Cast<VMDvDStorageSettings>().ToSeq();
 
             return (
-                from _ in plannedDvdSettings.MapToEitherAsync(s => DvdDrive(s, vmInfo))
+                from _ in plannedDvdSettings.MapToEitherAsync(s => DvdDrive(s, vmInfo).ToEither())
                     .ToAsync()
-                select Unit.Default).ToEither();
+                select Unit.Default);
         }
 
 
-        private static Task<LanguageExt.Either<PowershellFailure, Unit>> SetVMCheckpointType(
+        private static EitherAsync<Error, Unit> SetVMCheckpointType(
             TypedPsObject<VirtualMachineInfo> vmInfo, CheckpointType checkpointType, IPowershellEngine engine)
         {
             return engine.RunAsync(new PsCommandBuilder()
                 .AddCommand("Set-VM")
                 .AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("CheckpointType", checkpointType));
+                .AddParameter("CheckpointType", checkpointType)).ToAsync().ToError();
         }
 
-        private Task<LanguageExt.Either<PowershellFailure, Unit>> DetachUndefinedDrives(
-            TypedPsObject<VirtualMachineInfo> vmInfo, LanguageExt.Seq<VMDriveStorageSettings> plannedStorageSettings)
+        private EitherAsync<Error, Unit> DetachUndefinedDrives(
+            TypedPsObject<VirtualMachineInfo> vmInfo, Seq<VMDriveStorageSettings> plannedStorageSettings)
 
         {
-            return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings
-                    .Detect(Context.Engine, Context.HostSettings, vmInfo.GetList(x=>x.HardDrives)).ToAsync()
-                from _ in DetachUndefinedHardDrives(vmInfo, plannedStorageSettings, currentDiskSettings).ToAsync()
-                from __ in DetachUndefinedDvdDrives(vmInfo, plannedStorageSettings).ToAsync()
-                select Unit.Default).ToEither();
+            return from currentDiskSettings in CurrentHardDiskDriveStorageSettings
+                    .Detect(Context.Engine, Context.HostSettings, vmInfo.GetList(x => x.HardDrives))
+                from _ in DetachUndefinedHardDrives(vmInfo, plannedStorageSettings, currentDiskSettings)
+                from __ in DetachUndefinedDvdDrives(vmInfo, plannedStorageSettings)
+                select Unit.Default;
         }
 
 
-        private Task<LanguageExt.Either<PowershellFailure, Unit>> DetachUndefinedHardDrives(
-            TypedPsObject<VirtualMachineInfo> vmInfo, LanguageExt.Seq<VMDriveStorageSettings> plannedStorageSettings,
-            LanguageExt.Seq<CurrentHardDiskDriveStorageSettings> currentDiskStorageSettings)
+        private EitherAsync<Error, Unit> DetachUndefinedHardDrives(
+            TypedPsObject<VirtualMachineInfo> vmInfo, Seq<VMDriveStorageSettings> plannedStorageSettings,
+            Seq<CurrentHardDiskDriveStorageSettings> currentDiskStorageSettings)
 
         {
             var planedDiskSettings = plannedStorageSettings.Where(x =>
-                    x.Type == VirtualMachineDriveType.VHD || x.Type == VirtualMachineDriveType.SharedVHD)
+                    x.Type == VirtualCatletDriveType.VHD || x.Type == VirtualCatletDriveType.SharedVHD)
                 .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
             var attachedPaths = planedDiskSettings.Map(s => s.AttachPath).Map(x => x.IfNone(""))
@@ -118,7 +116,7 @@ namespace Eryph.VmManagement.Converging
 
             var frozenDiskIds = currentDiskStorageSettings.Where(x => x.Frozen).Map(x => x.AttachedVMId);
 
-            return TaskExtensions.Map(ConvergeHelpers.FindAndApply(vmInfo,
+            return ConvergeHelpers.FindAndApply(vmInfo,
                     i => i.HardDrives,
                     device =>
                     {
@@ -156,25 +154,25 @@ namespace Eryph.VmManagement.Converging
                         return detach;
                     },
                     i => Context.Engine.RunAsync(PsCommandBuilder.Create().AddCommand("Remove-VMHardDiskDrive")
-                        .AddParameter("VMHardDiskDrive", i.PsObject))), x => x.Lefts().HeadOrNone())
-                .MatchAsync(
-                    l => Prelude.LeftAsync<PowershellFailure, Unit>(l).ToEither(),
-                    () => Prelude.RightAsync<PowershellFailure, Unit>(Unit.Default)
-                        .ToEither());
+                        .AddParameter("VMHardDiskDrive", i.PsObject))).Map(x => x.Lefts().HeadOrNone())
+                        .MatchAsync(
+                            l => Prelude.LeftAsync<PowershellFailure, Unit>(l).ToEither(),
+                            () => Prelude.RightAsync<PowershellFailure, Unit>(Unit.Default)
+                                .ToEither()).ToError().ToAsync();
         }
 
 
-        private Task<LanguageExt.Either<PowershellFailure, Unit>> DetachUndefinedDvdDrives(
-            TypedPsObject<VirtualMachineInfo> vmInfo, LanguageExt.Seq<VMDriveStorageSettings> plannedStorageSettings)
+        private EitherAsync<Error, Unit> DetachUndefinedDvdDrives(
+            TypedPsObject<VirtualMachineInfo> vmInfo, Seq<VMDriveStorageSettings> plannedStorageSettings)
 
         {
-            var controllersAndLocations = plannedStorageSettings.Where(x => x.Type == VirtualMachineDriveType.DVD)
+            var controllersAndLocations = plannedStorageSettings.Where(x => x.Type == VirtualCatletDriveType.DVD)
                 .Map(x => new {x.ControllerNumber, x.ControllerLocation})
                 .GroupBy(x => x.ControllerNumber)
                 .ToImmutableDictionary(x => x.Key, x => x.Map(y => y.ControllerLocation).ToImmutableArray());
 
 
-            return TaskExtensions.Map(ConvergeHelpers.FindAndApply(vmInfo,
+            return ConvergeHelpers.FindAndApply(vmInfo,
                     i => i.DVDDrives,
                     device =>
                     {
@@ -189,23 +187,23 @@ namespace Eryph.VmManagement.Converging
                         return detach;
                     },
                     i => Context.Engine.RunAsync(PsCommandBuilder.Create().AddCommand("Remove-VMDvdDrive")
-                        .AddParameter("VMDvdDrive", i.PsObject))), x => x.Lefts().HeadOrNone())
+                        .AddParameter("VMDvdDrive", i.PsObject))).Map(x => x.Lefts().HeadOrNone())
                 .MatchAsync(
                     l => Prelude.LeftAsync<PowershellFailure, Unit>(l).ToEither(),
                     () => Prelude.RightAsync<PowershellFailure, Unit>(Unit.Default)
-                        .ToEither());
+                        .ToEither()).ToError().ToAsync();
         }
 
-        private Task<LanguageExt.Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> DvdDrive(
+        private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> DvdDrive(
             VMDvDStorageSettings dvdSettings,
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             return
-                (from dvdDrive in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
+                from dvdDrive in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
                         l => l.DVDDrives,
                         device => device.Cast<DvdDriveInfo>()
-                            .Map(drive =>drive.ControllerLocation == dvdSettings.ControllerLocation 
-                                         && drive.ControllerNumber == dvdSettings.ControllerNumber),
+                            .Map(drive => drive.ControllerLocation == dvdSettings.ControllerLocation
+                                          && drive.ControllerNumber == dvdSettings.ControllerNumber),
                         async () =>
                         {
                             await Context
@@ -223,100 +221,112 @@ namespace Eryph.VmManagement.Converging
                     from _ in Context.Engine.Run(PsCommandBuilder.Create()
                         .AddCommand("Set-VMDvdDrive")
                         .AddParameter("VMDvdDrive", dvdDrive.PsObject)
-                        .AddParameter("Path", dvdSettings.Path)).ToAsync()
-                    from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine).ToAsync()
-                    select vmInfoRecreated).ToEither();
-            
+                        .AddParameter("Path", dvdSettings.Path)).ToAsync().ToError()
+                    from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
+                    select vmInfoRecreated;
+
         }
-        
-        private async Task<LanguageExt.Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> VirtualDisk(
+
+        private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> VirtualDisk(
             HardDiskDriveStorageSettings driveSettings,
             TypedPsObject<VirtualMachineInfo> vmInfo,
-            LanguageExt.Seq<CurrentHardDiskDriveStorageSettings> currentStorageSettings)
+            Seq<CurrentHardDiskDriveStorageSettings> currentStorageSettings)
         {
             var currentSettings =
                 currentStorageSettings.Find(x =>
                     driveSettings.DiskSettings.Path.Equals(x.DiskSettings.Path, StringComparison.OrdinalIgnoreCase)
                     && driveSettings.DiskSettings.Name.Equals(x.DiskSettings.Name,
                         StringComparison.InvariantCultureIgnoreCase));
+
             var frozenOptional = currentSettings.Map(x => x.Frozen);
 
             if (frozenOptional.IsSome && frozenOptional.ValueUnsafe())
             {
-                await Context
-                    .ReportProgress(
+                return Context
+                    .ReportProgressAsync(
                         $"Skipping HD Drive '{driveSettings.DiskSettings.Name}': storage management is disabled for this disk.")
-                    .ConfigureAwait(false);
-                return vmInfo;
+                    .Map(_ => vmInfo);
             }
 
 
-            return await driveSettings.AttachPath.Map(async vhdPath =>
-            {
-                if (!File.Exists(vhdPath))
-                {
-                    await Context.ReportProgress($"Creating HD Drive: {driveSettings.DiskSettings.Name}")
-                        .ConfigureAwait(false);
+            var hasSameSize = Prelude.Cond<long>(size => 
+                size != driveSettings.DiskSettings.SizeBytes &&
+                                                      driveSettings.DiskSettings.SizeBytes > 0);
 
-                    var createDiskResult = await driveSettings.DiskSettings.ParentSettings.Match(parentSettings =>
-                        {
-                            var parentFilePath = Path.Combine(parentSettings.Path, parentSettings.FileName);
-                            return Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
-                                $"New-VHD -Path \"{vhdPath}\" -ParentPath \"{parentFilePath}\" -Differencing"));
-                        },
-                        () =>
-                        {
-                            return Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
-                                $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {driveSettings.DiskSettings.SizeBytes}"));
-                        });
+            var diskSizeInGb = Math.Round(driveSettings.DiskSettings.SizeBytes / 1024d / 1024 / 1024, 1);
 
-                    if (createDiskResult.IsLeft)
-                        return Prelude.Left(createDiskResult.LeftAsEnumerable().FirstOrDefault());
-                }
+            return driveSettings.AttachPath.Map(vhdPath =>
+                
+                        from uFile in Prelude.Cond<string>(File.Exists)(vhdPath).Match(
 
-                var sizeResult = await Context.Engine
-                    .GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("get-vhd").AddArgument(vhdPath))
-                    .BindAsync(x => x.HeadOrLeft(new PowershellFailure())).BindAsync(async vhdInfo =>
-                    {
-                        if (vhdInfo.Value.Size != driveSettings.DiskSettings.SizeBytes &&
-                            driveSettings.DiskSettings.SizeBytes > 0)
-                        {
-                            var gb = Math.Round(driveSettings.DiskSettings.SizeBytes / 1024d / 1024 / 1024, 1);
-                            await Context.ReportProgress(
-                                $"Resizing disk {driveSettings.DiskSettings.Name} to {gb} GB");
-                            return await Context.Engine.RunAsync(PsCommandBuilder.Create().AddCommand("Resize-VHD")
-                                .AddArgument(vhdPath)
-                                .AddParameter("Size", driveSettings.DiskSettings.SizeBytes));
-                        }
+                            // file doesn't exists
+                            None: () =>
+                                from p1 in Context.ReportProgressAsync(
+                                    $"Creating HD Drive: {driveSettings.DiskSettings.Name}")
 
-                        return Unit.Default;
-                    });
+                                from uCreate in driveSettings.DiskSettings.ParentSettings.Match(parentSettings =>
+                                        {
+                                            var parentFilePath = Path.Combine(parentSettings.Path,
+                                                parentSettings.FileName);
+                                            return Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
+                                                $"New-VHD -Path \"{vhdPath}\" -ParentPath \"{parentFilePath}\" -Differencing"));
+                                        },
+                                        () => Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
+                                            $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {driveSettings.DiskSettings.SizeBytes}")))
+                                    .ToError().ToAsync()
 
-                if (sizeResult.IsLeft)
-                    return Prelude.Left(sizeResult.LeftAsEnumerable().FirstOrDefault());
+                                select Prelude.unit,
+
+                            // file exists
+                            Some: _ => from size in
+
+                                    // get disk
+                                    from vhdInfo in Context.Engine.GetObjectsAsync<VhdInfo>(new PsCommandBuilder()
+                                            .AddCommand("get-vhd").AddArgument(vhdPath))
+                                        .ToError().ToAsync()
+                                        .Bind(s => s.HeadOrLeft(Errors.SequenceEmpty).ToAsync())
+
+                                    // resize if necessary
+                                    from newSize in hasSameSize(vhdInfo.Value.Size)
+                                        .Match(
+                                            Some: _ => Prelude.RightAsync<Error, long>(vhdInfo.Value.Size),
+                                            None:
+                                            from pS in Context.ReportProgressAsync(
+                                                $"Resizing disk {driveSettings.DiskSettings.Name} to {diskSizeInGb} GB")
+
+                                            select vhdInfo.Value.Size
+                                        )
+                                    select newSize
+                                select Prelude.unit)
+
+                        from uAttach in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
+                                i => i.HardDrives,
+                                device => device.Cast<HardDiskDriveInfo>()
+                                    .Map(disk => currentSettings.Map(x => x.AttachedVMId) == disk.Id),
+                                async () =>
+                                {
+                                    await Context
+                                        .ReportProgress(
+                                            $"Attaching HD Drive {driveSettings.DiskSettings.Name} to controller: {driveSettings.ControllerNumber}, Location: {driveSettings.ControllerLocation}")
+                                        .ConfigureAwait(false);
+                                    return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
+                                        PsCommandBuilder
+                                            .Create()
+                                            .AddCommand("Add-VMHardDiskDrive")
+                                            .AddParameter("VM", vmInfo.PsObject)
+                                            .AddParameter("Path", vhdPath)
+                                            .AddParameter("ControllerNumber", driveSettings.ControllerNumber)
+                                            .AddParameter("ControllerLocation", driveSettings.ControllerLocation)
+                                            .AddParameter("PassThru")
+                                    ).ConfigureAwait(false);
+                                }).ToAsync()
+
+                        select Prelude.unit
 
 
-                return await ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
-                        i => i.HardDrives,
-                        device => device.Cast<HardDiskDriveInfo>()
-                                .Map(disk => currentSettings.Map(x => x.AttachedVMId) == disk.Id),
-                        async () =>
-                        {
-                            await Context
-                                .ReportProgress(
-                                    $"Attaching HD Drive {driveSettings.DiskSettings.Name} to controller: {driveSettings.ControllerNumber}, Location: {driveSettings.ControllerLocation}")
-                                .ConfigureAwait(false);
-                            return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(PsCommandBuilder.Create()
-                                .AddCommand("Add-VMHardDiskDrive")
-                                .AddParameter("VM", vmInfo.PsObject)
-                                .AddParameter("Path", vhdPath)
-                                .AddParameter("ControllerNumber", driveSettings.ControllerNumber)
-                                .AddParameter("ControllerLocation", driveSettings.ControllerLocation)
-                                .AddParameter("PassThru")
-                            ).ConfigureAwait(false);
-                        }).BindAsync(_ => vmInfo.RecreateOrReload(Context.Engine))
-                    .ConfigureAwait(false);
-            }).IfNone(vmInfo.RecreateOrReload(Context.Engine));
+            )
+                .Traverse(l=>l)
+                .Bind(_ => vmInfo.RecreateOrReload(Context.Engine));
         }
     }
 }

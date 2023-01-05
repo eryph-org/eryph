@@ -2,10 +2,19 @@
   "profiles": {
     "eryph-zero": {
       "commandName": "Project",
-      "commandLineArgs": "install",
+      "commandLineArgs": "run",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
-      }
+      },
+      "remoteDebugEnabled": true
+    },
+    "network update": {
+      "commandName": "Project",
+      "commandLineArgs": "networks",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": true
     }
   }
 }

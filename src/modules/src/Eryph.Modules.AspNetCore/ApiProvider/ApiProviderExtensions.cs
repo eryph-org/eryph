@@ -30,8 +30,8 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
 
             services.AddOptions<ApiProviderOptions>();
             services.Configure(options);
-            
-            
+
+
             //mvcBuilder.AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
             services.AddApiVersioning(options =>
@@ -44,8 +44,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             {
                 //op.EnableEndpointRouting = false;
                 //op.OutputFormatters.Insert(0, new CustomODataOutputFormatter());
-                
-            });
+  });
 
 
             services.AddVersionedApiExplorer(
@@ -118,7 +117,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
 
             services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
 
-
             return mvcBuilder;
         }
 
@@ -157,7 +155,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
 
             app.UseSwagger(c =>
             {
-                c.SerializeAsV2 = true;
+                c.SerializeAsV2 = false;
                 c.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
                 {
                     swaggerDoc.Servers = new List<OpenApiServer>

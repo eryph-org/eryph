@@ -15,12 +15,13 @@
   <ItemGroup>
     <Folder Include="Events\" />
     <Folder Include="Resources\Images\Events\" />
+    <Folder Include="Resources\Networks\Events\" />
   </ItemGroup>
 
 
 
   <ItemGroup>
-    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3">
+    <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

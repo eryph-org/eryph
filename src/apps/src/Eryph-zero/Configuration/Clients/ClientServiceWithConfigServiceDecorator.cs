@@ -33,19 +33,19 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
         public async Task DeleteClient(TModel client)
         {
             await _decoratedService.DeleteClient(client);
-            await _configService.Delete(client.FromApiModel());
+            await _configService.Delete(client.FromApiModel(), "");
         }
 
         public async Task UpdateClient(TModel client)
         {
             await _decoratedService.UpdateClient(client);
-            await _configService.Update(client.FromApiModel());
+            await _configService.Update(client.FromApiModel(), "");
         }
 
         public async Task AddClient(TModel client)
         {
             await _decoratedService.AddClient(client);
-            await _configService.Add(client.FromApiModel());
+            await _configService.Add(client.FromApiModel(), "");
         }
     }
 }

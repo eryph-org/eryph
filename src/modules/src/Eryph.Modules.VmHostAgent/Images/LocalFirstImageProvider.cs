@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Messages.Resources.Images.Commands;
 using Eryph.VmManagement;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,7 @@ namespace Eryph.Modules.VmHostAgent.Images
             _log = log;
         }
 
-        public Task<Either<PowershellFailure, string>> ProvideImage(string imageName, Func<string, Task<Unit>> reportProgress, CancellationToken cancel)
+        public Task<Either<PowershellFailure, PrepareVirtualMachineImageResponse>> ProvideImage(string imageName, Func<string, Task<Unit>> reportProgress, CancellationToken cancel)
         {
             var hostSettings = HostSettingsBuilder.GetHostSettings();
 
@@ -40,7 +41,11 @@ namespace Eryph.Modules.VmHostAgent.Images
                             return i;
                         })
                         .BindAsync(imageInfo => EnsureArtifacts(imageInfo, reportProgress, cancel))
-                        .MapAsync(imageInfo => imageInfo.Id.Name);
+                        .MapAsync(imageInfo => new PrepareVirtualMachineImageResponse
+                        {
+                            RequestedImage = imageName,
+                            ResolvedImage = imageInfo.Id.Name
+                        });
 
                 }
 
@@ -82,7 +87,7 @@ namespace Eryph.Modules.VmHostAgent.Images
                 {
                     _log.LogInformation("Failed to find image on any source. Local fallback result: {message}", l.Message);
                     return new PowershellFailure
-                            { Message = $"could not find image '{imageId.Name}' on any source." };
+                            { Message = $"Could not find image '{imageId.Name}' on any source." };
                 })
                 .ToEither()
                 .BindAsync(imageInfo => localSource.CacheImage(path,imageInfo, cancel)) // cache anything received in local store

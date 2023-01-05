@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
@@ -10,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Eryph.StateDb
 {
+
     public class StateStoreRepository<T> : IStateStoreRepository<T> where T : class
     {
         private readonly StateStoreContext _dbContext;
@@ -66,6 +68,21 @@ namespace Eryph.StateDb
             return (await ListAsync(specification, cancellationToken)).FirstOrDefault();
         }
 
+        public Task<TProperty> GetBySpecAsync<TProperty, TSpec>(T entry,
+            Expression<Func<T, IEnumerable<TProperty>>> propertyExpression,
+            TSpec specification,
+            CancellationToken cancellationToken)
+            where TProperty : class 
+            where TSpec : ISingleResultSpecification, ISpecification<TProperty>
+        {
+            return _specificationEvaluator.GetQuery(_dbContext.Entry(entry)
+                .Collection(propertyExpression)
+                .Query(), specification).FirstOrDefaultAsync(cancellationToken);
+
+        }
+
+        public IRepositoryBaseIO<T> IO => new RepositoryBaseIO<T>(this);
+
         public async Task<TResult> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification,
             CancellationToken cancellationToken = default)
         {
@@ -87,6 +104,19 @@ namespace Eryph.StateDb
         {
             return await ApplySpecification(specification).ToListAsync(cancellationToken: cancellationToken);
         }
+
+        public Task<List<TProperty>> ListAsync<TProperty>(T entry,
+            Expression<Func<T, IEnumerable<TProperty>>> propertyExpression,
+            ISpecification<TProperty> specification,
+            CancellationToken cancellationToken)
+            where TProperty : class
+        {
+            return _specificationEvaluator.GetQuery(_dbContext.Entry(entry)
+                .Collection(propertyExpression)
+                .Query(), specification).ToListAsync(cancellationToken);
+
+        }
+
 
         public async Task<int> CountAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
         {

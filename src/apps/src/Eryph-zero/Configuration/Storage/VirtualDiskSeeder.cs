@@ -26,7 +26,7 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
         {
             return _configReaderService.GetConfig()
                 .Map(x => _repository.AddAsync(x, stoppingToken))
-                .Traverse(l => l).Map(_ => _repository.SaveChangesAsync(stoppingToken));
+                .TraverseSerial(l => l).Map(_ => _repository.SaveChangesAsync(stoppingToken));
         }
     }
 }

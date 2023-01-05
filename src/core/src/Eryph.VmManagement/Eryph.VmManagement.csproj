@@ -4,16 +4,17 @@
     <TargetFramework>net6.0-windows</TargetFramework>
   </PropertyGroup>
 
+
   <ItemGroup>
-    <PackageReference Include="Dbosoft.CloudInit.ConfigDrive" Version="1.0.0-rc.11" />
-    <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.NoCloud" Version="1.0.0-rc.11" />
-    <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.WindowsImaging" Version="1.0.0-rc.11" />
-    <PackageReference Include="GitVersion.MsBuild" Version="5.10.3">
+    <PackageReference Include="Dbosoft.CloudInit.ConfigDrive" Version="1.0.0-rc.12" />
+    <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.NoCloud" Version="1.0.0-rc.12" />
+    <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.WindowsImaging" Version="1.0.0-rc.12" />
+    <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
-    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.2.1" />
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.2.7" />
   </ItemGroup>
 
   <ItemGroup>

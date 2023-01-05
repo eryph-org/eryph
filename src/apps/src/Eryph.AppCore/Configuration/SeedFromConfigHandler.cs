@@ -17,7 +17,7 @@ namespace Eryph.Configuration
 
         public Task Execute(CancellationToken stoppingToken)
         {
-            return _seeders.Map(s => s.Execute(stoppingToken).ToUnit()).Traverse(l => l);
+            return _seeders.Map(s => s.Execute(stoppingToken).ToUnit()).TraverseParallel(l => l);
         }
     }
 }

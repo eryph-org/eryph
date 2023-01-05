@@ -15,5 +15,8 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
         public IEnumerable<OperationResource>? Resources { get; set; }
 
         public IEnumerable<OperationLogEntry>? LogEntries { get; set; }
+        public IEnumerable<Project>? Projects { get; set; }
+
+
     }
 }

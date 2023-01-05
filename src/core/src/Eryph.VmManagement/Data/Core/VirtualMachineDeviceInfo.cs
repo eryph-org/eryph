@@ -1,5 +1,4 @@
-﻿using Eryph.Core;
-using LanguageExt;
+﻿using Eryph.ConfigModel;
 
 namespace Eryph.VmManagement.Data.Core
 {
@@ -10,6 +9,7 @@ namespace Eryph.VmManagement.Data.Core
 
         [PrivateIdentifier]
         public virtual string Id { get; set; }
+
 
     }
 }

@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Eryph.Messages.Operations;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.VmHostAgent.Images;
 
 public interface IImageRequestDispatcher
 {
-    void NewImageRequestTask(Guid operationId, Guid taskId, string image);
+    void NewImageRequestTask(IOperationTaskMessage message, string image);
 }

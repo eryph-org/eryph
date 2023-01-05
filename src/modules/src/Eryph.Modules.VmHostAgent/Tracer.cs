@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using Eryph.VmManagement;
+using Eryph.VmManagement.Tracing;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.VmHostAgent;

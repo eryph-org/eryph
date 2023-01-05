@@ -1,34 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Builder;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Net;
 using System.Net.Sockets;
-using System.ServiceProcess;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
+using Dbosoft.OVN;
 using Eryph.App;
 using Eryph.ModuleCore;
-using Eryph.Modules.CommonApi;
 using Eryph.Modules.ComputeApi;
+using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
+using Eryph.VmManagement;
+using JetBrains.Annotations;
+using LanguageExt;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Configuration;
 using Microsoft.Extensions.Logging.EventLog;
 using Serilog;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
+using static Eryph.Modules.VmHostAgent.Networks.NetworkProviderManager<Eryph.Runtime.Zero.ConsoleRuntime>;
+using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Runtime.Zero.ConsoleRuntime>;
+using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Runtime.Zero.ConsoleRuntime>;
+using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
+using Eryph.Runtime.Zero.Configuration.Networks;
+using LanguageExt.Common;
+using Serilog.Templates;
+using Serilog.Templates.Themes;
+using Serilog.Events;
+using Microsoft.Extensions.Hosting.WindowsServices;
 
 namespace Eryph.Runtime.Zero;
 
@@ -37,160 +53,233 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         var rootCommand = new RootCommand();
+        var debugWaitOption = new System.CommandLine.Option<bool>(name: "--debuggerWait",
+            () => false, "Stops and waits for a debugger to be attached");
+
+        rootCommand.AddGlobalOption(debugWaitOption);
+
+        var inFileOption = new System.CommandLine.Option<FileInfo?>(
+            name: "--inFile",
+            description: "Use input file instead of reading from stdin.");
+
+        var outFileOption = new System.CommandLine.Option<FileInfo?>(
+            name: "--outFile",
+            description: "Use output file instead of writing to stdout.");
+
+        var nonInteractiveOption = new System.CommandLine.Option<bool>(
+            name: "--non-interactive",
+            description: "No operator involved - commands will not query for confirmation.");
 
         var runCommand = new Command("run");
-        runCommand.SetHandler(ctx => Run(args));
+        runCommand.SetHandler(_ => Run(args));
         rootCommand.AddCommand(runCommand);
 
         var installCommand = new Command("install");
-        installCommand.SetHandler(ctx => SelfInstall());
+        installCommand.SetHandler(_ => SelfInstall());
         rootCommand.AddCommand(installCommand);
 
-        return await rootCommand.InvokeAsync(args);
+        var networksCommand = new Command("networks");
+        rootCommand.AddCommand(networksCommand);
+
+        var getNetworksCommand = new Command("get");
+        getNetworksCommand.AddOption(outFileOption);
+        getNetworksCommand.SetHandler(GetNetworks, outFileOption);
+        networksCommand.AddCommand(getNetworksCommand);
+
+        var importNetworksCommand = new Command("import");
+
+        var noCurrentConfigCheckOption = new System.CommandLine.Option<bool>(
+            name: "--no-current-config-check",
+            description: "Do not check if host state is valid for current config. ");
+
+        importNetworksCommand.AddOption(inFileOption);
+        importNetworksCommand.AddOption(nonInteractiveOption);
+        importNetworksCommand.AddOption(noCurrentConfigCheckOption);
+        importNetworksCommand.SetHandler(ImportNetworkConfig, inFileOption,
+            nonInteractiveOption, noCurrentConfigCheckOption);
+        networksCommand.AddCommand(importNetworksCommand);
+
+        var commandLineBuilder = new CommandLineBuilder(rootCommand);
+
+        commandLineBuilder.AddMiddleware(async (context, next) =>
+        {
+            var debugHaltOn = context.ParseResult.GetValueForOption(debugWaitOption);
+
+            if (debugHaltOn)
+            {
+                Console.WriteLine("Waiting for debugger to be attached");
+                while (!Debugger.IsAttached)
+                {
+                    await Task.Delay(500, context.GetCancellationToken());
+                }
+                Console.WriteLine("Debugger attached");
+
+            }
+
+            await next(context);
+        });
+
+        commandLineBuilder.UseDefaults();
+        var parser = commandLineBuilder.Build();
+        return await parser.InvokeAsync(args);
+
     }
 
-    private static async Task<int> Run(string[] args)
+    private static Task<int> Run(string[] args)
     {
-        var returnCode = 0;
-
-        var logFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "eryph", "zero", "logs", "debug.txt");
-
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.File(logFilePath,
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 10,
-                retainedFileTimeLimit: TimeSpan.FromDays(30))
-            .CreateLogger();
-
-        try
+        return AdminGuard.CommandIsElevated(async () =>
         {
-            var fileVersion = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location);
-            Log.Logger.Information("Starting eryph-zero {version}", fileVersion.ProductVersion);
 
-            var startupConfig = StartupConfiguration(args,
-                sp =>
-                {
-                    var configuration = sp.GetRequiredService<IConfiguration>();
-                    return new
-                    {
-                        BasePath = configuration["basePath"],
-                        SSLEndpointManager = sp.GetRequiredService<ISSLEndpointManager>(),
-                        CryptoIO = sp.GetRequiredService<ICryptoIOServices>(),
-                        CertificateGenerator = sp.GetRequiredService<ICertificateGenerator>(),
+            var returnCode = 0;
 
-                    };
-                });
+            var logFilePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "eryph", "zero", "logs", "debug.txt");
 
-
-            await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
-
-            var basePathUrl = ConfigureUrl(startupConfig.BasePath);
-
-            var endpoints = new Dictionary<string, string>
-            {
-                { "identity", $"{basePathUrl}identity" },
-                { "compute", $"{basePathUrl}compute" },
-                { "common", $"{basePathUrl}common" },
-            };
-
-            ZeroConfig.EnsureConfiguration();
-
-            await SystemClientGenerator.EnsureSystemClient(startupConfig.CertificateGenerator, startupConfig.CryptoIO,
-                new Uri(endpoints["identity"]));
-
-            using var _ = await startupConfig.SSLEndpointManager
-                .EnableSslEndpoint(new SSLOptions(
-                    "eryph-zero CA",
-                    Network.FQDN,
-                    DateTime.UtcNow.AddDays(-1),
-                    365 * 5,
-                    ZeroConfig.GetPrivateConfigPath(),
-                    "eryphCA",
-                    Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
-                    basePathUrl));
-
-
-
-            processLock.SetMetadata(new Dictionary<string, object>
-            {
-                {
-                    "endpoints", endpoints
-                }
-            });
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .Enrich.FromLogContext()
+                .WriteTo.Console(new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff} {@l:u3}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}", theme: TemplateTheme.Literate),
+                    restrictedToMinimumLevel: LogEventLevel.Debug)
+                .WriteTo.File(
+                    new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} {@l:u3}] [{SourceContext}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}"),
+                    logFilePath,
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 10,
+                    retainedFileTimeLimit: TimeSpan.FromDays(30))
+                
+                .CreateLogger();
 
             try
             {
-                HostSettingsBuilder.GetHostSettings();
-            }
-            catch (ManagementException ex)
-            {
-                if (ex.ErrorCode == ManagementStatus.InvalidNamespace)
-                {
-                    await Console.Error.WriteAsync(
-                        "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
-                    return -10;
-                }
-            }
+                var fileVersion = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location);
+                Log.Logger.Information("Starting eryph-zero {version}", fileVersion.ProductVersion);
 
-            var container = new Container();
-            container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-            container.Bootstrap();
-            container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
-
-            var builder = ModulesHost.CreateDefaultBuilder(args) as ModulesHostBuilder;
-
-            var host =
-
-                builder
-
-                    .ConfigureInternalHost(hb => { hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero"); })
-                    .UseAspNetCore((module, webHostBuilder) =>
+                var startupConfig = StartupConfiguration(args,
+                    sp =>
                     {
-                        webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); });
-                    })
-                    .UseSimpleInjector(container)
-                    .ConfigureAppConfiguration((_, config) =>
-                    {
-                        config.AddInMemoryCollection(new Dictionary<string, string>
+                        var configuration = sp.GetRequiredService<IConfiguration>();
+                        return new
                         {
-                            { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
-                        });
-                    })
-                    .HostModule<CommonApiModule>()
-                    .HostModule<ComputeApiModule>()
-                    .AddIdentityModule(container)
-                    .HostModule<VmHostAgentModule>()
-                    .AddControllerModule(container)
-                    .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
-                    .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
-                        EventLogSettings, EventLogLoggerProvider>)
-                    .ConfigureLogging((context, logging) =>
+                            BasePath = configuration["basePath"],
+                            SSLEndpointManager = sp.GetRequiredService<ISSLEndpointManager>(),
+                            CryptoIO = sp.GetRequiredService<ICryptoIOServices>(),
+                            CertificateGenerator = sp.GetRequiredService<ICertificateGenerator>(),
+                            OVSPackageDir = configuration["ovsPackagePath"]
+                        };
+                    });
+
+
+                await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
+
+                var basePathUrl = ConfigureUrl(startupConfig.BasePath);
+
+                var endpoints = new Dictionary<string, string>
                     {
-                        logging.AddSerilog();
-                        // See: https://github.com/dotnet/runtime/issues/47303
-                        logging.AddConfiguration(
-                            context.Configuration.GetSection("Logging"));
-                    })
+                        { "identity", $"{basePathUrl}identity" },
+                        { "compute", $"{basePathUrl}compute" },
+                        { "common", $"{basePathUrl}common" },
+                        { "network", $"{basePathUrl}network" },
+
+                    };
+
+                ZeroConfig.EnsureConfiguration();
+
+                await SystemClientGenerator.EnsureSystemClient(startupConfig.CertificateGenerator, startupConfig.CryptoIO,
+                    new Uri(endpoints["identity"]));
+
+                using var _ = await startupConfig.SSLEndpointManager
+                    .EnableSslEndpoint(new SSLOptions(
+                        "eryph-zero CA",
+                        Network.FQDN,
+                        DateTime.UtcNow.AddDays(-1),
+                        365 * 5,
+                        ZeroConfig.GetPrivateConfigPath(),
+                        "eryphCA",
+                        Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
+                        basePathUrl));
+
+
+
+                processLock.SetMetadata(new Dictionary<string, object>
+                    {
+                        {
+                            "endpoints", endpoints
+                        }
+                    });
+
+
+                // do not check in service mode - during startup some features may be unavailable
+                if (!WindowsServiceHelpers.IsWindowsService())
+                {
+                    try
+                    {
+                        HostSettingsBuilder.GetHostSettings();
+                    }
+                    catch (ManagementException ex)
+                    {
+                        if (ex.ErrorCode == ManagementStatus.InvalidNamespace)
+                        {
+                            await Console.Error.WriteAsync(
+                                "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
+                            return -10;
+                        }
+                    }
+                }
+
+                var container = new Container();
+                container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+                container.Bootstrap(startupConfig.OVSPackageDir);
+                container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
+
+                var builder = ModulesHost.CreateDefaultBuilder(args) as ModulesHostBuilder;
+
+                var host =
+                    builder!
+                        .ConfigureInternalHost(hb =>
+                        {
+                            hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero");
+                        })
+
+                        .UseAspNetCore((module, webHostBuilder) =>
+                        {
+                            webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); });
+                        })
+                        .UseSimpleInjector(container)
+                        .ConfigureAppConfiguration((_, config) =>
+                        {
+                            config.AddInMemoryCollection(new Dictionary<string, string>
+                            {
+                                { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
+                            });
+                        })
+                        .HostModule<VmHostAgentModule>()
+                        .HostModule<NetworkModule>()
+                        .AddControllerModule(container)
+                        .HostModule<ComputeApiModule>()
+                        .AddIdentityModule(container)
+                        .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
+                        .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
+                            EventLogSettings, EventLogLoggerProvider>)
+                        .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
+                        .UseSerilog(dispose: true)
                     .Build();
 
-            //starting here all errors should be considered as recoverable
-            returnCode = -1;
+                //starting here all errors should be considered as recoverable
+                returnCode = -1;
 
+                await host.RunAsync();
 
-            await host.RunAsync();
+                return returnCode;
+            }
+            catch (Exception ex)
+            {
+                Log.Logger.Fatal(ex, "eryph-zero failure");
+                await Console.Error.WriteAsync(ex.Message);
 
-            return returnCode;
-        }
-        catch (Exception ex)
-        {
-            Log.Logger.Fatal(ex, "eryph-zero failure");
-
-            return returnCode;
-        }
-
+                return returnCode;
+            }
+        });
 
     }
 
@@ -205,7 +294,7 @@ internal static class Program
 
     private static T StartupConfiguration<T>(string[] args, Func<IServiceProvider, T> selectResult)
     {
-        var configHost = new HostBuilder()
+        using var configHost = Host.CreateDefaultBuilder()
             .ConfigureAppConfiguration((hostingContext, config) =>
             {
                 var env = hostingContext.HostingEnvironment;
@@ -251,190 +340,234 @@ internal static class Program
         return (((IPEndPoint)socket.LocalEndPoint)!).Port;
     }
 
-    private static async Task<int> SelfInstall()
+    private static Task<int> SelfInstall()
     {
-        var targetDir =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "eryph", "zero");
-        var zeroExe = Path.Combine(targetDir, "bin", "eryph-zero.exe");
-
-        var backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            "eryph", "zero.old");
-        
-        var serviceRemoved = false;
-        var serviceStopped = false;
-        var backupCreated = false;
-        try
+        return AdminGuard.CommandIsElevated(async () =>
         {
-            var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-            var parentDir = baseDir.Parent?.FullName ?? throw new IOException($"Invalid path {baseDir}");
+            var targetDir =
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    "eryph", "zero");
+            var zeroExe = Path.Combine(targetDir, "bin", "eryph-zero.exe");
 
-            if(Directory.Exists(backupDir))
-                Directory.Delete(backupDir, true);
-            
-            if (IsServiceRunning("eryph-zero"))
+            var backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "eryph", "zero.old");
+
+            var sysEnv = new SystemEnvironment(new NullLoggerFactory());
+            var serviceManager = sysEnv.GetServiceManager("eryph-zero");
+
+            var backupCreated = false;
+
+            try
             {
-                StopService("eryph-zero");
-                serviceStopped = true;
+                var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+                var parentDir = baseDir.Parent?.FullName ?? throw new IOException($"Invalid path {baseDir}");
+
+                var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+
+                if (Directory.Exists(backupDir))
+                    Directory.Delete(backupDir, true);
+
+                EitherAsync<Error, Unit> CopyService()
+                {
+                    return Prelude.Try(() =>
+                    {
+                        if (Directory.Exists(targetDir))
+                        {
+                            Directory.Move(targetDir, backupDir);
+                            backupCreated = true;
+                        }
+
+                        CopyDirectory(parentDir, targetDir);
+                        
+                        return Unit.Default;
+                    }).ToEitherAsync();
+
+
+                }
+
+                var installOrUpdate =
+                    from serviceExists in serviceManager.ServiceExists()
+                    from uStopped in serviceExists
+                        ? serviceManager.EnsureServiceStopped(cancelSource.Token)
+                        : Unit.Default
+                    from _ in Prelude.Try(()=>OVSPackage.UnpackAndProvide(true)).ToEitherAsync()
+                    from uCopy in CopyService()
+                    from uInstalled in serviceExists
+                        ? serviceManager.UpdateService($"{zeroExe} run", cancelSource.Token)
+                        : serviceManager.CreateService("eryph-zero", $"{zeroExe} run", cancelSource.Token)
+                    from uStarted in serviceManager.EnsureServiceStarted(cancelSource.Token)
+                    select Unit.Default;
+
+                _ = await installOrUpdate.IfLeft(l => l.Throw());
+                
+                if (Directory.Exists(backupDir))
+                    Directory.Delete(backupDir, true);
+
+
+                return 0;
+
+            }
+            catch (Exception ex)
+            {
+                await Console.Error.WriteAsync(ex.Message);
+
+                //undo operation
+
+                var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+
+                var rollback =
+                    from serviceExists in serviceManager.ServiceExists()
+                    from uStopped in serviceExists
+                        ? serviceManager.EnsureServiceStopped(cancelSource.Token)
+                        : Unit.Default
+                    from uCopy in Prelude.Try(() =>
+                    {
+                        if (backupCreated)
+                        {
+                            if (Directory.Exists(targetDir))
+                                Directory.Delete(targetDir, true);
+                            Directory.Move(backupDir, targetDir);
+                        }
+                        return Unit.Default;
+                    } ).ToEitherAsync()
+
+                    from serviceExists2 in serviceManager.ServiceExists()
+                    from uStarted in serviceExists2 
+                        ? serviceManager.EnsureServiceStarted(cancelSource.Token)
+                        : Unit.Default
+                    select Unit.Default;
+
+                _ = await rollback.IfLeft(l =>
+                {
+                    Console.Error.WriteLine($"Error in rollback of service update: {l.Message}");
+                });
+                
+                return -1;
             }
 
-            if (IsServiceInstalled("eryph-zero"))
-            {
-                await UnInstallService("eryph-zero");
-                serviceRemoved = true;
-            }
 
-            if (Directory.Exists(targetDir))
-            {
-                Directory.Move(targetDir, backupDir);
-                backupCreated = true;
-            }
+ 
 
-            CopyDirectory(parentDir, targetDir);
+        });
+    }
 
-#if DEBUG
-            var dirName = Directory.GetDirectories(targetDir).FirstOrDefault();
-            if (dirName != null && dirName != "bin")
-            {
-                Directory.Move(dirName, Path.Combine(targetDir, "bin"));
-            }
-#endif
+    private static async Task<int> GetNetworks([CanBeNull] FileSystemInfo outFile)
+    {
+        var manager = new NetworkProviderManager();
 
+        return await manager.GetCurrentConfigurationYaml()
+                .MatchAsync(
+                    async config =>
+                    {
+                        if (outFile != null)
+                        {
+                            await File.WriteAllTextAsync(outFile.FullName, config);
+                        }
+                        else
+                        {
+                            Console.WriteLine(config);
+                        }
 
-            if (!IsServiceInstalled("eryph-zero"))
-                await InstallService("eryph-zero", zeroExe, "run");
+                        return 0;
+                    }, l =>
+                    {
+                        Console.WriteLine(l.Message);
+                        return -1;
+                    }
+                    );
+    }
 
-            StartService("eryph-zero");
-            
-            if(Directory.Exists(backupDir))
-                Directory.Delete(backupDir, true);
-            
-            return 0;
-
-        }
-        catch (Exception ex)
+    private static async Task<int> ImportNetworkConfig([CanBeNull] FileSystemInfo inFile, bool nonInteractive,
+        bool noCurrentConfigCheck)
+    {
+        var configString = "";
+        if (inFile != null)
         {
-            await Console.Error.WriteAsync(ex.Message);
-
-            //undo operation
-            if (backupCreated) Directory.Move(backupDir, targetDir);
-            if (serviceRemoved) await InstallService("eryph-zero", zeroExe, "run");
-            if (serviceStopped) StartService("eryph-zero");
-
-            return -1;
+            configString = await File.ReadAllTextAsync(inFile.FullName);
         }
-
-        
-        ServiceController GetServiceController(string serviceName)
-        {
-            return new ServiceController(serviceName);
-        }
-        
-        bool IsServiceInstalled(string serviceName)
+        else
         {
             try
             {
-                using var controller = GetServiceController(serviceName);
-                // ReSharper disable once UnusedVariable
-                var dummy = controller.Status;
-                return true;
+                if (!Console.KeyAvailable)
+                {
+                    await Console.Error.WriteLineAsync(
+                        "Error: Supply the new network config to stdin or use --inFile option to read from file");
+                    return -1;
+                }
             }
-            catch (Exception)
+            catch (InvalidOperationException)
             {
-                return false;
+                // ignored, expected when console is redirected
             }
+
+            await using var reader = Console.OpenStandardInput();
+            using var textReader = new StreamReader(reader);
+            configString = await textReader.ReadToEndAsync();
+
         }
 
-        void StopService(string serviceName)
-        {
-            using var controller = GetServiceController(serviceName);
-            controller.Stop();
-            controller.WaitForStatus(ServiceControllerStatus.Stopped);
-        }
+        using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
 
-        bool IsServiceRunning(string serviceName)
-        {
-            if (!IsServiceInstalled(serviceName))
-                return false;
+        var res = (await (
+            from newConfig in importConfig(configString)
+            from currentConfig in getCurrentConfiguration()
+            from hostState in getHostStateWithProgress()
+            from syncResult in noCurrentConfigCheck
+                ? Prelude.SuccessAff((false, hostState))
+                : from currentConfigChanges in generateChanges(hostState, currentConfig)
+                  from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
+                  select r
+            from newConfigChanges in generateChanges(syncResult.HostState, newConfig)
+            from validateImpact in validateNetworkImpact(newConfig)
+            from _ in applyChangesInConsole(currentConfig, newConfigChanges,
+                nonInteractive, syncResult.IsValid)
 
-            using var controller = GetServiceController(serviceName);
-            return controller.Status == ServiceControllerStatus.Running;
-        }
+            from save in saveConfigurationYaml(configString)
+            from sync in syncNetworks()
+            from m in writeLine("New Network configuration was imported.")
+            select Unit.Default)
 
-        void StartService(string serviceName)
-        {
-            using var controller = GetServiceController(serviceName);
-            controller.Start();
-            controller.WaitForStatus(ServiceControllerStatus.Running);
-        }
-        
-        async Task UnInstallService(string serviceName)
-        {
-            var cmd = $@"delete {serviceName}";
-            var process = Process.Start(new ProcessStartInfo("sc", cmd)
+            .Run(new ConsoleRuntime(
+                    new NullLoggerFactory(),
+                    psEngine, new CancellationTokenSource())))
+            .Match(
+                r => 0, l =>
             {
-                RedirectStandardError = true,
-                RedirectStandardOutput = true
+                Console.Error.WriteLine("Error: " + l.Message);
+                return -1;
             });
 
-            if (process == null)
-                return;
-            
-            await process.WaitForExitAsync();
-            if (process.ExitCode != 0)
-            {
-                var output = await process.StandardError.ReadToEndAsync();
-                throw new IOException($"Failed to remove service {serviceName}. Message: {output}");
-            }
+        return res;
+    }
+
+
+    static void CopyDirectory(string sourceDir, string destinationDir)
+    {
+        // Get information about the source directory
+        var dir = new DirectoryInfo(sourceDir);
+
+        // Check if the source directory exists
+        if (!dir.Exists)
+            throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
+
+        // Cache directories before we start copying
+        var dirs = dir.GetDirectories();
+
+        // Create the destination directory
+        Directory.CreateDirectory(destinationDir);
+
+        // Get the files in the source directory and copy to the destination directory
+        foreach (var file in dir.GetFiles())
+        {
+            var targetFilePath = Path.Combine(destinationDir, file.Name);
+            file.CopyTo(targetFilePath, true);
         }
 
-        async Task InstallService(string serviceName, string path, string arguments)
+        foreach (var subDir in dirs)
         {
-            var cmd = $@"create {serviceName} BinPath=""\""{path}\"" {arguments}"" Start=Auto";
-            var process = Process.Start(new ProcessStartInfo("sc", cmd)
-            {
-                RedirectStandardError = true
-            });
-
-            if (process == null)
-                return;
-            
-            await process.WaitForExitAsync();
-            if (process.ExitCode != 0)
-            {
-                var output = await process.StandardError.ReadToEndAsync();
-                throw new IOException($"Failed to install service {serviceName}. Message: {output}");
-
-            }
-        }
-
-        static void CopyDirectory(string sourceDir, string destinationDir)
-        {
-            // Get information about the source directory
-            var dir = new DirectoryInfo(sourceDir);
-
-            // Check if the source directory exists
-            if (!dir.Exists)
-                throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
-
-            // Cache directories before we start copying
-            var dirs = dir.GetDirectories();
-
-            // Create the destination directory
-            Directory.CreateDirectory(destinationDir);
-
-            // Get the files in the source directory and copy to the destination directory
-            foreach (var file in dir.GetFiles())
-            {
-                var targetFilePath = Path.Combine(destinationDir, file.Name);
-                file.CopyTo(targetFilePath, true);
-            }
-
-            foreach (var subDir in dirs)
-            {
-                var newDestinationDir = Path.Combine(destinationDir, subDir.Name);
-                CopyDirectory(subDir.FullName, newDestinationDir);
-            }
+            var newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+            CopyDirectory(subDir.FullName, newDestinationDir);
         }
     }
 }

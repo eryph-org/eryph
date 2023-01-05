@@ -2,7 +2,7 @@ using System;
 using Dbosoft.Hosuto.Modules.Hosting;
 using SimpleInjector;
 
-namespace Eryph.Modules.Identity.Test.Integration.Endpoints;
+namespace Eryph.Modules.Identity.Test;
 
 public static class ModuleHostingOptionsExtensions
 {

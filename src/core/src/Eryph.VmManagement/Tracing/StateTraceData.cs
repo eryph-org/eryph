@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-namespace Eryph.VmManagement;
+namespace Eryph.VmManagement.Tracing;
 
 public class StateTraceData : TraceData
 {

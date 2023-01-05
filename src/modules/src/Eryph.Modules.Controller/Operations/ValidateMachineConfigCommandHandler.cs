@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Machine;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Operations;
-using Eryph.Messages.Operations.Events;
-using Eryph.Messages.Resources.Machines.Commands;
+using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.ModuleCore;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
@@ -12,60 +11,68 @@ using Rebus.Handlers;
 namespace Eryph.Modules.Controller.Operations
 {
     [UsedImplicitly]
-    public class ValidateMachineConfigCommandHandler : IHandleMessages<OperationTask<ValidateMachineConfigCommand>>
+    public class ValidateCatletConfigCommandHandler : IHandleMessages<OperationTask<ValidateCatletConfigCommand>>
     {
         private readonly IBus _bus;
 
-        public ValidateMachineConfigCommandHandler(IBus bus)
+        public ValidateCatletConfigCommandHandler(IBus bus)
         {
             _bus = bus;
         }
 
-        public Task Handle(OperationTask<ValidateMachineConfigCommand> message)
+        public Task Handle(OperationTask<ValidateCatletConfigCommand> message)
         {
-            message.Command.Config = NormalizeMachineConfig(message.Command.MachineId, message.Command.Config);
-            return _bus.SendLocal(OperationTaskStatusEvent.Completed(message.OperationId, message.TaskId, message.Command));
+            message.Command.Config = NormalizeCatletConfig(message.Command.MachineId, message.Command.Config);
+            return _bus.CompleteTask(message, message.Command);
         }
 
-        private static MachineConfig NormalizeMachineConfig(
+        private static CatletConfig NormalizeCatletConfig(
 #pragma warning restore 1998
-            Guid machineId, MachineConfig config)
+            Guid machineId, CatletConfig config)
         {
             var machineConfig = config;
 
-            if (machineConfig.VM == null)
-                machineConfig.VM = new VirtualMachineConfig();
+            if (machineConfig.VCatlet == null)
+                machineConfig.VCatlet = new VirtualCatletConfig();
 
             if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == Guid.Empty)
-                //TODO generate a random name here
-                machineConfig.Name = "eryph-machine";
+                machineConfig.Name = $"catlet";
 
 
-            if (machineConfig.VM.Cpu == null)
-                machineConfig.VM.Cpu = new VirtualMachineCpuConfig();
+            if (machineConfig.VCatlet.Cpu == null)
+                machineConfig.VCatlet.Cpu = new VirtualCatletCpuConfig();
 
-            if (machineConfig.VM.Memory == null)
-                machineConfig.VM.Memory = new VirtualMachineMemoryConfig();
+            if (machineConfig.VCatlet.Memory == null)
+                machineConfig.VCatlet.Memory = new VirtualCatletMemoryConfig();
 
-            if (machineConfig.VM.Drives == null)
-                machineConfig.VM.Drives = Array.Empty<VirtualMachineDriveConfig>();
+            if (machineConfig.VCatlet.Drives == null)
+                machineConfig.VCatlet.Drives = Array.Empty<VirtualCatletDriveConfig>();
 
-            if (machineConfig.VM.NetworkAdapters == null)
-                machineConfig.VM.NetworkAdapters = Array.Empty<VirtualMachineNetworkAdapterConfig>();
+            if (machineConfig.VCatlet.NetworkAdapters == null)
+                machineConfig.VCatlet.NetworkAdapters = Array.Empty<VirtualCatletNetworkAdapterConfig>();
 
-            if (machineConfig.Provisioning == null)
-                machineConfig.Provisioning = new MachineProvisioningConfig();
+            if (machineConfig.Raising == null)
+                machineConfig.Raising = new CatletRaisingConfig();
 
             if (machineConfig.Networks == null)
             {
                 machineConfig.Networks =
-                    new []{ new MachineNetworkConfig { Name = "default" } };
+                    new []{ new CatletNetworkConfig
+                    {
+                        Name = "default"
+                    } };
             }
 
-            if (string.IsNullOrWhiteSpace(machineConfig.Provisioning.Hostname))
-                machineConfig.Provisioning.Hostname = machineConfig.Name;
+            for (var i = 0; i < machineConfig.Networks.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(machineConfig.Networks[i].AdapterName))
+                    machineConfig.Networks[i].AdapterName = $"eth{i}";
+            }
 
-            foreach (var adapterConfig in machineConfig.VM.NetworkAdapters)
+            if (string.IsNullOrWhiteSpace(machineConfig.Raising.Hostname))
+                machineConfig.Raising.Hostname = machineConfig.Name;
+
+            foreach (var adapterConfig in machineConfig.VCatlet.NetworkAdapters)
             {
                 if (adapterConfig.MacAddress != null)
                 {
@@ -79,10 +86,10 @@ namespace Eryph.Modules.Controller.Operations
                 }
             }
 
-            foreach (var driveConfig in machineConfig.VM.Drives)
+            foreach (var driveConfig in machineConfig.VCatlet.Drives)
             {
                 if (!driveConfig.Type.HasValue)
-                    driveConfig.Type = VirtualMachineDriveType.VHD;
+                    driveConfig.Type = VirtualCatletDriveType.VHD;
 
                 if (driveConfig.Size == 0)
                     driveConfig.Size = null;
@@ -90,5 +97,6 @@ namespace Eryph.Modules.Controller.Operations
 
             return machineConfig;
         }
+
     }
 }

@@ -1,0 +1,1 @@
+﻿namespace Eryph.StateDb.Model;

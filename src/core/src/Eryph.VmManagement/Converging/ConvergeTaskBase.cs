@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement.Converging
 {
@@ -13,7 +14,7 @@ namespace Eryph.VmManagement.Converging
             Context = context;
         }
 
-        public abstract Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Converge(
+        public abstract Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo);
     }
 }

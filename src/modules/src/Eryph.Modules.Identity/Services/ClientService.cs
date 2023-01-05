@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.IdentityServer.Storage.Models;
 using Eryph.IdentityDb;
 using Eryph.Modules.Identity.Models;
 
@@ -49,7 +50,8 @@ namespace Eryph.Modules.Identity.Services
             identityServerClient.AllowedScopes = client.AllowedScopes;
             identityServerClient.Description = client.Description;
             identityServerClient.ClientName = client.Name;
-
+            identityServerClient.Claims.Add(new ClientClaim("tenant", client.Tenant));
+            identityServerClient.Claims.Add(new ClientClaim("roles", string.Join(',', client.Roles)));
             await _identityServerService.UpdateClient(identityServerClient);
         }
 

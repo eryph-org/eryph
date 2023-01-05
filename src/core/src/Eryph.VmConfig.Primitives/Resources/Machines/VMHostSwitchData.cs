@@ -1,4 +1,4 @@
-﻿using Eryph.Core;
+﻿using Eryph.ConfigModel;
 
 namespace Eryph.Resources.Machines;
 
