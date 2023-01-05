@@ -78,7 +78,14 @@ jobs:
     inputs:
       script: 'ren eryph-zero bin'
       workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build'
-      
+
+  - task: CopyFiles@2
+    displayName: copy development ovs package to zero build
+    inputs:
+      SourceFolder: '$(agent.builddirectory)'
+      Contents: 'ovspackage.zip'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)\zero_build'
+
   - task: ArchiveFiles@2
     displayName: pack zero build
     inputs:
