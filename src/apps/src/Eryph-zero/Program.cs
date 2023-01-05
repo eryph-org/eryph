@@ -45,6 +45,8 @@ using Serilog.Templates;
 using Serilog.Templates.Themes;
 using Serilog.Events;
 using Microsoft.Extensions.Hosting.WindowsServices;
+using Serilog.Extensions.Logging;
+using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Eryph.Runtime.Zero;
 
@@ -75,7 +77,12 @@ internal static class Program
         rootCommand.AddCommand(runCommand);
 
         var installCommand = new Command("install");
-        installCommand.SetHandler(_ => SelfInstall());
+        var deleteOutFile = new System.CommandLine.Option<bool>(
+            name: "--deleteOutFile",
+            description: "Delete output file on exit - useful if file is watched for changes.");
+        installCommand.AddOption(outFileOption);
+        installCommand.AddOption(deleteOutFile);
+        installCommand.SetHandler(SelfInstall, outFileOption, deleteOutFile);
         rootCommand.AddCommand(installCommand);
 
         var networksCommand = new Command("networks");
@@ -340,118 +347,205 @@ internal static class Program
         return (((IPEndPoint)socket.LocalEndPoint)!).Port;
     }
 
-    private static Task<int> SelfInstall()
+    private static Task<int> SelfInstall(FileSystemInfo? outFile, bool deleteOutFile)
     {
-        return AdminGuard.CommandIsElevated(async () =>
+        TextWriter? outWriter = null;
+        var standardOut = Console.Out;
+        var standardError = Console.Error;
+
+        if (outFile != null)
         {
-            var targetDir =
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                    "eryph", "zero");
-            var zeroExe = Path.Combine(targetDir, "bin", "eryph-zero.exe");
+            outWriter = File.CreateText(outFile.FullName);
+            Console.SetOut(outWriter);
+            Console.SetError(outWriter);
 
-            var backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "eryph", "zero.old");
+        }
 
-            var sysEnv = new SystemEnvironment(new NullLoggerFactory());
-            var serviceManager = sysEnv.GetServiceManager("eryph-zero");
+        try
+        {
 
-            var backupCreated = false;
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .Enrich.FromLogContext()
+                .WriteTo.Console(theme: ConsoleTheme.None)
+                .CreateLogger();
 
-            try
+            return AdminGuard.CommandIsElevated(async () =>
             {
-                var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-                var parentDir = baseDir.Parent?.FullName ?? throw new IOException($"Invalid path {baseDir}");
+                var targetDir =
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                        "eryph", "zero");
+                var zeroExe = Path.Combine(targetDir, "bin", "eryph-zero.exe");
 
-                var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                var backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    "eryph", "zero.old");
+                var loggerFactory = new SerilogLoggerFactory(Log.Logger);
+                var sysEnv = new SystemEnvironment(loggerFactory);
+                var serviceManager = sysEnv.GetServiceManager("eryph-zero");
 
-                if (Directory.Exists(backupDir))
-                    Directory.Delete(backupDir, true);
+                var backupCreated = false;
+                var enableRollback = await serviceManager.ServiceExists()
+                    .IfLeft(false);
 
-                EitherAsync<Error, Unit> CopyService()
+                try
                 {
-                    return Prelude.Try(() =>
+                    var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+                    var parentDir = baseDir.Parent?.FullName ?? throw new IOException($"Invalid path {baseDir}");
+
+
+                    if (Directory.Exists(backupDir))
+                        Directory.Delete(backupDir, true);
+
+                    EitherAsync<Error, Unit> CopyService()
                     {
-                        if (Directory.Exists(targetDir))
+                        return Prelude.Try(() =>
                         {
-                            Directory.Move(targetDir, backupDir);
-                            backupCreated = true;
-                        }
+                            Log.Logger.Information("Copy files...");
+                            if (Directory.Exists(targetDir))
+                            {
+                                Directory.Move(targetDir, backupDir);
+                                backupCreated = true;
+                            }
 
-                        CopyDirectory(parentDir, targetDir);
-                        
+                            CopyDirectory(parentDir, targetDir);
+
+                            return Unit.Default;
+                        }).ToEitherAsync();
+
+
+                    }
+
+                    EitherAsync<Error, Unit> LogProgress(string message)
+                    {
+                        Log.Logger.Information(message);
                         return Unit.Default;
-                    }).ToEitherAsync();
+                    }
 
+                    Log.Information("Installing eryph-zero service");
+
+                    var installOrUpdate =
+                        from serviceExists in serviceManager.ServiceExists()
+                        let cancelSource1 = new CancellationTokenSource(TimeSpan.FromMinutes(1))
+                        from uStopped in serviceExists
+                            ?
+                            LogProgress("Stopping running service...").Bind(_ => 
+                                serviceManager.EnsureServiceStopped(cancelSource1.Token))
+                            : Unit.Default
+                        from _ in Prelude.Try(() => OVSPackage.UnpackAndProvide(true)).ToEitherAsync()
+                        from uCopy in CopyService()
+                        let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(1))
+                        from uInstalled in serviceExists
+                            ? LogProgress("Updating service...").Bind(_ => serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
+                            : LogProgress("Installing service...").Bind(_ => serviceManager.CreateService("eryph-zero", $"{zeroExe} run", cancelSource2.Token))
+                        let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(2))
+
+                        from pStart in LogProgress("Starting service...")
+                        from uStarted in serviceManager.EnsureServiceStarted(cancelSource3.Token)
+                        select Unit.Default;
+
+                    _ = await installOrUpdate.IfLeft(l => l.Throw());
+
+                    if (Directory.Exists(backupDir))
+                        Directory.Delete(backupDir, true);
+
+                    //update path variable
+                    const string pathVariable = "PATH";
+                    var pathVariableValue = Environment.GetEnvironmentVariable(pathVariable, EnvironmentVariableTarget.Machine);
+                    var runDir = Path.Combine(targetDir, "bin");
+
+                    if (pathVariableValue == null || 
+                        !pathVariableValue.Contains(runDir, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable(pathVariable,
+                            $"{pathVariableValue};{runDir}", EnvironmentVariableTarget.Machine);
+                    }
+
+
+                    Log.Logger.Information("Installation completed");
+
+                    return 0;
 
                 }
-
-                var installOrUpdate =
-                    from serviceExists in serviceManager.ServiceExists()
-                    from uStopped in serviceExists
-                        ? serviceManager.EnsureServiceStopped(cancelSource.Token)
-                        : Unit.Default
-                    from _ in Prelude.Try(()=>OVSPackage.UnpackAndProvide(true)).ToEitherAsync()
-                    from uCopy in CopyService()
-                    from uInstalled in serviceExists
-                        ? serviceManager.UpdateService($"{zeroExe} run", cancelSource.Token)
-                        : serviceManager.CreateService("eryph-zero", $"{zeroExe} run", cancelSource.Token)
-                    from uStarted in serviceManager.EnsureServiceStarted(cancelSource.Token)
-                    select Unit.Default;
-
-                _ = await installOrUpdate.IfLeft(l => l.Throw());
-                
-                if (Directory.Exists(backupDir))
-                    Directory.Delete(backupDir, true);
-
-
-                return 0;
-
-            }
-            catch (Exception ex)
-            {
-                await Console.Error.WriteAsync(ex.Message);
-
-                //undo operation
-
-                var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
-
-                var rollback =
-                    from serviceExists in serviceManager.ServiceExists()
-                    from uStopped in serviceExists
-                        ? serviceManager.EnsureServiceStopped(cancelSource.Token)
-                        : Unit.Default
-                    from uCopy in Prelude.Try(() =>
-                    {
-                        if (backupCreated)
-                        {
-                            if (Directory.Exists(targetDir))
-                                Directory.Delete(targetDir, true);
-                            Directory.Move(backupDir, targetDir);
-                        }
-                        return Unit.Default;
-                    } ).ToEitherAsync()
-
-                    from serviceExists2 in serviceManager.ServiceExists()
-                    from uStarted in serviceExists2 
-                        ? serviceManager.EnsureServiceStarted(cancelSource.Token)
-                        : Unit.Default
-                    select Unit.Default;
-
-                _ = await rollback.IfLeft(l =>
+                catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"Error in rollback of service update: {l.Message}");
-                });
-                
-                return -1;
+                    Log.Error("Installation failed. Error: {message}", ex.Message );
+                    Log.Debug(ex, "Error Details");
+
+                    //undo operation
+
+                    if (!enableRollback) return -1;
+
+                    Log.Information("Trying to rollback to previous installation.");
+
+                    var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+
+                    try
+                    {
+                        var rollback =
+                            from serviceExists in serviceManager.ServiceExists()
+                            from uStopped in serviceExists
+                                ? serviceManager.EnsureServiceStopped(cancelSource.Token)
+                                : Unit.Default
+                            from uCopy in Prelude.Try(() =>
+                            {
+                                if (backupCreated)
+                                {
+                                    if (Directory.Exists(targetDir))
+                                        Directory.Delete(targetDir, true);
+                                    Directory.Move(backupDir, targetDir);
+                                }
+
+                                return Unit.Default;
+                            }).ToEitherAsync()
+
+                            from serviceExists2 in serviceManager.ServiceExists()
+                            from uStarted in serviceExists2
+                                ? serviceManager.EnsureServiceStarted(cancelSource.Token)
+                                : Unit.Default
+                            select Unit.Default;
+
+                        _ = await rollback.IfLeft(l =>
+                        {
+                            Log.Error("Rollback failed. Error: {message}", l.Message);
+                            Log.Debug("Error Details: {@error}", l);
+
+                        });
+
+                    }
+                    catch (Exception rollBackEx)
+                    {
+                        Log.Error("Rollback failed. Error: {message}", rollBackEx.Message);
+                        Log.Debug(rollBackEx, "Error Details");
+
+                    }
+
+                    return -1;
+                }
+
+
+
+
+            });
+        }
+        finally
+        {
+            if (outWriter != null)
+            {
+                Console.SetOut(standardOut);
+                Console.SetError(standardError);
+                outWriter.Close();
+
+                if (deleteOutFile)
+                {
+                    Task.Delay(2000).GetAwaiter().GetResult();
+                    File.Delete(outFile.FullName);
+
+                }
             }
-
-
- 
-
-        });
+        }
     }
 
-    private static async Task<int> GetNetworks([CanBeNull] FileSystemInfo outFile)
+    private static async Task<int> GetNetworks(FileSystemInfo? outFile)
     {
         var manager = new NetworkProviderManager();
 
@@ -506,8 +600,10 @@ internal static class Program
             configString = await textReader.ReadToEndAsync();
 
         }
-
+        
         using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
+        var ovsPackagePath = OVSPackage.UnpackAndProvide(true);
+        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsPackagePath), new NullLoggerFactory());
 
         var res = (await (
             from newConfig in importConfig(configString)
@@ -530,7 +626,7 @@ internal static class Program
 
             .Run(new ConsoleRuntime(
                     new NullLoggerFactory(),
-                    psEngine, new CancellationTokenSource())))
+                    psEngine,sysEnv, new CancellationTokenSource())))
             .Match(
                 r => 0, l =>
             {

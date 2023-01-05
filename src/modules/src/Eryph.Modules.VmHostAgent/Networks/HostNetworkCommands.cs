@@ -20,11 +20,23 @@ namespace Eryph.Modules.VmHostAgent.Networks;
 public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
     where RT : struct, HasPowershell<RT>, HasCancel<RT>
 {
-    public Aff<RT, Seq<VMSwitch>> GetSwitches() =>
-        from psEngine in default(RT).Powershell.ToAff()
-        from vmSwitches in psEngine.GetObjectsAsync<VMSwitch>(
-            PsCommandBuilder.Create().AddCommand("Get-VMSwitch")).ToAff()
-        select vmSwitches.Map(s => s.Value);
+    public Aff<RT, Seq<VMSwitch>> GetSwitches()
+    {
+        return from psEngine in default(RT).Powershell.ToAff()
+            from vmSwitches in psEngine.GetObjectsAsync<VMSwitch>(
+                PsCommandBuilder.Create().AddCommand("Get-VMSwitch")).ToAff()
+            from switches in vmSwitches.Map(s => Prelude.Try(() =>
+            {
+                var result = s.Value;
+
+                // try to fetch interface ids
+                result.NetAdapterInterfaceGuid = s.GetNetAdapterInterfaceGuid();
+                return result;
+
+            }).ToAff()).TraverseParallel(l=>l)
+            select switches;
+
+    }
 
     public Aff<RT, Seq<VMSwitchExtension>> GetSwitchExtensions() =>
         from psEngine in default(RT).Powershell.ToAff()
@@ -150,7 +162,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         {
             if (enumerable.Length() > 0)
             {
-                var adapterName = "";
+                string adapterName;
                 if (enumerable.Length() > 1)
                 {
                     createTeam = () => ps.RunAsync(
@@ -206,7 +218,9 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                     .Bind(vmSwitch =>
                     {
                         if (vmSwitch.NetAdapterInterfaceGuid is null or { Length: 0 })
+                        {
                             return Prelude.SuccessAff(Seq<string>.Empty);
+                        }
 
                         //even if it is a array only one adapter is supported in a switch
                         var switchAdapterGuid = vmSwitch.NetAdapterInterfaceGuid[0];

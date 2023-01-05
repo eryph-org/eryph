@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using System.Runtime.InteropServices;
 using Dbosoft.OVN;
 using Eryph.Core;
 using Eryph.ModuleCore.Networks;
@@ -10,7 +9,6 @@ using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Hosting.WindowsServices;
-using Microsoft.Extensions.Logging;
 using Rebus.Persistence.InMem;
 using Rebus.Transport.InMem;
 using SimpleInjector;
@@ -63,46 +61,5 @@ namespace Eryph.Runtime.Zero
             return container;
         }
 
-        private class EryphOVSEnvironment : SystemEnvironment
-        {
-            private readonly EryphOvsPathProvider _runPathProvider;
-
-            public EryphOVSEnvironment(EryphOvsPathProvider runPathProvider, ILoggerFactory loggerFactory) : base(loggerFactory)
-            {
-                _runPathProvider = runPathProvider;
-            }
-
-            public override IFileSystem FileSystem => new EryphOVsFileSystem(_runPathProvider);
-        }
-
-        private class EryphOVsFileSystem : DefaultFileSystem
-        {
-            private readonly EryphOvsPathProvider _runPathProvider;
-
-            public EryphOVsFileSystem(EryphOvsPathProvider runPathProvider) : base(OSPlatform.Windows)
-            {
-                _runPathProvider = runPathProvider;
-            }
-
-            protected override string FindBasePath(string pathRoot)
-            {
-                if (!pathRoot.StartsWith("usr")) return base.FindBasePath(pathRoot);
-
-                return _runPathProvider.OvsRunPath;
-
-            }
-        }
-
-        private class EryphOvsPathProvider
-        {
-            public string OvsRunPath { get; }
-
-            public EryphOvsPathProvider(string runPath)
-            {
-                OvsRunPath = runPath;
-            }
-        }
     }
-
-
 }
