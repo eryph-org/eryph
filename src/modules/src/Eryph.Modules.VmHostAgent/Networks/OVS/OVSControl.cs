@@ -19,7 +19,7 @@ public class OVSControl : OVSControlTool, IOVSControl
 
     }
 
-    public EitherAsync<Error, OVSTableRecord>  GetOVSTable(CancellationToken cancellationToken = default)
+    public EitherAsync<Error, OVSTableRecord>  GetOVSTable(CancellationToken cancellationToken)
     {
         return GetRecord<OVSTableRecord>("open", ".", cancellationToken: cancellationToken);
     }
@@ -44,32 +44,32 @@ public class OVSControl : OVSControlTool, IOVSControl
 
     }
 
-    public EitherAsync<Error, Unit> AddBridge(string bridgeName, CancellationToken cancellationToken = default)
+    public EitherAsync<Error, Unit> AddBridge(string bridgeName, CancellationToken cancellationToken)
     {
         return RunCommand($" --may-exist add-br \"{bridgeName}\"", false, cancellationToken).Map(_ => Unit.Default);
     }
 
-    public EitherAsync<Error, Unit> RemoveBridge(string bridgeName, CancellationToken cancellationToken = default)
+    public EitherAsync<Error, Unit> RemoveBridge(string bridgeName, CancellationToken cancellationToken)
     {
         return RunCommand($" --if-exists del-br \"{bridgeName}\"", false, cancellationToken).Map(_ => Unit.Default);
     }
 
-    public EitherAsync<Error, Unit> AddPort(string bridgeName, string portName, CancellationToken cancellationToken = default)
+    public EitherAsync<Error, Unit> AddPort(string bridgeName, string portName, CancellationToken cancellationToken)
     {
         return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\"", false, cancellationToken).Map(_ => Unit.Default);
     }
 
-    public EitherAsync<Error, Unit> AddPortWithIFaceId(string bridgeName, string portName, CancellationToken cancellationToken = default)
+    public EitherAsync<Error, Unit> AddPortWithIFaceId(string bridgeName, string portName, CancellationToken cancellationToken)
     {
         return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\" -- set interface \"{portName}\" external_ids:iface-id={portName}", false, cancellationToken).Map(_ => Unit.Default);
     }
 
-    public EitherAsync<Error, Unit> RemovePort(string bridgeName, string portName, CancellationToken cancellationToken = default)
+    public EitherAsync<Error, Unit> RemovePort(string bridgeName, string portName, CancellationToken cancellationToken)
     {
         return RunCommand($" --if-exists del-port \"{bridgeName}\" \"{portName}\"", false, cancellationToken).Map(_ => Unit.Default);
     }
 
-    public EitherAsync<Error, Seq<Bridge>> GetBridges(CancellationToken cancellationToken = default)
+    public EitherAsync<Error, Seq<Bridge>> GetBridges(CancellationToken cancellationToken)
     {
         return FindRecords<Bridge>("Bridge", Map<string, OVSQuery>.Empty, cancellationToken: cancellationToken);
     }
@@ -81,7 +81,7 @@ public class OVSControl : OVSControlTool, IOVSControl
     }
 
 
-    public EitherAsync<Error, Seq<BridgePort>> GetPorts(CancellationToken cancellationToken = default)
+    public EitherAsync<Error, Seq<BridgePort>> GetPorts(CancellationToken cancellationToken)
     {
         return FindRecords<BridgePort>("Port", Map<string, OVSQuery>.Empty, cancellationToken: cancellationToken);
     }

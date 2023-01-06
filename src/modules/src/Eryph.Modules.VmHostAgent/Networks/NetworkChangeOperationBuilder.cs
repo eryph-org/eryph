@@ -77,15 +77,6 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
     }
 
-    private static Aff<RT, Unit> RebuildNetworks()
-    {
-        var cts = new CancellationTokenSource(2000);
-
-        return default(RT).AgentSync.Bind(c => c
-            .SendSyncCommand("REBUILD_NETWORKS", cts.Token));
-
-    }
-
     internal static Aff<RT, NetworkChangeOperationBuilder<RT>> New()
     {
         return default(RT).Logger<NetworkChangeOperationBuilder<RT>>().Map(
@@ -159,7 +150,10 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
                 AddOperation(
                     () => default(RT).OVS.Bind(o =>
-                        o.RemoveBridge(bridge).ToAff(e => e)),
+                    {
+                        var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                        return o.RemoveBridge(bridge, cancelSourceCommand.Token).ToAff(e => e);
+                    }),
                     NetworkChangeOperation.RemoveBridge, bridge);
 
                 ovsBridges = ovsBridges with { Bridges = ovsBridges.Bridges.Remove(bridge) };
@@ -221,18 +215,24 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
             AddOperation(
                 () => default(RT).OVS.Bind(ovs =>
-                    ovs.RemoveBridge("br-int").ToAff(e => e)),
+                {
+                    var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                    return ovs.RemoveBridge("br-int", cancelSourceCommand.Token).ToAff(e => e);
+                }),
                 NetworkChangeOperation.RemoveBridge, "br-int");
 
             _logger.LogDebug("Adding operations to remove all bridges.");
 
             AddOperation(() =>
-                    default(RT).OVS.Bind(ovs =>
-                        currentBridges.Bridges.Map(b => ovs.RemoveBridge(b))
-                            .TraverseSerial(l => l).Map(_ => Unit.Default)
-                            .ToAff(e => e.Message)
-                            .Bind(_ => default(RT).HostNetworkCommands.Bind(c => c
-                                .RemoveOverlaySwitch()))),
+                    default(RT).OVS.Bind(ovs => currentBridges.Bridges.Map(b =>
+                        {
+                            var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                            return ovs.RemoveBridge(b, cancelSourceCommand.Token);
+                        })
+                        .TraverseSerial(l => l).Map(_ => Unit.Default)
+                        .ToAff(e => e.Message)
+                        .Bind(_ => default(RT).HostNetworkCommands.Bind(c => c
+                            .RemoveOverlaySwitch()))),
                 NetworkChangeOperation.RemoveOverlaySwitch);
 
             return SuccessAff(default(OVSBridgeInfo));
@@ -253,7 +253,10 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     _logger.LogDebug("Adding operations to remove unused bridge {bridge}", bridge);
 
                     AddOperation(() => default(RT).OVS.Bind(ovs =>
-                            ovs.RemoveBridge(bridge).ToAff(e => e)),
+                        {
+                            var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                            return ovs.RemoveBridge(bridge, cancelSourceCommand.Token).ToAff(e => e);
+                        }),
                         NetworkChangeOperation.RemoveUnusedBridge, bridge);
 
                     ovsBridges = ovsBridges with { Bridges = ovsBridges.Bridges.Remove(bridge) };
@@ -292,7 +295,8 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     AddOperation(() =>
                         from c in default(RT).HostNetworkCommands
                         from ovs in default(RT).OVS
-                        from uAddBridge in ovs.AddBridge(newBridge.BridgeName).ToAff(l => l)
+                        let cancelAddBridge = new CancellationTokenSource(TimeSpan.FromSeconds(30))
+                        from uAddBridge in ovs.AddBridge(newBridge.BridgeName, cancelAddBridge.Token).ToAff(l => l)
                         from uWait in c.WaitForBridgeAdapter(newBridge.BridgeName)
                         from uEnable in
                             enableBridges.Contains(newBridge.BridgeName)
@@ -388,8 +392,11 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
                         AddOperation(
                             () => default(RT).OVS.Bind(ovs =>
-                                ovs.RemovePort(networkProvider.BridgeName, adapter.Name)
-                                    .ToAff(l => l)), NetworkChangeOperation.RemoveAdapterPort,
+                            {
+                                var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                                return ovs.RemovePort(networkProvider.BridgeName, adapter.Name, cancelSourceCommand.Token)
+                                    .ToAff(l => l);
+                            }), NetworkChangeOperation.RemoveAdapterPort,
                             adapter.Name, networkProvider.BridgeName);
 
                         ovsBridges = ovsBridges with
@@ -497,7 +504,10 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                                 provider.BridgeName);
 
                             AddOperation(() => default(RT).OVS.Bind(ovs =>
-                                    ovs.RemoveBridge(provider.BridgeName).ToAff(e => e)),
+                                {
+                                    var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                                    return ovs.RemoveBridge(provider.BridgeName, cancelSourceCommand.Token).ToAff(e => e);
+                                }),
                                 NetworkChangeOperation.RemoveMissingBridge, provider.BridgeName);
 
                             ovsBridges = ovsBridges with { Bridges = ovsBridges.Bridges.Remove(provider.BridgeName) };
@@ -539,12 +549,21 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                         {
                             _logger.LogDebug("Adding {adapter} to bridge {bridge}", adapterName, networkProvider.BridgeName);
                             return AddOperation(
-                                () => default(RT).OVS.Bind(ovs => ovs.AddPort(networkProvider.BridgeName, adapterName)
-                                    .ToAff(l => l)),
+                                () => default(RT).OVS.Bind(ovs =>
+                                {
+                                    var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+                                    return ovs.AddPort(networkProvider.BridgeName, adapterName, cancelSourceCommand.Token)
+                                        .ToAff(l => l);
+                                }),
                                 _ => true,
-                                () => default(RT).OVS.Bind(ovs => ovs
-                                    .RemovePort(networkProvider.BridgeName, adapterName)
-                                    .ToAff(l => l)),
+                                () => default(RT).OVS.Bind(ovs =>
+                                {
+                                    var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                                    return ovs
+                                        .RemovePort(networkProvider.BridgeName, adapterName, cancelSourceCommand.Token)
+                                        .ToAff(l => l);
+                                }),
                                 NetworkChangeOperation.AddAdapterPort, adapterName, networkProvider.BridgeName
                             );
                         },
@@ -557,21 +576,35 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
                             AddOperation(
                                 () => default(RT).OVS.Bind(ovs =>
-                                    ovs.RemovePort(portBridge, adapterName).ToAff(l => l)),
+                                {
+                                    var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                                    return ovs.RemovePort(portBridge, adapterName, cancelSourceCommand.Token).ToAff(l => l);
+                                }),
                                 _ => true,
                                 () => default(RT).OVS.Bind(ovs =>
-                                    ovs.AddPort(portBridge, adapterName).ToAff(l => l)),
+                                {
+                                    var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                                    return ovs.AddPort(portBridge, adapterName, cancelSourceCommand.Token).ToAff(l => l);
+                                }),
                                 NetworkChangeOperation.RemoveAdapterPort, adapterName, portBridge
                             );
 
                             return AddOperation(
                                 () => default(RT).OVS.Bind(
-                                    ovs => ovs.AddPort(networkProvider.BridgeName, adapterName)
-                                        .ToAff(l => l)),
+                                    ovs =>
+                                    {
+                                        var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                                        return ovs.AddPort(networkProvider.BridgeName, adapterName, cancelSourceCommand.Token)
+                                            .ToAff(l => l);
+                                    }),
                                 _ => true,
                                 () => default(RT).OVS.Bind(
-                                    ovs => ovs.RemovePort(networkProvider.BridgeName, adapterName)
-                                        .ToAff(l => l)),
+                                    ovs =>
+                                    {
+                                        var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                                        return ovs.RemovePort(networkProvider.BridgeName, adapterName, cancelSourceCommand.Token)
+                                            .ToAff(l => l);
+                                    }),
                                 NetworkChangeOperation.AddAdapterPort, adapterName, networkProvider.BridgeName
                             );
                         }
@@ -588,7 +621,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     {
         using (_logger.BeginScope("Method: {method}", nameof(UpdateBridgeMappings)))
         {
-            var cancelSource = new CancellationTokenSource(5000);
+            var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
             return from ovs in default(RT).OVS
                    let bridgeMappings = string.Join(',', newConfig.NetworkProviders
@@ -602,8 +635,11 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
                        ? AddOperation(() =>
                            default(RT).OVS.Bind(ovsC =>
-                               ovsC.UpdateBridgeMapping(bridgeMappings, CancellationToken.None)
-                                   .ToAff(l => l)), NetworkChangeOperation.UpdateBridgeMapping)
+                           {
+                               var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                               return ovsC.UpdateBridgeMapping(bridgeMappings, cancelSourceCommand.Token)
+                                   .ToAff(l => l);
+                           }), NetworkChangeOperation.UpdateBridgeMapping)
                        : Unit.Default
 
                    select Unit.Default;
