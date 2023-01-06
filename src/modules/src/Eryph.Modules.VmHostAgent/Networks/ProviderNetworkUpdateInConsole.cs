@@ -180,7 +180,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
 
     public static Aff<RT, Unit> syncNetworks()
     {
-        return from m1 in Console<RT>.writeLine("Syncing project networks. This could take a while.")
+        return from m1 in Console<RT>.writeLine("Syncing project networks. This could take a while...")
             from sync in default(RT).AgentSync
                 .Bind(agent => agent.SendSyncCommand("REBUILD_NETWORKS", CancellationToken.None))
             select Unit.Default;
@@ -218,7 +218,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
 
             Eff<RT, Unit> InteractiveCheck() =>
                 from m1 in Console<RT>.writeLine(
-                    "\nFollowing changes have to be applied on host networking configuration:")
+                    "\nThe following changes have to be applied to the host network configuration:")
                 from m2 in newConfigChanges.Operations
                     .Map(op => Console<RT>.writeLine("- " + op.Text))
                     .Traverse(l => l)
@@ -226,7 +226,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
                 from output in !nonInteractive
                     ? from m3 in Console<RT>.writeLine(
                         "\nNetwork connectivity may be interrupted while applying these changes." +
-                        "\nIn case of failure a rollback will be tried.\n")
+                        "\nIn the event of an error, a rollback is attempted.\n")
 
                     from decision in Prelude.repeat(
                                          from _ in Console<RT>.write("\nApply (a) or Cancel (c): ")
@@ -246,7 +246,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
 
             return (!isEmpty
                     ? InteractiveCheck()
-                    : Console<RT>.writeLine("New network configuration requires no changes on host networking."))
+                    : Console<RT>.writeLine("The new network configuration does not require any changes to the host network."))
                 .Bind(_ => executeChangesConsole(newConfigChanges)
 
                     // rollback changes that have a direct rollback attached
