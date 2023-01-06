@@ -602,8 +602,11 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
                        ? AddOperation(() =>
                            default(RT).OVS.Bind(ovsC =>
-                               ovsC.UpdateBridgeMapping(bridgeMappings, CancellationToken.None)
-                                   .ToAff(l => l)), NetworkChangeOperation.UpdateBridgeMapping)
+                           {
+                               var cancelSourceCommand = new CancellationTokenSource(5000);
+                               return ovsC.UpdateBridgeMapping(bridgeMappings, cancelSourceCommand.Token)
+                                   .ToAff(l => l);
+                           }), NetworkChangeOperation.UpdateBridgeMapping)
                        : Unit.Default
 
                    select Unit.Default;
