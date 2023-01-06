@@ -16,7 +16,7 @@ namespace Eryph.VmManagement.Data.Core
             // NetAdapterInterfaceGuid as property is not available, so fetch it via reflection
             // this has been added for Server 2016 compatibility so it can be removed
             // when 2016 is out of extended support (year 2027)
-            // never windows version expose this property directly
+            // newer windows version expose this property directly
             var baseObject = vmSwitch.PsObject?.BaseObject;
             if (baseObject != null)
             {
