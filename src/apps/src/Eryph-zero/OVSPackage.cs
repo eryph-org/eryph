@@ -74,11 +74,11 @@ internal class OVSPackage
 
             if (!ovsPackageExists && !ovsBackupExists)
                 throw new IOException(
-                    "Could not find existing OpenVSwitch run directory and ovs package to install ovs.");
+                    "Could not find existing OpenVSwitch run directory and ovs package to create it from.");
 
             if (ovsBackupExists && relativePackagePath== null)
             {
-                log.Information("No OVS Installation folder found. Trying to recreate from backup.");
+                log.Information("No OpenVSwitch Installation folder found. Trying to recreate from backup.");
                 File.Move(ovsPackageBackupFile, ovsPackageFile);
                 ovsPackageExists = true;
             }

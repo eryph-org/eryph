@@ -12,7 +12,8 @@ public class VMSwitch
     [PrivateIdentifier]
     public string Name { get; init; }
 
-    public Guid[] NetAdapterInterfaceGuid { get; init; }
+    public string NetAdapterInterfaceDescription { get; init; }
+    public Guid[] NetAdapterInterfaceGuid { get; set; }
 
 }
 

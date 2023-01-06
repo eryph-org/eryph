@@ -30,12 +30,13 @@ public readonly struct ConsoleRuntime :
     public ConsoleRuntime(
         ILoggerFactory loggerFactory,
         IPowershellEngine engine,
+        ISysEnvironment sysEnv,
         CancellationTokenSource cancellationTokenSource)
     {
         _loggerFactory = loggerFactory;
         _engine = engine;
         CancellationTokenSource = cancellationTokenSource;
-        _sysEnv = new SystemEnvironment(loggerFactory);
+        _sysEnv = sysEnv;
     }
 
     public Eff<ConsoleRuntime, IPowershellEngine> Powershell =>
@@ -48,7 +49,7 @@ public readonly struct ConsoleRuntime :
         SuccessEff<IHostNetworkCommands<ConsoleRuntime>>(
             new HostNetworkCommands<ConsoleRuntime>());
 
-    public ConsoleRuntime LocalCancel => new(_loggerFactory,_engine, CancellationTokenSource);
+    public ConsoleRuntime LocalCancel => new(_loggerFactory,_engine, _sysEnv, CancellationTokenSource);
 
     public CancellationToken CancellationToken => CancellationTokenSource.Token;
     public CancellationTokenSource CancellationTokenSource { get; }
