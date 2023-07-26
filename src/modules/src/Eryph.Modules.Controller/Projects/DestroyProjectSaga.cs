@@ -12,6 +12,7 @@ using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 using Resource = Eryph.Resources.Resource;
 
@@ -23,7 +24,7 @@ namespace Eryph.Modules.Controller.Projects
     {
         private readonly IStateStore _stateStore;
 
-        public DestroyProjectSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IStateStore stateStore) : base(bus, taskDispatcher)
+        public DestroyProjectSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext, IStateStore stateStore) : base(bus, taskDispatcher, messageContext)
         {
             _stateStore = stateStore;
         }

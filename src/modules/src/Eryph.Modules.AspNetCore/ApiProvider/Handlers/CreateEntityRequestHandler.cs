@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using Eryph.StateDb.Model;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
@@ -16,20 +16,22 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
         private readonly IEndpointResolver _endpointResolver;
         private readonly IMapper _mapper;
         private readonly IUserRightsProvider _userRightsProvider;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public CreateEntityRequestHandler(IOperationDispatcher operationDispatcher, IEndpointResolver endpointResolver, IMapper mapper, IUserRightsProvider userRightsProvider)
+        public CreateEntityRequestHandler(IOperationDispatcher operationDispatcher, IEndpointResolver endpointResolver, IMapper mapper, IUserRightsProvider userRightsProvider, IHttpContextAccessor httpContextAccessor)
         {
             _operationDispatcher = operationDispatcher;
             _endpointResolver = endpointResolver;
             _mapper = mapper;
             _userRightsProvider = userRightsProvider;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(Func<object> createOperationFunc,
             CancellationToken cancellationToken)
         {
             var command = createOperationFunc();
-            var operation = await _operationDispatcher.StartNew(_userRightsProvider.GetUserTenantId(),command);
+            var operation = await _operationDispatcher.StartNew(_userRightsProvider.GetUserTenantId(), _httpContextAccessor.HttpContext?.TraceIdentifier??"",  command);
 
             if (operation == null)
                 return new UnprocessableEntityResult();

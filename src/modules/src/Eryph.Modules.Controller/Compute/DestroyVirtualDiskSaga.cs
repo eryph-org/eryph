@@ -9,6 +9,7 @@ using Eryph.Resources;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Compute
@@ -21,8 +22,8 @@ namespace Eryph.Modules.Controller.Compute
         private readonly IVirtualDiskDataService _virtualDiskDataService;
         private readonly IStorageManagementAgentLocator _agentLocator;
 
-        public DestroyVirtualDiskSaga(IBus bus, IOperationTaskDispatcher taskDispatcher,
-            IVirtualDiskDataService virtualDiskDataService, IStorageManagementAgentLocator agentLocator) : base(bus, taskDispatcher)
+        public DestroyVirtualDiskSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext,
+            IVirtualDiskDataService virtualDiskDataService, IStorageManagementAgentLocator agentLocator) : base(bus, taskDispatcher, messageContext)
         {
             _taskDispatcher = taskDispatcher;
             _virtualDiskDataService = virtualDiskDataService;

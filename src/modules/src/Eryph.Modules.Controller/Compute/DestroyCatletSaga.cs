@@ -13,6 +13,7 @@ using JetBrains.Annotations;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Compute
@@ -24,8 +25,8 @@ namespace Eryph.Modules.Controller.Compute
     {
         private readonly IVirtualMachineDataService _vmDataService;
 
-        public DestroyCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher,
-            IVirtualMachineDataService vmDataService) : base(bus, taskDispatcher)
+        public DestroyCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext,
+            IVirtualMachineDataService vmDataService) : base(bus, taskDispatcher, messageContext)
         {
             _vmDataService = vmDataService;
         }

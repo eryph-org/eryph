@@ -4,9 +4,11 @@ using System.Threading.Tasks;
 using Eryph.Messages.Operations;
 using Eryph.Messages.Operations.Events;
 using Eryph.ModuleCore;
+using Eryph.Rebus;
 using Eryph.StateDb.Model;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 using Resource = Eryph.Resources.Resource;
 
@@ -20,11 +22,13 @@ namespace Eryph.Modules.Controller.Operations
     {
         protected readonly IBus Bus;
         protected readonly IOperationTaskDispatcher TaskDispatcher;
+        protected readonly IMessageContext _messageContext;
 
-        protected OperationTaskWorkflowSaga(IBus bus, IOperationTaskDispatcher taskDispatcher)
+        protected OperationTaskWorkflowSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext)
         {
             Bus = bus;
             TaskDispatcher = taskDispatcher;
+            _messageContext = messageContext;
         }
 
 
@@ -97,38 +101,38 @@ namespace Eryph.Modules.Controller.Operations
 
         protected Task<Operation?> StartNewTask<T>(Resource resource = default) where T : class, new()
         {
-            return TaskDispatcher.StartNew<T>(Data.OperationId, Data.SagaTaskId, resource);
+            return TaskDispatcher.StartNew<T>(Data.OperationId, Data.SagaTaskId, _messageContext.GetTraceId(), resource);
         }
 
         protected Task<IEnumerable<Operation>> StartNewTask<T>(params Resource[] resources)
             where T : class, new()
         {
-            return TaskDispatcher.StartNew<T>(Data.OperationId, Data.SagaTaskId, resources);
+            return TaskDispatcher.StartNew<T>(Data.OperationId, Data.SagaTaskId, _messageContext.GetTraceId(), resources);
 
         }
 
         protected Task<Operation?> StartNewTask(Type operationCommandType,
             Resource resource = default)
         {
-            return TaskDispatcher.StartNew(Data.OperationId, Data.SagaTaskId, operationCommandType, resource);
+            return TaskDispatcher.StartNew(Data.OperationId, Data.SagaTaskId, _messageContext.GetTraceId(), operationCommandType, resource);
 
         }
 
         protected Task<IEnumerable<Operation>> StartNewTask(Type operationCommandType, params Resource[] resources)
         {
-            return TaskDispatcher.StartNew(Data.OperationId, Data.SagaTaskId, operationCommandType, resources);
+            return TaskDispatcher.StartNew(Data.OperationId, Data.SagaTaskId, _messageContext.GetTraceId(), operationCommandType, resources);
 
         }
 
         protected Task<Operation?> StartNewTask(object command)
         {
-            return TaskDispatcher.StartNew(Data.OperationId, Data.SagaTaskId, command);
+            return TaskDispatcher.StartNew(Data.OperationId, Data.SagaTaskId, _messageContext.GetTraceId(), command);
 
         }
 
         protected Task<IEnumerable<Operation>> StartNewTask(object command, params Resource[] resources)
         {
-            return TaskDispatcher.StartNew(Data.OperationId, Data.SagaTaskId, command, resources);
+            return TaskDispatcher.StartNew(Data.OperationId, Data.SagaTaskId, _messageContext.GetTraceId(), command, resources);
 
         }
 

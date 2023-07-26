@@ -8,6 +8,7 @@ using Eryph.Modules.Controller.Operations;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Networks
@@ -18,7 +19,7 @@ namespace Eryph.Modules.Controller.Networks
 
     {
 
-        public UpdateNetworksSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus, taskDispatcher)
+        public UpdateNetworksSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext) : base(bus, taskDispatcher, messageContext)
         {
         }
 

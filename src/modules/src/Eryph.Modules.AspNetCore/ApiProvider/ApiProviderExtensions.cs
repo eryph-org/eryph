@@ -31,7 +31,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             services.AddOptions<ApiProviderOptions>();
             services.Configure(options);
 
-
+            services.AddTransient<ICorrelationIdGenerator, CorrelationIdGenerator>();
             //mvcBuilder.AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
             services.AddApiVersioning(options =>
@@ -135,6 +135,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.UseMiddleware<CorrelationIdMiddleware>();
 
             //uncomment this when endpoint routing is working again
             app.UseEndpoints(endpoints =>

@@ -34,6 +34,7 @@ public abstract class OperationOrTaskDispatcherBase
 
     protected async Task<IEnumerable<Operation>> StartOpOrTask(Guid tenantId, Guid operationId, 
         Guid initiatingTaskId, object command,
+        string traceId,
         [AllowNull] params Resource[] resources)
     {
         if (command == null)
@@ -184,7 +185,7 @@ public abstract class OperationOrTaskDispatcherBase
                 message = taskMessage;
 
 
-            await _bus.Send(message);
+            await _bus.Send(message, new Dictionary<string, string> { {"trace_id", traceId}});
 
             _logger.LogInformation($"Send new command of type {command.GetType()} to controllers. Id: {operationId}");
         }

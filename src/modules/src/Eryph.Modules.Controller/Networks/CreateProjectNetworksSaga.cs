@@ -15,6 +15,7 @@ using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Networks
@@ -32,9 +33,10 @@ namespace Eryph.Modules.Controller.Networks
 
         public CreateProjectNetworksSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, ILogger log, 
             INetworkProviderManager networkProviderManager, 
+            IMessageContext messageContext,
             INetworkConfigValidator validator, 
             INetworkConfigRealizer realizer, 
-            IStateStoreRepository<Project> projectRepository) : base(bus, taskDispatcher)
+            IStateStoreRepository<Project> projectRepository) : base(bus, taskDispatcher, messageContext)
         {
             _log = log;
             _networkProviderManager = networkProviderManager;

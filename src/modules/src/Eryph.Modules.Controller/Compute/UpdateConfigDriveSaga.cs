@@ -8,6 +8,7 @@ using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Compute
@@ -19,7 +20,8 @@ namespace Eryph.Modules.Controller.Compute
     {
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IVirtualMachineMetadataService _metadataService;
-        public UpdateConfigDriveSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IVirtualMachineDataService vmDataService, IVirtualMachineMetadataService metadataService) : base(bus, taskDispatcher)
+        public UpdateConfigDriveSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IVirtualMachineDataService vmDataService, IVirtualMachineMetadataService metadataService, IMessageContext messageContext) 
+            : base(bus, taskDispatcher, messageContext)
         {
             _vmDataService = vmDataService;
             _metadataService = metadataService;

@@ -28,12 +28,12 @@ internal class Tracer : ITracer
         _traceWriter.WriteTrace(traceContext, records.TraceStarted, records.TraceStopped, records.Records.ToArray());
     }
 
-    public void Write(Guid contextId, TraceData data, string message = null)
+    public void Write(Guid contextId, string correlationId, TraceData data, string message = null)
     {
 
         _records.AddOrUpdate(contextId, g =>
         {
-            var res = new RecordsOfContext{ TraceStarted = DateTimeOffset.Now };
+            var res = new RecordsOfContext{ TraceStarted = DateTimeOffset.Now, CorrelationId= correlationId };
             res.Records.Add(new TraceRecord {  Data = data, Message = message, Timestamp = DateTimeOffset.Now });
             return res;
         }, (g, record) =>

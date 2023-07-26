@@ -7,6 +7,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 
 namespace Eryph.Modules.Controller.Inventory
 {
@@ -19,10 +20,11 @@ namespace Eryph.Modules.Controller.Inventory
         public UpdateVMHostInventoryCommandHandler(
             IVirtualMachineMetadataService metadataService, 
             IOperationDispatcher dispatcher,
+            IMessageContext messageContext,
             IVirtualMachineDataService vmDataService,
             IVirtualDiskDataService vhdDataService, 
             IVMHostMachineDataService vmHostDataService, IStateStore stateStore) : 
-            base(metadataService, dispatcher, vmDataService, vhdDataService, stateStore)
+            base(metadataService, dispatcher, vmDataService, vhdDataService, stateStore, messageContext)
         {
             _vmHostDataService = vmHostDataService;
         }

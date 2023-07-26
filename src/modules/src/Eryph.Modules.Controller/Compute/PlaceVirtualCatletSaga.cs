@@ -10,6 +10,7 @@ using Eryph.Rebus;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Compute
@@ -21,8 +22,8 @@ namespace Eryph.Modules.Controller.Compute
     {
         private readonly IPlacementCalculator _placementCalculator;
 
-        public PlaceVirtualCatletSaga(IBus bus, IPlacementCalculator placementCalculator, 
-            IOperationTaskDispatcher taskDispatcher) : base(bus, taskDispatcher)
+        public PlaceVirtualCatletSaga(IBus bus, IPlacementCalculator placementCalculator, IMessageContext messageContext,
+            IOperationTaskDispatcher taskDispatcher) : base(bus, taskDispatcher, messageContext)
         {
             _placementCalculator = placementCalculator;
         }

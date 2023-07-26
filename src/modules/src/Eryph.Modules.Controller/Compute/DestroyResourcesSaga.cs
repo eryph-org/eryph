@@ -11,6 +11,7 @@ using Eryph.Resources;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 using Resource = Eryph.Resources.Resource;
 
@@ -21,10 +22,9 @@ namespace Eryph.Modules.Controller.Compute
         OperationTaskWorkflowSaga<DestroyResourcesCommand, DestroyResourcesSagaData>,
         IHandleMessages<OperationTaskStatusEvent<DestroyCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>
-
     {
 
-        public DestroyResourcesSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus, taskDispatcher)
+        public DestroyResourcesSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext ) : base(bus, taskDispatcher, messageContext)
         {
         }
 

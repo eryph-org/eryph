@@ -17,6 +17,7 @@ using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 using Rebus.Sagas;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -35,8 +36,8 @@ namespace Eryph.Modules.Controller.Compute
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IStateStore _stateStore;
 
-        public CreateCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, Id64Generator idGenerator,
-            IVirtualMachineDataService vmDataService, IStateStore stateStore) : base(bus, taskDispatcher)
+        public CreateCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext, Id64Generator idGenerator,
+            IVirtualMachineDataService vmDataService, IStateStore stateStore) : base(bus, taskDispatcher, messageContext)
         {
             _idGenerator = idGenerator;
             _vmDataService = vmDataService;

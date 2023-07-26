@@ -19,7 +19,7 @@ public class OperationTaskDispatcher : OperationOrTaskDispatcherBase, IOperation
     }
 
 
-    public async Task<Operation?> StartNew(Guid operationId, Guid initiatingTaskId, object command)
+    public async Task<Operation?> StartNew(Guid operationId, Guid initiatingTaskId, string traceId, object command)
     {
         if (operationId == Guid.Empty)
             throw new ArgumentException("Invalid empty operation id", nameof(operationId));
@@ -28,11 +28,11 @@ public class OperationTaskDispatcher : OperationOrTaskDispatcherBase, IOperation
             throw new ArgumentException("Invalid empty initiating task id", nameof(initiatingTaskId));
 
 
-        return (await StartOpOrTask(Guid.Empty, operationId, initiatingTaskId, command, null)).FirstOrDefault();
+        return (await StartOpOrTask(Guid.Empty, operationId, initiatingTaskId, command,  traceId,null)).FirstOrDefault();
     }
 
 
-    public async Task<Operation?> StartNew<T>(Guid operationId, Guid initiatingTaskId, Resource resource = default)
+    public async Task<Operation?> StartNew<T>(Guid operationId, Guid initiatingTaskId, string traceId, Resource resource = default)
         where T : class, new()
     {
         if (operationId == Guid.Empty)
@@ -42,10 +42,10 @@ public class OperationTaskDispatcher : OperationOrTaskDispatcherBase, IOperation
             throw new ArgumentException("Invalid empty initiating task id", nameof(initiatingTaskId));
 
 
-        return (await StartOpOrTask(Guid.Empty, operationId, initiatingTaskId,Activator.CreateInstance<T>(), resource)).FirstOrDefault();
+        return (await StartOpOrTask(Guid.Empty, operationId, initiatingTaskId,Activator.CreateInstance<T>(), traceId, resource)).FirstOrDefault();
     }
 
-    public Task<IEnumerable<Operation>> StartNew(Guid operationId, Guid initiatingTaskId, object command, params Resource[] resources)
+    public Task<IEnumerable<Operation>> StartNew(Guid operationId, Guid initiatingTaskId, string traceId, object command, params Resource[] resources)
     {
         if (operationId == Guid.Empty)
             throw new ArgumentException("Invalid empty operation id", nameof(operationId));
@@ -54,11 +54,11 @@ public class OperationTaskDispatcher : OperationOrTaskDispatcherBase, IOperation
             throw new ArgumentException("Invalid empty initiating task id", nameof(initiatingTaskId));
 
 
-        return StartOpOrTask(Guid.Empty, operationId, initiatingTaskId, command, resources);
+        return StartOpOrTask(Guid.Empty, operationId, initiatingTaskId, command, traceId, resources);
     }
 
 
-    public Task<IEnumerable<Operation>> StartNew<T>(Guid operationId, Guid initiatingTaskId, [AllowNull] params Resource[] resources)
+    public Task<IEnumerable<Operation>> StartNew<T>(Guid operationId, Guid initiatingTaskId, string traceId, [AllowNull] params Resource[] resources)
         where T : class, new()
     {
         if (operationId == Guid.Empty)
@@ -68,10 +68,10 @@ public class OperationTaskDispatcher : OperationOrTaskDispatcherBase, IOperation
             throw new ArgumentException("Invalid empty initiating task id", nameof(initiatingTaskId));
 
 
-        return StartOpOrTask(Guid.Empty, operationId, initiatingTaskId, Activator.CreateInstance<T>(), resources);
+        return StartOpOrTask(Guid.Empty, operationId, initiatingTaskId, Activator.CreateInstance<T>(), traceId, resources);
     }
 
-    public async Task<Operation?> StartNew(Guid operationId, Guid initiatingTaskId, Type operationCommandType, Resource resource = default)
+    public async Task<Operation?> StartNew(Guid operationId, Guid initiatingTaskId, string traceId, Type operationCommandType, Resource resource = default)
     {
         if (operationId == Guid.Empty)
             throw new ArgumentException("Invalid empty operation id", nameof(operationId));
@@ -80,10 +80,10 @@ public class OperationTaskDispatcher : OperationOrTaskDispatcherBase, IOperation
             throw new ArgumentException("Invalid empty initiating task id", nameof(initiatingTaskId));
 
 
-        return (await StartNew(operationId, initiatingTaskId, operationCommandType, new[] { resource }))?.FirstOrDefault();
+        return (await StartNew(operationId, initiatingTaskId, traceId, operationCommandType, new[] { resource }))?.FirstOrDefault();
     }
 
-    public Task<IEnumerable<Operation>> StartNew(Guid operationId, Guid initiatingTaskId, Type commandType, [AllowNull] params Resource[] resources)
+    public Task<IEnumerable<Operation>> StartNew(Guid operationId, Guid initiatingTaskId, string traceId, Type commandType, [AllowNull] params Resource[] resources)
     {
         if (operationId == Guid.Empty)
             throw new ArgumentException("Invalid empty operation id", nameof(operationId));
@@ -92,7 +92,7 @@ public class OperationTaskDispatcher : OperationOrTaskDispatcherBase, IOperation
             throw new ArgumentException("Invalid empty initiating task id", nameof(initiatingTaskId));
 
 
-        return StartOpOrTask(Guid.Empty, operationId, initiatingTaskId, Activator.CreateInstance(commandType), resources);
+        return StartOpOrTask(Guid.Empty, operationId, initiatingTaskId, Activator.CreateInstance(commandType), traceId, resources);
     }
 
 
