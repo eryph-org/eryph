@@ -41,7 +41,7 @@ jobs:
     displayName: download signed ovs package
     condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
-      azureSubscription: 'Microsoft Partner Network (c46441f8-7686-456c-ba24-b3280ec11bd7)'
+      azureSubscription: 'dbosoft Azure PN'
       scriptType: 'batch'
       scriptLocation: 'inlineScript'
       inlineScript: 'az storage blob download --file=$(Build.SourcesDirectory)\ovspackage.zip --container-name=internal --name=ovs/latest/ovspackage_signed.zip --account-name=dbosoftreleaseseuwest'
