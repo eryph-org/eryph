@@ -10,10 +10,10 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations
 {
-    public class Get : GetEntityEndpoint<OperationRequest, Operation, StateDb.Model.Operation>
+    public class Get : GetEntityEndpoint<OperationRequest, Operation, StateDb.Model.OperationModel>
     {
-        public Get([NotNull] IGetRequestHandler<StateDb.Model.Operation, Operation> requestHandler, 
-            [NotNull] ISingleEntitySpecBuilder<OperationRequest, StateDb.Model.Operation> specBuilder) : base(requestHandler, specBuilder)
+        public Get([NotNull] IGetRequestHandler<StateDb.Model.OperationModel, Operation> requestHandler, 
+            [NotNull] ISingleEntitySpecBuilder<OperationRequest, StateDb.Model.OperationModel> specBuilder) : base(requestHandler, specBuilder)
         {
         }
 

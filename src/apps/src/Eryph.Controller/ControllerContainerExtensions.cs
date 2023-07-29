@@ -1,4 +1,4 @@
-﻿using Eryph.Controller.Rebus;
+﻿using Dbosoft.Rebus.Configuration;
 using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.MySql;
@@ -24,11 +24,11 @@ namespace Eryph.Controller
 
         public static Container UseMySql(this Container container)
         {
-            container.Register<IRebusSagasConfigurer, MySqlSagaConfigurer>();
-            container.Register<IRebusSubscriptionConfigurer, MySqlSubscriptionConfigurer>();
-            container.Register<IRebusTimeoutConfigurer, MySqlTimeoutConfigurer>();
+        //    container.Register<IRebusSagasConfigurer, MySqlSagaConfigurer>();
+        //    container.Register<IRebusSubscriptionConfigurer, MySqlSubscriptionConfigurer>();
+        //    container.Register<IRebusTimeoutConfigurer, MySqlTimeoutConfigurer>();
 
-            container.Register<IDbContextConfigurer<StateStoreContext>, MySqlDbContextConfigurer<StateStoreContext>>();
+            //container.Register<IDbContextConfigurer<StateStoreContext>, MySqlDbContextConfigurer<StateStoreContext>>();
             return container;
         }
     }

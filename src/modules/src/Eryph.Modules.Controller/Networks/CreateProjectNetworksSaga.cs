@@ -1,22 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
 using Eryph.Core.Network;
-using Eryph.Messages;
-using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Networks.Commands;
-using Eryph.ModuleCore;
-using Eryph.Modules.Controller.Operations;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
-using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Pipeline;
 using Rebus.Sagas;
+using ErrorData = Eryph.Messages.ErrorData;
 
 namespace Eryph.Modules.Controller.Networks
 {
@@ -31,12 +28,12 @@ namespace Eryph.Modules.Controller.Networks
         private readonly ILogger _log;
         private readonly INetworkProviderManager _networkProviderManager;
 
-        public CreateProjectNetworksSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, ILogger log, 
-            INetworkProviderManager networkProviderManager, 
-            IMessageContext messageContext,
+        public CreateProjectNetworksSaga(ILogger log, 
+            IWorkflow workflow,
+            INetworkProviderManager networkProviderManager,
             INetworkConfigValidator validator, 
             INetworkConfigRealizer realizer, 
-            IStateStoreRepository<Project> projectRepository) : base(bus, taskDispatcher, messageContext)
+            IStateStoreRepository<Project> projectRepository) : base(workflow)
         {
             _log = log;
             _networkProviderManager = networkProviderManager;

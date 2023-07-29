@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.HostedServices;
-using Eryph.Messages;
+using Dbosoft.Rebus.Operations;
 using Rebus.Bus;
 
 namespace Eryph.Modules.Controller
@@ -9,16 +9,17 @@ namespace Eryph.Modules.Controller
     public class StartBusModuleHandler : IHostedServiceHandler
     {
         private readonly IBus _bus;
+        private readonly WorkflowOptions _workflowOptions;
 
-        public StartBusModuleHandler(IBus bus)
+        public StartBusModuleHandler(IBus bus, WorkflowOptions workflowOptions)
         {
             _bus = bus;
+            _workflowOptions = workflowOptions;
         }
 
-        public async Task Execute(CancellationToken stoppingToken)
+        public Task Execute(CancellationToken stoppingToken)
         {
-            foreach (var type in MessageTypes.BySubscriber(MessageSubscriber.Controllers))
-                await _bus.Subscribe(type).ConfigureAwait(false);
+            return OperationsSetup.SubscribeEvents(_bus, _workflowOptions);
         }
     }
 }

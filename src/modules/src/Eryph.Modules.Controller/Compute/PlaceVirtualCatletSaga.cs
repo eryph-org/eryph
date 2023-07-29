@@ -1,17 +1,16 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.Messages;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
 using Eryph.Messages.Resources.Events;
-using Eryph.ModuleCore;
-using Eryph.Modules.Controller.Operations;
+
 using Eryph.Rebus;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Pipeline;
 using Rebus.Sagas;
+using ErrorData = Eryph.Messages.ErrorData;
 
 namespace Eryph.Modules.Controller.Compute
 {
@@ -20,11 +19,14 @@ namespace Eryph.Modules.Controller.Compute
         OperationTaskWorkflowSaga<PlaceVirtualCatletCommand, PlaceVirtualCatletSagaData>,
         IHandleMessages<PlacementVerificationCompletedEvent>
     {
+        private readonly IBus _bus;
         private readonly IPlacementCalculator _placementCalculator;
 
-        public PlaceVirtualCatletSaga(IBus bus, IPlacementCalculator placementCalculator, IMessageContext messageContext,
-            IOperationTaskDispatcher taskDispatcher) : base(bus, taskDispatcher, messageContext)
+        public PlaceVirtualCatletSaga(
+            IBus bus,
+            IPlacementCalculator placementCalculator, IWorkflow workflow) : base(workflow)
         {
+            _bus = bus;
             _placementCalculator = placementCalculator;
         }
 
@@ -61,7 +63,8 @@ namespace Eryph.Modules.Controller.Compute
             //request verification by VM Agent
             Data.CorrelationId = Guid.NewGuid();
 
-            return Bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{placementCandidate}",
+
+            return _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{placementCandidate}",
                 new VerifyPlacementCalculationCommand { CorrelationId = Data.CorrelationId });
         }
     }

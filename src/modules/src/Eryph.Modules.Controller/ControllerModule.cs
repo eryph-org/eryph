@@ -1,8 +1,11 @@
 ﻿using System;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.OVN;
+using Dbosoft.Rebus;
+using Dbosoft.Rebus.Configuration;
+using Dbosoft.Rebus.Operations;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
-using Eryph.Messages;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
@@ -11,14 +14,17 @@ using Eryph.Modules.Controller.Networks;
 using Eryph.Modules.Controller.Operations;
 using Eryph.Rebus;
 using Eryph.StateDb;
+using Eryph.StateDb.Workflows;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
-using Rebus.Routing.TypeBased;
+using Rebus.Sagas;
 using Rebus.Sagas.Exclusive;
+using Rebus.Subscriptions;
+using Rebus.Timeouts;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -36,8 +42,12 @@ namespace Eryph.Modules.Controller
 
             container.Register<IRebusUnitOfWork, StateStoreDbUnitOfWork>(Lifestyle.Scoped);
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
-            container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingTaskMessageHandler<>));
-            container.Collection.Append(typeof(IHandleMessages<>), typeof(FailedOperationHandler<>));
+
+            container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
+            container.RegisterConditional<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped, _ => true);
+            container.RegisterConditional<IOperationTaskDispatcher, EryphTaskDispatcher>(Lifestyle.Scoped, _ => true);
+            container.RegisterConditional<IOperationMessaging, EryphRebusOperationMessaging>(Lifestyle.Scoped, _ => true);
+            container.AddRebusOperationsHandlers<OperationManager, OperationTaskManager>();
 
 
             container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
@@ -58,8 +68,6 @@ namespace Eryph.Modules.Controller
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
             container.RegisterSingleton(() => new Id64Generator());
-            container.Register<IOperationTaskDispatcher, OperationTaskDispatcher>();
-            container.Register<IOperationDispatcher, OperationDispatcher>();
 
             //use placement calculator of Host
             container.Register(serviceProvider.GetRequiredService<IPlacementCalculator>);
@@ -82,23 +90,19 @@ namespace Eryph.Modules.Controller
                 .Transport(t =>
                     serviceProvider.GetRequiredService<IRebusTransportConfigurer>()
                         .Configure(t, QueueNames.Controllers))
-                .Routing(r => r.TypeBased()
-                        .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers)
-                    // agent routing is not registered here by design. Agent commands will be routed by agent name
-                )
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                     x.SetNumberOfWorkers(5);
                     x.EnableSimpleInjectorUnitOfWork();
                 })
-                .Timeouts(t => serviceProvider.GetRequiredService<IRebusTimeoutConfigurer>().Configure(t))
+                .Timeouts(t => serviceProvider.GetRequiredService<IRebusConfigurer<ITimeoutManager>>().Configure(t))
                 .Sagas(s =>
                 {
-                    serviceProvider.GetRequiredService<IRebusSagasConfigurer>().Configure(s);
+                    serviceProvider.GetRequiredService<IRebusConfigurer<ISagaStorage>>().Configure(s);
                     s.EnforceExclusiveAccess();
                 })
-                .Subscriptions(s => serviceProvider.GetRequiredService<IRebusSubscriptionConfigurer>().Configure(s))
+                .Subscriptions(s => serviceProvider.GetRequiredService<IRebusConfigurer<ISubscriptionStorage>>().Configure(s))
                 .Logging(x => x.Serilog())
                 .Start());
                 

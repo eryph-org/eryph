@@ -1,14 +1,11 @@
 ﻿using System.Threading.Tasks;
-using Eryph.Messages.Operations.Events;
+using Dbosoft.Rebus.Operations.Events;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.Modules.Controller.Operations;
 using JetBrains.Annotations;
 using LanguageExt;
-using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Pipeline;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Compute
@@ -20,8 +17,8 @@ namespace Eryph.Modules.Controller.Compute
     {
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IVirtualMachineMetadataService _metadataService;
-        public UpdateConfigDriveSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IVirtualMachineDataService vmDataService, IVirtualMachineMetadataService metadataService, IMessageContext messageContext) 
-            : base(bus, taskDispatcher, messageContext)
+        public UpdateConfigDriveSaga(IWorkflow workflow, IVirtualMachineDataService vmDataService, IVirtualMachineMetadataService metadataService) 
+            : base(workflow)
         {
             _vmDataService = vmDataService;
             _metadataService = metadataService;
@@ -40,7 +37,7 @@ namespace Eryph.Modules.Controller.Compute
                                 VMId = s.VMId,
                                 CatletId = s.Id,
                                 MachineMetadata = metadata
-                            }).ToUnit()));
+                            }).AsTask().ToUnit()));
         }
 
         public Task Handle(OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand> message)

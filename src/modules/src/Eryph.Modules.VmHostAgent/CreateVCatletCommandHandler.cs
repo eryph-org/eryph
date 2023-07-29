@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
@@ -23,7 +24,7 @@ namespace Eryph.Modules.VmHostAgent
     {
         private readonly IHostInfoProvider _hostInfoProvider;
 
-        public CreateVCatletCommandHandler(IPowershellEngine engine, IBus bus, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, bus, log)
+        public CreateVCatletCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, messaging, log)
         {
             _hostInfoProvider = hostInfoProvider;
         }

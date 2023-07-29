@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Resources.Machines;
@@ -21,16 +22,20 @@ namespace Eryph.Modules.VmHostAgent.Inventory
     {
         private readonly IBus _bus;
         private readonly ILogger _log;
+        private readonly WorkflowOptions _workflowOptions;
 
         private readonly IPowershellEngine _engine;
         private readonly IHostInfoProvider _hostInfoProvider;
         private readonly VirtualMachineInventory _inventory;
 
-        public InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log, IHostInfoProvider hostInfoProvider)
+        public InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log,
+            WorkflowOptions _workflowOptions,
+            IHostInfoProvider hostInfoProvider)
         {
             _bus = bus;
             _engine = engine;
             _log = log;
+            this._workflowOptions = _workflowOptions;
             _hostInfoProvider = hostInfoProvider;
             _inventory = new VirtualMachineInventory(_engine, HostSettingsBuilder.GetHostSettings(), hostInfoProvider);
         }
@@ -43,7 +48,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                 .BindAsync(VmsToInventory)
                 .ToAsync()
                 .MatchAsync(
-                    RightAsync: c => _bus.Send(c),
+                    RightAsync: c => _bus.Advanced.Routing.Send(_workflowOptions.OperationsDestination, c),
                     Left: l =>
                     {
                         _log.LogError(l.Message);

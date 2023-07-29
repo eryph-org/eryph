@@ -1,4 +1,5 @@
-﻿using Eryph.ConfigModel.Catlets;
+﻿using Dbosoft.Rebus.Operations;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
@@ -19,7 +20,7 @@ internal class UpdateConfigDriveCommandHandler :
 {
     private readonly IHostInfoProvider _hostInfoProvider;
 
-    public UpdateConfigDriveCommandHandler(IPowershellEngine engine, IBus bus, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, bus, log)
+    public UpdateConfigDriveCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, messaging, log)
     {
         _hostInfoProvider = hostInfoProvider;
     }

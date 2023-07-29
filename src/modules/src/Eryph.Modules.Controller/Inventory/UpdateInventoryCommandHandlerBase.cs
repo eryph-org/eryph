@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
@@ -173,6 +174,7 @@ namespace Eryph.Modules.Controller.Inventory
                                 AgentName = hostMachine.AgentName,
                                 CurrentMetadataId = oldMetadataId,
                                 NewMetadataId = metadata.Id,
+                                CatletId = metadata.MachineId,
                                 VMId = vmInfo.VMId,
                             });
                         }

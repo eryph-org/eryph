@@ -1,12 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using Eryph.Messages.Operations;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.ModuleCore;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
-using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.VmHostAgent;
@@ -14,11 +12,11 @@ namespace Eryph.Modules.VmHostAgent;
 [UsedImplicitly]
 public class RemoveVirtualDiskCommandHandler : IHandleMessages<OperationTask<RemoveVirtualDiskCommand>>
 {
-    private readonly IBus _bus;
+    private readonly ITaskMessaging _messaging;
     private readonly ILogger _log;
-    public RemoveVirtualDiskCommandHandler(IBus bus, ILogger log)
+    public RemoveVirtualDiskCommandHandler(ITaskMessaging messaging, ILogger log)
     {
-        _bus = bus;
+        _messaging = messaging;
         _log = log;
     }
 
@@ -39,12 +37,12 @@ public class RemoveVirtualDiskCommandHandler : IHandleMessages<OperationTask<Rem
                 }
             }
 
-            await _bus.CompleteTask(message);
+            await _messaging.CompleteTask(message);
         }
         catch (Exception ex)
         {
             _log.LogError(ex, $"Command '{nameof(RemoveVirtualDiskCommand)}' failed.");
-            await _bus.FailTask(message, ex.Message);
+            await _messaging.FailTask(message, ex.Message);
 
         }
     }

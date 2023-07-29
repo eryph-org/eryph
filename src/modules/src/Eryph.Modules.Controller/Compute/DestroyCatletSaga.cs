@@ -2,18 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Eryph.Messages.Operations.Events;
+using Dbosoft.Rebus.Operations.Events;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
-using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.Modules.Controller.Operations;
 using Eryph.Resources;
 using JetBrains.Annotations;
 using LanguageExt.UnsafeValueAccess;
-using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Pipeline;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Compute
@@ -25,8 +22,8 @@ namespace Eryph.Modules.Controller.Compute
     {
         private readonly IVirtualMachineDataService _vmDataService;
 
-        public DestroyCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext,
-            IVirtualMachineDataService vmDataService) : base(bus, taskDispatcher, messageContext)
+        public DestroyCatletSaga(IWorkflow workflow,
+            IVirtualMachineDataService vmDataService) : base(workflow)
         {
             _vmDataService = vmDataService;
         }

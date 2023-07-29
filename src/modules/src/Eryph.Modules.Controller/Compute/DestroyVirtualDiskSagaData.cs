@@ -1,5 +1,5 @@
 ﻿using System;
-using Eryph.Modules.Controller.Operations;
+using Dbosoft.Rebus.Operations.Workflow;
 
 namespace Eryph.Modules.Controller.Compute
 {

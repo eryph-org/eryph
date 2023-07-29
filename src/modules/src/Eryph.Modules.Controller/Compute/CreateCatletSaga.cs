@@ -2,24 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
-using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Images.Commands;
-using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
-using Eryph.Modules.Controller.Operations;
 using Eryph.Resources;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
-using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Pipeline;
 using Rebus.Sagas;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Eryph.Modules.Controller.Compute
 {
@@ -36,8 +32,8 @@ namespace Eryph.Modules.Controller.Compute
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IStateStore _stateStore;
 
-        public CreateCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext, Id64Generator idGenerator,
-            IVirtualMachineDataService vmDataService, IStateStore stateStore) : base(bus, taskDispatcher, messageContext)
+        public CreateCatletSaga(IWorkflow workflow, Id64Generator idGenerator,
+            IVirtualMachineDataService vmDataService, IStateStore stateStore) : base(workflow)
         {
             _idGenerator = idGenerator;
             _vmDataService = vmDataService;
@@ -74,10 +70,9 @@ namespace Eryph.Modules.Controller.Compute
                 await StartNewTask(new UpdateCatletCommand
                 {
                     Config = Data.Config,
-                    AgentName = Data.AgentName
-
-                },
-                    new Resources.Resource(ResourceType.Catlet, Data.MachineId));
+                    AgentName = Data.AgentName,
+                    CatletId = Data.MachineId
+                });
             });
         }
 
@@ -168,7 +163,7 @@ namespace Eryph.Modules.Controller.Compute
                 NewMachineId = Data.MachineId,
                 AgentName = Data.AgentName,
                 StorageId = _idGenerator.GenerateId()
-            });
+            }).AsTask();
         }
 
         public Task Handle(OperationTaskStatusEvent<UpdateCatletCommand> message)
@@ -197,7 +192,7 @@ namespace Eryph.Modules.Controller.Compute
                 return StartNewTask(new PlaceVirtualCatletCommand
                     {
                         Config = Data.Config
-                    });
+                    }).AsTask();
             });
         }
 
@@ -227,7 +222,7 @@ namespace Eryph.Modules.Controller.Compute
                     MachineId = Guid.Empty,
                     Config = message.Config
                 }
-            );
+            ).AsTask();
         }
     }
 }

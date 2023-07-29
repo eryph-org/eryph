@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
@@ -15,7 +16,7 @@ namespace Eryph.Modules.VmHostAgent
     [UsedImplicitly]
     internal class RemoveVirtualMachineHandler : VCatletOperationHandlerBase<RemoveVirtualCatletCommand>
     {
-        public RemoveVirtualMachineHandler(IBus bus, IPowershellEngine engine) : base(bus, engine)
+        public RemoveVirtualMachineHandler(ITaskMessaging messaging, IPowershellEngine engine) : base(messaging, engine)
         {
         }
 

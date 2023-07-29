@@ -1,4 +1,5 @@
-﻿using Eryph.Messages.Resources.Catlets.Commands;
+﻿using Dbosoft.Rebus.Operations;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using LanguageExt;
@@ -11,7 +12,7 @@ namespace Eryph.Modules.VmHostAgent
     internal class UpdateVCatletMetadataCommandHandler : 
         VirtualCatletConfigCommandHandler<UpdateVCatletMetadataCommand, Unit>
     {
-        public UpdateVCatletMetadataCommandHandler(IPowershellEngine engine, IBus bus, ILogger log) : base(engine, bus, log)
+        public UpdateVCatletMetadataCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log) : base(engine, messaging, log)
         {
         }
 

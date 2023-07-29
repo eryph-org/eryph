@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.ModuleCore;
@@ -52,10 +53,14 @@ namespace Eryph.Modules.Controller.Inventory
                         metaData.SensitiveDataHidden = true;
                         await _metadataService.SaveMetadata(metaData);
 
-                        await _opDispatcher.StartNew<UpdateConfigDriveCommand>(
+                        await _opDispatcher.StartNew(
                             vm.Project.Id,
                             _messageContext.GetTraceId(),
-                            new Resource(ResourceType.Catlet, vm.Id));
+                            new UpdateConfigDriveCommand
+                            {
+                                CatletId = vm.Id
+                            });
+                            
                     }
 
                 });

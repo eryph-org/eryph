@@ -1,19 +1,16 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations.Events;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
-using Eryph.Messages;
-using Eryph.Messages.Operations.Events;
 using Eryph.Messages.Projects;
 using Eryph.Messages.Resources.Commands;
-using Eryph.ModuleCore;
-using Eryph.Modules.Controller.Operations;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
-using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Pipeline;
 using Rebus.Sagas;
+using ErrorData = Eryph.Messages.ErrorData;
 using Resource = Eryph.Resources.Resource;
 
 namespace Eryph.Modules.Controller.Projects
@@ -24,7 +21,7 @@ namespace Eryph.Modules.Controller.Projects
     {
         private readonly IStateStore _stateStore;
 
-        public DestroyProjectSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext, IStateStore stateStore) : base(bus, taskDispatcher, messageContext)
+        public DestroyProjectSaga(IWorkflow workflow, IStateStore stateStore) : base(workflow)
         {
             _stateStore = stateStore;
         }

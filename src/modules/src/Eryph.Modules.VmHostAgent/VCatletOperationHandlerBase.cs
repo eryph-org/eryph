@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.Messages.Operations;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets;
-using Eryph.ModuleCore;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
-using Rebus.Bus;
 using Rebus.Handlers;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
@@ -17,12 +15,12 @@ namespace Eryph.Modules.VmHostAgent
     internal abstract class VCatletOperationHandlerBase<T> : IHandleMessages<OperationTask<T>>
         where T : class, IVMCommand, new()
     {
-        private readonly IBus _bus;
+        private readonly ITaskMessaging _messaging;
         private readonly IPowershellEngine _engine;
 
-        protected VCatletOperationHandlerBase(IBus bus, IPowershellEngine engine)
+        protected VCatletOperationHandlerBase(ITaskMessaging messaging, IPowershellEngine engine)
         {
-            _bus = bus;
+            _messaging = messaging;
             _engine = engine;
         }
 
@@ -38,7 +36,7 @@ namespace Eryph.Modules.VmHostAgent
                         None: () => Unit.Default);
                 })
                 .ToAsync()
-                .FailOrComplete(_bus, message);
+                .FailOrComplete(_messaging, message);
 
         }
 

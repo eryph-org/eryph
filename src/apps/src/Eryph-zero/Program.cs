@@ -47,6 +47,8 @@ using Serilog.Events;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
+using Microsoft.Extensions.Logging;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Eryph.Runtime.Zero;
 
@@ -236,6 +238,13 @@ internal static class Program
 
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+                container.RegisterInstance<ILoggerFactory>(new SerilogLoggerFactory(Log.Logger));
+                container.RegisterConditional(
+                    typeof(ILogger),
+                    c => typeof(Logger<>).MakeGenericType(c.Consumer!.ImplementationType),
+                    Lifestyle.Singleton,
+                    _ => true);
+
                 container.Bootstrap(startupConfig.OVSPackageDir);
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
@@ -258,6 +267,9 @@ internal static class Program
                             config.AddInMemoryCollection(new Dictionary<string, string>
                             {
                                 { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
+                                {"bus:type",  "inmemory"},
+                                {"databus:type", "inmemory"},
+                                { "store:type", "inmemory"}
                             });
                         })
                         .HostModule<VmHostAgentModule>()

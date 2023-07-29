@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Modules.Controller.Operations;
 

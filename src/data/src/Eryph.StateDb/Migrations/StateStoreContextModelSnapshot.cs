@@ -112,7 +112,34 @@ namespace Eryph.StateDb.Migrations
                     b.HasDiscriminator<string>("Discriminator").HasValue("NetworkPort");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.Operation", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationLogEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("TaskId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId");
+
+                    b.HasIndex("TaskId");
+
+                    b.ToTable("Logs");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationModel", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -134,34 +161,7 @@ namespace Eryph.StateDb.Migrations
                     b.ToTable("Operations");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.OperationLogEntry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Message")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("OperationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("TaskId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OperationId");
-
-                    b.HasIndex("TaskId");
-
-                    b.ToTable("Logs");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.OperationProject", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationProjectModel", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -179,10 +179,10 @@ namespace Eryph.StateDb.Migrations
 
                     b.HasIndex("ProjectId");
 
-                    b.ToTable("OperationProject");
+                    b.ToTable("OperationProjectModel");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.OperationResource", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationResourceModel", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -204,7 +204,7 @@ namespace Eryph.StateDb.Migrations
                     b.ToTable("OperationResources");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.OperationTask", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationTaskModel", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -216,7 +216,10 @@ namespace Eryph.StateDb.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("OperationId")
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ParentTaskId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Status")
@@ -708,22 +711,26 @@ namespace Eryph.StateDb.Migrations
 
             modelBuilder.Entity("Eryph.StateDb.Model.OperationLogEntry", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.Operation", "Operation")
+                    b.HasOne("Eryph.StateDb.Model.OperationModel", "Operation")
                         .WithMany("LogEntries")
-                        .HasForeignKey("OperationId");
+                        .HasForeignKey("OperationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.HasOne("Eryph.StateDb.Model.OperationTask", "Task")
+                    b.HasOne("Eryph.StateDb.Model.OperationTaskModel", "Task")
                         .WithMany()
-                        .HasForeignKey("TaskId");
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Operation");
 
                     b.Navigation("Task");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.OperationProject", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationProjectModel", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.Operation", "Operation")
+                    b.HasOne("Eryph.StateDb.Model.OperationModel", "Operation")
                         .WithMany("Projects")
                         .HasForeignKey("OperationId");
 
@@ -738,20 +745,22 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Project");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.OperationResource", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationResourceModel", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.Operation", "Operation")
+                    b.HasOne("Eryph.StateDb.Model.OperationModel", "Operation")
                         .WithMany("Resources")
                         .HasForeignKey("OperationId");
 
                     b.Navigation("Operation");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.OperationTask", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationTaskModel", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.Operation", "Operation")
+                    b.HasOne("Eryph.StateDb.Model.OperationModel", "Operation")
                         .WithMany("Tasks")
-                        .HasForeignKey("OperationId");
+                        .HasForeignKey("OperationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Operation");
                 });
@@ -960,7 +969,7 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("IpAssignments");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.Operation", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.OperationModel", b =>
                 {
                     b.Navigation("LogEntries");
 

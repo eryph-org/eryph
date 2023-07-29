@@ -2,9 +2,8 @@
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Messages.Operations;
-using Eryph.ModuleCore;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
@@ -12,7 +11,6 @@ using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
-using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.VmHostAgent
@@ -21,17 +19,17 @@ namespace Eryph.Modules.VmHostAgent
         where TMessage : class, new()
     {
         public const string DefaultDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        protected readonly IBus Bus;
+        protected readonly ITaskMessaging _messaging;
         protected readonly ILogger Log;
         protected readonly IPowershellEngine Engine;
-        protected OperationTask<TMessage> Message;
+        protected OperationTask<TMessage>? Message;
 
         protected VirtualCatletConfigCommandHandler(
             IPowershellEngine engine,
-            IBus bus, ILogger log)
+            ITaskMessaging messaging, ILogger log)
         {
             Engine = engine;
-            Bus = bus;
+            _messaging = messaging;
             Log = log;
         }
 
@@ -39,13 +37,14 @@ namespace Eryph.Modules.VmHostAgent
         {
             Message = message;
             return HandleCommand(message.Command)
-                .FailOrComplete(Bus, message);
+                .FailOrComplete(_messaging, message);
 
         }
 
         protected async Task<Unit> ProgressMessage(string progressMessage)
         {
-            await Bus.ProgressMessage(Message, progressMessage);
+            if(Message != null)
+                await _messaging.ProgressMessage(Message, progressMessage);
             return Unit.Default;
         }
 

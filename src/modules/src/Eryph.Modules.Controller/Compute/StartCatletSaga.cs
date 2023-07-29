@@ -1,14 +1,11 @@
 ﻿using System.Threading.Tasks;
-using Eryph.Messages.Operations.Events;
+using Dbosoft.Rebus.Operations.Events;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.Modules.Controller.Operations;
 using JetBrains.Annotations;
 using LanguageExt;
-using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Pipeline;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Compute
@@ -20,8 +17,8 @@ namespace Eryph.Modules.Controller.Compute
     {
         private readonly IVirtualMachineDataService _vmDataService;
 
-        public StartCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, IMessageContext messageContext,
-            IVirtualMachineDataService vmDataService) : base(bus, taskDispatcher, messageContext)
+        public StartCatletSaga(IWorkflow workflow,
+            IVirtualMachineDataService vmDataService) : base(workflow)
         {
             _vmDataService = vmDataService;
         }
@@ -30,7 +27,7 @@ namespace Eryph.Modules.Controller.Compute
         {
             return _vmDataService.GetVM(message.Resource.Id).MatchAsync(
                 None: () => Fail().ToUnit(),
-                Some: s => StartNewTask(new StartVirtualCatletCommand { CatletId = message.Resource.Id, VMId = s.VMId }).ToUnit());
+                Some: s => StartNewTask(new StartVirtualCatletCommand { CatletId = message.Resource.Id, VMId = s.VMId }).AsTask().ToUnit());
         }
 
         public Task Handle(OperationTaskStatusEvent<StartVirtualCatletCommand> message)

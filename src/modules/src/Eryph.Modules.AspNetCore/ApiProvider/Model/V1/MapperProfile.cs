@@ -8,14 +8,14 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
     {
         public MapperProfile()
         {
-            CreateMap<StateDb.Model.Operation, Operation>();
+            CreateMap<StateDb.Model.OperationModel, Operation>();
 
-            CreateMap<StateDb.Model.OperationProject, Project>()
+            CreateMap<StateDb.Model.OperationProjectModel, Project>()
                 .Flatten(x => x.Project);
 
 
             CreateMap<StateDb.Model.OperationLogEntry, OperationLogEntry>();
-            CreateMap<StateDb.Model.OperationResource, OperationResource>();
+            CreateMap<StateDb.Model.OperationResourceModel, OperationResource>();
             CreateMap<StateDb.Model.Project, Project>();
 
         }

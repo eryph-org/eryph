@@ -5,9 +5,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.Network;
-using Eryph.Messages.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Resources.Machines;
@@ -17,7 +17,6 @@ using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
-using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Networks;
@@ -26,16 +25,16 @@ namespace Eryph.Modules.Controller.Networks;
 [UsedImplicitly]
 public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<UpdateCatletNetworksCommand>>
 {
-    private readonly IBus _bus;
+    private readonly ITaskMessaging _messaging;
     private readonly IStateStore _stateStore;
     private readonly ICatletIpManager _ipManager;
     private readonly INetworkProviderManager _providerManager;
 
 
-    public UpdateCatletNetworksCommandHandler(IBus bus, ICatletIpManager ipManager, 
+    public UpdateCatletNetworksCommandHandler(ITaskMessaging messaging, ICatletIpManager ipManager, 
         IStateStore stateStore, INetworkProviderManager providerManager)
     {
-        _bus = bus;
+        _messaging = messaging;
         _ipManager = ipManager;
         _stateStore = stateStore;
         _providerManager = providerManager;
@@ -43,7 +42,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
     public async Task Handle(OperationTask<UpdateCatletNetworksCommand> message)
     {
-        await _bus.ProgressMessage(message, "Updating Catlet network settings");
+        await _messaging.ProgressMessage(message, "Updating Catlet network settings");
 
         await message.Command.Config.Networks.Map(cfg =>
 
@@ -102,7 +101,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
             )
             .TraverseParallel(l => l)
             .Map(settings => new UpdateCatletNetworksCommandResponse { NetworkSettings = settings.ToArray() })
-            .FailOrComplete(_bus, message);
+            .FailOrComplete(_messaging, message);
 
     }
 

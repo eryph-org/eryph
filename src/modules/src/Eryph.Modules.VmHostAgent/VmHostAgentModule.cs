@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Net.Http;
-using System.Web.Services.Description;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
+using Dbosoft.Rebus;
+using Dbosoft.Rebus.Configuration;
+using Dbosoft.Rebus.Operations;
 using Eryph.Core;
-using Eryph.Messages;
-using Eryph.ModuleCore;
 using Eryph.ModuleCore.Networks;
 using Eryph.Modules.VmHostAgent.Images;
 using Eryph.Modules.VmHostAgent.Inventory;
@@ -24,7 +24,7 @@ using Polly.Extensions.Http;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
-using Rebus.Routing.TypeBased;
+using Rebus.Subscriptions;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -102,8 +102,9 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterSingleton<IImageRequestBackgroundQueue, ImageBackgroundTaskQueue>();
 
 
+            container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);
-            container.Collection.Append(typeof(IHandleMessages<>), typeof(IncomingTaskMessageHandler<>));
+            container.AddRebusOperationsHandlers();
             container.RegisterDecorator(typeof(IHandleMessages<>), typeof(TraceDecorator<>));
 
             var localName = $"{QueueNames.VMHostAgent}.{Environment.MachineName}";
@@ -111,16 +112,14 @@ namespace Eryph.Modules.VmHostAgent
                 .Transport(t =>
                     serviceProvider.GetService<IRebusTransportConfigurer>()
                         .Configure(t, localName))
-                .Routing(x => x.TypeBased()
-                    .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers)
-                )
                 .Options(x =>
                 {
                     x.SimpleRetryStrategy(errorDetailsHeaderMaxLength:5);
                     x.SetNumberOfWorkers(5);
                     x.EnableSynchronousRequestReply();
                 })
-                .Subscriptions(s => serviceProvider.GetService<IRebusSubscriptionConfigurer>()?.Configure(s))
+                .Subscriptions(s => 
+                    serviceProvider.GetRequiredService<IRebusConfigurer<ISubscriptionStorage>>().Configure(s))
                 .Logging(x => x.Serilog()).Start());
         }
 

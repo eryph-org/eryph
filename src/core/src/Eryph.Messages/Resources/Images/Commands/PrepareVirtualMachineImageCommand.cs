@@ -1,4 +1,5 @@
 ﻿using Eryph.ConfigModel;
+using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.Images.Commands
 {
@@ -9,6 +10,7 @@ namespace Eryph.Messages.Resources.Images.Commands
 
         [PrivateIdentifier]
         public string AgentName { get; set; }
+
     }
 
     public class PrepareVirtualMachineImageResponse

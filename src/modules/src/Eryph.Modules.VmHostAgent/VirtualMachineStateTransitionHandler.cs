@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
@@ -13,7 +14,7 @@ namespace Eryph.Modules.VmHostAgent
     internal abstract class VirtualMachineStateTransitionHandler<T> : VCatletOperationHandlerBase<T>
         where T : class, IVMCommand, new()
     {
-        public VirtualMachineStateTransitionHandler(IBus bus, IPowershellEngine engine) : base(bus, engine)
+        public VirtualMachineStateTransitionHandler(ITaskMessaging messaging, IPowershellEngine engine) : base(messaging, engine)
         {
         }
 

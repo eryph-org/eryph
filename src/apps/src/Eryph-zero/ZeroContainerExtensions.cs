@@ -1,5 +1,7 @@
 ﻿using System.Reflection;
 using Dbosoft.OVN;
+using Dbosoft.Rebus.Configuration;
+using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.ModuleCore.Networks;
 using Eryph.Modules.VmHostAgent;
@@ -10,15 +12,19 @@ using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Rebus.Persistence.InMem;
+using Rebus.Sagas;
+using Rebus.Subscriptions;
+using Rebus.Timeouts;
 using Rebus.Transport.InMem;
 using SimpleInjector;
-using static Eryph.VmManagement.PsCommandBuilder;
 
 namespace Eryph.Runtime.Zero
 {
     public static class Info
     {
-        public static InMemNetwork Network = new InMemNetwork();
+        public static InMemNetwork Network = new();
+        public static InMemorySubscriberStore SubscriberStore = new();
+
     }
 
     internal static class ZeroContainerExtensions
@@ -41,16 +47,24 @@ namespace Eryph.Runtime.Zero
             container.Register<INetworkProviderManager, NetworkProviderManager>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncServiceBridgeService>();
             container.RegisterSingleton<IAgentControlService, AgentControlService>();
+
+            container.RegisterInstance(new WorkflowOptions
+            {
+                DispatchMode = WorkflowEventDispatchMode.Publish, 
+                EventDestination = QueueNames.Controllers,
+                OperationsDestination = QueueNames.Controllers,
+            });
         }
 
         public static Container UseInMemoryBus(this Container container)
         {
             container.RegisterInstance(Info.Network);
-            container.RegisterInstance(new InMemorySubscriberStore());
-            container.Register<IRebusTransportConfigurer, InMemoryTransportConfigurer>();
-            container.Register<IRebusSagasConfigurer, FileSystemSagasConfigurer>();
-            container.Register<IRebusSubscriptionConfigurer, InMemorySubscriptionConfigurer>();
-            container.Register<IRebusTimeoutConfigurer, InMemoryTimeoutConfigurer>();
+            container.RegisterInstance(Info.SubscriberStore);
+            container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
+            container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
+            container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
+            container.Register<IRebusConfigurer<ISubscriptionStorage>, DefaultSubscriptionStoreSelector>();
+
             return container;
         }
 

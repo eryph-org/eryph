@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Messages.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.ModuleCore;
 using JetBrains.Annotations;
-using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Operations
@@ -13,17 +11,17 @@ namespace Eryph.Modules.Controller.Operations
     [UsedImplicitly]
     public class ValidateCatletConfigCommandHandler : IHandleMessages<OperationTask<ValidateCatletConfigCommand>>
     {
-        private readonly IBus _bus;
+        private readonly ITaskMessaging _taskMessaging;
 
-        public ValidateCatletConfigCommandHandler(IBus bus)
+        public ValidateCatletConfigCommandHandler(ITaskMessaging taskMessaging)
         {
-            _bus = bus;
+            _taskMessaging = taskMessaging;
         }
 
         public Task Handle(OperationTask<ValidateCatletConfigCommand> message)
         {
             message.Command.Config = NormalizeCatletConfig(message.Command.MachineId, message.Command.Config);
-            return _bus.CompleteTask(message, message.Command);
+            return _taskMessaging.CompleteTask(message, message.Command);
         }
 
         private static CatletConfig NormalizeCatletConfig(

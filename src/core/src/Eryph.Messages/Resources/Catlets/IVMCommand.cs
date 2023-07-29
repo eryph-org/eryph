@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Eryph.Resources;
+using System;
 
 namespace Eryph.Messages.Resources.Catlets
 {
@@ -6,5 +7,6 @@ namespace Eryph.Messages.Resources.Catlets
     {
         Guid CatletId { get; set; }
         Guid VMId { get; set; }
+
     }
 }

@@ -3,16 +3,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.OVN;
 using Dbosoft.OVN.OSCommands.OVN;
-using Eryph.Messages.Operations;
-using Eryph.Messages.Operations.Events;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Networks.Commands;
-using Eryph.ModuleCore;
 using Eryph.StateDb;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
-using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Transport;
 
 namespace Eryph.Modules.Controller.Networks;
 
@@ -22,7 +18,7 @@ public class UpdateProjectNetworkPlanCommandHandler : IHandleMessages<OperationT
     private readonly ISysEnvironment _sysEnvironment;
     private readonly IOVNSettings _ovnSettings;
     private readonly ILogger _logger;
-    private readonly IBus _bus;
+    private readonly ITaskMessaging _messaging;
     private readonly IProjectNetworkPlanBuilder _planBuilder;
     private readonly IStateStore _stateStore;
 
@@ -30,23 +26,23 @@ public class UpdateProjectNetworkPlanCommandHandler : IHandleMessages<OperationT
     public UpdateProjectNetworkPlanCommandHandler(
         ISysEnvironment sysEnvironment, 
         IOVNSettings ovnSettings, 
-        ILogger logger, IBus bus, 
+        ILogger logger,
         IProjectNetworkPlanBuilder planBuilder, 
-        IStateStore stateStore)
+        IStateStore stateStore, ITaskMessaging messaging)
     {
         _sysEnvironment = sysEnvironment;
         _ovnSettings = ovnSettings;
         _logger = logger;
-        _bus = bus;
         _planBuilder = planBuilder;
         _stateStore = stateStore;
+        _messaging = messaging;
     }
 
     public async Task Handle(OperationTask<UpdateProjectNetworkPlanCommand> message)
     {
         var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
 
-        await ProgressMessage(message.OperationId, message.TaskId, "Rebuilding project network settings");
+        await _messaging.ProgressMessage(message.OperationId, message.TaskId, "Rebuilding project network settings");
 
         // build plan and save it to DB (to make sure that everything can be saved
         // we cannot use unit of work here, as OVN changes are not included in uow
@@ -77,22 +73,7 @@ public class UpdateProjectNetworkPlanCommandHandler : IHandleMessages<OperationT
             {
                 ProjectId = message.Command.ProjectId
             })
-            .FailOrComplete(_bus, message);
+            .FailOrComplete(_messaging, message);
     }
 
-    private async Task ProgressMessage(Guid operationId, Guid taskId, string message)
-    {
-        using var scope = new RebusTransactionScope();
-        await _bus.Publish(new OperationTaskProgressEvent
-        {
-            Id = Guid.NewGuid(),
-            OperationId = operationId,
-            TaskId = taskId,
-            Message = message,
-            Timestamp = DateTimeOffset.UtcNow
-        }).ConfigureAwait(false);
-
-        // commit it like this
-        await scope.CompleteAsync().ConfigureAwait(false);
-    }
 }
