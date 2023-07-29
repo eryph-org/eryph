@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Eryph.Rebus;
 using Eryph.VmManagement.Tracing;
 using Rebus.Handlers;
 using Rebus.Pipeline;
@@ -11,7 +12,6 @@ public class TraceDecorator<T> : IHandleMessages<T>
     private readonly IHandleMessages<T> _decoratedHandler;
     private readonly ITracer _tracer;
 
-
     public TraceDecorator(IHandleMessages<T> decoratedHandler, ITracer tracer)
     {
         _decoratedHandler = decoratedHandler;
@@ -19,7 +19,9 @@ public class TraceDecorator<T> : IHandleMessages<T>
     }
     public async Task Handle(T message)
     {
-        var context = new TraceContext(_tracer, Guid.NewGuid());
+        var correlationId = MessageContext.Current.GetTraceId();
+
+        var context = new TraceContext(_tracer, Guid.NewGuid(), correlationId);
         TraceContextAccessor.TraceContext = context;
         var messageId = MessageContext.Current.Headers["rbs2-msg-id"];
 

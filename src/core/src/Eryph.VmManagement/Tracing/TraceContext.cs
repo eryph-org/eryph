@@ -8,14 +8,16 @@ public readonly struct TraceContext : IDisposable
 
     private readonly ITracer _tracer;
     public Guid ContextId { get; }
+    public string CorrelationId { get; }
 
     public static TraceContext Empty => new();
 
 
-    public TraceContext(ITracer tracer, Guid traceContext)
+    public TraceContext(ITracer tracer, Guid traceContext, string correlationId)
     {
         _tracer = tracer;
         ContextId = traceContext;
+        CorrelationId = correlationId;
     }
 
     public void Dispose()
@@ -25,7 +27,7 @@ public readonly struct TraceContext : IDisposable
 
     public void Write(TraceData data, string message = null)
     {
-        _tracer?.Write(ContextId, data, message);
+        _tracer?.Write(ContextId, CorrelationId, data, message);
     }
 
 }

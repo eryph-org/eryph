@@ -1,28 +1,29 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Messages.Operations;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Images.Commands;
-using Eryph.ModuleCore;
 using Eryph.VmManagement;
 using LanguageExt;
-using Rebus.Bus;
+using SimpleInjector;
+using SimpleInjector.Lifestyles;
 
 namespace Eryph.Modules.VmHostAgent.Images;
 
 internal class ImageRequestRegistry : IImageRequestDispatcher
 {
-    private readonly IBus _bus;
+    //private readonly ITaskMessaging _messaging;
     private readonly IImageRequestBackgroundQueue _queue;
+    private readonly Container _container;
     private readonly IImageProvider _imageProvider;
 
     private record ListingTask(Guid OperationId, Guid InitiatingTaskId, Guid TaskId) : IOperationTaskMessage;
 
 
-    public ImageRequestRegistry(IBus bus, IImageRequestBackgroundQueue queue, IImageProvider imageProvider)
+    public ImageRequestRegistry(IImageRequestBackgroundQueue queue, Container container,  IImageProvider imageProvider)
     {
-        _bus = bus;
         _queue = queue;
+        _container = container;
         _imageProvider = imageProvider;
     }
 
@@ -44,36 +45,38 @@ internal class ImageRequestRegistry : IImageRequestDispatcher
 
     private async ValueTask ProvideImage(string image, CancellationToken cancel)
     {
+        await using var scope = AsyncScopedLifestyle.BeginScope(_container);
 
+        var taskMessaging = scope.GetInstance<ITaskMessaging>();
         try
         {
             var result = await _imageProvider.ProvideImage(
                 image,
-                (message) => ReportProgress(image, message), cancel);
-            await EndRequest(image, result);
+                (message) => ReportProgress(taskMessaging, image, message), cancel);
+            await EndRequest(taskMessaging, image, result);
         }
         catch (Exception ex)
         {
-            await EndRequest(image, new PowershellFailure { Message = ex.Message });
+            await EndRequest(taskMessaging, image, new PowershellFailure { Message = ex.Message });
         }
 
 
     }
 
-    public Task<Unit> ReportProgress(string image, string message)
+    public Task<Unit> ReportProgress(ITaskMessaging taskMessaging, string image, string message)
     {
         return _imageQueue.Value.Find(image).IfSomeAsync(async  listening =>
         {
             foreach (var task in listening)
             {
-                await _bus.ProgressMessage(task, message);
+                await taskMessaging.ProgressMessage(task, message);
             }
 
             return Unit.Default;
         });
     }
 
-    public Task EndRequest(string image, Either<PowershellFailure, PrepareVirtualMachineImageResponse> result)
+    public Task EndRequest(ITaskMessaging taskMessaging, string image, Either<PowershellFailure, PrepareVirtualMachineImageResponse> result)
     {
         return _imageQueue.Value.Find(image).IfSomeAsync(async listening =>
         {
@@ -82,7 +85,7 @@ internal class ImageRequestRegistry : IImageRequestDispatcher
             {
                 await result.ToAsync()
                     .ToError()
-                    .FailOrComplete(_bus, task);
+                    .FailOrComplete(taskMessaging, task);
 
             }
         });

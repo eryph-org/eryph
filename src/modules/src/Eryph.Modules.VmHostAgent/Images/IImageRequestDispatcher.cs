@@ -1,4 +1,4 @@
-﻿using Eryph.Messages.Operations;
+﻿using Dbosoft.Rebus.Operations;
 
 namespace Eryph.Modules.VmHostAgent.Images;
 

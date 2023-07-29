@@ -8,7 +8,7 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.ComputeApi.Model
 {
-    public class OperationSpecBuilder : ISingleEntitySpecBuilder<OperationRequest, Operation>, IListEntitySpecBuilder<OperationsListRequest,Operation>
+    public class OperationSpecBuilder : ISingleEntitySpecBuilder<OperationRequest, OperationModel>, IListEntitySpecBuilder<OperationsListRequest, OperationModel>
     {
         readonly IUserRightsProvider _userRightsProvider;
 
@@ -17,7 +17,7 @@ namespace Eryph.Modules.ComputeApi.Model
             _userRightsProvider = userRightsProvider;
         }
 
-        public ISingleResultSpecification<Operation> GetSingleEntitySpec(OperationRequest request, AccessRight accessRight)
+        public ISingleResultSpecification<OperationModel> GetSingleEntitySpec(OperationRequest request, AccessRight accessRight)
         {
             var tenantId = _userRightsProvider.GetUserTenantId();
 
@@ -26,7 +26,7 @@ namespace Eryph.Modules.ComputeApi.Model
                 : new OperationSpecs.GetById(requestId, tenantId, request.Expand, request.LogTimestamp);
         }
 
-        public ISpecification<Operation> GetEntitiesSpec(OperationsListRequest request)
+        public ISpecification<OperationModel> GetEntitiesSpec(OperationsListRequest request)
         {
             var tenantId = _userRightsProvider.GetUserTenantId();
             var roles = _userRightsProvider.GetUserRoles();

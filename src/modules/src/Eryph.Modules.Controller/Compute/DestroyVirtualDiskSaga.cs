@@ -1,13 +1,11 @@
 ﻿using System.Threading.Tasks;
-using Eryph.Messages.Operations.Events;
+using Dbosoft.Rebus.Operations.Events;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
-using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.Modules.Controller.Operations;
 using Eryph.Resources;
 using JetBrains.Annotations;
-using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
@@ -17,14 +15,12 @@ namespace Eryph.Modules.Controller.Compute
     internal class DestroyVirtualDiskSaga : OperationTaskWorkflowSaga<DestroyVirtualDiskCommand, DestroyVirtualDiskSagaData>,
         IHandleMessages<OperationTaskStatusEvent<RemoveVirtualDiskCommand>>
     {
-        private readonly IOperationTaskDispatcher _taskDispatcher;
         private readonly IVirtualDiskDataService _virtualDiskDataService;
         private readonly IStorageManagementAgentLocator _agentLocator;
 
-        public DestroyVirtualDiskSaga(IBus bus, IOperationTaskDispatcher taskDispatcher,
-            IVirtualDiskDataService virtualDiskDataService, IStorageManagementAgentLocator agentLocator) : base(bus, taskDispatcher)
+        public DestroyVirtualDiskSaga(IWorkflow workflow,
+            IVirtualDiskDataService virtualDiskDataService, IStorageManagementAgentLocator agentLocator) : base(workflow)
         {
-            _taskDispatcher = taskDispatcher;
             _virtualDiskDataService = virtualDiskDataService;
             _agentLocator = agentLocator;
         }
@@ -78,7 +74,7 @@ namespace Eryph.Modules.Controller.Compute
                         Path = vhd.Path,
                         FileName = vhd.FileName,
                         AgentName = agentName
-                    });
+                    }).AsTask();
                 });
 
 

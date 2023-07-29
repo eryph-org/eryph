@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dbosoft.Rebus.Operations.Core" Version="0.5.1" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -13,8 +14,14 @@
 
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
     <ProjectReference Include="..\..\..\data\src\Eryph.Data\Eryph.Data.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.VmConfig.Primitives\Eryph.Primitives.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Folder Include="Migrations\" />
   </ItemGroup>
 
 </Project>

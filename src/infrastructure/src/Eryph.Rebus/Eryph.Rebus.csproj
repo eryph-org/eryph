@@ -5,14 +5,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dbosoft.Rebus.Configuration.Selectors" Version="0.5.1" />
+    <PackageReference Include="Dbosoft.Rebus.SimpleInjector" Version="0.5.1" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Rebus" Version="6.6.5" />
-    <PackageReference Include="Rebus.Microsoft.Extensions.Logging" Version="3.0.0" />
-    <PackageReference Include="Rebus.RabbitMq" Version="7.4.3" />
+    <PackageReference Include="Rebus.Microsoft.Extensions.Logging" Version="4.0.0" />
+    <PackageReference Include="Rebus.RabbitMq" Version="8.0.0" />
     <PackageReference Include="Rebus.Serilog" Version="7.0.0" />
+    <PackageReference Include="Rebus.TransactionScopes" Version="6.0.0" />
     <PackageReference Include="Rebus.UnitOfWork" Version="6.0.0" />
   </ItemGroup>
 

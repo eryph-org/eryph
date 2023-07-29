@@ -2,6 +2,7 @@
 using System.Management;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.VmManagement;
 using Microsoft.Extensions.Hosting;
@@ -14,6 +15,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
     {
         private readonly IBus _bus;
         private readonly ILogger _log;
+        private readonly WorkflowOptions _workflowOptions;
 
         private ManagementEventWatcher _networkWatcher;
         private ManagementEventWatcher _statusWatcher;
@@ -21,10 +23,11 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
         private const int UpTimeCheckSeconds= 60;
 
-        public WmiWatcherModuleService(IBus bus, ILogger log)
+        public WmiWatcherModuleService(IBus bus, ILogger log, WorkflowOptions _workflowOptions)
         {
             _bus = bus;
             _log = log;
+            this._workflowOptions = _workflowOptions;
 
             _upTimeTimer = new Timer(UpTimeCheck, null, Timeout.Infinite, 0);
         }
@@ -98,7 +101,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
                     var upTimeInMilliseconds = (ulong)vm.GetPropertyValue("OnTimeInMilliseconds");
 
-                    _bus.Publish(new VCatletUpTimeChangedEvent()
+                    _bus.SendWorkflowEvent(_workflowOptions,new VCatletUpTimeChangedEvent()
                     {
                         VmId = vmId,
                         UpTime = TimeSpan.FromMilliseconds(upTimeInMilliseconds)

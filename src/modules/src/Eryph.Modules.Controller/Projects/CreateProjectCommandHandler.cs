@@ -3,32 +3,33 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages;
-using Eryph.Messages.Operations;
 using Eryph.Messages.Projects;
-using Eryph.ModuleCore;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
+using JetBrains.Annotations;
 using LanguageExt;
-using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Projects
 {
+    [UsedImplicitly]
     internal class CreateProjectCommandHandler : IHandleMessages<OperationTask<CreateProjectCommand>>
     {
         private readonly IStateStore _stateStore;
-        private readonly IBus _bus;
+        private readonly ITaskMessaging _messaging;
         private readonly INetworkProviderManager _networkProviderManager;
         
-        public CreateProjectCommandHandler(IStateStore stateStore, IBus bus, INetworkProviderManager networkProviderManager)
+        public CreateProjectCommandHandler(IStateStore stateStore, INetworkProviderManager networkProviderManager, 
+            ITaskMessaging messaging)
         {
             _stateStore = stateStore;
-            _bus = bus;
             _networkProviderManager = networkProviderManager;
+            _messaging = messaging;
         }
 
         public async Task Handle(OperationTask<CreateProjectCommand> message)
@@ -39,7 +40,7 @@ namespace Eryph.Modules.Controller.Projects
 
             if (string.IsNullOrWhiteSpace(name) || name.StartsWith("p_") || name == "default")
             {
-                await _bus.FailTask(message,
+                await _messaging.FailTask(message,
                     $"Project name '{name}' is a reserved name.");
                 return;
             }
@@ -49,7 +50,7 @@ namespace Eryph.Modules.Controller.Projects
 
             if (existingProject != null)
             {
-                await _bus.FailTask(message,
+                await _messaging.FailTask(message,
                     $"Project with name '{name}' already exists in tenant. Project names have to be unique within a tenant.");
                 return;
             }
@@ -63,7 +64,7 @@ namespace Eryph.Modules.Controller.Projects
                     TenantId = EryphConstants.DefaultTenantId
                 }, stoppingToken.Token);
 
-            await _bus.ProgressMessage(message, $"Creating project '{name}'");
+            await _messaging.ProgressMessage(message, $"Creating project '{name}'");
 
 
             if (!message.Command.NoDefaultNetwork)
@@ -78,13 +79,13 @@ namespace Eryph.Modules.Controller.Projects
                                 ? "Default network provider not found. " 
                                 : "Default network provider is a flat network provider. ";
 
-                            await _bus.ProgressMessage(message, 
+                            await _messaging.ProgressMessage(message, 
                                 $"{reason}No default network will be created for project '{name}'.");
 
                             return Unit.Default;
                         }
 
-                        await _bus.ProgressMessage(message, $"Creating default network for project '{name}'.");
+                        await _messaging.ProgressMessage(message, $"Creating default network for project '{name}'.");
 
                         var networkId = Guid.NewGuid();
                         var routerPort = new NetworkRouterPort
@@ -159,7 +160,7 @@ namespace Eryph.Modules.Controller.Projects
                     }).IfLeft(l => l.Throw());
             }
 
-            await _bus.CompleteTask(message, new ProjectReference { ProjectId = message.Command.CorrelationId });
+            await _messaging.CompleteTask(message, new ProjectReference { ProjectId = message.Command.CorrelationId });
         }
     }
 }

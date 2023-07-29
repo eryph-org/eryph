@@ -3,16 +3,19 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Rebus;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
+using Rebus.Pipeline;
 
 namespace Eryph.Modules.Controller.Inventory
 {
@@ -24,18 +27,20 @@ namespace Eryph.Modules.Controller.Inventory
 
         protected readonly IVirtualMachineMetadataService MetadataService;
         protected readonly IStateStore StateStore;
+        private readonly IMessageContext _messageContext;
 
         protected UpdateInventoryCommandHandlerBase(
             IVirtualMachineMetadataService metadataService, IOperationDispatcher dispatcher,
             IVirtualMachineDataService vmDataService, 
             IVirtualDiskDataService vhdDataService,
-            IStateStore stateStore)
+            IStateStore stateStore, IMessageContext messageContext)
         {
             MetadataService = metadataService;
             _dispatcher = dispatcher;
             _vmDataService = vmDataService;
             _vhdDataService = vhdDataService;
             StateStore = stateStore;
+            _messageContext = messageContext;
         }
 
         private static void SelectAllParentDisks(ref List<DiskInfo> parentDisks, DiskInfo disk)
@@ -162,13 +167,14 @@ namespace Eryph.Modules.Controller.Inventory
                             metadata.MachineId = Guid.NewGuid();
                             metadata.VMId = vmInfo.VMId;
                             
-
                             await _dispatcher.StartNew(EryphConstants.DefaultTenantId,
+                                _messageContext.GetTraceId(),
                                 new UpdateVCatletMetadataCommand
                             {
                                 AgentName = hostMachine.AgentName,
                                 CurrentMetadataId = oldMetadataId,
                                 NewMetadataId = metadata.Id,
+                                CatletId = metadata.MachineId,
                                 VMId = vmInfo.VMId,
                             });
                         }

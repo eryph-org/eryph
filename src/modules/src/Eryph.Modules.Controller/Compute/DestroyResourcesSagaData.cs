@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Modules.Controller.Operations;
 using Eryph.Resources;
 

@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Schema;
 using Eryph.Core;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
@@ -16,10 +14,10 @@ namespace Eryph.StateDb
         }
 
 
-        public DbSet<Operation> Operations { get; set; }
+        public DbSet<OperationModel> Operations { get; set; }
         public DbSet<OperationLogEntry> Logs { get; set; }
-        public DbSet<OperationTask> OperationTasks { get; set; }
-        public DbSet<OperationResource> OperationResources { get; set; }
+        public DbSet<OperationTaskModel> OperationTasks { get; set; }
+        public DbSet<OperationResourceModel> OperationResources { get; set; }
 
         public DbSet<Resource> Resources { get; set; }
         
@@ -59,12 +57,12 @@ namespace Eryph.StateDb
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Operation>().HasMany(c => c.LogEntries);
-            modelBuilder.Entity<Operation>().HasMany(c => c.Tasks);
-            modelBuilder.Entity<Operation>().HasMany(c => c.Resources);
-            modelBuilder.Entity<Operation>().HasMany(c => c.Projects);
+            modelBuilder.Entity<OperationModel>().HasMany(c => c.LogEntries);
+            modelBuilder.Entity<OperationModel>().HasMany(c => c.Tasks);
+            modelBuilder.Entity<OperationModel>().HasMany(c => c.Resources);
+            modelBuilder.Entity<OperationModel>().HasMany(c => c.Projects);
 
-            modelBuilder.Entity<Operation>()
+            modelBuilder.Entity<OperationModel>()
                 .Property(x => x.TenantId)
                 .HasDefaultValue(EryphConstants.DefaultTenantId);
 

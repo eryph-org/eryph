@@ -1,4 +1,5 @@
 ﻿using System;
+using Dbosoft.Rebus.Configuration;
 using Rebus.Config;
 using Rebus.Transport;
 

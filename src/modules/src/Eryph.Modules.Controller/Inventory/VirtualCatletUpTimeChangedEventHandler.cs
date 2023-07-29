@@ -1,12 +1,15 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Rebus;
 using Eryph.Resources;
 using JetBrains.Annotations;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 
 namespace Eryph.Modules.Controller.Inventory
 {
@@ -16,15 +19,17 @@ namespace Eryph.Modules.Controller.Inventory
         private readonly IOperationDispatcher _opDispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IVirtualMachineMetadataService _metadataService;
+        private readonly IMessageContext _messageContext;
 
         public VirtualCatletUpTimeChangedEventHandler(
             IOperationDispatcher opDispatcher, 
             IVirtualMachineMetadataService metadataService, 
-            IVirtualMachineDataService vmDataService)
+            IVirtualMachineDataService vmDataService, IMessageContext messageContext)
         {
             _opDispatcher = opDispatcher;
             _metadataService = metadataService;
             _vmDataService = vmDataService;
+            _messageContext = messageContext;
         }
 
         public Task Handle(VCatletUpTimeChangedEvent message)
@@ -48,9 +53,14 @@ namespace Eryph.Modules.Controller.Inventory
                         metaData.SensitiveDataHidden = true;
                         await _metadataService.SaveMetadata(metaData);
 
-                        await _opDispatcher.StartNew<UpdateConfigDriveCommand>(
+                        await _opDispatcher.StartNew(
                             vm.Project.Id,
-                            new Resource(ResourceType.Catlet, vm.Id));
+                            _messageContext.GetTraceId(),
+                            new UpdateConfigDriveCommand
+                            {
+                                CatletId = vm.Id
+                            });
+                            
                     }
 
                 });

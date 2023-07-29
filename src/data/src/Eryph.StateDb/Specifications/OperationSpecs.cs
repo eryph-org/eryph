@@ -3,12 +3,13 @@ using System.Linq;
 using Ardalis.Specification;
 using Eryph.Core;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Workflows;
 
 namespace Eryph.StateDb.Specifications
 {
     public static class OperationSpecs
     {
-        internal static void ExpandFields(ISpecificationBuilder<Operation> query, string expand, DateTimeOffset requestLogTimestamp)
+        internal static void ExpandFields(ISpecificationBuilder<OperationModel> query, string expand, DateTimeOffset requestLogTimestamp)
         {
             if (string.IsNullOrWhiteSpace(expand)) return;
 
@@ -37,7 +38,7 @@ namespace Eryph.StateDb.Specifications
         }
 
 
-        public sealed class GetAll : Specification<Operation>
+        public sealed class GetAll : Specification<OperationModel>
         {
             public GetAll(Guid tenantId, Guid[] roles, AccessRight requiredAccess, string expanded, DateTimeOffset requestLogTimestamp)
             {
@@ -54,7 +55,7 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
-        public sealed class GetById : Specification<Operation>, ISingleResultSpecification<Operation>
+        public sealed class GetById : Specification<OperationModel>, ISingleResultSpecification<OperationModel>
         {
             public GetById(Guid id, Guid tenantId, Guid[] roles, AccessRight requiredAccess,  string expanded, DateTimeOffset requestLogTimestamp)
             {

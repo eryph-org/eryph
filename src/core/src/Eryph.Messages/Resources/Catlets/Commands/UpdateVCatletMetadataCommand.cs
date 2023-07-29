@@ -1,10 +1,11 @@
 ﻿using System;
 using Eryph.ConfigModel;
+using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
     [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class UpdateVCatletMetadataCommand :  IHostAgentCommand
+    public class UpdateVCatletMetadataCommand :  IHostAgentCommand, IVMCommand, IHasResource
     {
         public Guid NewMetadataId { get; set; }
         public Guid CurrentMetadataId { get; set; }
@@ -12,5 +13,9 @@ namespace Eryph.Messages.Resources.Catlets.Commands
 
         [PrivateIdentifier]
         public string AgentName { get; set; }
+
+        public Guid CatletId { get; set; }
+
+        public Resource Resource => new(ResourceType.Catlet, CatletId);
     }
 }

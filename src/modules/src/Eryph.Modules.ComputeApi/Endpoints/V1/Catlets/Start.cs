@@ -27,7 +27,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
 
         protected override object CreateOperationMessage(Catlet model, SingleEntityRequest request)
         {
-            return new StartCatletCommand{Resource = new Resource(ResourceType.Catlet, model.Id)};
+            return new StartCatletCommand{ CatletId = model.Id};
         }
 
         [Authorize(Policy = "compute:catlets:start")]

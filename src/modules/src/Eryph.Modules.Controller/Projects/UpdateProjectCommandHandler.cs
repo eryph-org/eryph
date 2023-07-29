@@ -1,23 +1,23 @@
 ﻿using System.Threading.Tasks;
-using Eryph.Messages.Operations;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Projects;
-using Eryph.ModuleCore;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using Rebus.Bus;
+using JetBrains.Annotations;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Projects
 {
+    [UsedImplicitly]
     internal class UpdateProjectCommandHandler : IHandleMessages<OperationTask<UpdateProjectCommand>>
     {
         private readonly IStateStore _stateStore;
-        private readonly IBus _bus;
+        private readonly ITaskMessaging _messaging;
 
-        public UpdateProjectCommandHandler(IStateStore stateStore, IBus bus)
+        public UpdateProjectCommandHandler(IStateStore stateStore, ITaskMessaging messaging)
         {
             _stateStore = stateStore;
-            _bus = bus;
+            _messaging = messaging;
         }
 
         public async Task Handle(OperationTask<UpdateProjectCommand> message)
@@ -29,7 +29,7 @@ namespace Eryph.Modules.Controller.Projects
                 project.Name = message.Command.Name;
             
 
-            await _bus.CompleteTask(message);
+            await _messaging.CompleteTask(message);
         }
     }
 }

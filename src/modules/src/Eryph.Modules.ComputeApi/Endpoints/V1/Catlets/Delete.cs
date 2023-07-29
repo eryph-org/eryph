@@ -27,7 +27,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
 
         protected override object CreateOperationMessage(Catlet model, SingleEntityRequest request)
         {
-            return new DestroyCatletCommand{ Resource = new Resource(ResourceType.Catlet, model.Id)};
+            return new DestroyCatletCommand{ CatletId = model.Id};
         }
 
         [Authorize(Policy = "compute:catlets:write")]

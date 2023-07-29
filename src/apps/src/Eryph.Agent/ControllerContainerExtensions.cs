@@ -13,7 +13,7 @@ namespace Eryph.Agent
 
         public static Container UseRabbitMq(this Container container)
         {
-            container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
+            //container.Register<IRebusTransportConfigurer, RabbitMqRebusTransportConfigurer>();
 
             return container;
         }

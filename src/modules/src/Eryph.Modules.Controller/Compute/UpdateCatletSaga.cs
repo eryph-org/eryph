@@ -1,20 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Eryph.Messages;
-using Eryph.Messages.Operations.Events;
+using Dbosoft.Rebus.Operations.Events;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
-using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
-using Eryph.Modules.Controller.Operations;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
+using ErrorData = Eryph.Messages.ErrorData;
 
 namespace Eryph.Modules.Controller.Compute
 {
@@ -27,15 +26,17 @@ namespace Eryph.Modules.Controller.Compute
         IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>
 
     {
+        private readonly IBus _bus;
         private readonly Id64Generator _idGenerator;
         private readonly IVirtualMachineMetadataService _metadataService;
         private readonly IVirtualMachineDataService _vmDataService;
 
 
-        public UpdateCatletSaga(IBus bus, IOperationTaskDispatcher taskDispatcher, Id64Generator idGenerator,
+        public UpdateCatletSaga(IWorkflow workflow, IBus bus, Id64Generator idGenerator,
             IVirtualMachineDataService vmDataService,
-            IVirtualMachineMetadataService metadataService) : base(bus, taskDispatcher)
+            IVirtualMachineMetadataService metadataService) : base(workflow)
         {
+            _bus = bus;
             _idGenerator = idGenerator;
             _vmDataService = vmDataService;
             _metadataService = metadataService;
@@ -57,14 +58,14 @@ namespace Eryph.Modules.Controller.Compute
 
         }
 
-        protected override Task Initiated(UpdateCatletCommand message)
+        protected override async Task Initiated(UpdateCatletCommand message)
         {
             Data.Config = message.Config;
             Data.CatletId = message.Resource.Id;
             Data.AgentName = message.AgentName;
 
 
-            return StartNewTask(new ValidateCatletConfigCommand
+            await StartNewTask(new ValidateCatletConfigCommand
                 {
                     MachineId = message.Resource.Id,
                     Config = message.Config,
@@ -81,18 +82,22 @@ namespace Eryph.Modules.Controller.Compute
             {
                 Data.Config = r.Config;
                 Data.Validated = true;
+
+                if(Data.CatletId == Guid.Empty)
+                    await Fail($"Catlet cannot be updated because the catlet Id is missing.");
+
                 var machineInfo = await _vmDataService.GetVM(Data.CatletId);
                 Data.ProjectId = machineInfo.Map(x => x.ProjectId).IfNone(Guid.Empty);
                 Data.AgentName = machineInfo.Map(x => x.AgentName).IfNone("");
 
                 if (Data.ProjectId == Guid.Empty)
-                    await Fail("Could not identity project of Catlet.");
+                    await Fail($"Catlet {Data.CatletId} is not assigned to any project.");
                 else
                     await StartNewTask(new UpdateCatletNetworksCommand
                     {
                         CatletId = Data.CatletId,
                         Config = Data.Config,
-                        ProjectId = Data.ProjectId,
+                        ProjectId = Data.ProjectId
                     });
             });
         }
@@ -118,13 +123,14 @@ namespace Eryph.Modules.Controller.Compute
 
                         return StartNewTask(new UpdateVCatletCommand
                         {
+                            CatletId = Data.CatletId,
                             VMId = vm.VMId,
                             Config = Data.Config,
                             AgentName = Data.AgentName,
                             NewStorageId = _idGenerator.GenerateId(),
                             MachineMetadata = metadata,
                             MachineNetworkSettings = r.NetworkSettings
-                        });
+                        }).AsTask();
                     },
                     None: () => Fail(new ErrorData
                     { ErrorMessage = $"Could not find virtual catlet with catlet id {Data.CatletId}" })
@@ -144,7 +150,8 @@ namespace Eryph.Modules.Controller.Compute
 
                 await _metadataService.SaveMetadata(r.MachineMetadata);
 
-                await Bus.Send(new UpdateInventoryCommand
+                //TODO: replace this this with operation call
+                await _bus.SendLocal(new UpdateInventoryCommand
                 {
                     AgentName = Data.AgentName,
                     Inventory = new List<VirtualMachineData> { r.Inventory }
@@ -158,7 +165,7 @@ namespace Eryph.Modules.Controller.Compute
                             VMId = r.Inventory.VMId,
                             CatletId = Data.CatletId,
                             MachineMetadata = r.MachineMetadata,
-                        });
+                        }).AsTask();
                     },
                     None: () => Fail(new ErrorData
                     { ErrorMessage = $"Could not find virtual catlet with catlet id {Data.CatletId}" })
@@ -174,7 +181,7 @@ namespace Eryph.Modules.Controller.Compute
                 StartNewTask(new UpdateNetworksCommand
                 {
                     Projects = new[] { Data.ProjectId }
-                })
+                }).AsTask()
 
                 );
 

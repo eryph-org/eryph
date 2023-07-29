@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Eryph.Messages.Operations.Events;
+using Dbosoft.Rebus.Operations.Events;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
-using Eryph.ModuleCore;
-using Eryph.Modules.Controller.Operations;
 using Eryph.Resources;
 using JetBrains.Annotations;
-using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 using Resource = Eryph.Resources.Resource;
@@ -21,10 +19,9 @@ namespace Eryph.Modules.Controller.Compute
         OperationTaskWorkflowSaga<DestroyResourcesCommand, DestroyResourcesSagaData>,
         IHandleMessages<OperationTaskStatusEvent<DestroyCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>
-
     {
 
-        public DestroyResourcesSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus, taskDispatcher)
+        public DestroyResourcesSaga(IWorkflow workflow) : base(workflow)
         {
         }
 
@@ -45,7 +42,7 @@ namespace Eryph.Modules.Controller.Compute
             var secondGroup = new List<Resource>();
 
 
-            foreach (var resource in Data.Resources)
+            foreach (var resource in Data.Resources?? Array.Empty<Resource>())
                 switch(resource.Type)
                 {
                     case ResourceType.Catlet:
@@ -96,10 +93,10 @@ namespace Eryph.Modules.Controller.Compute
                 {
 
                     case ResourceType.Catlet:
-                        await StartNewTask<DestroyCatletCommand>(resource);
+                        await StartNewTask(new DestroyCatletCommand{ CatletId = resource.Id });
                         break;
                     case ResourceType.VirtualDisk:
-                        await StartNewTask<DestroyVirtualDiskCommand>(resource);
+                        await StartNewTask(new DestroyVirtualDiskCommand{DiskId = resource.Id});
                         break;
                     case ResourceType.VirtualNetwork:
                         break;

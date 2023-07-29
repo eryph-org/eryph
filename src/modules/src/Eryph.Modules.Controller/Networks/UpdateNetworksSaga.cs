@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Eryph.Messages.Operations.Events;
+using Dbosoft.Rebus.Operations.Events;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Networks.Commands;
-using Eryph.ModuleCore;
-using Eryph.Modules.Controller.Operations;
 using JetBrains.Annotations;
-using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
@@ -18,7 +16,7 @@ namespace Eryph.Modules.Controller.Networks
 
     {
 
-        public UpdateNetworksSaga(IBus bus, IOperationTaskDispatcher taskDispatcher) : base(bus, taskDispatcher)
+        public UpdateNetworksSaga(IWorkflow workflow) : base(workflow)
         {
         }
 

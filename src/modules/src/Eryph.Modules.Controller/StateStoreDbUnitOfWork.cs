@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Dbosoft.Rebus;
 using Eryph.Rebus;
 using Eryph.StateDb;
 using JetBrains.Annotations;

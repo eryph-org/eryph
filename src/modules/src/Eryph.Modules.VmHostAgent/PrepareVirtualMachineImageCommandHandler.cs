@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.Messages.Operations;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Images.Commands;
-using Eryph.ModuleCore;
 using Eryph.Modules.VmHostAgent.Images;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
-using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.VmHostAgent
@@ -16,12 +14,12 @@ namespace Eryph.Modules.VmHostAgent
         PrepareVirtualMachineImageCommandHandler : IHandleMessages<
             OperationTask<PrepareVirtualMachineImageCommand>>
     {
-        private readonly IBus _bus;
+        private readonly ITaskMessaging _messaging;
         private readonly ILogger _log;
         private readonly IImageRequestDispatcher _imageRequestDispatcher;
-        public PrepareVirtualMachineImageCommandHandler(IBus bus, ILogger log, IImageRequestDispatcher imageRequestDispatcher)
+        public PrepareVirtualMachineImageCommandHandler(ITaskMessaging messaging, ILogger log, IImageRequestDispatcher imageRequestDispatcher)
         {
-            _bus = bus;
+            _messaging = messaging;
             _log = log;
             _imageRequestDispatcher = imageRequestDispatcher;
         }
@@ -33,7 +31,7 @@ namespace Eryph.Modules.VmHostAgent
             {
                 if (message.Command.Image == null)
                 {
-                    await _bus.CompleteTask(message, new PrepareVirtualMachineImageResponse()
+                    await _messaging.CompleteTask(message, new PrepareVirtualMachineImageResponse()
                     {
                         RequestedImage = "",
                         ResolvedImage = ""
@@ -48,7 +46,7 @@ namespace Eryph.Modules.VmHostAgent
             catch (Exception ex)
             {
                 _log.LogError(ex, $"Command '{nameof(PrepareVirtualMachineImageCommand)}' failed.");
-                await _bus.FailTask(message, ex.Message);
+                await _messaging.FailTask(message, ex.Message);
             }
         }
     }

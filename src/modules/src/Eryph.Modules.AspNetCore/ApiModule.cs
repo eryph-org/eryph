@@ -2,6 +2,10 @@
 using System.Text.Json.Serialization;
 using Ardalis.Specification;
 using Dbosoft.Hosuto.Modules;
+using Dbosoft.Rebus;
+using Dbosoft.Rebus.Configuration;
+using Dbosoft.Rebus.Operations;
+using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages;
 using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -9,6 +13,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.Rebus;
 using Eryph.StateDb;
+using Eryph.StateDb.Workflows;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization.Policy;
@@ -110,14 +115,14 @@ namespace Eryph.Modules.AspNetCore
 
             container.Collection.Register(typeof(IHandleMessages<>), typeof(TModule).Assembly);
             container.Register<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped);
+            container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
+            container.Register<IOperationManager, OperationManager>(Lifestyle.Scoped);
 
             container.ConfigureRebus(configurer =>
             {
                 return configurer
                     .Transport(t =>
                         serviceProvider.GetRequiredService<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
-                    .Routing(x => x.TypeBased()
-                        .Map(MessageTypes.ByRecipient(MessageRecipient.Controllers), QueueNames.Controllers))
                     .Options(x =>
                     {
                         x.SimpleRetryStrategy();
