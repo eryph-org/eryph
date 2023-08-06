@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -171,6 +173,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                 }
             }
 
+
             if (routerPort == null)
             {
                 routerPort = new NetworkRouterPort
@@ -195,6 +198,31 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
 
             foundNames.Clear();
+
+            // if nothing has been configured for ip pool, we need second address after router to initialize pool
+            var secondIp = IPNetwork.ToIPAddress(IPNetwork.ToBigInteger(networkAddress.FirstUsable) + 1, AddressFamily.InterNetwork);
+
+            networkConfig.Subnets ??= new[]
+            {
+                new NetworkSubnetConfig
+                {
+                    Name = "default",
+                    Address = networkConfig.Address,
+
+                    // default project restore ? in that case also use default dns servers
+                    DnsServers = projectId == EryphConstants.DefaultProjectId ? new [] {"9.9.9.9","8.8.8.8"} : null,
+                    Mtu = 1400,
+                    IpPools = new IpPoolConfig[]
+                    {
+                        new(){
+                            Name = "default",
+                            // default projects network network? if not try to initialize pool even if not completely configured
+                            FirstIp = networkConfig.Address == "10.0.0.0/20" ? "10.0.0.100" :  secondIp.ToString(),
+                            LastIp =  networkConfig.Address == "10.0.0.0/20" ? "10.0.2.240" : IPNetwork.Parse(networkConfig.Address).LastUsable.ToString(),
+                        },
+                    }
+                }
+            };
 
             foreach (var subnetConfig in networkConfig.Subnets)
             {
@@ -231,11 +259,12 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
 
                 savedSubnet.DhcpLeaseTime = 3600;
-                savedSubnet.MTU = subnetConfig.Mtu;
+                savedSubnet.MTU = subnetConfig.Mtu == 0 ? 1400 : subnetConfig.Mtu;
                 savedSubnet.DnsServersV4 = subnetConfig.DnsServers != null
                     ? string.Join(',', subnetConfig.DnsServers)
                     : null;
                 savedSubnet.IpNetwork = subnetConfig.Address ?? networkConfig.Address;
+                subnetConfig.IpPools ??= Array.Empty<IpPoolConfig>();
 
 
                 foundNames.Clear();
