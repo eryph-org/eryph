@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Eryph.Resources;
+using JetBrains.Annotations;
 
 namespace Eryph.StateDb.Model;
 
