@@ -175,7 +175,7 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 if (config.Raising != null)
                 {
                     // remove default hostname config
-                    if (config.Raising.Hostname == config.Name)
+                    if (config.Raising.Hostname == config.VCatlet.Slug)
                         config.Raising.Hostname = null;
 
                     foreach (var raisingConfig in config.Raising.Config)
