@@ -52,7 +52,11 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 Name = vCatlet.Name,
                 Project = vCatlet.Project.Name != "default" ? vCatlet.Project.Name: null,
                 Version = "1.0",
-                VCatlet = new VirtualCatletConfig()
+                Environment = vCatlet.Environment != "default" ? vCatlet.Environment : null,
+                VCatlet = new VirtualCatletConfig
+                {
+                    Slug = vCatlet.StorageIdentifier,
+                }
             };
 
 
@@ -175,7 +179,7 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 if (config.Raising != null)
                 {
                     // remove default hostname config
-                    if (config.Raising.Hostname == config.Name)
+                    if (config.Raising.Hostname == config.VCatlet.Slug)
                         config.Raising.Hostname = null;
 
                     foreach (var raisingConfig in config.Raising.Config)

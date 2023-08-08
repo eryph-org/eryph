@@ -34,7 +34,8 @@ namespace Eryph.VmManagement.Inventory
            return (from hostInfo in _hostInfoProvider.GetHostInfoAsync()
                from vm in Prelude.RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo)
                     
-                from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _hostSettings,
+               from vmStorageSettings in VMStorageSettings.FromVM(_hostSettings, vm)
+                   from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _hostSettings,
                     vm.GetList(x=>x.HardDrives))
                 from cpuData in GetCpuData(vmInfo)
                from memoryData in GetMemoryData(vmInfo)
@@ -49,6 +50,12 @@ namespace Eryph.VmManagement.Inventory
                     Cpu = cpuData,
                     Memory = memoryData,
                     Firmware = firmwareData,
+                    Frozen = vmStorageSettings.Map(x => x.Frozen).IfNone(true),
+                    VMPath = vmStorageSettings.Map(x => x.VMPath).IfNone(""),
+                    StorageIdentifier = vmStorageSettings.Map(x=>x.StorageIdentifier.IfNone("")).IfNone(""),
+                    ProjectName = vmStorageSettings.Map(x => x.StorageNames.ProjectName.IfNone("")).IfNone(""),
+                    DataStore = vmStorageSettings.Map(x => x.StorageNames.ProjectName.IfNone("")).IfNone(""),
+                    Environment = vmStorageSettings.Map(x => x.StorageNames.ProjectName.IfNone("")).IfNone(""),
                     Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x=>x.HardDrives)).ToArray(),
                     NetworkAdapters = vm.GetList(x=>x.NetworkAdapters).Map(a=>
                     {
@@ -119,6 +126,7 @@ namespace Eryph.VmManagement.Inventory
             storageSettings.StorageNames?.DataStoreName.IfSome(n => disk.DataStore = n);
             storageSettings.StorageNames?.ProjectName.IfSome(n => disk.ProjectName = n);
             storageSettings.StorageNames?.EnvironmentName.IfSome(n => disk.Environment = n);
+            storageSettings.StorageIdentifier.IfNone(() => disk.Frozen = true);
             storageSettings.ParentSettings.IfSome(parentSettings => disk.Parent = CreateDiskInfo(parentSettings));
             return disk;
         }

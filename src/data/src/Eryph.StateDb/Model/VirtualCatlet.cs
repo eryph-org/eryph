@@ -15,6 +15,10 @@ namespace Eryph.StateDb.Model
         public Guid MetadataId { get; set; }
 
         public string Path { get; set; }
+        public string StorageIdentifier { get; set; }
+        public string DataStore { get; set; }
+        public string Environment { get; set; }
+        public bool Frozen { get; set; }
         public virtual VirtualCatletHost Host { get; set; }
 
 
