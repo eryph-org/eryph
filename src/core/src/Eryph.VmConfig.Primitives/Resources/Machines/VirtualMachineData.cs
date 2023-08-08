@@ -12,6 +12,14 @@ namespace Eryph.Resources.Machines
         public VmStatus Status { get; set; }
         public TimeSpan UpTime { get; set; }
 
+        public string DataStore { get; set; }
+        public string ProjectName { get; set; }
+        public string Environment { get; set; }
+
+        public bool Frozen { get; set; }
+        public string VMPath { get; set; }
+        public string StorageIdentifier { get; set; }
+
         public VirtualMachineNetworkAdapterData[] NetworkAdapters { get; set; }
         public VirtualMachineDriveData[] Drives { get; set; }
 

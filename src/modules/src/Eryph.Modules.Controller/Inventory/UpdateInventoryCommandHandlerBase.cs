@@ -107,6 +107,7 @@ namespace Eryph.Modules.Controller.Inventory
                         Name = diskInfo.Name,
                         DataStore = diskInfo.DataStore,
                         Environment = diskInfo.Environment,
+                        Frozen = diskInfo.Frozen,
                         StorageIdentifier = diskInfo.StorageIdentifier,
                         Project = await FindRequiredProject(diskInfo.ProjectName)
                     };
@@ -182,8 +183,8 @@ namespace Eryph.Modules.Controller.Inventory
                         if (metadata.MachineId == Guid.Empty)
                             metadata.MachineId = Guid.NewGuid();
 
-                        // TODO: add lookup of project from vm location
-                        var project = await FindRequiredProject("default");
+                        
+                        var project = await FindRequiredProject(vmInfo.ProjectName);
 
                         await _vmDataService.AddNewVM(
                             VirtualMachineInfoToVCatlet(vmInfo, hostMachine, metadata.MachineId, project),
@@ -205,7 +206,11 @@ namespace Eryph.Modules.Controller.Inventory
                         existingMachine.Status = newMachine.Status;
                         existingMachine.Host = hostMachine;
                         existingMachine.AgentName = newMachine.AgentName;
-
+                        existingMachine.Frozen = newMachine.Frozen;
+                        existingMachine.DataStore = newMachine.DataStore;
+                        existingMachine.Environment = newMachine.Environment;
+                        existingMachine.Path = newMachine.Path;
+                        existingMachine.StorageIdentifier = newMachine.StorageIdentifier;
                         existingMachine.ReportedNetworks = newMachine.ReportedNetworks;
                         existingMachine.NetworkAdapters = newMachine.NetworkAdapters;
                         existingMachine.Drives = newMachine.Drives;
@@ -255,6 +260,11 @@ namespace Eryph.Modules.Controller.Inventory
                 Status = MapVmStatusToMachineStatus(vmInfo.Status),
                 Host = hostMachine,
                 AgentName = hostMachine.AgentName,
+                DataStore = vmInfo.DataStore,
+                Environment = vmInfo.Environment,
+                Path = vmInfo.VMPath,
+                Frozen = vmInfo.Frozen,
+                StorageIdentifier = vmInfo.StorageIdentifier,
                 MetadataId = vmInfo.MetadataId,
                 UpTime = vmInfo.UpTime,
                 CpuCount = vmInfo.Cpu?.Count ?? 0,

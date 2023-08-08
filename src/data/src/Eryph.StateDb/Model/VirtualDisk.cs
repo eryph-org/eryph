@@ -12,6 +12,7 @@ namespace Eryph.StateDb.Model
         }
 
         public string StorageIdentifier { get; set; }
+        public bool Frozen { get; set; }
 
         public string Path { get; set; }
         public string FileName { get; set; }

@@ -68,7 +68,7 @@ namespace Eryph.Modules.Controller.Operations
             }
 
             if (string.IsNullOrWhiteSpace(machineConfig.Raising.Hostname))
-                machineConfig.Raising.Hostname = machineConfig.VCatlet.Slug;
+                machineConfig.Raising.Hostname =  machineConfig.VCatlet.Slug;
 
             foreach (var adapterConfig in machineConfig.VCatlet.NetworkAdapters)
             {

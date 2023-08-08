@@ -52,7 +52,11 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 Name = vCatlet.Name,
                 Project = vCatlet.Project.Name != "default" ? vCatlet.Project.Name: null,
                 Version = "1.0",
-                VCatlet = new VirtualCatletConfig()
+                Environment = vCatlet.Environment != "default" ? vCatlet.Environment : null,
+                VCatlet = new VirtualCatletConfig
+                {
+                    Slug = vCatlet.StorageIdentifier,
+                }
             };
 
 

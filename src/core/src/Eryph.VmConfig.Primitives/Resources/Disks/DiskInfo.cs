@@ -12,6 +12,9 @@ namespace Eryph.Resources.Disks
         public string ProjectName { get; set; }
         public string Environment { get; set; }
 
+        public bool Frozen { get; set; }
+
+
         [PrivateIdentifier]
 
         public string Path { get; set; }
