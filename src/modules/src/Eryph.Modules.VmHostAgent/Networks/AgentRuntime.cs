@@ -101,25 +101,3 @@ public readonly struct AgentRuntime :
         FromServiceProvider<ILoggerFactory>().Map(lf => lf.CreateLogger<T>());
 
 }
-
-
-
-public class AgentRuntimeEnv
-    {
-        public readonly CancellationTokenSource Source;
-        public readonly CancellationToken Token;
-        public readonly IServiceProvider ServiceProvider;
-
-        public AgentRuntimeEnv(CancellationTokenSource source, CancellationToken token, 
-            IServiceProvider serviceProvider)
-        {
-            Source = source;
-            Token = token;
-            ServiceProvider = serviceProvider;
-        }
-
-        public AgentRuntimeEnv(CancellationTokenSource source, IServiceProvider serviceProvider) 
-            : this(source, source.Token, serviceProvider)
-        {
-        }
-    }

@@ -21,7 +21,7 @@ namespace Eryph.StateDb.Model
 
         public virtual VirtualDisk Parent { get; set; }
         public virtual ICollection<VirtualDisk> Childs { get; set; }
-        public virtual ICollection<VirtualCatletDrive> AttachedDrives { get; set; }
+        public virtual ICollection<CatletDrive> AttachedDrives { get; set; }
 
         public Guid? ParentId { get; set; }
     }

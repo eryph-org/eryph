@@ -17,12 +17,13 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Mvc;
-using VirtualCatlet = Eryph.StateDb.Model.VirtualCatlet;
+
+using Catlet = Eryph.StateDb.Model.Catlet;
 
 namespace Eryph.Modules.ComputeApi.Handlers
 {
-    internal class GetVirtualCatletConfigurationHandler : IGetRequestHandler<VirtualCatlet, 
-        VirtualCatletConfiguration>
+    internal class GetVirtualCatletConfigurationHandler : IGetRequestHandler<Catlet, 
+        CatletConfiguration>
     {
         private readonly IStateStore _stateStore;
 
@@ -31,17 +32,17 @@ namespace Eryph.Modules.ComputeApi.Handlers
             _stateStore = stateStore;
         }
 
-        public async Task<ActionResult<VirtualCatletConfiguration>> HandleGetRequest(Func<ISingleResultSpecification<VirtualCatlet>> specificationFunc, CancellationToken cancellationToken)
+        public async Task<ActionResult<CatletConfiguration>> HandleGetRequest(Func<ISingleResultSpecification<Catlet>> specificationFunc, CancellationToken cancellationToken)
         {
             var vCatletSpec = specificationFunc();
 
-            var repo = _stateStore.For<VirtualCatlet>();
+            var repo = _stateStore.For<Catlet>();
             var vCatletIdResult= await repo.GetBySpecAsync(vCatletSpec, cancellationToken);
 
             if (vCatletIdResult == null)
                 return new NotFoundResult();
 
-            var vCatlet = await repo.GetBySpecAsync(new VCatletSpecs
+            var vCatlet = await repo.GetBySpecAsync(new CatletSpecs
                 .GetForConfig(vCatletIdResult.Id), cancellationToken);
 
             if (vCatlet == null)
@@ -53,21 +54,18 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 Project = vCatlet.Project.Name != "default" ? vCatlet.Project.Name: null,
                 Version = "1.0",
                 Environment = vCatlet.Environment != "default" ? vCatlet.Environment : null,
-                VCatlet = new VirtualCatletConfig
-                {
-                    Slug = vCatlet.StorageIdentifier,
-                }
+                Label = vCatlet.StorageIdentifier
             };
 
 
-            var driveConfigs = new List<VirtualCatletDriveConfig>();
+            var driveConfigs = new List<CatletDriveConfig>();
             var alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
             for (var index = 0; index < vCatlet.Drives.Count; index++)
             {
                 var drive = vCatlet.Drives[index];
                 var driveName = $"sd{alpha[index]}".ToLowerInvariant();
                 
-                var driveConfig = new VirtualCatletDriveConfig();
+                var driveConfig = new CatletDriveConfig();
 
                 if (drive.AttachedDisk != null)
                 {
@@ -76,14 +74,14 @@ namespace Eryph.Modules.ComputeApi.Handlers
                         Math.Ceiling(drive.AttachedDisk.SizeBytes.GetValueOrDefault() / 1024d / 1024 / 1024);
                 }
 
-                driveConfig.Type = drive.Type != VirtualCatletDriveType.VHD ?  drive.Type : null;
+                driveConfig.Type = drive.Type != CatletDriveType.VHD ?  drive.Type : null;
                 driveConfig.Name ??= driveName;
                 driveConfigs.Add(driveConfig);
 
 
             }
 
-            config.VCatlet.Drives = driveConfigs.ToArray();
+            config.Drives = driveConfigs.ToArray();
             
 
             if (vCatlet.NetworkPorts != null)
@@ -148,105 +146,112 @@ namespace Eryph.Modules.ComputeApi.Handlers
 
             }
 
-            config.VCatlet.Cpu = new VirtualCatletCpuConfig
+            config.Cpu = new CatletCpuConfig
             {
                 Count = vCatlet.CpuCount
             };
 
-            config.VCatlet.Memory = new VirtualCatletMemoryConfig
+            config.Memory = new CatletMemoryConfig
             {
                 Startup = (int)Math.Ceiling(vCatlet.StartupMemory / 1024d / 1024),
 
-                Maximum = vCatlet.Features.Contains(VCatletFeature.DynamicMemory)
-                    ? (int)Math.Ceiling(vCatlet.MaximumMemory / 1024d / 1024)
+                Maximum = vCatlet.MaximumMemory != 0 ? (int)Math.Ceiling(vCatlet.MaximumMemory / 1024d / 1024)
                     : null,
-                Minimum = vCatlet.Features.Contains(VCatletFeature.DynamicMemory)
-                    ? (int)Math.Ceiling(vCatlet.MaximumMemory / 1024d / 1024)
+                Minimum = vCatlet.MinimumMemory != 0 ? (int)Math.Ceiling(vCatlet.MaximumMemory / 1024d / 1024)
                     : null,
 
             };
 
             //remove all settings also configured in image
-            var metadataEntity = await _stateStore.Read<VirtualMachineMetadata>().GetByIdAsync(vCatlet.MetadataId, cancellationToken);
+            var metadataEntity = await _stateStore.Read<CatletMetadata>().GetByIdAsync(vCatlet.MetadataId, cancellationToken);
             VirtualCatletMetadata metadata = null;
             if (metadataEntity != null)
                 metadata = JsonSerializer.Deserialize<VirtualCatletMetadata>(metadataEntity.Metadata);
 
             if (metadata != null)
             {
-                config.Raising = metadata.RaisingConfig;
+                config.Fodder = metadata.Fodder;
+                if (config.Hostname == config.Label)
+                    config.Hostname = null;
 
-                if (config.Raising != null)
+                if (config.Fodder != null)
                 {
-                    // remove default hostname config
-                    if (config.Raising.Hostname == config.VCatlet.Slug)
-                        config.Raising.Hostname = null;
-
-                    foreach (var raisingConfig in config.Raising.Config)
+                    foreach (var fodderConfig in config.Fodder)
                     {
-                        if (!raisingConfig.Sensitive) continue;
+                        if (!fodderConfig.Secret.GetValueOrDefault()) continue;
 
-                        raisingConfig.Content = "#REDACTED";
+                        fodderConfig.Content = "#REDACTED";
 
                     }
+
+                    if (config.Fodder.Length == 0)
+                        config.Fodder = null;
+
                 }
 
-                if (metadata.ImageConfig != null)
+                if (metadata.ParentConfig != null)
                 {
-                    config.VCatlet.Image = metadata.ImageConfig.Image;
+                    config.Parent = metadata.ParentConfig.Parent;
 
-                    if (config.VCatlet.Cpu.Count == metadata.ImageConfig.Cpu?.Count)
-                        config.VCatlet.Cpu.Count = null;
+                    if (config.Cpu?.Count.GetValueOrDefault() == 0 || config.Cpu?.Count == metadata.ParentConfig.Cpu?.Count)
+                        config.Cpu.Count = null;
 
-                    if (config.VCatlet.Memory.Startup == metadata.ImageConfig.Memory?.Startup)
-                        config.VCatlet.Memory.Startup = null;
+                    if (config.Memory.Startup.GetValueOrDefault() == 0 || config.Memory.Startup == metadata.ParentConfig.Memory?.Startup)
+                        config.Memory.Startup = null;
+
+                    if (config.Memory.Minimum.GetValueOrDefault() == 0 || config.Memory.Minimum == metadata.ParentConfig.Memory?.Minimum)
+                        config.Memory.Minimum = null;
 
 
-                    var driveConfigReduced = new List<VirtualCatletDriveConfig>();
-                    foreach (var driveConfig in config.VCatlet.Drives)
+                    if (config.Memory.Maximum.GetValueOrDefault() == 0 || config.Memory.Maximum == metadata.ParentConfig.Memory?.Maximum)
+                        config.Memory.Maximum = null;
+
+
+                    var driveConfigReduced = new List<CatletDriveConfig>();
+                    foreach (var driveConfig in config.Drives)
                     {
-                        var imageConfig = metadata.ImageConfig.Drives.FirstOrDefault(x=>x.Name == driveConfig.Name);
+                        var parentConfig = metadata.ParentConfig.Drives.FirstOrDefault(x=>x.Name == driveConfig.Name);
 
-                        if (imageConfig != null)
+                        if (parentConfig != null)
                         {
-                            if(driveConfig.Slug == imageConfig.Slug)
-                                driveConfig.Slug = null;
-                            if (driveConfig.Type == null || driveConfig.Type == imageConfig.Type)
+                            if(driveConfig.Label == null || driveConfig.Label == parentConfig.Label)
+                                driveConfig.Label = null;
+                            if (driveConfig.Type == null || driveConfig.Type == parentConfig.Type)
                                 driveConfig.Type = null;
-                            if (driveConfig.Size == imageConfig.Size)
+                            if (driveConfig.Size.GetValueOrDefault() == 0 || driveConfig.Size == parentConfig.Size)
                                 driveConfig.Size = null;
 
                             if(driveConfig.Type == null && driveConfig.Size == null
-                               && driveConfig.Slug == null && driveConfig.Template == null
+                               && driveConfig.Label == null && driveConfig.Source == null
                               )
                                 continue;
                         }
 
                         driveConfigReduced.Add(driveConfig);
                     }
-                    config.VCatlet.Drives = driveConfigReduced.ToArray();
+                    config.Drives = driveConfigReduced.ToArray();
                 }
             }
 
             if (config.Networks?.Length == 0)
                 config.Networks = null;
 
-            if (config.VCatlet.Drives?.Length == 0)
-                config.VCatlet.Drives = null;
+            if (config.Drives?.Length == 0)
+                config.Drives = null;
 
 
 
-            if (config.VCatlet.Cpu.Count == null)
-                config.VCatlet.Cpu = null;
+            if (config.Cpu.Count == null)
+                config.Cpu = null;
 
-            if (config.VCatlet.Memory.Startup == null && config.VCatlet.Memory.Maximum == null
-                && config.VCatlet.Memory.Minimum == null)
-                config.VCatlet.Memory = null;
+            if (config.Memory?.Startup.GetValueOrDefault() == 0 && config.Memory?.Maximum.GetValueOrDefault() ==0
+                && config.Memory?.Minimum.GetValueOrDefault() == 0)
+                config.Memory = null;
 
 
             var configString = ConfigModelJsonSerializer.Serialize(config);
 
-            var result = new VirtualCatletConfiguration
+            var result = new CatletConfiguration
             {
                 Configuration = JsonSerializer.Deserialize<JsonElement>(configString)
             };

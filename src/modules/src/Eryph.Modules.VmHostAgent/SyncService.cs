@@ -15,19 +15,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.VmHostAgent;
 
-internal class SyncServiceCommand
-{
-    public string CommandName { get; set; }
-    public JsonElement? Data { get; set; }
-}
-
-internal class SyncServiceResponse
-{
-    public string Response { get; set; }
-    public JsonElement? Data { get; set; }
-    public string Error { get; set; }
-}
-
 internal class SyncService : BackgroundService
 {
     private readonly ILogger _logger;

@@ -53,22 +53,22 @@ namespace Eryph.VmManagement.Storage
 
 
                 var idCandidate = pathAfterDataStore;
-                var idIsImageRef = false;
+                var idIsGeneRef = false;
                 if (idCandidate.Contains(Path.DirectorySeparatorChar))
                 {
-                    // image path, resolve back to referenced image
-                    if (idCandidate.StartsWith("images\\", StringComparison.InvariantCultureIgnoreCase))
+                    // genepool path, resolve back to referenced geneset
+                    if (idCandidate.StartsWith("genepool\\", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        idCandidate = idCandidate.Remove(0, "images\\".Length);
-                        var imagePathParts = idCandidate.Split('\\', StringSplitOptions.RemoveEmptyEntries);
-                        if (imagePathParts.Length == 4)
+                        idCandidate = idCandidate.Remove(0, "genepool\\".Length);
+                        var genePathParts = idCandidate.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+                        if (genePathParts.Length == 4)
                         {
-                            idCandidate = imagePathParts[0] + "/" + imagePathParts[1]+ "/" + imagePathParts[2];
-                            idIsImageRef = true;
+                            idCandidate = genePathParts[0] + "/" + genePathParts[1]+ "/" + genePathParts[2];
+                            idIsGeneRef = true;
                         }
                     }
 
-                    idCandidate = idIsImageRef ? $"image:{idCandidate}" : null;
+                    idCandidate = idIsGeneRef ? $"gene:{idCandidate}" : null;
                 }
 
                 if (!string.IsNullOrWhiteSpace(idCandidate))

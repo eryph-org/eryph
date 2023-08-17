@@ -72,7 +72,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     "default", c2.Token).ToAsync().Map(_ => Unit.Default)
 
                 let fixedMacAddress =
-                    message.Command.Config.VCatlet.NetworkAdapters.Find(x => x.Name == cfg.AdapterName)
+                    message.Command.Config.NetworkAdapters.Find(x => x.Name == cfg.AdapterName)
                         .Map(x => x.MacAddress)
                         .IfNone("")
                 let _ = UpdatePort(networkPort, cfg.AdapterName, fixedMacAddress)

@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.Messages.Resources.Images.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
+using Eryph.Resources;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -23,7 +28,8 @@ namespace Eryph.Modules.Controller.Compute
         IHandleMessages<OperationTaskStatusEvent<UpdateVCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>
+        IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<PrepareGeneCommand>>
 
     {
         private readonly IBus _bus;
@@ -49,6 +55,8 @@ namespace Eryph.Modules.Controller.Compute
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<UpdateVCatletCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(m => m.InitiatingTaskId,
+                d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>(m => m.InitiatingTaskId,
@@ -73,6 +81,7 @@ namespace Eryph.Modules.Controller.Compute
             );
         }
 
+
         public Task Handle(OperationTaskStatusEvent<ValidateCatletConfigCommand> message)
         {
             if (Data.Validated)
@@ -90,18 +99,92 @@ namespace Eryph.Modules.Controller.Compute
                 Data.ProjectId = machineInfo.Map(x => x.ProjectId).IfNone(Guid.Empty);
                 Data.AgentName = machineInfo.Map(x => x.AgentName).IfNone("");
 
+
                 if (Data.ProjectId == Guid.Empty)
                     await Fail($"Catlet {Data.CatletId} is not assigned to any project.");
                 else
-                    await StartNewTask(new UpdateCatletNetworksCommand
+                {
+                    var breedConfig = await machineInfo.ToAsync().Bind(m =>
+                            _metadataService.GetMetadata(m.MetadataId).MapAsync(m => m.ParentConfig))
+                        .Map(parentConfig => parentConfig?.Breed(Data.Config, Data.Config.Parent) ?? Data.Config)
+                        .IfNone(Data.Config);
+
+
+                    var geneCommands = new List<(GeneType Type, string GeneName)>();
+                    geneCommands.AddRange((breedConfig?.Drives?
+                        .Select(x => x.Source)
+                        .Where(t => t != null && t.StartsWith("gene:") && t.Split(':').Length >= 2)
+                        .Select(t => t?.Remove(0,"gene:".Length) ?? "") ?? Enumerable.Empty<string>()).Select(x=> (GeneType.Volume, x)));
+
+                    // no images required - go directly to create
+                    if (geneCommands.Count == 0)
                     {
-                        CatletId = Data.CatletId,
-                        Config = Data.Config,
-                        ProjectId = Data.ProjectId
-                    });
+                        await UpdateCatlet();
+                        return;
+                    }
+
+                    Data.PendingGeneNames = geneCommands.Select(x=>x.GeneName).Distinct().ToList();
+
+                    foreach (var (geneType, geneName) in geneCommands)
+                    {
+                        await StartNewTask(new PrepareGeneCommand()
+                        {
+                            GeneType = geneType,
+                            GeneName = geneName,
+                            AgentName = Data.AgentName
+                        });
+                    }
+
+                }
             });
         }
+        public Task Handle(OperationTaskStatusEvent<PrepareGeneCommand> message)
+        {
+            if (Data.GenesPrepared)
+                return Task.CompletedTask;
 
+            return FailOrRun<PrepareGeneCommand, PrepareGeneResponse>(message,
+                (response) =>
+                {
+
+                    if (Data.Config != null)
+                    {
+
+                        if (response.GeneType == GeneType.Volume)
+                        {
+                            foreach (var catletDriveConfig in Data.Config.Drives ?? Array.Empty<CatletDriveConfig>())
+                            {
+                                if (catletDriveConfig.Source != null &&
+                                    catletDriveConfig.Source.StartsWith("gene:") &&
+                                    catletDriveConfig.Source.Contains(response.RequestedGene))
+                                {
+                                    catletDriveConfig.Source =
+                                        catletDriveConfig.Source.Replace(response.RequestedGene, response.ResolvedGene);
+                                }
+
+                            }
+                        }
+                    }
+
+                    if (Data.PendingGeneNames != null && Data.PendingGeneNames.Contains(response.RequestedGene))
+                        Data.PendingGeneNames.Remove(response.ResolvedGene);
+
+                    return Data.PendingGeneNames?.Count == 0
+                        ? UpdateCatlet()
+                        : Task.CompletedTask;
+                });
+        }
+
+        private async Task UpdateCatlet()
+        {
+            Data.GenesPrepared = true;
+            await StartNewTask(new UpdateCatletNetworksCommand
+            {
+                CatletId = Data.CatletId,
+                Config = Data.Config,
+                ProjectId = Data.ProjectId
+            });
+        }
 
         public Task Handle(OperationTaskStatusEvent<UpdateCatletNetworksCommand> message)
         {

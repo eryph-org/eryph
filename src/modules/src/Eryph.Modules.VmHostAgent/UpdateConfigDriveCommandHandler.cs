@@ -29,14 +29,14 @@ internal class UpdateConfigDriveCommandHandler :
     {
         var vmId = command.VMId;
 
-        var config = new CatletConfig
+        var fodderConfig = new CatletConfig
         {
-            Raising = command.MachineMetadata.RaisingConfig
+            Fodder = command.MachineMetadata.Fodder
         };
 
         var hostSettings = HostSettingsBuilder.GetHostSettings();
         var convergeConfigDrive = Prelude.fun(
-            (TypedPsObject<VirtualMachineInfo> vmInfo, VMStorageSettings storageSettings, VMHostMachineData hostInfo) =>
+            (TypedPsObject<VirtualMachineInfo> vmInfo, VMStorageSettings storageSettings, VMHostMachineData hostInfo, CatletConfig config) =>
                 VirtualMachine.ConvergeConfigDrive(hostSettings, hostInfo, Engine, ProgressMessage, vmInfo, config,
                     command.MachineMetadata, command.MachineNetworkSettings, storageSettings));
 
@@ -48,7 +48,9 @@ internal class UpdateConfigDriveCommandHandler :
             from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
             from currentStorageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).WriteTrace()
                 .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
-            from vmInfoConverged in convergeConfigDrive(vmInfo, currentStorageSettings, hostInfo).WriteTrace().ToAsync()
+            
+            let mergedConfig = fodderConfig.GeneticInheritance(metadata.ParentConfig)
+            from vmInfoConverged in convergeConfigDrive(vmInfo, currentStorageSettings, hostInfo, mergedConfig).WriteTrace().ToAsync()
 
             select Unit.Default;
 

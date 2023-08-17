@@ -10,9 +10,9 @@ namespace Eryph.Modules.Controller.DataServices
 {
     internal class VirtualMachineMetadataService : IVirtualMachineMetadataService
     {
-        private readonly IStateStoreRepository<StateDb.Model.VirtualMachineMetadata> _repository;
+        private readonly IStateStoreRepository<StateDb.Model.CatletMetadata> _repository;
 
-        public VirtualMachineMetadataService(IStateStoreRepository<StateDb.Model.VirtualMachineMetadata> repository)
+        public VirtualMachineMetadataService(IStateStoreRepository<StateDb.Model.CatletMetadata> repository)
         {
             _repository = repository;
         }
@@ -35,7 +35,7 @@ namespace Eryph.Modules.Controller.DataServices
             var entity = await _repository.GetByIdAsync(metadata.Id);
             if (entity == null)
             {
-                await _repository.AddAsync(new StateDb.Model.VirtualMachineMetadata
+                await _repository.AddAsync(new StateDb.Model.CatletMetadata
                 {
                     Id = metadata.Id,
                     Metadata = JsonSerializer.Serialize(metadata)
@@ -61,7 +61,7 @@ namespace Eryph.Modules.Controller.DataServices
         }
 
         private static Option<VirtualCatletMetadata> DeserializeMetadataEntity(
-            [CanBeNull] StateDb.Model.VirtualMachineMetadata metadataEntity)
+            [CanBeNull] StateDb.Model.CatletMetadata metadataEntity)
         {
             return JsonSerializer.Deserialize<VirtualCatletMetadata>(metadataEntity.Metadata);
         }

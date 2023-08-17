@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Drawing;
-using System.IO;
 using System.Threading.Tasks;
 using LanguageExt;
 
@@ -19,9 +17,9 @@ namespace Eryph.VmManagement.Storage
 
         public long SizeBytes { get; set; }
 
-        public static Option<DiskStorageSettings> FromTemplateString(HostSettings hostSettings, string templateString)
+        public static Option<DiskStorageSettings> FromSourceString(HostSettings hostSettings, string templateString)
         {
-            if (!templateString.StartsWith("image:"))
+            if (!templateString.StartsWith("gene:"))
             {
                 return new DiskStorageSettings
                 {
@@ -42,7 +40,7 @@ namespace Eryph.VmManagement.Storage
                 return Option<DiskStorageSettings>.None;
             }
 
-            var imageName = parts[1].Replace('/', '\\');
+            var genesetName = parts[1].Replace('/', '\\');
             var diskName = "sda";
 
             if (parts.Length == 3)
@@ -50,18 +48,18 @@ namespace Eryph.VmManagement.Storage
                 diskName = parts[2];
             }
 
-            var imageDiskPath = System.IO.Path.Combine(hostSettings.DefaultVirtualHardDiskPath,
-                "images", imageName, "Virtual Hard Disks", $"{diskName}.vhdx");
+            var geneDiskPath = System.IO.Path.Combine(hostSettings.DefaultVirtualHardDiskPath,
+                "genepool", genesetName, "volumes", $"{diskName}.vhdx");
 
             return new DiskStorageSettings
             {
-                StorageNames = StorageNames.FromPath(imageDiskPath,
+                StorageNames = StorageNames.FromPath(geneDiskPath,
                     hostSettings.DefaultVirtualHardDiskPath).Names,
-                StorageIdentifier = StorageNames.FromPath(imageDiskPath,
+                StorageIdentifier = StorageNames.FromPath(geneDiskPath,
                     hostSettings.DefaultVirtualHardDiskPath).StorageIdentifier,
-                Path = System.IO.Path.GetDirectoryName(imageDiskPath),
-                FileName = System.IO.Path.GetFileName(imageDiskPath),
-                Name = System.IO.Path.GetFileNameWithoutExtension(imageDiskPath)
+                Path = System.IO.Path.GetDirectoryName(geneDiskPath),
+                FileName = System.IO.Path.GetFileName(geneDiskPath),
+                Name = System.IO.Path.GetFileNameWithoutExtension(geneDiskPath)
             };
 
         }

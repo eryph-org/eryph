@@ -49,7 +49,7 @@ public class EryphRebusOperationMessaging : RebusOperationMessaging
                     {
                         case IVMCommand vmCommand:
                             {
-                                var machine = await _dbContext.VirtualCatlets.FindAsync(vmCommand.CatletId)
+                                var machine = await _dbContext.Catlets.FindAsync(vmCommand.CatletId)
                                 .ConfigureAwait(false);
 
                                 if (machine == null)

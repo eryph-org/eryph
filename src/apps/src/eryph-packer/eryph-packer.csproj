@@ -9,11 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Yaml" Version="0.1.0-PullRequest0037.47" />
+    <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.1.0-PullRequest0037.47" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Joveler.Compression.XZ" Version="4.1.0" />
+    <PackageReference Include="Joveler.Compression.XZ" Version="4.2.2" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="System.CommandLine.Rendering" Version="0.4.0-alpha.22272.1" />
   </ItemGroup>

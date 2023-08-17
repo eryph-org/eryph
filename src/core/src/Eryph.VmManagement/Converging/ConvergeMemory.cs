@@ -14,66 +14,81 @@ public class ConvergeMemory : ConvergeTaskBase
     public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo)
     {
-        var dynamicMemoryOn = Context.Config.VCatlet.Memory.Maximum.HasValue || Context.Config.VCatlet.Memory.Minimum.HasValue;
+        var dynamicMemoryOn = (Context.Config.Memory?.Maximum).GetValueOrDefault() != 0 || (Context.Config.Memory?.Minimum).GetValueOrDefault() != 0;
 
         if (vmInfo.Value.DynamicMemoryEnabled != dynamicMemoryOn)
         {
             var onOffString = dynamicMemoryOn ? "Enabling" : "Disabling";
             await Context.ReportProgress($"{onOffString} dynamic memory").ConfigureAwait(false);
 
-            await Context.Engine.RunAsync(PsCommandBuilder.Create()
+            var result = await Context.Engine.RunAsync(PsCommandBuilder.Create()
                 .AddCommand("Set-VMMemory")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("DynamicMemoryEnabled", dynamicMemoryOn)).ConfigureAwait(false);
 
+            if (result.IsLeft)
+                return result.Map(_ => vmInfo).ToError();
+
             if (dynamicMemoryOn)
             {
-                if (Context.Config.VCatlet.Memory.Maximum.HasValue)
+                if ((Context.Config.Memory?.Maximum).HasValue)
                 {
-                    var maxMemoryBytes = Context.Config.VCatlet.Memory.Maximum.GetValueOrDefault() * 1024L * 1024;
+                    var maxMemoryBytes = Context.Config.Memory?.Maximum.GetValueOrDefault() * 1024L * 1024;
                     if (vmInfo.Value.MemoryMaximum != maxMemoryBytes)
                     {
                         await Context
                             .ReportProgress(
-                                $"Setting maximum memory to {Context.Config.VCatlet.Memory.Maximum.GetValueOrDefault()} MB")
+                                $"Setting maximum memory to {Context.Config.Memory?.Maximum.GetValueOrDefault()} MB")
                             .ConfigureAwait(false);
 
-                        await Context.Engine.RunAsync(PsCommandBuilder.Create()
+                        result = await Context.Engine.RunAsync(PsCommandBuilder.Create()
                             .AddCommand("Set-VMMemory")
                             .AddParameter("VM", vmInfo.PsObject)
                             .AddParameter("MaximumBytes", maxMemoryBytes)).ConfigureAwait(false);
+
+                        if (result.IsLeft)
+                            return result.Map(_ => vmInfo).ToError();
+
                     }
                 }
 
-                if (Context.Config.VCatlet.Memory.Minimum.HasValue)
+                if ((Context.Config.Memory?.Minimum).HasValue)
                 {
-                    var minMemoryBytes = Context.Config.VCatlet.Memory.Minimum.GetValueOrDefault(Context.Config.VCatlet.Memory.Startup.GetValueOrDefault()) * 1024L * 1024;
+                    var minMemoryBytes = Context.Config.Memory?.Minimum.GetValueOrDefault(Context.Config.Memory.Startup.GetValueOrDefault()) * 1024L * 1024;
 
                     if (vmInfo.Value.MemoryMinimum != minMemoryBytes)
                     {
                         await Context
                             .ReportProgress(
-                                $"Setting minimum memory to {Context.Config.VCatlet.Memory.Minimum.GetValueOrDefault()} MB")
+                                $"Setting minimum memory to {Context.Config.Memory?.Minimum.GetValueOrDefault()} MB")
                             .ConfigureAwait(false);
 
-                        await Context.Engine.RunAsync(PsCommandBuilder.Create()
+                        result = await Context.Engine.RunAsync(PsCommandBuilder.Create()
                             .AddCommand("Set-VMMemory")
                             .AddParameter("VM", vmInfo.PsObject)
                             .AddParameter("MinimumBytes", minMemoryBytes)).ConfigureAwait(false);
+
+                        if (result.IsLeft)
+                            return result.Map(_ => vmInfo).ToError();
+
                     }
                 }
             }
         }
 
-        var memoryStartupBytes = Context.Config.VCatlet.Memory.Startup.GetValueOrDefault(1024) * 1024L * 1024;
+        var memoryStartupBytes = Context.Config.Memory?.Startup.GetValueOrDefault(1024) * 1024L * 1024;
         if (memoryStartupBytes != vmInfo.Value.MemoryStartup)
         {
-            await Context.ReportProgress($"Setting startup memory to {Context.Config.VCatlet.Memory.Startup.GetValueOrDefault(1024)} MB").ConfigureAwait(false);
-
-            await Context.Engine.RunAsync(PsCommandBuilder.Create()
+            await Context.ReportProgress($"Setting startup memory to {Context.Config.Memory?.Startup.GetValueOrDefault(1024)} MB").ConfigureAwait(false);
+                
+            var result = await Context.Engine.RunAsync(PsCommandBuilder.Create()
                 .AddCommand("Set-VMMemory")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("StartupBytes", memoryStartupBytes)).ConfigureAwait(false);
+
+            if (result.IsLeft)
+                return result.Map(_ => vmInfo).ToError();
+
         }
 
 

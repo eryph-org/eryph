@@ -22,6 +22,6 @@ namespace Eryph.Modules.ComputeApi.Model.V1
         public Guid ParentId { get; set; }
 
 
-        public IEnumerable<VirtualCatletDrive> AttachedDrives { get; set; }
+        public IEnumerable<CatletDrive> AttachedDrives { get; set; }
     }
 }

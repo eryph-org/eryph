@@ -30,27 +30,25 @@ namespace Eryph.Modules.Controller.Operations
         {
             var machineConfig = config;
 
-            if (machineConfig.VCatlet == null)
-                machineConfig.VCatlet = new VirtualCatletConfig();
 
             if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == Guid.Empty)
                 machineConfig.Name = $"catlet";
 
 
-            if (machineConfig.VCatlet.Cpu == null)
-                machineConfig.VCatlet.Cpu = new VirtualCatletCpuConfig();
+            if (machineConfig.Cpu == null)
+                machineConfig.Cpu = new CatletCpuConfig();
 
-            if (machineConfig.VCatlet.Memory == null)
-                machineConfig.VCatlet.Memory = new VirtualCatletMemoryConfig();
+            if (machineConfig.Memory == null)
+                machineConfig.Memory = new CatletMemoryConfig();
 
-            if (machineConfig.VCatlet.Drives == null)
-                machineConfig.VCatlet.Drives = Array.Empty<VirtualCatletDriveConfig>();
+            if (machineConfig.Drives == null)
+                machineConfig.Drives = Array.Empty<CatletDriveConfig>();
 
-            if (machineConfig.VCatlet.NetworkAdapters == null)
-                machineConfig.VCatlet.NetworkAdapters = Array.Empty<VirtualCatletNetworkAdapterConfig>();
+            if (machineConfig.NetworkAdapters == null)
+                machineConfig.NetworkAdapters = Array.Empty<CatletNetworkAdapterConfig>();
 
-            if (machineConfig.Raising == null)
-                machineConfig.Raising = new CatletRaisingConfig();
+            if (machineConfig.Fodder == null)
+                machineConfig.Fodder = Array.Empty<FodderConfig>();
 
             if (machineConfig.Networks == null)
             {
@@ -67,10 +65,10 @@ namespace Eryph.Modules.Controller.Operations
                     machineConfig.Networks[i].AdapterName = $"eth{i}";
             }
 
-            if (string.IsNullOrWhiteSpace(machineConfig.Raising.Hostname))
-                machineConfig.Raising.Hostname =  machineConfig.VCatlet.Slug;
+            if (string.IsNullOrWhiteSpace(machineConfig.Hostname))
+                machineConfig.Hostname =  machineConfig.Label;
 
-            foreach (var adapterConfig in machineConfig.VCatlet.NetworkAdapters)
+            foreach (var adapterConfig in machineConfig.NetworkAdapters)
             {
                 if (adapterConfig.MacAddress != null)
                 {
@@ -84,10 +82,10 @@ namespace Eryph.Modules.Controller.Operations
                 }
             }
 
-            foreach (var driveConfig in machineConfig.VCatlet.Drives)
+            foreach (var driveConfig in machineConfig.Drives)
             {
                 if (!driveConfig.Type.HasValue)
-                    driveConfig.Type = VirtualCatletDriveType.VHD;
+                    driveConfig.Type = CatletDriveType.VHD;
 
                 if (driveConfig.Size == 0)
                     driveConfig.Size = null;

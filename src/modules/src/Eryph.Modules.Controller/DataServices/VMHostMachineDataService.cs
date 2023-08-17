@@ -10,23 +10,23 @@ namespace Eryph.Modules.Controller.DataServices
 {
     internal class VMHostMachineDataService : IVMHostMachineDataService
     {
-        private readonly IStateStoreRepository<VirtualCatletHost> _repository;
+        private readonly IStateStoreRepository<CatletFarm> _repository;
 
-        public VMHostMachineDataService(IStateStoreRepository<VirtualCatletHost> repository)
+        public VMHostMachineDataService(IStateStoreRepository<CatletFarm> repository)
         {
             _repository = repository;
         }
 
-        public async Task<Option<VirtualCatletHost>> GetVMHost(Guid id)
+        public async Task<Option<CatletFarm>> GetVMHost(Guid id)
         {
             var res = await _repository.GetByIdAsync(id);
             return res;
         }
 
-        public async Task<VirtualCatletHost> AddNewVMHost(VirtualCatletHost vmHostMachine)
+        public async Task<CatletFarm> AddNewVMHost(CatletFarm vmHostMachine)
         {
             if (vmHostMachine.Id == Guid.Empty)
-                throw new ArgumentException($"{nameof(VirtualCatletHost.Id)} is missing", nameof(vmHostMachine));
+                throw new ArgumentException($"{nameof(CatletFarm.Id)} is missing", nameof(vmHostMachine));
 
 
             var res = await _repository.AddAsync(vmHostMachine);
@@ -34,14 +34,14 @@ namespace Eryph.Modules.Controller.DataServices
         }
 
         
-        public async Task<Option<VirtualCatletHost>> GetVMHostByHardwareId(string hardwareId)
+        public async Task<Option<CatletFarm>> GetVMHostByHardwareId(string hardwareId)
         {
             return await _repository.GetBySpecAsync(new VMHostMachineSpecs.GetByHardwareId(hardwareId));
         }
 
-        public async Task<Option<VirtualCatletHost>> GetVMHostByAgentName(string agentName)
+        public async Task<Option<CatletFarm>> GetVMHostByAgentName(string agentName)
         {
-            return (await _repository.ListAsync(new ResourceSpecs<VirtualCatletHost>.GetByName(agentName))).FirstOrDefault();
+            return (await _repository.ListAsync(new ResourceSpecs<CatletFarm>.GetByName(agentName))).FirstOrDefault();
         }
     }
 }

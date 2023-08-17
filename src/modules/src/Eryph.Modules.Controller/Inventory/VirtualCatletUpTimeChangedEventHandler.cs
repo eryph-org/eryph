@@ -40,17 +40,17 @@ namespace Eryph.Modules.Controller.Inventory
 
                 return _metadataService.GetMetadata(vm.MetadataId).IfSomeAsync(async metaData =>
                 {
-                    if (metaData.SensitiveDataHidden)
+                    if (metaData.SecureDataHidden)
                         return;
 
-                    var anySensitive = metaData.RaisingConfig?.Config.Any(x => x.Sensitive);
+                    var anySensitive = metaData.Fodder?.Any(x => x.Secret.GetValueOrDefault());
 
                     if (!anySensitive.GetValueOrDefault())
                         return;
 
                     if (vm.UpTime.GetValueOrDefault().TotalMinutes >= 5)
                     {
-                        metaData.SensitiveDataHidden = true;
+                        metaData.SecureDataHidden = true;
                         await _metadataService.SaveMetadata(metaData);
 
                         await _opDispatcher.StartNew(

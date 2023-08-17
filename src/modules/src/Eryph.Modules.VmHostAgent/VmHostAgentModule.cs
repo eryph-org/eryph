@@ -8,7 +8,7 @@ using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.ModuleCore.Networks;
-using Eryph.Modules.VmHostAgent.Images;
+using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
@@ -42,9 +42,8 @@ namespace Eryph.Modules.VmHostAgent
                 opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 
 
-            services.AddHttpClient("eryph-hub", cfg =>
+            services.AddHttpClient(GenePoolNames.EryphGenePool, cfg =>
             {
-                //cfg.BaseAddress = new Uri("https://eryph-images-staging.dbosoft.eu/file/eryph-images-staging/");
                 cfg.BaseAddress = new Uri("https://eryph-staging-b2.b-cdn.net");
             })
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
@@ -64,7 +63,7 @@ namespace Eryph.Modules.VmHostAgent
             options.AddHostedService<SyncService>();
             options.AddHostedService<OVSChassisService>();
             options.AddHostedService<WmiWatcherModuleService>();
-            options.AddHostedService<ImageRequestWatcherService>();
+            options.AddHostedService<GeneticsRequestWatcherService>();
             options.AddLogging();
 
             options.Services.AddHostedHandler<StartBusModuleHandler>();
@@ -92,14 +91,14 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
             container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
 
-            var imageSourceFactory = new ImageSourceFactory(container);
+            var genePoolFactory = new GenePoolFactory(container);
        
-            imageSourceFactory.Register<LocalImageSource>(ImagesSources.Local);
-            imageSourceFactory.Register<RepositoryImageSource>(ImagesSources.EryphHub);
-            container.RegisterInstance<IImageSourceFactory>(imageSourceFactory);
-            container.RegisterSingleton<IImageProvider, LocalFirstImageProvider>();
-            container.RegisterSingleton<IImageRequestDispatcher, ImageRequestRegistry>();
-            container.RegisterSingleton<IImageRequestBackgroundQueue, ImageBackgroundTaskQueue>();
+            genePoolFactory.Register<LocalGenePoolSource>(GenePoolNames.Local);
+            genePoolFactory.Register<RepositoryGenePool>(GenePoolNames.EryphGenePool);
+            container.RegisterInstance<IGenePoolFactory>(genePoolFactory);
+            container.RegisterSingleton<IGeneProvider, LocalFirstGeneProvider>();
+            container.RegisterSingleton<IGeneRequestDispatcher, GeneRequestRegistry>();
+            container.RegisterSingleton<IGeneRequestBackgroundQueue, GeneBackgroundTaskQueue>();
 
 
             container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());

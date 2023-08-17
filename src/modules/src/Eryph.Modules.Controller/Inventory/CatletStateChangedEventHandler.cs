@@ -20,7 +20,7 @@ namespace Eryph.Modules.Controller.Inventory
 
         public async Task Handle(VMStateChangedEvent message)
         {
-            var vCatlet = await _stateStoreContext.VirtualCatlets.FirstOrDefaultAsync(x=> x.VMId == message.VmId);
+            var vCatlet = await _stateStoreContext.Catlets.FirstOrDefaultAsync(x=> x.VMId == message.VmId);
 
             if (vCatlet == null)
                 return;

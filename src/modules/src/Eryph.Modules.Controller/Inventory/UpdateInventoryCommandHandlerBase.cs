@@ -51,7 +51,7 @@ namespace Eryph.Modules.Controller.Inventory
             parentDisks.Add(disk);
         }
 
-        protected async Task UpdateVMs(IEnumerable<VirtualMachineData> vmList, VirtualCatletHost hostMachine)
+        protected async Task UpdateVMs(IEnumerable<VirtualMachineData> vmList, CatletFarm hostMachine)
         {
 
             var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
@@ -172,7 +172,7 @@ namespace Eryph.Modules.Controller.Inventory
                                 _messageContext.GetTraceId(),
                                 new UpdateVCatletMetadataCommand
                             {
-                                AgentName = hostMachine.AgentName,
+                                AgentName = hostMachine.Name,
                                 CurrentMetadataId = oldMetadataId,
                                 NewMetadataId = metadata.Id,
                                 CatletId = metadata.MachineId,
@@ -247,10 +247,10 @@ namespace Eryph.Modules.Controller.Inventory
             return foundProject.IfNone(new Project());
         }
 
-        private VirtualCatlet VirtualMachineInfoToVCatlet(VirtualMachineData vmInfo, VirtualCatletHost hostMachine,
+        private Catlet VirtualMachineInfoToVCatlet(VirtualMachineData vmInfo, CatletFarm hostMachine,
             Guid machineId, Project project)
         {
-            return new VirtualCatlet
+            return new Catlet
             {
                 Id = machineId,
                 Project = project,
@@ -259,7 +259,7 @@ namespace Eryph.Modules.Controller.Inventory
                 Name = vmInfo.Name,
                 Status = MapVmStatusToMachineStatus(vmInfo.Status),
                 Host = hostMachine,
-                AgentName = hostMachine.AgentName,
+                AgentName = hostMachine.Name,
                 DataStore = vmInfo.DataStore,
                 Environment = vmInfo.Environment,
                 Path = vmInfo.VMPath,
@@ -272,17 +272,17 @@ namespace Eryph.Modules.Controller.Inventory
                 MinimumMemory = vmInfo.Memory?.Minimum ?? 0,
                 MaximumMemory = vmInfo.Memory?.Startup ?? 0,
                 Features = MapFeatures(vmInfo),
-                NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new VirtualCatletNetworkAdapter
+                NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new CatletNetworkAdapter
                 {
                     Id = a.Id,
-                    MachineId = machineId,
+                    CatletId = machineId,
                     Name = a.AdapterName,
                     SwitchName = a.VirtualSwitchName
                 }).ToList(),
-                Drives = vmInfo.Drives.Select(d => new VirtualCatletDrive
+                Drives = vmInfo.Drives.Select(d => new CatletDrive
                 {
                     Id = d.Id,
-                    MachineId = machineId,
+                    CatletId = machineId,
                     Type = d.Type,
                     //TODO: this code may needs to be improved
                     AttachedDisk = d.Disk != null
@@ -293,17 +293,14 @@ namespace Eryph.Modules.Controller.Inventory
             };
         }
 
-        private static List<VCatletFeature> MapFeatures(VirtualMachineData vmInfo)
+        private static List<CatletFeature> MapFeatures(VirtualMachineData vmInfo)
         {
-            var features = new List<VCatletFeature>();
-
-            if(vmInfo.Memory?.DynamicMemoryEnabled ?? false)
-                features.Add(VCatletFeature.DynamicMemory);
-
+            var features = new List<CatletFeature>();
+            
             if(vmInfo.Firmware?.SecureBoot ?? false)
-                features.Add(VCatletFeature.SecureBoot);
+                features.Add(CatletFeature.SecureBoot);
             if (vmInfo.Cpu?.ExposeVirtualizationExtensions ?? false)
-                features.Add(VCatletFeature.NestedVirtualization);
+                features.Add(CatletFeature.NestedVirtualization);
 
 
             return features;

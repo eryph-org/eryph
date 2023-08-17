@@ -41,7 +41,7 @@ namespace Eryph.VmManagement.Storage
                 select
                     new CurrentHardDiskDriveStorageSettings
                     {
-                        Type = VirtualCatletDriveType.VHD,
+                        Type = CatletDriveType.VHD,
                         AttachPath = snapshotPath.IsSome ? snapshotPath : vhdPath,
                         Frozen = snapshotPath.IsSome,
                         AttachedVMId = hdInfo.Id,

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Catlets;
 
@@ -10,8 +11,13 @@ namespace Eryph.Modules.Controller.Compute
 
         public bool Validated;
         public CatletConfig? Config { get; set; }
+        public CatletConfig? BreedConfig { get; set; }
+
         public Guid CatletId { get; set; }
         public string? AgentName { get; set; }
         public Guid ProjectId { get; set; }
+        public List<string>? PendingGeneNames { get; set; }
+        public bool GenesPrepared { get; set; }
+
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Networks;
 
 namespace Eryph.Messages.Resources.Networks.Commands
 {

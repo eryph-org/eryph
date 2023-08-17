@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
+using Eryph.ConfigModel.Networks;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;

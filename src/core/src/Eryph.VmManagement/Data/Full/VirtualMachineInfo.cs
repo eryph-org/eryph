@@ -43,7 +43,7 @@ namespace Eryph.VmManagement.Data.Full
         //public int AutomaticCriticalErrorActionTimeout { get; private set; }
 
 
-        //public bool AutomaticCheckpointsEnabled { get; private set; }
+        public bool AutomaticCheckpointsEnabled { get; private set; }
 
 
         //public int CPUUsage { get; private set; }

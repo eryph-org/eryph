@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -54,10 +55,10 @@ namespace Eryph.VmManagement.Converging
                     return await (from d in CreateConfigDriveDirectory(Context.StorageSettings.VMPath).ToAsync()
                         from networkData in GenerateNetworkData(vmInfo).ToAsync()
                         from _ in GenerateConfigDriveDisk(configDriveIsoPath,
-                            Context.Metadata.SensitiveDataHidden,
-                            string.IsNullOrWhiteSpace(Context.Config.Raising.Hostname) ? storageIdentifier : Context.Config.Raising.Hostname,
+                            Context.Metadata.SecureDataHidden,
+                            string.IsNullOrWhiteSpace(Context.Config.Hostname) ? storageIdentifier : Context.Config.Hostname,
                             networkData,
-                            Context.Config.Raising.Config).ToAsync()
+                            Context.Config.Fodder).ToAsync()
                         from newVmInfo in InsertConfigDriveDisk(configDriveIsoPath, vmInfo).ToAsync()
                         select newVmInfo);
 
@@ -68,7 +69,7 @@ namespace Eryph.VmManagement.Converging
             );
         }
 
-        private static async Task<Either<Error, NetworkData>> GenerateNetworkData(TypedPsObject<VirtualMachineInfo> vmInfo)
+        private async Task<Either<Error, NetworkData>> GenerateNetworkData(TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var config = new List<object>();
             const string regex = "(.{2})(.{2})(.{2})(.{2})(.{2})(.{2})";
@@ -76,6 +77,7 @@ namespace Eryph.VmManagement.Converging
 
             foreach (var adapterDevice in vmInfo.GetList(x=>x.NetworkAdapters))
             {
+                
                 (await adapterDevice.CastSafeAsync<VMNetworkAdapter>()).IfRight(adapter =>
                 {
                     var macFormatted = Regex.Replace(adapter.Value.MacAddress, regex, replace).ToLowerInvariant();
@@ -85,7 +87,14 @@ namespace Eryph.VmManagement.Converging
                         type = "physical",
                         id = adapter.Value.Name,
                         name = adapter.Value.Name,
-                        mac_address = macFormatted
+                        mac_address = macFormatted,
+                        subnets = (Context.Config.Networks?.Filter(x=>x.AdapterName == adapter.Value.Name) 
+                                   ?? new []{new CatletNetworkConfig()}.AsEnumerable())
+                            .Map(nw => new
+                            {
+                                type = "dhcp"
+                            })
+                        
                     };
                     config.Add(physicalNetworkSettings);
                 });
@@ -99,7 +108,7 @@ namespace Eryph.VmManagement.Converging
             bool withoutSensitive,
             string hostname,
             NetworkData networkData,
-            [CanBeNull] CloudInitConfig[] config)
+            [CanBeNull] FodderConfig[] config)
         {
 
             return Prelude.TryAsync(async () =>
@@ -113,7 +122,7 @@ namespace Eryph.VmManagement.Converging
                     {
                         foreach (var cloudInitConfig in config)
                         {
-                            if (withoutSensitive && cloudInitConfig.Sensitive)
+                            if (withoutSensitive && cloudInitConfig.Secret.GetValueOrDefault())
                                 continue;
 
                             var contentType = cloudInitConfig.Type switch
