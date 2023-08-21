@@ -12,13 +12,13 @@ namespace Eryph.VmManagement;
 internal static class PowerShellInvokeExtensions
 {
     public static Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(
-        this PowerShell ps, IEnumerable input,  ILogger log, IPsObjectRegistry registry, TypedPsObjectMapping mapping)
+        this PowerShell ps, IEnumerable input,  ILogger log, IPsObjectRegistry registry, ITypedPsObjectMapping mapping)
     {
         return InvokeGetObjects(ps, ps.InvokeTyped<T>(input, registry, mapping), log);
     }
 
     public static async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(
-        this PowerShell ps, IEnumerable input, ILogger log, IPsObjectRegistry registry, TypedPsObjectMapping mapping)
+        this PowerShell ps, IEnumerable input, ILogger log, IPsObjectRegistry registry, ITypedPsObjectMapping mapping)
     {
         using var inputData = new PSDataCollection<PSObject>();
 
@@ -138,7 +138,7 @@ internal static class PowerShellInvokeExtensions
     }
 
     public static Try<Seq<TypedPsObject<T>>> InvokeTyped<T>(this PowerShell ps, IEnumerable input, 
-        IPsObjectRegistry registry, TypedPsObjectMapping mapping)
+        IPsObjectRegistry registry, ITypedPsObjectMapping mapping)
     {
         return Prelude.Try( () =>
         {

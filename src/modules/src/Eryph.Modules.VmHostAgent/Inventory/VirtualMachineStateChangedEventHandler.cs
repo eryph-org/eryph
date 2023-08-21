@@ -17,10 +17,11 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
         public Task Handle(VirtualMachineStateChangedEvent message)
         {
-            return _bus.Publish(new VMStateChangedEvent
+            return _bus.Advanced.Topics.Publish("vm_events",new VMStateChangedEvent
             {
                 VmId = message.VmId,
-                Status = InventoryConverter.MapVmInfoStatusToVmStatus(message.State)
+                Status = InventoryConverter.MapVmInfoStatusToVmStatus(message.State),
+                TimeStamp = message.TimeStamp,
             });
         }
     }

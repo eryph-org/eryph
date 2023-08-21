@@ -64,7 +64,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                             ChangedNetwork = VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, new []{adapter.Value})
                                 .FirstOrDefault()
                         }).ToEither()).ToAsync().MatchAsync(
-                    r => _bus.Publish(r),
+                    r => _bus.Advanced.Topics.Publish("vm_events",r),
                     l => { _log.LogError(l.Message); });
         }
 

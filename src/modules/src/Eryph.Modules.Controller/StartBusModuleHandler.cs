@@ -17,9 +17,10 @@ namespace Eryph.Modules.Controller
             _workflowOptions = workflowOptions;
         }
 
-        public Task Execute(CancellationToken stoppingToken)
+        public async Task Execute(CancellationToken stoppingToken)
         {
-            return OperationsSetup.SubscribeEvents(_bus, _workflowOptions);
+            await OperationsSetup.SubscribeEvents(_bus, _workflowOptions);
+            await _bus.Advanced.Topics.Subscribe("vm_events");
         }
     }
 }

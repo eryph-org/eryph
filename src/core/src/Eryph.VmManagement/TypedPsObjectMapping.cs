@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.VmManagement;
 
-public class TypedPsObjectMapping
+public class TypedPsObjectMapping : ITypedPsObjectMapping
 {
     private IMapper _mapper;
     private readonly ILogger _logger;

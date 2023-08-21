@@ -8,6 +8,8 @@ namespace Eryph.StateDb.Model
         public string AgentName { get; set; }
 
         public CatletStatus Status { get; set; }
+        public DateTime StatusTimestamp { get; set; }
+
         public CatletType CatletType { get; set; }
 
 

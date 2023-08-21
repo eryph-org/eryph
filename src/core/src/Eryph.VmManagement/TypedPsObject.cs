@@ -16,9 +16,9 @@ namespace Eryph.VmManagement
     public sealed record TypedPsObject<T> : ITypedPsObject
     {
         private readonly IPsObjectRegistry _registry;
-        private readonly TypedPsObjectMapping _mapping;
+        private readonly ITypedPsObjectMapping _mapping;
 
-        public TypedPsObject(PSObject psObject, IPsObjectRegistry registry, TypedPsObjectMapping mapping )
+        public TypedPsObject(PSObject psObject, IPsObjectRegistry registry, ITypedPsObjectMapping mapping )
         {
             _registry = registry;
             _mapping = mapping;

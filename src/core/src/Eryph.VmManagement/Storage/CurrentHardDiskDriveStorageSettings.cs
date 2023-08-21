@@ -43,7 +43,7 @@ namespace Eryph.VmManagement.Storage
                     {
                         Type = CatletDriveType.VHD,
                         AttachPath = snapshotPath.IsSome ? snapshotPath : vhdPath,
-                        Frozen = snapshotPath.IsSome,
+                        Frozen = diskSettings.StorageIdentifier.IsNone || !diskSettings.StorageNames.IsValid || snapshotPath.IsSome,
                         AttachedVMId = hdInfo.Id,
                         ControllerNumber = hdInfo.ControllerNumber,
                         ControllerLocation = hdInfo.ControllerLocation,

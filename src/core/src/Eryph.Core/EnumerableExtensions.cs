@@ -8,7 +8,7 @@ namespace System.Linq
     {
         // copied from https://github.com/dotnet/efcore/blob/main/src/Shared/EnumerableExtensions.cs 
         // Copyright (c) .NET Foundation. All rights reserved.
-        // Licensed under the Apache License, Version 2.0. https://github.com/dotnet/efcore/blob/main/LICENSE.txt
+        // Licensed under MIT license https://github.com/dotnet/efcore/blob/main/LICENSE.txt
         public static IEnumerable<T> Distinct<T>(
             [NotNull] this IEnumerable<T> source,
             [NotNull] Func<T, T, bool> comparer)

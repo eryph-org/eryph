@@ -7,5 +7,6 @@ namespace Eryph.Modules.VmHostAgent.Inventory
     {
         public Guid VmId { get; set; }
         public VirtualMachineState State { get; set; }
+        public DateTime TimeStamp { get; set; }
     }
 }

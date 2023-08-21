@@ -8,11 +8,17 @@ using LanguageExt.UnsafeValueAccess;
 
 namespace Eryph.VmManagement.Storage
 {
-    public class StorageNames
+    public readonly struct StorageNames
     {
-        public Option<string> DataStoreName { get; set; }
-        public Option<string> ProjectName { get; set; }
-        public Option<string> EnvironmentName { get; set; }
+        public StorageNames()
+        {
+        }
+
+        public Option<string> DataStoreName { get; init; } = "default";
+        public Option<string> ProjectName { get; init; } = "default";
+        public Option<string> EnvironmentName { get; init; } = "default";
+
+        public bool IsValid => DataStoreName.IsSome && ProjectName.IsSome && EnvironmentName.IsSome;
 
         public static (StorageNames Names, Option<string> StorageIdentifier) FromPath(string path, string defaultPath)
         {
@@ -68,7 +74,7 @@ namespace Eryph.VmManagement.Storage
                         }
                     }
 
-                    idCandidate = idIsGeneRef ? $"gene:{idCandidate}" : null;
+                    idCandidate = idIsGeneRef ? $"gene:{idCandidate}:{Path.GetFileNameWithoutExtension(lastPart)}" : null;
                 }
 
                 if (!string.IsNullOrWhiteSpace(idCandidate))
@@ -87,17 +93,17 @@ namespace Eryph.VmManagement.Storage
 
         public EitherAsync<Error, string> ResolveStorageBasePath(string defaultPath)
         {
+            var names = this;
             return
                 from dsName in DataStoreName.ToEitherAsync(
                     Error.New("Unknown data store name. Cannot resolve path"))
-                from projectName in ProjectName.ToEitherAsync(Error.New(
+                from projectName in names.ProjectName.ToEitherAsync(Error.New(
                     "Unknown project name. Cannot resolve path"))
-                from environmentName in EnvironmentName.ToEitherAsync(Error.New(
+                from environmentName in names.EnvironmentName.ToEitherAsync(Error.New(
                     "Unknown environment name. Cannot resolve path"))
                 from dsPath in LookupVMDatastorePathInEnvironment(dsName, environmentName, defaultPath).ToAsync()
                 from projectPath in JoinPathAndProject(dsPath, projectName)
                 select projectPath;
-
         }
 
         private static async Task<Either<Error, string>> LookupVMDatastorePathInEnvironment(

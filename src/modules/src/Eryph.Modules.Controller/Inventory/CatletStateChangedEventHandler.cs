@@ -25,8 +25,12 @@ namespace Eryph.Modules.Controller.Inventory
             if (vCatlet == null)
                 return;
 
-            vCatlet.Status = MapVmStatusToCatletStatus(message.Status);
+            // ignore old events
+            if(vCatlet.StatusTimestamp > message.TimeStamp) 
+                return;
 
+            vCatlet.Status = MapVmStatusToCatletStatus(message.Status);
+            vCatlet.StatusTimestamp = message.TimeStamp;
             if (vCatlet.Status == CatletStatus.Stopped)
             {
                 vCatlet.UpTime = TimeSpan.Zero;

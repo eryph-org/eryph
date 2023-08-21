@@ -51,7 +51,7 @@ namespace Eryph.VmManagement
                 .ToAsync()
                 .ToError()
                 .Bind(info => Rename(engine, info, vmName))
-                .Bind(info => DisableAutomaticCheckpoint(engine, info));
+                .Bind(info => SetDefaults(engine, info));
 
         }
 
@@ -196,6 +196,7 @@ namespace Eryph.VmManagement
             ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
+
         public static EitherAsync<Error, TypedPsObject<T>> Rename<T>(
             IPowershellEngine engine,
             TypedPsObject<T> vmInfo,
@@ -209,17 +210,20 @@ namespace Eryph.VmManagement
             ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
-        public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> DisableAutomaticCheckpoint(
+        public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> SetDefaults(
             IPowershellEngine engine,
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
-            if (!vmInfo.Value.AutomaticCheckpointsEnabled)
-                return vmInfo;
 
             return engine.RunAsync(new PsCommandBuilder()
                     .AddCommand("Set-VM")
                     .AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("AutomaticCheckpointsEnabled",false)
+                    .AddParameter("DynamicMemory", false)
+                    .AddParameter("AutomaticCheckpointsEnabled", false)
+                    .AddParameter("EnhancedSessionTransportType", "VMBus")
+                    .AddParameter("AutomaticStartAction", "Nothing")
+                    .AddParameter("AutomaticStopAction", "Save")
+
             ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
         }
 

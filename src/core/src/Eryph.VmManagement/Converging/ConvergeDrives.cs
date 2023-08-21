@@ -111,7 +111,7 @@ namespace Eryph.VmManagement.Converging
 
         {
             var planedDiskSettings = plannedStorageSettings.Where(x =>
-                    x.Type == CatletDriveType.VHD || x.Type == CatletDriveType.SharedVHD)
+                    x.Type is CatletDriveType.VHD or CatletDriveType.SharedVHD)
                 .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
             var attachedPaths = planedDiskSettings.Map(s => s.AttachPath).Map(x => x.IfNone(""))

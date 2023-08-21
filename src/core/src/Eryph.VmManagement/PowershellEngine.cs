@@ -102,7 +102,7 @@ namespace Eryph.VmManagement
             return await ps.RunAsync(input, _log).ConfigureAwait(false);
         }
 
-        public TypedPsObjectMapping ObjectMapping { get; }
+        public ITypedPsObjectMapping ObjectMapping { get; }
 
         public async Task<PowerShell> CreateShell()
         {

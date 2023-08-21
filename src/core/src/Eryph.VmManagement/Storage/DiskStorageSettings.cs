@@ -17,6 +17,7 @@ namespace Eryph.VmManagement.Storage
 
         public long SizeBytes { get; set; }
 
+
         public static Option<DiskStorageSettings> FromSourceString(HostSettings hostSettings, string templateString)
         {
             if (!templateString.StartsWith("gene:"))
