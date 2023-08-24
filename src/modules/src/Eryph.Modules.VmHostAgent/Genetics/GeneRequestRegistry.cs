@@ -123,8 +123,10 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
                             },
                             None: async () =>
                             {
+                                var resolvedGenesets =
+                                    innerContext.ResolvedGenSets.Insert(0, resolvedGene.GeneSet.Name);
                                 var ancestorsString = string.Join(" => ", innerContext.ResolvedGenSets);
-                                if (innerContext.ResolvedGenSets.Length > 0 && ancestorsString != innerContext.OriginalRequest)
+                                if (resolvedGenesets.Length > 1 && ancestorsString != innerContext.OriginalRequest)
                                 {
                                     await m.ProgressMessage(innerContext.Message,
                                         $"Resolved ancestors of catlet {innerContext.OriginalRequest}: {ancestorsString}");
@@ -138,7 +140,7 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
                                 var result = new PrepareParentGenomeResponse
                                 {
                                     RequestedParent = innerContext.OriginalRequest,
-                                    ResolvedParent = innerContext.ResolvedGenSets.FirstOrDefault() ?? innerContext.OriginalRequest
+                                    ResolvedParent = resolvedGenesets.FirstOrDefault() ?? resolvedGene.GeneSet.Name
                                 };
 
                                 await m.CompleteTask(context.Message, result);
