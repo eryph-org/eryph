@@ -6,6 +6,20 @@ namespace Eryph.StateDb.Specifications
 {
     public class CatletSpecs
     {
+
+        public sealed class GetByName : Specification<Catlet>, ISingleResultSpecification
+        {
+            public GetByName(string name, Guid tenantId, string projectName)
+            {
+                Query
+                    .Include(x => x.Project)
+                    .Where(x => x.Project.TenantId == tenantId && x.Project.Name == projectName.ToLowerInvariant())
+                    .Where(x => x.Name == name.ToLowerInvariant());
+
+
+            }
+        }
+
         public sealed class GetByVMId : Specification<Catlet>, ISingleResultSpecification
         {
             public GetByVMId(Guid vmId)

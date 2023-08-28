@@ -14,5 +14,12 @@ public static class SubnetSpecs
         }
     }
 
+    public sealed class GetByProviderName : Specification<ProviderSubnet>, ISingleResultSpecification
+    {
+        public GetByProviderName( string providerName, string subnetName)
+        {
+            Query.Where(x => x.ProviderName == providerName && x.Name == subnetName);
+        }
+    }
 
 }

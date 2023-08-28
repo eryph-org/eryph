@@ -105,7 +105,7 @@ namespace Eryph.Modules.Controller.Compute
                 else
                 {
                     var breedConfig = await machineInfo.ToAsync().Bind(m =>
-                            _metadataService.GetMetadata(m.MetadataId).MapAsync(m => m.ParentConfig))
+                            _metadataService.GetMetadata(m.MetadataId).MapAsync(m => m.ParentConfig ?? new CatletConfig()))
                         .Map(parentConfig => parentConfig?.Breed(Data.Config, Data.Config.Parent) ?? Data.Config)
                         .IfNone(Data.Config);
 

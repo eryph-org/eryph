@@ -74,8 +74,8 @@ namespace Eryph.VmManagement.Storage
                 DataStoreName = dataStoreName
             };
 
-            if (!string.IsNullOrWhiteSpace(config.Label))
-                storageIdentifier = Prelude.Some(config.Label);
+            if (!string.IsNullOrWhiteSpace(config.Location))
+                storageIdentifier = Prelude.Some(config.Location);
 
             return from dataPath in  names.ResolveStorageBasePath(hostSettings.DefaultDataPath)
                    from importVhdPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath)

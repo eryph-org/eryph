@@ -31,7 +31,6 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
 
         public override Task<ActionResult<Catlet>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
         {
-            var id = HttpContext.TraceIdentifier;
             return base.HandleAsync(request, cancellationToken);
         }
 

@@ -8,7 +8,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
         {
             string userRole = null;
 
-            CreateMap<StateDb.Model.VirtualNetwork, CatletNetwork>();
+            CreateMap<StateDb.Model.ReportedNetwork, CatletNetwork>();
 
             CreateMap<StateDb.Model.VirtualNetwork, VirtualNetwork>()
             .ForMember(x => x.ProviderName,
@@ -23,6 +23,10 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.CatletNetworkAdapter, CatletNetworkAdapter>();
             CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>().ForMember(x => x.Path,
                 o => { o.MapFrom(s => userRole == "Admin" ? s.Path : null); });
+
+            CreateMap<StateDb.Model.Catlet, Catlet>()
+                .ForMember(x => x.Networks, m => m.MapFrom(y => y.ReportedNetworks));
+
         }
     }
 }

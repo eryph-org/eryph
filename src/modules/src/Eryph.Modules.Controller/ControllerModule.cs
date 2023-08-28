@@ -62,6 +62,7 @@ namespace Eryph.Modules.Controller
             container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
 
             container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
+            container.Register<IProviderIpManager, ProviderIpManager>(Lifestyle.Scoped);
             container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
             container.Register<INetworkConfigValidator, NetworkConfigValidator>(Lifestyle.Scoped);
             container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);

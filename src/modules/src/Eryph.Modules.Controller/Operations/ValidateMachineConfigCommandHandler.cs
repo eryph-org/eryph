@@ -66,7 +66,7 @@ namespace Eryph.Modules.Controller.Operations
             }
 
             if (string.IsNullOrWhiteSpace(machineConfig.Hostname))
-                machineConfig.Hostname =  machineConfig.Label;
+                machineConfig.Hostname =  machineConfig.Name;
 
             foreach (var adapterConfig in machineConfig.NetworkAdapters)
             {

@@ -12,5 +12,7 @@ public sealed class MachineNetworkSettings
     public string MacAddress { get; set; }
     public string AddressesV4 { get; set; }
     public string AddressesV6 { get; set; }
+    public string FloatingAddressV4 { get; set; }
+    public string FloatingAddressV6 { get; set; }
 
 }

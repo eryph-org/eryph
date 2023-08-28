@@ -11,6 +11,8 @@ using Ardalis.Specification;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
@@ -22,12 +24,13 @@ using Catlet = Eryph.StateDb.Model.Catlet;
 
 namespace Eryph.Modules.ComputeApi.Handlers
 {
-    internal class GetVirtualCatletConfigurationHandler : IGetRequestHandler<Catlet, 
+
+    internal class GetCatletConfigurationHandler : IGetRequestHandler<Catlet, 
         CatletConfiguration>
     {
         private readonly IStateStore _stateStore;
 
-        public GetVirtualCatletConfigurationHandler(IStateStore stateStore)
+        public GetCatletConfigurationHandler(IStateStore stateStore)
         {
             _stateStore = stateStore;
         }
@@ -54,7 +57,7 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 Project = vCatlet.Project.Name != "default" ? vCatlet.Project.Name: null,
                 Version = "1.0",
                 Environment = vCatlet.Environment != "default" ? vCatlet.Environment : null,
-                Label = vCatlet.StorageIdentifier
+                Location = vCatlet.StorageIdentifier
             };
 
 
@@ -171,7 +174,7 @@ namespace Eryph.Modules.ComputeApi.Handlers
             if (metadata != null)
             {
                 config.Fodder = metadata.Fodder;
-                if (config.Hostname == config.Label)
+                if (config.Hostname == config.Name)
                     config.Hostname = null;
 
                 if (config.Fodder != null)
@@ -214,15 +217,15 @@ namespace Eryph.Modules.ComputeApi.Handlers
 
                         if (parentConfig != null)
                         {
-                            if(driveConfig.Label == null || driveConfig.Label == parentConfig.Label)
-                                driveConfig.Label = null;
+                            if(driveConfig.Location == null || driveConfig.Location == parentConfig.Location)
+                                driveConfig.Location = null;
                             if (driveConfig.Type == null || driveConfig.Type == parentConfig.Type)
                                 driveConfig.Type = null;
                             if (driveConfig.Size.GetValueOrDefault() == 0 || driveConfig.Size == parentConfig.Size)
                                 driveConfig.Size = null;
 
                             if(driveConfig.Type == null && driveConfig.Size == null
-                               && driveConfig.Label == null && driveConfig.Source == null
+                               && driveConfig.Location == null && driveConfig.Source == null
                               )
                                 continue;
                         }

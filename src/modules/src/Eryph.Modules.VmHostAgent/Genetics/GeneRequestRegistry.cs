@@ -123,10 +123,8 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
                             },
                             None: async () =>
                             {
-                                var resolvedGenesets =
-                                    innerContext.ResolvedGenSets.Insert(0, resolvedGene.GeneSet.Name);
                                 var ancestorsString = string.Join(" => ", innerContext.ResolvedGenSets);
-                                if (resolvedGenesets.Length > 1 && ancestorsString != innerContext.OriginalRequest)
+                                if (innerContext.ResolvedGenSets.Length > 0 && ancestorsString != innerContext.OriginalRequest)
                                 {
                                     await m.ProgressMessage(innerContext.Message,
                                         $"Resolved ancestors of catlet {innerContext.OriginalRequest}: {ancestorsString}");
@@ -137,10 +135,17 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
                                         $"Resolved catlet {innerContext.OriginalRequest}");
                                 }
 
+                                // requested parent may have been a ref that has been resolved - than take this
+                                // as starting point -> otherwise use resolved genesets is it contains 
+                                // parent hierarchy
+                                var resolvedParent = innerContext.ResolvedGenSets.Length > 0
+                                    ? innerContext.ResolvedGenSets.FirstOrDefault()
+                                    : resolvedGene.GeneSet.Name;
+
                                 var result = new PrepareParentGenomeResponse
                                 {
                                     RequestedParent = innerContext.OriginalRequest,
-                                    ResolvedParent = resolvedGenesets.FirstOrDefault() ?? resolvedGene.GeneSet.Name
+                                    ResolvedParent = resolvedParent
                                 };
 
                                 await m.CompleteTask(context.Message, result);
