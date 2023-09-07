@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using Eryph.Core;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
@@ -202,6 +203,7 @@ namespace Eryph.StateDb
                 .HasForeignKey<VirtualNetworkPort>(x => x.FloatingPortId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+
             modelBuilder.Entity<FloatingNetworkPort>()
                 .Property(x => x.PoolName).HasColumnName(nameof(FloatingNetworkPort.PoolName));
             modelBuilder.Entity<FloatingNetworkPort>()
@@ -219,6 +221,8 @@ namespace Eryph.StateDb
             modelBuilder.Entity<NetworkPort>()
                 .HasIndex(x => x.MacAddress)
                 .IsUnique();
+
+
 
 
             modelBuilder.Entity<Subnet>()

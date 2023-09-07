@@ -14,6 +14,7 @@ namespace Eryph.Modules.ComputeApi.Model
         protected override void CustomizeQuery(ISpecificationBuilder<Catlet> specification)
         {
             specification.Include(x => x.ReportedNetworks);
+
         }
     }
 }

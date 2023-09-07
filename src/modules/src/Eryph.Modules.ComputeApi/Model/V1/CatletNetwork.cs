@@ -8,6 +8,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
     {
 
         public string Name { get; set; }
+
         public string Provider { get; set; }
 
         public IEnumerable<string> IpV4Addresses { get; set; }

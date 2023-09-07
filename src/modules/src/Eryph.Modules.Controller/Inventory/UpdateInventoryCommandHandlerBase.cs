@@ -197,7 +197,12 @@ namespace Eryph.Modules.Controller.Inventory
                     optionalMachine.IfSome(existingMachine =>
                     {
                         StateStore.LoadProperty(existingMachine, x=> x.Project);
+
                         Debug.Assert(existingMachine.Project != null);
+
+                        StateStore.LoadCollection(existingMachine, x => x.ReportedNetworks);
+                        StateStore.LoadCollection(existingMachine, x => x.NetworkAdapters);
+
 
                         // update data for existing machine
                         var newMachine = VirtualMachineInfoToVCatlet(vmInfo,

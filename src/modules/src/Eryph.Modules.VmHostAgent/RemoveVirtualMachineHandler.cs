@@ -14,14 +14,14 @@ using Rebus.Bus;
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class RemoveVirtualMachineHandler : VCatletOperationHandlerBase<RemoveVirtualCatletCommand>
+    internal class RemoveVirtualMachineHandler : VCatletOperationHandlerBase<RemoveCatletVMCommand>
     {
         public RemoveVirtualMachineHandler(ITaskMessaging messaging, IPowershellEngine engine) : base(messaging, engine)
         {
         }
 
         protected override Task<Either<Error, Unit>> HandleCommand(TypedPsObject<VirtualMachineInfo> vmInfo,
-            RemoveVirtualCatletCommand command, IPowershellEngine engine)
+            RemoveCatletVMCommand command, IPowershellEngine engine)
         {
             var hostSettings = HostSettingsBuilder.GetHostSettings();
 

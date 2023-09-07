@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
@@ -14,12 +15,14 @@ namespace Eryph.Modules.Controller.DataServices
     {
         private readonly IVirtualMachineMetadataService _metadataService;
         private readonly IStateStoreRepository<Catlet> _repository;
+        private readonly IStateStore _stateStore;
 
         public VirtualMachineDataService(IStateStoreRepository<Catlet> repository,
-            IVirtualMachineMetadataService metadataService)
+            IVirtualMachineMetadataService metadataService, IStateStore stateStore)
         {
             _repository = repository;
             _metadataService = metadataService;
+            _stateStore = stateStore;
         }
 
         public async Task<Option<Catlet>> GetByVMId(Guid id)
@@ -69,7 +72,19 @@ namespace Eryph.Modules.Controller.DataServices
             var entity = await _repository.GetByIdAsync(id);
             if (entity == null)
                 return Unit.Default;
+
+            // remove floating port references
+            await _stateStore.LoadCollectionAsync(entity, x=>x.NetworkPorts);
+            var floatingPortRepository = _stateStore.For<FloatingNetworkPort>();
+            foreach (var entityNetworkPort in entity.NetworkPorts)
+            {
+                await _stateStore.LoadPropertyAsync(entityNetworkPort, x => x.FloatingPort);
+            }
             
+            await floatingPortRepository.DeleteRangeAsync(entity.NetworkPorts
+                .Where(x => x.FloatingPort != null).Select(x => x.FloatingPort));
+
+
             await _repository.DeleteAsync(entity);
             
 
