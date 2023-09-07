@@ -27,7 +27,4 @@ namespace Eryph.Core
         void DirectoryDelete(string directoryPath);
 
     }
-
-    public enum FileSizeType { MB, GB };
-
 }

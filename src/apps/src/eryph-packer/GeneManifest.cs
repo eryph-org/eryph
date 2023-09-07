@@ -33,12 +33,3 @@ internal class GeneManifest
     public Dictionary<string, string>? Metadata { get; set; }
 
 }
-
-
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum GeneType
-{
-    Catlet,
-    Volume,
-    Fodder
-}

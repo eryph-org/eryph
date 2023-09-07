@@ -7,7 +7,6 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
-using Eryph.Messages.Resources.Images.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;

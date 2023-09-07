@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Messages.Resources.Images.Commands;
+using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Resources;
 using LanguageExt;
 using LanguageExt.Common;
