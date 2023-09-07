@@ -4,7 +4,7 @@ using Eryph.ConfigModel.Catlets;
 
 namespace Eryph.Modules.Controller.Compute
 {
-    public class PlaceVirtualCatletSagaData : TaskWorkflowSagaData
+    public class PlaceCatletSagaData : TaskWorkflowSagaData
     {
         public Guid CorrelationId { get; set; }
         public CatletConfig? Config { get; set; }

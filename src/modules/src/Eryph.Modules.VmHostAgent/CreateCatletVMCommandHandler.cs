@@ -17,7 +17,7 @@ namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
     internal class CreateCatletVMCommandHandler : 
-        VirtualCatletConfigCommandHandler<CreateCatletVMCommand, ConvergeVirtualCatletResult>
+        CatletConfigCommandHandler<CreateCatletVMCommand, ConvergeCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
 
@@ -26,7 +26,7 @@ namespace Eryph.Modules.VmHostAgent
             _hostInfoProvider = hostInfoProvider;
         }
 
-        protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(CreateCatletVMCommand command)
+        protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(CreateCatletVMCommand command)
         {
             var config = command.Config;
 
@@ -53,7 +53,7 @@ namespace Eryph.Modules.VmHostAgent
                 from createdVM in createVM(plannedStorageSettings, parentConfig)
                 from metadata in createMetadata(createdVM, parentConfig)
                 from inventory in CreateMachineInventory(Engine, hostSettings, createdVM, _hostInfoProvider)
-                select new ConvergeVirtualCatletResult
+                select new ConvergeCatletResult
                 {
                     Inventory = inventory,
                     MachineMetadata = metadata
@@ -84,12 +84,12 @@ namespace Eryph.Modules.VmHostAgent
                 select vm);
         }
 
-        private EitherAsync<Error, VirtualCatletMetadata> CreateMetadata(
+        private EitherAsync<Error, CatletMetadata> CreateMetadata(
             Option<CatletConfig> optionalParentConfig,
             TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig config, Guid machineId)
         {
-            return Prelude.RightAsync<Error, VirtualCatletMetadata>(
-                    new VirtualCatletMetadata
+            return Prelude.RightAsync<Error, CatletMetadata>(
+                    new CatletMetadata
                 {
                     Id = Guid.NewGuid(),
                     MachineId = machineId,

@@ -15,14 +15,14 @@ using ErrorData = Eryph.Messages.ErrorData;
 namespace Eryph.Modules.Controller.Compute
 {
     [UsedImplicitly]
-    internal class PlaceVirtualCatletSaga :
-        OperationTaskWorkflowSaga<PlaceVirtualCatletCommand, PlaceVirtualCatletSagaData>,
+    internal class PlaceCatletSaga :
+        OperationTaskWorkflowSaga<PlaceCatletCommand, PlaceCatletSagaData>,
         IHandleMessages<PlacementVerificationCompletedEvent>
     {
         private readonly IBus _bus;
         private readonly IPlacementCalculator _placementCalculator;
 
-        public PlaceVirtualCatletSaga(
+        public PlaceCatletSaga(
             IBus bus,
             IPlacementCalculator placementCalculator, IWorkflow workflow) : base(workflow)
         {
@@ -37,17 +37,17 @@ namespace Eryph.Modules.Controller.Compute
             // otherwise calculation most likely will choose same agent again resulting in a loop.
             // Currently this can not happen, as placement will always be confirmed by agent.
             return message.Confirmed
-                ? Complete(new PlaceVirtualCatletResult { AgentName = message.AgentName })
+                ? Complete(new PlaceCatletResult { AgentName = message.AgentName })
                 : CalculatePlacementAndRequestVerification();
         }
 
-        protected override void CorrelateMessages(ICorrelationConfig<PlaceVirtualCatletSagaData> config)
+        protected override void CorrelateMessages(ICorrelationConfig<PlaceCatletSagaData> config)
         {
             base.CorrelateMessages(config);
             config.Correlate<PlacementVerificationCompletedEvent>(m => m.CorrelationId, m => m.CorrelationId);
         }
 
-        protected override Task Initiated(PlaceVirtualCatletCommand message)
+        protected override Task Initiated(PlaceCatletCommand message)
         {
             Data.Config = message.Config;
             return CalculatePlacementAndRequestVerification();

@@ -18,7 +18,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands
 
         public long NewStorageId { get; set; }
 
-        public VirtualCatletMetadata MachineMetadata { get; set; }
+        public CatletMetadata MachineMetadata { get; set; }
 
         public MachineNetworkSettings[] MachineNetworkSettings { get; set; }
 

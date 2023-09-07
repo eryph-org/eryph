@@ -2,7 +2,7 @@
 
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
-    public class PlaceVirtualCatletResult
+    public class PlaceCatletResult
     {
         [PrivateIdentifier]
         public string AgentName { get; set; }

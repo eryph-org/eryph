@@ -8,6 +8,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt;
+using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Modules.Controller.DataServices
 {
@@ -38,7 +39,7 @@ namespace Eryph.Modules.Controller.DataServices
         }
 
         public async Task<Catlet> AddNewVM(Catlet vm,
-            [NotNull] VirtualCatletMetadata metadata)
+            [NotNull] CatletMetadata metadata)
         {
             if (vm.ProjectId == Guid.Empty)
                 throw new ArgumentException($"{nameof(Catlet.ProjectId)} is missing", nameof(vm));

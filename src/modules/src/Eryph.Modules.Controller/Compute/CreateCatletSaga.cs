@@ -20,7 +20,7 @@ namespace Eryph.Modules.Controller.Compute
     [UsedImplicitly]
     internal class CreateCatletSaga : OperationTaskWorkflowSaga<CreateCatletCommand, CreateCatletSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<PlaceCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareParentGenomeCommand>>
@@ -43,7 +43,7 @@ namespace Eryph.Modules.Controller.Compute
             if (Data.State >= CreateVMState.Created)
                 return Task.CompletedTask;
 
-            return FailOrRun<CreateCatletVMCommand, ConvergeVirtualCatletResult>(message, async r =>
+            return FailOrRun<CreateCatletVMCommand, ConvergeCatletResult>(message, async r =>
             {
                 Data.State = CreateVMState.Created;
 
@@ -75,12 +75,12 @@ namespace Eryph.Modules.Controller.Compute
             });
         }
 
-        public Task Handle(OperationTaskStatusEvent<PlaceVirtualCatletCommand> message)
+        public Task Handle(OperationTaskStatusEvent<PlaceCatletCommand> message)
         {
             if (Data.State >= CreateVMState.Placed)
                 return Task.CompletedTask;
 
-            return FailOrRun<PlaceVirtualCatletCommand, PlaceVirtualCatletResult>(message,
+            return FailOrRun<PlaceCatletCommand, PlaceCatletResult>(message,
                 async r =>
             {
                 Data.State = CreateVMState.Placed;
@@ -194,7 +194,7 @@ namespace Eryph.Modules.Controller.Compute
                 Data.State = CreateVMState.ConfigValidated;
 
 
-                return StartNewTask(new PlaceVirtualCatletCommand
+                return StartNewTask(new PlaceCatletCommand
                     {
                         Config = Data.Config
                     }).AsTask();
@@ -207,7 +207,7 @@ namespace Eryph.Modules.Controller.Compute
 
             config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>(m => m.InitiatingTaskId,
+            config.Correlate<OperationTaskStatusEvent<PlaceCatletCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);

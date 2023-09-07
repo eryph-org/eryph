@@ -26,7 +26,7 @@ namespace Eryph.Modules.Controller.Compute
     internal class UpdateCatletSaga : OperationTaskWorkflowSaga<UpdateCatletCommand, UpdateCatletSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletVMCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareGeneCommand>>
@@ -57,7 +57,7 @@ namespace Eryph.Modules.Controller.Compute
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>(m => m.InitiatingTaskId,
+            config.Correlate<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
@@ -227,7 +227,7 @@ namespace Eryph.Modules.Controller.Compute
             if (Data.Updated)
                 return Task.CompletedTask;
 
-            return FailOrRun<UpdateCatletVMCommand, ConvergeVirtualCatletResult>(message, async r =>
+            return FailOrRun<UpdateCatletVMCommand, ConvergeCatletResult>(message, async r =>
             {
                 Data.Updated = true;
 
@@ -243,7 +243,7 @@ namespace Eryph.Modules.Controller.Compute
                 await await _vmDataService.GetVM(Data.CatletId).Match(
                     Some: data =>
                     {
-                        return StartNewTask(new UpdateVirtualCatletConfigDriveCommand
+                        return StartNewTask(new UpdateCatletConfigDriveCommand
                         {
                             VMId = r.Inventory.VMId,
                             CatletId = Data.CatletId,
@@ -259,7 +259,7 @@ namespace Eryph.Modules.Controller.Compute
         }
 
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand> message)
+        public Task Handle(OperationTaskStatusEvent<UpdateCatletConfigDriveCommand> message)
         {
             return FailOrRun(message, () =>
                 StartNewTask(new UpdateNetworksCommand

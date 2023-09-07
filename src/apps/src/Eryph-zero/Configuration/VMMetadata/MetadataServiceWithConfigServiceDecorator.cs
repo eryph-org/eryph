@@ -9,23 +9,23 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
 {
     internal class MetadataServiceWithConfigServiceDecorator : IVirtualMachineMetadataService
     {
-        private readonly IConfigWriterService<VirtualCatletMetadata> _configService;
+        private readonly IConfigWriterService<CatletMetadata> _configService;
         private readonly IVirtualMachineMetadataService _decoratedService;
 
         public MetadataServiceWithConfigServiceDecorator(IVirtualMachineMetadataService decoratedService,
-            IConfigWriterService<VirtualCatletMetadata> configService)
+            IConfigWriterService<CatletMetadata> configService)
         {
             _decoratedService = decoratedService;
             _configService = configService;
         }
 
 
-        public Task<Option<VirtualCatletMetadata>> GetMetadata(Guid id)
+        public Task<Option<CatletMetadata>> GetMetadata(Guid id)
         {
             return _decoratedService.GetMetadata(id);
         }
 
-        public async Task<Unit> SaveMetadata(VirtualCatletMetadata metadata)
+        public async Task<Unit> SaveMetadata(CatletMetadata metadata)
         {
             await _decoratedService.SaveMetadata(metadata);
             await _configService.Update(metadata, "");
@@ -35,7 +35,7 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
         public async Task<Unit> RemoveMetadata(Guid id)
         {
             await _decoratedService.RemoveMetadata(id);
-            await _configService.Delete(new VirtualCatletMetadata { Id = id }, "");
+            await _configService.Delete(new CatletMetadata { Id = id }, "");
             return Unit.Default;
         }
     }

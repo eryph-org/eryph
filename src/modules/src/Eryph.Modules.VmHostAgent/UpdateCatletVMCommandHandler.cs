@@ -18,7 +18,7 @@ namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
     internal class UpdateCatletVMCommandHandler 
-        : VirtualCatletConfigCommandHandler<UpdateCatletVMCommand, ConvergeVirtualCatletResult>
+        : CatletConfigCommandHandler<UpdateCatletVMCommand, ConvergeCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
 
@@ -27,7 +27,7 @@ namespace Eryph.Modules.VmHostAgent
             _hostInfoProvider = hostInfoProvider;
         }
 
-        protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(UpdateCatletVMCommand command)
+        protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(UpdateCatletVMCommand command)
         {
             var config = command.Config;
 
@@ -51,7 +51,7 @@ namespace Eryph.Modules.VmHostAgent
                 from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).WriteTrace()
                 from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()
                 from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged, _hostInfoProvider).WriteTrace()
-                select new ConvergeVirtualCatletResult
+                select new ConvergeCatletResult
                 {
                     Inventory = inventory,
                     MachineMetadata = metadata

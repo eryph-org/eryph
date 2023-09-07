@@ -10,7 +10,7 @@ using Rebus.Bus;
 namespace Eryph.Modules.VmHostAgent
 {
     internal class UpdateCatletMetadataCommandHandler : 
-        VirtualCatletConfigCommandHandler<UpdateCatletMetadataCommand, Unit>
+        CatletConfigCommandHandler<UpdateCatletMetadataCommand, Unit>
     {
         public UpdateCatletMetadataCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log) : base(engine, messaging, log)
         {
@@ -19,7 +19,7 @@ namespace Eryph.Modules.VmHostAgent
         protected override EitherAsync<Error, Unit> HandleCommand(UpdateCatletMetadataCommand command)
         {
 
-            var metadata = new VirtualCatletMetadata { Id = command.CurrentMetadataId };
+            var metadata = new CatletMetadata { Id = command.CurrentMetadataId };
 
             return
                 from vmList in GetVmInfo(command.VMId, Engine)

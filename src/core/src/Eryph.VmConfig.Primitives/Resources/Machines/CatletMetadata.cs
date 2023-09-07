@@ -6,7 +6,7 @@ using JetBrains.Annotations;
 
 namespace Eryph.Resources.Machines
 {
-    public sealed class VirtualCatletMetadata
+    public sealed class CatletMetadata
     {
         public Guid Id { get; set; }
 

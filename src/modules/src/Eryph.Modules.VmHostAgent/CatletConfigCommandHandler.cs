@@ -15,7 +15,7 @@ using Rebus.Handlers;
 
 namespace Eryph.Modules.VmHostAgent
 {
-    internal abstract class VirtualCatletConfigCommandHandler<TMessage, TResult>: IHandleMessages<OperationTask<TMessage>> 
+    internal abstract class CatletConfigCommandHandler<TMessage, TResult>: IHandleMessages<OperationTask<TMessage>> 
         where TMessage : class, new()
     {
         public const string DefaultDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -24,7 +24,7 @@ namespace Eryph.Modules.VmHostAgent
         protected readonly IPowershellEngine Engine;
         protected OperationTask<TMessage>? Message;
 
-        protected VirtualCatletConfigCommandHandler(
+        protected CatletConfigCommandHandler(
             IPowershellEngine engine,
             ITaskMessaging messaging, ILogger log)
         {
@@ -96,8 +96,8 @@ namespace Eryph.Modules.VmHostAgent
         }
 
 
-        protected Task<Either<Error, VirtualCatletMetadata>> EnsureMetadata(
-            VirtualCatletMetadata metadata,
+        protected Task<Either<Error, CatletMetadata>> EnsureMetadata(
+            CatletMetadata metadata,
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var notes = vmInfo.Value.Notes;
@@ -130,7 +130,7 @@ namespace Eryph.Modules.VmHostAgent
             if (metadataId != metadata.Id)
                 throw new InvalidOperationException("Inconsistent metadata id between VM and expected metadata id.");
 
-            return Prelude.RightAsync<Error, VirtualCatletMetadata>(metadata).ToEither();
+            return Prelude.RightAsync<Error, CatletMetadata>(metadata).ToEither();
         }
 
         protected EitherAsync<Error, Unit> SetMetadataId(TypedPsObject<VirtualMachineInfo> vmInfo,

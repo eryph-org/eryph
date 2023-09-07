@@ -4,7 +4,7 @@ using System;
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
     [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class StartVirtualCatletCommand : IVMCommand, IHasResource
+    public class StartCatletVMCommand : IVMCommand, IHasResource
     {
         public Guid CatletId { get; set; }
         public Guid VMId { get; set; }

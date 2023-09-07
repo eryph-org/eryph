@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Eryph.Resources.Machines;
 using Eryph.StateDb.Model;
 using LanguageExt;
+using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Modules.Controller.DataServices;
 
@@ -12,7 +13,7 @@ internal interface IVirtualMachineDataService
     Task<Option<Catlet>> GetByVMId(Guid id);
 
     Task<Option<Catlet>> GetVM(Guid id);
-    Task<Catlet> AddNewVM(Catlet vm, VirtualCatletMetadata metadata);
+    Task<Catlet> AddNewVM(Catlet vm, CatletMetadata metadata);
 
     Task<Unit> RemoveVM(Guid id);
 

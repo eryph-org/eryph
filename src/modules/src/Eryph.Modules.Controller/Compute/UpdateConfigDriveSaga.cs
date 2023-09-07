@@ -13,7 +13,7 @@ namespace Eryph.Modules.Controller.Compute
     [UsedImplicitly]
     internal class UpdateConfigDriveSaga :
         OperationTaskWorkflowSaga<UpdateConfigDriveCommand, UpdateConfigDriveSagaData>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>
+        IHandleMessages<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>
     {
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IVirtualMachineMetadataService _metadataService;
@@ -31,7 +31,7 @@ namespace Eryph.Modules.Controller.Compute
                 Some: s => _metadataService.GetMetadata(s.MetadataId).Match(
                     None: () => Fail().ToUnit(),
                     Some: metadata =>
-                        StartNewTask(new UpdateVirtualCatletConfigDriveCommand
+                        StartNewTask(new UpdateCatletConfigDriveCommand
                             {
                                 
                                 VMId = s.VMId,
@@ -41,7 +41,7 @@ namespace Eryph.Modules.Controller.Compute
                             }).AsTask().ToUnit()));
         }
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand> message)
+        public Task Handle(OperationTaskStatusEvent<UpdateCatletConfigDriveCommand> message)
         {
             return FailOrRun(message, () => Complete());
 
@@ -50,7 +50,7 @@ namespace Eryph.Modules.Controller.Compute
         protected override void CorrelateMessages(ICorrelationConfig<UpdateConfigDriveSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
         }
 
 

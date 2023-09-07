@@ -234,7 +234,7 @@ namespace Eryph.VmManagement
             Func<string, Task> reportProgress,
             TypedPsObject<VirtualMachineInfo> vmInfo,
             CatletConfig machineConfig,
-            VirtualCatletMetadata metadata,
+            CatletMetadata metadata,
             MachineNetworkSettings[] networkSetting,
             VMStorageSettings storageSettings)
         {
@@ -262,7 +262,7 @@ namespace Eryph.VmManagement
             Func<string, Task> reportProgress,
             TypedPsObject<VirtualMachineInfo> vmInfo,
             CatletConfig machineConfig,
-            VirtualCatletMetadata metadata,
+            CatletMetadata metadata,
             MachineNetworkSettings[] networkSettings,
             VMStorageSettings storageSettings)
         {

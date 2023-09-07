@@ -2,9 +2,9 @@
 
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
-    public class ConvergeVirtualCatletResult
+    public class ConvergeCatletResult
     {
-        public VirtualCatletMetadata MachineMetadata { get; set; }
+        public CatletMetadata MachineMetadata { get; set; }
         public VirtualMachineData Inventory { get; set; }
     }
 }

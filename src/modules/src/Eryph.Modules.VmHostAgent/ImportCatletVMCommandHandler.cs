@@ -17,7 +17,7 @@ namespace Eryph.Modules.VmHostAgent;
 
 [UsedImplicitly]
 internal class ImportCatletVMCommandHandler :
-    VirtualCatletConfigCommandHandler<ImportCatletVMCommand, ConvergeVirtualCatletResult>
+    CatletConfigCommandHandler<ImportCatletVMCommand, ConvergeCatletResult>
 {
     private readonly IHostInfoProvider _hostInfoProvider;
 
@@ -26,7 +26,7 @@ internal class ImportCatletVMCommandHandler :
         _hostInfoProvider = hostInfoProvider;
     }
 
-    protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(ImportCatletVMCommand command)
+    protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(ImportCatletVMCommand command)
     {
         var config = command.Config;
 
@@ -52,7 +52,7 @@ internal class ImportCatletVMCommandHandler :
             from importedVM in importVM(plannedStorageSettings, template)
             from metadata in createMetadata(importedVM, template)
             from inventory in CreateMachineInventory(Engine, hostSettings, importedVM, _hostInfoProvider)
-            select new ConvergeVirtualCatletResult
+            select new ConvergeCatletResult
             {
                 Inventory = inventory,
                 MachineMetadata = metadata
@@ -74,17 +74,17 @@ internal class ImportCatletVMCommandHandler :
             select vm);
     }
 
-    private EitherAsync<Error, VirtualCatletMetadata> CreateMetadata(
+    private EitherAsync<Error, CatletMetadata> CreateMetadata(
         IPowershellEngine engine,
         Option<TypedPsObject<PlannedVirtualMachineInfo>> optionalTemplate,
         TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig config, Guid machineId)
     {
-        return Prelude.RightAsync<Error, VirtualCatletMetadata>(CreateMetadataAsync())
+        return Prelude.RightAsync<Error, CatletMetadata>(CreateMetadataAsync())
             .Bind(metadata => SetMetadataId(vmInfo, metadata.Id).Map(_ => metadata));
 
-        async Task<VirtualCatletMetadata> CreateMetadataAsync()
+        async Task<CatletMetadata> CreateMetadataAsync()
         {
-            return new VirtualCatletMetadata
+            return new CatletMetadata
             {
                 Id = Guid.NewGuid(),
                 MachineId = machineId,

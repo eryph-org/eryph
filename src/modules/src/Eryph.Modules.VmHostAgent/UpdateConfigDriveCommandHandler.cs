@@ -16,7 +16,7 @@ namespace Eryph.Modules.VmHostAgent;
 
 [UsedImplicitly]
 internal class UpdateConfigDriveCommandHandler : 
-    VirtualCatletConfigCommandHandler<UpdateVirtualCatletConfigDriveCommand, Unit>
+    CatletConfigCommandHandler<UpdateCatletConfigDriveCommand, Unit>
 {
     private readonly IHostInfoProvider _hostInfoProvider;
 
@@ -25,7 +25,7 @@ internal class UpdateConfigDriveCommandHandler :
         _hostInfoProvider = hostInfoProvider;
     }
 
-    protected override EitherAsync<Error, Unit> HandleCommand(UpdateVirtualCatletConfigDriveCommand command)
+    protected override EitherAsync<Error, Unit> HandleCommand(UpdateCatletConfigDriveCommand command)
     {
         var vmId = command.VMId;
 

@@ -13,7 +13,7 @@ namespace Eryph.Modules.Controller.Compute
     [UsedImplicitly]
     internal class StartCatletSaga :
         OperationTaskWorkflowSaga<StartCatletCommand, StartCatletSagaData>,
-        IHandleMessages<OperationTaskStatusEvent<StartVirtualCatletCommand>>
+        IHandleMessages<OperationTaskStatusEvent<StartCatletVMCommand>>
     {
         private readonly IVirtualMachineDataService _vmDataService;
 
@@ -27,10 +27,10 @@ namespace Eryph.Modules.Controller.Compute
         {
             return _vmDataService.GetVM(message.Resource.Id).MatchAsync(
                 None: () => Fail().ToUnit(),
-                Some: s => StartNewTask(new StartVirtualCatletCommand { CatletId = message.Resource.Id, VMId = s.VMId }).AsTask().ToUnit());
+                Some: s => StartNewTask(new StartCatletVMCommand { CatletId = message.Resource.Id, VMId = s.VMId }).AsTask().ToUnit());
         }
 
-        public Task Handle(OperationTaskStatusEvent<StartVirtualCatletCommand> message)
+        public Task Handle(OperationTaskStatusEvent<StartCatletVMCommand> message)
         {
             return FailOrRun(message, () => Complete());
 
@@ -39,7 +39,7 @@ namespace Eryph.Modules.Controller.Compute
         protected override void CorrelateMessages(ICorrelationConfig<StartCatletSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<StartVirtualCatletCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<StartCatletVMCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
         }
 
 

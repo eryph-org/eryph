@@ -21,6 +21,7 @@ using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Mvc;
 
 using Catlet = Eryph.StateDb.Model.Catlet;
+using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Modules.ComputeApi.Handlers
 {
@@ -166,10 +167,10 @@ namespace Eryph.Modules.ComputeApi.Handlers
             };
 
             //remove all settings also configured in image
-            var metadataEntity = await _stateStore.Read<CatletMetadata>().GetByIdAsync(catlet.MetadataId, cancellationToken);
-            VirtualCatletMetadata metadata = null;
+            var metadataEntity = await _stateStore.Read<StateDb.Model.CatletMetadata>().GetByIdAsync(catlet.MetadataId, cancellationToken);
+            CatletMetadata metadata = null;
             if (metadataEntity != null)
-                metadata = JsonSerializer.Deserialize<VirtualCatletMetadata>(metadataEntity.Metadata);
+                metadata = JsonSerializer.Deserialize<CatletMetadata>(metadataEntity.Metadata);
 
             if (metadata != null)
             {
