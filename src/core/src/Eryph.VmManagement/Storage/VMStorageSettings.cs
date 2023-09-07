@@ -7,17 +7,19 @@ using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.SomeHelp;
 
+#nullable enable
+
 namespace Eryph.VmManagement.Storage
 {
-    public class VMStorageSettings
+    public readonly struct VMStorageSettings
     {
-        public StorageNames StorageNames { get; set; }
-        public Option<string> StorageIdentifier { get; set; }
+        public StorageNames StorageNames { get; init; }
+        public Option<string> StorageIdentifier { get; init; }
 
-        public string VMPath { get; set; }
-        public string DefaultVhdPath { get; set; }
+        public string VMPath { get; init; }
+        public string DefaultVhdPath { get; init; }
 
-        public bool Frozen { get; set; }
+        public bool Frozen { get; init; }
 
         public static EitherAsync<Error, Option<VMStorageSettings>> FromVM(HostSettings hostSettings,
             TypedPsObject<VirtualMachineInfo> vm)
@@ -72,8 +74,8 @@ namespace Eryph.VmManagement.Storage
                 DataStoreName = dataStoreName
             };
 
-            if (!string.IsNullOrWhiteSpace(config.VCatlet.Slug))
-                storageIdentifier = Prelude.Some(config.VCatlet.Slug);
+            if (!string.IsNullOrWhiteSpace(config.Location))
+                storageIdentifier = Prelude.Some(config.Location);
 
             return from dataPath in  names.ResolveStorageBasePath(hostSettings.DefaultDataPath)
                    from importVhdPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath)

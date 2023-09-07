@@ -123,9 +123,9 @@ namespace Eryph.VmManagement.Inventory
             };
 
             storageSettings.StorageIdentifier.IfSome(n => disk.StorageIdentifier = n);
-            storageSettings.StorageNames?.DataStoreName.IfSome(n => disk.DataStore = n);
-            storageSettings.StorageNames?.ProjectName.IfSome(n => disk.ProjectName = n);
-            storageSettings.StorageNames?.EnvironmentName.IfSome(n => disk.Environment = n);
+            storageSettings.StorageNames.DataStoreName.IfSome(n => disk.DataStore = n);
+            storageSettings.StorageNames.ProjectName.IfSome(n => disk.ProjectName = n);
+            storageSettings.StorageNames.EnvironmentName.IfSome(n => disk.Environment = n);
             storageSettings.StorageIdentifier.IfNone(() => disk.Frozen = true);
             storageSettings.ParentSettings.IfSome(parentSettings => disk.Parent = CreateDiskInfo(parentSettings));
             return disk;

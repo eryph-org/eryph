@@ -62,8 +62,8 @@ namespace Eryph.Modules.ComputeApi
 
         public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
-            container.Register<IGetRequestHandler<StateDb.Model.VirtualCatlet, VirtualCatletConfiguration>, 
-                GetVirtualCatletConfigurationHandler>();
+            container.Register<IGetRequestHandler<StateDb.Model.Catlet, CatletConfiguration>, 
+                GetCatletConfigurationHandler>();
 
             container.Register<IGetRequestHandler<StateDb.Model.Project, VirtualNetworkConfiguration>,
                 GetVirtualNetworksConfigurationHandler>();

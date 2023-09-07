@@ -30,6 +30,7 @@ namespace Eryph.Modules.VmHostAgent
         protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(UpdateVCatletCommand command)
         {
             var config = command.Config;
+
             var vmId = command.VMId;
 
             var hostSettings = HostSettingsBuilder.GetHostSettings();
@@ -46,7 +47,7 @@ namespace Eryph.Modules.VmHostAgent
                 from plannedStorageSettings in VMStorageSettings.Plan(hostSettings, LongToString(command.NewStorageId),
                     config, currentStorageSettings).WriteTrace()
                 from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
-                from mergedConfig in config.MergeWithImageSettings(metadata.ImageConfig).WriteTrace().ToAsync().ToError()
+                let mergedConfig = config.GeneticInheritance(metadata.ParentConfig)
                 from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).WriteTrace()
                 from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()
                 from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged, _hostInfoProvider).WriteTrace()

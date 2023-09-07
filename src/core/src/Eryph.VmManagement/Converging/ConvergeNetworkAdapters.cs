@@ -20,7 +20,7 @@ namespace Eryph.VmManagement.Converging
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var interfaceCounter = 0;
-            var adapters = Context.Config.VCatlet.NetworkAdapters.ToArr();
+            var adapters = Context.Config.NetworkAdapters.ToArr();
 
             return Context.Config.Networks
                 .Map

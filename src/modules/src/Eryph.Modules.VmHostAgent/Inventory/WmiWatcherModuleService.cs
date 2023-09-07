@@ -8,6 +8,7 @@ using Eryph.VmManagement;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
+using Rebus.Transport;
 
 namespace Eryph.Modules.VmHostAgent.Inventory
 {
@@ -126,12 +127,16 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             var enabledState = (ushort) instance.GetPropertyValue("EnabledState");
             var otherEnabledState = (string) instance.GetPropertyValue("OtherEnabledState");
             var healthState = (ushort) instance.GetPropertyValue("HealthState");
+            var timestampLong = (ulong)e.NewEvent.GetPropertyValue("TIME_CREATED");
+            var timestamp = DateTime.FromFileTimeUtc((long) timestampLong);
 
             _bus.SendLocal(new VirtualMachineStateChangedEvent
             {
                 VmId = vmId,
-                State = StateConverter.ConvertVMState(enabledState, otherEnabledState, healthState)
+                State = StateConverter.ConvertVMState(enabledState, otherEnabledState, healthState),
+                TimeStamp = timestamp
             });
+
         }
 
         private void _networkWatcher_EventArrived(object sender, EventArrivedEventArgs e)

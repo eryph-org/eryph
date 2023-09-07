@@ -9,14 +9,14 @@ namespace Eryph.Modules.Controller.DataServices;
 
 internal interface IVirtualMachineDataService
 {
-    Task<Option<VirtualCatlet>> GetByVMId(Guid id);
+    Task<Option<Catlet>> GetByVMId(Guid id);
 
-    Task<Option<VirtualCatlet>> GetVM(Guid id);
-    Task<VirtualCatlet> AddNewVM(VirtualCatlet vm, VirtualCatletMetadata metadata);
+    Task<Option<Catlet>> GetVM(Guid id);
+    Task<Catlet> AddNewVM(Catlet vm, VirtualCatletMetadata metadata);
 
     Task<Unit> RemoveVM(Guid id);
 
-    Task<IEnumerable<VirtualCatlet>> GetAll();
+    Task<IEnumerable<Catlet>> GetAll();
 
 
 }

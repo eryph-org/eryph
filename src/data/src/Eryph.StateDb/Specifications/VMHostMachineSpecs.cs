@@ -5,7 +5,7 @@ namespace Eryph.StateDb.Specifications
 {
     public static class VMHostMachineSpecs
     {
-        public sealed class GetByHardwareId : Specification<VirtualCatletHost>, ISingleResultSpecification
+        public sealed class GetByHardwareId : Specification<CatletFarm>, ISingleResultSpecification
         {
             public GetByHardwareId(string hardwareId)
             {

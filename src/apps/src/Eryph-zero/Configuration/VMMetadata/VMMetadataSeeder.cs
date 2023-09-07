@@ -14,10 +14,10 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
     internal class VMMetadataSeeder : IConfigSeeder<ControllerModule>
     {
         private readonly IConfigReaderService<VirtualCatletMetadata> _configReaderService;
-        private readonly IStateStoreRepository<StateDb.Model.VirtualMachineMetadata> _repository;
+        private readonly IStateStoreRepository<StateDb.Model.CatletMetadata> _repository;
 
         public VMMetadataSeeder(IConfigReaderService<VirtualCatletMetadata> configReaderService,
-            IStateStoreRepository<StateDb.Model.VirtualMachineMetadata> repository)
+            IStateStoreRepository<StateDb.Model.CatletMetadata> repository)
         {
             _configReaderService = configReaderService;
             _repository = repository;
@@ -29,7 +29,7 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
                 .Map(x =>
                 {
                     var json = JsonSerializer.Serialize(x);
-                    return _repository.AddAsync(new StateDb.Model.VirtualMachineMetadata
+                    return _repository.AddAsync(new StateDb.Model.CatletMetadata
                     {
                         Id = x.Id,
                         Metadata = json

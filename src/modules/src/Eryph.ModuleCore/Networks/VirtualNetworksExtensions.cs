@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Net;
 using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Networks;
 using Eryph.StateDb.Model;
 
 namespace Eryph.ModuleCore.Networks

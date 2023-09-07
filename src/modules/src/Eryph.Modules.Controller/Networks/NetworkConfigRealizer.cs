@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Networks;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.StateDb;
@@ -259,7 +260,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
 
                 savedSubnet.DhcpLeaseTime = 3600;
-                savedSubnet.MTU = subnetConfig.Mtu == 0 ? 1400 : subnetConfig.Mtu;
+                savedSubnet.MTU = subnetConfig.Mtu.GetValueOrDefault() == 0 ? 1400 : subnetConfig.Mtu.GetValueOrDefault();
                 savedSubnet.DnsServersV4 = subnetConfig.DnsServers != null
                     ? string.Join(',', subnetConfig.DnsServers)
                     : null;

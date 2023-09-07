@@ -13,7 +13,7 @@ namespace Eryph.Resources.Machines
 
         public ControllerType ControllerType { get; set; }
 
-        public VirtualCatletDriveType? Type { get; set; }
+        public CatletDriveType? Type { get; set; }
 
         public bool Frozen { get; set; }
 

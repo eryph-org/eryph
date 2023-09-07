@@ -1,4 +1,5 @@
-﻿using Eryph.Modules.AspNetCore;
+﻿using Ardalis.Specification;
+using Eryph.Modules.AspNetCore;
 using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Http;
 
@@ -8,6 +9,12 @@ namespace Eryph.Modules.ComputeApi.Model
     {
         public CatletSpecBuilder(IUserRightsProvider userRightsProvider) : base(userRightsProvider)
         {
+        }
+
+        protected override void CustomizeQuery(ISpecificationBuilder<Catlet> specification)
+        {
+            specification.Include(x => x.ReportedNetworks);
+
         }
     }
 }

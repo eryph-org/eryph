@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Networks;
 using Eryph.Core.Network;
 
 namespace Eryph.Modules.Controller.Networks;

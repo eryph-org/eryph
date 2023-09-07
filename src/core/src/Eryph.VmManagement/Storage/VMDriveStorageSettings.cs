@@ -7,7 +7,7 @@ namespace Eryph.VmManagement.Storage
 {
     public class VMDriveStorageSettings
     {
-        public VirtualCatletDriveType Type { get; set; }
+        public CatletDriveType Type { get; set; }
 
         public int ControllerLocation { get; set; }
         public int ControllerNumber { get; set; }
@@ -16,13 +16,13 @@ namespace Eryph.VmManagement.Storage
         public static EitherAsync<Error, Seq<VMDriveStorageSettings>> PlanDriveStorageSettings(
             HostSettings hostSettings, CatletConfig config, VMStorageSettings storageSettings)
         {
-            return config.VCatlet.Drives
+            return config.Drives
                 .ToSeq().MapToEitherAsync((index, c) =>
                     FromDriveConfig(hostSettings, storageSettings, c, index).ToEither()).ToAsync();
         }
 
         public static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
-            HostSettings hostSettings, VMStorageSettings storageSettings, VirtualCatletDriveConfig driveConfig,
+            HostSettings hostSettings, VMStorageSettings storageSettings, CatletDriveConfig driveConfig,
             int index)
         {
             const int
@@ -33,23 +33,23 @@ namespace Eryph.VmManagement.Storage
 
 
             //if it is not a vhd, we only need controller settings
-            if (driveConfig.Type != VirtualCatletDriveType.VHD)
+            if (driveConfig.Type.HasValue && driveConfig.Type != CatletDriveType.VHD)
             {
                 VMDriveStorageSettings result;
-                if (driveConfig.Type == VirtualCatletDriveType.DVD)
+                if (driveConfig.Type == CatletDriveType.DVD)
                     result = new VMDvDStorageSettings
                     {
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation,
-                        Type = VirtualCatletDriveType.DVD,
-                        Path = driveConfig.Template,
+                        Type = CatletDriveType.DVD,
+                        Path = driveConfig.Source,
                     };
                 else
                     result = new VMDriveStorageSettings
                     {
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation,
-                        Type = driveConfig.Type.GetValueOrDefault(VirtualCatletDriveType.PHD)
+                        Type = driveConfig.Type.GetValueOrDefault(CatletDriveType.PHD)
                     };
 
                 return Prelude.RightAsync<Error, VMDriveStorageSettings>(result);
@@ -77,17 +77,17 @@ namespace Eryph.VmManagement.Storage
                         .ToAsync()
                     let planned = new HardDiskDriveStorageSettings
                     {
-                        Type = driveConfig.Type.Value,
+                        Type = CatletDriveType.VHD,
                         AttachPath = Path.Combine(Path.Combine(resolvedPath, identifier), $"{driveConfig.Name}.vhdx"),
                         DiskSettings = new DiskStorageSettings
                         {
                             StorageNames = names,
                             StorageIdentifier = storageIdentifier,
                             ParentSettings =
-                                string.IsNullOrWhiteSpace(driveConfig.Template)
+                                string.IsNullOrWhiteSpace(driveConfig.Source)
                                     ? Option<DiskStorageSettings>.None
                                     : DiskStorageSettings
-                                        .FromTemplateString(hostSettings, driveConfig.Template),
+                                        .FromSourceString(hostSettings, driveConfig.Source),
                             Path = Path.Combine(resolvedPath, identifier),
                             FileName = $"{driveConfig.Name}.vhdx",
                             // ReSharper disable once StringLiteralTypo

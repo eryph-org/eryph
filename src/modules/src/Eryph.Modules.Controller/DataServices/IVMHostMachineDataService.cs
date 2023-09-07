@@ -7,9 +7,9 @@ namespace Eryph.Modules.Controller.DataServices;
 
 public interface IVMHostMachineDataService
 {
-    Task<Option<VirtualCatletHost>> GetVMHost(Guid id);
-    Task<VirtualCatletHost> AddNewVMHost(VirtualCatletHost vmHostMachine);
-    Task<Option<VirtualCatletHost>> GetVMHostByHardwareId(string hardwareId);
-    Task<Option<VirtualCatletHost>> GetVMHostByAgentName(string agentName);
+    Task<Option<CatletFarm>> GetVMHost(Guid id);
+    Task<CatletFarm> AddNewVMHost(CatletFarm vmHostMachine);
+    Task<Option<CatletFarm>> GetVMHostByHardwareId(string hardwareId);
+    Task<Option<CatletFarm>> GetVMHostByAgentName(string agentName);
 
 }

@@ -23,7 +23,7 @@ namespace Eryph.VmManagement.Inventory
                 case VirtualMachineState.Paused:
                     return VmStatus.Stopped;
                 case VirtualMachineState.Starting:
-                    return VmStatus.Stopped;
+                    return VmStatus.Pending;
                 case VirtualMachineState.Reset:
                     return VmStatus.Stopped;
                 case VirtualMachineState.Saving:

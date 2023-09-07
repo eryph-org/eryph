@@ -9,7 +9,6 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.ModuleCore;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -28,16 +27,18 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
     private readonly ITaskMessaging _messaging;
     private readonly IStateStore _stateStore;
     private readonly ICatletIpManager _ipManager;
+    private readonly IProviderIpManager _providerIpManager;
     private readonly INetworkProviderManager _providerManager;
 
 
     public UpdateCatletNetworksCommandHandler(ITaskMessaging messaging, ICatletIpManager ipManager, 
-        IStateStore stateStore, INetworkProviderManager providerManager)
+        IStateStore stateStore, INetworkProviderManager providerManager, IProviderIpManager providerIpManager)
     {
         _messaging = messaging;
         _ipManager = ipManager;
         _stateStore = stateStore;
         _providerManager = providerManager;
+        _providerIpManager = providerIpManager;
     }
 
     public async Task Handle(OperationTask<UpdateCatletNetworksCommand> message)
@@ -65,14 +66,14 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                 let c2 = new CancellationTokenSource()
 
                 from floatingPort in isFlatNetwork 
-                    ? Prelude.RightAsync<Error, Unit>(Prelude.unit)
+                    ? Prelude.RightAsync<Error, Option<FloatingNetworkPort>>(Option<FloatingNetworkPort>.None)
                     : GetOrAddFloatingPort(
                     networkPort, Option<string>.None,
                     "default", "default",
-                    "default", c2.Token).ToAsync().Map(_ => Unit.Default)
+                    "default", c2.Token).ToAsync().Map(Option<FloatingNetworkPort>.Some)
 
                 let fixedMacAddress =
-                    message.Command.Config.VCatlet.NetworkAdapters.Find(x => x.Name == cfg.AdapterName)
+                    message.Command.Config.NetworkAdapters.Find(x => x.Name == cfg.AdapterName)
                         .Map(x => x.MacAddress)
                         .IfNone("")
                 let _ = UpdatePort(networkPort, cfg.AdapterName, fixedMacAddress)
@@ -86,6 +87,15 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     message.Command.Config.Networks,
                     c3.Token)
 
+                from floatingIps in isFlatNetwork
+                        ? Prelude.RightAsync<Error, IPAddress[]>(Array.Empty<IPAddress>())
+                        : floatingPort.ToEither(Error.New("floating port is missing")).ToAsync()
+                            .Bind( p => 
+                        _providerIpManager.ConfigureFloatingPortIps(
+                            networkProvider,
+                            p,
+                            c3.Token))
+
                 select new MachineNetworkSettings
                 {
                     NetworkProviderName = network.NetworkProvider,
@@ -94,7 +104,9 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     PortName = networkPort.Name,
                     MacAddress = networkPort.MacAddress,
                     AddressesV4 = string.Join(',', ips.Where(x => x.AddressFamily == AddressFamily.InterNetwork)),
-                    AddressesV6 = string.Join(',', ips.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6))
+                    FloatingAddressV4 = floatingIps.FirstOrDefault(x=>x.AddressFamily == AddressFamily.InterNetwork)?.ToString(),
+                    AddressesV6 = string.Join(',', ips.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6)),
+                    FloatingAddressV6 = floatingIps.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6)?.ToString(),
 
                 }
 

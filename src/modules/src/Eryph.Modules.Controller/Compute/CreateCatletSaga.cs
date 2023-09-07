@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Messages.Resources.Images.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
-using Eryph.Resources;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -25,7 +23,7 @@ namespace Eryph.Modules.Controller.Compute
         IHandleMessages<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CreateVCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>
+        IHandleMessages<OperationTaskStatusEvent<PrepareParentGenomeCommand>>
 
     {
         private readonly Id64Generator _idGenerator;
@@ -59,12 +57,13 @@ namespace Eryph.Modules.Controller.Compute
                     throw new InvalidOperationException($"Project '{projectName}' not found.");
 
 
-                _ = await _vmDataService.AddNewVM(new VirtualCatlet
+                _ = await _vmDataService.AddNewVM(new Catlet
                 {
                     ProjectId = project.Id,
                     Id = Data.MachineId,
                     AgentName = Data.AgentName,
-                    VMId = r.Inventory.VMId
+                    VMId = r.Inventory.VMId,
+                    Name = r.Inventory.Name,
                 }, r.MachineMetadata);
 
                 await StartNewTask(new UpdateCatletCommand
@@ -87,68 +86,74 @@ namespace Eryph.Modules.Controller.Compute
                 Data.State = CreateVMState.Placed;
                 Data.AgentName = r.AgentName;
 
-                Data.ImageNames = new List<string>();
-                if(!string.IsNullOrWhiteSpace(Data.Config?.VCatlet?.Image))
-                    Data.ImageNames.Add(Data.Config?.VCatlet?.Image??"");
 
-                Data.ImageNames.AddRange( Data.Config?.VCatlet?.Drives
-                    .Select(x => x.Template)
-                    .Where(t => t!=null && t.StartsWith("image:") && t.Split(':').Length>=2)
-                    .Select(t =>t.Split(':')[1]) ?? Enumerable.Empty<string>());
-
-                // no images required - go directly to create
-                if (Data.ImageNames.Count == 0)
+                if (string.IsNullOrWhiteSpace(Data.Config?.Parent))
                 {
                     await CreateCatlet();
                     return;
+
                 }
 
-                Data.ImageNames = Data.ImageNames.Distinct().ToList();
-
-                foreach (var imageName in Data.ImageNames)
+                await StartNewTask(new PrepareParentGenomeCommand
                 {
-                    await StartNewTask(new PrepareVirtualMachineImageCommand
-                    {
-                        Image = imageName,
-                        AgentName = r.AgentName
-                    });
-                }
+                    ParentName = Data.Config?.Parent,
+                    AgentName = r.AgentName
+                });
+
+                //Data.GeneSetName = Data.Config?.Parent??"";
+
+                //Data.GeneNames.AddRange( (Data.Config?.Drives?
+                //    .Select(x => x.Source)
+                //    .Where(t => t!=null && t.StartsWith("gene:") && t.Split(':').Length>=2) ?? Array.Empty<string>()));
+
+                //// no genesets required - go directly to create
+                //if (Data.GeneNames.Count == 0 && string.IsNullOrWhiteSpace(Data.GeneSetName))
+                //{
+
+                //}
+
+                //if (!string.IsNullOrWhiteSpace(Data.GeneSetName))
+                //{
+
+                //}
+
+                //Data.GeneNames = Data.GeneNames.Distinct().ToList();
+
+                //foreach (var geneName in Data.GeneNames)
+                //{
+                //    await StartNewTask(new PrepareGeneSetCommand
+                //    {
+                //        GeneName = geneName,
+                //        AgentName = r.AgentName
+                //    });
+                //}
 
             });
         }
 
-        public Task Handle(OperationTaskStatusEvent<PrepareVirtualMachineImageCommand> message)
+        public Task Handle(OperationTaskStatusEvent<PrepareParentGenomeCommand> message)
         {
             if (Data.State >= CreateVMState.ImagePrepared)
                 return Task.CompletedTask;
 
-            return FailOrRun<PrepareVirtualMachineImageCommand, PrepareVirtualMachineImageResponse>(message, 
+            return FailOrRun<PrepareParentGenomeCommand, PrepareParentGenomeResponse>(message, 
                 (response) =>
             {
+                if (Data.Config == null || Data.Config.Parent != response.RequestedParent) return Task.CompletedTask;
+                Data.Config.Parent = response.ResolvedParent;
+                return CreateCatlet();
+                //if (Data.Config.Drives != null)
+                //    foreach (var catletDriveConfig in Data.Config.Drives)
+                //    {
+                //        if (catletDriveConfig.Source != null &&
+                //            catletDriveConfig.Source.StartsWith("gene:") &&
+                //            catletDriveConfig.Source.Contains(response.RequestedGeneSet))
+                //        {
+                //            catletDriveConfig.Source =
+                //                catletDriveConfig.Source.Replace(response.RequestedGeneSet, response.ResolvedGenSet);
+                //        }
+                //    }
 
-                if (Data.Config != null)
-                {
-                    if(Data.Config.VCatlet.Image == response.RequestedImage)
-                        Data.Config.VCatlet.Image = response.ResolvedImage;
-
-                    foreach (var catletDriveConfig in Data.Config.VCatlet.Drives)
-                    {
-                        if (catletDriveConfig.Template != null && 
-                            catletDriveConfig.Template.StartsWith("image:") &&
-                            catletDriveConfig.Template.Contains(response.RequestedImage))
-                        {
-                            catletDriveConfig.Template = catletDriveConfig.Template.Replace(response.RequestedImage, response.ResolvedImage);
-                        }
-
-                    }
-                }
-
-                if(Data.ImageNames.Contains(response.RequestedImage))
-                    Data.ImageNames.Remove(response.RequestedImage);
-
-                return Data.ImageNames.Count == 0 
-                    ? CreateCatlet() 
-                    : Task.CompletedTask;
             });
         }
 
@@ -206,7 +211,7 @@ namespace Eryph.Modules.Controller.Compute
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<CreateVCatletCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<PrepareVirtualMachineImageCommand>>(m => m.InitiatingTaskId,
+            config.Correlate<OperationTaskStatusEvent<PrepareParentGenomeCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<UpdateCatletCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
         }

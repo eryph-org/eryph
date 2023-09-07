@@ -17,69 +17,69 @@ namespace Eryph.VmManagement.Data.Full
         IVMWithNetworkAdapterInfo,
         IVMWithDrivesInfo
     {
-        //public string ComputerName { get; private set; }
+        //public string ComputerName { get; init; }
 
 
-        //public string ConfigurationLocation { get; private set; }
+        //public string ConfigurationLocation { get; init; }
 
-        //public bool SmartPagingFileInUse { get; private set; }
+        //public bool SmartPagingFileInUse { get; init; }
 
-        //public string SmartPagingFilePath { get; private set; }
+        //public string SmartPagingFilePath { get; init; }
 
-        //public string SnapshotFileLocation { get; private set; }
+        //public string SnapshotFileLocation { get; init; }
 
-        //public StartAction AutomaticStartAction { get; private set; }
-
-
-        //public int AutomaticStartDelay { get; private set; }
+        //public StartAction AutomaticStartAction { get; init; }
 
 
-        //public StopAction AutomaticStopAction { get; private set; }
+        //public int AutomaticStartDelay { get; init; }
 
 
-        //public CriticalErrorAction AutomaticCriticalErrorAction { get; private set; }
+        //public StopAction AutomaticStopAction { get; init; }
 
 
-        //public int AutomaticCriticalErrorActionTimeout { get; private set; }
+        //public CriticalErrorAction AutomaticCriticalErrorAction { get; init; }
 
 
-        //public bool AutomaticCheckpointsEnabled { get; private set; }
+        //public int AutomaticCriticalErrorActionTimeout { get; init; }
 
 
-        //public int CPUUsage { get; private set; }
+        public bool AutomaticCheckpointsEnabled { get; init; }
 
 
-        //public long MemoryAssigned { get; private set; }
+        //public int CPUUsage { get; init; }
 
 
-        //public long MemoryDemand { get; private set; }
+        //public long MemoryAssigned { get; init; }
 
 
-        //public string MemoryStatus { get; private set; }
+        //public long MemoryDemand { get; init; }
 
 
-        //public bool? NumaAligned { get; private set; }
+        //public string MemoryStatus { get; init; }
 
 
-        //public int NumaNodesCount { get; private set; }
+        //public bool? NumaAligned { get; init; }
 
 
-        //public int NumaSocketCount { get; private set; }
+        //public int NumaNodesCount { get; init; }
 
 
-        //public VMHeartbeatStatus? Heartbeat { get; private set; }
+        //public int NumaSocketCount { get; init; }
 
 
-        //public string IntegrationServicesState { get; private set; }
+        //public VMHeartbeatStatus? Heartbeat { get; init; }
 
 
-        //public Version IntegrationServicesVersion { get; private set; }
+        //public string IntegrationServicesState { get; init; }
 
 
-        public TimeSpan Uptime { get; private set; }
+        //public Version IntegrationServicesVersion { get; init; }
 
 
-        //public VirtualMachineOperationalStatus[] OperationalStatus { get; private set; }
+        public TimeSpan Uptime { get; init; }
+
+
+        //public VirtualMachineOperationalStatus[] OperationalStatus { get; init; }
 
 
         //public VirtualMachineOperationalStatus? PrimaryOperationalStatus
@@ -93,10 +93,10 @@ namespace Eryph.VmManagement.Data.Full
         //    }
         //}
 
-        //public VirtualMachineOperationalStatus? SecondaryOperationalStatus { get; private set; }
+        //public VirtualMachineOperationalStatus? SecondaryOperationalStatus { get; init; }
 
 
-        //public string[] StatusDescriptions { get; private set; }
+        //public string[] StatusDescriptions { get; init; }
 
 
         //public string PrimaryStatusDescription
@@ -121,112 +121,112 @@ namespace Eryph.VmManagement.Data.Full
         //    }
         //}
 
-        //public string Status { get; private set; }
+        //public string Status { get; init; }
 
-        //public VMReplicationHealthState ReplicationHealth { get; private set; }
+        //public VMReplicationHealthState ReplicationHealth { get; init; }
 
-        //public VMReplicationMode ReplicationMode { get; private set; }
-
-
-        //public VMReplicationState ReplicationState { get; private set; }
+        //public VMReplicationMode ReplicationMode { get; init; }
 
 
-        //public bool ResourceMeteringEnabled { get; private set; }
+        //public VMReplicationState ReplicationState { get; init; }
 
 
-        public CheckpointType CheckpointType { get; private set; }
-
-        public bool DynamicMemoryEnabled { get; private set; }
+        //public bool ResourceMeteringEnabled { get; init; }
 
 
-        public long MemoryMaximum { get; private set; }
+        public CheckpointType CheckpointType { get; init; }
 
-        public long MemoryMinimum { get; private set; }
+        public bool DynamicMemoryEnabled { get; init; }
 
 
-        //public bool IsClustered { get; private set; }
+        public long MemoryMaximum { get; init; }
 
-        [PrivateIdentifier]
-        public string Notes { get; private set; }
+        public long MemoryMinimum { get; init; }
 
-        //public DateTime CreationTime { get; private set; }
+
+        //public bool IsClustered { get; init; }
 
         [PrivateIdentifier]
-        public Guid Id { get; private set; }
+        public string Notes { get; init; }
+
+        //public DateTime CreationTime { get; init; }
 
         [PrivateIdentifier]
-        public string Name { get; private set; }
-
-
-        public long MemoryStartup { get; private set; }
-
-
-        public long ProcessorCount { get; private set; }
-
-
-        //public bool BatteryPassthroughEnabled { get; private set; }
-
-
-        public int Generation { get; private set; }
-
-        //public Guid? ParentSnapshotId { get; private set; }
-
-
-        //public string ParentSnapshotName { get; private set; }
+        public Guid Id { get; init; }
 
         [PrivateIdentifier]
-        public string Path { get; private set; }
-
-        //public VMGroupInfo[] Groups { get; private set; }
+        public string Name { get; init; }
 
 
-        //public VirtualMachineType VirtualMachineType { get; private set; }
+        public long MemoryStartup { get; init; }
 
 
-        //public VirtualMachineSubType VirtualMachineSubType { get; private set; }
-
-        //public VMComPortInfo ComPort1 { get; private set; }
+        public long ProcessorCount { get; init; }
 
 
-        //public VMComPortInfo ComPort2 { get; private set; }
-
-        public VirtualMachineDeviceInfo[] DVDDrives { get; private set; }
+        //public bool BatteryPassthroughEnabled { get; init; }
 
 
-        //public VMFibreChannelHbaInfo[] FibreChannelHostBusAdapters { get; private set; }
+        public int Generation { get; init; }
+
+        //public Guid? ParentSnapshotId { get; init; }
 
 
-        //public VMFloppyDiskDriveInfo FloppyDrive { get; private set; }
+        //public string ParentSnapshotName { get; init; }
+
+        [PrivateIdentifier]
+        public string Path { get; init; }
+
+        //public VMGroupInfo[] Groups { get; init; }
 
 
-        public VirtualMachineDeviceInfo[] HardDrives { get; private set; }
+        //public VirtualMachineType VirtualMachineType { get; init; }
 
 
-        //public VMRemoteFx3DVideoAdapterInfo RemoteFxAdapter { get; private set; }
+        //public VirtualMachineSubType VirtualMachineSubType { get; init; }
+
+        //public VMComPortInfo ComPort1 { get; init; }
 
 
-        //public VirtualMachineIntegrationComponentInfo[] VMIntegrationService { get; private set; }
+        //public VMComPortInfo ComPort2 { get; init; }
 
-        public VirtualMachineDeviceInfo[] NetworkAdapters { get; private set; }
-
-
-        //public long SizeOfSystemFiles { get; private set; }
+        public VirtualMachineDeviceInfo[] DVDDrives { get; init; }
 
 
-        public VirtualMachineState State { get; private set; }
-
-        //public string Version { get; private set; }
+        //public VMFibreChannelHbaInfo[] FibreChannelHostBusAdapters { get; init; }
 
 
-        //public bool GuestControlledCacheTypes { get; private set; }
+        //public VMFloppyDiskDriveInfo FloppyDrive { get; init; }
 
 
-        //public uint LowMemoryMappedIoSpace { get; private set; }
+        public VirtualMachineDeviceInfo[] HardDrives { get; init; }
 
 
-        //public ulong HighMemoryMappedIoSpace { get; private set; }
+        //public VMRemoteFx3DVideoAdapterInfo RemoteFxAdapter { get; init; }
 
 
-        //public OnOffState? LockOnDisconnect { get; private set; }
+        //public VirtualMachineIntegrationComponentInfo[] VMIntegrationService { get; init; }
+
+        public VirtualMachineDeviceInfo[] NetworkAdapters { get; init; }
+
+
+        //public long SizeOfSystemFiles { get; init; }
+
+
+        public VirtualMachineState State { get; init; }
+
+        //public string Version { get; init; }
+
+
+        //public bool GuestControlledCacheTypes { get; init; }
+
+
+        //public uint LowMemoryMappedIoSpace { get; init; }
+
+
+        //public ulong HighMemoryMappedIoSpace { get; init; }
+
+
+        //public OnOffState? LockOnDisconnect { get; init; }
     }
 }

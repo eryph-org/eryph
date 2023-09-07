@@ -14,4 +14,5 @@ public class UpdateVirtualCatletConfigDriveCommand : IVMCommand, IHasResource
     public MachineNetworkSettings[] MachineNetworkSettings { get; set; }
 
     public Resource Resource => new(ResourceType.Catlet, CatletId);
+    public string CatletName { get; set; }
 }

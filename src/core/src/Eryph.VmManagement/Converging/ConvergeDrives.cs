@@ -31,7 +31,7 @@ namespace Eryph.VmManagement.Converging
 
             try
             {
-                 await (
+                 var res = await (
                     //prevent snapshots creating during running disk converge
                     from _ in SetVMCheckpointType(vmInfo, CheckpointType.Disabled, Context.Engine)
                     //make a plan
@@ -45,6 +45,9 @@ namespace Eryph.VmManagement.Converging
                     from ___ in VirtualDisks(infoRecreated, plannedDriveStorageSettings)
                     from ____ in DvdDrives(infoRecreated, plannedDriveStorageSettings)
                     select Unit.Default).ToEither().ConfigureAwait(false);
+
+                 if (res.IsLeft)
+                     return res.Map(_ => vmInfo);
             }
             finally
             {
@@ -58,7 +61,7 @@ namespace Eryph.VmManagement.Converging
             Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
         {
             var plannedDiskSettings = plannedDriveStorageSettings
-                .Where(x => x.Type == VirtualCatletDriveType.VHD || x.Type == VirtualCatletDriveType.SharedVHD)
+                .Where(x => x.Type == CatletDriveType.VHD || x.Type == CatletDriveType.SharedVHD)
                 .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
             return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine,
@@ -71,7 +74,7 @@ namespace Eryph.VmManagement.Converging
             Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
         {
             var plannedDvdSettings = plannedDriveStorageSettings
-                .Where(x => x.Type == VirtualCatletDriveType.DVD)
+                .Where(x => x.Type == CatletDriveType.DVD)
                 .Cast<VMDvDStorageSettings>().ToSeq();
 
             return (
@@ -108,7 +111,7 @@ namespace Eryph.VmManagement.Converging
 
         {
             var planedDiskSettings = plannedStorageSettings.Where(x =>
-                    x.Type == VirtualCatletDriveType.VHD || x.Type == VirtualCatletDriveType.SharedVHD)
+                    x.Type is CatletDriveType.VHD or CatletDriveType.SharedVHD)
                 .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
             var attachedPaths = planedDiskSettings.Map(s => s.AttachPath).Map(x => x.IfNone(""))
@@ -166,7 +169,7 @@ namespace Eryph.VmManagement.Converging
             TypedPsObject<VirtualMachineInfo> vmInfo, Seq<VMDriveStorageSettings> plannedStorageSettings)
 
         {
-            var controllersAndLocations = plannedStorageSettings.Where(x => x.Type == VirtualCatletDriveType.DVD)
+            var controllersAndLocations = plannedStorageSettings.Where(x => x.Type == CatletDriveType.DVD)
                 .Map(x => new {x.ControllerNumber, x.ControllerLocation})
                 .GroupBy(x => x.ControllerNumber)
                 .ToImmutableDictionary(x => x.Key, x => x.Map(y => y.ControllerLocation).ToImmutableArray());
@@ -264,14 +267,14 @@ namespace Eryph.VmManagement.Converging
                                 from p1 in Context.ReportProgressAsync(
                                     $"Creating HD Drive: {driveSettings.DiskSettings.Name}")
 
-                                from uCreate in driveSettings.DiskSettings.ParentSettings.Match(parentSettings =>
+                                from uCreate in driveSettings.DiskSettings.ParentSettings.MatchAsync(async parentSettings =>
                                         {
                                             var parentFilePath = Path.Combine(parentSettings.Path,
                                                 parentSettings.FileName);
-                                            return Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
+                                            return await Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
                                                 $"New-VHD -Path \"{vhdPath}\" -ParentPath \"{parentFilePath}\" -Differencing"));
                                         },
-                                        () => Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
+                                        async () => await Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
                                             $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {driveSettings.DiskSettings.SizeBytes}")))
                                     .ToError().ToAsync()
 

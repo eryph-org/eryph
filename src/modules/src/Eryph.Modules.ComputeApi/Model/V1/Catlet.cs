@@ -13,5 +13,9 @@ namespace Eryph.Modules.ComputeApi.Model.V1
         public CatletStatus Status { get; set; }
 
         public IEnumerable<CatletNetwork> Networks { get; set; }
+
+        public IEnumerable<CatletNetworkAdapter> NetworkAdapters { get; set; }
+
+        public IEnumerable<CatletDrive> Drives { get; set; }
     }
 }

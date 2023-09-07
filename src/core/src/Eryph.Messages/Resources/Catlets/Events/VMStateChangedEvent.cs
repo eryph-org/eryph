@@ -8,5 +8,6 @@ namespace Eryph.Messages.Resources.Catlets.Events
     {
         public Guid VmId { get; set; }
         public VmStatus Status { get; set; }
+        public DateTime TimeStamp { get; set; }
     }
 }

@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -34,16 +33,13 @@ namespace Eryph.Modules.Controller.Inventory
         {
             var newMachineState = await
                 _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId).IfNoneAsync(
-                async () => new VirtualCatletHost
+                async () => new CatletFarm
                 {
                     Id = Guid.NewGuid(),
-                    AgentName = message.HostInventory.Name,
                     Name = message.HostInventory.Name,
                     HardwareId = message.HostInventory.HardwareId,
                     Project = await FindRequiredProject("default")
                 });
-
-            newMachineState.Status = CatletStatus.Running;
 
             var existingMachine = await _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
                 .IfNoneAsync(() => _vmHostDataService.AddNewVMHost(newMachineState));

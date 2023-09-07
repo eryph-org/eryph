@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using Eryph.Core;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
@@ -22,11 +23,11 @@ namespace Eryph.StateDb
         public DbSet<Resource> Resources { get; set; }
         
         public DbSet<Catlet> Catlets { get; set; }
-        public DbSet<VirtualCatlet> VirtualCatlets { get; set; }
-        public DbSet<VirtualCatletHost> VirtualCatletHosts { get; set; }
 
-        public DbSet<VirtualCatletNetworkAdapter> VirtualCatletNetworkAdapters { get; set; }
-        public DbSet<VirtualCatletDrive> VirtualCatletDrives { get; set; }
+        public DbSet<CatletFarm> CatletFarms { get; set; }
+
+        public DbSet<CatletNetworkAdapter> CatletNetworkAdapters { get; set; }
+        public DbSet<CatletDrive> CatletDrives { get; set; }
         public DbSet<VirtualDisk> VirtualDisks { get; set; }
 
         public DbSet<VirtualNetwork> VirtualNetworks { get; set; }
@@ -46,7 +47,7 @@ namespace Eryph.StateDb
 
         public DbSet<ReportedNetwork> ReportedNetworks { get; set; }
 
-        public DbSet<VirtualMachineMetadata> Metadata { get; set; }
+        public DbSet<CatletMetadata> Metadata { get; set; }
         public DbSet<Project> Projects { get; set; }
 
         public DbSet<ProjectRoles> ProjectRoles { get; set; }
@@ -123,6 +124,41 @@ namespace Eryph.StateDb
             modelBuilder.Entity<Catlet>()
                 .Navigation(x => x.NetworkPorts);
 
+            modelBuilder.Entity<Catlet>()
+                .HasOne(x => x.Host)
+                .WithMany(x => x.Catlets);
+
+            modelBuilder.Entity<Catlet>()
+                .HasMany(x => x.NetworkAdapters)
+                .WithOne(x => x.Catlet)
+                .HasForeignKey(x => x.CatletId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Catlet>()
+                .Navigation(x => x.NetworkAdapters)
+                .AutoInclude();
+
+
+            modelBuilder.Entity<Catlet>()
+                .HasMany(x => x.Drives)
+                .WithOne(x => x.Catlet)
+                .HasForeignKey(x => x.CatletId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Catlet>()
+                .Navigation(x => x.Drives)
+                .AutoInclude();
+
+            modelBuilder.Entity<Catlet>()
+                .Property(e => e.Features)
+                .HasConversion(
+                    v => string.Join(',', v),
+                    v => v.Split(',',
+                            StringSplitOptions.RemoveEmptyEntries)
+                        .Map(Enum.Parse<CatletFeature>)
+                        .ToList());
+
+
             modelBuilder.Entity<VirtualNetwork>()
                 .ToTable("VNetworks")
                 .HasMany(x => x.NetworkPorts)
@@ -167,6 +203,7 @@ namespace Eryph.StateDb
                 .HasForeignKey<VirtualNetworkPort>(x => x.FloatingPortId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+
             modelBuilder.Entity<FloatingNetworkPort>()
                 .Property(x => x.PoolName).HasColumnName(nameof(FloatingNetworkPort.PoolName));
             modelBuilder.Entity<FloatingNetworkPort>()
@@ -184,6 +221,8 @@ namespace Eryph.StateDb
             modelBuilder.Entity<NetworkPort>()
                 .HasIndex(x => x.MacAddress)
                 .IsUnique();
+
+
 
 
             modelBuilder.Entity<Subnet>()
@@ -216,68 +255,31 @@ namespace Eryph.StateDb
                 .HasKey(x => x.Id);
 
 
-            modelBuilder.Entity<VirtualCatletHost>()
-                .ToTable("VCatletHosts");
-
-            modelBuilder.Entity<VirtualCatlet>()
-                .ToTable("VCatlets");
-            
-            modelBuilder.Entity<VirtualCatlet>()
-                .HasOne(x => x.Host)
-                .WithMany(x => x.VirtualCatlets);
-
-            modelBuilder.Entity<VirtualCatlet>()
-                .HasMany(x => x.NetworkAdapters)
-                .WithOne(x => x.Vm)
-                .HasForeignKey(x => x.MachineId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<VirtualCatlet>()
-                .Navigation(x => x.NetworkAdapters)
-                .AutoInclude();
-            
-
-            modelBuilder.Entity<VirtualCatlet>()
-                .HasMany(x => x.Drives)
-                .WithOne(x => x.Vm)
-                .HasForeignKey(x => x.MachineId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<VirtualCatlet>()
-                .Navigation(x => x.Drives)
-                .AutoInclude();
-
-            modelBuilder.Entity<VirtualCatlet>()
-                .Property(e => e.Features)
-                .HasConversion(
-                    v => string.Join(',', v),
-                    v => v.Split(',',
-                            StringSplitOptions.RemoveEmptyEntries)
-                        .Map(Enum.Parse<VCatletFeature>)
-                        .ToList());
+            modelBuilder.Entity<CatletFarm>()
+                .ToTable("CatletFarms");
 
 
-            modelBuilder.Entity<VirtualCatletNetworkAdapter>().HasKey("MachineId", "Id");
+            modelBuilder.Entity<CatletNetworkAdapter>().HasKey(x=>new {x.CatletId, x.Id});
 
 
-            modelBuilder.Entity<VirtualCatletDrive>()
-                .ToTable("VDrives")
+            modelBuilder.Entity<CatletDrive>()
+                .ToTable("CatletDrives")
                 .HasKey(x => x.Id);
 
-            modelBuilder.Entity<VirtualCatletDrive>()
+            modelBuilder.Entity<CatletDrive>()
                 .HasOne(x => x.AttachedDisk)
                 .WithMany(x => x.AttachedDrives)
                 .HasForeignKey(x => x.AttachedDiskId);
 
 
             modelBuilder.Entity<VirtualDisk>()
-                .ToTable("VDisks");
+                .ToTable("CatletDisks");
                 
             modelBuilder.Entity<VirtualDisk>().HasOne(x => x.Parent)
                 .WithMany(x => x.Childs)
                 .HasForeignKey(x => x.ParentId);
 
-            modelBuilder.Entity<VirtualMachineMetadata>()
+            modelBuilder.Entity<CatletMetadata>()
                 .HasKey(x => x.Id);
 
 

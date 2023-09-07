@@ -8,6 +8,8 @@ namespace Eryph.Resources
     {
         Catlet,
         VirtualDisk,
-        VirtualNetwork
+        VirtualNetwork,
+        CatletFarm
     }
 }
+

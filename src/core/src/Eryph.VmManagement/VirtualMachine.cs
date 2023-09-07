@@ -1,7 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Json;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
@@ -45,12 +50,39 @@ namespace Eryph.VmManagement
                     })
                 .ToAsync()
                 .ToError()
-                .Bind(info => Rename(engine, info, vmName));
+                .Bind(info => Rename(engine, info, vmName))
+                .Bind(info => SetDefaults(engine, info));
+
         }
 
+        //keep this method (old template import) as base for vm import feature
+        public static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> VMTemplateFromPath(
+            IPowershellEngine engine,
+            string vmPath)
+        {
+            if (string.IsNullOrEmpty(vmPath))
+                return LeftAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>>(
+                    Error.New("Cannot create vcatlet from vm path - path is missing."));
+
+            var configRootPath = Path.Combine(vmPath, "Virtual Machines");
+
+            var vmInfo = Directory.GetFiles(configRootPath, "*.vmcx")
+                .HeadOrLeft(Error.New("Failed to find VM configuration file")).ToAsync()
+                .Bind(configPath =>
+                    engine.GetObjectsAsync<VMCompatibilityReportInfo>(PsCommandBuilder.Create()
+                            .AddCommand("Compare-VM")
+                            .AddParameter("Path", configPath)
+                        ).ToError().ToAsync()
+                        .Bind(x => x.HeadOrLeft(Error.New("Failed to load VM from path")).ToAsync())
+                        .Bind(rep => ExpandTemplateData(
+                            rep.GetProperty(x => x.VM), engine)));
+
+            return vmInfo;
+        }
+
+        //keep this method (old template import) as base for vm import feature
         public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ImportTemplate(
             IPowershellEngine engine,
-            HostSettings hostSettings,
             string vmName,
             string storageIdentifier,
             VMStorageSettings storageSettings,
@@ -70,10 +102,10 @@ namespace Eryph.VmManagement
                     .AddParameter("Copy")
                     .AddParameter("GenerateNewID")
                 ).ToError().ToAsync()
-                .Bind(x => x.HeadOrLeft(Error.New("Failed to Import VM Image")).ToAsync())
+                .Bind(x => x.HeadOrLeft(Error.New("Failed to Import VM")).ToAsync())
                 .Bind(rep => (
-                        from uD in RemoveAllPlannedDrives(engine, rep.GetProperty(x => x.VM))
-                        from _ in Rename(engine, rep.GetProperty(x => x.VM), vmName)
+                        //from uD in RemoveAllPlannedDrives(engine, rep.GetProperty(x => x.VM))
+                        //from _ in Rename(engine, rep.GetProperty(x => x.VM), vmName)
                         from __ in ResetMetadata(engine, rep.GetProperty(x => x.VM))
                         from ___ in RenamePlannedNetAdaptersToConvention(engine, rep.GetProperty(x => x.VM))
                         from ____ in DisconnectNetworkAdapters(engine, rep.GetProperty(x => x.VM))
@@ -97,36 +129,61 @@ namespace Eryph.VmManagement
             return vmInfo;
         }
 
-        public static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> TemplateFromImage(
-            IPowershellEngine engine,
+        public static EitherAsync<Error, CatletConfig> TemplateFromParents(
             HostSettings hostSettings,
-            string image)
+            string parent)
         {
-            if(string.IsNullOrEmpty(image))
-                return LeftAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>>(
-                        Error.New("Cannot create template from image - image name is missing."));
+            if(string.IsNullOrEmpty(parent))
+                return LeftAsync<Error, CatletConfig>(
+                        Error.New("Cannot create template from parent - parent name is missing."));
 
 
-            var imageRootPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "Images");
-            var imagePathName = image.Replace('/', '\\');
+            var genepoolPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "genepool");
+            var loadedConfig = new Dictionary<string,CatletConfig>();
 
-            var imagePath = Path.Combine(imageRootPath, imagePathName);
 
-            var configRootPath = Path.Combine(imagePath, "Virtual Machines");
+            do
+            {
+                if (loadedConfig.ContainsKey(parent))
+                {
+                    parent = null;
+                    continue;
+                }
 
-            var vmInfo = Directory.GetFiles(configRootPath, "*.vmcx")
-                .HeadOrLeft(Error.New("Failed to find image configuration file")).ToAsync()
-                .Bind(configPath =>
-                    engine.GetObjectsAsync<VMCompatibilityReportInfo>(PsCommandBuilder.Create()
-                            .AddCommand("Compare-VM")
-                            .AddParameter("Path", configPath)
-                        ).ToError().ToAsync()
-                        .Bind(x => x.HeadOrLeft(Error.New("Failed to load VM Image")).ToAsync())
-                        .Bind(rep => ExpandTemplateData(
-                            rep.GetProperty(x=>x.VM), engine)));
+                var parentPathName = parent.Replace('/', '\\');
+                var genesetManifestPath = Path.Combine(genepoolPath, parentPathName, "geneset.json");
+                var manifest = JsonSerializer.Deserialize<JsonNode>(File.ReadAllText(genesetManifestPath));
+                var reference = manifest["ref"]?.GetValue<string>() ?? "";
+                if (!string.IsNullOrWhiteSpace(reference))
+                {
+                    parent = reference;
+                    continue;
+                }
 
-            return vmInfo;
+                var genesetCatletPath = Path.Combine(genepoolPath, parentPathName, "catlet.json");
+                if (!File.Exists(genesetCatletPath))
+                    return Error.New($"Could not find catlet template of geneset {parent} in local genepool. You can only breed catlets from genesets with a catlet template.");
+
+                var configDictionary =
+                    ConfigModelJsonSerializer.DeserializeToDictionary(File.ReadAllText(genesetCatletPath));
+                var newConfig = CatletConfigDictionaryConverter.Convert(configDictionary);
+
+                newConfig.Name = parent;
+                loadedConfig.Add(parent, newConfig);
+                parent = newConfig.Parent;
+
+
+            } while (parent != null);
+
+            var ancestors = loadedConfig.Values.Reverse().ToArray();
+
+            var breedConfig = ancestors.Fold(new CatletConfig(),
+                (p, child) => p.Breed(child, p.Name));
+
+            return breedConfig;
         }
+
+
 
         public static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> RemoveAllPlannedDrives(
             IPowershellEngine engine,
@@ -139,6 +196,7 @@ namespace Eryph.VmManagement
             ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
+
         public static EitherAsync<Error, TypedPsObject<T>> Rename<T>(
             IPowershellEngine engine,
             TypedPsObject<T> vmInfo,
@@ -149,6 +207,23 @@ namespace Eryph.VmManagement
                 .AddCommand("Rename-VM")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("NewName", newName)
+            ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
+        }
+
+        public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> SetDefaults(
+            IPowershellEngine engine,
+            TypedPsObject<VirtualMachineInfo> vmInfo)
+        {
+
+            return engine.RunAsync(new PsCommandBuilder()
+                    .AddCommand("Set-VM")
+                    .AddParameter("VM", vmInfo.PsObject)
+                    .AddParameter("DynamicMemory", false)
+                    .AddParameter("AutomaticCheckpointsEnabled", false)
+                    .AddParameter("EnhancedSessionTransportType", "VMBus")
+                    .AddParameter("AutomaticStartAction", "Nothing")
+                    .AddParameter("AutomaticStopAction", "Save")
+
             ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
@@ -168,7 +243,7 @@ namespace Eryph.VmManagement
 
             var convergeTasks = new ConvergeTaskBase[]
             {
-                //new ConvergeFirmware(convergeContext),
+                new ConvergeSecureBoot(convergeContext),
                 new ConvergeCPU(convergeContext),
                 new ConvergeMemory(convergeContext),
                 new ConvergeDrives(convergeContext),
@@ -224,7 +299,7 @@ namespace Eryph.VmManagement
                     (   from hd in device.CastSafeAsync<PlannedHardDiskDriveInfo>().ToAsync()
                         from optionalDrive in VhdQuery.GetVhdInfo(engine, hd.Value.Path).ToAsync()
                         from drive in optionalDrive.ToEither(new PowershellFailure
-                                {Message = "Failed to find realized image disk"})
+                                {Message = "Failed to find realized VM disk"})
                             .ToAsync()
                         let _ = drive.Apply(d => hd.Value.Size = d.Value.Size)
                         select hd).ToEither())
