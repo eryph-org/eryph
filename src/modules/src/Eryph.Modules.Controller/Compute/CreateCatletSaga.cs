@@ -21,7 +21,7 @@ namespace Eryph.Modules.Controller.Compute
     internal class CreateCatletSaga : OperationTaskWorkflowSaga<CreateCatletCommand, CreateCatletSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<CreateVCatletCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareParentGenomeCommand>>
 
@@ -38,12 +38,12 @@ namespace Eryph.Modules.Controller.Compute
             _stateStore = stateStore;
         }
 
-        public Task Handle(OperationTaskStatusEvent<CreateVCatletCommand> message)
+        public Task Handle(OperationTaskStatusEvent<CreateCatletVMCommand> message)
         {
             if (Data.State >= CreateVMState.Created)
                 return Task.CompletedTask;
 
-            return FailOrRun<CreateVCatletCommand, ConvergeVirtualCatletResult>(message, async r =>
+            return FailOrRun<CreateCatletVMCommand, ConvergeVirtualCatletResult>(message, async r =>
             {
                 Data.State = CreateVMState.Created;
 
@@ -162,7 +162,7 @@ namespace Eryph.Modules.Controller.Compute
             Data.State = CreateVMState.ImagePrepared;
             Data.MachineId = Guid.NewGuid();
 
-            return StartNewTask(new CreateVCatletCommand
+            return StartNewTask(new CreateCatletVMCommand
             {
                 Config = Data.Config,
                 NewMachineId = Data.MachineId,
@@ -209,7 +209,7 @@ namespace Eryph.Modules.Controller.Compute
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<CreateVCatletCommand>>(m => m.InitiatingTaskId,
+            config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<PrepareParentGenomeCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);

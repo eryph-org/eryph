@@ -16,17 +16,17 @@ using Microsoft.Extensions.Logging;
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class CreateVCatletCommandHandler : 
-        VirtualCatletConfigCommandHandler<CreateVCatletCommand, ConvergeVirtualCatletResult>
+    internal class CreateCatletVMCommandHandler : 
+        VirtualCatletConfigCommandHandler<CreateCatletVMCommand, ConvergeVirtualCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
 
-        public CreateVCatletCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, messaging, log)
+        public CreateCatletVMCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, messaging, log)
         {
             _hostInfoProvider = hostInfoProvider;
         }
 
-        protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(CreateVCatletCommand command)
+        protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(CreateCatletVMCommand command)
         {
             var config = command.Config;
 

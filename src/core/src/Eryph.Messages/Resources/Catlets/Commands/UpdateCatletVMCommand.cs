@@ -7,7 +7,7 @@ using Eryph.Resources.Machines;
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
     [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class UpdateVCatletCommand : IHostAgentCommand, IVMCommand, IHasResource
+    public class UpdateCatletVMCommand : IHostAgentCommand, IVMCommand, IHasResource
     {
         public CatletConfig Config { get; set; }
 

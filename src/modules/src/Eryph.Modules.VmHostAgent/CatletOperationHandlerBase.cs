@@ -12,13 +12,13 @@ using Rebus.Handlers;
 
 namespace Eryph.Modules.VmHostAgent
 {
-    internal abstract class VCatletOperationHandlerBase<T> : IHandleMessages<OperationTask<T>>
+    internal abstract class CatletOperationHandlerBase<T> : IHandleMessages<OperationTask<T>>
         where T : class, IVMCommand, new()
     {
         private readonly ITaskMessaging _messaging;
         private readonly IPowershellEngine _engine;
 
-        protected VCatletOperationHandlerBase(ITaskMessaging messaging, IPowershellEngine engine)
+        protected CatletOperationHandlerBase(ITaskMessaging messaging, IPowershellEngine engine)
         {
             _messaging = messaging;
             _engine = engine;

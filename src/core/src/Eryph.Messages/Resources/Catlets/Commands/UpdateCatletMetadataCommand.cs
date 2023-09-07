@@ -5,7 +5,7 @@ using Eryph.Resources;
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
     [SendMessageTo(MessageRecipient.VMHostAgent)]
-    public class UpdateVCatletMetadataCommand :  IHostAgentCommand, IVMCommand, IHasResource
+    public class UpdateCatletMetadataCommand :  IHostAgentCommand, IVMCommand, IHasResource
     {
         public Guid NewMetadataId { get; set; }
         public Guid CurrentMetadataId { get; set; }

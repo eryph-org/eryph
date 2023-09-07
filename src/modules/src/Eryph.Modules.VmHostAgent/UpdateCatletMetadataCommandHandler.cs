@@ -9,14 +9,14 @@ using Rebus.Bus;
 
 namespace Eryph.Modules.VmHostAgent
 {
-    internal class UpdateVCatletMetadataCommandHandler : 
-        VirtualCatletConfigCommandHandler<UpdateVCatletMetadataCommand, Unit>
+    internal class UpdateCatletMetadataCommandHandler : 
+        VirtualCatletConfigCommandHandler<UpdateCatletMetadataCommand, Unit>
     {
-        public UpdateVCatletMetadataCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log) : base(engine, messaging, log)
+        public UpdateCatletMetadataCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log) : base(engine, messaging, log)
         {
         }
 
-        protected override EitherAsync<Error, Unit> HandleCommand(UpdateVCatletMetadataCommand command)
+        protected override EitherAsync<Error, Unit> HandleCommand(UpdateCatletMetadataCommand command)
         {
 
             var metadata = new VirtualCatletMetadata { Id = command.CurrentMetadataId };

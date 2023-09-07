@@ -14,7 +14,7 @@ using Rebus.Bus;
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class RemoveVirtualMachineHandler : VCatletOperationHandlerBase<RemoveCatletVMCommand>
+    internal class RemoveVirtualMachineHandler : CatletOperationHandlerBase<RemoveCatletVMCommand>
     {
         public RemoveVirtualMachineHandler(ITaskMessaging messaging, IPowershellEngine engine) : base(messaging, engine)
         {

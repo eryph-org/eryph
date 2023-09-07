@@ -25,7 +25,7 @@ namespace Eryph.Modules.Controller.Compute
     [UsedImplicitly]
     internal class UpdateCatletSaga : OperationTaskWorkflowSaga<UpdateCatletCommand, UpdateCatletSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateVCatletCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>,
@@ -53,7 +53,7 @@ namespace Eryph.Modules.Controller.Compute
             base.CorrelateMessages(config);
             config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<UpdateVCatletCommand>>(m => m.InitiatingTaskId,
+            config.Correlate<OperationTaskStatusEvent<UpdateCatletVMCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
@@ -204,7 +204,7 @@ namespace Eryph.Modules.Controller.Compute
                     {
                         var (vm, metadata) = data;
 
-                        return StartNewTask(new UpdateVCatletCommand
+                        return StartNewTask(new UpdateCatletVMCommand
                         {
                             CatletId = Data.CatletId,
                             VMId = vm.VMId,
@@ -222,12 +222,12 @@ namespace Eryph.Modules.Controller.Compute
             });
         }
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVCatletCommand> message)
+        public Task Handle(OperationTaskStatusEvent<UpdateCatletVMCommand> message)
         {
             if (Data.Updated)
                 return Task.CompletedTask;
 
-            return FailOrRun<UpdateVCatletCommand, ConvergeVirtualCatletResult>(message, async r =>
+            return FailOrRun<UpdateCatletVMCommand, ConvergeVirtualCatletResult>(message, async r =>
             {
                 Data.Updated = true;
 

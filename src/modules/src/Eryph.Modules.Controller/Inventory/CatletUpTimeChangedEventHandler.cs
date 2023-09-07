@@ -14,14 +14,14 @@ using Rebus.Pipeline;
 namespace Eryph.Modules.Controller.Inventory
 {
     [UsedImplicitly]
-    internal class VirtualCatletUpTimeChangedEventHandler : IHandleMessages<VCatletUpTimeChangedEvent>
+    internal class CatletUpTimeChangedEventHandler : IHandleMessages<CatletUpTimeChangedEvent>
     {
         private readonly IOperationDispatcher _opDispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IVirtualMachineMetadataService _metadataService;
         private readonly IMessageContext _messageContext;
 
-        public VirtualCatletUpTimeChangedEventHandler(
+        public CatletUpTimeChangedEventHandler(
             IOperationDispatcher opDispatcher, 
             IVirtualMachineMetadataService metadataService, 
             IVirtualMachineDataService vmDataService, IMessageContext messageContext)
@@ -32,7 +32,7 @@ namespace Eryph.Modules.Controller.Inventory
             _messageContext = messageContext;
         }
 
-        public Task Handle(VCatletUpTimeChangedEvent message)
+        public Task Handle(CatletUpTimeChangedEvent message)
         {
             return _vmDataService.GetByVMId(message.VmId).IfSomeAsync(vm =>
             {

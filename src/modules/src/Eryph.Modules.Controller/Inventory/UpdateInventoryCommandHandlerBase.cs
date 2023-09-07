@@ -170,7 +170,7 @@ namespace Eryph.Modules.Controller.Inventory
                             
                             await _dispatcher.StartNew(EryphConstants.DefaultTenantId,
                                 _messageContext.GetTraceId(),
-                                new UpdateVCatletMetadataCommand
+                                new UpdateCatletMetadataCommand
                             {
                                 AgentName = hostMachine.Name,
                                 CurrentMetadataId = oldMetadataId,
@@ -187,7 +187,7 @@ namespace Eryph.Modules.Controller.Inventory
                         var project = await FindRequiredProject(vmInfo.ProjectName);
 
                         await _vmDataService.AddNewVM(
-                            VirtualMachineInfoToVCatlet(vmInfo, hostMachine, metadata.MachineId, project),
+                            VirtualMachineInfoToCatlet(vmInfo, hostMachine, metadata.MachineId, project),
                             metadata);
 
 
@@ -205,7 +205,7 @@ namespace Eryph.Modules.Controller.Inventory
 
 
                         // update data for existing machine
-                        var newMachine = VirtualMachineInfoToVCatlet(vmInfo,
+                        var newMachine = VirtualMachineInfoToCatlet(vmInfo,
                             hostMachine, existingMachine.Id, existingMachine.Project);
                         existingMachine.Name = newMachine.Name;
                         existingMachine.Status = newMachine.Status;
@@ -252,7 +252,7 @@ namespace Eryph.Modules.Controller.Inventory
             return foundProject.IfNone(new Project());
         }
 
-        private Catlet VirtualMachineInfoToVCatlet(VirtualMachineData vmInfo, CatletFarm hostMachine,
+        private Catlet VirtualMachineInfoToCatlet(VirtualMachineData vmInfo, CatletFarm hostMachine,
             Guid machineId, Project project)
         {
             return new Catlet

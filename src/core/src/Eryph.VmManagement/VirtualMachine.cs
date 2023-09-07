@@ -62,7 +62,7 @@ namespace Eryph.VmManagement
         {
             if (string.IsNullOrEmpty(vmPath))
                 return LeftAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>>(
-                    Error.New("Cannot create vcatlet from vm path - path is missing."));
+                    Error.New("Cannot create catlet from vm path - path is missing."));
 
             var configRootPath = Path.Combine(vmPath, "Virtual Machines");
 

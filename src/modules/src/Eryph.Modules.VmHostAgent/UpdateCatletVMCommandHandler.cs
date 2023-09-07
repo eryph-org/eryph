@@ -17,17 +17,17 @@ using Rebus.Bus;
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class UpdateVCatletCommandHandler 
-        : VirtualCatletConfigCommandHandler<UpdateVCatletCommand, ConvergeVirtualCatletResult>
+    internal class UpdateCatletVMCommandHandler 
+        : VirtualCatletConfigCommandHandler<UpdateCatletVMCommand, ConvergeVirtualCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
 
-        public UpdateVCatletCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, messaging, log)
+        public UpdateCatletVMCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, messaging, log)
         {
             _hostInfoProvider = hostInfoProvider;
         }
 
-        protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(UpdateVCatletCommand command)
+        protected override EitherAsync<Error, ConvergeVirtualCatletResult> HandleCommand(UpdateCatletVMCommand command)
         {
             var config = command.Config;
 
