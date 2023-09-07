@@ -33,9 +33,10 @@ namespace Eryph.Modules.Controller.Compute
                     Some: metadata =>
                         StartNewTask(new UpdateVirtualCatletConfigDriveCommand
                             {
-
+                                
                                 VMId = s.VMId,
                                 CatletId = s.Id,
+                                CatletName = s.Name,
                                 MachineMetadata = metadata
                             }).AsTask().ToUnit()));
         }

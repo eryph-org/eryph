@@ -240,13 +240,14 @@ namespace Eryph.Modules.Controller.Compute
                     Inventory = new List<VirtualMachineData> { r.Inventory }
                 });
 
-                await _vmDataService.GetVM(Data.CatletId).Match(
+                await await _vmDataService.GetVM(Data.CatletId).Match(
                     Some: data =>
                     {
                         return StartNewTask(new UpdateVirtualCatletConfigDriveCommand
                         {
                             VMId = r.Inventory.VMId,
                             CatletId = Data.CatletId,
+                            CatletName = data.Name,
                             MachineMetadata = r.MachineMetadata,
                         }).AsTask();
                     },

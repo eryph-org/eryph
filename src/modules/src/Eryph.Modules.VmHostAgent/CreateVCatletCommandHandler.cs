@@ -99,7 +99,7 @@ namespace Eryph.Modules.VmHostAgent
                     ParentConfig = optionalParentConfig.MatchUnsafe(
                         None: () => null, Some: c => c),
 
-                })
+                    })
                 .Bind(metadata => SetMetadataId(vmInfo, metadata.Id).Map(_ => metadata));
 
         }

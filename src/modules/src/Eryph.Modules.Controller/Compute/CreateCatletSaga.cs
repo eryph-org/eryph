@@ -62,7 +62,8 @@ namespace Eryph.Modules.Controller.Compute
                     ProjectId = project.Id,
                     Id = Data.MachineId,
                     AgentName = Data.AgentName,
-                    VMId = r.Inventory.VMId
+                    VMId = r.Inventory.VMId,
+                    Name = r.Inventory.Name,
                 }, r.MachineMetadata);
 
                 await StartNewTask(new UpdateCatletCommand

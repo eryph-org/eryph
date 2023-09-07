@@ -31,6 +31,7 @@ internal class UpdateConfigDriveCommandHandler :
 
         var fodderConfig = new CatletConfig
         {
+            Name = command.CatletName,
             Fodder = command.MachineMetadata.Fodder
         };
 

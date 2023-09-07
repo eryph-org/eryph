@@ -56,7 +56,7 @@ namespace Eryph.VmManagement.Converging
                         from networkData in GenerateNetworkData(vmInfo).ToAsync()
                         from _ in GenerateConfigDriveDisk(configDriveIsoPath,
                             Context.Metadata.SecureDataHidden,
-                            string.IsNullOrWhiteSpace(Context.Config.Hostname) ? storageIdentifier : Context.Config.Hostname,
+                            string.IsNullOrWhiteSpace(Context.Config.Hostname) ? Context.Config.Name : Context.Config.Hostname,
                             networkData,
                             Context.Config.Fodder).ToAsync()
                         from newVmInfo in InsertConfigDriveDisk(configDriveIsoPath, vmInfo).ToAsync()
