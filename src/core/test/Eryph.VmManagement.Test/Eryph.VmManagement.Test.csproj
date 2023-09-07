@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="C:\Users\fwagner\source\Repos\eryph\eryph\src\core\src\Eryph.VmManagement\Eryph.VmManagement.csproj" />
+    <ProjectReference Include="..\..\src\Eryph.VmManagement\Eryph.VmManagement.csproj" />
   </ItemGroup>
 
 </Project>
