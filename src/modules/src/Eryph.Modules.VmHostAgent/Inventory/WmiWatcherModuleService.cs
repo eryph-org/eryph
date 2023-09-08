@@ -102,7 +102,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
                     var upTimeInMilliseconds = (ulong)vm.GetPropertyValue("OnTimeInMilliseconds");
 
-                    _bus.SendWorkflowEvent(_workflowOptions,new VCatletUpTimeChangedEvent()
+                    _bus.SendWorkflowEvent(_workflowOptions,new CatletUpTimeChangedEvent()
                     {
                         VmId = vmId,
                         UpTime = TimeSpan.FromMilliseconds(upTimeInMilliseconds)

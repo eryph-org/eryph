@@ -11,7 +11,7 @@ using Rebus.Bus;
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal abstract class VirtualMachineStateTransitionHandler<T> : VCatletOperationHandlerBase<T>
+    internal abstract class VirtualMachineStateTransitionHandler<T> : CatletOperationHandlerBase<T>
         where T : class, IVMCommand, new()
     {
         public VirtualMachineStateTransitionHandler(ITaskMessaging messaging, IPowershellEngine engine) : base(messaging, engine)

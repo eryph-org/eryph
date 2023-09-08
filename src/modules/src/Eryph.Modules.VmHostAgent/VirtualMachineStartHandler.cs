@@ -7,7 +7,7 @@ using Rebus.Bus;
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
-    internal class VirtualMachineStartHandler : VirtualMachineStateTransitionHandler<StartVirtualCatletCommand>
+    internal class VirtualMachineStartHandler : VirtualMachineStateTransitionHandler<StartCatletVMCommand>
     {
         public VirtualMachineStartHandler(ITaskMessaging messaging, IPowershellEngine engine) : base(messaging, engine)
         {

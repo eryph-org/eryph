@@ -5,7 +5,6 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
-using Eryph.Messages.Resources.Images.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
 using Eryph.StateDb;
@@ -20,8 +19,8 @@ namespace Eryph.Modules.Controller.Compute
     [UsedImplicitly]
     internal class CreateCatletSaga : OperationTaskWorkflowSaga<CreateCatletCommand, CreateCatletSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<CreateVCatletCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<PlaceCatletCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareParentGenomeCommand>>
 
@@ -38,12 +37,12 @@ namespace Eryph.Modules.Controller.Compute
             _stateStore = stateStore;
         }
 
-        public Task Handle(OperationTaskStatusEvent<CreateVCatletCommand> message)
+        public Task Handle(OperationTaskStatusEvent<CreateCatletVMCommand> message)
         {
             if (Data.State >= CreateVMState.Created)
                 return Task.CompletedTask;
 
-            return FailOrRun<CreateVCatletCommand, ConvergeVirtualCatletResult>(message, async r =>
+            return FailOrRun<CreateCatletVMCommand, ConvergeCatletResult>(message, async r =>
             {
                 Data.State = CreateVMState.Created;
 
@@ -75,12 +74,12 @@ namespace Eryph.Modules.Controller.Compute
             });
         }
 
-        public Task Handle(OperationTaskStatusEvent<PlaceVirtualCatletCommand> message)
+        public Task Handle(OperationTaskStatusEvent<PlaceCatletCommand> message)
         {
             if (Data.State >= CreateVMState.Placed)
                 return Task.CompletedTask;
 
-            return FailOrRun<PlaceVirtualCatletCommand, PlaceVirtualCatletResult>(message,
+            return FailOrRun<PlaceCatletCommand, PlaceCatletResult>(message,
                 async r =>
             {
                 Data.State = CreateVMState.Placed;
@@ -162,7 +161,7 @@ namespace Eryph.Modules.Controller.Compute
             Data.State = CreateVMState.ImagePrepared;
             Data.MachineId = Guid.NewGuid();
 
-            return StartNewTask(new CreateVCatletCommand
+            return StartNewTask(new CreateCatletVMCommand
             {
                 Config = Data.Config,
                 NewMachineId = Data.MachineId,
@@ -194,7 +193,7 @@ namespace Eryph.Modules.Controller.Compute
                 Data.State = CreateVMState.ConfigValidated;
 
 
-                return StartNewTask(new PlaceVirtualCatletCommand
+                return StartNewTask(new PlaceCatletCommand
                     {
                         Config = Data.Config
                     }).AsTask();
@@ -207,9 +206,9 @@ namespace Eryph.Modules.Controller.Compute
 
             config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<PlaceVirtualCatletCommand>>(m => m.InitiatingTaskId,
+            config.Correlate<OperationTaskStatusEvent<PlaceCatletCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<CreateVCatletCommand>>(m => m.InitiatingTaskId,
+            config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<PrepareParentGenomeCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);

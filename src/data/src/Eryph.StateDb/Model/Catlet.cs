@@ -43,12 +43,4 @@ namespace Eryph.StateDb.Model
 
         public List<CatletFeature> Features { get; set; }
     }
-
-
-    public enum CatletFeature
-    {
-        SecureBoot,
-        DynamicMemory,
-        NestedVirtualization
-    }
 }

@@ -11,22 +11,13 @@ using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Hosting.WindowsServices;
-using Rebus.Persistence.InMem;
 using Rebus.Sagas;
 using Rebus.Subscriptions;
 using Rebus.Timeouts;
-using Rebus.Transport.InMem;
 using SimpleInjector;
 
 namespace Eryph.Runtime.Zero
 {
-    public static class Info
-    {
-        public static InMemNetwork Network = new();
-        public static InMemorySubscriberStore SubscriberStore = new();
-
-    }
-
     internal static class ZeroContainerExtensions
     {
         public static void Bootstrap(this Container container, string ovsPackageDir)

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
@@ -40,19 +39,4 @@ public class CorrelationIdMiddleware
             context.Response.Headers.Add(CorrelationIdHeader, new[] { correlationId.ToString() });
             return Task.CompletedTask;
         });
-}
-
-public interface ICorrelationIdGenerator
-{
-    string Get();
-    void Set(string correlationId);
-}
-
-public class CorrelationIdGenerator : ICorrelationIdGenerator
-{
-    private string _correlationId = Guid.NewGuid().ToString();
-
-    public string Get() => _correlationId;
-
-    public void Set(string correlationId) => _correlationId = correlationId;
 }

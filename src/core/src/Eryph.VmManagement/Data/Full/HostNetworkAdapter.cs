@@ -8,11 +8,3 @@ public class HostNetworkAdapter
 
     public string Name { get; init; }
 }
-
-public class NetNat
-{
-
-    public string Name { get; init; }
-
-    public string InternalIPInterfaceAddressPrefix { get; init; }
-}

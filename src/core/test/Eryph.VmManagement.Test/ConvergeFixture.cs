@@ -32,7 +32,7 @@ public class ConvergeFixture
     public TestPowershellEngine Engine { get; }
     public MachineNetworkSettings[] NetworkSettings { get; set; }
     public CatletConfig Config { get; set; }
-    public VirtualCatletMetadata Metadata { get; set; }
+    public CatletMetadata Metadata { get; set; }
 
     public HostSettings HostSettings { get; set; }
 

@@ -16,7 +16,7 @@ namespace Eryph.VmManagement.Converging
         public readonly Func<string, Task> ReportProgress;
         public readonly VMStorageSettings StorageSettings;
         public readonly VMHostMachineData HostInfo;
-        public readonly VirtualCatletMetadata Metadata;
+        public readonly CatletMetadata Metadata;
         public readonly MachineNetworkSettings[] NetworkSettings;
 
         public ConvergeContext(
@@ -24,7 +24,7 @@ namespace Eryph.VmManagement.Converging
             IPowershellEngine engine,
             Func<string, Task> reportProgress,
             CatletConfig config,
-            VirtualCatletMetadata metadata,
+            CatletMetadata metadata,
             VMStorageSettings storageSettings, 
             MachineNetworkSettings[] networkSettings,
             VMHostMachineData hostInfo)

@@ -13,6 +13,7 @@ using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
+using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Runtime.Zero
 {
@@ -36,8 +37,8 @@ namespace Eryph.Runtime.Zero
                 services.AddTransient<IModuleServicesFilter<ControllerModule>, ControllerModuleFilters>();
             });
 
-            container.RegisterSingleton<IConfigReaderService<VirtualCatletMetadata>, VMMetadataConfigReaderService>();
-            container.RegisterSingleton<IConfigWriterService<VirtualCatletMetadata>, VMMetadataConfigWriterService>();
+            container.RegisterSingleton<IConfigReaderService<CatletMetadata>, VMMetadataConfigReaderService>();
+            container.RegisterSingleton<IConfigWriterService<CatletMetadata>, VMMetadataConfigWriterService>();
             container.RegisterSingleton<IConfigReaderService<VirtualDisk>, VhdReaderService>();
             container.RegisterSingleton<IConfigWriterService<VirtualDisk>, VhdWriterService>();
 
@@ -60,9 +61,9 @@ namespace Eryph.Runtime.Zero
                     next(context, container);
 
                     container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigWriterService<VirtualCatletMetadata>>, Lifestyle.Scoped);
+                        .GetRequiredService<IConfigWriterService<CatletMetadata>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigReaderService<VirtualCatletMetadata>>, Lifestyle.Scoped);
+                        .GetRequiredService<IConfigReaderService<CatletMetadata>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigWriterService<VirtualDisk>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices

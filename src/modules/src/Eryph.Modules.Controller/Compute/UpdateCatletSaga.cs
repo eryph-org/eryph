@@ -7,7 +7,6 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
-using Eryph.Messages.Resources.Images.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
@@ -25,8 +24,8 @@ namespace Eryph.Modules.Controller.Compute
     [UsedImplicitly]
     internal class UpdateCatletSaga : OperationTaskWorkflowSaga<UpdateCatletCommand, UpdateCatletSagaData>,
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateVCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateCatletVMCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareGeneCommand>>
@@ -53,11 +52,11 @@ namespace Eryph.Modules.Controller.Compute
             base.CorrelateMessages(config);
             config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<UpdateVCatletCommand>>(m => m.InitiatingTaskId,
+            config.Correlate<OperationTaskStatusEvent<UpdateCatletVMCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand>>(m => m.InitiatingTaskId,
+            config.Correlate<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>(m => m.InitiatingTaskId,
                 d => d.SagaTaskId);
@@ -204,7 +203,7 @@ namespace Eryph.Modules.Controller.Compute
                     {
                         var (vm, metadata) = data;
 
-                        return StartNewTask(new UpdateVCatletCommand
+                        return StartNewTask(new UpdateCatletVMCommand
                         {
                             CatletId = Data.CatletId,
                             VMId = vm.VMId,
@@ -222,12 +221,12 @@ namespace Eryph.Modules.Controller.Compute
             });
         }
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVCatletCommand> message)
+        public Task Handle(OperationTaskStatusEvent<UpdateCatletVMCommand> message)
         {
             if (Data.Updated)
                 return Task.CompletedTask;
 
-            return FailOrRun<UpdateVCatletCommand, ConvergeVirtualCatletResult>(message, async r =>
+            return FailOrRun<UpdateCatletVMCommand, ConvergeCatletResult>(message, async r =>
             {
                 Data.Updated = true;
 
@@ -243,7 +242,7 @@ namespace Eryph.Modules.Controller.Compute
                 await await _vmDataService.GetVM(Data.CatletId).Match(
                     Some: data =>
                     {
-                        return StartNewTask(new UpdateVirtualCatletConfigDriveCommand
+                        return StartNewTask(new UpdateCatletConfigDriveCommand
                         {
                             VMId = r.Inventory.VMId,
                             CatletId = Data.CatletId,
@@ -259,7 +258,7 @@ namespace Eryph.Modules.Controller.Compute
         }
 
 
-        public Task Handle(OperationTaskStatusEvent<UpdateVirtualCatletConfigDriveCommand> message)
+        public Task Handle(OperationTaskStatusEvent<UpdateCatletConfigDriveCommand> message)
         {
             return FailOrRun(message, () =>
                 StartNewTask(new UpdateNetworksCommand

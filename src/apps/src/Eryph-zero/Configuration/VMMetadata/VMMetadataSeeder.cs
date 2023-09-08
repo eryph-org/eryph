@@ -13,10 +13,10 @@ namespace Eryph.Runtime.Zero.Configuration.VMMetadata
     [UsedImplicitly]
     internal class VMMetadataSeeder : IConfigSeeder<ControllerModule>
     {
-        private readonly IConfigReaderService<VirtualCatletMetadata> _configReaderService;
+        private readonly IConfigReaderService<CatletMetadata> _configReaderService;
         private readonly IStateStoreRepository<StateDb.Model.CatletMetadata> _repository;
 
-        public VMMetadataSeeder(IConfigReaderService<VirtualCatletMetadata> configReaderService,
+        public VMMetadataSeeder(IConfigReaderService<CatletMetadata> configReaderService,
             IStateStoreRepository<StateDb.Model.CatletMetadata> repository)
         {
             _configReaderService = configReaderService;

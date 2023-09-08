@@ -21,6 +21,7 @@ using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Mvc;
 
 using Catlet = Eryph.StateDb.Model.Catlet;
+using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Modules.ComputeApi.Handlers
 {
@@ -37,35 +38,35 @@ namespace Eryph.Modules.ComputeApi.Handlers
 
         public async Task<ActionResult<CatletConfiguration>> HandleGetRequest(Func<ISingleResultSpecification<Catlet>> specificationFunc, CancellationToken cancellationToken)
         {
-            var vCatletSpec = specificationFunc();
+            var catletSpec = specificationFunc();
 
             var repo = _stateStore.For<Catlet>();
-            var vCatletIdResult= await repo.GetBySpecAsync(vCatletSpec, cancellationToken);
+            var catletIdResult= await repo.GetBySpecAsync(catletSpec, cancellationToken);
 
-            if (vCatletIdResult == null)
+            if (catletIdResult == null)
                 return new NotFoundResult();
 
-            var vCatlet = await repo.GetBySpecAsync(new CatletSpecs
-                .GetForConfig(vCatletIdResult.Id), cancellationToken);
+            var catlet = await repo.GetBySpecAsync(new CatletSpecs
+                .GetForConfig(catletIdResult.Id), cancellationToken);
 
-            if (vCatlet == null)
+            if (catlet == null)
                 return new NotFoundResult();
 
             var config = new CatletConfig
             {
-                Name = vCatlet.Name,
-                Project = vCatlet.Project.Name != "default" ? vCatlet.Project.Name: null,
+                Name = catlet.Name,
+                Project = catlet.Project.Name != "default" ? catlet.Project.Name: null,
                 Version = "1.0",
-                Environment = vCatlet.Environment != "default" ? vCatlet.Environment : null,
-                Location = vCatlet.StorageIdentifier
+                Environment = catlet.Environment != "default" ? catlet.Environment : null,
+                Location = catlet.StorageIdentifier
             };
 
 
             var driveConfigs = new List<CatletDriveConfig>();
             var alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
-            for (var index = 0; index < vCatlet.Drives.Count; index++)
+            for (var index = 0; index < catlet.Drives.Count; index++)
             {
-                var drive = vCatlet.Drives[index];
+                var drive = catlet.Drives[index];
                 var driveName = $"sd{alpha[index]}".ToLowerInvariant();
                 
                 var driveConfig = new CatletDriveConfig();
@@ -87,17 +88,17 @@ namespace Eryph.Modules.ComputeApi.Handlers
             config.Drives = driveConfigs.ToArray();
             
 
-            if (vCatlet.NetworkPorts != null)
+            if (catlet.NetworkPorts != null)
             {
                 var networks = new List<CatletNetworkConfig>();
-                foreach (var vCatletNetworkPort in vCatlet.NetworkPorts)
+                foreach (var catletNetworkPort in catlet.NetworkPorts)
                 {
                     var network = new CatletNetworkConfig
                     {
-                        Name = vCatletNetworkPort.Network.Name
+                        Name = catletNetworkPort.Network.Name
                     };
 
-                    foreach (var ipAssignment in vCatletNetworkPort.IpAssignments)
+                    foreach (var ipAssignment in catletNetworkPort.IpAssignments)
                     {
                         if(ipAssignment.Subnet is not VirtualNetworkSubnet subnet)
                             continue;
@@ -151,25 +152,25 @@ namespace Eryph.Modules.ComputeApi.Handlers
 
             config.Cpu = new CatletCpuConfig
             {
-                Count = vCatlet.CpuCount
+                Count = catlet.CpuCount
             };
 
             config.Memory = new CatletMemoryConfig
             {
-                Startup = (int)Math.Ceiling(vCatlet.StartupMemory / 1024d / 1024),
+                Startup = (int)Math.Ceiling(catlet.StartupMemory / 1024d / 1024),
 
-                Maximum = vCatlet.MaximumMemory != 0 ? (int)Math.Ceiling(vCatlet.MaximumMemory / 1024d / 1024)
+                Maximum = catlet.MaximumMemory != 0 ? (int)Math.Ceiling(catlet.MaximumMemory / 1024d / 1024)
                     : null,
-                Minimum = vCatlet.MinimumMemory != 0 ? (int)Math.Ceiling(vCatlet.MaximumMemory / 1024d / 1024)
+                Minimum = catlet.MinimumMemory != 0 ? (int)Math.Ceiling(catlet.MaximumMemory / 1024d / 1024)
                     : null,
 
             };
 
             //remove all settings also configured in image
-            var metadataEntity = await _stateStore.Read<CatletMetadata>().GetByIdAsync(vCatlet.MetadataId, cancellationToken);
-            VirtualCatletMetadata metadata = null;
+            var metadataEntity = await _stateStore.Read<StateDb.Model.CatletMetadata>().GetByIdAsync(catlet.MetadataId, cancellationToken);
+            CatletMetadata metadata = null;
             if (metadataEntity != null)
-                metadata = JsonSerializer.Deserialize<VirtualCatletMetadata>(metadataEntity.Metadata);
+                metadata = JsonSerializer.Deserialize<CatletMetadata>(metadataEntity.Metadata);
 
             if (metadata != null)
             {

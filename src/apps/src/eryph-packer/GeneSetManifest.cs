@@ -28,14 +28,3 @@ public class GeneSetManifest
 
 
 }
-
-public class GeneReferenceData
-{
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
-
-    [JsonPropertyName("hash")]
-    public string? Hash { get; set; }
-
-
-}
