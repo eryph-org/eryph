@@ -14,6 +14,14 @@ namespace Eryph.Runtime.Zero.Configuration
             _basePath = basePath;
         }
 
+        public T ReadConfigFile<T>(string id)
+        {
+            var filePath = Path.Combine(_basePath, CoerceValidFileName(id) + ".json");
+            var json = File.ReadAllText(filePath);
+            return JsonSerializer.Deserialize<T>(json);
+
+        }
+
         public Task SaveConfigFile<T>(T data, string id)
         {
             var json = JsonSerializer.Serialize(data);
@@ -75,5 +83,7 @@ namespace Eryph.Runtime.Zero.Configuration
             if (File.Exists(filePath))
                 File.Delete(filePath);
         }
+
+
     }
 }

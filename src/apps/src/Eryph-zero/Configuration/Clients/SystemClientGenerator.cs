@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -14,6 +15,8 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
 {
     public static class SystemClientGenerator
     {
+        private static readonly string[] RequiredScopes = {"compute:write", "identity:write"};
+
         public static async Task EnsureSystemClient(ICertificateGenerator certificateGenerator, ICryptoIOServices cryptoIOServices, Uri identityEndpoint)
         {
             var systemClientDataFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.json");
@@ -21,6 +24,16 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
 
             var recreateSystemClient = !File.Exists(systemClientDataFile) || !File.Exists(systemClientKeyFile);
             var entropy = Encoding.UTF8.GetBytes(identityEndpoint.ToString());
+
+
+            var clientIO = new ConfigIO(ZeroConfig.GetClientConfigPath());
+
+            if (!recreateSystemClient && File.Exists(systemClientDataFile))
+            {
+                var currentConfig = clientIO.ReadConfigFile<ClientConfigModel>("system-client");
+                if(!currentConfig.AllowedScopes.SequenceEqual(RequiredScopes))
+                    recreateSystemClient = true;
+            }
 
             AsymmetricKeyParameter publicKey = null;
             if (File.Exists(systemClientDataFile))
@@ -62,12 +75,11 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
             {
                 ClientId = "system-client",
                 X509CertificateBase64 = Convert.ToBase64String(certificate.GetEncoded()),
-                AllowedScopes = new[] {"openid", "common_api", "compute:write", "identity:clients:write:all"},
-                TenantId = EryphConstants.DefaultTenantId.ToString(),
-                Roles = new []{EryphConstants.SuperAdminRole.ToString()}
+                AllowedScopes = RequiredScopes,
+                TenantId = EryphConstants.DefaultTenantId,
+                Roles = new []{EryphConstants.SuperAdminRole}
             };
 
-            var clientIO = new ConfigIO(ZeroConfig.GetClientConfigPath());
             await clientIO.SaveConfigFile(newClient, newClient.ClientId);
             await cryptoIOServices.WritePrivateKeyFile(systemClientKeyFile, keyPair, entropy);
         }

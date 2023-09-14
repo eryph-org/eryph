@@ -1,7 +1,6 @@
 ﻿using System;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Dbosoft.IdentityServer.EfCore.Storage.DbContexts;
 using Eryph.Configuration;
 using Eryph.Configuration.Model;
 using Eryph.IdentityDb;
@@ -30,7 +29,7 @@ namespace Eryph.Runtime.Zero
             container.Register<ISigningCertificateManager, SigningCertificateManager>();
 
             container
-                .Register<IDbContextConfigurer<ConfigurationDbContext>, InMemoryConfigurationStoreContextConfigurer>();
+                .Register<IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
 
             return builder;
         }
@@ -50,11 +49,13 @@ namespace Eryph.Runtime.Zero
                         .GetRequiredService<IConfigWriterService<ClientConfigModel>>);
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigReaderService<ClientConfigModel>>);
-                    container.RegisterDecorator(typeof(IClientService<>),
-                        typeof(ClientServiceWithConfigServiceDecorator<>));
+                    container.RegisterDecorator(typeof(IClientService),
+                        typeof(ClientServiceWithConfigServiceDecorator));
 
                     container.RegisterSingleton<SeedFromConfigHandler<IdentityModule>>();
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityClientSeeder>();
+                    container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
+
                 };
             }
 

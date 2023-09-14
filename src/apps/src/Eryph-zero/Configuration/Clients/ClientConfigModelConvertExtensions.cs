@@ -1,42 +1,42 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Security.Cryptography;
 using Eryph.Configuration.Model;
-using Eryph.Modules.Identity.Models;
-using Eryph.Modules.Identity.Models.V1;
+using Eryph.Modules.Identity.Services;
+using OpenIddict.Abstractions;
 
 namespace Eryph.Runtime.Zero.Configuration.Clients
 {
     internal static class ClientConfigModelConvertExtensions
     {
-        public static ClientConfigModel FromApiModel<TModel>(this TModel apiModel) where TModel : IClientApiModel
+        public static ClientConfigModel FromDescriptor(this ClientApplicationDescriptor descriptor)
         {
             return new ClientConfigModel
             {
-                ClientId = apiModel.Id,
-                ClientName = apiModel.Name,
-                AllowedScopes = apiModel.AllowedScopes?.ToArray(),
-                X509CertificateBase64 = apiModel.Certificate,
-                Description = apiModel.Description,
-                Roles = apiModel.Roles.ToArray(),
-                TenantId = apiModel.Tenant
+                ClientId = descriptor.ClientId,
+                ClientName = descriptor.DisplayName,
+                AllowedScopes = descriptor.Scopes.ToArray(),
+                X509CertificateBase64 = descriptor.Certificate,
+                Roles = descriptor.AppRoles.ToArray(),
+                TenantId = descriptor.TenantId
             };
         }
 
-        public static Client ToApiModel(this ClientConfigModel configModel)
+        public static ClientApplicationDescriptor ToDescriptor(this ClientConfigModel configModel)
         {
-            var client = new Client
+
+            var descriptor = new ClientApplicationDescriptor
             {
-                Id = configModel.ClientId,
-                Name = configModel.ClientName,
-                AllowedScopes = configModel.AllowedScopes?.ToList(),
-                Description = configModel.Description,
-                Tenant = configModel.TenantId,
-                Roles = configModel.Roles.ToList()
+                TenantId = configModel.TenantId,
+                ClientId = configModel.ClientId,
+                DisplayName = configModel.ClientName,
+                Certificate = configModel.X509CertificateBase64,
             };
 
-            var clientAsApiModel = (IClientApiModel) client;
-            clientAsApiModel.Certificate = configModel.X509CertificateBase64;
+            descriptor.Scopes.UnionWith(configModel.AllowedScopes ?? Array.Empty<string>());
+            descriptor.AppRoles.UnionWith(configModel.Roles ?? Array.Empty<Guid>());
 
-            return client;
+            return descriptor;
         }
     }
 }

@@ -44,7 +44,7 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
             return Update(disk, projectName);
         }
 
-        private StorageConfig GetStorageConfigByDiskTemplate(VirtualDisk virtualDisk, string projectName)
+        private StorageConfig GetStorageConfigByDiskTemplate(VirtualDisk virtualDisk, string? projectName)
         {
             var nameBuilder = new StringBuilder();
             nameBuilder.Append(virtualDisk.Environment ?? "$$empty$$");
@@ -80,7 +80,6 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
 
             foreach (var b in hash)
             {
-                // can be "x2" if you want lowercase
                 sb.Append(b.ToString("X2"));
             }
 

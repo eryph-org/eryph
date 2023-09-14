@@ -6,12 +6,10 @@ using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.Messages;
 using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
-using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.Workflows;
 using JetBrains.Annotations;
@@ -24,7 +22,6 @@ using Microsoft.Extensions.Hosting;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
-using Rebus.Routing.TypeBased;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -54,8 +51,8 @@ namespace Eryph.Modules.AspNetCore
                 .AddJwtBearer(options =>
                 {
                     options.Authority = endpointResolver.GetEndpoint("identity").ToString();
-                    options.Audience = AudienceName;
 
+                    options.Audience = AudienceName;
                     if (env.IsDevelopment())
                         options.RequireHttpsMetadata = false;
                 });
@@ -132,4 +129,21 @@ namespace Eryph.Modules.AspNetCore
             });
         }
     }
+
+    //public class LogValidator : ISecurityTokenValidator
+    //{
+    //    public bool CanReadToken(string securityToken)
+    //    {
+    //        return true;
+    //    }
+
+    //    public ClaimsPrincipal ValidateToken(string securityToken, TokenValidationParameters validationParameters,
+    //        out SecurityToken validatedToken)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+
+    //    public bool CanValidateToken => true;
+    //    public int MaximumTokenSizeInBytes { get; set; }
+    //}
 }

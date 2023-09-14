@@ -3,28 +3,17 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using Dbosoft.IdentityServer.EfCore.Storage.Mappers;
-using Dbosoft.IdentityServer.Storage.Models;
+using Eryph.IdentityDb.Entities;
 
 namespace Eryph.IdentityDb
 {
     public class IdentityServerClientService : IIdentityServerClientService
     {
-        private static readonly IMapper Mapper;
-        private static readonly MapperConfiguration ProjectionMapperConfiguration;
         private readonly IClientRepository _repository;
 
         static IdentityServerClientService()
         {
-            //this mapper is used for update mapping (Identity Server Mapper is not access-able for us)
-            var mapperConfiguration = new MapperConfiguration(cfg => { cfg.AddProfile<ClientMapperProfile>(); });
 
-            //projection will not work with identity server profile, but by using CovertUsing we can use to default mapper from identity server
-            ProjectionMapperConfiguration = new MapperConfiguration(cfg => cfg
-                .CreateMap<Dbosoft.IdentityServer.EfCore.Storage.Entities.Client, Client>()
-                .ConvertUsing(src => src.ToModel()));
-
-            Mapper = mapperConfiguration.CreateMapper();
         }
 
         public IdentityServerClientService(IClientRepository repository)
@@ -32,30 +21,29 @@ namespace Eryph.IdentityDb
             _repository = repository;
         }
 
-        public IQueryable<Client> QueryClients()
+        public IQueryable<ClientApplicationEntity> QueryClients()
         {
-            return _repository.QueryClients().ToArray().AsQueryable().ProjectTo<Client>(ProjectionMapperConfiguration);
+            return _repository.QueryClients();
         }
 
-        public async Task<Client> GetClient(string clientId)
+        public async Task<ClientApplicationEntity> GetClient(string clientId)
         {
-            var (id, _) = await _repository.GetClientIdAsync(clientId);
-            return id.GetValueOrDefault(0) == 0 ? null : (await _repository.GetClientAsync(id.Value)).ToModel();
+            return await _repository.GetClientAsync(clientId);
         }
 
-        public async Task AddClient(Client client)
+        public async Task AddClient(ClientApplicationEntity client)
         {
-            await _repository.AddClientAsync(client.ToEntity());
+            await _repository.AddClientAsync(client);
             await _repository.SaveAllChangesAsync();
         }
 
-        public async Task AddClients(IEnumerable<Client> clients)
+        public async Task AddClients(IEnumerable<ClientApplicationEntity> clients)
         {
-            await _repository.AddClientsAsync(clients.Select(x => x.ToEntity()));
+            await _repository.AddClientsAsync(clients);
             await _repository.SaveAllChangesAsync();
         }
 
-        public async Task DeleteClient(Client client)
+        public async Task DeleteClient(ClientApplicationEntity client)
         {
             var trackedClient = await _repository.GetTrackedClientAsync(client.ClientId);
 
@@ -67,7 +55,7 @@ namespace Eryph.IdentityDb
         }
 
 
-        public async Task UpdateClient(Client client)
+        public async Task UpdateClient(ClientApplicationEntity client)
         {
             var trackedClient = await _repository.GetTrackedClientAsync(client.ClientId);
 
@@ -75,8 +63,6 @@ namespace Eryph.IdentityDb
                 return;
 
             _repository.RemoveClientRelations(trackedClient);
-            Mapper.Map(client, trackedClient);
-
             await _repository.UpdateClientAsync(trackedClient);
             await _repository.SaveAllChangesAsync();
         }

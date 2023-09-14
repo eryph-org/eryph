@@ -1,14 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Dbosoft.IdentityServer;
-using Dbosoft.IdentityServer.Models;
-using Dbosoft.IdentityServer.Storage.Models;
+using Eryph.Modules.Identity.Models.V1;
+using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
+using OpenIddict.Abstractions;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.OpenSsl;
 
@@ -17,44 +17,11 @@ namespace Eryph.Modules.Identity.Models
     [UsedImplicitly]
     public static class ClientApiModelExtensions
     {
-        public static TModel ToApiModel<TModel>(this Client client) where TModel : IClientApiModel
-        {
-            return ClientApiMapper.Mapper.Map<TModel>(client);
-        }
 
-        public static Client ToIdentityServerModel<TModel>(this TModel client) where TModel : IClientApiModel
-        {
-            return new Client
-            {
-                ClientId = client.Id,
-                ClientName = client.Name,
-                Description = client.Description,
-                AllowedScopes = client.AllowedScopes,
-                AllowedGrantTypes = GrantTypes.ClientCredentials,
-                AllowOfflineAccess = true,
-                AllowRememberConsent = true,
-                RequireConsent = false,
-                ClientSecrets =
-                {
-                    new Secret
-                    {
-                        Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
-                        Value = client.Certificate
-                    }
-                },
-                Claims = new List<ClientClaim>
-                {
-                    new("tenant", client.Tenant),
-                    new("roles", string.Join(',', client.Roles))
-
-                }
-            };
-        }
-
-        public static async Task<string> NewClientCertificate(this IClientApiModel client, ICertificateGenerator certificateGenerator)
+        public static async Task<string> NewClientCertificate(this ClientApplicationDescriptor client, ICertificateGenerator certificateGenerator)
         {
             var (certificate, keyPair) = certificateGenerator.GenerateSelfSignedCertificate(
-                new X509Name("CN="+ client.Id),
+                new X509Name("CN="+ client.ClientId),
                 30*365,2048);
             client.Certificate = Convert.ToBase64String(certificate.GetEncoded());
 
@@ -64,6 +31,47 @@ namespace Eryph.Modules.Identity.Models
             new PemWriter(writer).WriteObject(keyPair);
 
             return stringBuilder.ToString();
+        }
+
+        public static ClientApplicationDescriptor ToDescriptor(this Client client)
+        {
+            var descriptor = new ClientApplicationDescriptor
+            {
+                TenantId = client.TenantId,
+                ClientId = client.Id,
+                DisplayName = client.Name
+            };
+
+            descriptor.Scopes.UnionWith(client.AllowedScopes ?? Array.Empty<string>());
+            descriptor.AppRoles.UnionWith(client.Roles ?? Array.Empty<Guid>());
+            return descriptor;
+        }
+
+        public static TClient ToClient<TClient>(this ClientApplicationDescriptor descriptor)
+            where TClient : Client, new()
+        {
+            return new TClient
+            {
+                Id = descriptor.ClientId,
+                Name = descriptor.DisplayName,
+                TenantId = descriptor.TenantId,
+                AllowedScopes = descriptor.Scopes.ToArray(),
+                Roles = descriptor.AppRoles.ToArray()
+            };
+        }
+
+        public static async ValueTask<(bool IsValid, string InvalidScope)> ValidateScopes<TClient>(this TClient client, 
+            IOpenIddictScopeManager scopeManager, CancellationToken cancellationToken )
+            where TClient : Client
+        {
+            foreach (var scope in client.AllowedScopes)
+            {
+                if(await scopeManager.FindByNameAsync(scope, cancellationToken) == null)
+                    return (false, scope);
+                
+            }
+
+            return (true, "");
         }
     }
 }

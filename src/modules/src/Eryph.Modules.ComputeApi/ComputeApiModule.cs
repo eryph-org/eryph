@@ -1,15 +1,12 @@
 ﻿using System;
-using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.ComputeApi.Handlers;
 using Eryph.Modules.ComputeApi.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using RabbitMQ.Client;
 using SimpleInjector;
 using IEndpointResolver = Eryph.ModuleCore.IEndpointResolver;
 
@@ -48,15 +45,15 @@ namespace Eryph.Modules.ComputeApi
                         authority,
                         "compute:catlets:write", "compute:write")));
 
-                options.AddPolicy("compute:catlets:start",
+                options.AddPolicy("compute:catlets:control",
                     policy => policy.Requirements.Add(new HasScopeRequirement(
                         authority,
-                        "compute:catlets:start", "compute:catlets:write","compute:write")));
+                        "compute:catlets:control", "compute:catlets:write","compute:write")));
 
-                options.AddPolicy("compute:catlets:stop",
+                options.AddPolicy("compute:catlets:control",
                     policy => policy.Requirements.Add(new HasScopeRequirement(
                         authority,
-                        "compute:catlets:stop", "compute:catlets:write", "compute:write")));
+                        "compute:catlets:control", "compute:catlets:write", "compute:write")));
             });
         }
 
