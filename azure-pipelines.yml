@@ -80,7 +80,7 @@ jobs:
     inputs:
       scriptType: ps
       scriptLocation: inlineScript
-      azureSubscription: '[YOUR_CONNECTION_NAME]'
+      azureSubscription: 'dbosoft Azure PN'
       addSpnToEnvironment: true
       workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build\bin'
       inlineScript: |
