@@ -16,27 +16,14 @@ jobs:
      value: ''
 
   steps:
-  - task: DownloadSecureFile@1
-    displayName: download code signing certificate
+  - task: DotNetCoreCLI@2
+    displayName: Install AzureSignTool
     condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
-      secureFile: 'Authenticode.pfx'
+      command: 'custom'
+      custom: 'tool'
+      arguments: 'install --global azuresigntool'
       
-  - task: PowerShell@2
-    displayName: import code signing certificate
-    condition: ne(variables['Build.Reason'], 'PullRequest')
-    inputs:
-      targetType: 'inline'
-      script: |
-        $secName = "Authenticode.pfx"
-        $tempDirectory = $env:AGENT_TEMPDIRECTORY        
-        $pfxFilePath = Join-Path $tempDirectory $secName        
-        $Password = ConvertTo-SecureString -String $env:AUTHENTICODE_PASSWORD -AsPlainText -Force
-        $cert = Import-PfxCertificate -FilePath $pfxFilePath -CertStoreLocation Cert:\CurrentUser\My -Password $Password
-        $thumbprint = $cert.Thumbprint
-        Write-Host "##vso[task.setvariable variable=signHash;]$thumbprint"
-    env:
-      AUTHENTICODE_PASSWORD: $(AuthenticodePassword)
   - task: AzureCLI@2
     displayName: download signed ovs package
     condition: ne(variables['Build.Reason'], 'PullRequest')
@@ -86,6 +73,19 @@ jobs:
     inputs:
       script: 'ren eryph-zero bin'
       workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build'
+
+  - task: AzureCLI@2
+    displayName: 'Sign eryph-zero.exe'
+    condition: ne(variables['Build.Reason'], 'PullRequest')
+    inputs:
+      scriptType: ps
+      scriptLocation: inlineScript
+      azureSubscription: '[YOUR_CONNECTION_NAME]'
+      addSpnToEnvironment: true
+      workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build\bin'
+      inlineScript: |
+        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2023" -v eryph-zero.exe
+
 
   - task: CopyFiles@2
     displayName: copy ovs package to zero build
