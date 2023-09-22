@@ -1,13 +1,12 @@
-using System;
-using System.Collections.Generic;
 using System.Net.Http.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
-using Dbosoft.IdentityServer;
-using Dbosoft.IdentityServer.Storage.Models;
-using Eryph.IdentityDb;
+using Eryph.Modules.Identity.Services;
 using FluentAssertions;
-using Moq;
+using Microsoft.Extensions.DependencyInjection;
+using SimpleInjector;
+using SimpleInjector.Lifestyles;
 using Xunit;
 using Client = Eryph.Modules.Identity.Models.V1.Client;
 
@@ -23,10 +22,8 @@ public class GetClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
     }
 
 
-    private WebModuleFactory<IdentityModule> SetupClients(Action<Mock<IIdentityServerClientService>> configure)
+    private WebModuleFactory<IdentityModule> SetupClients()
     {
-        var serviceMock = new Mock<IIdentityServerClientService>();
-        configure(serviceMock);
 
 
         var factory = _factory.WithModuleConfiguration(options =>
@@ -34,7 +31,19 @@ public class GetClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
             options.ConfigureContainer(container =>
             {
                 container.Options.AllowOverridingRegistrations = true;
-                container.RegisterInstance(serviceMock.Object);
+
+            });
+        }).WithModuleConfiguration(o =>
+        {
+            o.Configure(ctx =>
+            {
+                var container = ctx.Services.GetRequiredService<Container>();
+                using var scope = AsyncScopedLifestyle.BeginScope(container);
+                var clientService = scope.GetRequiredService<IClientService>();
+                _ = clientService.Add(new ClientApplicationDescriptor
+                {
+                    ClientId = "test2"
+                }, CancellationToken.None).GetAwaiter().GetResult();
             });
         });
 
@@ -44,23 +53,7 @@ public class GetClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
     [Fact]
     public async Task Get_Client()
     {
-        var factory = SetupClients(mock =>
-        {
-            mock.Setup(x => x.GetClient("test2")).ReturnsAsync(
-                new Dbosoft.IdentityServer.Storage.Models.Client()
-                {
-                    ClientId = "test2",
-                    ClientSecrets = new List<Secret>(new[]
-                    {
-                        new Secret
-                        {
-                            Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
-                            Value = TestClientData.CertificateString
-                        }
-                    })
-
-                });
-        });
+        var factory = SetupClients();
 
         var result = await factory.CreateDefaultClient().GetFromJsonAsync<Client>("v1/clients/test2");
         result.Should().NotBeNull();

@@ -1,8 +1,11 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Eryph.Modules.AspNetCore;
+using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -16,14 +19,15 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
         .WithRequest<GetClientRequest>
         .WithActionResult<Client>
     {
-        private readonly IClientService<Client> _clientService;
-
-        public Get(IClientService<Client> clientService)
+        private readonly IClientService _clientService;
+        private readonly IUserInfoProvider _userInfoProvider;
+        public Get(IClientService clientService, IUserInfoProvider userInfoProvider)
         {
             _clientService = clientService;
+            _userInfoProvider = userInfoProvider;
         }
 
-
+        [Authorize(Policy = "identity:clients:read")]
         [HttpGet("clients/{id}")]
         [SwaggerOperation(
             Summary = "Get a client",
@@ -35,11 +39,13 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
 
         public override async Task<ActionResult<Client>> HandleAsync([FromRoute] GetClientRequest request, CancellationToken cancellationToken = new CancellationToken())
         {
-            var client = await _clientService.GetClient(request.Id);
+            var tenantId = _userInfoProvider.GetUserTenantId();
+            var descriptor = await _clientService.Get(request.Id, tenantId, cancellationToken);
 
-            if (client == null)
+            if (descriptor == null)
                 return NotFound($"client with id {request.Id} not found.");
 
+            var client = descriptor.ToClient<Client>();
             return Ok(client);
         }
     }

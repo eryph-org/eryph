@@ -1,63 +1,60 @@
 ﻿using System;
-using System.Linq;
+using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
-using Dbosoft.IdentityServer.Storage.Models;
+using Ardalis.Specification;
 using Eryph.IdentityDb;
-using Eryph.Modules.Identity.Models;
+using Eryph.IdentityDb.Entities;
+using Eryph.IdentityDb.Specifications;
+using OpenIddict.Abstractions;
 
 namespace Eryph.Modules.Identity.Services
 {
-    public class ClientService<TModel> : IClientService<TModel> where TModel : IClientApiModel
+    public class ClientService : BaseApplicationService<ClientApplicationEntity, ClientApplicationDescriptor>, IClientService
     {
-        private readonly IIdentityServerClientService _identityServerService;
-
-        public ClientService(IIdentityServerClientService identityServerClient)
+        public ClientService(IOpenIddictApplicationManager applicationManager, IIdentityDbRepository<ClientApplicationEntity> repository) : base(applicationManager, repository)
         {
-            _identityServerService = identityServerClient;
         }
 
-        public IQueryable<TModel> QueryClients()
+        protected override async ValueTask PopulateApplicationFromDescriptor(ClientApplicationEntity application, ClientApplicationDescriptor descriptor,
+            CancellationToken cancellationToken)
         {
-            return ClientApiMapper.Mapper.ProjectTo<TModel>(_identityServerService.QueryClients());
+            await base.PopulateApplicationFromDescriptor(application, descriptor, cancellationToken);
+            application.Certificate = descriptor.Certificate;
+
         }
 
-        public async Task<TModel> GetClient(string clientId)
+        protected override async ValueTask PopulateDescriptorFromApplication(ClientApplicationDescriptor descriptor, ClientApplicationEntity application,
+            CancellationToken cancellationToken)
         {
-            return (await _identityServerService.GetClient(clientId)).ToApiModel<TModel>();
+            await base.PopulateDescriptorFromApplication(descriptor, application, cancellationToken);
+            descriptor.Certificate = application.Certificate;
         }
 
-        public async Task DeleteClient(TModel client)
+
+        protected override void InitializeDescriptor(ClientApplicationDescriptor descriptor)
         {
-            if (string.Equals(client.Id, "system-client"))
-                throw new InvalidOperationException("It is not allowed to delete the build-in system-client");
+            descriptor.Type = OpenIddictConstants.ClientTypes.Confidential;
 
-            var identityServerClient = await _identityServerService.GetClient(client.Id);
+            //// as openiddict does automatically assumes that a client key is required for confidential clients
+            //// we have to set a secure random string as client secret to avoid client to be filtered out
+            descriptor.ClientSecret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
-            if (identityServerClient != null)
-                await _identityServerService.DeleteClient(identityServerClient);
+            descriptor.Permissions.Clear();
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.ClientCredentials);
+
         }
 
-        public async Task UpdateClient(TModel client)
+        protected override ISingleResultSpecification<ClientApplicationEntity> GetSingleEntitySpec(string clientId, Guid tenantId)
         {
-            if (string.Equals(client.Id, "system-client"))
-                throw new InvalidOperationException("It is not allowed to change the build-in system-client");
-
-
-            var identityServerClient = await _identityServerService.GetClient(client.Id);
-
-            if (identityServerClient == null) return;
-
-            identityServerClient.AllowedScopes = client.AllowedScopes;
-            identityServerClient.Description = client.Description;
-            identityServerClient.ClientName = client.Name;
-            identityServerClient.Claims.Add(new ClientClaim("tenant", client.Tenant));
-            identityServerClient.Claims.Add(new ClientClaim("roles", string.Join(',', client.Roles)));
-            await _identityServerService.UpdateClient(identityServerClient);
+            return new ClientSpecs.GetByClientId(clientId, tenantId);
         }
 
-        public Task AddClient(TModel client)
+        protected override ISpecification<ClientApplicationEntity> GetListSpec(Guid tenantId)
         {
-            return _identityServerService.AddClient(client.ToIdentityServerModel());
+            return new ClientSpecs.GetAll(tenantId);
         }
     }
+
 }

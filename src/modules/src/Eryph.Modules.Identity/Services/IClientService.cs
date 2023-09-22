@@ -1,15 +1,15 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Modules.Identity.Models;
 
-namespace Eryph.Modules.Identity.Services
+namespace Eryph.Modules.Identity.Services;
+
+public interface IClientService
 {
-    public interface IClientService<TModel> where TModel : IClientApiModel
-    {
-        IQueryable<TModel> QueryClients();
-        Task<TModel> GetClient(string clientId);
-        Task DeleteClient(TModel client);
-        Task UpdateClient(TModel client);
-        Task AddClient(TModel client);
-    }
+    ValueTask<IEnumerable<ClientApplicationDescriptor>> List(Guid tenantId, CancellationToken cancellationToken);
+    ValueTask<ClientApplicationDescriptor> Get(string clientId, Guid tenantId, CancellationToken cancellationToken);
+    ValueTask<ClientApplicationDescriptor> Update(ClientApplicationDescriptor descriptor, CancellationToken cancellationToken);
+    ValueTask Delete(string clientId, Guid tenantId, CancellationToken cancellationToken);
+    ValueTask<ClientApplicationDescriptor> Add(ClientApplicationDescriptor descriptor, CancellationToken cancellationToken);
 }

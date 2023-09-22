@@ -1,4 +1,6 @@
-﻿namespace Eryph.Configuration.Model
+﻿using System;
+
+namespace Eryph.Configuration.Model
 {
     public class ClientConfigModel
     {
@@ -7,7 +9,7 @@
         public string Description { get; set; }
         public string X509CertificateBase64 { get; set; }
         public string[] AllowedScopes { get; set; }
-        public string[] Roles { get; set; }
-        public string TenantId { get; set; }
+        public Guid[] Roles { get; set; }
+        public Guid TenantId { get; set; }
     }
 }

@@ -1,8 +1,5 @@
 using System.Linq;
 using System.Threading.Tasks;
-using Dbosoft.Hosuto.Modules.Hosting;
-using Eryph.Modules.Identity.Services;
-using Eryph.Modules.Identity.Test.Integration.Endpoints;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;

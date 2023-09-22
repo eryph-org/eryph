@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using JetBrains.Annotations;
 
 namespace Eryph.Modules.Identity.Models.V1;
 
 [PublicAPI]
-public class Client : IClientApiModel
+public class Client
 {
     /// <summary>
     ///     Unique identifier for a eryph client
@@ -22,28 +23,20 @@ public class Client : IClientApiModel
     public string Name { get; set; }
 
     /// <summary>
-    ///     optional description of client
-    /// </summary>
-    [MaxLength(200)]
-    public string Description { get; set; }
-
-    /// <summary>
-    ///     The clients public certificate (base64 encoded)
-    /// </summary>
-    string IClientApiModel.Certificate { get; set; }
-
-    /// <summary>
     ///     allowed scopes of client
     /// </summary>
-    public List<string> AllowedScopes { get; set; }
+    public string[] AllowedScopes { get; set; }
 
 
     /// <summary>
     ///     Roles of client
     /// </summary>
-    public List<string> Roles { get; set; }
+    public Guid[] Roles { get; set; }
 
-    public string Tenant { get; set; }
+    /// <summary>
+    ///    Tenant of client
+    /// </summary>
+    public Guid TenantId { get; set; }
 
 
 }

@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
@@ -17,19 +18,21 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
     [Route("v{version:apiVersion}")]
     public class NewKey : EndpointBaseAsync
         .WithRequest<NewClientKeyRequest>
-        .WithActionResult<ClientWithSecrets>
+        .WithActionResult<ClientWithSecret>
     {
-        private readonly IClientService<Client> _clientService;
+        private readonly IClientService _clientService;
         private readonly ICertificateGenerator _certificateGenerator;
-        
-        public NewKey(IClientService<Client> clientService, ICertificateGenerator certificateGenerator)
+        private readonly IUserInfoProvider _userInfoProvider;
+
+        public NewKey(IClientService clientService, ICertificateGenerator certificateGenerator, IUserInfoProvider userInfoProvider)
         {
             _clientService = clientService;
             _certificateGenerator = certificateGenerator;
+            _userInfoProvider = userInfoProvider;
         }
 
 
-        [Authorize(Policy = "identity:clients:write:all")]
+        [Authorize(Policy = "identity:clients:write")]
         [HttpPost("clients/{id}/newkey")]
         [SwaggerOperation(
             Summary = "Updates a client key",
@@ -37,27 +40,21 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
             OperationId = "Clients_NewKey",
             Tags = new[] { "Clients" })
         ]
-        [SwaggerResponse(Status200OK, "Success", typeof(ClientWithSecrets))]
+        [SwaggerResponse(Status200OK, "Success", typeof(ClientWithSecret))]
 
-        public override async Task<ActionResult<ClientWithSecrets>> HandleAsync([FromRoute] NewClientKeyRequest request, CancellationToken cancellationToken = new CancellationToken())
+        public override async Task<ActionResult<ClientWithSecret>> HandleAsync([FromRoute] NewClientKeyRequest request, CancellationToken cancellationToken = new CancellationToken())
         {
-            var client = await _clientService.GetClient(request.Id);
-            if (client == null)
+            var tenantId = _userInfoProvider.GetUserTenantId();
+            var descriptor = await _clientService.Get(request.Id, tenantId, cancellationToken);
+            if (descriptor == null)
                 return NotFound($"client with id {request.Id} not found.");
 
 
-            var privateKey = await client.NewClientCertificate(_certificateGenerator);
-            await _clientService.UpdateClient(client);
+            var privateKey = await descriptor.NewClientCertificate(_certificateGenerator);
+            descriptor = await _clientService.Update(descriptor, cancellationToken);
 
-            var createdClient = new ClientWithSecrets
-            {
-                Id = client.Id,
-                AllowedScopes = client.AllowedScopes,
-                Description = client.Description,
-                Name = client.Name,
-                Key = privateKey,
-                KeyType = ClientSecretType.RsaPrivateKey
-            };
+            var createdClient = descriptor.ToClient<ClientWithSecret>();
+            createdClient.Key = privateKey;
 
             return Ok(createdClient);
         }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using Eryph.Core;
@@ -11,40 +10,12 @@ using Microsoft.AspNetCore.Http;
 
 namespace Eryph.Modules.AspNetCore;
 
-public class UserRightsProvider : IUserRightsProvider
+public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
 {
-    private readonly IHttpContextAccessor _contextAccessor;
     private readonly IStateStore _stateStore;
-    public UserRightsProvider(IHttpContextAccessor contextAccessor, IStateStore stateStore)
+    public UserRightsProvider(IHttpContextAccessor contextAccessor, IStateStore stateStore): base(contextAccessor)
     {
-        _contextAccessor = contextAccessor;
         _stateStore = stateStore;
-    }
-
-    public Guid GetUserTenantId()
-    {
-        var tenantId = Guid.Empty;
-        var claims = _contextAccessor.HttpContext?.User.Claims.ToArray() ?? Array.Empty<Claim>();
-        var tenantClaim = claims.FirstOrDefault(x => x.Type == "client_tenant");
-        if (tenantClaim != null) _ = Guid.TryParse(tenantClaim.Value, out tenantId);
-
-        return tenantId;
-    }
-
-    public Guid[] GetUserRoles()
-    {
-        var roles = Array.Empty<Guid>();
-
-        var claims = _contextAccessor.HttpContext?.User.Claims.ToArray() ?? Array.Empty<Claim>();
-
-        var rolesClaim = claims.FirstOrDefault(x => x.Type == "client_roles");
-        if (rolesClaim != null)
-        {
-            roles = rolesClaim.Value.Split(',')
-                .Select(x => (Guid.TryParse(x, out var guid), guid)).Where(x => x.Item1)
-                .Select(x => x.guid).ToArray();
-        }
-        return roles;
     }
 
 

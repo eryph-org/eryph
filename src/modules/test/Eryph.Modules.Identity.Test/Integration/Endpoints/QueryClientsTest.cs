@@ -2,14 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
-using Dbosoft.IdentityServer;
-using Dbosoft.IdentityServer.Storage.Models;
 using Eryph.IdentityDb;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.Identity.Services;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using SimpleInjector;
+using SimpleInjector.Lifestyles;
 using Xunit;
 using Client = Eryph.Modules.Identity.Models.V1.Client;
 
@@ -23,11 +26,9 @@ public class QueryClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
     {
         _factory = factory;
     }
-     
-    private WebModuleFactory<IdentityModule> SetupClients(Action<Mock<IIdentityServerClientService>> configure)
+
+    private WebModuleFactory<IdentityModule> SetupClients()
     {
-        var serviceMock = new Mock<IIdentityServerClientService>();
-        configure(serviceMock);
 
 
         var factory = _factory.WithModuleConfiguration(options =>
@@ -35,7 +36,23 @@ public class QueryClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
             options.ConfigureContainer(container =>
             {
                 container.Options.AllowOverridingRegistrations = true;
-                container.RegisterInstance(serviceMock.Object);
+
+            });
+        }).WithModuleConfiguration(o =>
+        {
+            o.Configure(ctx =>
+            {
+                var container = ctx.Services.GetRequiredService<Container>();
+                using var scope = AsyncScopedLifestyle.BeginScope(container);
+                var clientService = scope.GetRequiredService<IClientService>();
+                _ = clientService.Add(new ClientApplicationDescriptor
+                {
+                    ClientId = "test1"
+                }, CancellationToken.None).GetAwaiter().GetResult();
+                _ = clientService.Add(new ClientApplicationDescriptor
+                {
+                    ClientId = "test2"
+                }, CancellationToken.None).GetAwaiter().GetResult();
 
             });
         });
@@ -46,37 +63,8 @@ public class QueryClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
     [Fact]
     public async Task Query_Clients()
     {
-        var factory = SetupClients(mock =>
-        {
-            mock.Setup(x => x.QueryClients()).Returns(new[]
-            {
-                new Dbosoft.IdentityServer.Storage.Models.Client()
-                {
-                    ClientId = "test1",
-                    ClientSecrets = new List<Secret>(new[]
-                    {
-                        new Secret
-                        {
-                            Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
-                            Value = TestClientData.CertificateString
-                        }
-                    }),
-                },
-                new Dbosoft.IdentityServer.Storage.Models.Client()
-                {
-                    ClientId = "test2",
-                    ClientSecrets = new List<Secret>(new[]
-                    {
-                        new Secret
-                        {
-                            Type = IdentityServerConstants.SecretTypes.X509CertificateBase64,
-                            Value = TestClientData.CertificateString
-                        }
-                    }),
-                }
-            }.AsQueryable());
+        var factory = SetupClients();
 
-        });
         var result = await factory.CreateDefaultClient().GetFromJsonAsync<ListResponse<Client>>("v1/clients");
         result.Should().NotBeNull();
         result.Value.Count().Should().Be(2);

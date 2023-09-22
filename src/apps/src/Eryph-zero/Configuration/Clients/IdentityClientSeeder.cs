@@ -1,11 +1,12 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration;
 using Eryph.Configuration.Model;
-using Eryph.IdentityDb;
 using Eryph.Modules.Identity;
-using Eryph.Modules.Identity.Models;
+using Eryph.Modules.Identity.Services;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 
 namespace Eryph.Runtime.Zero.Configuration.Clients
 {
@@ -13,20 +14,33 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
     internal class IdentityClientSeeder : IConfigSeeder<IdentityModule>
     {
         private readonly IConfigReaderService<ClientConfigModel> _clientConfigService;
-        private readonly IIdentityServerClientService _clientService;
+        private readonly IClientService _clientService;
+        private readonly ILogger<IdentityClientSeeder> _logger;
 
-        public IdentityClientSeeder(IIdentityServerClientService clientService,
-            IConfigReaderService<ClientConfigModel> clientConfigService)
+        public IdentityClientSeeder(IConfigReaderService<ClientConfigModel> clientConfigService, ILogger<IdentityClientSeeder> logger,
+            IClientService clientService)
         {
-            _clientService = clientService;
             _clientConfigService = clientConfigService;
+            _logger = logger;
+            _clientService = clientService;
         }
 
-        public Task Execute(CancellationToken stoppingToken)
+        public async Task Execute(CancellationToken stoppingToken)
         {
-            return _clientService.AddClients(
-                _clientConfigService.GetConfig()
-                    .Map(x => x.ToApiModel().ToIdentityServerModel()));
+            foreach (var clientConfigModel in _clientConfigService.GetConfig())
+            {
+                var clientDescriptor = clientConfigModel.ToDescriptor();
+
+                try
+                {
+                   await _clientService.Add(clientDescriptor, stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "failed to load client {clientId}", clientConfigModel.ClientId);
+
+                }
+            }
         }
     }
 }

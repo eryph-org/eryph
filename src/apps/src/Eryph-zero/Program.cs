@@ -49,6 +49,7 @@ using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
 using Microsoft.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
+using Microsoft.IdentityModel.Logging;
 
 namespace Eryph.Runtime.Zero;
 
@@ -56,6 +57,8 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        IdentityModelEventSource.ShowPII = true; 
+
         var rootCommand = new RootCommand();
         var debugWaitOption = new System.CommandLine.Option<bool>(name: "--debuggerWait",
             () => false, "Stops and waits for a debugger to be attached");

@@ -30,7 +30,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             return new StopCatletCommand{CatletId = model.Id };
         }
 
-        [Authorize(Policy = "compute:catlets:stop")]
+        [Authorize(Policy = "compute:catlets:control")]
         [HttpPut("catlets/{id}/stop")]
         [SwaggerOperation(
             Summary = "Stops a catlet",

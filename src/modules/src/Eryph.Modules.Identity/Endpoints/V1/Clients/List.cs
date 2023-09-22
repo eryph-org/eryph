@@ -2,9 +2,12 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
+using LanguageExt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -19,16 +22,18 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
         .WithoutRequest
         .WithActionResult<ListResponse<Client>>
     {
-        private readonly IClientService<Client> _clientService;
+        private readonly IClientService _clientService;
+        private readonly IUserInfoProvider _userInfoProvider;
 
-        public List(IClientService<Client> clientService)
+        public List(IClientService clientService, IUserInfoProvider userInfoProvider)
         {
             _clientService = clientService;
+            _userInfoProvider = userInfoProvider;
         }
 
 
         [HttpGet("clients")]
-        [Authorize("identity:clients:read:all")]
+        [Authorize("identity:clients:read")]
         [SwaggerOperation(
             Summary = "Lists clients",
             Description = "Lists clients",
@@ -38,8 +43,12 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
         [SwaggerResponse(Status200OK, "Success", typeof(ListResponse<Client>))]
         public override async Task<ActionResult<ListResponse<Client>>> HandleAsync(CancellationToken cancellationToken = new CancellationToken())
         {
-            var clients = _clientService.QueryClients().ToArray();
-            return new (new ListResponse<Client> { Value = clients });
+            var tenantId = _userInfoProvider.GetUserTenantId();
+
+            var clients = await _clientService.List(tenantId, cancellationToken).Map(e => 
+                e.Map(c => c.ToClient<Client>()));
+
+            return new ActionResult<ListResponse<Client>>(new ListResponse<Client> { Value = clients });
         }
     }
 

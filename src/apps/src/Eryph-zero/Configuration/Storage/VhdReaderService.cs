@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Eryph.Configuration;
@@ -20,7 +21,7 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
                 if(config == null)
                     continue;
                 
-                foreach (var virtualDiskConfig in config.VirtualDisks)
+                foreach (var virtualDiskConfig in config.VirtualDisks?? Array.Empty<StorageVhdConfig>())
                 {
                     yield return new VirtualDisk
                     {

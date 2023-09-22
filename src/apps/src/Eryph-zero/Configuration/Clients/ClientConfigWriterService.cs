@@ -6,12 +6,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
 {
     internal class ClientConfigWriterService : IConfigWriterService<ClientConfigModel>
     {
-        private readonly ConfigIO _io;
-
-        public ClientConfigWriterService()
-        {
-            _io = new ConfigIO(ZeroConfig.GetClientConfigPath());
-        }
+        private readonly ConfigIO _io = new(ZeroConfig.GetClientConfigPath());
 
         public Task Delete(ClientConfigModel client, string projectName)
         {

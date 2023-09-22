@@ -1,13 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dbosoft.IdentityServer.EfCore.Storage.DbContexts;
-using Dbosoft.IdentityServer.EfCore.Storage.Entities;
+using Eryph.IdentityDb.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Eryph.IdentityDb
 {
-    public class ClientRepository<TDbContext> : IClientRepository where TDbContext : ConfigurationDbContext
+    public class ClientRepository<TDbContext> : IClientRepository where TDbContext : IdentityDbContext
     {
         protected readonly TDbContext DbContext;
 
@@ -16,7 +15,7 @@ namespace Eryph.IdentityDb
             DbContext = dbContext;
         }
 
-        public Task<Client> GetClientAsync(int id)
+        public Task<ClientApplicationEntity> GetClientAsync(string id)
         {
             return QueryClients()
                 .Where(x => x.Id == id)
@@ -24,37 +23,21 @@ namespace Eryph.IdentityDb
                 .SingleOrDefaultAsync();
         }
 
-        public Task<Client> GetTrackedClientAsync(string id)
+        public Task<ClientApplicationEntity> GetTrackedClientAsync(string id)
         {
             return QueryClients()
                 .Where(x => x.ClientId == id)
                 .SingleOrDefaultAsync();
         }
 
-        public IQueryable<Client> QueryClients()
+        public IQueryable<ClientApplicationEntity> QueryClients()
         {
-            return DbContext.Clients
-                .Include(x => x.AllowedGrantTypes)
-                .Include(x => x.RedirectUris)
-                .Include(x => x.PostLogoutRedirectUris)
-                .Include(x => x.AllowedScopes)
-                .Include(x => x.ClientSecrets)
-                .Include(x => x.Claims)
-                .Include(x => x.IdentityProviderRestrictions)
-                .Include(x => x.AllowedCorsOrigins)
-                .Include(x => x.Properties)
+            return DbContext.Applications
+                .Where(x=>x.IdentityApplicationType == IdentityApplicationType.Client)
+                .Cast<ClientApplicationEntity>()
                 .AsNoTracking();
         }
 
-
-        public async Task<(int? Id, string ClientId)> GetClientIdAsync(string clientId)
-        {
-            var client = await DbContext.Clients.Where(x => x.ClientId == clientId)
-                .Select(x => new {x.Id, x.ClientId})
-                .SingleOrDefaultAsync();
-
-            return (client?.Id, client?.ClientId);
-        }
 
 
         public async Task<int> SaveAllChangesAsync()
@@ -62,34 +45,28 @@ namespace Eryph.IdentityDb
             return await DbContext.SaveChangesAsync();
         }
 
-        public async Task<int> AddClientAsync(Client client)
+        public async Task<string> AddClientAsync(ClientApplicationEntity client)
         {
             await DbContext.AddAsync(client);
             return client.Id;
         }
 
-        public Task AddClientsAsync(IEnumerable<Client> clients)
+        public Task AddClientsAsync(IEnumerable<ClientApplicationEntity> clients)
         {
             return DbContext.AddRangeAsync(clients);
         }
 
-        public void RemoveClientRelations(Client client)
+        public void RemoveClientRelations(ClientApplicationEntity client)
         {
-            DbContext.RemoveRange(client.AllowedScopes);
-            DbContext.RemoveRange(client.AllowedGrantTypes);
-            DbContext.RemoveRange(client.RedirectUris);
-            DbContext.RemoveRange(client.AllowedCorsOrigins);
-            DbContext.RemoveRange(client.IdentityProviderRestrictions);
-            DbContext.RemoveRange(client.PostLogoutRedirectUris);
         }
 
-        public Task UpdateClientAsync(Client client)
+        public Task UpdateClientAsync(ClientApplicationEntity client)
         {
             DbContext.Update(client);
             return Task.CompletedTask;
         }
 
-        public Task RemoveClientAsync(Client client)
+        public Task RemoveClientAsync(ClientApplicationEntity client)
         {
             DbContext.Remove(client);
             return Task.CompletedTask;

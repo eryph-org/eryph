@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -17,15 +18,17 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
         .WithRequest<DeleteClientRequest>
         .WithoutResult
     {
-        private readonly IClientService<Client> _clientService;
+        private readonly IClientService _clientService;
+        private readonly IUserInfoProvider _userInfoProvider;
 
-        public Delete(IClientService<Client> clientService)
+        public Delete(IClientService clientService, IUserInfoProvider userInfoProvider)
         {
             _clientService = clientService;
+            _userInfoProvider = userInfoProvider;
         }
 
 
-        [Authorize(Policy = "identity:clients:write:all")]
+        [Authorize(Policy = "identity:clients:write")]
         [HttpDelete("clients/{id}")]
         [SwaggerOperation(
             Summary = "Deletes a client",
@@ -36,11 +39,13 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
         [ProducesResponseType(Status200OK)]
         public override async Task<ActionResult> HandleAsync([FromRoute] DeleteClientRequest request, CancellationToken cancellationToken = new CancellationToken())
         {
-            var client = await _clientService.GetClient(request.Id);
+            var tenantId = _userInfoProvider.GetUserTenantId();
+
+            var client = await _clientService.Get(request.Id, tenantId, cancellationToken);
             if (client == null)
                 return NotFound($"client with id {request.Id} not found.");
 
-            await _clientService.DeleteClient(client);
+            await _clientService.Delete(client.ClientId, tenantId, cancellationToken);
 
             return Ok();
         }
