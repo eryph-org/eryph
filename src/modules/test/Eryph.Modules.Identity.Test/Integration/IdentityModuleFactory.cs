@@ -4,7 +4,12 @@ using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.IdentityDb;
 using Eryph.ModuleCore;
 using Eryph.Modules.Identity.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
+using OpenIddict.Client.AspNetCore;
 using SimpleInjector;
 
 namespace Eryph.Modules.Identity.Test.Integration
@@ -38,5 +43,13 @@ namespace Eryph.Modules.Identity.Test.Integration
             return moduleHostBuilder;
         }
 
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.ConfigureTestServices(services => 
+                services.AddOpenIddict(openIddict => openIddict.AddServer(options =>
+            {
+                options.UseAspNetCore().DisableTransportSecurityRequirement();
+            })));
+        }
     }
 }

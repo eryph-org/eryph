@@ -1,10 +1,12 @@
-using System;
 using System.Net.Http.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
-using Eryph.IdentityDb;
+using Eryph.Modules.Identity.Services;
 using FluentAssertions;
-using Moq;
+using Microsoft.Extensions.DependencyInjection;
+using SimpleInjector;
+using SimpleInjector.Lifestyles;
 using Xunit;
 using Client = Eryph.Modules.Identity.Models.V1.Client;
 
@@ -29,6 +31,19 @@ public class GetClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
             options.ConfigureContainer(container =>
             {
                 container.Options.AllowOverridingRegistrations = true;
+
+            });
+        }).WithModuleConfiguration(o =>
+        {
+            o.Configure(ctx =>
+            {
+                var container = ctx.Services.GetRequiredService<Container>();
+                using var scope = AsyncScopedLifestyle.BeginScope(container);
+                var clientService = scope.GetRequiredService<IClientService>();
+                _ = clientService.Add(new ClientApplicationDescriptor
+                {
+                    ClientId = "test2"
+                }, CancellationToken.None).GetAwaiter().GetResult();
             });
         });
 

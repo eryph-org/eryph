@@ -5,6 +5,8 @@ using Eryph.IdentityModel.Clients;
 using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OpenIddict.Client.AspNetCore;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.OpenSsl;
@@ -12,16 +14,19 @@ using Org.BouncyCastle.Security;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Identity.Test.Integration
 {
     public class ClientAccessTokenTest : IClassFixture<IdentityModuleFactory>
     {
         private readonly IdentityModuleFactory _factory;
+        private readonly ITestOutputHelper _outputHelper;
 
-        public ClientAccessTokenTest(IdentityModuleFactory factory)
+        public ClientAccessTokenTest(IdentityModuleFactory factory, ITestOutputHelper outputHelper)
         {
             _factory = factory;
+            _outputHelper = outputHelper;
         }
 
         [Fact]
@@ -42,9 +47,12 @@ namespace Eryph.Modules.Identity.Test.Integration
                 c.ConfigureTestServices(
                     services =>
                     {
+                        services.AddLogging((builder) => builder.AddXUnit(_outputHelper));
+
 
                     });
-            });
+
+                });
 
             factory = factory.WithModuleConfiguration(o=>
             {

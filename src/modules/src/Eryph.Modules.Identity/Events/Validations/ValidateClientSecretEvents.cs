@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Eryph.IdentityDb.Entities;
@@ -48,6 +49,12 @@ public class ValidateClientSecretEvents
                 .SetType(OpenIddictServerHandlerType.Custom)
                 .Build();
 
+        public static Uri UriAppend(Uri uri, params string[] paths)
+        {
+            return new Uri(paths.Aggregate(uri.AbsoluteUri, (current, path) =>
+                $"{current.TrimEnd('/')}/{path.TrimStart('/')}"));
+        }
+
         /// <inheritdoc/>
         public async ValueTask HandleAsync(OpenIddictServerEvents.ValidateTokenRequestContext context)
         {
@@ -83,12 +90,13 @@ public class ValidateClientSecretEvents
             var certificate = new X509Certificate2(Convert.FromBase64String(application.Certificate));
             var securityKey = new X509SecurityKey(certificate);
 
+
             var validationParameters = new TokenValidationParameters
             {
                 ValidateIssuer = true,
                 ValidIssuer = application.ClientId,
                 ValidateAudience = true,
-                ValidAudience = context.BaseUri + "/connect/token",
+                ValidAudience = UriAppend(context.BaseUri,"connect/token").ToString(),
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKeys = new[] { securityKey },
                 ValidateLifetime = true
