@@ -18,7 +18,7 @@
     },
     "install": {
       "commandName": "Project",
-      "commandLineArgs": "install",
+      "commandLineArgs": "install --outFile \"t:\\install.log\" --deleteOutFile",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },

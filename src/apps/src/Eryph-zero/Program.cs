@@ -398,7 +398,7 @@ internal static class Program
         return (((IPEndPoint)socket.LocalEndPoint)!).Port;
     }
 
-    private static Task<int> SelfInstall(FileSystemInfo? outFile, bool deleteOutFile)
+    private static async Task<int> SelfInstall(FileSystemInfo? outFile, bool deleteOutFile)
     {
         TextWriter? outWriter = null;
         var standardOut = Console.Out;
@@ -421,7 +421,7 @@ internal static class Program
                 .WriteTo.Console(theme: ConsoleTheme.None)
                 .CreateLogger();
 
-            return AdminGuard.CommandIsElevated(async () =>
+            return await AdminGuard.CommandIsElevated(async () =>
             {
                 var targetDir =
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
@@ -500,7 +500,7 @@ internal static class Program
                         let cancelSource1 = new CancellationTokenSource(TimeSpan.FromMinutes(1))
                         from uStopped in serviceExists
                             ?
-                            LogProgress("Stopping running service...").Bind(_ => 
+                            LogProgress("Stopping running service...").Bind(_ =>
                                 serviceManager.EnsureServiceStopped(cancelSource1.Token))
                             : Unit.Default
                         from uDBackup in Prelude.Try(() =>
@@ -511,7 +511,7 @@ internal static class Program
                             CopyDirectory(dataDir, backupDataDir);
                             dataBackupCreated = true;
                             return Unit.Default;
-                        }).ToEitherAsync()    
+                        }).ToEitherAsync()
                         from _ in Prelude.Try(() => OVSPackage.UnpackAndProvide(true)).ToEitherAsync()
                         from uCopy in CopyService()
                         from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
@@ -720,7 +720,7 @@ internal static class Program
                     );
     }
 
-    private static async Task<int> ImportNetworkConfig([CanBeNull] FileSystemInfo inFile, bool nonInteractive,
+    private static async Task<int> ImportNetworkConfig(FileSystemInfo? inFile, bool nonInteractive,
         bool noCurrentConfigCheck)
     {
         var configString = "";
