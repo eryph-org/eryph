@@ -503,15 +503,17 @@ internal static class Program
                             LogProgress("Stopping running service...").Bind(_ =>
                                 serviceManager.EnsureServiceStopped(cancelSource1.Token))
                             : Unit.Default
-                        from uDBackup in Prelude.Try(() =>
+                        from uDBackup in Prelude.TryAsync(async () =>
                         {
                             if (!Directory.Exists(dataDir)) return Unit.Default;
 
                             Log.Logger.Information("Creating data backup...");
-                            CopyDirectory(dataDir, backupDataDir);
+                            await Task.Delay(2000, CancellationToken.None);
+                            CopyDirectory(dataDir, backupDataDir,
+                                "state.db-shm", "state.db-wal");
                             dataBackupCreated = true;
                             return Unit.Default;
-                        }).ToEitherAsync()
+                        }).ToEither()
                         from _ in Prelude.Try(() => OVSPackage.UnpackAndProvide(true)).ToEitherAsync()
                         from uCopy in CopyService()
                         from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
@@ -787,7 +789,7 @@ internal static class Program
     }
 
 
-    private static void CopyDirectory(string sourceDir, string destinationDir)
+    private static void CopyDirectory(string sourceDir, string destinationDir, params string[] ignoredFiles)
     {
         // Get information about the source directory
         var dir = new DirectoryInfo(sourceDir);
@@ -805,6 +807,9 @@ internal static class Program
         // Get the files in the source directory and copy to the destination directory
         foreach (var file in dir.GetFiles())
         {
+            if(ignoredFiles.Contains(file.Name))
+                continue;
+
             var targetFilePath = Path.Combine(destinationDir, file.Name);
             file.CopyTo(targetFilePath, true);
         }
