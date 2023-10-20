@@ -77,7 +77,13 @@ internal static class Program
             name: "--non-interactive",
             description: "No operator involved - commands will not query for confirmation.");
 
+        var warmupOption = new System.CommandLine.Option<bool>(
+            name: "--warmup",
+            description: "Run in warmup mode (internal use)");
+
+
         var runCommand = new Command("run");
+        runCommand.AddOption(warmupOption);
         runCommand.SetHandler(_ => Run(args));
         rootCommand.AddCommand(runCommand);
 
@@ -143,6 +149,7 @@ internal static class Program
         {
 
             var returnCode = 0;
+            var warmupMode = args.Contains("--warmup");
 
             var logFilePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
@@ -167,6 +174,9 @@ internal static class Program
                 var fileVersion = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location);
                 Log.Logger.Information("Starting eryph-zero {version}", fileVersion.ProductVersion);
 
+                if (warmupMode)
+                    Log.Logger.Information("Running in warmup mode. Process will be stopped after start is completed");
+                
                 var startupConfig = StartupConfiguration(args,
                     sp =>
                     {
@@ -290,7 +300,33 @@ internal static class Program
                 //starting here all errors should be considered as recoverable
                 returnCode = -1;
 
-                await host.RunAsync();
+                if (warmupMode)
+                {
+                    try
+                    {
+                        await host.StartAsync();
+                        await Task.Delay(1000);
+                        Log.Logger.Information("Warmup completed. Stopping.");
+                        var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));    
+                        await host.StopAsync(cancelSource.Token);
+                        returnCode = 0;
+                    }
+                    finally
+                    {
+                        if (host is IAsyncDisposable asyncDisposable)
+                        {
+                            await asyncDisposable.DisposeAsync();
+                        }
+                        else
+                        {
+                            host.Dispose();
+                        }
+                    }
+                }
+                else
+                {
+                    await host.RunAsync();
+                }
 
                 return returnCode;
             }
@@ -394,11 +430,19 @@ internal static class Program
 
                 var backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                     "eryph", "zero.old");
+
+                var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "eryph", "zero", "private");
+
+                var backupDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "eryph", "zero", "private.old");
                 var loggerFactory = new SerilogLoggerFactory(Log.Logger);
                 var sysEnv = new SystemEnvironment(loggerFactory);
                 var serviceManager = sysEnv.GetServiceManager("eryph-zero");
 
                 var backupCreated = false;
+                var dataBackupCreated = false;
+
                 var enableRollback = await serviceManager.ServiceExists()
                     .IfLeft(false);
 
@@ -407,33 +451,53 @@ internal static class Program
                     var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
                     var parentDir = baseDir.Parent?.FullName ?? throw new IOException($"Invalid path {baseDir}");
 
-
                     if (Directory.Exists(backupDir))
                         Directory.Delete(backupDir, true);
 
                     EitherAsync<Error, Unit> CopyService()
                     {
-                        return Prelude.Try(() =>
+                        return Prelude.TryAsync(async () =>
                         {
                             Log.Logger.Information("Copy files...");
                             if (Directory.Exists(targetDir))
                             {
-                                Directory.Move(targetDir, backupDir);
-                                backupCreated = true;
+                                var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+                                Exception? lastException = null;
+                                while (!cancelSource.IsCancellationRequested)
+                                {
+                                    try
+                                    {
+                                        Directory.Move(targetDir, backupDir);
+                                        backupCreated = true;
+                                        lastException = null;
+                                        break;
+                                    }
+                                    catch (IOException ex)
+                                    {
+                                        lastException = ex;
+                                        if(Directory.Exists(backupDir))
+                                            Directory.Delete(backupDir, true);
+                                        await Task.Delay(1000, CancellationToken.None);
+                                    }
+                                }
+                                if(lastException != null)
+                                    throw lastException;
+
                             }
 
                             CopyDirectory(parentDir, targetDir);
 
                             return Unit.Default;
-                        }).ToEitherAsync();
+                        }).ToEither();
 
 
                     }
 
-                    EitherAsync<Error, Unit> LogProgress(string message)
+                    if (Directory.Exists(dataDir))
                     {
-                        Log.Logger.Information(message);
-                        return Unit.Default;
+                        Log.Logger.Information("Creating data backup...");
+                        CopyDirectory(dataDir, backupDataDir);
+                        dataBackupCreated = true;
                     }
 
                     Log.Information("Installing eryph-zero service");
@@ -448,10 +512,12 @@ internal static class Program
                             : Unit.Default
                         from _ in Prelude.Try(() => OVSPackage.UnpackAndProvide(true)).ToEitherAsync()
                         from uCopy in CopyService()
-                        let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(1))
+                        from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
+                        let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                         from uInstalled in serviceExists
-                            ? LogProgress("Updating service...").Bind(_ => serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
-                            : LogProgress("Installing service...").Bind(_ => serviceManager.CreateService("eryph-zero", $"{zeroExe} run", cancelSource2.Token))
+                            ? LogProgress("Updating service...").Bind ( _ => serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
+                            : LogProgress("Installing service...").Bind( _ => serviceManager.CreateService("eryph-zero", $"{zeroExe} run",
+                                cancelSource2.Token))
                         let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
 
                         from pStart in LogProgress("Starting service...")
@@ -462,6 +528,9 @@ internal static class Program
 
                     if (Directory.Exists(backupDir))
                         Directory.Delete(backupDir, true);
+
+                    if (Directory.Exists(backupDataDir))
+                        Directory.Delete(backupDataDir, true);
 
                     //update path variable
                     const string pathVariable = "PATH";
@@ -492,26 +561,38 @@ internal static class Program
 
                     Log.Information("Trying to rollback to previous installation.");
 
-                    var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
-
                     try
                     {
                         var rollback =
                             from serviceExists in serviceManager.ServiceExists()
+                            let cancelSourceStop = new CancellationTokenSource(TimeSpan.FromMinutes(1))
                             from uStopped in serviceExists
-                                ? serviceManager.EnsureServiceStopped(cancelSource.Token)
+                                ? serviceManager.EnsureServiceStopped(cancelSourceStop.Token)
                                 : Unit.Default
                             from uCopy in Prelude.TryAsync (async () =>
                             {
-                                if (backupCreated) 
-                                    await SaveDirectoryMove(backupDir, targetDir, cancelSource.Token);
+                                if (backupCreated)
+                                {
+                                    Log.Information("Restoring backup files");
+                                    var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                                    await SaveDirectoryMove(backupDir, targetDir, cancelSourceCopy.Token);
+                                }
+
+                                if(dataBackupCreated)
+                                {
+                                    Log.Information("Restoring backup data files");
+                                    var cancelSourceCopy = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                                    await SaveDirectoryMove(backupDataDir, dataDir, cancelSourceCopy.Token);
+                                }
 
                                 return Unit.Default;
                             }).ToEither()
 
                             from serviceExists2 in serviceManager.ServiceExists()
+                            let cancelSourceStart = new CancellationTokenSource(TimeSpan.FromMinutes(5))
+
                             from uStarted in serviceExists2
-                                ? serviceManager.EnsureServiceStarted(cancelSource.Token)
+                                ? LogProgress("Starting service...").Bind(_ => serviceManager.EnsureServiceStarted(cancelSourceStart.Token))
                                 : Unit.Default
                             select Unit.Default;
 
@@ -554,6 +635,40 @@ internal static class Program
                 }
             }
         }
+
+
+        EitherAsync<Error, Unit> LogProgress(string message)
+        {
+            Log.Logger.Information(message);
+            return Unit.Default;
+        }
+
+        EitherAsync<Error, Unit> RunWarmup(string eryphBinPath)
+        {
+            var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            return Prelude.TryAsync(async () =>
+                        {
+                var process = new Process
+                {
+                    StartInfo =
+                    {
+                        FileName = eryphBinPath,
+                        Arguments = "run --warmup",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = false,
+                        RedirectStandardError = false,
+                        CreateNoWindow = true,
+                        WorkingDirectory = Environment.SystemDirectory
+                    },
+                    EnableRaisingEvents = true
+                };
+                process.Start();
+                await process.WaitForExitAsync(cancelTokenSource.Token);
+
+
+                return Unit.Default;
+            }).ToEither();
+        }
     }
 
     private static async Task SaveDirectoryMove(string source, string target, CancellationToken cancellationToken)
@@ -565,8 +680,7 @@ internal static class Program
                 try
                 {
                     Directory.Delete(target, true);
-
-                    return;
+                    break;
                 }
                 catch (Exception)
                 {
