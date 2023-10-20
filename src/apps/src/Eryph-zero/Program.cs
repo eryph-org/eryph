@@ -452,7 +452,7 @@ internal static class Program
                         from uInstalled in serviceExists
                             ? LogProgress("Updating service...").Bind(_ => serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
                             : LogProgress("Installing service...").Bind(_ => serviceManager.CreateService("eryph-zero", $"{zeroExe} run", cancelSource2.Token))
-                        let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(2))
+                        let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
 
                         from pStart in LogProgress("Starting service...")
                         from uStarted in serviceManager.EnsureServiceStarted(cancelSource3.Token)
@@ -501,17 +501,13 @@ internal static class Program
                             from uStopped in serviceExists
                                 ? serviceManager.EnsureServiceStopped(cancelSource.Token)
                                 : Unit.Default
-                            from uCopy in Prelude.Try(() =>
+                            from uCopy in Prelude.TryAsync (async () =>
                             {
-                                if (backupCreated)
-                                {
-                                    if (Directory.Exists(targetDir))
-                                        Directory.Delete(targetDir, true);
-                                    Directory.Move(backupDir, targetDir);
-                                }
+                                if (backupCreated) 
+                                    await SaveDirectoryMove(backupDir, targetDir, cancelSource.Token);
 
                                 return Unit.Default;
-                            }).ToEitherAsync()
+                            }).ToEither()
 
                             from serviceExists2 in serviceManager.ServiceExists()
                             from uStarted in serviceExists2
@@ -558,6 +554,28 @@ internal static class Program
                 }
             }
         }
+    }
+
+    private static async Task SaveDirectoryMove(string source, string target, CancellationToken cancellationToken)
+    {
+        if (Directory.Exists(target))
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    Directory.Delete(target, true);
+
+                    return;
+                }
+                catch (Exception)
+                {
+                    await Task.Delay(1000, cancellationToken);
+                }
+            }
+        }
+
+        Directory.Move(source, target);
     }
 
     private static async Task<int> GetNetworks(FileSystemInfo? outFile)
@@ -653,7 +671,7 @@ internal static class Program
     }
 
 
-    static void CopyDirectory(string sourceDir, string destinationDir)
+    private static void CopyDirectory(string sourceDir, string destinationDir)
     {
         // Get information about the source directory
         var dir = new DirectoryInfo(sourceDir);
