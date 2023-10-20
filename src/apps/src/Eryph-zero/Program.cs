@@ -458,10 +458,10 @@ internal static class Program
                     {
                         return Prelude.TryAsync(async () =>
                         {
-                            Log.Logger.Information("Copy files...");
+                            Log.Logger.Information("Copy new files...");
                             if (Directory.Exists(targetDir))
                             {
-                                var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+                                var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                                 Exception? lastException = null;
                                 while (!cancelSource.IsCancellationRequested)
                                 {
@@ -493,13 +493,6 @@ internal static class Program
 
                     }
 
-                    if (Directory.Exists(dataDir))
-                    {
-                        Log.Logger.Information("Creating data backup...");
-                        CopyDirectory(dataDir, backupDataDir);
-                        dataBackupCreated = true;
-                    }
-
                     Log.Information("Installing eryph-zero service");
 
                     var installOrUpdate =
@@ -510,6 +503,15 @@ internal static class Program
                             LogProgress("Stopping running service...").Bind(_ => 
                                 serviceManager.EnsureServiceStopped(cancelSource1.Token))
                             : Unit.Default
+                        from uDBackup in Prelude.Try(() =>
+                        {
+                            if (!Directory.Exists(dataDir)) return Unit.Default;
+
+                            Log.Logger.Information("Creating data backup...");
+                            CopyDirectory(dataDir, backupDataDir);
+                            dataBackupCreated = true;
+                            return Unit.Default;
+                        }).ToEitherAsync()    
                         from _ in Prelude.Try(() => OVSPackage.UnpackAndProvide(true)).ToEitherAsync()
                         from uCopy in CopyService()
                         from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
