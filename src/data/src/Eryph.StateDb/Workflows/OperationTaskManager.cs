@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.Messages;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 using OperationTaskStatus = Dbosoft.Rebus.Operations.OperationTaskStatus;
@@ -35,13 +36,19 @@ public class OperationTaskManager : OperationTaskManagerBase
 
         var (resources, projects) = await OperationsHelper.GetCommandProjectsAndResources(command, _db);
 
+        string? displayName = null;
+
+        if(command is ICommandWithName commandWithName)
+            displayName = commandWithName.GetCommandName();
+
         res = new OperationTaskModel
         {
             Id = taskId,
             OperationId = operation.Id,
             Status = Model.OperationTaskStatus.Queued,
             ParentTaskId = parentTaskId,
-            Name = command.GetType().Name
+            Name = command.GetType().Name,
+            DisplayName = displayName
         };
 
         await _db.AddAsync(res);
@@ -65,6 +72,7 @@ public class OperationTaskManager : OperationTaskManagerBase
         return new OperationTask(res);
     }
 
+
     public override ValueTask<bool> TryChangeStatusAsync(IOperationTask task, OperationTaskStatus newStatus,
         object? additionalData)
     {
@@ -78,6 +86,9 @@ public class OperationTaskManager : OperationTaskManagerBase
             OperationTaskStatus.Completed => Model.OperationTaskStatus.Completed,
             _ => throw new ArgumentOutOfRangeException(nameof(newStatus), newStatus, null)
         };
+
+        if(opTask.Model.Status == Model.OperationTaskStatus.Completed)
+             opTask.Model.Progress = 100;
 
         return new ValueTask<bool>(true);
     }

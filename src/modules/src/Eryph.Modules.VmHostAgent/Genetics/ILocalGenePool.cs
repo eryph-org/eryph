@@ -9,7 +9,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics;
 internal interface ILocalGenePool: IGenePool
 {
     EitherAsync<Error, Unit> MergeGenes(GeneInfo geneInfo, GeneSetInfo imageInfo,
-        Func<string, Task<Unit>> reportProgress, CancellationToken cancel);
+        Func<string, int, Task<Unit>> reportProgress, CancellationToken cancel);
     EitherAsync<Error, GeneSetInfo> ProvideFallbackGeneSet(string path, GeneSetIdentifier genesetIdentifier, CancellationToken cancel);
 
     EitherAsync<Error, GeneSetInfo> CacheGeneSet(string path, GeneSetInfo genesetInfo, CancellationToken cancel);

@@ -7,6 +7,8 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
     {
         [Key] public string Id { get; set; } = null!;
 
+        public string? TaskId { get; set; }
+
         public string? Message { get; set; }
         public DateTimeOffset Timestamp { get; set; }
     }

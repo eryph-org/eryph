@@ -53,8 +53,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             Tags = new[] { "Catlets" })
         ]
 
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status409Conflict, "Conflict")]
+        //[SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]
+        //[SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status409Conflict, "Conflict")]
 
         public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromBody] NewCatletRequest request, CancellationToken cancellationToken = default)
         {

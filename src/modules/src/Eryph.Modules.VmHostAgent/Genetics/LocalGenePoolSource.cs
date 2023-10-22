@@ -105,7 +105,7 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
 
     public EitherAsync<Error, long> RetrieveGenePart(GeneInfo gene, string genePart,
         long availableSize, long totalSize,
-        Func<string, Task<Unit>> reportProgress, Stopwatch stopwatch, CancellationToken cancel)
+        Func<string, int, Task<Unit>> reportProgress, Stopwatch stopwatch, CancellationToken cancel)
     {
         return ParseGenePartHash(genePart).BindAsync(async parsedGenePartName =>
         {
@@ -140,7 +140,7 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
 
 
     public EitherAsync<Error, Unit> MergeGenes(GeneInfo geneInfo, GeneSetInfo genesetInfo,
-        Func<string, Task<Unit>> reportProgress, CancellationToken cancel)
+        Func<string, int, Task<Unit>> reportProgress, CancellationToken cancel)
     {
         var mergedGenesInfo = ReadGenesInfo(genesetInfo);
 

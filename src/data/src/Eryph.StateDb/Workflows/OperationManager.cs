@@ -65,12 +65,29 @@ public class OperationManager : OperationManagerBase
     {
         _log.LogDebug("Received operation task progress event. Id : '{operationId}/{taskId}'", operation.Id, task.Id);
 
-        if (data is not JsonElement { ValueKind: JsonValueKind.String } messageElement)
-        {
-            _log.LogDebug("Invalid operation task progress event: data has to be a message string. Id : '{operationId}/{taskId}'", 
-                operation.Id, task.Id);
+        var message = "";
+        var progress = 0;
 
-            return;
+        switch (data)
+        {
+            case JsonElement { ValueKind: JsonValueKind.Object } dataElement:
+                message = dataElement.GetProperty("message").GetString();
+                progress = dataElement.GetProperty("progress").GetInt32();
+                break;
+            case JsonElement { ValueKind: JsonValueKind.String } stringElement:
+                message = stringElement.GetString();
+                break;
+            default:
+                _log.LogDebug("Invalid operation task progress event: data has to be a json object or a string. Id : '{operationId}/{taskId}'",
+                    operation.Id, task.Id);
+                break;
+        }
+
+
+        var taskEntry = await _db.OperationTasks.FindAsync(task.Id);
+        if (taskEntry != null)
+        {
+            taskEntry.Progress = progress;
         }
 
         var opLogEntry =
@@ -79,11 +96,13 @@ public class OperationManager : OperationManagerBase
                 Id = progressId,
                 OperationId = operation.Id,
                 TaskId = task.Id,
-                Message = messageElement.GetString(),
+                Message = message,
                 Timestamp = timestamp
             };
 
         await _db.Logs.AddAsync(opLogEntry).ConfigureAwait(false);
+
+        
     }
 
     public override ValueTask<bool> TryChangeStatusAsync(IOperation operation,

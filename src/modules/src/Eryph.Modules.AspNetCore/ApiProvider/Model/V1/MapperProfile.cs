@@ -17,6 +17,9 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
             CreateMap<StateDb.Model.OperationLogEntry, OperationLogEntry>();
             CreateMap<StateDb.Model.OperationResourceModel, OperationResource>();
             CreateMap<StateDb.Model.Project, Project>();
+            CreateMap<StateDb.Model.OperationTaskModel, OperationTask>()
+                .ForMember(x => x.ParentTask, m => m.MapFrom(x => x.ParentTaskId));
+
 
         }
     }

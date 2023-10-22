@@ -2,7 +2,7 @@
   "profiles": {
     "eryph-zero": {
       "commandName": "Project",
-      "commandLineArgs": "run --warmup",
+      "commandLineArgs": "run",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },

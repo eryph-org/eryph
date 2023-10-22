@@ -13,7 +13,7 @@ public class OperationsListRequest : ListRequest
     [FromQuery(Name = "logTimeStamp")] public DateTimeOffset LogTimestamp { get; set; }
 
     /// <summary>
-    /// Expand details. Supported details are: logs,resources,projects
+    /// Expand details. Supported details are: logs,resources,projects,tasks
     /// </summary>
     [FromQuery(Name = "expand")][CanBeNull] public string Expand { get; set; }
 

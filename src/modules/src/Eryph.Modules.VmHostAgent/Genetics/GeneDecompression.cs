@@ -17,10 +17,10 @@ namespace Eryph.Modules.VmHostAgent.Genetics
     {
         private readonly IFileSystemService _fileSystemService;
         private readonly ILogger _log;
-        private readonly Func<string, Task<Unit>> _reportProgress;
+        private readonly Func<string, int, Task<Unit>> _reportProgress;
         private readonly GeneInfo _gene;
 
-        public GeneDecompression(IFileSystemService fileSystemService, ILogger log, Func<string, Task<Unit>> reportProgress, GeneInfo gene)
+        public GeneDecompression(IFileSystemService fileSystemService, ILogger log, Func<string, int, Task<Unit>> reportProgress, GeneInfo gene)
         {
             _fileSystemService = fileSystemService;
             _log = log;
@@ -85,11 +85,12 @@ namespace Eryph.Modules.VmHostAgent.Genetics
 
                 var totalReadMb = Math.Round(totalRead / 1024d / 1024d, 0);
                 var percent = totalReadMb / totalMb;
+                var percentInt = Convert.ToInt32(Math.Round(percent*100, 0));
 
                 var progressMessage = $"Extracting {_gene} ({totalReadMb:F} MB / {totalMb:F} MB) => {percent:P0} completed";
                 _log.LogTrace("Extracting {gene} ({totalReadMb} MB / {totalMb} MB) => {percent} completed",
                     _gene, totalReadMb, totalMb, percent);
-                await _reportProgress(progressMessage);
+                await _reportProgress(progressMessage, percentInt);
                 stopWatch.Restart();
 
             }
