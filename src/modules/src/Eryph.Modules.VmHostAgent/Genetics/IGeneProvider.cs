@@ -11,8 +11,8 @@ namespace Eryph.Modules.VmHostAgent.Genetics;
 public interface IGeneProvider
 
 {
-    EitherAsync<Error, PrepareGeneResponse> ProvideGene(GeneIdentifier geneIdentifier, Func<string,Task<Unit>> reportProgress, CancellationToken cancel);
+    EitherAsync<Error, PrepareGeneResponse> ProvideGene(GeneIdentifier geneIdentifier, Func<string, int,Task<Unit>> reportProgress, CancellationToken cancel);
 
     EitherAsync<Error, Option<string>> GetGeneSetParent(GeneSetIdentifier genesetIdentifier,
-        Func<string, Task<Unit>> reportProgress, CancellationToken cancellationToken);
+        Func<string, int, Task<Unit>> reportProgress, CancellationToken cancellationToken);
 }

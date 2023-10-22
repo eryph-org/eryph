@@ -117,7 +117,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
     }
 
     public EitherAsync<Error, long> RetrieveGenePart(GeneInfo geneInfo, string genePart,
-        long availableSize, long totalSize, Func<string, Task<Unit>> reportProgress, Stopwatch stopwatch, CancellationToken cancel)
+        long availableSize, long totalSize, Func<string, int, Task<Unit>> reportProgress, Stopwatch stopwatch, CancellationToken cancel)
     {
 
         return ParseGenePartHash(genePart).BindAsync(async parsedPartName =>
@@ -185,7 +185,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
 
 
 
-    private async Task CopyToAsync(Stream source, Stream destination, Func<string, Task<Unit>> reportProgress, GeneIdentifier geneIdentifier, long availableSize, long totalSize, 
+    private async Task CopyToAsync(Stream source, Stream destination, Func<string, int, Task<Unit>> reportProgress, GeneIdentifier geneIdentifier, long availableSize, long totalSize, 
         Stopwatch stopwatch, int bufferSize = 65536, CancellationToken cancel = default)
     {
         var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
@@ -205,9 +205,11 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
 
             var totalReadMb = Math.Round((availableSize+ totalRead) / 1024d / 1024d, 0);
             var percent = totalReadMb / totalMb;
+            var percentInt = Convert.ToInt32(Math.Round(percent * 100, 0));
 
             _log.LogTrace("Pulling {geneIdentifier} ({totalReadMb} MB / {totalMb} MB) => {percent} completed", geneIdentifier, totalReadMb, totalMb, percent);
-            await reportProgress($"Pulling {geneIdentifier} ({totalReadMb:F} MB / {totalMb:F} MB) => {percent:P0} completed");
+            await reportProgress($"Pulling {geneIdentifier} ({totalReadMb:F} MB / {totalMb:F} MB) => {percent:P0} completed", 
+                percentInt);
             stopwatch.Restart();
 
         }

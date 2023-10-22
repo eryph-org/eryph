@@ -14,5 +14,8 @@ namespace Eryph.StateDb.Model
         public OperationTaskStatus Status { get; set; }
         public string AgentName { get; set; }
         public string Name { get; set; }
+        public string DisplayName { get; set; }
+
+        public int Progress { get; set; }
     }
 }

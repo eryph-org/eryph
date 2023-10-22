@@ -109,9 +109,9 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
                     .Bind(resolvedGene =>
                         
                         from optionalParent in _geneProvider.GetGeneSetParent(resolvedGene.GeneSet,
-                            async (msg) =>
+                            async (message, progress) =>
                             {
-                                await m.ProgressMessage(innerContext.Message, msg);
+                                await m.ProgressMessage(innerContext.Message,new { message , progress});
                                 return Unit.Default;
                             }, CancellationToken.None  )
                         from uResponse in optionalParent.MatchAsync(
@@ -174,7 +174,7 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
         {
             var result = await _geneProvider.ProvideGene(
                 geneIdentifier,
-                (message) => ReportProgress(taskMessaging, geneIdentifier, message), cancel);
+                (message, progress) => ReportProgress(taskMessaging, geneIdentifier, message, progress), cancel);
             await EndRequest(taskMessaging, geneIdentifier, result);
         }
         catch (Exception ex)
@@ -185,17 +185,22 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
 
     }
 
-    public Task<Unit> ReportProgress(ITaskMessaging taskMessaging, GeneIdentifier geneIdentifier, string message)
+    public async Task<Unit> ReportProgress(ITaskMessaging taskMessaging, GeneIdentifier geneIdentifier, string message, int progress)
     {
-        return _pendingRequests.Value.Find(geneIdentifier).IfSomeAsync(async  listening =>
+
+        await _pendingRequests.Value.Find(geneIdentifier).IfSomeAsync(async listening =>
         {
             foreach (var task in listening)
             {
-                await taskMessaging.ProgressMessage(task.TaskMessageCallback(task.Context), message);
+                await taskMessaging.ProgressMessage(task.TaskMessageCallback(task.Context), new { message, progress });
             }
 
             return Unit.Default;
         });
+
+
+        
+        return Unit.Default;
     }
 
     public Task EndRequest(ITaskMessaging taskMessaging, GeneIdentifier geneIdentifier, Either<Error, PrepareGeneResponse> result)

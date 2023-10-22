@@ -24,7 +24,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
             _log = log;
         }
 
-        public EitherAsync<Error, PrepareGeneResponse> ProvideGene(GeneIdentifier geneIdentifier, Func<string, Task<Unit>> reportProgress, CancellationToken cancel)
+        public EitherAsync<Error, PrepareGeneResponse> ProvideGene(GeneIdentifier geneIdentifier, Func<string, int, Task<Unit>> reportProgress, CancellationToken cancel)
         {
             var hostSettings = HostSettingsBuilder.GetHostSettings();
 
@@ -34,7 +34,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
                     .Map(i =>
                     {
                         if (i.Id.Name != geneIdentifier.GeneSet.Name)
-                            reportProgress($"Resolved geneset '{geneIdentifier.GeneSet}' as '{i.Id.Name}'");
+                            reportProgress($"Resolved geneset '{geneIdentifier.GeneSet}' as '{i.Id.Name}'", 0);
                         return i;
                     })
                 let newGeneIdentifier = geneIdentifier with { GeneSet = genesetInfo.Id }
@@ -49,7 +49,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
 
         }
 
-        public EitherAsync<Error, Option<string>> GetGeneSetParent(GeneSetIdentifier genesetIdentifier, Func<string, Task<Unit>> reportProgress, CancellationToken cancellationToken)
+        public EitherAsync<Error, Option<string>> GetGeneSetParent(GeneSetIdentifier genesetIdentifier, Func<string, int, Task<Unit>> reportProgress, CancellationToken cancellationToken)
         {
             var hostSettings = HostSettingsBuilder.GetHostSettings();
             var path = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "genepool");
@@ -87,7 +87,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
 
 
         private EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier geneSetIdentifier,
-            Func<string, Task<Unit>> reportProgress, IEnumerable<string> previousRefs, CancellationToken cancel)
+            Func<string, int, Task<Unit>> reportProgress, IEnumerable<string> previousRefs, CancellationToken cancel)
         {
 
             var geneSetRefs = previousRefs as string[] ?? previousRefs.ToArray();
@@ -173,7 +173,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
         }
 
         private EitherAsync<Error, GeneIdentifier> EnsureGene(GeneSetInfo genesetInfo, GeneIdentifier geneId, string geneHash,
-            Func<string, Task<Unit>> reportProgress, CancellationToken cancel)
+            Func<string, int, Task<Unit>> reportProgress, CancellationToken cancel)
         {
             return EnsureGeneAsync().ToAsync();
 
@@ -198,7 +198,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
             }
         }
 
-        private EitherAsync<Error, GeneInfo> EnsureGeneParts(GeneInfo geneInfo, Func<string, Task<Unit>> reportProgress, CancellationToken cancel)
+        private EitherAsync<Error, GeneInfo> EnsureGeneParts(GeneInfo geneInfo, Func<string, int, Task<Unit>> reportProgress, CancellationToken cancel)
         {
             return EnsureGenePartsAsync().ToAsync();
 
@@ -291,7 +291,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
 
 
         private EitherAsync<Error, long> ProvideGenePartFromRemote(
-            GeneInfo geneInfo, string genePart, long availableSize, long totalSize, Func<string, Task<Unit>> reportProgress,
+            GeneInfo geneInfo, string genePart, long availableSize, long totalSize, Func<string, int, Task<Unit>> reportProgress,
             Stopwatch stopwatch, CancellationToken cancel)
         {
             return ProvideGenePartFromRemoteAsync().ToAsync();

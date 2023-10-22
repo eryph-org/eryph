@@ -14,7 +14,7 @@ public class OperationRequest : SingleEntityRequest
 
 
     /// <summary>
-    /// Expand details. Supported details are: logs,resources,projects
+    /// Expand details. Supported details are: logs,resources,projects,tasks
     /// </summary>
     [FromQuery(Name = "expand")] [CanBeNull] public string Expand { get; set; }
 

@@ -4,7 +4,7 @@ using Eryph.Resources;
 namespace Eryph.Messages.Resources.Genes.Commands;
 
 [SendMessageTo(MessageRecipient.VMHostAgent)]
-public class PrepareGeneCommand : IHostAgentCommand
+public class PrepareGeneCommand : IHostAgentCommand, ICommandWithName
 {
     public GeneType GeneType { get; set; }
 
@@ -13,4 +13,9 @@ public class PrepareGeneCommand : IHostAgentCommand
     [PrivateIdentifier]
     public string AgentName { get; set; }
 
+    public string GetCommandName()
+    {
+        var name = $"{GeneType} {GeneName}";
+        return $"Preparing {name}";
+    }
 }
