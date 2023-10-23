@@ -406,8 +406,7 @@ try {
 }
 catch {
     $errorMessage = @(
-        'Unable to set PowerShell to use TLS 1.2. This is required for contacting eryph as of 03 FEB 2020.'
-        'https://blog.eryph.org/2020/01/remove-support-for-old-tls-versions/.'
+        'Unable to set PowerShell to use TLS 1.2. This is required for downloading eryph.'
         'If you see underlying connection closed or trust errors, you may need to do one or more of the following:'
         '(1) upgrade to .NET Framework 4.5+ and PowerShell v3+,'
         '(2) Call [System.Net.ServicePointManager]::SecurityProtocol = 3072; in PowerShell prior to attempting installation,'
@@ -556,4 +555,29 @@ $eryphExePath = Join-Path $eryphPath -ChildPath 'bin'
 # Update current process PATH environment variable if it needs updating.
 if ($env:Path -notlike "*$eryphExePath*") {
     $env:Path = [Environment]::GetEnvironmentVariable('Path', [System.EnvironmentVariableTarget]::Machine);
+}
+
+# powershell modules
+
+Write-Information "Ensuring Powershell gallery is enabled" -InformationAction Continue
+Install-PackageProvider NuGet -Force | Out-Null;
+Set-PSRepository PSGallery -InstallationPolicy Trusted | Out-Null
+$computeClientModule = Get-Module Eryph.ComputeClient -ListAvailable
+
+if(-not $computeClientModule){
+    Write-Information "Installing module Eryph.ComputeClient" -InformationAction Continue
+    Install-Module Eryph.ComputeClient -Force
+}else {
+    Write-Information "Updating module Eryph.ComputeClient" -InformationAction Continue
+    Update-Module Eryph.ComputeClient
+}
+
+$identityClientModule = Get-Module Eryph.IdentityClient -ListAvailable
+
+if(-not $identityClientModule){
+    Write-Information "Installing module Eryph.IdentityClient" -InformationAction Continue
+    Install-Module Eryph.IdentityClient -Force
+}else {
+    Write-Information "Updating module Eryph.IdentityClient" -InformationAction Continue
+    Update-Module Eryph.IdentityClient
 }

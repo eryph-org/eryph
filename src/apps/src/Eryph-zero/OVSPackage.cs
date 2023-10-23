@@ -6,12 +6,9 @@ using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
-using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
-using Org.BouncyCastle.Crypto.Digests;
 using Org.BouncyCastle.Security;
 using Serilog;
-using Serilog.Core;
 
 namespace Eryph.Runtime.Zero;
 
@@ -188,6 +185,28 @@ internal class OVSPackage
 
     }
 
+    public static string? GetCurrentOVSPath()
+    {
+        var ovsRootPath =
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "eryph", "ovs");
+        
+        if(!Directory.Exists(ovsRootPath))
+            return null;
+
+        var ovsRootDir = new DirectoryInfo(ovsRootPath);
+        foreach (var ovsFilesDir in ovsRootDir.GetDirectories("run_*"))
+        {
+            
+            if (!ovsFilesDir.GetFiles("ovs-vsctl.exe", SearchOption.AllDirectories).Any())
+                continue;
+
+            return ovsFilesDir.FullName;
+        }
+
+        return null;
+    }
 
     public static DirectorySecurity GetOvsDirectorySecurity()
     {

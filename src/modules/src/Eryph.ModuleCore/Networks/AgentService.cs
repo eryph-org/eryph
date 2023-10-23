@@ -3,5 +3,6 @@
 public enum AgentService
 {
     OVNController,
-    VSwitch
+    VSwitch,
+    OVSDB
 }

@@ -8,8 +8,8 @@ namespace Eryph.Modules.VmHostAgent.Networks;
 public record NetworkChangeOperation<RT>(
     NetworkChangeOperation Operation, 
     Func<Aff<RT, Unit>> Change,
-    [CanBeNull] Func<Seq<NetworkChangeOperation>,bool> CanRollBack,
-    [CanBeNull] Func<Aff<RT, Unit>> Rollback,
+    Func<Seq<NetworkChangeOperation>,bool>? CanRollBack,
+    Func<Aff<RT, Unit>>? Rollback,
 
     params object[] Args)
     where RT : struct, HasCancel<RT>

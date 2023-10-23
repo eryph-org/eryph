@@ -13,17 +13,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.OVN;
+using Dbosoft.OVN.Nodes;
 using Eryph.App;
 using Eryph.ModuleCore;
 using Eryph.Modules.ComputeApi;
 using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
+using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
 using Eryph.VmManagement;
-using JetBrains.Annotations;
 using LanguageExt;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -40,6 +41,7 @@ using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Runt
 using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 using Eryph.Runtime.Zero.Configuration.Networks;
+using Eryph.VmManagement.Data.Core;
 using LanguageExt.Common;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
@@ -89,12 +91,24 @@ internal static class Program
 
         var installCommand = new Command("install");
         var deleteOutFile = new System.CommandLine.Option<bool>(
-            name: "--deleteOutFile",
+            name: "--deleteOutFile", 
             description: "Delete output file on exit - useful if file is watched for changes.");
         installCommand.AddOption(outFileOption);
         installCommand.AddOption(deleteOutFile);
         installCommand.SetHandler(SelfInstall, outFileOption, deleteOutFile);
         rootCommand.AddCommand(installCommand);
+
+
+        var uninstallCommand = new Command("uninstall");
+        uninstallCommand.AddOption(outFileOption);
+        uninstallCommand.AddOption(deleteOutFile);
+        var deleteAppData = new System.CommandLine.Option<bool>(
+            name: "--delete-app-data",
+            description: "Delete all local application data");
+        uninstallCommand.AddOption(deleteAppData);
+        uninstallCommand.SetHandler(SelfUnInstall, outFileOption, deleteOutFile, deleteAppData);
+        rootCommand.AddCommand(uninstallCommand);
+
 
         var networksCommand = new Command("networks");
         rootCommand.AddCommand(networksCommand);
@@ -641,12 +655,6 @@ internal static class Program
         }
 
 
-        EitherAsync<Error, Unit> LogProgress(string message)
-        {
-            Log.Logger.Information(message);
-            return Unit.Default;
-        }
-
         EitherAsync<Error, Unit> RunWarmup(string eryphBinPath)
         {
             var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
@@ -673,6 +681,223 @@ internal static class Program
                 return Unit.Default;
             }).ToEither();
         }
+    }
+
+    private static async Task<int> SelfUnInstall(FileSystemInfo? outFile, bool deleteOutFile, bool deleteAppData)
+    {
+        TextWriter? outWriter = null;
+        var standardOut = Console.Out;
+        var standardError = Console.Error;
+
+        if (outFile != null)
+        {
+            outWriter = File.CreateText(outFile.FullName);
+            Console.SetOut(outWriter);
+            Console.SetError(outWriter);
+
+        }
+
+        try
+        {
+
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .Enrich.FromLogContext()
+                .WriteTo.Console(theme: ConsoleTheme.None)
+                .CreateLogger();
+
+            return await AdminGuard.CommandIsElevated(async () =>
+            {
+                var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "eryph");
+
+                var loggerFactory = new SerilogLoggerFactory(Log.Logger);
+                var sysEnv = new SystemEnvironment(loggerFactory);
+                var serviceManager = sysEnv.GetServiceManager("eryph-zero");
+                var syncClient = new SyncClient();
+                try
+                {
+                    Log.Information("Uninstalling eryph-zero service");
+
+                    var unInstallService =
+                        from serviceExists in serviceManager.ServiceExists()
+                        let cancelSource1 = new CancellationTokenSource(TimeSpan.FromMinutes(1))
+                        from uNetworkStopped in serviceExists
+                            ? LogProgress("Stopping chassis services...").ToEither().MapAsync(async _ =>
+                            {
+                                var fin = await syncClient.SendSyncCommand("STOP_VSWITCH", cancelSource1.Token)
+                                    .Bind(_ => syncClient.SendSyncCommand("STOP_OVSDB", cancelSource1.Token))
+                                    .Run();
+                                fin.IfFail(l =>
+                                    Log.Logger.Debug("Failed to send stop chassis commands. Error: {error}", l));
+                                return Unit.Default; // ignore error from stop command - we can also take control of existing processes
+                            }).ToAsync()
+                            : Unit.Default
+
+                        from uStopped in serviceExists
+                            ?
+                            LogProgress("Stopping running service...").Bind(_ =>
+                                serviceManager.EnsureServiceStopped(cancelSource1.Token))
+                            : Unit.Default
+                        let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
+                        from uUninstalled in serviceExists
+                            ? LogProgress("Removing service...").Bind(_ => serviceManager.RemoveService(cancelSource2.Token))
+                            : Unit.Default
+                        select Unit.Default;
+
+                    _ = await unInstallService.IfLeft(l => l.Throw());
+
+                    var ovsPath = OVSPackage.GetCurrentOVSPath();
+
+                    if (ovsPath != null)
+                    {
+                        var ovsEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsPath), loggerFactory);
+                        var ovsControl = new OVSControl(ovsEnv);
+                        await using var ovsDbNode = new OVSDbNode(ovsEnv, loggerFactory);
+                        await using var ovsVSwitchNode = new OVSSwitchNode(ovsEnv, loggerFactory);
+                        var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                        // ReSharper disable AccessToDisposedClosure
+
+                        var ovsCleanup =
+                            from uStartLog in LogProgress("Starting temporary chassis services...")
+                            from dbStart in ovsDbNode.Start(cancelSource.Token).MapAsync( async _=>
+                            {
+                                await ovsDbNode.WaitForStart(cancelSource.Token);
+                                return Unit.Default;
+                            })
+                            from switchStart in ovsVSwitchNode.Start(cancelSource.Token).MapAsync(async _ =>
+                            {
+                                await ovsVSwitchNode.WaitForStart(cancelSource.Token);
+                                return Unit.Default;
+                            })
+                            from delay in Delay(2000)
+                            let controlCancel = new CancellationTokenSource(TimeSpan.FromMinutes(5))
+                            from uCleanup in LogProgress("Removing OVS bridges....")
+                            from bridges in ovsControl.GetBridges(controlCancel.Token)
+                            from uRemove in bridges.Map(b => ovsControl.RemoveBridge(b.Name, controlCancel.Token))
+                                .TraverseSerial(l => l).Map(_ => Unit.Default)
+                            let stopCancel = new CancellationTokenSource(TimeSpan.FromMinutes(5))
+
+                            from uStopLog in LogProgress("Stopping temporary chassis services...")
+                            from switchStop in ovsVSwitchNode.Stop(true, stopCancel.Token)
+                            from dbStop in ovsDbNode.Stop(true, stopCancel.Token)
+                            
+                            select Unit.Default;
+                        
+                        _ = await ovsCleanup.IfLeft(l =>
+                        {
+                            Log.Warning("OVS Cleanup failed with error '{error}'.  If necessary, delete OVS network adapters manually.", l);
+
+                        });
+
+                        // ReSharper restore AccessToDisposedClosure
+
+
+                    }
+
+                    using var psEngine = new PowershellEngine(loggerFactory.CreateLogger<PowershellEngine>());
+                    var removeSwitch = from extensions in psEngine.GetObjectsAsync<VMSwitchExtension>(PsCommandBuilder.Create()
+                            .AddCommand("Get-VMSwitch")
+                            .AddCommand("Get-VMSwitchExtension")
+                            .AddParameter("Name", "dbosoft Open vSwitch Extension")).ToAsync().ToError()
+                        from uRemove in extensions.Where(e => e.Value.Enabled)
+                            .Map(e => LogProgress($"Removing vm switch '{e.Value.SwitchName}'...").Bind(_ => psEngine.RunAsync(PsCommandBuilder.Create()
+                                                   .AddCommand("Remove-VMSwitch")
+                                                   .AddParameter("Name", e.Value.SwitchName)
+                                                   .AddParameter("Force", true)).ToAsync().ToError()))
+                            .TraverseSerial(l => l).Map(_ => Unit.Default)
+                        select Unit.Default;
+
+                    _ = await removeSwitch.IfLeft(l =>
+                    {
+                        Log.Warning("VM Switch cleanup failed with error '{error}'. If necessary, delete the eryph overlay switch manually.", l);
+
+                    });
+
+
+                    if (Directory.Exists(dataDir) && deleteAppData)
+                    {
+                        Log.Logger.Information("Removing data files...");
+                        Directory.Delete(dataDir, true);
+                    }
+
+                    Log.Logger.Information("Uninstallation completed");
+
+                    return 0;
+
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Uninstallation failed. Error: {message}", ex.Message);
+                    Log.Debug(ex, "Error Details");
+
+                    return -1;
+                }
+                
+
+            });
+        }
+        finally
+        {
+            if (outWriter != null)
+            {
+                Console.SetOut(standardOut);
+                Console.SetError(standardError);
+                outWriter.Close();
+
+                if (deleteOutFile)
+                {
+                    Task.Delay(2000).GetAwaiter().GetResult();
+                    File.Delete(outFile.FullName);
+
+                }
+            }
+        }
+
+
+        EitherAsync<Error, Unit> RunWarmup(string eryphBinPath)
+        {
+            var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            return Prelude.TryAsync(async () =>
+            {
+                var process = new Process
+                {
+                    StartInfo =
+                    {
+                        FileName = eryphBinPath,
+                        Arguments = "run --warmup",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = false,
+                        RedirectStandardError = false,
+                        CreateNoWindow = true,
+                        WorkingDirectory = Environment.SystemDirectory
+                    },
+                    EnableRaisingEvents = true
+                };
+                process.Start();
+                await process.WaitForExitAsync(cancelTokenSource.Token);
+
+
+                return Unit.Default;
+            }).ToEither();
+        }
+    }
+
+    private static EitherAsync<Error, Unit> LogProgress(string message)
+    {
+        Log.Logger.Information(message);
+        return Unit.Default;
+    }
+
+    private static EitherAsync<Error, Unit> Delay(int timeout)
+    {
+        async Task<Either<Error, Unit>> DelayAsync()
+        {
+            await Task.Delay(timeout);
+            return Unit.Default;
+        }
+
+        return DelayAsync().ToAsync();
     }
 
     private static async Task SaveDirectoryMove(string source, string target, CancellationToken cancellationToken)
