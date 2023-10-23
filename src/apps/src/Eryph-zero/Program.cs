@@ -711,6 +711,10 @@ internal static class Program
                 var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                     "eryph");
 
+                var ovsDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "openvswitch");
+
+
                 var loggerFactory = new SerilogLoggerFactory(Log.Logger);
                 var sysEnv = new SystemEnvironment(loggerFactory);
                 var serviceManager = sysEnv.GetServiceManager("eryph-zero");
@@ -786,13 +790,25 @@ internal static class Program
                         
                         _ = await ovsCleanup.IfLeft(l =>
                         {
-                            Log.Warning("OVS Cleanup failed with error '{error}'.  If necessary, delete OVS network adapters manually.", l);
+                            Log.Warning("OVS Cleanup failed with error '{error}'.\nIf necessary, delete OVS network adapters manually.", l);
 
                         });
 
                         // ReSharper restore AccessToDisposedClosure
 
+                    }
 
+                    if (Directory.Exists(ovsDataDir))
+                    {
+                        try
+                        {
+                            Directory.Delete(ovsDataDir, true);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Logger.Debug(ex, "Failed to delete ovs data files from '{ovsPath}'", ovsDataDir);
+                            Log.Warning("OVS data files cleanup failed with error '{error}'. \nIf necessary, delete OVS data files manually from {ovsPath}", ex.Message, ovsDataDir);
+                        }
                     }
 
                     using var psEngine = new PowershellEngine(loggerFactory.CreateLogger<PowershellEngine>());
@@ -810,7 +826,7 @@ internal static class Program
 
                     _ = await removeSwitch.IfLeft(l =>
                     {
-                        Log.Warning("VM Switch cleanup failed with error '{error}'. If necessary, delete the eryph overlay switch manually.", l);
+                        Log.Warning("VM Switch cleanup failed with error '{error}'.\nIf necessary, delete the eryph overlay switch manually.", l);
 
                     });
 
