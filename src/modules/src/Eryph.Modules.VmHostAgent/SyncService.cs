@@ -67,6 +67,8 @@ internal class SyncService : BackgroundService
                     case "REBUILD_NETWORKS": break;
                     case "STOP_OVN": break;
                     case "START_OVN": break;
+                    case "STOP_VSWITCH": break;
+                    case "STOP_OVSDB": break;
                     default:
                         commandValid = false;
                         break;
@@ -160,6 +162,14 @@ internal class SyncService : BackgroundService
             case "START_OVN":
                 service = AgentService.OVNController;
                 operation = AgentServiceOperation.Start;
+                break;
+            case "STOP_VSWITCH":
+                service = AgentService.VSwitch;
+                operation = AgentServiceOperation.Stop;
+                break;
+            case "STOP_OVSDB":
+                service = AgentService.OVSDB;
+                operation = AgentServiceOperation.Stop;
                 break;
             default: return new SyncServiceResponse { Response = "INVALID" };
         }

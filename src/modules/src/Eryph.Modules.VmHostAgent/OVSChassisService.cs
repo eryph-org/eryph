@@ -74,6 +74,18 @@ public class OVSChassisService : IHostedService
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
+            case AgentService.OVSDB:
+                switch (e.RequestedOperation)
+                {
+                    case AgentServiceOperation.Stop:
+                        await _ovsDbNode.StopAsync(true, cancellationToken);
+                        return true;
+                    case AgentServiceOperation.Start:
+                        await _ovsDbNode.StartAsync(cancellationToken);
+                        return true;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
         }
 
         return false;

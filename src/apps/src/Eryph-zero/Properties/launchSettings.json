@@ -23,6 +23,14 @@
         "DOTNET_ENVIRONMENT": "Development"
       },
       "remoteDebugEnabled": true
+    },
+    "uninstall": {
+      "commandName": "Project",
+      "commandLineArgs": "uninstall --delete-app-data",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": true
     }
   }
 }
