@@ -92,8 +92,10 @@ namespace Eryph.VmManagement.Storage
                             FileName = $"{driveConfig.Name}.vhdx",
                             // ReSharper disable once StringLiteralTypo
                             Name = driveConfig.Name,
-                            SizeBytes = driveConfig.Size.ToOption().Match(None: () => 1 * 1024L * 1024 * 1024,
-                                Some: s => s * 1024L * 1024 * 1024)
+                            SizeBytesCreate = driveConfig.Size.ToOption().Match(None: () => 1 * 1024L * 1024 * 1024,
+                                Some: s => s * 1024L * 1024 * 1024),
+                            SizeBytes = driveConfig.Size * 1024L * 1024 * 1024
+
                         },
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation
