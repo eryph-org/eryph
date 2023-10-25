@@ -252,15 +252,12 @@ namespace Eryph.VmManagement.Converging
             }
 
 
-            var hasSameSize = Prelude.Cond<long>(size => 
-                size != driveSettings.DiskSettings.SizeBytes &&
-                                                      driveSettings.DiskSettings.SizeBytes > 0);
-
-            var diskSizeInGb = Math.Round(driveSettings.DiskSettings.SizeBytes / 1024d / 1024 / 1024, 1);
+            var diskSizeUpdateInGb = Math.Round(driveSettings.DiskSettings.SizeBytes.GetValueOrDefault() / 1024d / 1024 / 1024, 1);
 
             return driveSettings.AttachPath.Map(vhdPath =>
-                
-                        from uFile in Prelude.Cond<string>(File.Exists)(vhdPath).Match(
+                        from fileExists in 
+                            Context.Engine.GetObjectsAsync<bool>(new PsCommandBuilder().AddCommand("Test-Path").AddArgument(vhdPath)).ToError().ToAsync()
+                        from uFile in fileExists.Find(x=> x.PsObject?.ToString() == "True").Match(
 
                             // file doesn't exists
                             None: () =>
@@ -275,7 +272,7 @@ namespace Eryph.VmManagement.Converging
                                                 $"New-VHD -Path \"{vhdPath}\" -ParentPath \"{parentFilePath}\" -Differencing"));
                                         },
                                         async () => await Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
-                                            $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {driveSettings.DiskSettings.SizeBytes}")))
+                                            $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {driveSettings.DiskSettings.SizeBytesCreate}")))
                                     .ToError().ToAsync()
 
                                 select Prelude.unit,
@@ -290,17 +287,20 @@ namespace Eryph.VmManagement.Converging
                                         .Bind(s => s.HeadOrLeft(Errors.SequenceEmpty).ToAsync())
 
                                     // resize if necessary
-                                    from newSize in hasSameSize(vhdInfo.Value.Size)
-                                        .Match(
-                                            Some: _ => Prelude.RightAsync<Error, long>(vhdInfo.Value.Size),
-                                            None:
-                                            from pS in Context.ReportProgressAsync(
-                                                $"Resizing disk {driveSettings.DiskSettings.Name} to {diskSizeInGb} GB")
-
+                                    let sameSize = driveSettings.DiskSettings.SizeBytes.GetValueOrDefault() == 0
+                                                   || vhdInfo.Value.Size == driveSettings.DiskSettings.SizeBytes
+                                    from newSize in sameSize 
+                                        ? Prelude.RightAsync<Error, long>(vhdInfo.Value.Size)
+                                        : from pS in Context.ReportProgressAsync(
+                                                $"Resizing disk {driveSettings.DiskSettings.Name} to {diskSizeUpdateInGb} GB")
+                                          from uResize in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                                                                   .AddCommand("Resize-VHD")
+                                                                   .AddParameter("Path", vhdPath)
+                                                                   .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytes))
+                                                .ToError().ToAsync()
                                             select vhdInfo.Value.Size
-                                        )
-                                    select newSize
-                                select Prelude.unit)
+                                    select vhdInfo.Value.Size
+                                  select Prelude.unit)
 
                         from uAttach in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
                                 i => i.HardDrives,

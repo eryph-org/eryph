@@ -15,7 +15,8 @@ namespace Eryph.VmManagement.Storage
         public Option<string> StorageIdentifier { get; set; }
         public StorageNames StorageNames { get; set; }
 
-        public long SizeBytes { get; set; }
+        public long? SizeBytes { get; set; }
+        public long? SizeBytesCreate { get; set; }
 
 
         public static Option<DiskStorageSettings> FromSourceString(HostSettings hostSettings, string templateString)
