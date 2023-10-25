@@ -91,6 +91,9 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
             container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
 
+            container.Register<IOVSPortManager, OVSPortManager>(Lifestyle.Scoped);
+
+
             var genePoolFactory = new GenePoolFactory(container);
        
             genePoolFactory.Register<LocalGenePoolSource>(GenePoolNames.Local);

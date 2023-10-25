@@ -3,21 +3,24 @@ using System.IO;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Storage;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
-using Rebus.Bus;
 
 namespace Eryph.Modules.VmHostAgent
 {
     [UsedImplicitly]
     internal class RemoveVirtualMachineHandler : CatletOperationHandlerBase<RemoveCatletVMCommand>
     {
-        public RemoveVirtualMachineHandler(ITaskMessaging messaging, IPowershellEngine engine) : base(messaging, engine)
+        IOVSPortManager _ovsPortManager;
+
+        public RemoveVirtualMachineHandler(ITaskMessaging messaging, IPowershellEngine engine, IOVSPortManager ovsPortManager) : base(messaging, engine)
         {
+            _ovsPortManager = ovsPortManager;
         }
 
         protected override Task<Either<Error, Unit>> HandleCommand(TypedPsObject<VirtualMachineInfo> vmInfo,
@@ -28,6 +31,7 @@ namespace Eryph.Modules.VmHostAgent
 
             return (from storageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo)
                 from stoppedVM in vmInfo.StopIfRunning(engine).ToAsync().ToError()
+                from uRemovePorts in _ovsPortManager.SyncPorts(vmInfo, VMPortChange.Remove)
                 from _ in stoppedVM.Remove(engine).ToAsync().ToError()
                 let __ = RemoveVMFiles(storageSettings)
                 select Unit.Default)
