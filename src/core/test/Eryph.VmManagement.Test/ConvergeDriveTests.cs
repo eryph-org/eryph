@@ -20,6 +20,7 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData(null, 40, 40)]
+        [InlineData(0, 40, 40)]
         [InlineData(40,30, 40)]
         [InlineData(50, 30, 50)]
         [InlineData(20, 30, 20)]
@@ -86,7 +87,7 @@ namespace Eryph.VmManagement.Test
             var convergeTask = new ConvergeDrives(_fixture.Context);
             _ = (await convergeTask.Converge(vmData)).IfLeft(l => l.Throw());
 
-            if (configSize == null || configSize == currentSize)
+            if (configSize == null || configSize == 0 || configSize == currentSize)
             {
                 vhdCommand.Should().BeNull();
                 return;

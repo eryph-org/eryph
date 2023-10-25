@@ -287,7 +287,7 @@ namespace Eryph.VmManagement.Converging
                                         .Bind(s => s.HeadOrLeft(Errors.SequenceEmpty).ToAsync())
 
                                     // resize if necessary
-                                    let sameSize = driveSettings.DiskSettings.SizeBytes.HasValue == false 
+                                    let sameSize = driveSettings.DiskSettings.SizeBytes.GetValueOrDefault() == 0
                                                    || vhdInfo.Value.Size == driveSettings.DiskSettings.SizeBytes
                                     from newSize in sameSize 
                                         ? Prelude.RightAsync<Error, long>(vhdInfo.Value.Size)
