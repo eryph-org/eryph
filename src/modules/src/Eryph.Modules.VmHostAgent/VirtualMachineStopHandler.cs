@@ -14,5 +14,10 @@ namespace Eryph.Modules.VmHostAgent
         }
 
         protected override string TransitionPowerShellCommand => "Stop-VM";
+
+        protected override void CreateCommand(PsCommandBuilder commandBuilder)
+        {
+            commandBuilder.AddParameter("TurnOff");
+        }
     }
 }

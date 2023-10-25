@@ -24,10 +24,17 @@ namespace Eryph.Modules.VmHostAgent
             TypedPsObject<VirtualMachineInfo> vmInfo,
             T command, IPowershellEngine engine)
         {
-            var result = await engine.RunAsync(new PsCommandBuilder().AddCommand(TransitionPowerShellCommand)
-                .AddParameter("VM", vmInfo.PsObject)).ConfigureAwait(false);
+            var commandBuilder = new PsCommandBuilder().AddCommand(TransitionPowerShellCommand)
+                .AddParameter("VM", vmInfo.PsObject);
+
+            var result = await engine.RunAsync(commandBuilder).ConfigureAwait(false);
 
             return result.ToError();
+        }
+
+        protected virtual void CreateCommand(PsCommandBuilder commandBuilder)
+        {
+            
         }
     }
 }
