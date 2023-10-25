@@ -16,7 +16,7 @@ using Resource = Eryph.Resources.Resource;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
 {
-    public class Stop : ResourceOperationEndpoint<SingleEntityRequest, Catlet>
+    public class Stop : ResourceOperationEndpoint<StopCatletRequest, Catlet>
     {
 
 
@@ -25,9 +25,10 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
         {
         }
 
-        protected override object CreateOperationMessage(Catlet model, SingleEntityRequest request)
+        protected override object CreateOperationMessage(Catlet model, StopCatletRequest request)
         {
-            return new StopCatletCommand{CatletId = model.Id };
+            return new StopCatletCommand{CatletId = model.Id, 
+                Graceful = request.Graceful.GetValueOrDefault()};
         }
 
         [Authorize(Policy = "compute:catlets:control")]
@@ -39,11 +40,10 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             Tags = new[] { "Catlets" })
         ]
 
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
+        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromBody] StopCatletRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }
-
 
     }
 }
