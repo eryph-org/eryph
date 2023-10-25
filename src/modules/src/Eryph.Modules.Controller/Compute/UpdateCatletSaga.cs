@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Catlets;
@@ -17,7 +18,6 @@ using LanguageExt;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using ErrorData = Eryph.Messages.ErrorData;
 
 namespace Eryph.Modules.Controller.Compute
 {
