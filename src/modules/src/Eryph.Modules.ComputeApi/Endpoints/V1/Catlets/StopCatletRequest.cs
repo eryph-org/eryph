@@ -6,13 +6,14 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class StopCatletRequest : SingleEntityRequest
 {
-    [FromBody] public bool? Graceful { get; set; }
-    [Required]
-    [FromRoute(Name = "id")]
-    public new string Id
-    {
-        get => base.Id;
-        set => base.Id = value;
-    }
+    [FromBody]
+    public StopCatletRequestBody Body { get; set; }
+
+}
+
+
+public class StopCatletRequestBody
+{
+   public bool? Graceful { get; set; }
 
 }

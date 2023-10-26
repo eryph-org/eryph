@@ -28,7 +28,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
         protected override object CreateOperationMessage(Catlet model, StopCatletRequest request)
         {
             return new StopCatletCommand{CatletId = model.Id, 
-                Graceful = request.Graceful.GetValueOrDefault()};
+                Graceful = (request.Body?.Graceful).GetValueOrDefault()};
         }
 
         [Authorize(Policy = "compute:catlets:control")]
@@ -40,7 +40,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             Tags = new[] { "Catlets" })
         ]
 
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromBody] StopCatletRequest request, CancellationToken cancellationToken = default)
+        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] StopCatletRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }

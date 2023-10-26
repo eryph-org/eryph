@@ -28,15 +28,16 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
         protected override object CreateOperationMessage(Catlet model, UpdateCatletRequest request )
         {
 
-            var jsonString = request.Configuration.GetValueOrDefault().ToString();
+            var jsonString = request.Body?.Configuration.GetValueOrDefault().ToString();
+
 
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
             var config = CatletConfigDictionaryConverter.Convert(configDictionary);
 
             return new UpdateCatletCommand{CatletId = model.Id,
-                CorrelationId = request.CorrelationId == Guid.Empty
+                CorrelationId = request.Body.CorrelationId == Guid.Empty
                     ? new Guid()
-                    : request.CorrelationId,
+                    : request.Body.CorrelationId,
                 Config = config
             };
         }
@@ -50,7 +51,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             Tags = new[] { "Catlets" })
         ]
 
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromBody] UpdateCatletRequest request, CancellationToken cancellationToken = default)
+        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] UpdateCatletRequest request, CancellationToken cancellationToken = default)
         {
             return base.HandleAsync(request, cancellationToken);
         }
