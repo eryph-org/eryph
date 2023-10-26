@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
@@ -10,7 +11,6 @@ using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using ErrorData = Eryph.Messages.ErrorData;
 
 namespace Eryph.Modules.Controller.Compute
 {

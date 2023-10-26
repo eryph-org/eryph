@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
@@ -10,7 +11,6 @@ using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using ErrorData = Eryph.Messages.ErrorData;
 using Resource = Eryph.Resources.Resource;
 
 namespace Eryph.Modules.Controller.Projects
