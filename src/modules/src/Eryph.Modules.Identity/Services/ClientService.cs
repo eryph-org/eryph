@@ -38,7 +38,7 @@ namespace Eryph.Modules.Identity.Services
 
             //// as openiddict does automatically assumes that a client key is required for confidential clients
             //// we have to set a secure random string as client secret to avoid client to be filtered out
-            descriptor.ClientSecret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+            descriptor.ClientSecret ??= Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
             descriptor.Permissions.Clear();
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);

@@ -64,7 +64,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
             var descriptor = client.ToDescriptor();
             var privateKey = await descriptor.NewClientCertificate(_certificateGenerator);
 
-            descriptor = await _clientService.Add(descriptor, cancellationToken);
+            descriptor = await _clientService.Add(descriptor, false, cancellationToken);
 
             var createdClient = descriptor.ToClient<ClientWithSecret>();
             createdClient.Key = privateKey;

@@ -5,6 +5,7 @@ using Eryph.IdentityDb.Entities;
 using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
+using static Eryph.Modules.Identity.Events.Validations.ValidateClientTypeEvents;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 using static OpenIddict.Server.OpenIddictServerEvents;
 using static OpenIddict.Server.OpenIddictServerHandlerFilters;
@@ -13,7 +14,7 @@ namespace Eryph.Modules.Identity.Events.Validations;
 
 public class ValidateClientTypeEvents
 {
-    public sealed class BuildInValidateClientType
+    public sealed class BuildInValidateClientType : IOpenIddictServerHandler<ValidateTokenRequestContext>
     {
         public static OpenIddictServerHandlerDescriptor Descriptor { get; }
             = OpenIddictServerHandlerDescriptor.CreateBuilder<ValidateTokenRequestContext>()
@@ -21,10 +22,22 @@ public class ValidateClientTypeEvents
                 .AddFilter<RequireDegradedModeDisabled>()
                 .AddFilter<ClientAssertionFilters.RequireNoClientAssertion>()
 
-                .UseScopedHandler<OpenIddictServerHandlers.Exchange.ValidateClientType>()
+                .UseScopedHandler<BuildInValidateClientType>()
                 .SetOrder(OpenIddictServerHandlers.Exchange.ValidateClientId.Descriptor.Order + 1_000)
-                .SetType(OpenIddictServerHandlerType.BuiltIn)
+                .SetType(OpenIddictServerHandlerType.Custom)
                 .Build();
+
+        private readonly OpenIddictServerHandlers.Exchange.ValidateClientType _buildInHandler;
+
+        public BuildInValidateClientType(IOpenIddictApplicationManager applicationManager)
+        {
+            _buildInHandler = new(applicationManager);
+        }
+
+        public ValueTask HandleAsync(ValidateTokenRequestContext context)
+        {
+            return _buildInHandler.HandleAsync(context);
+        }
     }
 
     /// <summary>
@@ -51,7 +64,7 @@ public class ValidateClientTypeEvents
                 .AddFilter<RequireDegradedModeDisabled>()
                 .UseScopedHandler<ValidateClientAssertionClientType>()
                 .AddFilter<ClientAssertionFilters.RequireClientAssertion>()
-                .SetOrder(OpenIddictServerHandlers.Authentication.ValidateClientId.Descriptor.Order + 1000)
+                .SetOrder(OpenIddictServerHandlers.Authentication.ValidateClientId.Descriptor.Order + 1_000)
                 .SetType(OpenIddictServerHandlerType.Custom)
                 .Build();
 

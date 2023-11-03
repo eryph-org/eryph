@@ -33,7 +33,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
 
                 try
                 {
-                   await _clientService.Add(clientDescriptor, stoppingToken);
+                   await _clientService.Add(clientDescriptor, true, stoppingToken);
                 }
                 catch (Exception ex)
                 {

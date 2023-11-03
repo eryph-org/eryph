@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
+using Eryph.StateDb.Model;
 using LanguageExt;
 using OpenIddict.Abstractions;
 
@@ -69,6 +71,10 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         else
             await _applicationManager.UpdateAsync(currentApplication, cancellationToken);
 
+        var updatedApp = await _repository.GetBySpecAsync(
+                             GetSingleEntitySpec(descriptor.ClientId, descriptor.TenantId), cancellationToken)
+                         ?? throw new Exception("Application not found");
+        newDescriptor.ClientSecret = updatedApp?.ClientSecret;
         return newDescriptor;
     }
 
@@ -84,19 +90,36 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         await _applicationManager.DeleteAsync(entity, cancellationToken);
     }
 
-    public async ValueTask<TDescriptor> Add(TDescriptor descriptor, CancellationToken cancellationToken)
+    public async ValueTask<TDescriptor> Add(TDescriptor descriptor, bool hashedSecret, CancellationToken cancellationToken)
     {
         var application = new TEntity();
 
         var newDescriptor = descriptor.Clone<TDescriptor>();
         InitializeDescriptor(newDescriptor);
 
-        var clientSecret = newDescriptor.ClientSecret;
+        // openiddict requires client secret to be set
+        var clientSecret = newDescriptor.ClientSecret 
+                           ?? Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+
+        // and it should never be in descriptor
         newDescriptor.ClientSecret = null;
 
         await PopulateApplicationFromDescriptor(application, newDescriptor, cancellationToken);
         application.Id = $"{newDescriptor.TenantId}_{newDescriptor.ClientId}";
         await _applicationManager.CreateAsync(application, clientSecret, cancellationToken);
+
+        // if secret passed was already the hashed secret set it directly in entity as openiddict has hashed it again
+        if (descriptor.ClientSecret != null && hashedSecret)
+        {
+            var entity =
+                await _repository.GetBySpecAsync(GetSingleEntitySpec(newDescriptor.ClientId, newDescriptor.TenantId),
+                    cancellationToken);
+            if(entity != null)
+                entity.ClientSecret = descriptor.ClientSecret;
+
+            newDescriptor.ClientSecret = descriptor.ClientSecret;
+        }
+
         return newDescriptor;
     }
 

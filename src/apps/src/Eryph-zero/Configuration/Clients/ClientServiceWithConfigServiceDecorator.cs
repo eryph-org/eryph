@@ -45,9 +45,9 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
             await _configService.Delete(client.FromDescriptor(), "");
         }
 
-        public async ValueTask<ClientApplicationDescriptor> Add(ClientApplicationDescriptor descriptor, CancellationToken cancellationToken)
+        public async ValueTask<ClientApplicationDescriptor> Add(ClientApplicationDescriptor descriptor, bool hashedSecret, CancellationToken cancellationToken)
         {
-            var newDescriptor = await _decoratedService.Add(descriptor, cancellationToken);
+            var newDescriptor = await _decoratedService.Add(descriptor, hashedSecret, cancellationToken);
             await _configService.Add(newDescriptor.FromDescriptor(), "");
             return newDescriptor;
         }
