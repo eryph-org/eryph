@@ -17,12 +17,10 @@ public class ValidateClientSecretEvents
 {
     public sealed class BuildInValidateClientSecret : IOpenIddictServerHandler<OpenIddictServerEvents.ValidateTokenRequestContext>
     {
-        private readonly IOpenIddictApplicationManager _applicationManager;
         private readonly OpenIddictServerHandlers.Exchange.ValidateClientSecret _buildInHandler;
 
         public BuildInValidateClientSecret(IOpenIddictApplicationManager applicationManager)
         {
-            _applicationManager = applicationManager;
             _buildInHandler = new(applicationManager);
         }
 
@@ -39,11 +37,6 @@ public class ValidateClientSecretEvents
 
         public async ValueTask HandleAsync(OpenIddictServerEvents.ValidateTokenRequestContext context)
         {
-
-            var application = await _applicationManager.FindByClientIdAsync(context.ClientId) ??
-                              throw new InvalidOperationException(SR.GetResourceString(SR.ID0032));
-
-            var res = await _applicationManager.ValidateClientSecretAsync(application, context.ClientSecret);
             await _buildInHandler.HandleAsync(context);
         }
     }

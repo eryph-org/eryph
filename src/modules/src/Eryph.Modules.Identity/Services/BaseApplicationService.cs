@@ -97,20 +97,27 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         var newDescriptor = descriptor.Clone<TDescriptor>();
         InitializeDescriptor(newDescriptor);
 
-        var clientSecret = hashedSecret ? Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)) : newDescriptor.ClientSecret;
+        // openiddict requires client secret to be set
+        var clientSecret = newDescriptor.ClientSecret 
+                           ?? Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+
+        // and it should never be in descriptor
         newDescriptor.ClientSecret = null;
 
         await PopulateApplicationFromDescriptor(application, newDescriptor, cancellationToken);
         application.Id = $"{newDescriptor.TenantId}_{newDescriptor.ClientId}";
         await _applicationManager.CreateAsync(application, clientSecret, cancellationToken);
 
-        if (newDescriptor.ClientSecret != null && hashedSecret)
+        // if secret passed was already the hashed secret set it directly in entity as openiddict has hashed it again
+        if (descriptor.ClientSecret != null && hashedSecret)
         {
             var entity =
                 await _repository.GetBySpecAsync(GetSingleEntitySpec(newDescriptor.ClientId, newDescriptor.TenantId),
                     cancellationToken);
             if(entity != null)
-                entity.ClientSecret = newDescriptor.ClientSecret;
+                entity.ClientSecret = descriptor.ClientSecret;
+
+            newDescriptor.ClientSecret = descriptor.ClientSecret;
         }
 
         return newDescriptor;
