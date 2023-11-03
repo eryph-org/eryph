@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System.Security.Cryptography;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
 using Eryph.Modules.AspNetCore;
@@ -49,12 +51,28 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients
             if (descriptor == null)
                 return NotFound($"client with id {request.Id} not found.");
 
-
-            var privateKey = await descriptor.NewClientCertificate(_certificateGenerator);
-            descriptor = await _clientService.Update(descriptor, cancellationToken);
+            var sharedSecret = (request.Body?.SharedSecret).GetValueOrDefault(false);
+            string key;
+            if (sharedSecret)
+            {
+                key = Convert.ToBase64String(
+                    RandomNumberGenerator.GetBytes(50))
+                    .Replace('+', '-')
+                    .Replace('/', '_')
+                    .Replace('=', '0');
+                descriptor.ClientSecret = key;
+                descriptor = await _clientService.Update(descriptor, cancellationToken);
+                
+            }
+            else
+            {
+                key = await descriptor.NewClientCertificate(_certificateGenerator);
+                descriptor = await _clientService.Update(descriptor, cancellationToken);
+            }
 
             var createdClient = descriptor.ToClient<ClientWithSecret>();
-            createdClient.Key = privateKey;
+            createdClient.Key = key;
+
 
             return Ok(createdClient);
         }

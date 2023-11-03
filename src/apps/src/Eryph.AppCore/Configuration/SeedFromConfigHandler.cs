@@ -3,21 +3,27 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.HostedServices;
 using LanguageExt;
+using SimpleInjector;
+using SimpleInjector.Lifestyles;
 
 namespace Eryph.Configuration
 {
     public class SeedFromConfigHandler<TModule> : IHostedServiceHandler where TModule : class
     {
         private readonly IEnumerable<IConfigSeeder<TModule>> _seeders;
+        private readonly Container _container;
 
-        public SeedFromConfigHandler(IEnumerable<IConfigSeeder<TModule>> seeders)
+        public SeedFromConfigHandler(IEnumerable<IConfigSeeder<TModule>> seeders, Container container)
         {
             _seeders = seeders;
+            this._container = container;
         }
 
-        public Task Execute(CancellationToken stoppingToken)
+        public async Task Execute(CancellationToken stoppingToken)
         {
-            return _seeders.Map(s => s.Execute(stoppingToken).ToUnit()).TraverseParallel(l => l);
+            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
+            _ = await _seeders.Map(s => s.Execute(stoppingToken).ToUnit()).TraverseParallel(l => l);
+
         }
     }
 }

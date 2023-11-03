@@ -11,5 +11,5 @@ public interface IClientService
     ValueTask<ClientApplicationDescriptor> Get(string clientId, Guid tenantId, CancellationToken cancellationToken);
     ValueTask<ClientApplicationDescriptor> Update(ClientApplicationDescriptor descriptor, CancellationToken cancellationToken);
     ValueTask Delete(string clientId, Guid tenantId, CancellationToken cancellationToken);
-    ValueTask<ClientApplicationDescriptor> Add(ClientApplicationDescriptor descriptor, CancellationToken cancellationToken);
+    ValueTask<ClientApplicationDescriptor> Add(ClientApplicationDescriptor descriptor, bool hashedSecret, CancellationToken cancellationToken);
 }

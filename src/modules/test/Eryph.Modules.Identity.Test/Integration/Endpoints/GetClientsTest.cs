@@ -43,7 +43,7 @@ public class GetClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
                 _ = clientService.Add(new ClientApplicationDescriptor
                 {
                     ClientId = "test2"
-                }, CancellationToken.None).GetAwaiter().GetResult();
+                }, false, CancellationToken.None).GetAwaiter().GetResult();
             });
         });
 

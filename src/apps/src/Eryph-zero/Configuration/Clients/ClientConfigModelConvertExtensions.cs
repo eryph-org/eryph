@@ -17,6 +17,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
                 ClientName = descriptor.DisplayName,
                 AllowedScopes = descriptor.Scopes.ToArray(),
                 X509CertificateBase64 = descriptor.Certificate,
+                SharedSecret = descriptor.ClientSecret,
                 Roles = descriptor.AppRoles.ToArray(),
                 TenantId = descriptor.TenantId
             };
@@ -30,6 +31,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
                 TenantId = configModel.TenantId,
                 ClientId = configModel.ClientId,
                 DisplayName = configModel.ClientName,
+                ClientSecret = configModel.SharedSecret,
                 Certificate = configModel.X509CertificateBase64,
             };
 

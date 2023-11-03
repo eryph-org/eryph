@@ -12,15 +12,22 @@ namespace Eryph.Modules.Identity.Events.Validations
     public static class ValidateClientCredentialsEvents
     {
 
-        public sealed class BuildInValidateClientAssertionParameters
+        public sealed class BuildInValidateClientAssertionParameters : IOpenIddictServerHandler<ValidateTokenRequestContext>
         {
+            private readonly ValidateClientCredentialsParameters _buildInHandler = new();
+
             public static OpenIddictServerHandlerDescriptor Descriptor { get; }
                 = OpenIddictServerHandlerDescriptor.CreateBuilder<ValidateTokenRequestContext>()
-                    .UseSingletonHandler<ValidateClientCredentialsParameters>()
+                    .UseSingletonHandler<BuildInValidateClientAssertionParameters>()
                     .AddFilter<ClientAssertionFilters.RequireNoClientAssertion>()
                     .SetOrder(ValidateAuthorizationCodeParameter.Descriptor.Order + 1_000)
-                    .SetType(OpenIddictServerHandlerType.BuiltIn)
+                    .SetType(OpenIddictServerHandlerType.Custom)
                     .Build();
+
+            public ValueTask HandleAsync(ValidateTokenRequestContext context)
+            {
+                return _buildInHandler.HandleAsync(context);
+            }
         }
 
         /// <summary>
@@ -36,7 +43,7 @@ namespace Eryph.Modules.Identity.Events.Validations
                 = OpenIddictServerHandlerDescriptor.CreateBuilder<ValidateTokenRequestContext>()
                     .UseSingletonHandler<ValidateClientAssertionParameters>()
                     .AddFilter<ClientAssertionFilters.RequireClientAssertion>()
-                    .SetOrder(ValidateAuthorizationCodeParameter.Descriptor.Order + 1_000)
+                    .SetOrder(ValidateAuthorizationCodeParameter.Descriptor.Order + 1_001)
                     .SetType(OpenIddictServerHandlerType.Custom)
                     .Build();
 

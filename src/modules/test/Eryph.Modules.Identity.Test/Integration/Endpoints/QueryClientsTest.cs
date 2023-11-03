@@ -47,12 +47,12 @@ public class QueryClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
                 var clientService = scope.GetRequiredService<IClientService>();
                 _ = clientService.Add(new ClientApplicationDescriptor
                 {
-                    ClientId = "test1"
-                }, CancellationToken.None).GetAwaiter().GetResult();
+                    ClientId = "test1",
+                }, false, CancellationToken.None).GetAwaiter().GetResult();
                 _ = clientService.Add(new ClientApplicationDescriptor
                 {
                     ClientId = "test2"
-                }, CancellationToken.None).GetAwaiter().GetResult();
+                }, false, CancellationToken.None).GetAwaiter().GetResult();
 
             });
         });
