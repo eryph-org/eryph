@@ -30,8 +30,8 @@ namespace Eryph.Modules.Network
         {
 
 
-            options.AddHostedService<OVSNodeHostedService<SyncedOVNDatabaseNode>>();
-            options.AddHostedService<OVSNodeHostedService<NetworkControllerNode>>();
+            options.AddHostedService<OwnThreadOVSNodeHostedService<SyncedOVNDatabaseNode>>();
+            options.AddHostedService<OwnThreadOVSNodeHostedService<NetworkControllerNode>>();
 
             options.AddLogging();
         }
