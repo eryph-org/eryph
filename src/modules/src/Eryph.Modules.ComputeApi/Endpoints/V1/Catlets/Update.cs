@@ -43,7 +43,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
         }
 
         [Authorize(Policy = "compute:catlets:write")]
-        [HttpPut("catlet")]
+        [HttpPut("catlets/{id}")]
         [SwaggerOperation(
             Summary = "Updates a catlet",
             Description = "Updates a catlet",
