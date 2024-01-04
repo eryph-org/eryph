@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core.VmAgent;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -14,15 +15,15 @@ namespace Eryph.VmManagement.Storage
 
 
         public static EitherAsync<Error, Seq<VMDriveStorageSettings>> PlanDriveStorageSettings(
-            HostSettings hostSettings, CatletConfig config, VMStorageSettings storageSettings)
+            VmHostAgentConfiguration vmHostAgentConfig, HostSettings hostSettings, CatletConfig config, VMStorageSettings storageSettings)
         {
             return config.Drives
                 .ToSeq().MapToEitherAsync((index, c) =>
-                    FromDriveConfig(hostSettings, storageSettings, c, index).ToEither()).ToAsync();
+                    FromDriveConfig(vmHostAgentConfig, hostSettings, storageSettings, c, index).ToEither()).ToAsync();
         }
 
         public static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
-            HostSettings hostSettings, VMStorageSettings storageSettings, CatletDriveConfig driveConfig,
+            VmHostAgentConfiguration vmHostAgentConfig, HostSettings hostSettings, VMStorageSettings storageSettings, CatletDriveConfig driveConfig,
             int index)
         {
             const int
@@ -71,7 +72,7 @@ namespace Eryph.VmManagement.Storage
 
 
             return
-                (from resolvedPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath)
+                (from resolvedPath in names.ResolveStorageBasePath(vmHostAgentConfig, hostSettings.DefaultVirtualHardDiskPath)
                     from identifier in storageIdentifier.ToEither(
                         Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
                         .ToAsync()
@@ -87,7 +88,7 @@ namespace Eryph.VmManagement.Storage
                                 string.IsNullOrWhiteSpace(driveConfig.Source)
                                     ? Option<DiskStorageSettings>.None
                                     : DiskStorageSettings
-                                        .FromSourceString(hostSettings, driveConfig.Source),
+                                        .FromSourceString(vmHostAgentConfig, hostSettings, driveConfig.Source),
                             Path = Path.Combine(resolvedPath, identifier),
                             FileName = $"{driveConfig.Name}.vhdx",
                             // ReSharper disable once StringLiteralTypo

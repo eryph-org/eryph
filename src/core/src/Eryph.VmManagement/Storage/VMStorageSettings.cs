@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
@@ -21,17 +22,20 @@ namespace Eryph.VmManagement.Storage
 
         public bool Frozen { get; init; }
 
-        public static EitherAsync<Error, Option<VMStorageSettings>> FromVM(HostSettings hostSettings,
+        public static EitherAsync<Error, Option<VMStorageSettings>> FromVM(
+            VmHostAgentConfiguration vmHostAgentConfig,
+            HostSettings hostSettings,
             TypedPsObject<VirtualMachineInfo> vm)
         {
 
-            var (names, storageIdentifier) = StorageNames.FromPath(vm.Value.Path, hostSettings.DefaultDataPath);
+            var (names, storageIdentifier) = StorageNames.FromPath(vm.Value.Path, vmHostAgentConfig, hostSettings.DefaultDataPath);
 
             async Task<VMStorageSettings> FromVMAsync()
             {
                 return await
-                    (from resolvedPath in names.ResolveStorageBasePath(hostSettings.DefaultDataPath)
-                        from importVhdPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath)
+                    (from resolvedPath in names.
+                            ResolveStorageBasePath(vmHostAgentConfig, hostSettings.DefaultDataPath)
+                        from importVhdPath in names.ResolveStorageBasePath(vmHostAgentConfig, hostSettings.DefaultVirtualHardDiskPath)
                         from storageSettings in ComparePath(resolvedPath, vm.Value.Path,
                             storageIdentifier)
 
@@ -58,13 +62,17 @@ namespace Eryph.VmManagement.Storage
         }
 
 
-        public static EitherAsync<Error, VMStorageSettings> FromCatletConfig(CatletConfig config,
+        public static EitherAsync<Error, VMStorageSettings> FromCatletConfig(
+            CatletConfig config,
+            VmHostAgentConfiguration vmHostAgentConfig,
             HostSettings hostSettings)
         {
             var projectName = Prelude.Some(string.IsNullOrWhiteSpace(config.Project) 
                 ? "default": config.Project);
-            var environmentName = Prelude.Some("default");
-            var dataStoreName = Prelude.Some("default");
+            var environmentName = Prelude.Some(string.IsNullOrWhiteSpace(config.Environment)
+                ? "default" : config.Environment);
+            var dataStoreName = Prelude.Some(string.IsNullOrWhiteSpace(config.Store)
+                ? "default" :  config.Store);
             var storageIdentifier = Option<string>.None;
 
             var names = new StorageNames
@@ -77,8 +85,8 @@ namespace Eryph.VmManagement.Storage
             if (!string.IsNullOrWhiteSpace(config.Location))
                 storageIdentifier = Prelude.Some(config.Location);
 
-            return from dataPath in  names.ResolveStorageBasePath(hostSettings.DefaultDataPath)
-                   from importVhdPath in names.ResolveStorageBasePath(hostSettings.DefaultVirtualHardDiskPath)
+            return from dataPath in  names.ResolveStorageBasePath(vmHostAgentConfig, hostSettings.DefaultDataPath)
+                   from importVhdPath in names.ResolveStorageBasePath(vmHostAgentConfig, hostSettings.DefaultVirtualHardDiskPath)
                    select new VMStorageSettings
                 {
                     StorageNames = names,
@@ -90,12 +98,13 @@ namespace Eryph.VmManagement.Storage
 
 
         public static EitherAsync<Error, VMStorageSettings> Plan(
+            VmHostAgentConfiguration vmHostAgentConfig,
             HostSettings hostSettings,
             string newStorageId,
             CatletConfig config,
             Option<VMStorageSettings> currentStorageSettings)
         {
-            return FromCatletConfig(config, hostSettings).Bind(newSettings =>
+            return FromCatletConfig(config, vmHostAgentConfig, hostSettings).Bind(newSettings =>
                 currentStorageSettings.Match(
                     None: () => EnsureStorageId(newStorageId, newSettings).ToError().ToAsync(),
                     Some: currentSettings => EnsureStorageId(newStorageId, newSettings, currentSettings)

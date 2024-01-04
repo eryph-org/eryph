@@ -1,4 +1,5 @@
 ﻿using Eryph.ConfigModel.Catlets;
+using Eryph.Core.VmAgent;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Storage;
@@ -23,7 +24,7 @@ public class ConvergeFixture
 
         NetworkSettings = Array.Empty<MachineNetworkSettings>();
         HostInfo = new VMHostMachineData();
-
+        VmHostAgentConfiguration = new VmHostAgentConfiguration();
     }
 
     public VMStorageSettings StorageSettings { get; set; }
@@ -38,9 +39,11 @@ public class ConvergeFixture
 
     public VMHostMachineData HostInfo { get; set; }
 
+    public VmHostAgentConfiguration VmHostAgentConfiguration { get; set; }
+
 
     public ConvergeContext Context =>
-        new(HostSettings, Engine, ReportProgressCallBack,
+        new(VmHostAgentConfiguration, HostSettings, Engine, ReportProgressCallBack,
             Config, Metadata, StorageSettings, NetworkSettings, HostInfo);
 
     private static Task ReportProgressCallBack(string _) => Task.CompletedTask;

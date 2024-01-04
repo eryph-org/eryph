@@ -12,6 +12,14 @@ namespace Eryph.Runtime.Zero.Configuration
             return Config.GetConfigPath("zero");
         }
 
+        public static string GetVmHostAgentConfigPath()
+        {
+            var privateConfigPath = GetPrivateConfigPath();
+            var agentSettingsPath = Path.Combine(privateConfigPath, "agentsettings");
+
+            return agentSettingsPath;
+        }
+
         public static string GetClientConfigPath()
         {
             var privateConfigPath = Path.Combine(GetConfigPath(), "private");
@@ -68,8 +76,7 @@ namespace Eryph.Runtime.Zero.Configuration
             Config.EnsurePath(GetMetadataConfigPath());
             Config.EnsurePath(GetStorageConfigPath());
             Config.EnsurePath(GetNetworksConfigPath());
-
-
+            Config.EnsurePath(GetVmHostAgentConfigPath());
         }
 
         public static DirectorySecurity GetPrivateDirectorySecurity()

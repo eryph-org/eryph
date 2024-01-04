@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.Core.VmAgent;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data;
@@ -17,12 +18,14 @@ namespace Eryph.VmManagement.Inventory
     public class VirtualMachineInventory
     {
         private readonly IPowershellEngine _engine;
+        private readonly VmHostAgentConfiguration _vmHostAgentConfig;
         private readonly HostSettings _hostSettings;
         private readonly IHostInfoProvider _hostInfoProvider;
 
-        public VirtualMachineInventory(IPowershellEngine engine, HostSettings hostSettings, IHostInfoProvider hostInfoProvider)
+        public VirtualMachineInventory(IPowershellEngine engine, VmHostAgentConfiguration vmHostAgentConfig, HostSettings hostSettings, IHostInfoProvider hostInfoProvider)
         {
             _engine = engine;
+            _vmHostAgentConfig = vmHostAgentConfig;
             _hostSettings = hostSettings;
             _hostInfoProvider = hostInfoProvider;
         }
@@ -34,8 +37,8 @@ namespace Eryph.VmManagement.Inventory
            return (from hostInfo in _hostInfoProvider.GetHostInfoAsync()
                from vm in Prelude.RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo)
                     
-               from vmStorageSettings in VMStorageSettings.FromVM(_hostSettings, vm)
-                   from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _hostSettings,
+               from vmStorageSettings in VMStorageSettings.FromVM(_vmHostAgentConfig, _hostSettings, vm)
+                   from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _vmHostAgentConfig, _hostSettings,
                     vm.GetList(x=>x.HardDrives))
                 from cpuData in GetCpuData(vmInfo)
                from memoryData in GetMemoryData(vmInfo)

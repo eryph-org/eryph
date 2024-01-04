@@ -1,4 +1,5 @@
-﻿using Eryph.VmManagement.Storage;
+﻿using Eryph.Core.VmAgent;
+using Eryph.VmManagement.Storage;
 using FluentAssertions;
 using LanguageExt.UnsafeValueAccess;
 using Xunit;
@@ -15,7 +16,7 @@ namespace Eryph.Modules.VmHostAgent.Test
         [InlineData("c:\\default\\test\\eryph\\genepool\\testorg\\testgene\\version\\volumes\\test.vhdx", "default", "default", "default", "gene:testorg/testgene/version:test")]
         public void Resolves_Path_To_Expected_Storage_names(string path, string project, string environment,  string dataStore, string identifier)
         {
-            var (names, storageIdentifier) = StorageNames.FromPath(path, "c:\\default\\test\\eryph");
+            var (names, storageIdentifier) = StorageNames.FromPath(path, new VmHostAgentConfiguration(), "c:\\default\\test\\eryph");
 
             names.ProjectName.IsSome.Should().Be(true);
             names.EnvironmentName.IsSome.Should().Be(true);

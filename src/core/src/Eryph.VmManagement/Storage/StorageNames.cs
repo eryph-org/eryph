@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.Core.VmAgent;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
@@ -20,18 +21,36 @@ namespace Eryph.VmManagement.Storage
 
         public bool IsValid => DataStoreName.IsSome && ProjectName.IsSome && EnvironmentName.IsSome;
 
-        public static (StorageNames Names, Option<string> StorageIdentifier) FromPath(string path, string defaultPath)
+        public static (StorageNames Names, Option<string> StorageIdentifier) FromPath(
+            string path,
+            VmHostAgentConfiguration vmHostAgentConfig,
+            string defaultPath)
         {
             var projectName = Prelude.Some("default");
-            var environmentName = Prelude.Some("default");
+            var environmentName = Option<string>.None;
             var dataStoreName = Option<string>.None;
             var dataStorePath = Option<string>.None;
             var storageIdentifier = Option<string>.None;
 
             if (path.StartsWith(defaultPath, StringComparison.InvariantCultureIgnoreCase))
             {
+                environmentName = Prelude.Some("default");
                 dataStoreName = Prelude.Some("default");
                 dataStorePath = defaultPath;
+            }
+            else
+            {
+                // TODO better validation
+                // TODO functional programming
+                var result = vmHostAgentConfig.Environments
+                    ?.SelectMany(e => e.DataStores, (e, ds) => (e, ds))
+                    ?.FirstOrDefault(r => path.StartsWith(r.ds.Path, StringComparison.InvariantCultureIgnoreCase));
+                if (result.HasValue)
+                {
+                    environmentName = result.Value.e.Name;
+                    dataStoreName = result.Value.ds.Name;
+                    dataStorePath = result.Value.ds.Path;
+                }
             }
 
             if (dataStorePath.IsSome)
@@ -91,7 +110,7 @@ namespace Eryph.VmManagement.Storage
             return (names, storageIdentifier);
         }
 
-        public EitherAsync<Error, string> ResolveStorageBasePath(string defaultPath)
+        public EitherAsync<Error, string> ResolveStorageBasePath(VmHostAgentConfiguration vmHostAgentConfig, string defaultPath)
         {
             var names = this;
             return
@@ -101,15 +120,29 @@ namespace Eryph.VmManagement.Storage
                     "Unknown project name. Cannot resolve path"))
                 from environmentName in names.EnvironmentName.ToEitherAsync(Error.New(
                     "Unknown environment name. Cannot resolve path"))
-                from dsPath in LookupVMDatastorePathInEnvironment(dsName, environmentName, defaultPath).ToAsync()
+                from dsPath in LookupVMDatastorePathInEnvironment(dsName, environmentName, vmHostAgentConfig, defaultPath).ToAsync()
                 from projectPath in JoinPathAndProject(dsPath, projectName)
                 select projectPath;
         }
 
         private static async Task<Either<Error, string>> LookupVMDatastorePathInEnvironment(
-            string datastore, string environment, string defaultPath)
+            string datastore, string environment, VmHostAgentConfiguration vmHostAgentConfig, string defaultPath)
         {
-            return defaultPath;
+            if (datastore == "default" && environment == "default")
+                return defaultPath;
+
+            var environmentConfig = vmHostAgentConfig.Environments?.FirstOrDefault(e => e.Name == environment);
+            if (environmentConfig is null)
+                return Error.New("Environment is not configured. Cannot resolve path");
+
+            var dataStoreConfig = environmentConfig.DataStores?.FirstOrDefault(ds => ds.Name == datastore);
+            if (dataStoreConfig is null)
+                return Error.New("Data store is not configured. Cannot resolve path");
+
+            if (string.IsNullOrWhiteSpace(dataStoreConfig.Path))
+                return Error.New("The path of the data store is invalid");
+
+            return dataStoreConfig.Path;
         }
 
 

@@ -21,6 +21,7 @@ using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
+using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
@@ -83,6 +84,10 @@ internal static class Program
             name: "--warmup",
             description: "Run in warmup mode (internal use)");
 
+        var noCurrentConfigCheckOption = new System.CommandLine.Option<bool>(
+            name: "--no-current-config-check",
+            description: "Do not check if host state is valid for current config. ");
+
 
         var runCommand = new Command("run");
         runCommand.AddOption(warmupOption);
@@ -110,6 +115,23 @@ internal static class Program
         rootCommand.AddCommand(uninstallCommand);
 
 
+        var agentSettingsCommand = new Command("agentsettings");
+        rootCommand.AddCommand(agentSettingsCommand);
+
+        var getAgentSettingsCommand = new Command("get");
+        getAgentSettingsCommand.AddOption(outFileOption);
+        getAgentSettingsCommand.SetHandler(GetAgentSettings, outFileOption);
+        agentSettingsCommand.AddCommand(getAgentSettingsCommand);
+
+        var importAgentSettingsCommand = new Command("import");
+        importAgentSettingsCommand.AddOption(inFileOption);
+        importAgentSettingsCommand.AddOption(nonInteractiveOption);
+        importAgentSettingsCommand.AddOption(noCurrentConfigCheckOption);
+        importAgentSettingsCommand.SetHandler(ImportAgentSettings, inFileOption,
+            nonInteractiveOption, noCurrentConfigCheckOption);
+        agentSettingsCommand.AddCommand(importAgentSettingsCommand);
+
+
         var networksCommand = new Command("networks");
         rootCommand.AddCommand(networksCommand);
 
@@ -119,11 +141,6 @@ internal static class Program
         networksCommand.AddCommand(getNetworksCommand);
 
         var importNetworksCommand = new Command("import");
-
-        var noCurrentConfigCheckOption = new System.CommandLine.Option<bool>(
-            name: "--no-current-config-check",
-            description: "Do not check if host state is valid for current config. ");
-
         importNetworksCommand.AddOption(inFileOption);
         importNetworksCommand.AddOption(nonInteractiveOption);
         importNetworksCommand.AddOption(noCurrentConfigCheckOption);
@@ -939,6 +956,72 @@ internal static class Program
         }
 
         Directory.Move(source, target);
+    }
+
+    private static async Task<int> GetAgentSettings(FileSystemInfo? outFile)
+    {
+        var manager = new VmHostAgentConfigurationManager();
+        return await manager.GetCurrentConfigurationYaml()
+            .MatchAsync(
+                async config =>
+                {
+                    if (outFile != null)
+                    {
+                        await File.WriteAllTextAsync(outFile.FullName, config);
+                    }
+                    else
+                    {
+                        Console.WriteLine(config);
+                    }
+
+                    return 0;
+                }, l =>
+                {
+                    Console.WriteLine(l.Message);
+                    return -1;
+                }
+            );
+    }
+
+    private static async Task<int> ImportAgentSettings(
+        FileSystemInfo? inFile,
+        bool nonInteractive,
+        bool noCurrentConfigCheck)
+    {
+        var configString = "";
+        if (inFile != null)
+        {
+            configString = await File.ReadAllTextAsync(inFile.FullName);
+        }
+        else
+        {
+            try
+            {
+                if (!Console.KeyAvailable)
+                {
+                    await Console.Error.WriteLineAsync(
+                        "Error: Supply the new network config to stdin or use --inFile option to read from file");
+                    return -1;
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // ignored, expected when console is redirected
+            }
+
+            await using var reader = Console.OpenStandardInput();
+            using var textReader = new StreamReader(reader);
+            configString = await textReader.ReadToEndAsync();
+        }
+
+        var manager = new VmHostAgentConfigurationManager();
+        return await manager.SaveConfigurationYaml(configString)
+            .Match(_ => 0,
+                error =>
+                {
+                    Console.WriteLine(error.Message);
+                    return -1;
+                });
     }
 
     private static async Task<int> GetNetworks(FileSystemInfo? outFile)

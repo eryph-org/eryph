@@ -1,6 +1,7 @@
 ﻿using System;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
@@ -20,10 +21,18 @@ namespace Eryph.Modules.VmHostAgent
         CatletConfigCommandHandler<CreateCatletVMCommand, ConvergeCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
+        private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
-        public CreateCatletVMCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, messaging, log)
+        public CreateCatletVMCommandHandler(
+            IPowershellEngine engine,
+            ITaskMessaging messaging,
+            ILogger log,
+            IHostInfoProvider hostInfoProvider,
+            IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
+            : base(engine, messaging, log)
         {
             _hostInfoProvider = hostInfoProvider;
+            _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
         protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(CreateCatletVMCommand command)
@@ -31,10 +40,6 @@ namespace Eryph.Modules.VmHostAgent
             var config = command.Config;
 
             var hostSettings = HostSettingsBuilder.GetHostSettings();
-
-            var planStorageSettings = Prelude.fun(() =>
-                VMStorageSettings.Plan(hostSettings, LongToString(command.StorageId), config,
-                    Option<VMStorageSettings>.None));
 
             var getParentConfig = Prelude.fun(() =>
                 GetTemplate(hostSettings, config.Parent));
@@ -48,11 +53,13 @@ namespace Eryph.Modules.VmHostAgent
                     CreateMetadata(parentConfig, vmInfo, config, command.NewMachineId));
 
             return
-                from plannedStorageSettings in planStorageSettings()
+                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration()
+                from plannedStorageSettings in VMStorageSettings.Plan(vmHostAgentConfig, hostSettings, LongToString(command.StorageId), config,
+                    Option<VMStorageSettings>.None)
                 from parentConfig in getParentConfig()
                 from createdVM in createVM(plannedStorageSettings, parentConfig)
                 from metadata in createMetadata(createdVM, parentConfig)
-                from inventory in CreateMachineInventory(Engine, hostSettings, createdVM, _hostInfoProvider)
+                from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, hostSettings, createdVM, _hostInfoProvider)
                 select new ConvergeCatletResult
                 {
                     Inventory = inventory,

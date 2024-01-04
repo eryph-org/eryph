@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
+using Eryph.Core.VmAgent;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
@@ -228,6 +229,7 @@ namespace Eryph.VmManagement
         }
 
         public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+            VmHostAgentConfiguration vmHostAgentConfig,
             HostSettings hostSettings,
             VMHostMachineData hostInfo,
             IPowershellEngine engine,
@@ -239,7 +241,7 @@ namespace Eryph.VmManagement
             VMStorageSettings storageSettings)
         {
             var convergeContext =
-                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, networkSetting, hostInfo);
+                new ConvergeContext(vmHostAgentConfig, hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, networkSetting, hostInfo);
 
             var convergeTasks = new ConvergeTaskBase[]
             {
@@ -256,6 +258,7 @@ namespace Eryph.VmManagement
         }
 
         public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> ConvergeConfigDrive(
+            VmHostAgentConfiguration vmHostAgentConfig,
             HostSettings hostSettings,
             VMHostMachineData hostInfo,
             IPowershellEngine engine,
@@ -267,7 +270,7 @@ namespace Eryph.VmManagement
             VMStorageSettings storageSettings)
         {
             var convergeContext =
-                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, networkSettings, hostInfo);
+                new ConvergeContext(vmHostAgentConfig, hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, networkSettings, hostInfo);
 
             var convergeTasks = new ConvergeTaskBase[]
             {

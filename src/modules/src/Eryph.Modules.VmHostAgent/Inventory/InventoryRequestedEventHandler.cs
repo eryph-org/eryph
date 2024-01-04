@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations;
+﻿using Dbosoft.Rebus.Operations;
+using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Resources.Machines;
@@ -14,6 +13,9 @@ using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Eryph.Modules.VmHostAgent.Inventory
 {
@@ -26,18 +28,19 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
         private readonly IPowershellEngine _engine;
         private readonly IHostInfoProvider _hostInfoProvider;
-        private readonly VirtualMachineInventory _inventory;
+        private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
         public InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log,
             WorkflowOptions _workflowOptions,
-            IHostInfoProvider hostInfoProvider)
+            IHostInfoProvider hostInfoProvider,
+            IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
         {
             _bus = bus;
             _engine = engine;
             _log = log;
             this._workflowOptions = _workflowOptions;
             _hostInfoProvider = hostInfoProvider;
-            _inventory = new VirtualMachineInventory(_engine, HostSettingsBuilder.GetHostSettings(), hostInfoProvider);
+            _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
 
@@ -60,9 +63,13 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         private Task<Either<Error, UpdateVMHostInventoryCommand>> VmsToInventory(
             Seq<TypedPsObject<VirtualMachineInfo>> vms)
         {
+            var hostSettings = HostSettingsBuilder.GetHostSettings();
+
             return  
-                (from hostInventory in _hostInfoProvider.GetHostInfoAsync(true)
-                from vmInventory in InventorizeAllVms(vms).ToAsync()
+                (from hostInventory in _hostInfoProvider.GetHostInfoAsync(true) 
+                 from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration()
+                 let inventory = new VirtualMachineInventory(_engine, vmHostAgentConfig, hostSettings, _hostInfoProvider)
+                 from vmInventory in InventorizeAllVms(inventory, vms).ToAsync()
                 select new UpdateVMHostInventoryCommand
                 {
                     HostInventory = hostInventory,
@@ -71,10 +78,11 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         }
 
         private Task<Either<Error, IEnumerable<VirtualMachineData>>> InventorizeAllVms(
+            VirtualMachineInventory inventory,
             Seq<TypedPsObject<VirtualMachineInfo>> vms)
         {
             return
-                vms.Map(vm => _inventory.InventorizeVM(vm)
+                vms.Map(vm => inventory.InventorizeVM(vm)
                         .ToAsync().Match(
                             Right: Prelude.Some,
                             Left: l =>
