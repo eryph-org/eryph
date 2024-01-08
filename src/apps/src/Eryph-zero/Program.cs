@@ -245,21 +245,18 @@ internal static class Program
                     });
 
 
-                // do not check in service mode - during startup some features may be unavailable
-                if (!WindowsServiceHelpers.IsWindowsService())
+
+                try
                 {
-                    try
+                    HostSettingsBuilder.GetHostSettings();
+                }
+                catch (ManagementException ex)
+                {
+                    if (ex.ErrorCode == ManagementStatus.InvalidNamespace)
                     {
-                        HostSettingsBuilder.GetHostSettings();
-                    }
-                    catch (ManagementException ex)
-                    {
-                        if (ex.ErrorCode == ManagementStatus.InvalidNamespace)
-                        {
-                            await Console.Error.WriteAsync(
-                                "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
-                            return -10;
-                        }
+                        await Console.Error.WriteAsync(
+                            "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
+                        return -10;
                     }
                 }
 
@@ -533,8 +530,12 @@ internal static class Program
                         from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
                         let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                         from uInstalled in serviceExists
-                            ? LogProgress("Updating service...").Bind ( _ => serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
-                            : LogProgress("Installing service...").Bind( _ => serviceManager.CreateService("eryph-zero", $"{zeroExe} run",
+                            ? LogProgress("Updating service...").Bind(_ =>
+                                serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
+                            : LogProgress("Installing service...").Bind(_ => serviceManager.CreateService("eryph-zero",
+                                $"{zeroExe} run",
+                                // vmms is the Hyper-V Virtual Machine Management service
+                                Prelude.Seq(new[]{ "vmms" }),
                                 cancelSource2.Token))
                         let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
 
