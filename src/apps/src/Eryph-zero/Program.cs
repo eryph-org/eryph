@@ -533,8 +533,12 @@ internal static class Program
                         from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
                         let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                         from uInstalled in serviceExists
-                            ? LogProgress("Updating service...").Bind ( _ => serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
-                            : LogProgress("Installing service...").Bind( _ => serviceManager.CreateService("eryph-zero", $"{zeroExe} run",
+                            ? LogProgress("Updating service...").Bind(_ =>
+                                serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
+                            : LogProgress("Installing service...").Bind(_ => serviceManager.CreateService("eryph-zero",
+                                $"{zeroExe} run",
+                                // vmms is the Hyper-V Virtual Machine Management service
+                                new[] { "vmms" }.ToSeq(),
                                 cancelSource2.Token))
                         let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
 
