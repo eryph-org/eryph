@@ -245,18 +245,21 @@ internal static class Program
                     });
 
 
-
-                try
+                // do not check in service mode - during startup some features may be unavailable
+                if (!WindowsServiceHelpers.IsWindowsService())
                 {
-                    HostSettingsBuilder.GetHostSettings();
-                }
-                catch (ManagementException ex)
-                {
-                    if (ex.ErrorCode == ManagementStatus.InvalidNamespace)
+                    try
                     {
-                        await Console.Error.WriteAsync(
-                            "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
-                        return -10;
+                        HostSettingsBuilder.GetHostSettings();
+                    }
+                    catch (ManagementException ex)
+                    {
+                        if (ex.ErrorCode == ManagementStatus.InvalidNamespace)
+                        {
+                            await Console.Error.WriteAsync(
+                                "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
+                            return -10;
+                        }
                     }
                 }
 
@@ -535,7 +538,7 @@ internal static class Program
                             : LogProgress("Installing service...").Bind(_ => serviceManager.CreateService("eryph-zero",
                                 $"{zeroExe} run",
                                 // vmms is the Hyper-V Virtual Machine Management service
-                                Prelude.Seq(new[]{ "vmms" }),
+                                new[] { "vmms" }.ToSeq(),
                                 cancelSource2.Token))
                         let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
 
