@@ -15,15 +15,15 @@ namespace Eryph.VmManagement.Storage
 
 
         public static EitherAsync<Error, Seq<VMDriveStorageSettings>> PlanDriveStorageSettings(
-            VmHostAgentConfiguration vmHostAgentConfig, HostSettings hostSettings, CatletConfig config, VMStorageSettings storageSettings)
+            VmHostAgentConfiguration vmHostAgentConfig, CatletConfig config, VMStorageSettings storageSettings)
         {
             return config.Drives
                 .ToSeq().MapToEitherAsync((index, c) =>
-                    FromDriveConfig(vmHostAgentConfig, hostSettings, storageSettings, c, index).ToEither()).ToAsync();
+                    FromDriveConfig(vmHostAgentConfig, storageSettings, c, index).ToEither()).ToAsync();
         }
 
         public static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
-            VmHostAgentConfiguration vmHostAgentConfig, HostSettings hostSettings, VMStorageSettings storageSettings, CatletDriveConfig driveConfig,
+            VmHostAgentConfiguration vmHostAgentConfig, VMStorageSettings storageSettings, CatletDriveConfig driveConfig,
             int index)
         {
             const int
@@ -87,7 +87,7 @@ namespace Eryph.VmManagement.Storage
                                 string.IsNullOrWhiteSpace(driveConfig.Source)
                                     ? Option<DiskStorageSettings>.None
                                     : DiskStorageSettings
-                                        .FromSourceString(vmHostAgentConfig, hostSettings, driveConfig.Source),
+                                        .FromSourceString(vmHostAgentConfig, driveConfig.Source),
                             Path = Path.Combine(resolvedPath, identifier),
                             FileName = $"{driveConfig.Name}.vhdx",
                             // ReSharper disable once StringLiteralTypo

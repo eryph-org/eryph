@@ -176,10 +176,10 @@ namespace Eryph.Modules.VmHostAgent
         }
 
         protected static EitherAsync<Error, VirtualMachineData> CreateMachineInventory(
-            IPowershellEngine engine, VmHostAgentConfiguration vmHostAgentConfig, HostSettings hostSettings,
+            IPowershellEngine engine, VmHostAgentConfiguration vmHostAgentConfig,
             TypedPsObject<VirtualMachineInfo> vmInfo, IHostInfoProvider hostInfoProvider)
         {
-            var inventory = new VirtualMachineInventory(engine, vmHostAgentConfig, hostSettings, hostInfoProvider);
+            var inventory = new VirtualMachineInventory(engine, vmHostAgentConfig, hostInfoProvider);
             return inventory.InventorizeVM(vmInfo).ToAsync();
         }
 

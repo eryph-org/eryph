@@ -19,14 +19,12 @@ namespace Eryph.VmManagement.Inventory
     {
         private readonly IPowershellEngine _engine;
         private readonly VmHostAgentConfiguration _vmHostAgentConfig;
-        private readonly HostSettings _hostSettings;
         private readonly IHostInfoProvider _hostInfoProvider;
 
-        public VirtualMachineInventory(IPowershellEngine engine, VmHostAgentConfiguration vmHostAgentConfig, HostSettings hostSettings, IHostInfoProvider hostInfoProvider)
+        public VirtualMachineInventory(IPowershellEngine engine, VmHostAgentConfiguration vmHostAgentConfig, IHostInfoProvider hostInfoProvider)
         {
             _engine = engine;
             _vmHostAgentConfig = vmHostAgentConfig;
-            _hostSettings = hostSettings;
             _hostInfoProvider = hostInfoProvider;
         }
 
@@ -37,10 +35,10 @@ namespace Eryph.VmManagement.Inventory
            return (from hostInfo in _hostInfoProvider.GetHostInfoAsync()
                from vm in Prelude.RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo)
                     
-               from vmStorageSettings in VMStorageSettings.FromVM(_vmHostAgentConfig, _hostSettings, vm)
-                   from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(_engine, _vmHostAgentConfig, _hostSettings,
-                    vm.GetList(x=>x.HardDrives))
-                from cpuData in GetCpuData(vmInfo)
+               from vmStorageSettings in VMStorageSettings.FromVM(_vmHostAgentConfig, vm)
+               from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(
+                   _engine, _vmHostAgentConfig, vm.GetList(x=>x.HardDrives))
+               from cpuData in GetCpuData(vmInfo)
                from memoryData in GetMemoryData(vmInfo)
                from firmwareData in GetFirmwareData(vmInfo)
                select new VirtualMachineData

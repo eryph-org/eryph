@@ -68,7 +68,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             return  
                 (from hostInventory in _hostInfoProvider.GetHostInfoAsync(true) 
                  from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-                 let inventory = new VirtualMachineInventory(_engine, vmHostAgentConfig, hostSettings, _hostInfoProvider)
+                 let inventory = new VirtualMachineInventory(_engine, vmHostAgentConfig, _hostInfoProvider)
                  from vmInventory in InventorizeAllVms(inventory, vms).ToAsync()
                 select new UpdateVMHostInventoryCommand
                 {

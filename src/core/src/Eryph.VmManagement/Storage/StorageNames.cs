@@ -37,113 +37,11 @@ namespace Eryph.VmManagement.Storage
             return FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes);
         }
 
-        public static (StorageNames Names, Option<string> StorageIdentifier) FromPath(
-            string path,
-            VmHostAgentConfiguration vmHostAgentConfig,
-            string defaultPath)
-        {
-            var projectName = Prelude.Some("default");
-            var environmentName = Option<string>.None;
-            var dataStoreName = Option<string>.None;
-            var dataStorePath = Option<string>.None;
-            var storageIdentifier = Option<string>.None;
-
-            if (path.StartsWith(defaultPath, StringComparison.InvariantCultureIgnoreCase))
-            {
-                environmentName = Prelude.Some("default");
-                dataStoreName = Prelude.Some("default");
-                dataStorePath = defaultPath;
-            }
-            else
-            {
-                // TODO better validation
-                // TODO functional programming
-                var result = vmHostAgentConfig.Environments
-                    ?.SelectMany(e => e.Datastores, (e, ds) => (e, ds))
-                    ?.FirstOrDefault(r => path.StartsWith(r.ds.Path, StringComparison.InvariantCultureIgnoreCase));
-                if (result.HasValue)
-                {
-                    environmentName = result.Value.e.Name;
-                    dataStoreName = result.Value.ds.Name;
-                    dataStorePath = result.Value.ds.Path;
-                }
-            }
-
-            if (dataStorePath.IsSome)
-            {
-                var pathAfterDataStore = path.Remove(0, dataStorePath.ValueUnsafe().Length).TrimStart('\\');
-
-                var pathRoot = pathAfterDataStore.Split(Path.DirectorySeparatorChar).FirstOrDefault() ??
-                               pathAfterDataStore;
-
-                if (pathRoot.StartsWith("p_"))
-                {
-                    projectName = pathRoot.Remove(0, "p_".Length).ToLowerInvariant();
-                    pathAfterDataStore = pathAfterDataStore.Remove(0,pathRoot.Length + 1); // remove root + \\;
-                }
-
-                var lastPart = pathAfterDataStore
-                    .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
-
-                if (lastPart != null && lastPart.Contains('.')) // assuming a filename if this contains a dot
-                {
-                    pathAfterDataStore  = pathAfterDataStore.Remove(pathAfterDataStore.LastIndexOf(lastPart,
-                        StringComparison.InvariantCulture)).TrimEnd('\\');
-
-                }
-
-
-                var idCandidate = pathAfterDataStore;
-                var idIsGeneRef = false;
-                if (idCandidate.Contains(Path.DirectorySeparatorChar))
-                {
-                    // genepool path, resolve back to referenced geneset
-                    if (idCandidate.StartsWith("genepool\\", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        idCandidate = idCandidate.Remove(0, "genepool\\".Length);
-                        var genePathParts = idCandidate.Split('\\', StringSplitOptions.RemoveEmptyEntries);
-                        if (genePathParts.Length == 4)
-                        {
-                            idCandidate = genePathParts[0] + "/" + genePathParts[1]+ "/" + genePathParts[2];
-                            idIsGeneRef = true;
-                        }
-                    }
-
-                    idCandidate = idIsGeneRef ? $"gene:{idCandidate}:{Path.GetFileNameWithoutExtension(lastPart)}" : null;
-                }
-
-                if (!string.IsNullOrWhiteSpace(idCandidate))
-                    storageIdentifier = idCandidate;
-            }
-
-            var names = new StorageNames
-            {
-                DataStoreName = dataStoreName,
-                ProjectName = projectName,
-                EnvironmentName = environmentName
-            };
-
-            return (names, storageIdentifier);
-        }
-
-        public static (StorageNames Names, Option<string> StorageIdentifier) FromPath(
+        private static (StorageNames Names, Option<string> StorageIdentifier) FromPath(
             string path,
             VmHostAgentConfiguration vmHostAgentConfig,
             Func<VmHostAgentDefaultsConfiguration, string> getDefault)
         {
-            // check default
-            // check datastore
-            // check environment default
-            // check environment datastore
-            /*
-            var defaultEnv = new VmHostAgentEnvironmentConfiguration()
-            {
-                Datastores = vmHostAgentConfig.Datastores,
-                Defaults = vmHostAgentConfig.Defaults,
-                Name = "default",
-            };
-            */
-
             var pathCandidates = vmHostAgentConfig.Environments.SelectMany(
                 e => e.Datastores,
                 (e, ds) => (Environment: e.Name, Datastore: ds.Name, ds.Path))
@@ -153,9 +51,9 @@ namespace Eryph.VmManagement.Storage
                 .Concat(new[] { (Environment: "default", Datastore: "default", Path: getDefault(vmHostAgentConfig.Defaults)) });
 
             var match = pathCandidates
-                .Select(pc => (pc.Environment, pc.Datastore, RelativePath: GetContainedPath(pc.Path, path)))
-                .Where(p => p.RelativePath.IsSome)
-                .Select(p => (p.Environment, p.Datastore, RelativePath: p.RelativePath.ValueUnsafe()))
+                .Select(pc => from relativePath in GetContainedPath(pc.Path, path)
+                              select (pc.Environment, pc.Datastore, RelativePath: relativePath))
+                .Somes()
                 .HeadOrNone();
 
             return match.Map(e =>
@@ -196,67 +94,6 @@ namespace Eryph.VmManagement.Storage
             }).Match(
                 Some: v => v,
                 None: () => (new StorageNames() { DataStoreName = None, EnvironmentName = None, ProjectName = None }, None));
-
-            /*
-            var allEnvironments = vmHostAgentConfig.Environments.Concat(new[] { defaultEnv })
-                .SelectMany(e => e.Datastores, (e, ds) => (Environment: e, DataStore: ds));
-
-            return allEnvironments.Where(e => GetContainedPath(e.DataStore.Path, path).IsSome)
-                .Select(e => new
-                {
-                    EnvironmentName = e.Environment.Name,
-                    DatastoreName = e.DataStore.Name,
-                    RelativePath = GetContainedPath(e.DataStore.Path, path).ValueUnsafe(),
-                }).HeadOrNone()
-                .Match(
-                    Some: v => Optional(v),
-                    None: () => allEnvironments
-                        .Where(e => GetContainedPath(getDefault(e.Environment.Defaults), path).IsSome)
-                        .Select(e => new
-                        {
-                            EnvironmentName = e.Environment.Name,
-                            DatastoreName = "default",
-                            RelativePath = GetContainedPath(getDefault(e.Environment.Defaults), path).ValueUnsafe(),
-                        }).HeadOrNone())
-                .Map(e =>
-                {
-                    // TODO should project support more than one level?
-                    // TODO support no folder at all
-                    // Get first directory of relative path
-                    var root = e.RelativePath.Split(Path.DirectorySeparatorChar).First();
-                    return root.StartsWith("p_")
-                        ? new
-                        {
-                            StorageNames = new StorageNames()
-                            {
-                                EnvironmentName = e.EnvironmentName,
-                                DataStoreName = e.DatastoreName,
-                                ProjectName = root.Remove(0, "p_".Length).ToLowerInvariant(),
-                            },
-                            RelativePath = Path.GetRelativePath(root + Path.DirectorySeparatorChar, path),
-                        }
-                        : new
-                        {
-                            StorageNames = new StorageNames()
-                            {
-                                EnvironmentName = e.EnvironmentName,
-                                DataStoreName = e.DatastoreName,
-                                ProjectName = "default",
-                            },
-                            e.RelativePath,
-                        };
-                }).Map(e =>
-                {
-                    var storageIdentifier = GetGeneReference(e.RelativePath).Match(
-                            Some: v => v,
-                            None: () => Path.GetDirectoryName(e.RelativePath));
-
-                    return (e.StorageNames, string.IsNullOrWhiteSpace(storageIdentifier) ? None : Optional(storageIdentifier));
-
-                }).Match(
-                Some: v => v,
-                None: () => (new StorageNames() { DataStoreName = None, EnvironmentName = None, ProjectName = None }, None));
-            */
         }
 
         public EitherAsync<Error, string> ResolveVmStorageBasePath(VmHostAgentConfiguration vmHostAgentConfig)
@@ -273,7 +110,7 @@ namespace Eryph.VmManagement.Storage
 
         private static Option<string> GetContainedPath(string relativeTo, string path)
         {
-            string relativePath = Path.GetRelativePath(relativeTo, path);
+            var relativePath = Path.GetRelativePath(relativeTo, path);
             if (relativePath.StartsWith("..") || relativePath.StartsWith(".") || relativePath == path)
                 return None;
 

@@ -47,7 +47,7 @@ internal class UpdateConfigDriveCommandHandler :
         var hostSettings = HostSettingsBuilder.GetHostSettings();
         var convergeConfigDrive = Prelude.fun(
             (VmHostAgentConfiguration vmHostAgentConfig, TypedPsObject<VirtualMachineInfo> vmInfo, VMStorageSettings storageSettings, VMHostMachineData hostInfo, CatletConfig config) =>
-                VirtualMachine.ConvergeConfigDrive(vmHostAgentConfig, hostSettings, hostInfo, Engine, ProgressMessage, vmInfo, config,
+                VirtualMachine.ConvergeConfigDrive(vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfo, config,
                     command.MachineMetadata, command.MachineNetworkSettings, storageSettings));
 
 
@@ -57,7 +57,7 @@ internal class UpdateConfigDriveCommandHandler :
             from vmList in GetVmInfo(vmId, Engine)
             from vmInfo in EnsureSingleEntry(vmList, vmId)
             from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
-            from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, hostSettings, vmInfo).WriteTrace()
+            from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
                 .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
             
             let mergedConfig = fodderConfig.GeneticInheritance(metadata.ParentConfig)

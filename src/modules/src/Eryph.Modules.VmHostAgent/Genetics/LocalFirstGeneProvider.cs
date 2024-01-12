@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Resources;
 using LanguageExt;
@@ -17,20 +18,28 @@ namespace Eryph.Modules.VmHostAgent.Genetics
     {
         private readonly IGenePoolFactory _genepoolFactory;
         private readonly ILogger _log;
+        private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
-        public LocalFirstGeneProvider(IGenePoolFactory genepoolFactory, ILogger log)
+        public LocalFirstGeneProvider(
+            IGenePoolFactory genepoolFactory,
+            ILogger log,
+            IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
         {
             _genepoolFactory = genepoolFactory;
             _log = log;
+            _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
-        public EitherAsync<Error, PrepareGeneResponse> ProvideGene(GeneIdentifier geneIdentifier, Func<string, int, Task<Unit>> reportProgress, CancellationToken cancel)
+        public EitherAsync<Error, PrepareGeneResponse> ProvideGene(
+            GeneIdentifier geneIdentifier,
+            Func<string, int, Task<Unit>> reportProgress,
+            CancellationToken cancel)
         {
             var hostSettings = HostSettingsBuilder.GetHostSettings();
 
-            var path = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "genepool");
-
-            return from genesetInfo in ProvideGeneSet(path, geneIdentifier.GeneSet, reportProgress, Array.Empty<string>(), cancel)
+            return from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+                let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
+                from genesetInfo in ProvideGeneSet(genePoolPath, geneIdentifier.GeneSet, reportProgress, Array.Empty<string>(), cancel)
                     .Map(i =>
                     {
                         if (i.Id.Name != geneIdentifier.GeneSet.Name)
@@ -46,19 +55,21 @@ namespace Eryph.Modules.VmHostAgent.Genetics
                     RequestedGene = geneIdentifier.Name,
                     ResolvedGene = ensuredGene.Name
                 };
-
         }
 
-        public EitherAsync<Error, Option<string>> GetGeneSetParent(GeneSetIdentifier genesetIdentifier, Func<string, int, Task<Unit>> reportProgress, CancellationToken cancellationToken)
+        public EitherAsync<Error, Option<string>> GetGeneSetParent(
+            GeneSetIdentifier genesetIdentifier,
+            Func<string, int, Task<Unit>> reportProgress,
+            CancellationToken cancellationToken)
         {
             var hostSettings = HostSettingsBuilder.GetHostSettings();
-            var path = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "genepool");
 
-            return from genesetInfo in ProvideGeneSet(path, genesetIdentifier, reportProgress,Array.Empty<string>(), cancellationToken)
-                select string.IsNullOrWhiteSpace(genesetInfo.MetaData.Parent)
-                    ? Option<string>.None
-                    : Option<string>.Some(genesetInfo.MetaData.Parent);
-
+            return from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+                   let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
+                   from genesetInfo in ProvideGeneSet(genePoolPath, genesetIdentifier, reportProgress,Array.Empty<string>(), cancellationToken)
+                   select string.IsNullOrWhiteSpace(genesetInfo.MetaData.Parent) 
+                       ? Option<string>.None 
+                       : Option<string>.Some(genesetInfo.MetaData.Parent);
         }
 
         private static EitherAsync<Error, string> GetGeneHash(GeneSetInfo genesetInfo, GeneIdentifier geneId)

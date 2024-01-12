@@ -36,7 +36,7 @@ namespace Eryph.VmManagement.Converging
                     from _ in SetVMCheckpointType(vmInfo, CheckpointType.Disabled, Context.Engine)
                     //make a plan
                     from plannedDriveStorageSettings in VMDriveStorageSettings
-                        .PlanDriveStorageSettings(Context.VmHostAgentConfig, Context.HostSettings, Context.Config, Context.StorageSettings) 
+                        .PlanDriveStorageSettings(Context.VmHostAgentConfig, Context.Config, Context.StorageSettings) 
                     //ensure that the changes reflect the current VM settings
                     from infoReloaded in vmInfo.Reload(Context.Engine)
                     //detach removed disks
@@ -65,7 +65,7 @@ namespace Eryph.VmManagement.Converging
                 .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
             return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine,
-                    Context.VmHostAgentConfig, Context.HostSettings, vmInfo.GetList(x=>x.HardDrives))
+                    Context.VmHostAgentConfig, vmInfo.GetList(x=>x.HardDrives))
                 from _ in plannedDiskSettings.MapToEitherAsync(s => VirtualDisk(s, vmInfo, currentDiskSettings).ToEither()).ToAsync()
                 select Unit.Default);
         }
@@ -98,7 +98,7 @@ namespace Eryph.VmManagement.Converging
 
         {
             return from currentDiskSettings in CurrentHardDiskDriveStorageSettings
-                    .Detect(Context.Engine, Context.VmHostAgentConfig, Context.HostSettings, vmInfo.GetList(x => x.HardDrives))
+                    .Detect(Context.Engine, Context.VmHostAgentConfig, vmInfo.GetList(x => x.HardDrives))
                 from _ in DetachUndefinedHardDrives(vmInfo, plannedStorageSettings, currentDiskSettings)
                 from __ in DetachUndefinedDvdDrives(vmInfo, plannedStorageSettings)
                 select Unit.Default;

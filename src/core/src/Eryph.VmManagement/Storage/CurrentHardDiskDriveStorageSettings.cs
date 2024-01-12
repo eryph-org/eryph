@@ -17,12 +17,11 @@ namespace Eryph.VmManagement.Storage
         public static EitherAsync<Error, Seq<CurrentHardDiskDriveStorageSettings>> Detect(
             IPowershellEngine engine,
             VmHostAgentConfiguration vmHostAgentConfig,
-            HostSettings hostSettings,
             IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> hdInfos)
         {
             var r = hdInfos
                 .ToSeq().MapToEitherAsync(hdInfo => 
-                    Detect(engine, vmHostAgentConfig, hostSettings, 
+                    Detect(engine, vmHostAgentConfig, 
                     hdInfo.Cast<HardDiskDriveInfo>()).ToEither())
                 .ToAsync()
                 .Map(x => x.Where(o => o.IsSome)
@@ -34,7 +33,6 @@ namespace Eryph.VmManagement.Storage
         public static EitherAsync<Error, Option<CurrentHardDiskDriveStorageSettings>> Detect(
             IPowershellEngine engine,
             VmHostAgentConfiguration vmHostAgentConfig,
-            HostSettings hostSettings,
             HardDiskDriveInfo hdInfo)
         {
             return Prelude.Cond<HardDiskDriveInfo>(h => !string.IsNullOrWhiteSpace(h.Path))(hdInfo).Map(hd =>
@@ -42,7 +40,7 @@ namespace Eryph.VmManagement.Storage
                 from snapshotInfo in VhdQuery.GetSnapshotAndActualVhd(engine, vhdInfo).ToAsync()
                 let vhdPath = snapshotInfo.ActualVhd.Map(vhd => vhd.Value.Path).IfNone(hdInfo.Path)
                 let snapshotPath = snapshotInfo.SnapshotVhd.Map(vhd => vhd.Value.Path)
-                from optionalDiskSettings in DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, hostSettings, vhdPath).ToAsync()
+                from optionalDiskSettings in DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, vhdPath).ToAsync()
                 from diskSettings in optionalDiskSettings.ToEither(new PowershellFailure
                     {Message = "Missing disk settings for existing disk. Should not happen."}).ToAsync()
                 select

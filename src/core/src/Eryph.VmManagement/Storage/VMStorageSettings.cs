@@ -24,10 +24,8 @@ namespace Eryph.VmManagement.Storage
 
         public static EitherAsync<Error, Option<VMStorageSettings>> FromVM(
             VmHostAgentConfiguration vmHostAgentConfig,
-            HostSettings hostSettings,
             TypedPsObject<VirtualMachineInfo> vm)
         {
-
             var (names, storageIdentifier) = StorageNames.FromVmPath(vm.Value.Path, vmHostAgentConfig);
 
             async Task<VMStorageSettings> FromVMAsync()
@@ -63,8 +61,7 @@ namespace Eryph.VmManagement.Storage
 
         public static EitherAsync<Error, VMStorageSettings> FromCatletConfig(
             CatletConfig config,
-            VmHostAgentConfiguration vmHostAgentConfig,
-            HostSettings hostSettings)
+            VmHostAgentConfiguration vmHostAgentConfig)
         {
             var projectName = Prelude.Some(string.IsNullOrWhiteSpace(config.Project) 
                 ? "default": config.Project);
@@ -98,12 +95,11 @@ namespace Eryph.VmManagement.Storage
 
         public static EitherAsync<Error, VMStorageSettings> Plan(
             VmHostAgentConfiguration vmHostAgentConfig,
-            HostSettings hostSettings,
             string newStorageId,
             CatletConfig config,
             Option<VMStorageSettings> currentStorageSettings)
         {
-            return FromCatletConfig(config, vmHostAgentConfig, hostSettings).Bind(newSettings =>
+            return FromCatletConfig(config, vmHostAgentConfig).Bind(newSettings =>
                 currentStorageSettings.Match(
                     None: () => EnsureStorageId(newStorageId, newSettings).ToError().ToAsync(),
                     Some: currentSettings => EnsureStorageId(newStorageId, newSettings, currentSettings)

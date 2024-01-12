@@ -41,8 +41,8 @@ internal class ImportCatletVMCommandHandler :
 
         var hostSettings = HostSettingsBuilder.GetHostSettings();
 
-        var planStorageSettings = Prelude.fun((VmHostAgentConfiguration vmAgentConfig) =>
-            VMStorageSettings.Plan(vmAgentConfig, hostSettings, LongToString(command.StorageId), config,
+        var planStorageSettings = Prelude.fun((VmHostAgentConfiguration vmHostAgentConfig) =>
+            VMStorageSettings.Plan(vmHostAgentConfig, LongToString(command.StorageId), config,
                 Option<VMStorageSettings>.None));
 
         var getTemplate = Prelude.fun(() =>
@@ -61,7 +61,7 @@ internal class ImportCatletVMCommandHandler :
             from template in getTemplate()
             from importedVM in importVM(plannedStorageSettings, template)
             from metadata in createMetadata(importedVM, template)
-            from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, hostSettings, importedVM, _hostInfoProvider)
+            from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, importedVM, _hostInfoProvider)
             select new ConvergeCatletResult
             {
                 Inventory = inventory,

@@ -22,7 +22,6 @@ namespace Eryph.VmManagement.Storage
 
         public static Option<DiskStorageSettings> FromSourceString(
             VmHostAgentConfiguration vmHostAgentConfig,
-            HostSettings hostSettings,
             string templateString)
         {
             if (!templateString.StartsWith("gene:"))
@@ -53,7 +52,7 @@ namespace Eryph.VmManagement.Storage
                 diskName = parts[2];
             }
 
-            var geneDiskPath = System.IO.Path.Combine(hostSettings.DefaultVirtualHardDiskPath,
+            var geneDiskPath = System.IO.Path.Combine(vmHostAgentConfig.Defaults.Volumes,
                 "genepool", genesetName, "volumes", $"{diskName}.vhdx");
             var (geneDiskStorageNames, geneDiskStorageIdentifier) = StorageNames.FromVhdPath(geneDiskPath, vmHostAgentConfig);
 
@@ -71,7 +70,6 @@ namespace Eryph.VmManagement.Storage
         public static Task<Either<PowershellFailure, Option<DiskStorageSettings>>> FromVhdPath(
             IPowershellEngine engine,
             VmHostAgentConfiguration vmHostAgentConfig,
-            HostSettings hostSettings,
             Option<string> optionalPath)
         {
             return optionalPath.Map(path => from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path).ToAsync()
@@ -82,7 +80,7 @@ namespace Eryph.VmManagement.Storage
                 let parentPath = string.IsNullOrWhiteSpace(vhdInfo.Value.ParentPath)
                     ? Option<string>.None
                     : Option<string>.Some(vhdInfo.Value.ParentPath)
-                from parentSettings in FromVhdPath(engine, vmHostAgentConfig, hostSettings, parentPath).ToAsync()
+                from parentSettings in FromVhdPath(engine, vmHostAgentConfig, parentPath).ToAsync()
                 select
                     new DiskStorageSettings
                     {

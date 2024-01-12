@@ -14,7 +14,6 @@ namespace Eryph.VmManagement.Converging
         public readonly CatletConfig Config;
         public readonly IPowershellEngine Engine;
         public readonly VmHostAgentConfiguration VmHostAgentConfig;
-        public readonly HostSettings HostSettings;
         public readonly Func<string, Task> ReportProgress;
         public readonly VMStorageSettings StorageSettings;
         public readonly VMHostMachineData HostInfo;
@@ -23,7 +22,6 @@ namespace Eryph.VmManagement.Converging
 
         public ConvergeContext(
             VmHostAgentConfiguration vmHostAgentConfig,
-            HostSettings hostSettings,
             IPowershellEngine engine,
             Func<string, Task> reportProgress,
             CatletConfig config,
@@ -33,7 +31,6 @@ namespace Eryph.VmManagement.Converging
             VMHostMachineData hostInfo)
         {
             VmHostAgentConfig = vmHostAgentConfig;
-            HostSettings = hostSettings;
             Engine = engine;
             ReportProgress = reportProgress;
             Config = config;
