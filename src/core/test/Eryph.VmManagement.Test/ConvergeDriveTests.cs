@@ -32,7 +32,7 @@ namespace Eryph.VmManagement.Test
             {
                 DefaultVhdPath = @"x:\disks\abc",
                 StorageIdentifier = "abc",
-                StorageNames = StorageNames.FromPath(@"x:\data\eryph\abc", _fixture.VmHostAgentConfiguration, @"x:\data\eryph\").Names
+                StorageNames = StorageNames.FromVmPath(@"x:\data\eryph\abc", _fixture.VmHostAgentConfiguration).Names
             };
 
 
@@ -111,7 +111,7 @@ namespace Eryph.VmManagement.Test
             {
                 DefaultVhdPath = @"x:\disks\abc",
                 StorageIdentifier = "abc",
-                StorageNames = StorageNames.FromPath(@"x:\data\eryph\abc", _fixture.VmHostAgentConfiguration,@"x:\data\eryph\").Names
+                StorageNames = StorageNames.FromVmPath(@"x:\data\eryph\abc", _fixture.VmHostAgentConfiguration).Names
             };
 
 

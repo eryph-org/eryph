@@ -72,10 +72,9 @@ namespace Eryph.VmManagement.Storage
 
 
             return
-                (from resolvedPath in names.ResolveStorageBasePath(vmHostAgentConfig, hostSettings.DefaultVirtualHardDiskPath)
-                    from identifier in storageIdentifier.ToEither(
+                (from resolvedPath in names.ResolveVolumeStorageBasePath(vmHostAgentConfig)
+                    from identifier in storageIdentifier.ToEitherAsync(
                         Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
-                        .ToAsync()
                     let planned = new HardDiskDriveStorageSettings
                     {
                         Type = CatletDriveType.VHD,

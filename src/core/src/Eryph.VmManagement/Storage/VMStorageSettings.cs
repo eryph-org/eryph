@@ -28,14 +28,13 @@ namespace Eryph.VmManagement.Storage
             TypedPsObject<VirtualMachineInfo> vm)
         {
 
-            var (names, storageIdentifier) = StorageNames.FromPath(vm.Value.Path, vmHostAgentConfig, hostSettings.DefaultDataPath);
+            var (names, storageIdentifier) = StorageNames.FromVmPath(vm.Value.Path, vmHostAgentConfig);
 
             async Task<VMStorageSettings> FromVMAsync()
             {
                 return await
-                    (from resolvedPath in names.
-                            ResolveStorageBasePath(vmHostAgentConfig, hostSettings.DefaultDataPath)
-                        from importVhdPath in names.ResolveStorageBasePath(vmHostAgentConfig, hostSettings.DefaultVirtualHardDiskPath)
+                    (from resolvedPath in names.ResolveVmStorageBasePath(vmHostAgentConfig)
+                        from importVhdPath in names.ResolveVolumeStorageBasePath(vmHostAgentConfig)
                         from storageSettings in ComparePath(resolvedPath, vm.Value.Path,
                             storageIdentifier)
 
@@ -85,8 +84,8 @@ namespace Eryph.VmManagement.Storage
             if (!string.IsNullOrWhiteSpace(config.Location))
                 storageIdentifier = Prelude.Some(config.Location);
 
-            return from dataPath in  names.ResolveStorageBasePath(vmHostAgentConfig, hostSettings.DefaultDataPath)
-                   from importVhdPath in names.ResolveStorageBasePath(vmHostAgentConfig, hostSettings.DefaultVirtualHardDiskPath)
+            return from dataPath in  names.ResolveVmStorageBasePath(vmHostAgentConfig)
+                   from importVhdPath in names.ResolveVolumeStorageBasePath(vmHostAgentConfig)
                    select new VMStorageSettings
                 {
                     StorageNames = names,

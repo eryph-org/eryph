@@ -49,7 +49,7 @@ namespace Eryph.Modules.VmHostAgent
                         command.MachineMetadata, command.MachineNetworkSettings, storageSettings));
 
             return
-                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration()
+                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                 from hostInfo in _hostInfoProvider.GetHostInfoAsync(true).WriteTrace()
                 from vmList in GetVmInfo(vmId, Engine)
                 from vmInfo in EnsureSingleEntry(vmList, vmId)

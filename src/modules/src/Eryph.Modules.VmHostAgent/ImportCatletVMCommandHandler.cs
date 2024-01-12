@@ -56,7 +56,7 @@ internal class ImportCatletVMCommandHandler :
                 CreateMetadata(Engine, plannedVM, vmInfo, config, command.NewMachineId));
 
         return
-            from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration()
+            from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
             from plannedStorageSettings in planStorageSettings(vmHostAgentConfig)
             from template in getTemplate()
             from importedVM in importVM(plannedStorageSettings, template)

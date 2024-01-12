@@ -960,8 +960,10 @@ internal static class Program
 
     private static async Task<int> GetAgentSettings(FileSystemInfo? outFile)
     {
+        var hostSettings = HostSettingsBuilder.GetHostSettings();
         var manager = new VmHostAgentConfigurationManager();
-        return await manager.GetCurrentConfigurationYaml()
+
+        return await manager.GetCurrentConfigurationYaml(hostSettings)
             .MatchAsync(
                 async config =>
                 {
@@ -1014,14 +1016,17 @@ internal static class Program
             configString = await textReader.ReadToEndAsync();
         }
 
+        var hostSettings = HostSettingsBuilder.GetHostSettings();
         var manager = new VmHostAgentConfigurationManager();
-        return await manager.SaveConfigurationYaml(configString)
-            .Match(_ => 0,
-                error =>
-                {
-                    Console.WriteLine(error.Message);
-                    return -1;
-                });
+        return await Prelude.match(from config in manager.ParseConfigurationYaml(configString).ToAsync()
+                             from _ in manager.SaveConfiguration(config, hostSettings)
+                             select Unit.Default,
+               Right: _ => 0,
+               Left: error =>
+               {
+                   Console.WriteLine(error.Message);
+                   return -1;
+               });
     }
 
     private static async Task<int> GetNetworks(FileSystemInfo? outFile)

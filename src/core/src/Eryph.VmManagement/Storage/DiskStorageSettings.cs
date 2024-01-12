@@ -27,8 +27,7 @@ namespace Eryph.VmManagement.Storage
         {
             if (!templateString.StartsWith("gene:"))
             {
-                var (storageNames, storageIdentifier) = StorageNames.FromPath(templateString,
-                    vmHostAgentConfig, hostSettings.DefaultVirtualHardDiskPath);
+                var (storageNames, storageIdentifier) = StorageNames.FromVhdPath(templateString, vmHostAgentConfig);
                 return new DiskStorageSettings
                 {
                     StorageNames = storageNames,
@@ -56,8 +55,7 @@ namespace Eryph.VmManagement.Storage
 
             var geneDiskPath = System.IO.Path.Combine(hostSettings.DefaultVirtualHardDiskPath,
                 "genepool", genesetName, "volumes", $"{diskName}.vhdx");
-            var (geneDiskStorageNames, geneDiskStorageIdentifier) = StorageNames.FromPath(geneDiskPath,
-                vmHostAgentConfig, hostSettings.DefaultVirtualHardDiskPath);
+            var (geneDiskStorageNames, geneDiskStorageIdentifier) = StorageNames.FromVhdPath(geneDiskPath, vmHostAgentConfig);
 
             return new DiskStorageSettings
             {
@@ -79,8 +77,8 @@ namespace Eryph.VmManagement.Storage
             return optionalPath.Map(path => from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path).ToAsync()
                 from vhdInfo in optionalVhdInfo.ToEither(new PowershellFailure {Message = "Failed to read VHD "})
                     .ToAsync()
-                let nameAndId = StorageNames.FromPath(System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
-                    vmHostAgentConfig, hostSettings.DefaultVirtualHardDiskPath)
+                let nameAndId = StorageNames.FromVhdPath(System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
+                    vmHostAgentConfig)
                 let parentPath = string.IsNullOrWhiteSpace(vhdInfo.Value.ParentPath)
                     ? Option<string>.None
                     : Option<string>.Some(vhdInfo.Value.ParentPath)

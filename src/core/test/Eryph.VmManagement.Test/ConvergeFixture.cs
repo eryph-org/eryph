@@ -24,7 +24,14 @@ public class ConvergeFixture
 
         NetworkSettings = Array.Empty<MachineNetworkSettings>();
         HostInfo = new VMHostMachineData();
-        VmHostAgentConfiguration = new VmHostAgentConfiguration();
+        VmHostAgentConfiguration = new VmHostAgentConfiguration()
+        {
+            Defaults = new()
+            {
+                Vms = "x:\\data",
+                Volumes = "x:\\disks",
+            },
+        };
     }
 
     public VMStorageSettings StorageSettings { get; set; }

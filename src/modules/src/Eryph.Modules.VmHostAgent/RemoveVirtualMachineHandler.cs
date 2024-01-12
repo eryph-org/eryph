@@ -36,7 +36,7 @@ namespace Eryph.Modules.VmHostAgent
             var hostSettings = HostSettingsBuilder.GetHostSettings();
 
 
-            return (from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration()
+            return (from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                 from storageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, hostSettings, vmInfo)
                 from stoppedVM in vmInfo.StopIfRunning(engine).ToAsync().ToError()
                 from uRemovePorts in _ovsPortManager.SyncPorts(vmInfo, VMPortChange.Remove)

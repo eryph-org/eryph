@@ -1,11 +1,13 @@
-﻿namespace Eryph.Core.VmAgent;
+﻿using System;
+
+namespace Eryph.Core.VmAgent;
 
 public class VmHostAgentConfiguration
 {
-    public VmHostAgentEnvironmentConfiguration[] Environments { get; set; }
+    public VmHostAgentDefaultsConfiguration Defaults { get; init; } = new();
 
-    public const string DefaultConfig = @"
-environments:
-";
+    public VmHostAgentDataStoreConfiguration[] Datastores { get; init; } = Array.Empty<VmHostAgentDataStoreConfiguration>();
+
+    public VmHostAgentEnvironmentConfiguration[] Environments { get; init; } = Array.Empty<VmHostAgentEnvironmentConfiguration>();
 }
 

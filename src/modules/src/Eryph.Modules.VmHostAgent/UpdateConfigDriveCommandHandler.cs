@@ -52,7 +52,7 @@ internal class UpdateConfigDriveCommandHandler :
 
 
         return
-            from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration()
+            from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
             from hostInfo in _hostInfoProvider.GetHostInfoAsync().WriteTrace()
             from vmList in GetVmInfo(vmId, Engine)
             from vmInfo in EnsureSingleEntry(vmList, vmId)

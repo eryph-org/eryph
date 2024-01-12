@@ -2,8 +2,8 @@
 {
     public class VmHostAgentDataStoreConfiguration
     {
-        public string Name { get; set; }
+        public string Name { get; init; } = string.Empty;
 
-        public string Path { get; set; }
+        public string Path { get; init; } = string.Empty;
     }
 }

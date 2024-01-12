@@ -53,7 +53,7 @@ namespace Eryph.Modules.VmHostAgent
                     CreateMetadata(parentConfig, vmInfo, config, command.NewMachineId));
 
             return
-                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration()
+                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                 from plannedStorageSettings in VMStorageSettings.Plan(vmHostAgentConfig, hostSettings, LongToString(command.StorageId), config,
                     Option<VMStorageSettings>.None)
                 from parentConfig in getParentConfig()
