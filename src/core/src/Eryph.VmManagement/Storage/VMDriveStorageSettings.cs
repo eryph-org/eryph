@@ -23,7 +23,9 @@ namespace Eryph.VmManagement.Storage
         }
 
         public static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
-            VmHostAgentConfiguration vmHostAgentConfig, VMStorageSettings storageSettings, CatletDriveConfig driveConfig,
+            VmHostAgentConfiguration vmHostAgentConfig,
+            VMStorageSettings storageSettings,
+            CatletDriveConfig driveConfig,
             int index)
         {
             const int
@@ -60,8 +62,10 @@ namespace Eryph.VmManagement.Storage
 
             var projectName = storageSettings.StorageNames.ProjectName;
             var environmentName = storageSettings.StorageNames.EnvironmentName;
-            var dataStoreName = storageSettings.StorageNames.DataStoreName;
-            var storageIdentifier = storageSettings.StorageIdentifier;
+            var dataStoreName = Prelude.Optional(driveConfig.Store).Filter(Prelude.notEmpty).IfNone("default");
+            var storageIdentifier = Prelude.Optional(driveConfig.Location).Filter(Prelude.notEmpty).Match(
+                Some: s => s,
+                None: storageSettings.StorageIdentifier);
 
             var names = new StorageNames
             {
@@ -78,7 +82,7 @@ namespace Eryph.VmManagement.Storage
                     let planned = new HardDiskDriveStorageSettings
                     {
                         Type = CatletDriveType.VHD,
-                        AttachPath = Path.Combine(Path.Combine(resolvedPath, identifier), $"{driveConfig.Name}.vhdx"),
+                        AttachPath = Path.Combine(resolvedPath, identifier, $"{driveConfig.Name}.vhdx"),
                         DiskSettings = new DiskStorageSettings
                         {
                             StorageNames = names,
@@ -89,8 +93,8 @@ namespace Eryph.VmManagement.Storage
                                     : DiskStorageSettings
                                         .FromSourceString(vmHostAgentConfig, driveConfig.Source),
                             Path = Path.Combine(resolvedPath, identifier),
-                            FileName = $"{driveConfig.Name}.vhdx",
                             // ReSharper disable once StringLiteralTypo
+                            FileName = $"{driveConfig.Name}.vhdx",
                             Name = driveConfig.Name,
                             SizeBytesCreate = driveConfig.Size.ToOption().Match(None: () => 1 * 1024L * 1024 * 1024,
                                 Some: s => s * 1024L * 1024 * 1024),
