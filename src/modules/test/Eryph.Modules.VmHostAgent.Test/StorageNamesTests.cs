@@ -1,6 +1,7 @@
 ﻿using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Storage;
 using FluentAssertions;
+using FluentAssertions.LanguageExt;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
 using Xunit;
@@ -86,18 +87,11 @@ namespace Eryph.Modules.VmHostAgent.Test
             string expectedIdentifier)
         {
             var (names, storageIdentifier) = StorageNames.FromVmPath(path, _vmHostAgentConfiguration);
-
-            names.EnvironmentName.IsSome.Should().Be(true);
-            names.DataStoreName.IsSome.Should().Be(true);
-            names.ProjectName.IsSome.Should().Be(true);
-            storageIdentifier.IsSome.Should().Be(true);
-
             
-            names.EnvironmentName.ValueUnsafe().Should().Be(expectedEnvironment);
-            names.DataStoreName.ValueUnsafe().Should().Be(expectedDataStore);
-            names.ProjectName.ValueUnsafe().Should().Be(expectedProject);
-
-            storageIdentifier.ValueUnsafe().Should().Be(expectedIdentifier);
+            names.EnvironmentName.Should().BeSome(expectedEnvironment);
+            names.DataStoreName.Should().BeSome(expectedDataStore);
+            names.ProjectName.Should().BeSome(expectedProject);
+            storageIdentifier.Should().BeSome(expectedIdentifier);
         }
 
         [Theory]
@@ -113,10 +107,10 @@ namespace Eryph.Modules.VmHostAgent.Test
         {
             var (names, storageIdentifier) = StorageNames.FromVmPath(path, _vmHostAgentConfiguration);
 
-            names.EnvironmentName.IsNone.Should().Be(true);
-            names.DataStoreName.IsNone.Should().Be(true);
-            names.ProjectName.IsNone.Should().Be(true);
-            storageIdentifier.IsNone.Should().Be(true);
+            names.EnvironmentName.Should().BeNone();
+            names.DataStoreName.Should().BeNone();
+            names.ProjectName.Should().BeNone();
+            storageIdentifier.Should().BeNone();
         }
 
         [Theory]
@@ -127,7 +121,7 @@ namespace Eryph.Modules.VmHostAgent.Test
         [InlineData(@"x:\scratch\test\p_TestProject\A6RKKLNZNSOW", "default", "scratch", "testproject", "A6RKKLNZNSOW")]
         [InlineData(@"x:\qa\test\volumes\A6RKKLNZNSOW", "qa", "default", "default", "A6RKKLNZNSOW")]
         [InlineData(@"x:\qa\test\volumes\p_TestProject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
-        [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "luster", "default", "A6RKKLNZNSOW")]
+        [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "cluster", "default", "A6RKKLNZNSOW")]
         [InlineData(@"x:\qa\cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
         [InlineData(@"x:\\default\test\volumes\eryph\genepool\testorg\testgene\testversion\volumes\test.vhdx", "default", "default", "default", "gene:testorg/testgene/testversion:test")]
         public void FromVhdPath_ValidPath_ReturnsStorageNames(
@@ -139,16 +133,10 @@ namespace Eryph.Modules.VmHostAgent.Test
         {
             var (names, storageIdentifier) = StorageNames.FromVhdPath(path, _vmHostAgentConfiguration);
 
-            names.ProjectName.IsSome.Should().Be(true);
-            names.EnvironmentName.IsSome.Should().Be(true);
-            names.DataStoreName.IsSome.Should().Be(true);
-            storageIdentifier.IsSome.Should().Be(true);
-
-            names.EnvironmentName.ValueUnsafe().Should().Be(expectedEnvironment);
-            names.DataStoreName.ValueUnsafe().Should().Be(expectedDataStore);
-            names.ProjectName.ValueUnsafe().Should().Be(expectedProject);
-
-            storageIdentifier.ValueUnsafe().Should().Be(expectedIdentifier);
+            names.EnvironmentName.Should().BeSome(expectedEnvironment);
+            names.DataStoreName.Should().BeSome(expectedDataStore);
+            names.ProjectName.Should().BeSome(expectedProject);
+            storageIdentifier.Should().BeSome(expectedIdentifier);
         }
 
         [Theory]
@@ -164,10 +152,10 @@ namespace Eryph.Modules.VmHostAgent.Test
         {
             var (names, storageIdentifier) = StorageNames.FromVhdPath(path, _vmHostAgentConfiguration);
 
-            names.EnvironmentName.IsNone.Should().Be(true);
-            names.DataStoreName.IsNone.Should().Be(true);
-            names.ProjectName.IsNone.Should().Be(true);
-            storageIdentifier.IsNone.Should().Be(true);
+            names.EnvironmentName.Should().BeNone();
+            names.DataStoreName.Should().BeNone();
+            names.ProjectName.Should().BeNone();
+            storageIdentifier.Should().BeNone();
         }
 
         [Theory]
@@ -196,8 +184,7 @@ namespace Eryph.Modules.VmHostAgent.Test
 
             var result = await storageNames.ResolveVmStorageBasePath(_vmHostAgentConfiguration);
 
-            result.IsRight.Should().BeTrue();
-            result.ValueUnsafe().Should().Be(expectedPath);
+            result.Should().BeRight().Which.Should().Be(expectedPath);
         }
 
         [Fact]
@@ -212,8 +199,7 @@ namespace Eryph.Modules.VmHostAgent.Test
 
             var result = await storageNames.ResolveVmStorageBasePath(_vmHostAgentConfiguration);
 
-            result.IsRight.Should().BeFalse();
-            result.IfLeft(e => e.Message.Should().Be("The environment missing-environment is not configured"));
+            result.Should().BeLeft().Which.Message.Should().Be("The environment missing-environment is not configured");
         }
 
         [Fact]
@@ -228,8 +214,7 @@ namespace Eryph.Modules.VmHostAgent.Test
 
             var result = await storageNames.ResolveVmStorageBasePath(_vmHostAgentConfiguration);
 
-            result.IsRight.Should().BeFalse();
-            result.IfLeft(e => e.Message.Should().Be("The datastore missing-datastore is not configured"));
+            result.Should().BeLeft().Which.Message.Should().Be("The datastore missing-datastore is not configured");
         }
 
         [Theory]
@@ -257,8 +242,8 @@ namespace Eryph.Modules.VmHostAgent.Test
             };
 
             var result = await storageNames.ResolveVolumeStorageBasePath(_vmHostAgentConfiguration);
-            result.IsRight.Should().BeTrue();
-            result.ValueUnsafe().Should().Be(expectedPath);
+            
+            result.Should().BeRight().Which.Should().Be(expectedPath);
         }
 
         [Fact]
@@ -273,8 +258,7 @@ namespace Eryph.Modules.VmHostAgent.Test
 
             var result = await storageNames.ResolveVolumeStorageBasePath(_vmHostAgentConfiguration);
 
-            result.IsRight.Should().BeFalse();
-            result.IfLeft(e => e.Message.Should().Be("The environment missing-environment is not configured"));
+            result.Should().BeLeft().Which.Message.Should().Be("The environment missing-environment is not configured");
         }
 
         [Fact]
@@ -289,8 +273,7 @@ namespace Eryph.Modules.VmHostAgent.Test
 
             var result = await storageNames.ResolveVolumeStorageBasePath(_vmHostAgentConfiguration);
 
-            result.IsRight.Should().BeFalse();
-            result.IfLeft(e => e.Message.Should().Be("The datastore missing-datastore is not configured"));
+            result.Should().BeLeft().Which.Message.Should().Be("The datastore missing-datastore is not configured");
         }
     }
 }
