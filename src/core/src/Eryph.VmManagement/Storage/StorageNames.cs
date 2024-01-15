@@ -122,7 +122,7 @@ namespace Eryph.VmManagement.Storage
             return from genePath in GetContainedPath("genepool", relativePath)
                    let geneDirectory = Path.GetDirectoryName(genePath)
                    let genePathParts = geneDirectory.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
-                   where genePathParts.Length == 4
+                   where genePathParts.Length == 4 && string.Equals(genePathParts[3], "volumes", StringComparison.OrdinalIgnoreCase)
                    select $"gene:{genePathParts[0]}/{genePathParts[1]}/{genePathParts[2]}:{Path.GetFileNameWithoutExtension(genePath)}";
         }
 
