@@ -142,23 +142,23 @@ namespace Eryph.VmManagement.Storage
             string environment,
             VmHostAgentConfiguration vmHostAgentConfig)
         {
-            var bla = Prelude.RightAsync<Error, string>("abc");
-
-            return from envConfig in environment == "default"
-                ? Prelude.Right(new VmHostAgentEnvironmentConfiguration()
-                {
-                    Defaults = vmHostAgentConfig.Defaults,
-                    Datastores = vmHostAgentConfig.Datastores,
-                    Name = "default",
-                })
-                : Prelude.Optional(vmHostAgentConfig.Environments.FirstOrDefault(e => e.Name == environment))
-                    .ToEither(Error.New($"The environment {environment} is not configured"))
-            from datastorePaths in dataStore == "default"
-                ? Prelude.Right((envConfig.Defaults.Vms, envConfig.Defaults.Volumes))
-                : from datastoreConfig in envConfig.Datastores.Where(ds => ds.Name == dataStore)
+            return dataStore == "default"
+                ? from defaults in environment == "default"
+                    ? vmHostAgentConfig.Defaults
+                    : from envConfig in vmHostAgentConfig.Environments.Where(e => e.Name == environment)
+                        .HeadOrLeft(Error.New($"The environment {environment} is not configured"))
+                      select envConfig.Defaults
+                  select (defaults.Vms, defaults.Volumes)
+                : from defaultDatastoreConfig in vmHostAgentConfig.Datastores.Where(ds => ds.Name == dataStore)
                     .HeadOrLeft(Error.New($"The datastore {dataStore} is not configured"))
-                  select (datastoreConfig.Path, datastoreConfig.Path)
-            select datastorePaths;
+                  let datastoreConfig = environment == "default"
+                        ? defaultDatastoreConfig
+                        : Prelude.match(from envConfig in vmHostAgentConfig.Environments
+                        where envConfig.Name == environment
+                        from envDsConfig in envConfig.Datastores
+                        where envDsConfig.Name == dataStore
+                        select envDsConfig, Empty: () => defaultDatastoreConfig, More: l => l.Head)
+                  select (datastoreConfig.Path, datastoreConfig.Path);
         }
 
 

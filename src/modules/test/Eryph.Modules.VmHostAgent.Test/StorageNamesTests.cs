@@ -20,12 +20,12 @@ namespace Eryph.Modules.VmHostAgent.Test
             {
                 new VmHostAgentDataStoreConfiguration()
                 {
-                    Name = "test-cluster",
+                    Name = "cluster",
                     Path = @"x:\cluster\test"
                 },
                 new VmHostAgentDataStoreConfiguration()
                 {
-                    Name = "test-scratch",
+                    Name = "scratch",
                     Path = @"x:\scratch\test"
                 }
             },
@@ -43,7 +43,7 @@ namespace Eryph.Modules.VmHostAgent.Test
                     {
                         new VmHostAgentDataStoreConfiguration()
                         {
-                            Name = "prod-cluster",
+                            Name = "cluster",
                             Path = @"x:\prod\cluster\test"
                         },
                     }
@@ -60,7 +60,7 @@ namespace Eryph.Modules.VmHostAgent.Test
                     {
                         new VmHostAgentDataStoreConfiguration()
                         {
-                            Name = "qa-cluster",
+                            Name = "cluster",
                             Path = @"x:\qa\cluster\test"
                         },
                     }
@@ -72,12 +72,12 @@ namespace Eryph.Modules.VmHostAgent.Test
         [InlineData(@"x:\default\test\vms\eryph\A6RKKLNZNSOW", "default", "default", "default", "A6RKKLNZNSOW")]
         [InlineData(@"x:\default\test\vms\eryph\A6RKKLNZNSOW\test.file", "default", "default", "default", "A6RKKLNZNSOW")]
         [InlineData(@"x:\default\test\vms\eryph\p_TestProject\A6RKKLNZNSOW", "default", "default", "testproject", "A6RKKLNZNSOW")]
-        [InlineData(@"x:\scratch\test\A6RKKLNZNSOW", "default", "test-scratch", "default", "A6RKKLNZNSOW")]
-        [InlineData(@"x:\scratch\test\p_TestProject\A6RKKLNZNSOW", "default", "test-scratch", "testproject", "A6RKKLNZNSOW")]
+        [InlineData(@"x:\scratch\test\A6RKKLNZNSOW", "default", "scratch", "default", "A6RKKLNZNSOW")]
+        [InlineData(@"x:\scratch\test\p_TestProject\A6RKKLNZNSOW", "default", "scratch", "testproject", "A6RKKLNZNSOW")]
         [InlineData(@"x:\qa\test\vms\A6RKKLNZNSOW", "qa", "default", "default", "A6RKKLNZNSOW")]
         [InlineData(@"x:\qa\test\vms\p_TestProject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
-        [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "qa-cluster", "default", "A6RKKLNZNSOW")]
-        [InlineData(@"x:\qa\cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "qa-cluster", "testproject", "A6RKKLNZNSOW")]
+        [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "cluster", "default", "A6RKKLNZNSOW")]
+        [InlineData(@"x:\qa\cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
         public void FromVmPath_ValidPath_ReturnsStorageNames(
             string path,
             string expectedEnvironment,
@@ -111,7 +111,7 @@ namespace Eryph.Modules.VmHostAgent.Test
         [InlineData(@"x:\qa\test\volumes\p_TestProject\A6RKKLNZNSOW")]
         public void FromVmPath_InvalidPath_ReturnsNone(string path)
         {
-            var (names, storageIdentifier) = StorageNames.FromVhdPath(path, _vmHostAgentConfiguration);
+            var (names, storageIdentifier) = StorageNames.FromVmPath(path, _vmHostAgentConfiguration);
 
             names.EnvironmentName.IsNone.Should().Be(true);
             names.DataStoreName.IsNone.Should().Be(true);
@@ -123,12 +123,12 @@ namespace Eryph.Modules.VmHostAgent.Test
         [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW", "default", "default", "default", "A6RKKLNZNSOW")]
         [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW\test.file", "default", "default", "default", "A6RKKLNZNSOW")]
         [InlineData(@"x:\default\test\volumes\eryph\p_TestProject\A6RKKLNZNSOW", "default", "default", "testproject", "A6RKKLNZNSOW")]
-        [InlineData(@"x:\scratch\test\A6RKKLNZNSOW", "default", "test-scratch", "default", "A6RKKLNZNSOW")]
-        [InlineData(@"x:\scratch\test\p_TestProject\A6RKKLNZNSOW", "default", "test-scratch", "testproject", "A6RKKLNZNSOW")]
+        [InlineData(@"x:\scratch\test\A6RKKLNZNSOW", "default", "scratch", "default", "A6RKKLNZNSOW")]
+        [InlineData(@"x:\scratch\test\p_TestProject\A6RKKLNZNSOW", "default", "scratch", "testproject", "A6RKKLNZNSOW")]
         [InlineData(@"x:\qa\test\volumes\A6RKKLNZNSOW", "qa", "default", "default", "A6RKKLNZNSOW")]
         [InlineData(@"x:\qa\test\volumes\p_TestProject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
-        [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "qa-cluster", "default", "A6RKKLNZNSOW")]
-        [InlineData(@"x:\qa\cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "qa-cluster", "testproject", "A6RKKLNZNSOW")]
+        [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "luster", "default", "A6RKKLNZNSOW")]
+        [InlineData(@"x:\qa\cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
         [InlineData(@"x:\\default\test\volumes\eryph\genepool\testorg\testgene\testversion\volumes\test.vhdx", "default", "default", "default", "gene:testorg/testgene/testversion:test")]
         public void FromVhdPath_ValidPath_ReturnsStorageNames(
             string path,
@@ -172,15 +172,15 @@ namespace Eryph.Modules.VmHostAgent.Test
 
         [Theory]
         [InlineData("default", "default", "default", @"x:\default\test\vms\eryph")]
-        [InlineData("default", "test-cluster", "default", @"x:\cluster\test")]
+        [InlineData("default", "cluster", "default", @"x:\cluster\test")]
         [InlineData("qa", "default", "default", @"x:\qa\test\vms")]
-        [InlineData("qa", "qa-cluster", "default", @"x:\qa\cluster\test")]
-        [InlineData("qa", "test-scratch", "default", @"x:\scratch\test")]
+        [InlineData("qa", "cluster", "default", @"x:\qa\cluster\test")]
+        [InlineData("qa", "scratch", "default", @"x:\scratch\test")]
         [InlineData("default", "default", "test-project", @"x:\default\test\vms\eryph\p_test-project")]
-        [InlineData("default", "test-cluster", "test-project", @"x:\cluster\test\p_test-project")]
+        [InlineData("default", "cluster", "test-project", @"x:\cluster\test\p_test-project")]
         [InlineData("qa", "default", "test-project", @"x:\qa\test\vms\p_test-project")]
-        [InlineData("qa", "qa-cluster", "test-project", @"x:\qa\cluster\test\p_test-project")]
-        [InlineData("qa", "test-scratch", "test-project", @"x:\scratch\test\p_test-project")]
+        [InlineData("qa", "cluster", "test-project", @"x:\qa\cluster\test\p_test-project")]
+        [InlineData("qa", "scratch", "test-project", @"x:\scratch\test\p_test-project")]
         public async Task ResolveVmStorageBasePath_StorageNamesAreValid_ReturnsPath(
             string environmentName,
             string dataStoreName,
@@ -234,15 +234,15 @@ namespace Eryph.Modules.VmHostAgent.Test
 
         [Theory]
         [InlineData("default", "default", "default", @"x:\default\test\volumes\eryph")]
-        [InlineData("default", "test-cluster", "default", @"x:\cluster\test")]
+        [InlineData("default", "cluster", "default", @"x:\cluster\test")]
         [InlineData("qa", "default", "default", @"x:\qa\test\volumes")]
-        [InlineData("qa", "qa-cluster", "default", @"x:\qa\cluster\test")]
-        [InlineData("qa", "test-scratch", "default", @"x:\scratch\test")]
+        [InlineData("qa", "cluster", "default", @"x:\qa\cluster\test")]
+        [InlineData("qa", "scratch", "default", @"x:\scratch\test")]
         [InlineData("default", "default", "test-project", @"x:\default\test\volumes\eryph\p_test-project")]
-        [InlineData("default", "test-cluster", "test-project", @"x:\cluster\test\p_test-project")]
+        [InlineData("default", "cluster", "test-project", @"x:\cluster\test\p_test-project")]
         [InlineData("qa", "default", "test-project", @"x:\qa\test\volumes\p_test-project")]
-        [InlineData("qa", "qa-cluster", "test-project", @"x:\qa\cluster\test\p_test-project")]
-        [InlineData("qa", "test-scratch", "test-project", @"x:\scratch\test\p_test-project")]
+        [InlineData("qa", "cluster", "test-project", @"x:\qa\cluster\test\p_test-project")]
+        [InlineData("qa", "scratch", "test-project", @"x:\scratch\test\p_test-project")]
         public async Task ResolveVolumeStorageBasePath_StorageNamesAreValid_ReturnsPath(
             string environmentName,
             string dataStoreName,
