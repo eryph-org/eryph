@@ -1,4 +1,4 @@
-﻿<#
+<#
     .SYNOPSIS
     Downloads and installs eryph-zero on the local machine.
 
@@ -560,7 +560,7 @@ if ($env:Path -notlike "*$eryphExePath*") {
 # powershell modules
 
 Write-Information "Ensuring Powershell gallery is enabled" -InformationAction Continue
-Install-PackageProvider NuGet -Force | Out-Null;
+Get-PackageProvider NuGet -ForceBootstrap | Out-Null;
 Set-PSRepository PSGallery -InstallationPolicy Trusted | Out-Null
 $computeClientModule = Get-Module Eryph.ComputeClient -ListAvailable
 
@@ -569,7 +569,7 @@ if(-not $computeClientModule){
     Install-Module Eryph.ComputeClient -Force
 }else {
     Write-Information "Updating module Eryph.ComputeClient" -InformationAction Continue
-    Update-Module Eryph.ComputeClient
+    Update-Module Eryph.ComputeClient-ErrorAction Continue
 }
 
 $identityClientModule = Get-Module Eryph.IdentityClient -ListAvailable
@@ -579,5 +579,5 @@ if(-not $identityClientModule){
     Install-Module Eryph.IdentityClient -Force
 }else {
     Write-Information "Updating module Eryph.IdentityClient" -InformationAction Continue
-    Update-Module Eryph.IdentityClient
+    Update-Module Eryph.IdentityClient -ErrorAction Continue
 }
