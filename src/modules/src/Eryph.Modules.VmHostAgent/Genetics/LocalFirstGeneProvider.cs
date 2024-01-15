@@ -18,15 +18,18 @@ namespace Eryph.Modules.VmHostAgent.Genetics
     {
         private readonly IGenePoolFactory _genepoolFactory;
         private readonly ILogger _log;
+        private readonly IHostSettingsProvider _hostSettingsProvider;
         private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
         public LocalFirstGeneProvider(
             IGenePoolFactory genepoolFactory,
             ILogger log,
+            IHostSettingsProvider hostSettingsProvider,
             IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
         {
             _genepoolFactory = genepoolFactory;
             _log = log;
+            _hostSettingsProvider = hostSettingsProvider;
             _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
@@ -35,9 +38,8 @@ namespace Eryph.Modules.VmHostAgent.Genetics
             Func<string, int, Task<Unit>> reportProgress,
             CancellationToken cancel)
         {
-            var hostSettings = HostSettingsBuilder.GetHostSettings();
-
-            return from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+            return from hostSettings in _hostSettingsProvider.GetHostSettings()
+                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                 let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
                 from genesetInfo in ProvideGeneSet(genePoolPath, geneIdentifier.GeneSet, reportProgress, Array.Empty<string>(), cancel)
                     .Map(i =>
@@ -62,9 +64,8 @@ namespace Eryph.Modules.VmHostAgent.Genetics
             Func<string, int, Task<Unit>> reportProgress,
             CancellationToken cancellationToken)
         {
-            var hostSettings = HostSettingsBuilder.GetHostSettings();
-
-            return from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+            return from hostSettings in _hostSettingsProvider.GetHostSettings()
+                   from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                    let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
                    from genesetInfo in ProvideGeneSet(genePoolPath, genesetIdentifier, reportProgress,Array.Empty<string>(), cancellationToken)
                    select string.IsNullOrWhiteSpace(genesetInfo.MetaData.Parent) 

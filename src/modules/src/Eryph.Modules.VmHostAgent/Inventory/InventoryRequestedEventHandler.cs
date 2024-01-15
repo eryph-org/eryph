@@ -28,11 +28,13 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
         private readonly IPowershellEngine _engine;
         private readonly IHostInfoProvider _hostInfoProvider;
+        private readonly IHostSettingsProvider _hostSettingsProvider;
         private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
         public InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log,
             WorkflowOptions _workflowOptions,
             IHostInfoProvider hostInfoProvider,
+            IHostSettingsProvider HostSettingsProvider,
             IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
         {
             _bus = bus;
@@ -40,6 +42,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             _log = log;
             this._workflowOptions = _workflowOptions;
             _hostInfoProvider = hostInfoProvider;
+            _hostSettingsProvider = HostSettingsProvider;
             _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
@@ -63,10 +66,9 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         private Task<Either<Error, UpdateVMHostInventoryCommand>> VmsToInventory(
             Seq<TypedPsObject<VirtualMachineInfo>> vms)
         {
-            var hostSettings = HostSettingsBuilder.GetHostSettings();
-
             return  
                 (from hostInventory in _hostInfoProvider.GetHostInfoAsync(true) 
+                 from hostSettings in _hostSettingsProvider.GetHostSettings()
                  from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                  let inventory = new VirtualMachineInventory(_engine, vmHostAgentConfig, _hostInfoProvider)
                  from vmInventory in InventorizeAllVms(inventory, vms).ToAsync()

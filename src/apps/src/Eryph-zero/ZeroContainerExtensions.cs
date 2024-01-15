@@ -41,6 +41,7 @@ namespace Eryph.Runtime.Zero
             container.RegisterSingleton<IAgentControlService, AgentControlService>();
 
             container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
+            container.Register<IHostSettingsProvider, HostSettingsProvider>();
 
             container.RegisterInstance(new WorkflowOptions
             {

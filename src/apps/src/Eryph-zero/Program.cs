@@ -27,6 +27,7 @@ using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
 using Eryph.VmManagement;
 using LanguageExt;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -265,18 +266,20 @@ internal static class Program
                 // do not check in service mode - during startup some features may be unavailable
                 if (!WindowsServiceHelpers.IsWindowsService())
                 {
-                    try
+                    var provider = new HostSettingsProvider();
+                    var result = await provider.GetHostSettings()
+                        .Match(
+                            Right: _ => Prelude.None,
+                            Left: e => e.Exception.Map(ex =>
+                                ex is ManagementException { ErrorCode: ManagementStatus.InvalidNamespace }
+                                    ? Prelude.Some(e)
+                                    : Prelude.None));
+
+                    if (result.IsSome)
                     {
-                        HostSettingsBuilder.GetHostSettings();
-                    }
-                    catch (ManagementException ex)
-                    {
-                        if (ex.ErrorCode == ManagementStatus.InvalidNamespace)
-                        {
-                            await Console.Error.WriteAsync(
-                                "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
-                            return -10;
-                        }
+                        await Console.Error.WriteAsync(
+                            "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
+                        return -10;
                     }
                 }
 
@@ -960,11 +963,11 @@ internal static class Program
 
     private static async Task<int> GetAgentSettings(FileSystemInfo? outFile)
     {
-        var hostSettings = HostSettingsBuilder.GetHostSettings();
-        var manager = new VmHostAgentConfigurationManager();
+        var result = from hostSettings in new HostSettingsProvider().GetHostSettings()
+            from yaml in new VmHostAgentConfigurationManager().GetCurrentConfigurationYaml(hostSettings)
+            select yaml;
 
-        return await manager.GetCurrentConfigurationYaml(hostSettings)
-            .MatchAsync(
+        return await result.MatchAsync(
                 async config =>
                 {
                     if (outFile != null)
@@ -1016,11 +1019,11 @@ internal static class Program
             configString = await textReader.ReadToEndAsync();
         }
 
-        var hostSettings = HostSettingsBuilder.GetHostSettings();
         var manager = new VmHostAgentConfigurationManager();
         return await Prelude.match(from config in manager.ParseConfigurationYaml(configString).ToAsync()
-                             from _ in manager.SaveConfiguration(config, hostSettings)
-                             select Unit.Default,
+            from hostSettings in new HostSettingsProvider().GetHostSettings()
+            from _ in manager.SaveConfiguration(config, hostSettings)
+            select Unit.Default,
                Right: _ => 0,
                Left: error =>
                {

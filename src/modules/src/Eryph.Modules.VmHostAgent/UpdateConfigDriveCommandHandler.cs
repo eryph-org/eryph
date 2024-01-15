@@ -21,6 +21,7 @@ internal class UpdateConfigDriveCommandHandler :
     CatletConfigCommandHandler<UpdateCatletConfigDriveCommand, Unit>
 {
     private readonly IHostInfoProvider _hostInfoProvider;
+    private readonly IHostSettingsProvider _hostSettingsProvider;
     private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
     public UpdateConfigDriveCommandHandler(
@@ -28,9 +29,11 @@ internal class UpdateConfigDriveCommandHandler :
         ITaskMessaging messaging,
         ILogger log,
         IHostInfoProvider hostInfoProvider,
+        IHostSettingsProvider hostSettingsProvider,
         IVmHostAgentConfigurationManager vmHostAgentConfigurationManager) : base(engine, messaging, log)
     {
         _hostInfoProvider = hostInfoProvider;
+        _hostSettingsProvider = hostSettingsProvider;
         _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
     }
 
@@ -44,7 +47,6 @@ internal class UpdateConfigDriveCommandHandler :
             Fodder = command.MachineMetadata.Fodder
         };
 
-        var hostSettings = HostSettingsBuilder.GetHostSettings();
         var convergeConfigDrive = Prelude.fun(
             (VmHostAgentConfiguration vmHostAgentConfig, TypedPsObject<VirtualMachineInfo> vmInfo, VMStorageSettings storageSettings, VMHostMachineData hostInfo, CatletConfig config) =>
                 VirtualMachine.ConvergeConfigDrive(vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfo, config,
@@ -52,6 +54,7 @@ internal class UpdateConfigDriveCommandHandler :
 
 
         return
+            from hostSettings in _hostSettingsProvider.GetHostSettings()
             from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
             from hostInfo in _hostInfoProvider.GetHostInfoAsync().WriteTrace()
             from vmList in GetVmInfo(vmId, Engine)

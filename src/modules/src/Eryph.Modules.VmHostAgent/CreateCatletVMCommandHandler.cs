@@ -22,6 +22,7 @@ namespace Eryph.Modules.VmHostAgent
         CatletConfigCommandHandler<CreateCatletVMCommand, ConvergeCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
+        private readonly IHostSettingsProvider _hostSettingsProvider;
         private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
         public CreateCatletVMCommandHandler(
@@ -29,18 +30,18 @@ namespace Eryph.Modules.VmHostAgent
             ITaskMessaging messaging,
             ILogger log,
             IHostInfoProvider hostInfoProvider,
+            IHostSettingsProvider hostSettingsProvider,
             IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
             : base(engine, messaging, log)
         {
             _hostInfoProvider = hostInfoProvider;
+            _hostSettingsProvider = hostSettingsProvider;
             _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
         protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(CreateCatletVMCommand command)
         {
             var config = command.Config;
-
-            var hostSettings = HostSettingsBuilder.GetHostSettings();
 
             var getParentConfig = Prelude.fun((VmHostAgentConfiguration vmHostAgentConfig) =>
                 GetTemplate(vmHostAgentConfig, config.Parent));
@@ -54,6 +55,7 @@ namespace Eryph.Modules.VmHostAgent
                     CreateMetadata(parentConfig, vmInfo, config, command.NewMachineId));
 
             return
+                from hostSettings in _hostSettingsProvider.GetHostSettings()
                 from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                 from plannedStorageSettings in VMStorageSettings.Plan(vmHostAgentConfig, LongToString(command.StorageId), config,
                     Option<VMStorageSettings>.None)

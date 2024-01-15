@@ -23,6 +23,7 @@ namespace Eryph.Modules.VmHostAgent
         : CatletConfigCommandHandler<UpdateCatletVMCommand, ConvergeCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
+        private readonly IHostSettingsProvider _hostSettingsProvider;
         private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
         public UpdateCatletVMCommandHandler(
@@ -30,9 +31,11 @@ namespace Eryph.Modules.VmHostAgent
             ITaskMessaging messaging,
             ILogger log,
             IHostInfoProvider hostInfoProvider,
+            IHostSettingsProvider hostSettingsProvider,
             IVmHostAgentConfigurationManager vmHostAgentConfigurationManager) : base(engine, messaging, log)
         {
             _hostInfoProvider = hostInfoProvider;
+            _hostSettingsProvider = hostSettingsProvider;
             _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
@@ -42,13 +45,13 @@ namespace Eryph.Modules.VmHostAgent
 
             var vmId = command.VMId;
 
-            var hostSettings = HostSettingsBuilder.GetHostSettings();
             var convergeVM = Prelude.fun(
                 (VmHostAgentConfiguration vmHostAgentConfig, TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig c, VMStorageSettings storageSettings, VMHostMachineData hostInfo) =>
                     VirtualMachine.Converge(vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfo, c,
                         command.MachineMetadata, command.MachineNetworkSettings, storageSettings));
 
             return
+                from hostSettings in _hostSettingsProvider.GetHostSettings()
                 from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                 from hostInfo in _hostInfoProvider.GetHostInfoAsync(true).WriteTrace()
                 from vmList in GetVmInfo(vmId, Engine)

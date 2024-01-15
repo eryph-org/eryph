@@ -16,5 +16,9 @@ namespace Eryph.Core
         EitherAsync<Error, VmHostAgentConfiguration> GetCurrentConfiguration(HostSettings hostSettings);
         Either<Error, VmHostAgentConfiguration> ParseConfigurationYaml(string yaml);
         EitherAsync<Error, Unit> SaveConfigurationYaml(string config);
+
+        EitherAsync<Error, Unit> SaveConfiguration(
+            VmHostAgentConfiguration configuration,
+            HostSettings hostSettings);
     }
 }

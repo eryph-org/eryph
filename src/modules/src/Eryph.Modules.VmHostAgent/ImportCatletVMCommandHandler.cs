@@ -22,6 +22,7 @@ internal class ImportCatletVMCommandHandler :
     CatletConfigCommandHandler<ImportCatletVMCommand, ConvergeCatletResult>
 {
     private readonly IHostInfoProvider _hostInfoProvider;
+    private readonly IHostSettingsProvider _hostSettingsProvider;
     private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
     public ImportCatletVMCommandHandler(
@@ -29,17 +30,17 @@ internal class ImportCatletVMCommandHandler :
         ITaskMessaging messaging,
         ILogger log,
         IHostInfoProvider hostInfoProvider,
+        IHostSettingsProvider hostSettingsProvider,
         IVmHostAgentConfigurationManager vmHostAgentConfigurationManager) : base(engine, messaging, log)
     {
         _hostInfoProvider = hostInfoProvider;
+        _hostSettingsProvider = hostSettingsProvider;
         _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
     }
 
     protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(ImportCatletVMCommand command)
     {
         var config = command.Config;
-
-        var hostSettings = HostSettingsBuilder.GetHostSettings();
 
         var planStorageSettings = Prelude.fun((VmHostAgentConfiguration vmHostAgentConfig) =>
             VMStorageSettings.Plan(vmHostAgentConfig, LongToString(command.StorageId), config,
@@ -56,6 +57,7 @@ internal class ImportCatletVMCommandHandler :
                 CreateMetadata(Engine, plannedVM, vmInfo, config, command.NewMachineId));
 
         return
+            from hostSettings in _hostSettingsProvider.GetHostSettings()
             from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
             from plannedStorageSettings in planStorageSettings(vmHostAgentConfig)
             from template in getTemplate()
