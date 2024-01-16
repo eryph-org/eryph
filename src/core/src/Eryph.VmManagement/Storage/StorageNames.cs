@@ -42,13 +42,16 @@ namespace Eryph.VmManagement.Storage
             VmHostAgentConfiguration vmHostAgentConfig,
             Func<VmHostAgentDefaultsConfiguration, string> getDefault)
         {
-            var pathCandidates = vmHostAgentConfig.Environments.SelectMany(
-                e => e.Datastores,
-                (e, ds) => (Environment: e.Name, Datastore: ds.Name, ds.Path))
-                .Concat(vmHostAgentConfig.Environments
-                    .Select(e => (Environment: e.Name, Datastore: "default", Path: getDefault(e.Defaults))))
-                .Concat(vmHostAgentConfig.Datastores.Select(ds => (Environment: "default", Datastore: ds.Name, ds.Path)))
-                .Concat(new[] { (Environment: "default", Datastore: "default", Path: getDefault(vmHostAgentConfig.Defaults)) });
+            var pathCandidates = Seq(
+                Optional(vmHostAgentConfig.Environments).ToSeq().Flatten()
+                    .Where(e => e.Datastores is not null)
+                    .SelectMany(e => e.Datastores, (e, ds) => (Environment: e.Name, Datastore: ds.Name, ds.Path)),
+                Optional(vmHostAgentConfig.Environments).ToSeq().Flatten()
+                    .Select(e => (Environment: e.Name, Datastore: "default", Path: getDefault(e.Defaults))),
+                Optional(vmHostAgentConfig.Datastores).ToSeq().Flatten()
+                    .Select(ds => (Environment: "default", Datastore: ds.Name, ds.Path)),
+                Seq1((Environment: "default", Datastore: "default", Path: getDefault(vmHostAgentConfig.Defaults)))
+            ).Flatten();
 
             var match = pathCandidates
                 .Select(pc => from relativePath in GetContainedPath(pc.Path, path)
@@ -85,7 +88,7 @@ namespace Eryph.VmManagement.Storage
                         Some: v => v,
                         None: () => Path.HasExtension(e.RelativePath) ? Path.GetDirectoryName(e.RelativePath) : e.RelativePath);
 
-                    return (e.StorageNames, string.IsNullOrWhiteSpace(storageIdentifier) ? None : Optional(storageIdentifier));
+                    return (e.StorageNames, Optional(storageIdentifier).Filter(notEmpty));
                 }).Match(
                     Some: v => v,
                     None: () => (new StorageNames() { DataStoreName = None, EnvironmentName = None, ProjectName = None }, None));
@@ -140,22 +143,25 @@ namespace Eryph.VmManagement.Storage
             return dataStore == "default"
                 ? from defaults in environment == "default"
                     ? vmHostAgentConfig.Defaults
-                    : from envConfig in vmHostAgentConfig.Environments.Where(e => e.Name == environment)
+                    : from envConfig in Optional(vmHostAgentConfig.Environments).ToSeq().Flatten()
+                        .Where(e => e.Name == environment)
                         .HeadOrLeft(Error.New($"The environment {environment} is not configured"))
                       select envConfig.Defaults
                   select (defaults.Vms, defaults.Volumes)
-                : from defaultDatastoreConfig in vmHostAgentConfig.Datastores.Where(ds => ds.Name == dataStore)
+                : from defaultDatastoreConfig in Optional(vmHostAgentConfig.Datastores).ToSeq().Flatten()
+                    .Where(ds => ds.Name == dataStore)
                     .HeadOrLeft(Error.New($"The datastore {dataStore} is not configured"))
                   let datastoreConfig = environment == "default"
                         ? defaultDatastoreConfig
-                        : Prelude.match(from envConfig in vmHostAgentConfig.Environments
-                        where envConfig.Name == environment
-                        from envDsConfig in envConfig.Datastores
-                        where envDsConfig.Name == dataStore
-                        select envDsConfig, Empty: () => defaultDatastoreConfig, More: l => l.Head)
+                        : match(from envConfig in vmHostAgentConfig.Environments
+                                where envConfig.Name == environment
+                                from envDsConfig in envConfig.Datastores
+                                where envDsConfig.Name == dataStore
+                                select envDsConfig,
+                                Empty: () => defaultDatastoreConfig,
+                                More: l => l.Head)
                   select (datastoreConfig.Path, datastoreConfig.Path);
         }
-
 
         private static string JoinPathAndProject(string dsPath, string projectName)
         {

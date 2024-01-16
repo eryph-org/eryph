@@ -1,4 +1,5 @@
 ﻿using System;
+using JetBrains.Annotations;
 
 namespace Eryph.Core.VmAgent;
 
@@ -6,8 +7,8 @@ public class VmHostAgentConfiguration
 {
     public VmHostAgentDefaultsConfiguration Defaults { get; init; } = new();
 
-    public VmHostAgentDataStoreConfiguration[] Datastores { get; init; } = Array.Empty<VmHostAgentDataStoreConfiguration>();
+    [CanBeNull] public VmHostAgentDataStoreConfiguration[] Datastores { get; init; }
 
-    public VmHostAgentEnvironmentConfiguration[] Environments { get; init; } = Array.Empty<VmHostAgentEnvironmentConfiguration>();
+    [CanBeNull] public VmHostAgentEnvironmentConfiguration[] Environments { get; init; }
 }
 

@@ -74,7 +74,7 @@ namespace Eryph.Runtime.Zero.Configuration.AgentSettings
                 {
                     Defaults = SimplifyDefaults(configuration.Defaults, hostSettings),
                     Datastores = configuration.Datastores,
-                    Environments = configuration.Environments.Select(e => new VmHostAgentEnvironmentConfiguration()
+                    Environments = configuration.Environments?.Select(e => new VmHostAgentEnvironmentConfiguration()
                     {
                         Datastores = e.Datastores,
                         Defaults = SimplifyDefaults(e.Defaults, hostSettings),
@@ -136,7 +136,7 @@ namespace Eryph.Runtime.Zero.Configuration.AgentSettings
             {
                 Datastores = config.Datastores,
                 Defaults = ApplyHostDefaults(config.Defaults, hostSettings),
-                Environments = config.Environments.Select(env => new VmHostAgentEnvironmentConfiguration()
+                Environments = config.Environments?.Select(env => new VmHostAgentEnvironmentConfiguration()
                 {
                     Datastores = env.Datastores,
                     Defaults = ApplyHostDefaults(env.Defaults, hostSettings),
