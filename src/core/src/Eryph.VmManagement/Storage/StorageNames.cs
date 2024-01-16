@@ -56,13 +56,9 @@ namespace Eryph.VmManagement.Storage
                 .Somes()
                 .HeadOrNone();
 
-            return match.Map(e =>
-            {
-                // TODO should project support more than one level?
-                // TODO support no folder at all
-                // Get first directory of relative path
-                var root = e.RelativePath.Split(Path.DirectorySeparatorChar).First();
-                return root.StartsWith("p_")
+            return match.Bind(e =>
+                from root in e.RelativePath.Split(Path.DirectorySeparatorChar).HeadOrNone()
+                select root.StartsWith("p_")
                     ? new
                     {
                         StorageNames = new StorageNames()
@@ -82,18 +78,17 @@ namespace Eryph.VmManagement.Storage
                             ProjectName = "default",
                         },
                         e.RelativePath,
-                    };
-            }).Map(e =>
-            {
-                var storageIdentifier = GetGeneReference(e.RelativePath).Match(
+                    }
+                ).Map(e =>
+                {
+                    var storageIdentifier = GetGeneReference(e.RelativePath).Match(
+                        Some: v => v,
+                        None: () => Path.HasExtension(e.RelativePath) ? Path.GetDirectoryName(e.RelativePath) : e.RelativePath);
+
+                    return (e.StorageNames, string.IsNullOrWhiteSpace(storageIdentifier) ? None : Optional(storageIdentifier));
+                }).Match(
                     Some: v => v,
-                    None: () => Path.HasExtension(e.RelativePath) ? Path.GetDirectoryName(e.RelativePath) : e.RelativePath);
-
-                return (e.StorageNames, string.IsNullOrWhiteSpace(storageIdentifier) ? None : Optional(storageIdentifier));
-
-            }).Match(
-                Some: v => v,
-                None: () => (new StorageNames() { DataStoreName = None, EnvironmentName = None, ProjectName = None }, None));
+                    None: () => (new StorageNames() { DataStoreName = None, EnvironmentName = None, ProjectName = None }, None));
         }
 
         public EitherAsync<Error, string> ResolveVmStorageBasePath(VmHostAgentConfiguration vmHostAgentConfig)

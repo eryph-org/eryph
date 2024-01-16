@@ -8,14 +8,6 @@
       },
       "remoteDebugEnabled": true
     },
-    "network update": {
-      "commandName": "Project",
-      "commandLineArgs": "networks",
-      "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development"
-      },
-      "remoteDebugEnabled": true
-    },
     "install": {
       "commandName": "Project",
       "commandLineArgs": "install --outFile \"t:\\install.log\" --deleteOutFile",
@@ -31,6 +23,22 @@
         "DOTNET_ENVIRONMENT": "Development"
       },
       "remoteDebugEnabled": true
+    },
+    "agentsettings get": {
+      "commandName": "Project",
+      "commandLineArgs": "agentsettings get",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
+    },
+    "networks get": {
+      "commandName": "Project",
+      "commandLineArgs": "networks get",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
     }
   }
 }

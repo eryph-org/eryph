@@ -28,7 +28,7 @@ namespace Eryph.Runtime.Zero.Configuration.AgentSettings
         {
             return from config in ReadConfigurationFromDisk()
                 .Bind(yaml => yaml.Match(
-                    yaml => ParseConfigurationYaml(yaml).ToAsync(),
+                    yaml => ParseConfigurationYaml(yaml),
                     () => from config in Prelude.TryAsync(new VmHostAgentConfiguration()).ToEither()
                                from _ in SaveConfiguration(config, hostSettings)
                                select config
@@ -36,7 +36,7 @@ namespace Eryph.Runtime.Zero.Configuration.AgentSettings
                    select ApplyHostDefaults(config, hostSettings);
         }
 
-        public Either<Error, VmHostAgentConfiguration> ParseConfigurationYaml(string yaml)
+        public EitherAsync<Error, VmHostAgentConfiguration> ParseConfigurationYaml(string yaml)
         {
             var yamlDeserializer = new DeserializerBuilder()
                 .WithNamingConvention(UnderscoredNamingConvention.Instance)
@@ -56,7 +56,7 @@ namespace Eryph.Runtime.Zero.Configuration.AgentSettings
                         throw ex.InnerException;
                     }
                 })
-                .ToEither(Error.New);
+                .ToEitherAsync();
         }
 
         public EitherAsync<Error, Unit> SaveConfiguration(
@@ -97,21 +97,6 @@ namespace Eryph.Runtime.Zero.Configuration.AgentSettings
                 .Build();
 
             return yamlSerializer.Serialize(configuration);
-        }
-
-        public EitherAsync<Error, Unit> SaveConfigurationYaml(string config)
-        {
-            return Prelude.TryAsync(async () =>
-                {
-                    var path = ZeroConfig.GetVmHostAgentConfigPath();
-                    Config.EnsurePath(path);
-
-                    var configFilePath = Path.Combine(path, "agentsettings.yml");
-
-                    await File.WriteAllTextAsync(configFilePath, config);
-                    return Unit.Default;
-                }
-            ).ToEither();
         }
 
         private EitherAsync<Error, Option<string>> ReadConfigurationFromDisk()

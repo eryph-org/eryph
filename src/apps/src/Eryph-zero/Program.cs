@@ -1020,7 +1020,7 @@ internal static class Program
         }
 
         var manager = new VmHostAgentConfigurationManager();
-        return await Prelude.match(from config in manager.ParseConfigurationYaml(configString).ToAsync()
+        return await Prelude.match(from config in manager.ParseConfigurationYaml(configString)
             from hostSettings in new HostSettingsProvider().GetHostSettings()
             from _ in manager.SaveConfiguration(config, hostSettings)
             select Unit.Default,

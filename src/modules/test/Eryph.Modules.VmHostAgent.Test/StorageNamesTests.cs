@@ -95,7 +95,6 @@ namespace Eryph.Modules.VmHostAgent.Test
         }
 
         [Theory]
-        //[InlineData("not-a-path")]
         [InlineData(@"x:\some\folder")]
         // It must not match any default paths for volumes
         [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW")]
@@ -140,7 +139,6 @@ namespace Eryph.Modules.VmHostAgent.Test
         }
 
         [Theory]
-        //[InlineData("not-a-path")]
         [InlineData(@"x:\some\folder")]
         // It must not match any default paths for virtual machines
         [InlineData(@"x:\default\test\vms\eryph\A6RKKLNZNSOW")]

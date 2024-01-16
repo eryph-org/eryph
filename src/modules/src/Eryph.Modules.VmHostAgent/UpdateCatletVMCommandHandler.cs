@@ -72,4 +72,4 @@ namespace Eryph.Modules.VmHostAgent
         }
 
     }
-};
+}

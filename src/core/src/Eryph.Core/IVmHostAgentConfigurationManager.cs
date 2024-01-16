@@ -13,9 +13,10 @@ namespace Eryph.Core
     public interface IVmHostAgentConfigurationManager
     {
         EitherAsync<Error, string> GetCurrentConfigurationYaml(HostSettings hostSettings);
+        
         EitherAsync<Error, VmHostAgentConfiguration> GetCurrentConfiguration(HostSettings hostSettings);
-        Either<Error, VmHostAgentConfiguration> ParseConfigurationYaml(string yaml);
-        EitherAsync<Error, Unit> SaveConfigurationYaml(string config);
+        
+        EitherAsync<Error, VmHostAgentConfiguration> ParseConfigurationYaml(string yaml);
 
         EitherAsync<Error, Unit> SaveConfiguration(
             VmHostAgentConfiguration configuration,
