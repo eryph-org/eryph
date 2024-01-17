@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Eryph.Core.VmAgent;
 using LanguageExt;
 
 namespace Eryph.VmManagement.Storage
@@ -19,16 +20,17 @@ namespace Eryph.VmManagement.Storage
         public long? SizeBytesCreate { get; set; }
 
 
-        public static Option<DiskStorageSettings> FromSourceString(HostSettings hostSettings, string templateString)
+        public static Option<DiskStorageSettings> FromSourceString(
+            VmHostAgentConfiguration vmHostAgentConfig,
+            string templateString)
         {
             if (!templateString.StartsWith("gene:"))
             {
+                var (storageNames, storageIdentifier) = StorageNames.FromVhdPath(templateString, vmHostAgentConfig);
                 return new DiskStorageSettings
                 {
-                    StorageNames = StorageNames.FromPath(templateString,
-                        hostSettings.DefaultVirtualHardDiskPath).Names,
-                    StorageIdentifier = StorageNames.FromPath(templateString,
-                        hostSettings.DefaultVirtualHardDiskPath).StorageIdentifier,
+                    StorageNames = storageNames,
+                    StorageIdentifier = storageIdentifier,
                     Path = System.IO.Path.GetDirectoryName(templateString),
                     FileName = System.IO.Path.GetFileName(templateString),
                     Name = System.IO.Path.GetFileNameWithoutExtension(templateString)
@@ -50,15 +52,14 @@ namespace Eryph.VmManagement.Storage
                 diskName = parts[2];
             }
 
-            var geneDiskPath = System.IO.Path.Combine(hostSettings.DefaultVirtualHardDiskPath,
+            var geneDiskPath = System.IO.Path.Combine(vmHostAgentConfig.Defaults.Volumes,
                 "genepool", genesetName, "volumes", $"{diskName}.vhdx");
+            var (geneDiskStorageNames, geneDiskStorageIdentifier) = StorageNames.FromVhdPath(geneDiskPath, vmHostAgentConfig);
 
             return new DiskStorageSettings
             {
-                StorageNames = StorageNames.FromPath(geneDiskPath,
-                    hostSettings.DefaultVirtualHardDiskPath).Names,
-                StorageIdentifier = StorageNames.FromPath(geneDiskPath,
-                    hostSettings.DefaultVirtualHardDiskPath).StorageIdentifier,
+                StorageNames = geneDiskStorageNames,
+                StorageIdentifier = geneDiskStorageIdentifier,
                 Path = System.IO.Path.GetDirectoryName(geneDiskPath),
                 FileName = System.IO.Path.GetFileName(geneDiskPath),
                 Name = System.IO.Path.GetFileNameWithoutExtension(geneDiskPath)
@@ -66,18 +67,20 @@ namespace Eryph.VmManagement.Storage
 
         }
 
-        public static Task<Either<PowershellFailure, Option<DiskStorageSettings>>> FromVhdPath(IPowershellEngine engine,
-            HostSettings hostSettings, Option<string> optionalPath)
+        public static Task<Either<PowershellFailure, Option<DiskStorageSettings>>> FromVhdPath(
+            IPowershellEngine engine,
+            VmHostAgentConfiguration vmHostAgentConfig,
+            Option<string> optionalPath)
         {
             return optionalPath.Map(path => from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path).ToAsync()
                 from vhdInfo in optionalVhdInfo.ToEither(new PowershellFailure {Message = "Failed to read VHD "})
                     .ToAsync()
-                let nameAndId = StorageNames.FromPath(System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
-                    hostSettings.DefaultVirtualHardDiskPath)
+                let nameAndId = StorageNames.FromVhdPath(System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
+                    vmHostAgentConfig)
                 let parentPath = string.IsNullOrWhiteSpace(vhdInfo.Value.ParentPath)
                     ? Option<string>.None
                     : Option<string>.Some(vhdInfo.Value.ParentPath)
-                from parentSettings in FromVhdPath(engine, hostSettings, parentPath).ToAsync()
+                from parentSettings in FromVhdPath(engine, vmHostAgentConfig, parentPath).ToAsync()
                 select
                     new DiskStorageSettings
                     {

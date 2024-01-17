@@ -32,7 +32,7 @@ namespace Eryph.VmManagement.Test
             {
                 DefaultVhdPath = @"x:\disks\abc",
                 StorageIdentifier = "abc",
-                StorageNames = StorageNames.FromPath(@"x:\data\eryph\abc", @"x:\data\eryph\").Names
+                StorageNames = StorageNames.FromVmPath(@"x:\data\eryph\abc", _fixture.VmHostAgentConfiguration).Names
             };
 
 
@@ -106,13 +106,12 @@ namespace Eryph.VmManagement.Test
         [Fact]
         public async Task Converges_new_disk()
         {
-
             _fixture.Config.Drives = new[] { new CatletDriveConfig { Name = "sdb" } };
             _fixture.StorageSettings = _fixture.StorageSettings with
             {
                 DefaultVhdPath = @"x:\disks\abc",
                 StorageIdentifier = "abc",
-                StorageNames = StorageNames.FromPath(@"x:\data\eryph\abc", @"x:\data\eryph\").Names
+                StorageNames = StorageNames.FromVmPath(@"x:\data\eryph\abc", _fixture.VmHostAgentConfiguration).Names
             };
 
 

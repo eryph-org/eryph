@@ -2,9 +2,12 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.Core.VmAgent;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Storage
 {
@@ -20,107 +23,149 @@ namespace Eryph.VmManagement.Storage
 
         public bool IsValid => DataStoreName.IsSome && ProjectName.IsSome && EnvironmentName.IsSome;
 
-        public static (StorageNames Names, Option<string> StorageIdentifier) FromPath(string path, string defaultPath)
+        public static (StorageNames Names, Option<string> StorageIdentifier) FromVmPath(
+            string path,
+            VmHostAgentConfiguration vmHostAgentConfig)
         {
-            var projectName = Prelude.Some("default");
-            var environmentName = Prelude.Some("default");
-            var dataStoreName = Option<string>.None;
-            var dataStorePath = Option<string>.None;
-            var storageIdentifier = Option<string>.None;
-
-            if (path.StartsWith(defaultPath, StringComparison.InvariantCultureIgnoreCase))
-            {
-                dataStoreName = Prelude.Some("default");
-                dataStorePath = defaultPath;
-            }
-
-            if (dataStorePath.IsSome)
-            {
-                var pathAfterDataStore = path.Remove(0, dataStorePath.ValueUnsafe().Length).TrimStart('\\');
-
-                var pathRoot = pathAfterDataStore.Split(Path.DirectorySeparatorChar).FirstOrDefault() ??
-                               pathAfterDataStore;
-
-                if (pathRoot.StartsWith("p_"))
-                {
-                    projectName = pathRoot.Remove(0, "p_".Length).ToLowerInvariant();
-                    pathAfterDataStore = pathAfterDataStore.Remove(0,pathRoot.Length + 1); // remove root + \\;
-                }
-
-                var lastPart = pathAfterDataStore
-                    .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
-
-                if (lastPart != null && lastPart.Contains('.')) // assuming a filename if this contains a dot
-                {
-                    pathAfterDataStore  = pathAfterDataStore.Remove(pathAfterDataStore.LastIndexOf(lastPart,
-                        StringComparison.InvariantCulture)).TrimEnd('\\');
-
-                }
-
-
-                var idCandidate = pathAfterDataStore;
-                var idIsGeneRef = false;
-                if (idCandidate.Contains(Path.DirectorySeparatorChar))
-                {
-                    // genepool path, resolve back to referenced geneset
-                    if (idCandidate.StartsWith("genepool\\", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        idCandidate = idCandidate.Remove(0, "genepool\\".Length);
-                        var genePathParts = idCandidate.Split('\\', StringSplitOptions.RemoveEmptyEntries);
-                        if (genePathParts.Length == 4)
-                        {
-                            idCandidate = genePathParts[0] + "/" + genePathParts[1]+ "/" + genePathParts[2];
-                            idIsGeneRef = true;
-                        }
-                    }
-
-                    idCandidate = idIsGeneRef ? $"gene:{idCandidate}:{Path.GetFileNameWithoutExtension(lastPart)}" : null;
-                }
-
-                if (!string.IsNullOrWhiteSpace(idCandidate))
-                    storageIdentifier = idCandidate;
-            }
-
-            var names = new StorageNames
-            {
-                DataStoreName = dataStoreName,
-                ProjectName = projectName,
-                EnvironmentName = environmentName
-            };
-
-            return (names, storageIdentifier);
+            return FromPath(path, vmHostAgentConfig, defaults => defaults.Vms);
         }
 
-        public EitherAsync<Error, string> ResolveStorageBasePath(string defaultPath)
+        public static (StorageNames Names, Option<string> StorageIdentifier) FromVhdPath(
+            string path,
+            VmHostAgentConfiguration vmHostAgentConfig)
+        {
+            return FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes);
+        }
+
+        private static (StorageNames Names, Option<string> StorageIdentifier) FromPath(
+            string path,
+            VmHostAgentConfiguration vmHostAgentConfig,
+            Func<VmHostAgentDefaultsConfiguration, string> getDefault)
+        {
+            var pathCandidates = Seq(
+                Optional(vmHostAgentConfig.Environments).ToSeq().Flatten()
+                    .Where(e => e.Datastores is not null)
+                    .SelectMany(e => e.Datastores, (e, ds) => (Environment: e.Name, Datastore: ds.Name, ds.Path)),
+                Optional(vmHostAgentConfig.Environments).ToSeq().Flatten()
+                    .Select(e => (Environment: e.Name, Datastore: "default", Path: getDefault(e.Defaults))),
+                Optional(vmHostAgentConfig.Datastores).ToSeq().Flatten()
+                    .Select(ds => (Environment: "default", Datastore: ds.Name, ds.Path)),
+                Seq1((Environment: "default", Datastore: "default", Path: getDefault(vmHostAgentConfig.Defaults)))
+            ).Flatten();
+
+            var match = pathCandidates
+                .Select(pc => from relativePath in GetContainedPath(pc.Path, path)
+                              select (pc.Environment, pc.Datastore, RelativePath: relativePath))
+                .Somes()
+                .HeadOrNone();
+
+            return match.Bind(e =>
+                from root in e.RelativePath.Split(Path.DirectorySeparatorChar).HeadOrNone()
+                select root.StartsWith("p_")
+                    ? new
+                    {
+                        StorageNames = new StorageNames()
+                        {
+                            EnvironmentName = e.Environment,
+                            DataStoreName = e.Datastore,
+                            ProjectName = root.Remove(0, "p_".Length).ToLowerInvariant(),
+                        },
+                        RelativePath = Path.GetRelativePath(root + Path.DirectorySeparatorChar, e.RelativePath),
+                    }
+                    : new
+                    {
+                        StorageNames = new StorageNames()
+                        {
+                            EnvironmentName = e.Environment,
+                            DataStoreName = e.Datastore,
+                            ProjectName = "default",
+                        },
+                        e.RelativePath,
+                    }
+                ).Map(e =>
+                {
+                    var storageIdentifier = GetGeneReference(e.RelativePath).Match(
+                        Some: v => v,
+                        None: () => Path.HasExtension(e.RelativePath) ? Path.GetDirectoryName(e.RelativePath) : e.RelativePath);
+
+                    return (e.StorageNames, Optional(storageIdentifier).Filter(notEmpty));
+                }).Match(
+                    Some: v => v,
+                    None: () => (new StorageNames() { DataStoreName = None, EnvironmentName = None, ProjectName = None }, None));
+        }
+
+        public EitherAsync<Error, string> ResolveVmStorageBasePath(VmHostAgentConfiguration vmHostAgentConfig)
+        {
+            return from paths in ResolveStorageBasePaths(vmHostAgentConfig).ToAsync()
+                   select paths.VmPath;
+        }
+
+        public EitherAsync<Error, string> ResolveVolumeStorageBasePath(VmHostAgentConfiguration vmHostAgentConfig)
+        {
+            return from paths in ResolveStorageBasePaths(vmHostAgentConfig).ToAsync()
+                   select paths.VhdPath;
+        }
+
+        private static Option<string> GetContainedPath(string relativeTo, string path)
+        {
+            var relativePath = Path.GetRelativePath(relativeTo, path);
+            if (relativePath.StartsWith("..") || relativePath.StartsWith(".") || relativePath == path)
+                return None;
+
+            return Some(relativePath);
+        }
+
+        private static Option<string> GetGeneReference(string relativePath)
+        {
+            return from genePath in GetContainedPath("genepool", relativePath)
+                   let geneDirectory = Path.GetDirectoryName(genePath)
+                   let genePathParts = geneDirectory.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
+                   where genePathParts.Length == 4 && string.Equals(genePathParts[3], "volumes", StringComparison.OrdinalIgnoreCase)
+                   select $"gene:{genePathParts[0]}/{genePathParts[1]}/{genePathParts[2]}:{Path.GetFileNameWithoutExtension(genePath)}";
+        }
+
+        private Either<Error, (string VmPath, string VhdPath)> ResolveStorageBasePaths(
+            VmHostAgentConfiguration vmHostAgentConfig)
         {
             var names = this;
-            return
-                from dsName in DataStoreName.ToEitherAsync(
-                    Error.New("Unknown data store name. Cannot resolve path"))
-                from projectName in names.ProjectName.ToEitherAsync(Error.New(
-                    "Unknown project name. Cannot resolve path"))
-                from environmentName in names.EnvironmentName.ToEitherAsync(Error.New(
-                    "Unknown environment name. Cannot resolve path"))
-                from dsPath in LookupVMDatastorePathInEnvironment(dsName, environmentName, defaultPath).ToAsync()
-                from projectPath in JoinPathAndProject(dsPath, projectName)
-                select projectPath;
+            return from dsName in names.DataStoreName.ToEither(Error.New("Unknown data store name. Cannot resolve path"))
+                   from projectName in names.ProjectName.ToEither(Error.New("Unknown project name. Cannot resolve path"))
+                   from environmentName in names.EnvironmentName.ToEither(Error.New("Unknown environment name. Cannot resolve path"))
+                   from datastorePaths in LookupVMDatastorePathInEnvironment(dsName, environmentName, vmHostAgentConfig)
+                   select (JoinPathAndProject(datastorePaths.VmPath, projectName), JoinPathAndProject(datastorePaths.VhdPath, projectName));
         }
 
-        private static async Task<Either<Error, string>> LookupVMDatastorePathInEnvironment(
-            string datastore, string environment, string defaultPath)
+        private static Either<Error, (string VmPath, string VhdPath )> LookupVMDatastorePathInEnvironment(
+            string dataStore,
+            string environment,
+            VmHostAgentConfiguration vmHostAgentConfig)
         {
-            return defaultPath;
+            return dataStore == "default"
+                ? from defaults in environment == "default"
+                    ? vmHostAgentConfig.Defaults
+                    : from envConfig in Optional(vmHostAgentConfig.Environments).ToSeq().Flatten()
+                        .Where(e => e.Name == environment)
+                        .HeadOrLeft(Error.New($"The environment {environment} is not configured"))
+                      select envConfig.Defaults
+                  select (defaults.Vms, defaults.Volumes)
+                : from defaultDatastoreConfig in Optional(vmHostAgentConfig.Datastores).ToSeq().Flatten()
+                    .Where(ds => ds.Name == dataStore)
+                    .HeadOrLeft(Error.New($"The datastore {dataStore} is not configured"))
+                  let datastoreConfig = environment == "default"
+                        ? defaultDatastoreConfig
+                        : match(from envConfig in vmHostAgentConfig.Environments
+                                where envConfig.Name == environment
+                                from envDsConfig in envConfig.Datastores
+                                where envDsConfig.Name == dataStore
+                                select envDsConfig,
+                                Empty: () => defaultDatastoreConfig,
+                                More: l => l.Head)
+                  select (datastoreConfig.Path, datastoreConfig.Path);
         }
 
-
-        private static EitherAsync<Error, string> JoinPathAndProject(string dsPath, string projectName)
+        private static string JoinPathAndProject(string dsPath, string projectName)
         {
-            var result = dsPath;
-
-            if (projectName != "default")
-                result = Path.Combine(dsPath, $"p_{projectName}");
-
-            return Prelude.RightAsync<Error, string>(result);
+            return projectName == "default" ? dsPath : Path.Combine(dsPath, $"p_{projectName}");
         }
     }
 }

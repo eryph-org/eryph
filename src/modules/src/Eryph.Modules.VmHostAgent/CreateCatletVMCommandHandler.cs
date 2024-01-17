@@ -1,6 +1,8 @@
 ﻿using System;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
@@ -20,24 +22,29 @@ namespace Eryph.Modules.VmHostAgent
         CatletConfigCommandHandler<CreateCatletVMCommand, ConvergeCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
+        private readonly IHostSettingsProvider _hostSettingsProvider;
+        private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
-        public CreateCatletVMCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, messaging, log)
+        public CreateCatletVMCommandHandler(
+            IPowershellEngine engine,
+            ITaskMessaging messaging,
+            ILogger log,
+            IHostInfoProvider hostInfoProvider,
+            IHostSettingsProvider hostSettingsProvider,
+            IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
+            : base(engine, messaging, log)
         {
             _hostInfoProvider = hostInfoProvider;
+            _hostSettingsProvider = hostSettingsProvider;
+            _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
         protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(CreateCatletVMCommand command)
         {
             var config = command.Config;
 
-            var hostSettings = HostSettingsBuilder.GetHostSettings();
-
-            var planStorageSettings = Prelude.fun(() =>
-                VMStorageSettings.Plan(hostSettings, LongToString(command.StorageId), config,
-                    Option<VMStorageSettings>.None));
-
-            var getParentConfig = Prelude.fun(() =>
-                GetTemplate(hostSettings, config.Parent));
+            var getParentConfig = Prelude.fun((VmHostAgentConfiguration vmHostAgentConfig) =>
+                GetTemplate(vmHostAgentConfig, config.Parent));
 
             var createVM = Prelude.fun((VMStorageSettings settings, 
                     Option<CatletConfig> parentConfig) =>
@@ -48,11 +55,14 @@ namespace Eryph.Modules.VmHostAgent
                     CreateMetadata(parentConfig, vmInfo, config, command.NewMachineId));
 
             return
-                from plannedStorageSettings in planStorageSettings()
-                from parentConfig in getParentConfig()
+                from hostSettings in _hostSettingsProvider.GetHostSettings()
+                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+                from plannedStorageSettings in VMStorageSettings.Plan(vmHostAgentConfig, LongToString(command.StorageId), config,
+                    Option<VMStorageSettings>.None)
+                from parentConfig in getParentConfig(vmHostAgentConfig)
                 from createdVM in createVM(plannedStorageSettings, parentConfig)
                 from metadata in createMetadata(createdVM, parentConfig)
-                from inventory in CreateMachineInventory(Engine, hostSettings, createdVM, _hostInfoProvider)
+                from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, createdVM, _hostInfoProvider)
                 select new ConvergeCatletResult
                 {
                     Inventory = inventory,
@@ -61,14 +71,14 @@ namespace Eryph.Modules.VmHostAgent
         }
 
         private static EitherAsync<Error, Option<CatletConfig>> GetTemplate(
-            HostSettings hostSettings,
+            VmHostAgentConfiguration vmHostAgentConfig,
             string? parent)
         {
             if (string.IsNullOrWhiteSpace(parent))
                 return Prelude.RightAsync<Error, Option<CatletConfig>> (
                     Option<CatletConfig>.None);
 
-            return VirtualMachine.TemplateFromParents(hostSettings, parent).Map(Prelude.Some);
+            return VirtualMachine.TemplateFromParents(vmHostAgentConfig, parent).Map(Prelude.Some);
         }
 
         private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(VMStorageSettings storageSettings, IPowershellEngine engine,

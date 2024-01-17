@@ -6,6 +6,7 @@ using Eryph.Core;
 using Eryph.ModuleCore.Networks;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Rebus;
+using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Security.Cryptography;
 using Eryph.StateDb;
@@ -38,6 +39,9 @@ namespace Eryph.Runtime.Zero
             container.Register<INetworkProviderManager, NetworkProviderManager>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncServiceBridgeService>();
             container.RegisterSingleton<IAgentControlService, AgentControlService>();
+
+            container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
+            container.Register<IHostSettingsProvider, HostSettingsProvider>();
 
             container.RegisterInstance(new WorkflowOptions
             {

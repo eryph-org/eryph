@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
+using Eryph.Core.VmAgent;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
@@ -130,7 +131,7 @@ namespace Eryph.VmManagement
         }
 
         public static EitherAsync<Error, CatletConfig> TemplateFromParents(
-            HostSettings hostSettings,
+            VmHostAgentConfiguration vmHostAgentConfig,
             string parent)
         {
             if(string.IsNullOrEmpty(parent))
@@ -138,7 +139,7 @@ namespace Eryph.VmManagement
                         Error.New("Cannot create template from parent - parent name is missing."));
 
 
-            var genepoolPath = Path.Combine(hostSettings.DefaultVirtualHardDiskPath, "genepool");
+            var genepoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool");
             var loadedConfig = new Dictionary<string,CatletConfig>();
 
 
@@ -228,7 +229,7 @@ namespace Eryph.VmManagement
         }
 
         public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
-            HostSettings hostSettings,
+            VmHostAgentConfiguration vmHostAgentConfig,
             VMHostMachineData hostInfo,
             IPowershellEngine engine,
             Func<string, Task> reportProgress,
@@ -239,7 +240,7 @@ namespace Eryph.VmManagement
             VMStorageSettings storageSettings)
         {
             var convergeContext =
-                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, networkSetting, hostInfo);
+                new ConvergeContext(vmHostAgentConfig, engine, reportProgress, machineConfig, metadata, storageSettings, networkSetting, hostInfo);
 
             var convergeTasks = new ConvergeTaskBase[]
             {
@@ -256,7 +257,7 @@ namespace Eryph.VmManagement
         }
 
         public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> ConvergeConfigDrive(
-            HostSettings hostSettings,
+            VmHostAgentConfiguration vmHostAgentConfig,
             VMHostMachineData hostInfo,
             IPowershellEngine engine,
             Func<string, Task> reportProgress,
@@ -267,7 +268,7 @@ namespace Eryph.VmManagement
             VMStorageSettings storageSettings)
         {
             var convergeContext =
-                new ConvergeContext(hostSettings, engine, reportProgress, machineConfig, metadata, storageSettings, networkSettings, hostInfo);
+                new ConvergeContext(vmHostAgentConfig, engine, reportProgress, machineConfig, metadata, storageSettings, networkSettings, hostInfo);
 
             var convergeTasks = new ConvergeTaskBase[]
             {

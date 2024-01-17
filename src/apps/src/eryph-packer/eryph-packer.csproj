@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Yaml" Version="0.1.0-PullRequest0037.48" />
-    <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.1.0-PullRequest0037.48" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Yaml" Version="0.1.0" />
+    <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.1.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

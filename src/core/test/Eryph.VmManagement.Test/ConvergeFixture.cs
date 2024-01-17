@@ -1,4 +1,5 @@
 ﻿using Eryph.ConfigModel.Catlets;
+using Eryph.Core.VmAgent;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Storage;
@@ -13,17 +14,16 @@ public class ConvergeFixture
         Engine = new TestPowershellEngine(mapping);
         Config = new CatletConfig();
         StorageSettings = new VMStorageSettings();
-
-        HostSettings = new HostSettings
-        {
-            DefaultDataPath = "x:\\data",
-            DefaultNetwork = "default",
-            DefaultVirtualHardDiskPath = "x:\\disks"
-        };
-
         NetworkSettings = Array.Empty<MachineNetworkSettings>();
         HostInfo = new VMHostMachineData();
-
+        VmHostAgentConfiguration = new VmHostAgentConfiguration()
+        {
+            Defaults = new()
+            {
+                Vms = "x:\\data",
+                Volumes = "x:\\disks",
+            },
+        };
     }
 
     public VMStorageSettings StorageSettings { get; set; }
@@ -34,13 +34,13 @@ public class ConvergeFixture
     public CatletConfig Config { get; set; }
     public CatletMetadata Metadata { get; set; }
 
-    public HostSettings HostSettings { get; set; }
-
     public VMHostMachineData HostInfo { get; set; }
+
+    public VmHostAgentConfiguration VmHostAgentConfiguration { get; set; }
 
 
     public ConvergeContext Context =>
-        new(HostSettings, Engine, ReportProgressCallBack,
+        new(VmHostAgentConfiguration, Engine, ReportProgressCallBack,
             Config, Metadata, StorageSettings, NetworkSettings, HostInfo);
 
     private static Task ReportProgressCallBack(string _) => Task.CompletedTask;

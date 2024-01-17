@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core.VmAgent;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
@@ -175,10 +176,10 @@ namespace Eryph.Modules.VmHostAgent
         }
 
         protected static EitherAsync<Error, VirtualMachineData> CreateMachineInventory(
-            IPowershellEngine engine, HostSettings hostSettings,
+            IPowershellEngine engine, VmHostAgentConfiguration vmHostAgentConfig,
             TypedPsObject<VirtualMachineInfo> vmInfo, IHostInfoProvider hostInfoProvider)
         {
-            var inventory = new VirtualMachineInventory(engine, hostSettings, hostInfoProvider);
+            var inventory = new VirtualMachineInventory(engine, vmHostAgentConfig, hostInfoProvider);
             return inventory.InventorizeVM(vmInfo).ToAsync();
         }
 

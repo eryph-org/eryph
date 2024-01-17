@@ -1,5 +1,7 @@
 ﻿using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
@@ -21,10 +23,20 @@ namespace Eryph.Modules.VmHostAgent
         : CatletConfigCommandHandler<UpdateCatletVMCommand, ConvergeCatletResult>
     {
         private readonly IHostInfoProvider _hostInfoProvider;
+        private readonly IHostSettingsProvider _hostSettingsProvider;
+        private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
-        public UpdateCatletVMCommandHandler(IPowershellEngine engine, ITaskMessaging messaging, ILogger log, IHostInfoProvider hostInfoProvider) : base(engine, messaging, log)
+        public UpdateCatletVMCommandHandler(
+            IPowershellEngine engine,
+            ITaskMessaging messaging,
+            ILogger log,
+            IHostInfoProvider hostInfoProvider,
+            IHostSettingsProvider hostSettingsProvider,
+            IVmHostAgentConfigurationManager vmHostAgentConfigurationManager) : base(engine, messaging, log)
         {
             _hostInfoProvider = hostInfoProvider;
+            _hostSettingsProvider = hostSettingsProvider;
+            _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
         protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(UpdateCatletVMCommand command)
@@ -33,24 +45,25 @@ namespace Eryph.Modules.VmHostAgent
 
             var vmId = command.VMId;
 
-            var hostSettings = HostSettingsBuilder.GetHostSettings();
             var convergeVM = Prelude.fun(
-                (TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig c, VMStorageSettings storageSettings, VMHostMachineData hostInfo) =>
-                    VirtualMachine.Converge(hostSettings, hostInfo, Engine, ProgressMessage, vmInfo, c,
+                (VmHostAgentConfiguration vmHostAgentConfig, TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig c, VMStorageSettings storageSettings, VMHostMachineData hostInfo) =>
+                    VirtualMachine.Converge(vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfo, c,
                         command.MachineMetadata, command.MachineNetworkSettings, storageSettings));
 
             return
+                from hostSettings in _hostSettingsProvider.GetHostSettings()
+                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                 from hostInfo in _hostInfoProvider.GetHostInfoAsync(true).WriteTrace()
                 from vmList in GetVmInfo(vmId, Engine)
                 from vmInfo in EnsureSingleEntry(vmList, vmId)
-                from currentStorageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo).WriteTrace()
-                from plannedStorageSettings in VMStorageSettings.Plan(hostSettings, LongToString(command.NewStorageId),
+                from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
+                from plannedStorageSettings in VMStorageSettings.Plan(vmHostAgentConfig, LongToString(command.NewStorageId),
                     config, currentStorageSettings).WriteTrace()
                 from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
                 let mergedConfig = config.GeneticInheritance(metadata.ParentConfig)
                 from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).WriteTrace()
-                from vmInfoConverged in convergeVM(vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()
-                from inventory in CreateMachineInventory(Engine, hostSettings, vmInfoConverged, _hostInfoProvider).WriteTrace()
+                from vmInfoConverged in convergeVM(vmHostAgentConfig, vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()
+                from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, vmInfoConverged, _hostInfoProvider).WriteTrace()
                 select new ConvergeCatletResult
                 {
                     Inventory = inventory,

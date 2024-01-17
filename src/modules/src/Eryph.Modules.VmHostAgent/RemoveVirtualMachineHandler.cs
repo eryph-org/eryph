@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.VmManagement;
@@ -17,19 +18,27 @@ namespace Eryph.Modules.VmHostAgent
     internal class RemoveVirtualMachineHandler : CatletOperationHandlerBase<RemoveCatletVMCommand>
     {
         IOVSPortManager _ovsPortManager;
+        private readonly IHostSettingsProvider _hostSettingsProvider;
+        private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
 
-        public RemoveVirtualMachineHandler(ITaskMessaging messaging, IPowershellEngine engine, IOVSPortManager ovsPortManager) : base(messaging, engine)
+        public RemoveVirtualMachineHandler(
+            ITaskMessaging messaging,
+            IPowershellEngine engine,
+            IOVSPortManager ovsPortManager,
+            IHostSettingsProvider hostSettingsProvider,
+            IVmHostAgentConfigurationManager vmHostAgentConfigurationManager) : base(messaging, engine)
         {
             _ovsPortManager = ovsPortManager;
+            _hostSettingsProvider = hostSettingsProvider;
+            _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
         protected override Task<Either<Error, Unit>> HandleCommand(TypedPsObject<VirtualMachineInfo> vmInfo,
             RemoveCatletVMCommand command, IPowershellEngine engine)
         {
-            var hostSettings = HostSettingsBuilder.GetHostSettings();
-
-
-            return (from storageSettings in VMStorageSettings.FromVM(hostSettings, vmInfo)
+            return (from hostSettings in _hostSettingsProvider.GetHostSettings()
+                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+                from storageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo)
                 from stoppedVM in vmInfo.StopIfRunning(engine).ToAsync().ToError()
                 from uRemovePorts in _ovsPortManager.SyncPorts(vmInfo, VMPortChange.Remove)
                 from _ in stoppedVM.Remove(engine).ToAsync().ToError()
