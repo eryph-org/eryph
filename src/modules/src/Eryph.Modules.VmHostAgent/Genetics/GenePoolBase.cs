@@ -42,8 +42,11 @@ public abstract class GenePoolBase
         return name == "sha1" ? SHA1.Create() : SHA256.Create();
     }
 
-    protected static string GetHashString(byte[] hashBytes)
+    protected static string GetHashString(byte[]? hashBytes)
     {
-        return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
+        return 
+            hashBytes == null 
+                ? string.Empty 
+                : BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
     }
 }

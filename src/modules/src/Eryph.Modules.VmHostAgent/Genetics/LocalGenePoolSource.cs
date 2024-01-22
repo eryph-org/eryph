@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.GenePool.Model;
+using Eryph.GenePool.Model.Responses;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
@@ -64,7 +65,9 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
 
             if (mergedGenesInfo.MergedGenes.Contains(geneHash))
             {
-                return new GeneInfo(geneIdentifier, hash, hashAlgName, null, null, true);
+                return new GeneInfo(geneIdentifier, hash, hashAlgName, null,
+                    Array.Empty<GenePartDownloadUri>(),DateTimeOffset.MinValue, 
+                    null, true);
             }
 
 
@@ -89,7 +92,9 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
 
                     var manifestData = JsonSerializer.Deserialize<GeneManifestData>(manifestJsonData);
                     return new GeneInfo(geneIdentifier, hash, hashAlgName,
-                        manifestData, genePath, false);
+                        manifestData,
+                        Array.Empty<GenePartDownloadUri>(), DateTimeOffset.MinValue,
+                        genePath, false);
                 }
 
 
@@ -222,7 +227,7 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
                         cancellationToken: cancel);
 
                 return await Prelude
-                    .RightAsync<Error, GeneSetInfo>(new GeneSetInfo(genesetIdentifier, genesetPath, manifest))
+                    .RightAsync<Error, GeneSetInfo>(new GeneSetInfo(genesetIdentifier, genesetPath, manifest, Array.Empty<GetGeneDownloadResponse>()))
                     .ToEither();
 
             })
@@ -231,15 +236,16 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
 
     }
 
-    public EitherAsync<Error, GeneSetInfo> CacheGeneSet(string path, GeneSetInfo imageInfo, CancellationToken cancel)
+    public EitherAsync<Error, GeneSetInfo> CacheGeneSet(string path, GeneSetInfo genesetInfo, CancellationToken cancel)
     {
         return Prelude.TryAsync(async () =>
         {
-            var genesetPath = BuildGeneSetPath(imageInfo.Id, path, true);
+            var genesetPath = BuildGeneSetPath(genesetInfo.Id, path, true);
 
             await using var manifestStream = _fileSystem.OpenWrite(Path.Combine(genesetPath, "geneset.json"));
-            await JsonSerializer.SerializeAsync(manifestStream, imageInfo.MetaData, cancellationToken: cancel);
-            return new GeneSetInfo(imageInfo.Id, genesetPath, imageInfo.MetaData);
+            await JsonSerializer.SerializeAsync(manifestStream, genesetInfo.MetaData, cancellationToken: cancel);
+            return new GeneSetInfo(genesetInfo.Id, genesetPath, genesetInfo.MetaData,
+                genesetInfo.GeneDownloadInfo);
 
         }).ToEither(ex => Error.New(ex));
 
@@ -259,7 +265,9 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
             await using var manifestStream = _fileSystem.OpenWrite(Path.Combine(genePath, "gene.json"));
             await JsonSerializer.SerializeAsync(manifestStream, geneInfo.MetaData, cancellationToken: cancel);
             return new GeneInfo(geneInfo.GeneId, geneInfo.Hash, geneInfo.HashAlg, geneInfo.MetaData,
-                genePath, false);
+                geneInfo.DownloadUris, geneInfo.DownloadExpires,
+                genePath,
+                false);
 
         }).ToEither(ex => Error.New(ex));
 
