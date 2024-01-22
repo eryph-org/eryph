@@ -1,4 +1,6 @@
-﻿namespace Eryph.Modules.VmHostAgent.Genetics;
+﻿using Eryph.GenePool.Model;
+
+namespace Eryph.Modules.VmHostAgent.Genetics;
 
 public record GeneInfo(GeneIdentifier GeneId, string Hash, string HashAlg, GeneManifestData? MetaData, string? LocalPath, bool MergedWithImage)
 {

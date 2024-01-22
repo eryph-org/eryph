@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Eryph.GenePool.Model;
 using Eryph.Resources;
 using Eryph.VmManagement;
 using LanguageExt;

@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.GenePool.Model;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
@@ -29,11 +30,11 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
 
     private string BuildGeneSetPath(GeneSetIdentifier genesetIdentifier, string basePath, bool shouldExists = false)
     {
-        var orgDirectory = Path.Combine(basePath, genesetIdentifier.Organization);
+        var orgDirectory = Path.Combine(basePath, genesetIdentifier.Organization.Value);
         if (shouldExists) _fileSystem.EnsureDirectoryExists(orgDirectory);
-        var poolBaseDirectory = Path.Combine(orgDirectory, genesetIdentifier.GeneSet);
+        var poolBaseDirectory = Path.Combine(orgDirectory, genesetIdentifier.Geneset.Value);
         if (shouldExists) _fileSystem.EnsureDirectoryExists(poolBaseDirectory);
-        var imageTagDirectory = Path.Combine(poolBaseDirectory, genesetIdentifier.Tag);
+        var imageTagDirectory = Path.Combine(poolBaseDirectory, genesetIdentifier.Tag.Value);
         if (shouldExists) _fileSystem.EnsureDirectoryExists(imageTagDirectory);
 
         return imageTagDirectory;
@@ -205,7 +206,7 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
     private EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier genesetIdentifier,
         bool fallbackMode, CancellationToken cancel)
     {
-        if (!fallbackMode && genesetIdentifier.Tag == "latest")
+        if (!fallbackMode && genesetIdentifier.Tag.Value == "latest")
             return Error.New("latest geneset version will be look up first on remote sources.");
 
         return Prelude.TryAsync(async () =>
@@ -217,7 +218,7 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
 
                 await using var manifestStream = File.OpenRead(Path.Combine(genesetPath, "geneset.json"));
                 var manifest =
-                    await JsonSerializer.DeserializeAsync<GeneSetManifestData>(manifestStream,
+                    await JsonSerializer.DeserializeAsync<GenesetTagManifestData>(manifestStream,
                         cancellationToken: cancel);
 
                 return await Prelude

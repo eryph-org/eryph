@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -36,7 +37,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
         return Prelude.TryAsync(async () =>
             {
                 var manifestUrl =
-                    $"{genesetIdentifier.Organization}/{genesetIdentifier.GeneSet}/{genesetIdentifier.Tag}/geneset.json";
+                    $"{genesetIdentifier.Organization}/{genesetIdentifier.Geneset}/{genesetIdentifier.Tag}/geneset.json";
                 using var httpClient = _httpClientFactory.CreateClient(PoolName);
 
                 var response = await httpClient.GetAsync(manifestUrl, cancel);
@@ -56,7 +57,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
 
                 var manifest = ReadGeneSetManifest(await response.Content.ReadAsStringAsync(cancel));
 
-                if (manifest?.GeneSet != genesetIdentifier.Name)
+                if (manifest?.Geneset != genesetIdentifier.Name)
                 {
                     return Error.New($"Invalid manifest for geneset '{genesetIdentifier}'.");
                 }
@@ -80,7 +81,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
                         var (hashAlgName, partHash) = parsedGeneId;
 
                         var geneUrl =
-                            $"{genesetInfo.Id.Organization}/{genesetInfo.Id.GeneSet}/{genesetInfo.Id.Tag}/{partHash}/gene.json";
+                            $"{genesetInfo.Id.Organization}/{genesetInfo.Id.Geneset}/{genesetInfo.Id.Tag}/{partHash}/gene.json";
                         _log.LogTrace("gene {gene} manifest url: {url}", geneIdentifier, geneUrl);
 
                         using var httpClient = _httpClientFactory.CreateClient(PoolName);
@@ -127,7 +128,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
             var messageName = $"{geneInfo}/{partHash[..12]}";
             var genesetId = geneInfo.GeneId.GeneSet;
             var genePartUrl =
-                $"{genesetId.Organization}/{genesetId.GeneSet}/{genesetId.Tag}/{geneInfo.Hash}/{partHash}.part";
+                $"{genesetId.Organization}/{genesetId.Geneset}/{genesetId.Tag}/{geneInfo.Hash}/{partHash}.part";
             _log.LogTrace("gene {gene}, part {genePart} url: {url}", geneInfo,
                 genePart, genePartUrl);
 

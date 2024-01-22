@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -26,9 +27,9 @@ public abstract class GenePoolBase
         return (geneParts[0], geneParts[1].ToLowerInvariant());
     }
 
-    protected static GeneSetManifestData ReadGeneSetManifest(string json)
+    protected static GenesetTagManifestData ReadGeneSetManifest(string json)
     {
-        return JsonSerializer.Deserialize<GeneSetManifestData>(json);
+        return JsonSerializer.Deserialize<GenesetTagManifestData>(json);
     }
 
     protected static GeneManifestData ReadGeneManifest(string json)
