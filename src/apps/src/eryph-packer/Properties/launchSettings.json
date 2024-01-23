@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "eryph-packer": {
-      "commandName": "Project",
-      "commandLineArgs": "pack vm dbosoft/win11-22h2-enterprise/20230816 ..\\hyperv-boxes\\builds\\win11-22h2-enterprise-stage1 --workdir genes",
-      "workingDirectory": "D:\\Source\\Repos\\eryph\\build-images"
-    }
-  }
-}
