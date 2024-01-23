@@ -63,7 +63,7 @@ internal class UpdateConfigDriveCommandHandler :
             from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
                 .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
             
-            let mergedConfig = fodderConfig.GeneticInheritance(metadata.ParentConfig)
+            from mergedConfig in fodderConfig.BreedAndFeed(vmHostAgentConfig, metadata.ParentConfig).ToAsync()
             from vmInfoConverged in convergeConfigDrive(vmHostAgentConfig, vmInfo, currentStorageSettings, hostInfo, mergedConfig).WriteTrace().ToAsync()
 
             select Unit.Default;

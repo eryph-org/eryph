@@ -11,7 +11,6 @@ namespace Eryph.Modules.Controller.Compute
 
         public bool Validated;
         public CatletConfig? Config { get; set; }
-        public CatletConfig? BreedConfig { get; set; }
 
         public Guid CatletId { get; set; }
         public string? AgentName { get; set; }

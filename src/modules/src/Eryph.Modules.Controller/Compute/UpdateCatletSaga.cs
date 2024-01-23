@@ -6,12 +6,12 @@ using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Catlets;
+using Eryph.GenePool.Model;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.IdGenerator;
-using Eryph.Resources;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -108,28 +108,36 @@ namespace Eryph.Modules.Controller.Compute
                         .Map(parentConfig => parentConfig?.Breed(Data.Config, Data.Config.Parent) ?? Data.Config)
                         .IfNone(Data.Config);
 
-
-                    var geneCommands = new List<(GeneType Type, string GeneName)>();
-                    geneCommands.AddRange((breedConfig?.Drives?
+                    var geneIdentifiers = new List<GeneIdentifier>();
+                    geneIdentifiers.AddRange(breedConfig?.Drives?
                         .Select(x => x.Source)
-                        .Where(t => t != null && t.StartsWith("gene:") && t.Split(':').Length >= 2)
-                        .Select(t => t?.Remove(0,"gene:".Length) ?? "") ?? Enumerable.Empty<string>()).Select(x=> (GeneType.Volume, x)));
+                        .Where(t => t != null && t.StartsWith("gene:"))
+                        .Select(x => x == null 
+                            ? throw new NullReferenceException() // could not happen
+                            : GeneIdentifier.ParseUnsafe(GeneType.Volume, x)) ?? Array.Empty<GeneIdentifier>());
+
+                    geneIdentifiers.AddRange(breedConfig?.Fodder?
+                        .Select(x => x.Source)
+                        .Where(t => t != null && t.StartsWith("gene:"))
+                        .Select(x => x == null
+                            ? throw new NullReferenceException() // could not happen
+                            : GeneIdentifier.ParseUnsafe(GeneType.Fodder, x)) ?? Array.Empty<GeneIdentifier>());
 
                     // no images required - go directly to create
-                    if (geneCommands.Count == 0)
+                    if (geneIdentifiers.Count == 0)
                     {
                         await UpdateCatlet();
                         return;
                     }
 
-                    Data.PendingGeneNames = geneCommands.Select(x=>x.GeneName).Distinct().ToList();
+                    Data.PendingGeneNames = geneIdentifiers.Select(x=>x.Name).Distinct().ToList();
 
-                    foreach (var (geneType, geneName) in geneCommands)
+                    foreach (var geneIdentifier in geneIdentifiers)
                     {
                         await StartNewTask(new PrepareGeneCommand()
                         {
-                            GeneType = geneType,
-                            GeneName = geneName,
+                            GeneType = geneIdentifier.GeneType,
+                            GeneName = geneIdentifier.Name,
                             AgentName = Data.AgentName
                         });
                     }
@@ -146,27 +154,42 @@ namespace Eryph.Modules.Controller.Compute
                 (response) =>
                 {
 
-                    if (Data.Config != null)
-                    {
+                    //if (Data.BreedConfig != null)
+                    //{
 
-                        if (response.GeneType == GeneType.Volume)
-                        {
-                            foreach (var catletDriveConfig in Data.Config.Drives ?? Array.Empty<CatletDriveConfig>())
-                            {
-                                if (catletDriveConfig.Source != null &&
-                                    catletDriveConfig.Source.StartsWith("gene:") &&
-                                    catletDriveConfig.Source.Contains(response.RequestedGene))
-                                {
-                                    catletDriveConfig.Source =
-                                        catletDriveConfig.Source.Replace(response.RequestedGene, response.ResolvedGene);
-                                }
+                    //    if (response.GeneType == GeneType.Volume)
+                    //    {
+                    //        foreach (var catletDriveConfig in Data.BreedConfig.Drives ?? Array.Empty<CatletDriveConfig>())
+                    //        {
+                    //            if (catletDriveConfig.Source != null &&
+                    //                catletDriveConfig.Source.StartsWith("gene:"))
+                    //            {
+                    //                var geneIdentifier = GeneIdentifier.ParseUnsafe(GeneType.Volume,catletDriveConfig.Source);
+                    //                if (geneIdentifier.Name == response.RequestedGene)
+                    //                    catletDriveConfig.Source = response.ResolvedGene;
+                    //            }
 
-                            }
-                        }
-                    }
+                    //        }
+                    //    }
+
+                    //    if (response.GeneType == GeneType.Fodder)
+                    //    {
+                    //        foreach (var fodderConfig in Data.BreedConfig.Fodder ?? Array.Empty<FodderConfig>())
+                    //        {
+                    //            if (fodderConfig.Source != null &&
+                    //                fodderConfig.Source.StartsWith("gene:"))
+                    //            {
+                    //                var geneIdentifier = GeneIdentifier.ParseUnsafe(GeneType.Fodder, fodderConfig.Source);
+                    //                if (geneIdentifier.Name == response.RequestedGene)
+                    //                    fodderConfig.Source = response.ResolvedGene;
+                    //            }
+
+                    //        }
+                    //    }
+                    //}
 
                     if (Data.PendingGeneNames != null && Data.PendingGeneNames.Contains(response.RequestedGene))
-                        Data.PendingGeneNames.Remove(response.ResolvedGene);
+                        Data.PendingGeneNames.Remove(response.RequestedGene);
 
                     return Data.PendingGeneNames?.Count == 0
                         ? UpdateCatlet()

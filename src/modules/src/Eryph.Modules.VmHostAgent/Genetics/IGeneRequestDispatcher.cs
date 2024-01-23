@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.GenePool.Model;
 using Eryph.Resources;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;

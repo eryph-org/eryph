@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Core.VmAgent;
+using Eryph.GenePool.Model;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
@@ -151,7 +152,9 @@ namespace Eryph.VmManagement
                     continue;
                 }
 
-                var parentPathName = parent.Replace('/', '\\');
+                var parentIdentifier = GeneSetIdentifier.ParseUnsafe(parent);
+
+                var parentPathName = parentIdentifier.Name.Replace('/', '\\');
                 var genesetManifestPath = Path.Combine(genepoolPath, parentPathName, "geneset.json");
                 var manifest = JsonSerializer.Deserialize<JsonNode>(File.ReadAllText(genesetManifestPath));
                 var reference = manifest["ref"]?.GetValue<string>() ?? "";

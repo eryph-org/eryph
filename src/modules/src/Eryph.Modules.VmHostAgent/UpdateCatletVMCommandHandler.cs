@@ -60,7 +60,7 @@ namespace Eryph.Modules.VmHostAgent
                 from plannedStorageSettings in VMStorageSettings.Plan(vmHostAgentConfig, LongToString(command.NewStorageId),
                     config, currentStorageSettings).WriteTrace()
                 from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
-                let mergedConfig = config.GeneticInheritance(metadata.ParentConfig)
+                from mergedConfig in config.BreedAndFeed(vmHostAgentConfig, metadata.ParentConfig).ToAsync()
                 from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).WriteTrace()
                 from vmInfoConverged in convergeVM(vmHostAgentConfig, vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()
                 from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, vmInfoConverged, _hostInfoProvider).WriteTrace()

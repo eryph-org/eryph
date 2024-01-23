@@ -1,4 +1,5 @@
-﻿using Eryph.Resources;
+﻿using Eryph.GenePool.Model;
+using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.Genes.Commands;
 

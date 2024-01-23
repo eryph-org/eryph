@@ -15,7 +15,7 @@
 
     <PackageReference Include="Ardalis.ApiEndpoints" Version="4.1.0" />
 
-    <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.1.0" />
+    <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.1.1-PullRequest0045.3" />
 
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
