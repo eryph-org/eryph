@@ -19,6 +19,7 @@ using Eryph.ModuleCore;
 using Eryph.Modules.ComputeApi;
 using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
+using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
@@ -149,6 +150,17 @@ internal static class Program
             nonInteractiveOption, noCurrentConfigCheckOption);
         networksCommand.AddCommand(importNetworksCommand);
 
+        var driverCommand = new Command("driver");
+        rootCommand.AddCommand(driverCommand);
+
+        var getDriverStatusCommand = new Command("status");
+        getDriverStatusCommand.SetHandler(DriverCommands.GetDriverStatus);
+        driverCommand.AddCommand(getDriverStatusCommand);
+
+        var installDriverCommand = new Command("reinstall");
+        installDriverCommand.SetHandler(DriverCommands.ReinstallDriver);
+        driverCommand.AddCommand(installDriverCommand);
+
         var commandLineBuilder = new CommandLineBuilder(rootCommand);
 
         commandLineBuilder.AddMiddleware(async (context, next) =>
@@ -262,9 +274,9 @@ internal static class Program
                         }
                     });
 
-
+                bool isWindowsService = WindowsServiceHelpers.IsWindowsService();
                 // do not check in service mode - during startup some features may be unavailable
-                if (!WindowsServiceHelpers.IsWindowsService())
+                if (!isWindowsService)
                 {
                     var provider = new HostSettingsProvider();
                     var result = await provider.GetHostSettings()
@@ -283,16 +295,27 @@ internal static class Program
                     }
                 }
 
+                var loggerFactory = new SerilogLoggerFactory(Log.Logger);
+
+                var ovsRunDir = OVSPackage.UnpackAndProvide(startupConfig.OVSPackageDir);
+                var ensureDriverResult = await DriverCommands.EnsureDriver(
+                    ovsRunDir, !isWindowsService, !isWindowsService, loggerFactory);
+                if (ensureDriverResult.IsFail)
+                {
+                    ensureDriverResult.IfFail(e => Console.Error.WriteLine((e.ToString())));
+                    return -11;
+                }
+
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-                container.RegisterInstance<ILoggerFactory>(new SerilogLoggerFactory(Log.Logger));
+                container.RegisterInstance<ILoggerFactory>(loggerFactory);
                 container.RegisterConditional(
                     typeof(ILogger),
-                    c => typeof(Logger<>).MakeGenericType(c.Consumer!.ImplementationType),
+                    c => typeof(Microsoft.Extensions.Logging.Logger<>).MakeGenericType(c.Consumer!.ImplementationType),
                     Lifestyle.Singleton,
                     _ => true);
 
-                container.Bootstrap(startupConfig.OVSPackageDir);
+                container.Bootstrap(ovsRunDir);
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
                 var builder = ModulesHost.CreateDefaultBuilder(args) as ModulesHostBuilder;
@@ -548,7 +571,8 @@ internal static class Program
                             dataBackupCreated = true;
                             return Unit.Default;
                         }).ToEither()
-                        from _ in Prelude.Try(() => OVSPackage.UnpackAndProvide(true)).ToEitherAsync()
+                        from ovsRootPath in Prelude.Try(() => OVSPackage.UnpackAndProvide()).ToEitherAsync()
+                        from _ in DriverCommands.EnsureDriver(ovsRootPath, true, true, loggerFactory).Map(r => r.ToEither()).ToAsync()
                         from uCopy in CopyService()
                         from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
                         let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
@@ -1089,10 +1113,11 @@ internal static class Program
         }
         
         using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
-        var ovsPackagePath = OVSPackage.UnpackAndProvide(true);
-        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsPackagePath), new NullLoggerFactory());
+        var ovsRootPath = OVSPackage.UnpackAndProvide();
+        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRootPath), new NullLoggerFactory());
 
         var res = (await (
+            from _ in OvsDriverProvider<ConsoleRuntime>.ensureDriver(ovsRootPath, true, true)
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
@@ -1103,7 +1128,7 @@ internal static class Program
                   select r
             from newConfigChanges in generateChanges(syncResult.HostState, newConfig)
             from validateImpact in validateNetworkImpact(newConfig)
-            from _ in applyChangesInConsole(currentConfig, newConfigChanges,
+            from __ in applyChangesInConsole(currentConfig, newConfigChanges,
                 nonInteractive, syncResult.IsValid)
 
             from save in saveConfigurationYaml(configString)

@@ -14,7 +14,7 @@ namespace Eryph.Runtime.Zero;
 
 internal class OVSPackage
 {
-    public static string UnpackAndProvide(bool canInstallDriver, string? relativePackagePath = null)
+    public static string UnpackAndProvide(string? relativePackagePath = null)
     {
         var log = Log.ForContext<OVSPackage>();
         var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
@@ -52,7 +52,8 @@ internal class OVSPackage
         foreach (var ovsFilesDir in ovsRootDir.GetDirectories("run_*"))
         {
             log.Verbose("Checking path '{ovsFileDir}' for ovs files", ovsFilesDir.FullName);
-            var hasOvs = ovsFilesDir.GetFiles("ovs-vswitchd.exe", SearchOption.AllDirectories).Any();
+            var hasOvs = ovsFilesDir.GetFiles("ovs-vswitchd.exe", SearchOption.AllDirectories).Any()
+                && ovsFilesDir.GetFiles("dbo_ovse.inf", SearchOption.AllDirectories).Any();
            
             if(!hasOvs) continue;
            
@@ -89,7 +90,10 @@ internal class OVSPackage
             var extractFolder = Path.Combine(ovsRootDir.FullName, $"run_{runDirNo:D}");
             ZipFile.ExtractToDirectory(ovsPackageFile, extractFolder);
 
+            if (relativePackagePath == null)
+                File.Move(ovsPackageFile, ovsPackageBackupFile, true);
 
+            /*
             if (canInstallDriver)
             {
                 var exitCode = -1;
@@ -147,11 +151,8 @@ internal class OVSPackage
                 if (exitCode != 0)
                     throw new IOException(
                         $"Failed to install eryph overlay driver. Installation exit code: {exitCode}");
-
-                if(relativePackagePath==null)
-                    File.Move(ovsPackageFile, ovsPackageBackupFile, true);
-
             }
+            */
         }
 
         //cleanup old rundirs (if not in use any more)

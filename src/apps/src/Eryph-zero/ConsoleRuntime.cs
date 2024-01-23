@@ -1,10 +1,12 @@
-﻿using System.Threading;
+﻿using System.Text;
+using System.Threading;
 using Dbosoft.OVN;
 using Eryph.Core;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
+using Eryph.Modules.VmHostAgent.Sys.ProcessRunners;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.VmManagement;
 using LanguageExt;
@@ -21,7 +23,12 @@ public readonly struct ConsoleRuntime :
     HasHostNetworkCommands<ConsoleRuntime>,
     HasConsole<ConsoleRuntime>,
     HasNetworkProviderManager<ConsoleRuntime>,
-    HasLogger<ConsoleRuntime>
+    HasLogger<ConsoleRuntime>,
+    HasFile<ConsoleRuntime>,
+    HasDirectory<ConsoleRuntime>,
+    HasProcessRunner<ConsoleRuntime>,
+    HasEnvironment<ConsoleRuntime>
+
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly IPowershellEngine _engine;
@@ -68,4 +75,13 @@ public readonly struct ConsoleRuntime :
     public Eff<ConsoleRuntime, ILogger<T>> Logger<T>() =>
         Eff<ConsoleRuntime, ILogger<T>>(rt => rt._loggerFactory.CreateLogger<T>());
 
+    public Encoding Encoding => Encoding.UTF8;
+
+    public Eff<ConsoleRuntime, FileIO> FileEff => SuccessEff(LanguageExt.Sys.Live.FileIO.Default);
+
+    public Eff<ConsoleRuntime, DirectoryIO> DirectoryEff => SuccessEff(LanguageExt.Sys.Live.DirectoryIO.Default);
+
+    public Eff<ConsoleRuntime, ProcessRunnerIO> ProcessRunnerEff => SuccessEff(LiveProcessRunnerIO.Default);
+
+    public Eff<ConsoleRuntime, EnvironmentIO> EnvironmentEff => SuccessEff(LanguageExt.Sys.Live.EnvironmentIO.Default);
 }

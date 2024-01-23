@@ -39,6 +39,14 @@
         "DOTNET_ENVIRONMENT": "Development"
       },
       "remoteDebugEnabled": false
+    },
+    "driver status": {
+      "commandName": "Project",
+      "commandLineArgs": "driver status",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
     }
   }
 }
