@@ -67,7 +67,17 @@ jobs:
       projects: '**/apps/**/*-zero/*.csproj'
       arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build /p:SignHash=$(signHash)'
       zipAfterPublish: false
-      
+
+  - task: DotNetCoreCLI@2
+    displayName: publish uninstaller app
+    inputs:
+      command: 'publish'
+      publishWebProjects: false
+      modifyOutputPath: false
+      projects: '**/apps/**/*-uninstaller/*.csproj'
+      arguments: '--configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build /p:SignHash=$(signHash)'
+      zipAfterPublish: false
+
   - task: CmdLine@2
     displayName: rename zero build
     inputs:
@@ -75,7 +85,7 @@ jobs:
       workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build'
 
   - task: AzureCLI@2
-    displayName: 'Sign eryph-zero.exe'
+    displayName: 'Sign executables'
     condition: ne(variables['Build.Reason'], 'PullRequest')
     inputs:
       scriptType: ps
@@ -85,7 +95,7 @@ jobs:
       workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build\bin'
       inlineScript: |
         AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2023" -v eryph-zero.exe
-
+        AzureSignTool sign -kvu "https://dbosoft-hsm-vault.vault.azure.net" -kvi $Env:servicePrincipalId -kvt $Env:tenantId -kvs $Env:servicePrincipalKey -tr http://rfc3161timestamp.globalsign.com/advanced -kvc "codesigning-2023" -v eryph-uninstaller.exe
 
   - task: CopyFiles@2
     displayName: copy ovs package to zero build
