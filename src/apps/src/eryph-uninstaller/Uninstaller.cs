@@ -36,42 +36,56 @@ namespace Eryph.Runtime.Uninstaller
 
         public async Task UninstallAsync()
         {
-            var fileVersionInfo = await DetectInstall();
-            if (fileVersionInfo is null)
-                return;
+            try
+            {
+                var fileVersionInfo = await DetectInstall();
+                if (fileVersionInfo is null)
+                    return;
 
-            await TrackAsync(fileVersionInfo.ProductVersion);
-            await RunUninstall(fileVersionInfo.FileName);
-            await RemoveFolder();
+                await TrackAsync(fileVersionInfo.ProductVersion);
+                await RunUninstall(fileVersionInfo.FileName);
+                await RemoveFolder();
+            }
+            catch (Exception e)
+            {
+                await _reportProgress(e.ToString());
+            }
         }
 
         public async Task TrackAsync(string productVersion)
         {
-            using var client = new HttpClient();
+            try
+            {
+                using var client = new HttpClient();
 
-            var json = $$"""
-                {
-                    "anonymousId": "{{Guid.NewGuid()}}",
-                    "event": "uninstall_eryph",
-                    "properties": {
-                        "product": "eryph_zero",
-                        "version" "{{productVersion}}",
-                        "uninstall_reason": "{{_uninstallReason}}",
-                        "feedback": "{{HttpUtility.JavaScriptStringEncode(_feedback)}}"
-                    }
-                }      
-                """;
+                var json = $$"""
+                 {
+                     "anonymousId": "{{Guid.NewGuid()}}",
+                     "event": "uninstall_eryph",
+                     "properties": {
+                         "product": "eryph_zero",
+                         "version" "{{productVersion}}",
+                         "uninstall_reason": "{{_uninstallReason}}",
+                         "feedback": "{{HttpUtility.JavaScriptStringEncode(_feedback)}}"
+                     }
+                 }
+                 """;
 
-            using var request = new HttpRequestMessage();
+                using var request = new HttpRequestMessage();
 
-            request.Method = HttpMethod.Post;
-            request.RequestUri = new Uri(FeedbackUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue(
-                "Basic",
-                Convert.ToBase64String(Encoding.ASCII.GetBytes($"{WriteKey}:")));
-            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-            
-            await client.SendAsync(request);
+                request.Method = HttpMethod.Post;
+                request.RequestUri = new Uri(FeedbackUrl);
+                request.Headers.Authorization = new AuthenticationHeaderValue(
+                    "Basic",
+                    Convert.ToBase64String(Encoding.ASCII.GetBytes($"{WriteKey}:")));
+                request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                await client.SendAsync(request);
+            }
+            catch (Exception)
+            {
+                // Ignore any exceptions when sending tracking request
+            }
         }
 
         public async Task<FileVersionInfo?> DetectInstall()
@@ -135,8 +149,7 @@ namespace Eryph.Runtime.Uninstaller
                 await _reportProgress("Installation folder was not." + Environment.NewLine);
             }
 
-            Directory.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "eryph", "zero"), true);
+            Directory.Delete(folderPath, true);
 
             await _reportProgress("Installation folder removed." + Environment.NewLine);
         }

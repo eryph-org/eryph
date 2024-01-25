@@ -42,6 +42,7 @@ namespace Eryph.Runtime.Uninstaller
                 Arguments = "-continue",
                 UseShellExecute = true,
                 Verb = "runas",
+                WorkingDirectory = tempFolderPath,
             };
             Process.Start(startInfo);
             
@@ -57,11 +58,13 @@ namespace Eryph.Runtime.Uninstaller
             var executablePath = currentProcess!.MainModule!.FileName;
             var folderPath = Path.GetDirectoryName(executablePath);
 
-            var startInfo = new ProcessStartInfo("powershell.exe", "")
+            var startInfo = new ProcessStartInfo("powershell.exe")
             {
-                Arguments = @$"-C ""Wait-Process -Id {currentProcess.Id}; Remove-Item -LiteralPath '{executablePath}';Remove-Item -LiteralPath '{folderPath}';""",
-                UseShellExecute = true,
+                Arguments = $"""-C "Wait-Process -Id {currentProcess.Id}; Remove-Item -LiteralPath '{executablePath}';Remove-Item -LiteralPath '{folderPath}';" """,
+                UseShellExecute = false,
                 CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                WorkingDirectory = Path.GetTempPath(),
             };
             Process.Start(startInfo);
         }

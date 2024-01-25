@@ -14,8 +14,19 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <TextBox x:Name="TextBox" IsReadOnly="True" TextWrapping="Wrap" Grid.Row="0" VerticalScrollBarVisibility="Visible"/>
-        <CheckBox Grid.Row="1" Margin="0,5">Remove uninstaller</CheckBox>
-        <Button x:Name="CloseButton" Grid.Row="2" Width="200" Height="25" IsEnabled="False" Click="CloseButton_Click">Close</Button>
+        <TextBox x:Name="TextBox"
+                 IsReadOnly="True"
+                 TextWrapping="Wrap"
+                 Grid.Row="0"
+                 VerticalScrollBarVisibility="Visible"/>
+        <Button x:Name="CloseButton"
+                Grid.Row="2"
+                Width="200"
+                Height="25"
+                Margin="0,5,0,0"
+                IsEnabled="False"
+                Click="CloseButton_Click">
+            Close
+        </Button>
     </Grid>
 </Page>
