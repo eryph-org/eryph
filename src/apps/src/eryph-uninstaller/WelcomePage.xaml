@@ -64,7 +64,7 @@
         <CheckBox x:Name="RemoveVirtualMachinesCheckBox"
                   Grid.Row="5"
                   Margin="0,5"
-                  IsEnabled="{Binding IsChecked, ElementName=RemoveConfigCheckBox}">
+                  IsEnabled="{Binding IsChecked, ElementName=RemoveConfigCheckBox}" Visibility="Hidden">
             Remove virtual machines and disk
         </CheckBox>
         <Button x:Name="UninstallButton"

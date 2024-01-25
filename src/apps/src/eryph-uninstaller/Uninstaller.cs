@@ -41,8 +41,8 @@ namespace Eryph.Runtime.Uninstaller
                 return;
 
             await TrackAsync(fileVersionInfo.ProductVersion);
-            //await RunUninstall(fileVersionInfo.FileName);
-            //await RemoveFolder();
+            await RunUninstall(fileVersionInfo.FileName);
+            await RemoveFolder();
         }
 
         public async Task TrackAsync(string productVersion)
