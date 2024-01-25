@@ -27,8 +27,8 @@ namespace Eryph.Runtime.Uninstaller
         public ProgressPage(
             bool removeConfig,
             bool removeVirtualMachines,
-            string? uninstallReason,
-            string? feedback)
+            UninstallReason uninstallReason,
+            string feedback)
         {
             InitializeComponent();
             _uninstaller = new(removeConfig, removeVirtualMachines, uninstallReason,

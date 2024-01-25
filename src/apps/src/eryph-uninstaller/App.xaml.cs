@@ -15,12 +15,12 @@ namespace Eryph.Runtime.Uninstaller
     /// </summary>
     public partial class App : Application
     {
-        private bool _deleteOnExit = false;
+        private bool _deleteOnExit;
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
 #if DEBUG
-            if (System.Diagnostics.Debugger.IsAttached)
+            if (Debugger.IsAttached)
                 return;
 #endif
             if (e.Args.Length > 0 && e.Args[0] == "-continue")
@@ -41,6 +41,7 @@ namespace Eryph.Runtime.Uninstaller
             {
                 Arguments = "-continue",
                 UseShellExecute = true,
+                Verb = "runas",
             };
             Process.Start(startInfo);
             

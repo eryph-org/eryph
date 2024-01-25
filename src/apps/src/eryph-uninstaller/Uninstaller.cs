@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace Eryph.Runtime.Uninstaller
 {
@@ -10,15 +13,18 @@ namespace Eryph.Runtime.Uninstaller
     {
         private readonly bool _removeConfig;
         private readonly bool _removeVirtualMachines;
-        private readonly string? _uninstallReason;
-        private readonly string? _feedback;
-        private Func<string, Task> _reportProgress;
+        private readonly UninstallReason _uninstallReason;
+        private readonly string _feedback;
+        private readonly Func<string, Task> _reportProgress;
+
+        private const string FeedbackUrl = "https://dbosoftfrvyfj.dataplane.rudderstack.com/v1/track";
+        private const string WriteKey = "2bApAyC76MQAPXOjMkUlrToX7zD";
 
         public Uninstaller(
             bool removeConfig,
             bool removeVirtualMachines,
-            string? uninstallReason,
-            string? feedback,
+            UninstallReason uninstallReason,
+            string feedback,
             Func<string, Task> reportProgress)
         {
             _removeConfig = removeConfig;
@@ -30,15 +36,45 @@ namespace Eryph.Runtime.Uninstaller
 
         public async Task UninstallAsync()
         {
-            var exePath = await DetectInstall();
-            if (exePath is null)
+            var fileVersionInfo = await DetectInstall();
+            if (fileVersionInfo is null)
                 return;
 
-            await RunUninstall(exePath);
-            await RemoveFolder();
+            await TrackAsync(fileVersionInfo.ProductVersion);
+            //await RunUninstall(fileVersionInfo.FileName);
+            //await RemoveFolder();
         }
 
-        private async Task<string?> DetectInstall()
+        public async Task TrackAsync(string productVersion)
+        {
+            using var client = new HttpClient();
+
+            var json = $$"""
+                {
+                    "anonymousId": "{{Guid.NewGuid()}}",
+                    "event": "uninstall_eryph",
+                    "properties": {
+                        "product": "eryph_zero",
+                        "version" "{{productVersion}}",
+                        "uninstall_reason": "{{_uninstallReason}}",
+                        "feedback": "{{HttpUtility.JavaScriptStringEncode(_feedback)}}"
+                    }
+                }      
+                """;
+
+            using var request = new HttpRequestMessage();
+
+            request.Method = HttpMethod.Post;
+            request.RequestUri = new Uri(FeedbackUrl);
+            request.Headers.Authorization = new AuthenticationHeaderValue(
+                "Basic",
+                Convert.ToBase64String(Encoding.ASCII.GetBytes($"{WriteKey}:")));
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            
+            await client.SendAsync(request);
+        }
+
+        public async Task<FileVersionInfo?> DetectInstall()
         {
             await _reportProgress("Detecting eryph installation..." + Environment.NewLine);
 
@@ -53,7 +89,7 @@ namespace Eryph.Runtime.Uninstaller
             var fileVersionInfo = FileVersionInfo.GetVersionInfo(exePath);
             await _reportProgress($"Eryph version {fileVersionInfo.ProductVersion} found." + Environment.NewLine);
 
-            return exePath;
+            return fileVersionInfo;
         }
 
         private async Task RunUninstall(string path)

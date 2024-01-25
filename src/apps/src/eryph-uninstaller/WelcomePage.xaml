@@ -32,22 +32,29 @@
                 Content="It did not work for me"
                 Grid.Row="0"
                 Margin="0,5"
-                Checked="ReasonSelected"/>
+                Checked="ReasonSelected"
+                Tag="{x:Static local:UninstallReason.DidNotWork}"/>
             <RadioButton
                 GroupName="UninstallReason"
                 Content="I do not need it anymore"
                 Grid.Row="1"
                 Margin="0,5"
-                Checked="ReasonSelected"/>
+                Checked="ReasonSelected"
+                Tag="{x:Static local:UninstallReason.NotNeededAnymore}"/>
             <RadioButton
                 GroupName="UninstallReason"
                 Content="Other"
                 Grid.Row="2"
                 Margin="0,5"
-                Checked="ReasonSelected"/>
+                Checked="ReasonSelected"
+                Tag="{x:Static local:UninstallReason.Other}"/>
         </Grid>
         <Label Grid.Row="2">Additional Feedback:</Label>
-        <TextBox x:Name="FeedbackTextBox" Grid.Row="3"/>
+        <TextBox x:Name="FeedbackTextBox"
+                 Grid.Row="3"
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 MaxLength="1000"/>
         <CheckBox x:Name="RemoveConfigCheckBox"
                   Grid.Row="4"
                   Margin="0,5"

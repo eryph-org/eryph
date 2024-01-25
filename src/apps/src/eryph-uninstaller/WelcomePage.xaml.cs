@@ -28,14 +28,14 @@ namespace Eryph.Runtime.Uninstaller
 
         private void UninstallButton_Click(object sender, RoutedEventArgs e)
         {
-            var reason = (string?)UninstallReasonsGrid.Children
+            var reason = UninstallReasonsGrid.Children
                 .OfType<RadioButton>()
-                .FirstOrDefault(r => r.IsChecked == true)?.Content;
+                .First(r => r.IsChecked == true);
 
             NavigationService!.Navigate(new ProgressPage(
                     RemoveConfigCheckBox.IsChecked ?? false,
                     RemoveVirtualMachinesCheckBox.IsChecked ?? false,
-                    reason,
+                    (UninstallReason)reason.Tag,
                     FeedbackTextBox.Text));
         }
 
