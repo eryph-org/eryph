@@ -68,6 +68,12 @@ jobs:
       arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build /p:SignHash=$(signHash)'
       zipAfterPublish: false
 
+  - task: CmdLine@2
+    displayName: rename zero build
+    inputs:
+      script: 'ren eryph-zero bin'
+      workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build'
+
   - task: DotNetCoreCLI@2
     displayName: publish uninstaller app
     inputs:
@@ -75,14 +81,8 @@ jobs:
       publishWebProjects: false
       modifyOutputPath: false
       projects: '**/apps/**/*-uninstaller/*.csproj'
-      arguments: '--configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build /p:SignHash=$(signHash)'
+      arguments: '--configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build\bin /p:SignHash=$(signHash)'
       zipAfterPublish: false
-
-  - task: CmdLine@2
-    displayName: rename zero build
-    inputs:
-      script: 'ren eryph-zero bin'
-      workingDirectory: '$(Build.ArtifactStagingDirectory)\zero_build'
 
   - task: AzureCLI@2
     displayName: 'Sign executables'
