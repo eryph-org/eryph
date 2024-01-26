@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -17,7 +18,7 @@ namespace Eryph.Runtime.Uninstaller
         private readonly string _feedback;
         private readonly Func<string, Task> _reportProgress;
 
-        private const string FeedbackUrl = "https://dbosoftfrvyfj.dataplane.rudderstack.com/v1/track";
+        private const string DataPlaneUrl = "https://dp-t.dbosoft.eu/v1/track";
         private const string WriteKey = "2bApAyC76MQAPXOjMkUlrToX7zD";
 
         public Uninstaller(
@@ -64,8 +65,8 @@ namespace Eryph.Runtime.Uninstaller
                      "event": "uninstall_eryph",
                      "properties": {
                          "product": "eryph_zero",
-                         "version" "{{productVersion}}",
-                         "uninstall_reason": "{{_uninstallReason}}",
+                         "version": "{{HttpUtility.JavaScriptStringEncode(productVersion)}}",
+                         "uninstall_reason": "{{_uninstallReason:G}}",
                          "feedback": "{{HttpUtility.JavaScriptStringEncode(_feedback)}}"
                      }
                  }
@@ -74,17 +75,22 @@ namespace Eryph.Runtime.Uninstaller
                 using var request = new HttpRequestMessage();
 
                 request.Method = HttpMethod.Post;
-                request.RequestUri = new Uri(FeedbackUrl);
+                request.RequestUri = new Uri(DataPlaneUrl);
                 request.Headers.Authorization = new AuthenticationHeaderValue(
                     "Basic",
                     Convert.ToBase64String(Encoding.ASCII.GetBytes($"{WriteKey}:")));
                 request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                await client.SendAsync(request);
+                var response = await client.SendAsync(request);
+                response.EnsureSuccessStatusCode();
             }
             catch (Exception)
             {
-                // Ignore any exceptions when sending tracking request
+                // Ignore any exceptions when sending tracking request unless we are debugging
+#if DEBUG
+                if (Debugger.IsAttached)
+                    throw;
+#endif
             }
         }
 
@@ -109,9 +115,9 @@ namespace Eryph.Runtime.Uninstaller
         private async Task RunUninstall(string path)
         {
             string arguments = "uninstall";
-            if(_removeConfig)
+            if (_removeConfig)
                 arguments += " --delete-app-data";
-            if(_removeVirtualMachines)
+            if (_removeVirtualMachines)
                 arguments += " --delete-catlets";
             
             var processStartInfo = new ProcessStartInfo(path)
@@ -142,14 +148,25 @@ namespace Eryph.Runtime.Uninstaller
         private async Task RemoveFolder()
         {
             await _reportProgress("Removing installation folder..." + Environment.NewLine);
+            
             var folderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "eryph", "zero");
-            if (!Directory.Exists(folderPath))
+            var eryphPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "eryph");
+            var eryphZeroPath = Path.Combine(eryphPath, "zero");
+            
+            if (!Directory.Exists(eryphZeroPath))
             {
                 await _reportProgress("Installation folder was not." + Environment.NewLine);
+                return;
             }
 
             Directory.Delete(folderPath, true);
+
+            if (!Directory.EnumerateFileSystemEntries(eryphPath).Any())
+            {
+                Directory.Delete(eryphPath);
+            }
 
             await _reportProgress("Installation folder removed." + Environment.NewLine);
         }
