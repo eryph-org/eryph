@@ -157,7 +157,7 @@ namespace Eryph.Runtime.Uninstaller
             
             if (!Directory.Exists(eryphZeroPath))
             {
-                await _reportProgress("Installation folder was not." + Environment.NewLine);
+                await _reportProgress("Installation folder was not found." + Environment.NewLine);
                 return;
             }
 

@@ -12,7 +12,6 @@
         <Grid.RowDefinitions>
             <RowDefinition/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <TextBox x:Name="TextBox"
                  IsReadOnly="True"
@@ -20,7 +19,7 @@
                  Grid.Row="0"
                  VerticalScrollBarVisibility="Visible"/>
         <Button x:Name="CloseButton"
-                Grid.Row="2"
+                Grid.Row="1"
                 Width="200"
                 Height="25"
                 Margin="0,5,0,0"
