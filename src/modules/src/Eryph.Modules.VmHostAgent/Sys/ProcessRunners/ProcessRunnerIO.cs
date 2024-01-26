@@ -37,11 +37,7 @@ namespace Eryph.Modules.VmHostAgent.Sys.ProcessRunners
 
             using var process = Process.Start(processStartInfo);
             if (process is null)
-                return new ProcessRunnerResult()
-                {
-                    ExitCode = -1,
-                    Output = "Process could not be started",
-                };
+                return new ProcessRunnerResult(-1, "The process could not be started");
 
             // Read both outputs in parallel. This is necessary to avoid deadlocks.
             var outputs = await Task.WhenAll(process.StandardOutput.ReadToEndAsync(),
@@ -53,11 +49,7 @@ namespace Eryph.Modules.VmHostAgent.Sys.ProcessRunners
 
             await process.WaitForExitAsync().ConfigureAwait(false);
 
-            return new ProcessRunnerResult()
-            {
-                ExitCode = process.ExitCode,
-                Output = output,
-            };
+            return new ProcessRunnerResult(process.ExitCode, output);
         }
     }
 }
