@@ -110,9 +110,9 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
                 cfg.CreateProfile("Dism", c =>
                 {
                     var assembly = AppDomain.CurrentDomain.GetAssemblies()
-                        .FirstOrDefault(a => a.FullName?.Contains("Microsoft.Dism.PowerShell.dll") ?? false);
-                    var assemblyType = assembly?.GetType("Microsoft.Dism.Commands.BasicDriverObject");
-                    if(assemblyType is null)
+                        .FirstOrDefault(a => a.FullName?.Contains("Microsoft.Dism.PowerShell") ?? false);
+                    var assemblyType = assembly?.GetType("Microsoft.Dism.Commands.BasicDriverObject", false);
+                    if (assemblyType is null)
                         return;
 
                     c.CreateMap(assemblyType, typeof(DismDriverInfo));

@@ -1113,11 +1113,11 @@ internal static class Program
         }
         
         using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
-        var ovsRootPath = OVSPackage.UnpackAndProvide();
-        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRootPath), new NullLoggerFactory());
+        var ovsRunDir = OVSPackage.UnpackAndProvide();
+        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), new NullLoggerFactory());
 
         var res = (await (
-            from _ in OvsDriverProvider<ConsoleRuntime>.ensureDriver(ovsRootPath, true, true)
+            from _ in OvsDriverProvider<ConsoleRuntime>.ensureDriver(ovsRunDir, true, true)
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()

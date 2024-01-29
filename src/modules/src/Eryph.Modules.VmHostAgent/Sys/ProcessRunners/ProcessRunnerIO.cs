@@ -33,6 +33,8 @@ namespace Eryph.Modules.VmHostAgent.Sys.ProcessRunners
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
             };
 
             using var process = Process.Start(processStartInfo);

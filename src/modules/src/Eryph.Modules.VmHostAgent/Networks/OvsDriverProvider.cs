@@ -42,27 +42,27 @@ namespace Eryph.Modules.VmHostAgent.Networks
             return from extensionInfo in getExtensionInfo()
                    let isAlreadyInstalled = extensionInfo.IsSome
                    from _ in match(extensionInfo,
-                       Some: ei => logInformation("Hyper-V switch extension {ExtensionVersion} is installed", ei.Version),
-                       None: () => logInformation("Hyper-V switch extension is not installed"))
+                       Some: ei => logInformation("OVS Hyper-V switch extension {ExtensionVersion} is installed", ei.Version),
+                       None: () => logInformation("OVS Hyper-V switch extension is not installed"))
                    let infPath = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
                    from infVersion in getDriverVersionFromInfFile(infPath)
                    from __ in match(extensionInfo,
                        Some: ei => 
-                           from extensionVersion in parseVersion(ei.Version).ToAff(Error.New("Could not parse version of Hyper-V extension"))
+                           from extensionVersion in parseVersion(ei.Version).ToAff(Error.New(
+                               "Could not parse the version of the Hyper-V extension"))
                            from _ in extensionVersion != infVersion && canUpgrade 
                                ? from _ in removeAllDriverPackages()
                                  from __ in installDriver(infPath)
                                  select unit
                                : from _ in extensionVersion != infVersion
-                                   ? logWarning("Hyper-V switch extension version {ExtensionVersion} does not match driver version {DriverVersion}",
+                                   ? logWarning("Hyper-V switch extension version {ExtensionVersion} does not match packaged driver version {DriverVersion}",
                                        ei.Version, infVersion)
                                    : SuccessAff<RT, Unit>(unit)
                                  select unit
                            select unit,
                        None: () => canInstall
                            ? installDriver(infPath)
-                           : FailAff<RT, Unit>(Error.New("Hyper-V switch extension is missing")))
-                
+                           : FailAff<RT, Unit>(Error.New("OVS Hyper-V switch extension is missing")))
                    select unit;
         }
 
@@ -76,7 +76,7 @@ namespace Eryph.Modules.VmHostAgent.Networks
                    let infDirectoryPath = Path.GetDirectoryName(infPath)
                    from result in ProcessRunner<RT>.runProcess(
                        netCfgPath, @$"-l ""{infFileName}"" -c s -i {DriverModuleName}", infDirectoryPath)
-                   from __ in guard(result.ExitCode == 0, Error.New($"Failed to install driver:{newLine}{result.Output}"))
+                   from __ in guard(result.ExitCode == 0, Error.New($"Failed to install OVS Hyper-V switch extension:{newLine}{result.Output}"))
                    from ___ in logInformation("Successfully installed OVS Hyper-V switch extension")
                    select unit;
         }

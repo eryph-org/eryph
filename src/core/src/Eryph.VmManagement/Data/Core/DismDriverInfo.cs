@@ -8,8 +8,8 @@ using LanguageExt;
 namespace Eryph.VmManagement.Data.Core
 {
     /// <summary>
-    /// Contains the information about an installed driver package
-    /// which was retrieved via Powershell with <c>Get-WindowsDriver</c>.
+    /// Contains information about an installed driver package which
+    /// was retrieved via Powershell with <c>Get-WindowsDriver</c>.
     /// </summary>
     public class DismDriverInfo
     {
