@@ -47,26 +47,28 @@ namespace Eryph.Modules.VmHostAgent.Networks
                    let infPath = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
                    from infVersion in getDriverVersionFromInfFile(infPath)
                    from __ in match(extensionInfo,
-                       Some: ei => from extensionVersion in parseVersion(ei.Version).ToAff(Error.New("Could not parse version of Hyper-V extension"))
-                                   from _ in extensionVersion != infVersion && canUpgrade 
-                                       ? from _ in removeAllDriverPackages()
-                                         from __ in installDriver(infPath)
-                                         select unit
-                                       : from _ in extensionVersion != infVersion
-                                            ? logWarning("Hyper-V switch extension version {ExtensionVersion} does not match driver version {DriverVersion}",
-                                                ei.Version, infVersion)
-                                            : SuccessAff<RT, Unit>(unit)
-                                         select unit
-                                   select unit,
-                       None: () => canInstall ? installDriver(infPath) : FailAff<RT, Unit>(Error.New("Hyper-V switch extension is missing")))
-                   //from isDriverLoaded in isDriverLoaded()
-                   //from ___ in guard(isDriverLoaded, Error.New("Hyper-V switch extension driver was not loaded. Consider reinstalling the driver."))
+                       Some: ei => 
+                           from extensionVersion in parseVersion(ei.Version).ToAff(Error.New("Could not parse version of Hyper-V extension"))
+                           from _ in extensionVersion != infVersion && canUpgrade 
+                               ? from _ in removeAllDriverPackages()
+                                 from __ in installDriver(infPath)
+                                 select unit
+                               : from _ in extensionVersion != infVersion
+                                   ? logWarning("Hyper-V switch extension version {ExtensionVersion} does not match driver version {DriverVersion}",
+                                       ei.Version, infVersion)
+                                   : SuccessAff<RT, Unit>(unit)
+                                 select unit
+                           select unit,
+                       None: () => canInstall
+                           ? installDriver(infPath)
+                           : FailAff<RT, Unit>(Error.New("Hyper-V switch extension is missing")))
+                
                    select unit;
         }
 
         public static Aff<RT, Unit> installDriver(string infPath)
         {
-            return from _ in logInformation("Going to install OVS Hyper-V switch extension")
+            return from _ in logInformation("Going to install OVS Hyper-V switch extension...")
                    from systemFolderPath in Environment<RT>.getFolderPath(Environment.SpecialFolder.System)
                    from newLine in Environment<RT>.newLine
                    let netCfgPath = Path.Combine(systemFolderPath, "netcfg.exe")
@@ -74,9 +76,8 @@ namespace Eryph.Modules.VmHostAgent.Networks
                    let infDirectoryPath = Path.GetDirectoryName(infPath)
                    from result in ProcessRunner<RT>.runProcess(
                        netCfgPath, @$"-l ""{infFileName}"" -c s -i {DriverModuleName}", infDirectoryPath)
-                   // TODO better error handling
                    from __ in guard(result.ExitCode == 0, Error.New($"Failed to install driver:{newLine}{result.Output}"))
-                   from ___ in logInformation("Successfully installed OVS Hyper-V switch extension...")
+                   from ___ in logInformation("Successfully installed OVS Hyper-V switch extension")
                    select unit;
         }
 
@@ -87,8 +88,8 @@ namespace Eryph.Modules.VmHostAgent.Networks
                    from newLine in Environment<RT>.newLine
                    let netCfgPath = Path.Combine(systemFolderPath, "netcfg.exe")
                    from result in ProcessRunner<RT>.runProcess(netCfgPath, $"/u {DriverModuleName}")
-                   from __ in guard(result.ExitCode == 0, Error.New($"Failed to uninstall driver:{newLine}{result.Output}"))
-                   from ___ in logInformation("Successfully uninstalled OVS Hyper-V switch extension...")
+                   from __ in guard(result.ExitCode == 0, Error.New($"Failed to uninstall OVS Hyper-V switch extension:{newLine}{result.Output}"))
+                   from ___ in logInformation("Successfully uninstalled OVS Hyper-V switch extension")
                    select unit;
         }
 
@@ -101,15 +102,14 @@ namespace Eryph.Modules.VmHostAgent.Networks
                    select unit;
         }
 
-
-        public static Aff<RT, Unit> removeDriverPackage(string infName)
+        internal static Aff<RT, Unit> removeDriverPackage(string infName)
         {
             return from _ in logInformation("Going to remove driver package {InfName}...", infName)
                    from result in ProcessRunner<RT>.runProcess("pnputil.exe", $"/delete-driver {infName}", "")
                    from newLine in Environment<RT>.newLine
                    from __ in guard(result.ExitCode == 0, Error.New(
                        $"Failed to remove driver package {infName}:{newLine}{result.Output}"))
-                   from ___ in logInformation("Successfully removed driver package {InfName}...", infName)
+                   from ___ in logInformation("Successfully removed driver package {InfName}", infName)
                    select unit;
         }
 
@@ -161,6 +161,8 @@ namespace Eryph.Modules.VmHostAgent.Networks
                    from content in Seq<byte>(0xFF, 0xFE) == bytes.Take(2).ToSeq()
                        ? Eff<RT, string>(_ => Encoding.Unicode.GetString(bytes.Skip(2).ToArray()))
                        // .NET Core does not support Windows code pages, so we fall back to ASCII.
+                       // Any INF files that use non-ASCII characters should hopefully be encoded
+                       // in UTF-16 LE anyway.
                        : Eff<RT, string>(_ => Encoding.ASCII.GetString(bytes))
                    select content;
         }   

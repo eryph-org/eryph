@@ -32,7 +32,7 @@ namespace Eryph.Runtime.Zero
                 from isDriverLoaded in OvsDriverProvider<DriverCommandsRuntime>.isDriverLoaded()
                 from __ in Console<DriverCommandsRuntime>.writeLine(isDriverLoaded
                     ? "Hyper-V switch extension driver is loaded"
-                    : "Hyper-V switch extension driver was not loaded. Overlay network will not work. Consider reinstalling the driver")
+                    : "Hyper-V switch extension driver is not loaded. Overlay network might not work. Consider reinstalling the driver.")
                 from installedDriverPackages in OvsDriverProvider<DriverCommandsRuntime>.getInstalledDriverPackages()
                 from newLine in Environment<DriverCommandsRuntime>.newLine
                 from ___ in Console<DriverCommandsRuntime>.writeLine(installedDriverPackages.Fold(
@@ -64,13 +64,11 @@ namespace Eryph.Runtime.Zero
                     None: () => SuccessAff(unit))
                 from __ in Console<DriverCommandsRuntime>.writeLine("Removing all driver packages")
                 from installedDriverPackages in OvsDriverProvider<DriverCommandsRuntime>.getInstalledDriverPackages()
-                from ___ in installedDriverPackages.Map(di => OvsDriverProvider<DriverCommandsRuntime>.removeDriverPackage(di.Driver))
-                    .TraverseSerial(u => u)
+                from ___ in OvsDriverProvider<DriverCommandsRuntime>.removeAllDriverPackages()
                 from ____ in Console<DriverCommandsRuntime>.writeLine("Installing new driver")
                 let infPath = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
                 from _____ in OvsDriverProvider<DriverCommandsRuntime>.installDriver(infPath)
                 select unit);
-
 
             result.IfFail(err => Console.WriteLine(err.ToString()));
             return result.IsFail ? -1 : 0;

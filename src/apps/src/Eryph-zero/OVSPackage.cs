@@ -92,67 +92,6 @@ internal class OVSPackage
 
             if (relativePackagePath == null)
                 File.Move(ovsPackageFile, ovsPackageBackupFile, true);
-
-            /*
-            if (canInstallDriver)
-            {
-                var exitCode = -1;
-                try
-                {
-                    log.Information("Installing Open VSwitch driver");
-
-
-                    var driverPathDir = new DirectoryInfo(Path.Combine(extractFolder, "driver"));
-
-                    if(Directory.Exists(Path.Combine(ovsRootPath, "driver")))
-                        Directory.Delete(Path.Combine(ovsRootPath, "driver"), true);
-
-                    driverPathDir.MoveTo(Path.Combine(ovsRootPath, "driver"));
-
-#if DEBUG
-                    //for development allow installation of self signed driver package
-                    if (File.Exists(Path.Combine(driverPathDir.FullName, "package.cer")))
-                    {
-                        var certService = new WindowsCertificateStoreService();
-                        var cert = X509Certificate.CreateFromCertFile(Path.Combine(driverPathDir.FullName,
-                            "package.cer"));
-                        certService.AddAsRootCertificate(DotNetUtilities.FromX509Certificate(cert));
-                    }
-#endif
-                        var process = Process.Start(new ProcessStartInfo("C:\\Windows\\system32\\netcfg.exe",
-                        $"-l \"dbo_ovse.inf\" -c s -i DBO_OVSE")
-                    {
-                        WorkingDirectory = driverPathDir.FullName,
-                        RedirectStandardError = true,
-                        RedirectStandardOutput = true
-                    });
-
-                    if (process != null)
-                    {
-                        process.WaitForExit();
-                        exitCode = process.HasExited ? process.ExitCode : exitCode;
-
-                        if (exitCode != 0)
-                        {
-                            var message = process.StandardError.ReadToEnd();
-                            if(string.IsNullOrWhiteSpace(message))
-                                message = process.StandardOutput.ReadToEnd();
-
-                            log.Error("Driver installation failed with: {message}", message);
-                        }
-                    }
-
-                }
-                catch
-                {
-                    //ignored
-                }
-
-                if (exitCode != 0)
-                    throw new IOException(
-                        $"Failed to install eryph overlay driver. Installation exit code: {exitCode}");
-            }
-            */
         }
 
         //cleanup old rundirs (if not in use any more)
