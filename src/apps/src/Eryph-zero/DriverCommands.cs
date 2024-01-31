@@ -24,7 +24,8 @@ namespace Eryph.Runtime.Zero
         public static async Task<int> GetDriverStatus()
         {
             var result = await Run(
-                from extensionInfo in OvsDriverProvider<DriverCommandsRuntime>.getExtensionInfo()
+                from hostNetworkCommands in default(DriverCommandsRuntime).HostNetworkCommands
+                from extensionInfo in hostNetworkCommands.GetInstalledSwitchExtension()
                 let extensionMessage = extensionInfo.Match(
                     Some: ei => $"Hyper-V switch extension found: {ei.Name} {ei.Version}",
                     None: () => "Hyper-V switch extension not found")
@@ -40,8 +41,9 @@ namespace Eryph.Runtime.Zero
                     (acc, info) => $"{acc}{newLine}\t{info.Driver} - {info.Version} {info.OriginalFileName}"))
                 let ovsRunDir = Try(() => OVSPackage.UnpackAndProvide()).ToOption()
                 from packageDriverVersion in match(ovsRunDir,
-                    Some: d => OvsDriverProvider<DriverCommandsRuntime>.getDriverVersionFromInfFile(Path.Combine(d, "driver", "dbo_ovse.inf"))
-                            .Map(v => Some(v)),
+                    Some: d =>
+                        from v in OvsDriverProvider<DriverCommandsRuntime>.getDriverVersionFromInfFile(Path.Combine(d, "driver", "dbo_ovse.inf"))
+                        select Some(v),
                     None: () => SuccessAff((Option<Version>)None))
                 from ____ in match(packageDriverVersion,
                     Some: v => Console<DriverCommandsRuntime>.writeLine($"Driver version in OVS package: {v}"),
@@ -56,7 +58,8 @@ namespace Eryph.Runtime.Zero
         {
             var result = await Run(
                 from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide())
-                from extensionInfo in OvsDriverProvider<DriverCommandsRuntime>.getExtensionInfo()
+                from hostNetworkCommands in default(DriverCommandsRuntime).HostNetworkCommands
+                from extensionInfo in hostNetworkCommands.GetInstalledSwitchExtension()
                 from _ in match(extensionInfo,
                     Some: _ => from __ in Console<DriverCommandsRuntime>.writeLine("Uninstalling existing driver")
                                from ___ in OvsDriverProvider<DriverCommandsRuntime>.uninstallDriver()

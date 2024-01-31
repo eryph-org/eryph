@@ -101,7 +101,7 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
                         c.AddHyperVMapping<VMFirmwareInfo>(hyperVAssembly, "VMFirmware");
 
                         c.AddHyperVMapping<VMSwitchExtension>(hyperVAssembly, "VMSwitchExtension");
-                                                c.AddHyperVMapping<VmSystemSwitchExtension>(hyperVAssembly, "VMSystemSwitchExtension");
+                                                c.AddHyperVMapping<VMSystemSwitchExtension>(hyperVAssembly, "VMSystemSwitchExtension");
 
                     }
 

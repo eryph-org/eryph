@@ -13,7 +13,11 @@ namespace Eryph.Modules.VmHostAgent.Networks;
 public interface IHostNetworkCommands<RT> where RT : struct, HasCancel<RT>
 {
     Aff<RT, Seq<VMSwitch>> GetSwitches();
+    Aff<RT, Option<VMSystemSwitchExtension>> GetInstalledSwitchExtension();
     Aff<RT, Seq<VMSwitchExtension>> GetSwitchExtensions();
+    Aff<RT, Unit> DisableSwitchExtension();
+    Aff<RT, Unit> EnableSwitchExtension();
+
     Aff<RT, Seq<HostNetworkAdapter>> GetPhysicalAdapters();
     Aff<RT, Seq<string>> GetAdapterNames();
 

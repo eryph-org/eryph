@@ -13,6 +13,8 @@ using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.VmHostAgent.Networks;
 
 
@@ -35,8 +37,15 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
 
             }).ToAff()).TraverseParallel(l=>l)
             select switches;
-
     }
+
+    public Aff<RT, Option<VMSystemSwitchExtension>> GetInstalledSwitchExtension() =>
+        from psEngine in default(RT).Powershell
+        let command = PsCommandBuilder.Create().AddCommand("Get-VMSystemSwitchExtension")
+        from results in psEngine.GetObjectsAsync<VMSystemSwitchExtension>(command).ToAff()
+        select results.Select(r => r.Value)
+            .Where(e => string.Equals(e.Name, EryphConstants.SwitchExtensionName, StringComparison.OrdinalIgnoreCase))
+            .HeadOrNone();
 
     public Aff<RT, Seq<VMSwitchExtension>> GetSwitchExtensions() =>
         from psEngine in default(RT).Powershell.ToAff()
@@ -44,9 +53,34 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             PsCommandBuilder.Create()
                 .AddCommand("Get-VMSwitch")
                 .AddCommand("Get-VMSwitchExtension")
-                .AddParameter("Name", "dbosoft Open vSwitch Extension")).ToAff()
+                .AddParameter("Name", EryphConstants.SwitchExtensionName)).ToAff()
         select vmSwitchExtensions.Map(s => s.ToValue());
 
+    public Aff<RT, Unit> DisableSwitchExtension() =>
+        from psEngine in default(RT).Powershell
+        from _ in psEngine.RunAsync(PsCommandBuilder.Create()
+            .AddCommand("Get-VMSwitch")
+            .AddCommand("Get-VMSwitchExtension")
+            .AddCommand("Disable-VMSwitchExtension")).ToAff()
+        select unit;
+
+    public Aff<RT, Unit> EnableSwitchExtension() =>
+        from psEngine in default(RT).Powershell
+        from vmSwitches in psEngine.GetObjectsAsync<VMSwitch>(
+            PsCommandBuilder.Create().AddCommand("Get-VMSwitch")).ToAff()
+        let overlaySwitch = vmSwitches.Select(r => r.Value)
+            .Where(s => s.Name == EryphConstants.OverlaySwitchName)
+            .HeadOrNone()
+        from _ in match(overlaySwitch,
+            Some: os =>
+                from _ in psEngine.RunAsync(PsCommandBuilder.Create()
+                    .AddCommand("Enable-VMSwitchExtension")
+                    .AddParameter("VMSwitchName", EryphConstants.OverlaySwitchName)
+                    .AddParameter("Name", EryphConstants.SwitchExtensionName)).ToAff()
+                select unit,
+            None: () => SuccessAff(unit))
+        select unit;
+    
     public Aff<RT, Seq<HostNetworkAdapter>> GetPhysicalAdapters() =>
         from psEngine in default(RT).Powershell.ToAff()
         from netAdapters in psEngine.GetObjectsAsync<HostNetworkAdapter>(
@@ -156,7 +190,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             .AddParameter("Name", EryphConstants.OverlaySwitchName);
 
         var enumerable = adapters as string[] ?? adapters.ToArray();
-        var createTeam = () => Aff<Unit>.Success(Unit.Default);
+        var createTeam = () => SuccessAff(Unit.Default);
 
         return default(RT).Powershell.Bind(ps =>
         {
@@ -219,7 +253,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                     {
                         if (vmSwitch.NetAdapterInterfaceGuid is null or { Length: 0 })
                         {
-                            return Prelude.SuccessAff(Seq<string>.Empty);
+                            return Prelude.SuccessAff(Seq<string>());
                         }
 
                         //even if it is a array only one adapter is supported in a switch

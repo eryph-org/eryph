@@ -11,7 +11,7 @@ namespace Eryph.VmManagement.Data.Core
     /// Contains information about an installed Hyper-V switch extension which
     /// was retrieved via Powershell with <c>Get-VMSystemSwitchExtension</c>.
     /// </summary>
-    public class VmSystemSwitchExtension
+    public class VMSystemSwitchExtension
     {
         public string Id { get; init; }
 
