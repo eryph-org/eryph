@@ -268,8 +268,17 @@ namespace Eryph.VmManagement.Converging
                                         {
                                             var parentFilePath = Path.Combine(parentSettings.Path,
                                                 parentSettings.FileName);
-                                            return await Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
-                                                $"New-VHD -Path \"{vhdPath}\" -ParentPath \"{parentFilePath}\" -Differencing"));
+
+                                            var command = PsCommandBuilder.Create()
+                                                .AddCommand("New-VHD")
+                                                .AddParameter("Path", vhdPath)
+                                                .AddParameter("ParentPath", parentFilePath)
+                                                .AddParameter("Differencing");
+
+                                                if (driveSettings.DiskSettings.SizeBytesCreate > 0)
+                                                    command.AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate);
+
+                                            return await Context.Engine.RunAsync(command);
                                         },
                                         async () => await Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
                                             $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {driveSettings.DiskSettings.SizeBytesCreate}")))
