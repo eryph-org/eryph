@@ -102,7 +102,7 @@ namespace Eryph.VmManagement
                 from fodder in Try(() =>
                 {
                     var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(geneContent);
-                    return FodderConfigDictionaryConverter.Convert(configDictionary).Fodder ?? Array.Empty<FodderConfig>();
+                    return FodderGeneConfigDictionaryConverter.Convert(configDictionary).Fodder ?? Array.Empty<FodderConfig>();
                     
                 }).ToEither(Error.New)
                 let includedFodder = string.IsNullOrWhiteSpace(config.Name) 
