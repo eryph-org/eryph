@@ -155,7 +155,7 @@ namespace Eryph.VmManagement
                 var parentIdentifier = GeneSetIdentifier.ParseUnsafe(parent);
 
                 var parentPathName = parentIdentifier.Name.Replace('/', '\\');
-                var genesetManifestPath = Path.Combine(genepoolPath, parentPathName, "geneset.json");
+                var genesetManifestPath = Path.Combine(genepoolPath, parentPathName, "geneset-tag.json");
                 var manifest = JsonSerializer.Deserialize<JsonNode>(File.ReadAllText(genesetManifestPath));
                 var reference = manifest["ref"]?.GetValue<string>() ?? "";
                 if (!string.IsNullOrWhiteSpace(reference))

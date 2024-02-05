@@ -23,7 +23,7 @@ public class LocalGenepoolReader : ILocalGenepoolReader
             {
                 var genepoolPath = Path.Combine(_agentConfiguration.Defaults.Volumes, "genepool");
                 var pathName = geneset.Name.Replace('/', '\\');
-                var genesetManifestPath = Path.Combine(genepoolPath, pathName, "geneset.json");
+                var genesetManifestPath = Path.Combine(genepoolPath, pathName, "geneset-tag.json");
                 var manifest = JsonSerializer.Deserialize<JsonNode>(File.ReadAllText(genesetManifestPath));
                 var reference = manifest["ref"]?.GetValue<string>() ?? "";
                 if (!string.IsNullOrWhiteSpace(reference))

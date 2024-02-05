@@ -217,11 +217,11 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
         return Prelude.TryAsync(async () =>
             {
                 var genesetPath = BuildGeneSetPath(genesetIdentifier, path);
-                if (!File.Exists(Path.Combine(genesetPath, "geneset.json")))
+                if (!File.Exists(Path.Combine(genesetPath, "geneset-tag.json")))
                     return await Prelude.LeftAsync<Error, GeneSetInfo>(Error.New(
                         $"Geneset '{genesetIdentifier.Name}' not found in local gene pool.")).ToEither();
 
-                await using var manifestStream = File.OpenRead(Path.Combine(genesetPath, "geneset.json"));
+                await using var manifestStream = File.OpenRead(Path.Combine(genesetPath, "geneset-tag.json"));
                 var manifest =
                     await JsonSerializer.DeserializeAsync<GenesetTagManifestData>(manifestStream,
                         cancellationToken: cancel);
@@ -242,7 +242,7 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
         {
             var genesetPath = BuildGeneSetPath(genesetInfo.Id, path, true);
 
-            await using var manifestStream = _fileSystem.OpenWrite(Path.Combine(genesetPath, "geneset.json"));
+            await using var manifestStream = _fileSystem.OpenWrite(Path.Combine(genesetPath, "geneset-tag.json"));
             await JsonSerializer.SerializeAsync(manifestStream, genesetInfo.MetaData, cancellationToken: cancel);
             return new GeneSetInfo(genesetInfo.Id, genesetPath, genesetInfo.MetaData,
                 genesetInfo.GeneDownloadInfo);
