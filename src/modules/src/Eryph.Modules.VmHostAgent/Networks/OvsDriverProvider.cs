@@ -11,7 +11,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Eryph.Core;
-using Eryph.Modules.VmHostAgent.Sys.ProcessRunners;
+using Eryph.Core.Sys;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;

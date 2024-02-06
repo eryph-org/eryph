@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Modules.VmHostAgent.Sys.ProcessRunners;
+using Eryph.Core.Sys;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero

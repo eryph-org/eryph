@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Eryph.Modules.VmHostAgent.Sys.ProcessRunners;
+using Eryph.Core.Sys;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using LanguageExt;
