@@ -35,8 +35,8 @@ namespace Eryph.VmManagement.Converging
                     //prevent snapshots creating during running disk converge
                     from _ in SetVMCheckpointType(vmInfo, CheckpointType.Disabled, Context.Engine)
                     //make a plan
-                    from plannedDriveStorageSettings in VMDriveStorageSettings
-                        .PlanDriveStorageSettings(Context.VmHostAgentConfig, Context.Config, Context.StorageSettings) 
+                    from plannedDriveStorageSettings in VMDriveStorageSettings.PlanDriveStorageSettings(
+                        Context.VmHostAgentConfig, Context.Config, Context.StorageSettings, Context.Engine) 
                     //ensure that the changes reflect the current VM settings
                     from infoReloaded in vmInfo.Reload(Context.Engine)
                     //detach removed disks

@@ -15,17 +15,21 @@ namespace Eryph.VmManagement.Storage
 
 
         public static EitherAsync<Error, Seq<VMDriveStorageSettings>> PlanDriveStorageSettings(
-            VmHostAgentConfiguration vmHostAgentConfig, CatletConfig config, VMStorageSettings storageSettings)
+            VmHostAgentConfiguration vmHostAgentConfig,
+            CatletConfig config,
+            VMStorageSettings storageSettings,
+            IPowershellEngine powershellEngine)
         {
             return config.Drives
                 .ToSeq().MapToEitherAsync((index, c) =>
-                    FromDriveConfig(vmHostAgentConfig, storageSettings, c, index).ToEither()).ToAsync();
+                    FromDriveConfig(vmHostAgentConfig, storageSettings, c, powershellEngine, index).ToEither()).ToAsync();
         }
 
         public static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
             VmHostAgentConfiguration vmHostAgentConfig,
             VMStorageSettings storageSettings,
             CatletDriveConfig driveConfig,
+            IPowershellEngine powershellEngine,
             int index)
         {
             const int
@@ -79,10 +83,14 @@ namespace Eryph.VmManagement.Storage
                 (from resolvedPath in names.ResolveVolumeStorageBasePath(vmHostAgentConfig)
                     from identifier in storageIdentifier.ToEitherAsync(
                         Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
+                    let fileName = $"{driveConfig.Name}.vhdx"
+                    let attachPath = Path.Combine(resolvedPath, identifier, fileName)
+                    // TODO Check if the VHD file exists
+                    from vhdInfo in VhdQuery.GetVhdInfo(powershellEngine, attachPath).ToError().ToAsync()
                     let planned = new HardDiskDriveStorageSettings
                     {
                         Type = CatletDriveType.VHD,
-                        AttachPath = Path.Combine(resolvedPath, identifier, $"{driveConfig.Name}.vhdx"),
+                        AttachPath = attachPath,
                         DiskSettings = new DiskStorageSettings
                         {
                             StorageNames = names,
@@ -94,7 +102,7 @@ namespace Eryph.VmManagement.Storage
                                         .FromSourceString(vmHostAgentConfig, driveConfig.Source),
                             Path = Path.Combine(resolvedPath, identifier),
                             // ReSharper disable once StringLiteralTypo
-                            FileName = $"{driveConfig.Name}.vhdx",
+                            FileName = fileName,
                             Name = driveConfig.Name,
                             SizeBytesCreate = driveConfig.Size.ToOption().Match(None: () => 1 * 1024L * 1024 * 1024,
                                 Some: s => s * 1024L * 1024 * 1024),
