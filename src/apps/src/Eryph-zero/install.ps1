@@ -569,7 +569,7 @@ if(-not $computeClientModule){
     Install-Module Eryph.ComputeClient -Force
 }else {
     Write-Information "Updating module Eryph.ComputeClient" -InformationAction Continue
-    Update-Module Eryph.ComputeClient-ErrorAction Continue
+    Update-Module Eryph.ComputeClient -ErrorAction Continue
 }
 
 $identityClientModule = Get-Module Eryph.IdentityClient -ListAvailable
