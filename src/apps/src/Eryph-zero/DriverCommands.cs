@@ -54,29 +54,6 @@ namespace Eryph.Runtime.Zero
             return result.IsFail ? -1 : 0;
         }
 
-        public static async Task<int> ReinstallDriver()
-        {
-            var result = await Run(
-                from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide())
-                from hostNetworkCommands in default(DriverCommandsRuntime).HostNetworkCommands
-                from extensionInfo in hostNetworkCommands.GetInstalledSwitchExtension()
-                from _ in match(extensionInfo,
-                    Some: _ => from __ in Console<DriverCommandsRuntime>.writeLine("Uninstalling existing driver")
-                               from ___ in OvsDriverProvider<DriverCommandsRuntime>.uninstallDriver()
-                               select unit,
-                    None: () => SuccessAff(unit))
-                from __ in Console<DriverCommandsRuntime>.writeLine("Removing all driver packages")
-                from installedDriverPackages in OvsDriverProvider<DriverCommandsRuntime>.getInstalledDriverPackages()
-                from ___ in OvsDriverProvider<DriverCommandsRuntime>.removeAllDriverPackages()
-                from ____ in Console<DriverCommandsRuntime>.writeLine("Installing new driver")
-                let infPath = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
-                from _____ in OvsDriverProvider<DriverCommandsRuntime>.installDriver(infPath)
-                select unit);
-
-            result.IfFail(err => Console.WriteLine(err.ToString()));
-            return result.IsFail ? -1 : 0;
-        }
-
         public static Task<Fin<Unit>> EnsureDriver(
             string ovsRunDir,
             bool canInstall,
@@ -85,6 +62,16 @@ namespace Eryph.Runtime.Zero
         {
             return Run(OvsDriverProvider<DriverCommandsRuntime>.ensureDriver(
                 ovsRunDir, canInstall, canUpgrade),
+                loggerFactory);
+        }
+
+        public static Task<Fin<Unit>> RemoveDriver(
+            ILoggerFactory loggerFactory)
+        {
+            return Run(
+                from _ in OvsDriverProvider<DriverCommandsRuntime>.uninstallDriver()
+                from __ in OvsDriverProvider<DriverCommandsRuntime>.removeAllDriverPackages()
+                select unit,
                 loggerFactory);
         }
 

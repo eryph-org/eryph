@@ -157,10 +157,6 @@ internal static class Program
         getDriverStatusCommand.SetHandler(DriverCommands.GetDriverStatus);
         driverCommand.AddCommand(getDriverStatusCommand);
 
-        var installDriverCommand = new Command("reinstall");
-        installDriverCommand.SetHandler(DriverCommands.ReinstallDriver);
-        driverCommand.AddCommand(installDriverCommand);
-
         var commandLineBuilder = new CommandLineBuilder(rootCommand);
 
         commandLineBuilder.AddMiddleware(async (context, next) =>
@@ -299,7 +295,7 @@ internal static class Program
 
                 var ovsRunDir = OVSPackage.UnpackAndProvide(startupConfig.OVSPackageDir);
                 var ensureDriverResult = await DriverCommands.EnsureDriver(
-                    ovsRunDir, !isWindowsService, !isWindowsService, loggerFactory);
+                    ovsRunDir, !isWindowsService && !warmupMode, !isWindowsService && !warmupMode, loggerFactory);
                 if (ensureDriverResult.IsFail)
                 {
                     ensureDriverResult.IfFail(e => Console.Error.WriteLine((e.ToString())));
@@ -878,6 +874,12 @@ internal static class Program
 
                     });
 
+                    var removeDriver = DriverCommands.RemoveDriver(loggerFactory);
+                    _ = (await removeDriver).IfFail(l =>
+                    {
+                        Log.Warning("Hyper-V switch extension cleanup failed with error '{error}'.\nIf necessary, remove the Hyper-V switch extension manually.", l);
+
+                    });
 
                     if (Directory.Exists(dataDir) && deleteAppData)
                     {
