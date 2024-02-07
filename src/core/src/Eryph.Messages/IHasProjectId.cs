@@ -4,11 +4,11 @@ namespace Eryph.Messages;
 
 public interface IHasProjectId
 {
-    Guid ProjectId { get; set; }
+    Guid ProjectId { get;  }
 }
 
 public interface IHasProjectName
 {
-    Guid TenantId { get; set; }
-    string ProjectName { get; set; }
+    Guid TenantId { get;  }
+    string ProjectName { get;  }
 }
