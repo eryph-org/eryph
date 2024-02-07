@@ -36,9 +36,10 @@ namespace Eryph.Modules.Controller.Projects
         {
             var stoppingToken = new CancellationTokenSource(10000);
 
-            var name = message.Command.Name.ToLowerInvariant();
+            var name = message.Command.ProjectName.ToLowerInvariant();
 
-            if (string.IsNullOrWhiteSpace(name) || name.StartsWith("p_") || name == "default")
+            if (string.IsNullOrWhiteSpace(name) || name.StartsWith("p_") 
+                                                || name == "default")
             {
                 await _messaging.FailTask(message,
                     $"Project name '{name}' is a reserved name.");
@@ -66,6 +67,19 @@ namespace Eryph.Modules.Controller.Projects
 
             await _messaging.ProgressMessage(message, $"Creating project '{name}'");
 
+            if (!string.IsNullOrWhiteSpace(message.Command.IdentityId))
+            {
+                var roleAssignment = new ProjectRoleAssignment()
+                {
+                    Id = Guid.NewGuid(),
+                    IdentityId = message.Command.IdentityId,
+                    ProjectId = project.Id,
+                    RoleId = EryphConstants.BuildInRoles.Owner
+                };
+
+                await _stateStore.For<ProjectRoleAssignment>().AddAsync(
+                    roleAssignment, stoppingToken.Token);
+            }
 
             if (!message.Command.NoDefaultNetwork)
             {
@@ -160,7 +174,11 @@ namespace Eryph.Modules.Controller.Projects
                     }).IfLeft(l => l.Throw());
             }
 
-            await _messaging.CompleteTask(message, new ProjectReference { ProjectId = message.Command.CorrelationId });
+            await _messaging.CompleteTask(message, new ProjectReference
+            {
+                ProjectId = message.Command.CorrelationId,
+                ProjectName = name
+            });
         }
     }
 }

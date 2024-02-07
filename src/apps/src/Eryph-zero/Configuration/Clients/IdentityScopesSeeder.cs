@@ -55,6 +55,18 @@ internal class IdentityScopesSeeder : IConfigSeeder<IdentityModule>
             }
         },
         {
+            "compute:projects:read", new[]
+            {
+                "compute_api"
+            }
+        },
+        {
+            "compute:projects:write", new[]
+            {
+                "compute_api"
+            }
+        },
+        {
             "identity:clients:read", new[]
             {
                 "identity_api"

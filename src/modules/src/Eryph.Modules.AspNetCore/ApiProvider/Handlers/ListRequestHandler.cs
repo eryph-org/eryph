@@ -21,7 +21,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
         }
 
         public async Task<ActionResult<ListResponse<TResponse>>> HandleListRequest<TRequest, TResponse>(TRequest request,
-            Func<TRequest, ISpecification<TModel>> createSpecificationFunc, CancellationToken cancellationToken) where TRequest : ListRequest
+            Func<TRequest, ISpecification<TModel>> createSpecificationFunc, CancellationToken cancellationToken) where TRequest : IListRequest
         {
             var queryResult = await _repository.ListAsync(createSpecificationFunc(request), cancellationToken);
             var result = _mapper.Map<IEnumerable<TResponse>>(queryResult);

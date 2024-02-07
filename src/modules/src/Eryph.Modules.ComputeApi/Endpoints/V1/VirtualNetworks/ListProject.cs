@@ -6,6 +6,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -19,6 +20,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
 
         }
 
+        [Authorize(Policy = "compute:projects:read")]
         [HttpGet("projects/{project}/vnetworks")]
         [SwaggerOperation(
             Summary = "Get list of virtual networks in a project",

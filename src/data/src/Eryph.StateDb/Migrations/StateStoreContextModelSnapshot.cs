@@ -290,12 +290,26 @@ namespace Eryph.StateDb.Migrations
                     b.Property<int>("Progress")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReferenceProjectName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ReferenceType")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("OperationId");
+
+                    b.HasIndex("ProjectId");
 
                     b.ToTable("OperationTasks");
                 });
@@ -319,18 +333,25 @@ namespace Eryph.StateDb.Migrations
                     b.ToTable("Projects");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.ProjectRoles", b =>
+            modelBuilder.Entity("Eryph.StateDb.Model.ProjectRoleAssignment", b =>
                 {
-                    b.Property<Guid>("RoleId")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdentityId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("AccessRight")
-                        .HasColumnType("INTEGER");
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("TEXT");
 
-                    b.HasKey("RoleId", "ProjectId");
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("ProjectId", "IdentityId", "RoleId");
 
                     b.ToTable("ProjectRoles");
                 });
@@ -431,24 +452,6 @@ namespace Eryph.StateDb.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Tenants");
-                });
-
-            modelBuilder.Entity("ProjectProjectRoles", b =>
-                {
-                    b.Property<Guid>("ProjectsId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("RolesRoleId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("RolesProjectId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("ProjectsId", "RolesRoleId", "RolesProjectId");
-
-                    b.HasIndex("RolesRoleId", "RolesProjectId");
-
-                    b.ToTable("ProjectProjectRoles");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
@@ -807,6 +810,10 @@ namespace Eryph.StateDb.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Eryph.StateDb.Model.Project", null)
+                        .WithMany("ReferencedTasks")
+                        .HasForeignKey("ProjectId");
+
                     b.Navigation("Operation");
                 });
 
@@ -819,6 +826,17 @@ namespace Eryph.StateDb.Migrations
                         .IsRequired();
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.ProjectRoleAssignment", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Project", "Project")
+                        .WithMany("ProjectRoles")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.ReportedNetwork", b =>
@@ -841,21 +859,6 @@ namespace Eryph.StateDb.Migrations
                         .IsRequired();
 
                     b.Navigation("Project");
-                });
-
-            modelBuilder.Entity("ProjectProjectRoles", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.Project", null)
-                        .WithMany()
-                        .HasForeignKey("ProjectsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Eryph.StateDb.Model.ProjectRoles", null)
-                        .WithMany()
-                        .HasForeignKey("RolesRoleId", "RolesProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
@@ -990,6 +993,10 @@ namespace Eryph.StateDb.Migrations
 
             modelBuilder.Entity("Eryph.StateDb.Model.Project", b =>
                 {
+                    b.Navigation("ProjectRoles");
+
+                    b.Navigation("ReferencedTasks");
+
                     b.Navigation("Resources");
                 });
 

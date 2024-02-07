@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Eryph.Messages;
 using Eryph.Messages.Resources;
@@ -19,6 +20,14 @@ public static class OperationsHelper
         if (command is IHasProjectId hasProjectId)
             projects.Add(hasProjectId.ProjectId);
 
+        if (command is IHasProjectName hasProjectName)
+        {
+            var project = await db.Projects.FirstOrDefaultAsync(x =>
+                x.TenantId == hasProjectName.TenantId && x.Name == hasProjectName.ProjectName);
+
+            if(project != null)
+                projects.Add(project.Id);
+        }
 
         var resources = command switch
         {

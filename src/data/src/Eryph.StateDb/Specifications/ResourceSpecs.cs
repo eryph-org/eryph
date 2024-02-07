@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Ardalis.Specification;
 using Eryph.Core;
@@ -14,13 +15,11 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class GetAll : Specification<T>
         {
-            public GetAll(
-                
-                Guid tenantId, Guid[] roles, AccessRight requiredAccess, [CanBeNull] string filteredProject,
+            public GetAll(AuthContext authContext, IEnumerable<Guid> sufficientRoles, [CanBeNull] string filteredProject,
                 Action<ISpecificationBuilder<T>> customizeAction = null)
             {
 
-                Query.Where(x => x.Project.TenantId == tenantId);
+                Query.Where(x => x.Project.TenantId == authContext.TenantId);
 
                 if (filteredProject!= null)
                 {
@@ -30,10 +29,11 @@ namespace Eryph.StateDb.Specifications
                         Query.Where(x => x.Project.Name == filteredProject);
 
                 }
-
-
-                if (!roles.Contains(EryphConstants.SuperAdminRole))
-                    Query.Where(x => x.Project.Roles.Any(y=> roles.Contains(y.RoleId) && y.AccessRight>= requiredAccess) );
+                
+                if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
+                    Query.Where(x => x.Project.ProjectRoles
+                        .Any(y=> authContext.Identities.Contains(y.IdentityId) 
+                                 && sufficientRoles.Contains(y.RoleId)));
 
 
 
@@ -73,18 +73,18 @@ namespace Eryph.StateDb.Specifications
 
             }
 
-            public GetById(Guid id,
-                Guid tenantId, Guid[] roles, AccessRight requiredAccess,
+            public GetById(Guid id, AuthContext authContext, IEnumerable<Guid> sufficientRoles,
                 Action<ISpecificationBuilder<T>> customizeAction = null)
             {
 
-                Query.Where(x => x.Id == id && x.Project.TenantId == tenantId)
+                Query.Where(x => x.Id == id && x.Project.TenantId == authContext.TenantId)
                     .Include(x => x.Project);
 
 
-                if (!roles.Contains(EryphConstants.SuperAdminRole))
-                    Query.Where(x => x.Project.Roles.Any(y => roles.Contains(y.RoleId) 
-                                                              && y.AccessRight >= requiredAccess));
+                if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
+                    Query.Where(x => x.Project.ProjectRoles
+                        .Any(y => authContext.Identities.Contains(y.IdentityId)
+                                  && sufficientRoles.Contains(y.RoleId)));
 
                 customizeAction?.Invoke(Query);
 

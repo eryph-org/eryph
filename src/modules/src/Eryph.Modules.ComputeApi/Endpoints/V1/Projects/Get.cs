@@ -6,6 +6,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using ProjectModel = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
@@ -20,6 +21,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         {
         }
 
+        [Authorize(Policy = "compute:projects:read")]
         [HttpGet("projects/{id}")]
         [SwaggerOperation(
             Summary = "Get a projects",

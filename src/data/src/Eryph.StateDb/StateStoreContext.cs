@@ -50,7 +50,7 @@ namespace Eryph.StateDb
         public DbSet<CatletMetadata> Metadata { get; set; }
         public DbSet<Project> Projects { get; set; }
 
-        public DbSet<ProjectRoles> ProjectRoles { get; set; }
+        public DbSet<ProjectRoleAssignment> ProjectRoles { get; set; }
 
 
         public DbSet<Tenant> Tenants { get; set; }
@@ -66,7 +66,6 @@ namespace Eryph.StateDb
             modelBuilder.Entity<OperationModel>()
                 .Property(x => x.TenantId)
                 .HasDefaultValue(EryphConstants.DefaultTenantId);
-
 
             modelBuilder.Entity<Tenant>()
                 .HasKey(x => x.Id);
@@ -89,12 +88,12 @@ namespace Eryph.StateDb
                 .HasForeignKey(x=>x.ProjectId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<ProjectRoles>()
-                .HasKey(x => new { x.RoleId, x.ProjectId });
+            modelBuilder.Entity<ProjectRoleAssignment>()
+                .HasKey(x => x.Id);
 
-            modelBuilder.Entity<Project>()
-                .HasMany(x => x.Roles)
-                .WithMany(x => x.Projects);
+            modelBuilder.Entity<ProjectRoleAssignment>()
+                .HasAlternateKey(x => new { x.ProjectId, x.IdentityId, x.RoleId });
+
 
             modelBuilder.Entity<Resource>()
                 .HasKey(x => x.Id);

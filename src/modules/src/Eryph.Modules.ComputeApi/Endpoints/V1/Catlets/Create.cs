@@ -64,8 +64,16 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             var config = CatletConfigDictionaryConverter.Convert(configDictionary);
 
             var tenantId = _userRightsProvider.GetUserTenantId();
+            
+            var project = config.Project ?? "default";
+
+            var projectAccess = await _userRightsProvider.HasProjectAccess(project, AccessRight.Write);
+            if (!projectAccess)
+                return Forbid();
+
             var existingCatlet = await _repository.GetBySpecAsync(new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId,
-                config.Project ?? "default"), cancellationToken);
+                project), cancellationToken);
+
 
             if (existingCatlet != null)
                 return Conflict();

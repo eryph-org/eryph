@@ -28,10 +28,12 @@ namespace Eryph.Modules.ComputeApi.Model
 
         public ISpecification<OperationModel> GetEntitiesSpec(OperationsListRequest request)
         {
-            var tenantId = _userRightsProvider.GetUserTenantId();
-            var roles = _userRightsProvider.GetUserRoles();
 
-            return new OperationSpecs.GetAll(tenantId, roles, AccessRight.Read, request.Expand, request.LogTimestamp);
+            return new OperationSpecs.GetAll(
+                _userRightsProvider.GetAuthContext(),
+                _userRightsProvider.GetProjectRoles(AccessRight.Read),
+                
+                request.Expand, request.LogTimestamp);
 
         }
     }

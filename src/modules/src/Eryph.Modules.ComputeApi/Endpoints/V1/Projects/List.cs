@@ -5,6 +5,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using ProjectModel = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
@@ -17,7 +18,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
             [NotNull] IListEntitySpecBuilder<AllProjectsListRequest, StateDb.Model.Project> specBuilder) : base(listRequestHandler, specBuilder)
         {
         }
-        
+
+        [Authorize(Policy = "compute:projects:read")]
         [HttpGet("projects")]
         [SwaggerOperation(
             Summary = "List all projects",

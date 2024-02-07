@@ -18,8 +18,21 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
             CreateMap<StateDb.Model.OperationResourceModel, OperationResource>();
             CreateMap<StateDb.Model.Project, Project>();
             CreateMap<StateDb.Model.OperationTaskModel, OperationTask>()
-                .ForMember(x => x.ParentTask, m => m.MapFrom(x => x.ParentTaskId));
+                .ForMember(x => x.ParentTask, m => m.MapFrom(x => x.ParentTaskId))
+                .ForMember(x => x.Reference,
+                    m =>
+                    {
+                        m.Condition(x => x.ReferenceType.HasValue);
+                        m.MapFrom(s =>
 
+                                new OperationTaskReference
+                                {
+                                    Id = s.ReferenceId,
+                                    Type = s.ReferenceType,
+                                    ProjectName = s.ReferenceProjectName
+                                }
+                            );
+                    });
 
         }
     }

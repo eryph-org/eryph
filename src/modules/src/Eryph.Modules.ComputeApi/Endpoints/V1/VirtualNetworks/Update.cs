@@ -10,6 +10,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -37,6 +38,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
                     Config = config };
         }
 
+        [Authorize(Policy = "compute:projects:write")]
         [HttpPost("vnetworks")]
         [SwaggerOperation(
             Summary = "Creates or updates virtual networks of project",

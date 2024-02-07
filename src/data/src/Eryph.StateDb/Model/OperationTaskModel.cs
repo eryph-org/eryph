@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using Eryph.Resources;
 using Eryph.StateDb.Workflows;
 
 namespace Eryph.StateDb.Model
@@ -17,5 +19,10 @@ namespace Eryph.StateDb.Model
         public string DisplayName { get; set; }
 
         public int Progress { get; set; }
+        
+        public TaskReferenceType? ReferenceType { get; set; }
+        public string ReferenceId { get; set; }
+        public string ReferenceProjectName { get; set; }
+
     }
 }
