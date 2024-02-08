@@ -30,7 +30,7 @@ namespace Eryph.Modules.Controller.Projects
         protected override void CorrelateMessages(ICorrelationConfig<DestroyProjectSagaData> config)
         {
             base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<DestroyResourcesCommand>>(m => m.OperationId, d => d.OperationId);
+            config.Correlate<OperationTaskStatusEvent<DestroyResourcesCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
         }
 
 
