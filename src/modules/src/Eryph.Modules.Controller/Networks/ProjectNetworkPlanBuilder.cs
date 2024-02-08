@@ -236,7 +236,9 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
 
     private static NetworkPlan AddProjectRouterAndPorts(NetworkPlan networkPlan, Seq<VirtualNetwork> networks)
     {
-        networkPlan = networkPlan.AddRouter($"project-{networkPlan.Id}");
+        if(networks.Length > 0)
+            networkPlan = networkPlan.AddRouter($"project-{networkPlan.Id}");
+
         return networks.Map(network =>
         {
             var ipNetwork = IPNetwork.Parse(network.IpNetwork);
