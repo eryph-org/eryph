@@ -27,7 +27,8 @@ public readonly struct ConsoleRuntime :
     HasFile<ConsoleRuntime>,
     HasDirectory<ConsoleRuntime>,
     HasProcessRunner<ConsoleRuntime>,
-    HasEnvironment<ConsoleRuntime>
+    HasEnvironment<ConsoleRuntime>,
+    HasRegistry<ConsoleRuntime>
 
 {
     private readonly ILoggerFactory _loggerFactory;
@@ -84,4 +85,6 @@ public readonly struct ConsoleRuntime :
     public Eff<ConsoleRuntime, ProcessRunnerIO> ProcessRunnerEff => SuccessEff(LiveProcessRunnerIO.Default);
 
     public Eff<ConsoleRuntime, EnvironmentIO> EnvironmentEff => SuccessEff(LanguageExt.Sys.Live.EnvironmentIO.Default);
+
+    public Eff<ConsoleRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
 }

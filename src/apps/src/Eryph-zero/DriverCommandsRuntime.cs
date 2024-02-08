@@ -23,7 +23,8 @@ namespace Eryph.Runtime.Zero
             HasEnvironment<DriverCommandsRuntime>,
             HasProcessRunner<DriverCommandsRuntime>,
             HasPowershell<DriverCommandsRuntime>,
-            HasHostNetworkCommands<DriverCommandsRuntime>
+            HasHostNetworkCommands<DriverCommandsRuntime>,
+            HasRegistry<DriverCommandsRuntime>
     {
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly ILoggerFactory _loggerFactory;
@@ -67,5 +68,7 @@ namespace Eryph.Runtime.Zero
 
         public Eff<DriverCommandsRuntime, IHostNetworkCommands<DriverCommandsRuntime>> HostNetworkCommands =>
             Eff<DriverCommandsRuntime, IHostNetworkCommands<DriverCommandsRuntime>>(rt => rt._hostNetworkCommands);
+
+        public Eff<DriverCommandsRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
     }
 }

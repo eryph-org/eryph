@@ -31,7 +31,8 @@ public class OvsDriverProvider<RT> where RT : struct,
     HasFile<RT>,
     HasProcessRunner<RT>,
     HasEnvironment<RT>,
-    HasHostNetworkCommands<RT>
+    HasHostNetworkCommands<RT>,
+    HasRegistry<RT>
 {
     public static Aff<RT, Unit> ensureDriver(string ovsRunDir, bool canInstall, bool canUpgrade) =>
         from hostNetworkCommands in default(RT).HostNetworkCommands
@@ -127,6 +128,30 @@ public class OvsDriverProvider<RT> where RT : struct,
         from fileContent in getInfFileContent(filePath)
         from version in extractDriverVersionFromInf(fileContent)
         select version;
+
+    public static Eff<RT, bool> isDriverTestSigningEnabled() =>
+        from registryValue in Registry<RT>.getRegistryValue(
+            @"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control",
+            "SystemStartOptions")
+        from startupOptions in registryValue.ToEff(Error.New("Could not read system startup options"))
+        from _ in guard(startupOptions is string, Error.New("Could not read system startup options"))
+        select ((string)startupOptions).Contains("TESTSIGNING", StringComparison.OrdinalIgnoreCase);
+
+    public static Aff<RT, bool> isDriverPackageTestSigned(string infPath) =>
+        from psEngine in default(RT).Powershell
+        // We assume that the security catalog has the same file name as the INF file
+        let catPath = Path.ChangeExtension(infPath, ".cat")
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-AuthenticodeSignature")
+            .AddParameter("FilePath", catPath)
+            .AddCommand("Select-Object")
+            .AddParameter("ExpandProperty", "SignerCertificate")
+            .AddCommand("Select-Object")
+            .AddParameter("ExpandProperty", "Subject")
+        from powershellResult in psEngine.GetObjectsAsync<string>(command).ToAff()
+        from signer in powershellResult.Map(r => Optional(r.Value)).Somes().HeadOrNone()
+            .ToEff(Error.New("Could not read signature from file"))
+        select !signer.Contains("Microsoft Windows Hardware Compatibility Publisher", StringComparison.OrdinalIgnoreCase);
 
     internal static Aff<RT, string> getInfFileContent(string filePath) =>
         from bytes in File<RT>.readAllBytes(filePath)

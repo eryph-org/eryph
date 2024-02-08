@@ -39,15 +39,21 @@ namespace Eryph.Runtime.Zero
                 from ___ in Console<DriverCommandsRuntime>.writeLine(installedDriverPackages.Fold(
                     $"The following driver packages are installed:",
                     (acc, info) => $"{acc}{newLine}\t{info.Driver} - {info.Version} {info.OriginalFileName}"))
-                let ovsRunDir = Try(() => OVSPackage.UnpackAndProvide()).ToOption()
-                from packageDriverVersion in match(ovsRunDir,
-                    Some: d =>
-                        from v in OvsDriverProvider<DriverCommandsRuntime>.getDriverVersionFromInfFile(Path.Combine(d, "driver", "dbo_ovse.inf"))
-                        select Some(v),
-                    None: () => SuccessAff((Option<Version>)None))
-                from ____ in match(packageDriverVersion,
-                    Some: v => Console<DriverCommandsRuntime>.writeLine($"Driver version in OVS package: {v}"),
+                let packageInfFile = Try(() => OVSPackage.UnpackAndProvide()).ToOption()
+                    .Map(ovsRunDir => Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf"))
+                from ____ in match(packageInfFile,
+                    Some: infFile =>
+                        from packageDriverVersion in OvsDriverProvider<DriverCommandsRuntime>.getDriverVersionFromInfFile(infFile)
+                        from _ in Console<DriverCommandsRuntime>.writeLine($"Driver version in OVS package: {packageDriverVersion}")
+                        from isDriverPackageTestSigned in OvsDriverProvider<DriverCommandsRuntime>.isDriverPackageTestSigned(infFile)
+                        from __ in isDriverPackageTestSigned
+                            ? Console<DriverCommandsRuntime>.writeLine($"Driver in OVS package is test signed")
+                            : SuccessEff(unit)
+                        select unit,
                     None: () => Console<DriverCommandsRuntime>.writeLine("No OVS package found"))
+                from isDriverTestSigningEnabled in OvsDriverProvider<DriverCommandsRuntime>.isDriverTestSigningEnabled()
+                from _____ in Console<DriverCommandsRuntime>.writeLine(
+                    $"Driver test signing is {(isDriverTestSigningEnabled ? "" : "not ")}enabled")
                 select unit);
 
             result.IfFail(err => Console.WriteLine(err.ToString()));
