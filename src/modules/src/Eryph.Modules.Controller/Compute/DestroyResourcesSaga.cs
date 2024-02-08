@@ -18,7 +18,8 @@ namespace Eryph.Modules.Controller.Compute
     internal class DestroyResourcesSaga :
         OperationTaskWorkflowSaga<DestroyResourcesCommand, DestroyResourcesSagaData>,
         IHandleMessages<OperationTaskStatusEvent<DestroyCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>
+        IHandleMessages<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<DestroyVirtualNetworksCommand>>
     {
 
         public DestroyResourcesSaga(IWorkflow workflow) : base(workflow)
@@ -30,6 +31,7 @@ namespace Eryph.Modules.Controller.Compute
             base.CorrelateMessages(config);
             config.Correlate<OperationTaskStatusEvent<DestroyCatletCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<DestroyVirtualNetworksCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
 
         }
 
@@ -53,7 +55,7 @@ namespace Eryph.Modules.Controller.Compute
                         secondGroup.Add(resource);
                         break;
                     case ResourceType.VirtualNetwork:
-                        //secondGroup.Add(resource);
+                        secondGroup.Add(resource);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -88,6 +90,7 @@ namespace Eryph.Modules.Controller.Compute
             Data.Resources = Data.DestroyGroups[0].ToArray();
             Data.DestroyGroups.RemoveAt(0);
 
+            var networks = new List<Guid>();
             foreach (var resource in Data.Resources)
                 switch(resource.Type)
                 {
@@ -99,11 +102,15 @@ namespace Eryph.Modules.Controller.Compute
                         await StartNewTask(new DestroyVirtualDiskCommand{DiskId = resource.Id});
                         break;
                     case ResourceType.VirtualNetwork:
+                        networks.Add(resource.Id);
+
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 };
 
+            if(networks.Count > 0)
+                await StartNewTask(new DestroyVirtualNetworksCommand { NetworkIds = networks.ToArray() });
 
         }
 
@@ -117,6 +124,12 @@ namespace Eryph.Modules.Controller.Compute
         public Task Handle(OperationTaskStatusEvent<DestroyCatletCommand> message)
         {
             return FailOrRun<DestroyCatletCommand, DestroyResourcesResponse>(message,
+                (response) => CollectAndCheckCompleted(response.DestroyedResources, response.DetachedResources));
+        }
+
+        public Task Handle(OperationTaskStatusEvent<DestroyVirtualNetworksCommand> message)
+        {
+            return FailOrRun<DestroyVirtualNetworksCommand, DestroyResourcesResponse>(message,
                 (response) => CollectAndCheckCompleted(response.DestroyedResources, response.DetachedResources));
         }
 
