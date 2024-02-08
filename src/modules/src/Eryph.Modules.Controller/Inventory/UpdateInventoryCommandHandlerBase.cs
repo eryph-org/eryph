@@ -153,7 +153,7 @@ namespace Eryph.Modules.Controller.Inventory
                 var optionalMetadata = await MetadataService.GetMetadata(vmInfo.MetadataId);
                 //TODO: add logging that entry has been skipped due to missing metadata
 
-                optionalMetadata.IfSome(async metadata =>
+                await optionalMetadata.IfSomeAsync(async metadata =>
                 {
                     var optionalMachine = (await _vmDataService.GetVM(metadata.MachineId));
 
