@@ -73,4 +73,13 @@
     <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
   <Import Project="..\..\..\..\exesign.custom.targets" />
+  <!--https://github.com/PowerShell/PowerShell/issues/15274-->
+	<Target Name="MyTarget" AfterTargets="Publish">
+		<ItemGroup>
+			<FilesToMove Include="$(PublishDir)runtimes\win\lib\net6.0\**\*.*" />
+		</ItemGroup>
+		<Move SourceFiles="@(FilesToMove)"
+		      DestinationFolder="$(PublishDir)%(RecursiveDir)"/>
+		<RemoveDir Directories="$(PublishDir)runtimes" />
+	</Target>
 </Project>
