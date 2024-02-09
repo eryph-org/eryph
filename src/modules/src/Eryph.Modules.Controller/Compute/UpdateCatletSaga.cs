@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
@@ -15,6 +16,7 @@ using Eryph.Modules.Controller.IdGenerator;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.Common;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
@@ -108,23 +110,39 @@ namespace Eryph.Modules.Controller.Compute
                         .Map(parentConfig => parentConfig?.Breed(Data.Config, Data.Config.Parent) ?? Data.Config)
                         .IfNone(Data.Config);
 
-                    var geneIdentifiers = new List<GeneIdentifier>();
-                    geneIdentifiers.AddRange(breedConfig?.Drives?
-                        .Select(x => x.Source)
-                        .Where(t => t != null && t.StartsWith("gene:"))
-                        .Select(x => x == null 
-                            ? throw new NullReferenceException() // could not happen
-                            : GeneIdentifier.ParseUnsafe(GeneType.Volume, x)) ?? Array.Empty<GeneIdentifier>());
 
-                    geneIdentifiers.AddRange(breedConfig?.Fodder?
-                        .Select(x => x.Source)
-                        .Where(t => t != null && t.StartsWith("gene:"))
-                        .Select(x => x == null
-                            ? throw new NullReferenceException() // could not happen
-                            : GeneIdentifier.ParseUnsafe(GeneType.Fodder, x)) ?? Array.Empty<GeneIdentifier>());
+                    var driveIdentifiers = await 
+                        MapToGeneIdentifiers((breedConfig.Drives ?? Array.Empty<CatletDriveConfig>())
+                                .Select(x=>x.Source).ToArray() , GeneType.Volume)
+                        .MatchAsync(
+                            right => (Right: true, Genes: right.ToArray()),
+                            LeftAsync:async l =>
+                            {
+                                await Fail(l.ToString());
+                                return (Right: false, Genes: Array.Empty<GeneIdentifier>());
+                            });
 
+                    if(!driveIdentifiers.Right)
+                        return;
+
+                    var fodderIdentifiers = await 
+                        MapToGeneIdentifiers((breedConfig.Fodder ?? Array.Empty<FodderConfig>())
+                                .Select(x => x.Source).ToArray(), GeneType.Fodder)
+                        .MatchAsync(
+                            right => (Right: true, Genes: right.ToArray()),
+                            LeftAsync: async l =>
+                            {
+                                await Fail(l.ToString());
+                                return (Right: false, Genes: Array.Empty<GeneIdentifier>());
+                            });
+
+                    if (!fodderIdentifiers.Right)
+                        return;
+                    
+                    var geneIdentifiers = driveIdentifiers.Genes.Concat(fodderIdentifiers.Genes).ToArray();
+                    
                     // no images required - go directly to create
-                    if (geneIdentifiers.Count == 0)
+                    if (geneIdentifiers.Length == 0)
                     {
                         await UpdateCatlet();
                         return;
@@ -144,6 +162,18 @@ namespace Eryph.Modules.Controller.Compute
 
                 }
             });
+
+            static Either<Error, IEnumerable<GeneIdentifier>> MapToGeneIdentifiers(string?[] sources,
+                GeneType geneType)
+            {
+                return from validSources in Prelude.Right(sources.Filter(
+                        t => !string.IsNullOrWhiteSpace(t) && t.StartsWith("gene:")))
+                    from identifiers in sources.Filter(
+                        t => !string.IsNullOrWhiteSpace(t) && !t.StartsWith("gene:")).HeadOrNone().Match(
+                        Some: i => Error.New($"Invalid gene source '{i}'"),
+                        None: () => validSources.Select(x => GeneIdentifier.Parse(geneType, x)).Traverse(l => l))
+                    select identifiers;
+            }
         }
         public Task Handle(OperationTaskStatusEvent<PrepareGeneCommand> message)
         {
@@ -153,41 +183,6 @@ namespace Eryph.Modules.Controller.Compute
             return FailOrRun<PrepareGeneCommand, PrepareGeneResponse>(message,
                 (response) =>
                 {
-
-                    //if (Data.BreedConfig != null)
-                    //{
-
-                    //    if (response.GeneType == GeneType.Volume)
-                    //    {
-                    //        foreach (var catletDriveConfig in Data.BreedConfig.Drives ?? Array.Empty<CatletDriveConfig>())
-                    //        {
-                    //            if (catletDriveConfig.Source != null &&
-                    //                catletDriveConfig.Source.StartsWith("gene:"))
-                    //            {
-                    //                var geneIdentifier = GeneIdentifier.ParseUnsafe(GeneType.Volume,catletDriveConfig.Source);
-                    //                if (geneIdentifier.Name == response.RequestedGene)
-                    //                    catletDriveConfig.Source = response.ResolvedGene;
-                    //            }
-
-                    //        }
-                    //    }
-
-                    //    if (response.GeneType == GeneType.Fodder)
-                    //    {
-                    //        foreach (var fodderConfig in Data.BreedConfig.Fodder ?? Array.Empty<FodderConfig>())
-                    //        {
-                    //            if (fodderConfig.Source != null &&
-                    //                fodderConfig.Source.StartsWith("gene:"))
-                    //            {
-                    //                var geneIdentifier = GeneIdentifier.ParseUnsafe(GeneType.Fodder, fodderConfig.Source);
-                    //                if (geneIdentifier.Name == response.RequestedGene)
-                    //                    fodderConfig.Source = response.ResolvedGene;
-                    //            }
-
-                    //        }
-                    //    }
-                    //}
-
                     if (Data.PendingGeneNames != null && Data.PendingGeneNames.Contains(response.RequestedGene))
                         Data.PendingGeneNames.Remove(response.RequestedGene);
 
