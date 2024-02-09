@@ -83,6 +83,13 @@ namespace Eryph.VmManagement
             return res;
         }
 
+        public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
+            PsCommandBuilder builder,
+            Func<int, Task> reportProgress = null) =>
+            GetObjectsAsync<T>(builder, reportProgress)
+                .Map(result => result.Map(seq => seq.Map(x => x.Value)))
+                .ToAsync();
+
         public Either<PowershellFailure, Unit> Run(PsCommandBuilder builder, Action<int> reportProgress = null)
         {
             using var ps = CreateShell().GetAwaiter().GetResult();

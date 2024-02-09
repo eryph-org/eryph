@@ -25,13 +25,11 @@ namespace Eryph.Modules.VmHostAgent.Networks;
 
 public class OvsDriverProvider<RT> where RT : struct,
     HasCancel<RT>,
+    HasFile<RT>,
+    HasHostNetworkCommands<RT>,
     HasLogger<RT>,
     HasPowershell<RT>,
-    HasDirectory<RT>,
-    HasFile<RT>,
     HasProcessRunner<RT>,
-    HasEnvironment<RT>,
-    HasHostNetworkCommands<RT>,
     HasRegistry<RT>
 {
     public static Aff<RT, Unit> ensureDriver(string ovsRunDir, bool allowInstall, bool allowUpgrade) =>
@@ -54,8 +52,9 @@ public class OvsDriverProvider<RT> where RT : struct,
                 from extensionVersion in parseVersion(ei.Version).ToAff(Error.New(
                     "Could not parse the version of the Hyper-V extension"))
                 from _ in extensionVersion != infVersion && canUpgrade
-                    ? from _ in removeAllDriverPackages()
-                      from __ in installDriver(infPath)
+                    ? from _ in uninstallDriver()
+                      from __ in removeAllDriverPackages()
+                      from ___ in installDriver(infPath)
                       select unit
                     : from _ in extensionVersion != infVersion
                         ? logWarning("Hyper-V switch extension version {ExtensionVersion} does not match packaged driver version {DriverVersion}",
@@ -70,30 +69,27 @@ public class OvsDriverProvider<RT> where RT : struct,
 
     public static Aff<RT, Unit> installDriver(string infPath) =>
         from _ in logInformation("Going to install OVS Hyper-V switch extension...")
-        from systemFolderPath in Environment<RT>.getFolderPath(Environment.SpecialFolder.System)
-        from newLine in Environment<RT>.newLine
-        let netCfgPath = Path.Combine(systemFolderPath, "netcfg.exe")
         let infFileName = Path.GetFileName(infPath)
+        from infVersion in getDriverVersionFromInfFile(infPath)
         let infDirectoryPath = Path.GetDirectoryName(infPath)
         from result in ProcessRunner<RT>.runProcess(
-            netCfgPath,
+            "netcfg.exe",
             @$"-l ""{infFileName}"" -c s -i {EryphConstants.DriverModuleName}",
             infDirectoryPath)
-        from __ in guard(result.ExitCode == 0, Error.New($"Failed to install OVS Hyper-V switch extension:{newLine}{result.Output}"))
+        from __ in guard(result.ExitCode == 0,
+            Error.New($"Failed to install OVS Hyper-V switch extension:{Environment.NewLine}{result.Output}"))
         from hostNetworkCommands in default(RT).HostNetworkCommands
         from ___ in hostNetworkCommands.EnableSwitchExtension()
-        from ____ in logInformation("Successfully installed OVS Hyper-V switch extension")
+        from ____ in logInformation("Successfully installed OVS Hyper-V switch extension {DriverVersion}", infVersion)
         select unit;
 
     public static Aff<RT, Unit> uninstallDriver() =>
         from _ in logInformation("Going to uninstall OVS Hyper-V switch extension...")
         from hostNetworkCommands in default(RT).HostNetworkCommands
         from __ in hostNetworkCommands.DisableSwitchExtension()
-        from systemFolderPath in Environment<RT>.getFolderPath(Environment.SpecialFolder.System)
-        from newLine in Environment<RT>.newLine
-        let netCfgPath = Path.Combine(systemFolderPath, "netcfg.exe")
-        from result in ProcessRunner<RT>.runProcess(netCfgPath, $"/u {EryphConstants.DriverModuleName}")
-        from ___ in guard(result.ExitCode == 0, Error.New($"Failed to uninstall OVS Hyper-V switch extension:{newLine}{result.Output}"))
+        from result in ProcessRunner<RT>.runProcess("netcfg.exe", $"/u {EryphConstants.DriverModuleName}")
+        from ___ in guard(result.ExitCode == 0,
+            Error.New($"Failed to uninstall OVS Hyper-V switch extension:{Environment.NewLine}{result.Output}"))
         from ____ in logInformation("Successfully uninstalled OVS Hyper-V switch extension")
         select unit;
 
@@ -106,9 +102,10 @@ public class OvsDriverProvider<RT> where RT : struct,
 
     internal static Aff<RT, Unit> removeDriverPackage(string infName) =>
         from _ in logInformation("Going to remove driver package {InfName}...", infName)
-        from result in ProcessRunner<RT>.runProcess("pnputil.exe", $"/delete-driver {infName} /uninstall /force")
-        from newLine in Environment<RT>.newLine
-        from __ in guard(result.ExitCode == 0, Error.New($"Failed to remove driver package {infName}:{newLine}{result.Output}"))
+        // The /uninstall flag is not supported on Windows Server 2016
+        from result in ProcessRunner<RT>.runProcess("pnputil.exe", $"/delete-driver {infName} /force")
+        from __ in guard(result.ExitCode == 0,
+            Error.New($"Failed to remove driver package {infName}:{Environment.NewLine}{result.Output}"))
         from ___ in logInformation("Successfully removed driver package {InfName}", infName)
         select unit;
 
@@ -155,8 +152,8 @@ public class OvsDriverProvider<RT> where RT : struct,
             .AddParameter("ExpandProperty", "SignerCertificate")
             .AddCommand("Select-Object")
             .AddParameter("ExpandProperty", "Subject")
-        from powershellResult in psEngine.GetObjectsAsync<string>(command).ToAff()
-        from signer in powershellResult.Map(r => Optional(r.Value)).Somes().HeadOrNone()
+        from powershellResult in psEngine.GetObjectValuesAsync<string?>(command).ToAff()
+        from signer in powershellResult.Map(Optional).Somes().HeadOrNone()
             .ToEff(Error.New("Could not read signature from file"))
         select !signer.Contains("Microsoft Windows Hardware Compatibility Publisher", StringComparison.OrdinalIgnoreCase);
 

@@ -48,7 +48,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             .HeadOrNone();
 
     public Aff<RT, Seq<VMSwitchExtension>> GetSwitchExtensions() =>
-        from psEngine in default(RT).Powershell.ToAff()
+        from psEngine in default(RT).Powershell
         from vmSwitchExtensions in psEngine.GetObjectsAsync<VMSwitchExtension>(
             PsCommandBuilder.Create()
                 .AddCommand("Get-VMSwitch")
@@ -61,15 +61,16 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from _ in psEngine.RunAsync(PsCommandBuilder.Create()
             .AddCommand("Get-VMSwitch")
             .AddCommand("Get-VMSwitchExtension")
+            .AddParameter("Name", EryphConstants.SwitchExtensionName)
             .AddCommand("Disable-VMSwitchExtension")).ToAff()
         select unit;
 
     public Aff<RT, Unit> EnableSwitchExtension() =>
         from psEngine in default(RT).Powershell
-        from vmSwitches in psEngine.GetObjectsAsync<VMSwitch>(
+        from vmSwitches in psEngine.GetObjectValuesAsync<VMSwitch>(
             PsCommandBuilder.Create().AddCommand("Get-VMSwitch")).ToAff()
-        let overlaySwitch = vmSwitches.Select(r => r.Value)
-            .Where(s => s.Name == EryphConstants.OverlaySwitchName)
+        let overlaySwitch = vmSwitches
+            .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
             .HeadOrNone()
         from _ in match(overlaySwitch,
             Some: os =>
