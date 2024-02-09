@@ -57,7 +57,7 @@ public class LocalGenepoolReader : ILocalGenepoolReader
             var genePath = Path.Combine(genepoolPath, pathName, geneFolder,
                 $"{geneIdentifier.Gene}.json");
             if (!File.Exists(genePath))
-                throw new InvalidDataException($"Geneset '{geneIdentifier.GeneSet}' not found in local genepool.");
+                throw new InvalidDataException($"Gene '{geneIdentifier}' not found in local genepool.");
 
             return File.ReadAllText(genePath);
 
