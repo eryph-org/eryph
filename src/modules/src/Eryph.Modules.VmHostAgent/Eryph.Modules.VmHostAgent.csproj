@@ -11,13 +11,13 @@
 
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Hosting" Version="0.1.0-ci.50" />
+    <PackageReference Include="Eryph.GenePool.Client" Version="0.1.0-ci.22" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Joveler.Compression.XZ" Version="4.2.2" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="6.0.2" />
     <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
   </ItemGroup>
 

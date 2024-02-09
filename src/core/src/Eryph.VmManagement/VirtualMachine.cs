@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Core.VmAgent;
+using Eryph.GenePool.Model;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
@@ -131,7 +132,7 @@ namespace Eryph.VmManagement
         }
 
         public static EitherAsync<Error, CatletConfig> TemplateFromParents(
-            VmHostAgentConfiguration vmHostAgentConfig,
+            ILocalGenepoolReader genepoolReader,
             string parent)
         {
             if(string.IsNullOrEmpty(parent))
@@ -139,7 +140,6 @@ namespace Eryph.VmManagement
                         Error.New("Cannot create template from parent - parent name is missing."));
 
 
-            var genepoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool");
             var loadedConfig = new Dictionary<string,CatletConfig>();
 
 
@@ -151,24 +151,45 @@ namespace Eryph.VmManagement
                     continue;
                 }
 
-                var parentPathName = parent.Replace('/', '\\');
-                var genesetManifestPath = Path.Combine(genepoolPath, parentPathName, "geneset.json");
-                var manifest = JsonSerializer.Deserialize<JsonNode>(File.ReadAllText(genesetManifestPath));
-                var reference = manifest["ref"]?.GetValue<string>() ?? "";
+                var eitherParentRef = 
+                    from parentIdentifier in GeneSetIdentifier.Parse(parent)
+                    from optionalRef in genepoolReader.GetGenesetReference(parentIdentifier)
+                    select optionalRef;
+
+                if (eitherParentRef.IsLeft)
+                    return eitherParentRef.Map(_ => new CatletConfig()).ToAsync();
+
+                // we have to break out from functional here, control the loop from
+                // reference returned
+                var reference = eitherParentRef
+                    .RightAsEnumerable()
+                    .Map(o => o.AsEnumerable()).Flatten().HeadOrNone()
+                    .Map(o => o.Name)
+                    .IfNone("");
+
                 if (!string.IsNullOrWhiteSpace(reference))
                 {
                     parent = reference;
                     continue;
                 }
+                
+                // read catlet config of parent
+                var eitherConfig = from parentIdentifier in GeneSetIdentifier.Parse(parent)
+                    let geneIdentifier = new GeneIdentifier(GeneType.Catlet, parentIdentifier, "catlet")
+                    from catletGene in genepoolReader.ReadGeneContent(geneIdentifier)
+                    from config in Try(() =>
+                    {
+                        var configDictionary =
+                            ConfigModelJsonSerializer.DeserializeToDictionary(catletGene);
+                        return CatletConfigDictionaryConverter.Convert(configDictionary);
+                    }).ToEither(Error.New)
+                    select config;
 
-                var genesetCatletPath = Path.Combine(genepoolPath, parentPathName, "catlet.json");
-                if (!File.Exists(genesetCatletPath))
-                    return Error.New($"Could not find catlet template of geneset {parent} in local genepool. You can only breed catlets from genesets with a catlet template.");
+                if(eitherConfig.IsLeft)
+                    return eitherConfig.ToAsync();
 
-                var configDictionary =
-                    ConfigModelJsonSerializer.DeserializeToDictionary(File.ReadAllText(genesetCatletPath));
-                var newConfig = CatletConfigDictionaryConverter.Convert(configDictionary);
-
+                //config has to be there at this point, so we can safely use First
+                var newConfig = eitherConfig.RightAsEnumerable().First();
                 newConfig.Name = parent;
                 loadedConfig.Add(parent, newConfig);
                 parent = newConfig.Parent;

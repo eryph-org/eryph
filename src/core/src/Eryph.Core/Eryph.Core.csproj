@@ -7,16 +7,16 @@
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="12.0.0" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.1.0" />
-    <PackageReference Include="Eryph.ConfigModel.Core" Version="0.1.0" />
-    <PackageReference Include="Eryph.ConfigModel.Networks" Version="0.1.0" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.2.0" />
+    <PackageReference Include="Eryph.ConfigModel.Core" Version="0.2.0" />
+    <PackageReference Include="Eryph.ConfigModel.Networks" Version="0.2.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="LanguageExt.Core" Version="4.4.0" />
     <PackageReference Include="IPNetwork2" Version="2.6.508" />
-    <PackageReference Include="JetBrains.Annotations" Version="2022.3.1" />
+    <PackageReference Include="JetBrains.Annotations" Version="2023.3.0" />
     <PackageReference Include="LanguageExt.Sys" Version="4.4.0" />
     <PackageReference Include="LanguageExt.Transformers" Version="4.4.0" />
     <PackageReference Include="SimpleInjector" Version="5.4.1" />

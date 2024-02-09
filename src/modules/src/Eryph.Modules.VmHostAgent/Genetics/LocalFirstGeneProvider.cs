@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.GenePool.Model;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Resources;
 using LanguageExt;

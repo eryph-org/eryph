@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.GenePool.Model;
 using Eryph.Resources;
 using Joveler.Compression.XZ;
 using LanguageExt;
@@ -136,14 +137,16 @@ namespace Eryph.Modules.VmHostAgent.Genetics
         }
 
 
-        private static string GetGenePath(GeneType? type)
+        private static string GetGenePath(string? type)
         {
-            return type switch
+            if (!Enum.TryParse<GeneType>(type, true, out var geneType))
+                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+
+            return geneType switch
             {
                 GeneType.Catlet => "",
                 GeneType.Volume => "volumes",
                 GeneType.Fodder => "fodder",
-                null => "",
                 _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
             };
         }

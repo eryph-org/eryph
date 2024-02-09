@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Security.Cryptography;
-using System.Text.Json;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -26,23 +25,16 @@ public abstract class GenePoolBase
         return (geneParts[0], geneParts[1].ToLowerInvariant());
     }
 
-    protected static GeneSetManifestData ReadGeneSetManifest(string json)
-    {
-        return JsonSerializer.Deserialize<GeneSetManifestData>(json);
-    }
-
-    protected static GeneManifestData ReadGeneManifest(string json)
-    {
-        return JsonSerializer.Deserialize<GeneManifestData>(json);
-    }
-
     protected static HashAlgorithm CreateHashAlgorithm(string name)
     {
         return name == "sha1" ? SHA1.Create() : SHA256.Create();
     }
 
-    protected static string GetHashString(byte[] hashBytes)
+    protected static string GetHashString(byte[]? hashBytes)
     {
-        return BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
+        return 
+            hashBytes == null 
+                ? string.Empty 
+                : BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
     }
 }
