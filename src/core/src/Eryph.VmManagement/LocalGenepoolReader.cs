@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Eryph.Core.VmAgent;
@@ -45,12 +46,20 @@ public class LocalGenepoolReader : ILocalGenepoolReader
         {
             var genepoolPath = Path.Combine(_agentConfiguration.Defaults.Volumes, "genepool");
             var pathName = geneIdentifier.GeneSet.Name.Replace('/', '\\');
-            var fodderGenePath = Path.Combine(genepoolPath, pathName, "fodder",
+
+            var geneFolder = geneIdentifier.GeneType switch
+            {
+                GeneType.Catlet => ".",
+                GeneType.Volume => "volumes",
+                GeneType.Fodder => "fodder",
+                _ => throw new ArgumentOutOfRangeException()
+            };
+            var genePath = Path.Combine(genepoolPath, pathName, geneFolder,
                 $"{geneIdentifier.Gene}.json");
-            if (!File.Exists(fodderGenePath))
+            if (!File.Exists(genePath))
                 throw new InvalidDataException($"Geneset '{geneIdentifier.GeneSet}' not found in local genepool.");
 
-            return File.ReadAllText(fodderGenePath);
+            return File.ReadAllText(genePath);
 
         }).ToEither(Error.New);
     }

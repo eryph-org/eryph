@@ -44,7 +44,7 @@ namespace Eryph.Modules.VmHostAgent
             var config = command.Config;
 
             var getParentConfig = Prelude.fun((VmHostAgentConfiguration vmHostAgentConfig) =>
-                GetTemplate(vmHostAgentConfig, config.Parent));
+                GetTemplate(new LocalGenepoolReader(vmHostAgentConfig), config.Parent));
 
             var createVM = Prelude.fun((VMStorageSettings settings, 
                     Option<CatletConfig> parentConfig) =>
@@ -71,14 +71,14 @@ namespace Eryph.Modules.VmHostAgent
         }
 
         private static EitherAsync<Error, Option<CatletConfig>> GetTemplate(
-            VmHostAgentConfiguration vmHostAgentConfig,
+            ILocalGenepoolReader genepoolReader,
             string? parent)
         {
             if (string.IsNullOrWhiteSpace(parent))
                 return Prelude.RightAsync<Error, Option<CatletConfig>> (
                     Option<CatletConfig>.None);
 
-            return VirtualMachine.TemplateFromParents(vmHostAgentConfig, parent).Map(Prelude.Some);
+            return VirtualMachine.TemplateFromParents(genepoolReader, parent).Map(Prelude.Some);
         }
 
         private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(VMStorageSettings storageSettings, IPowershellEngine engine,
