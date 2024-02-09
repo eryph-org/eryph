@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Security.Cryptography;
-using System.Text.Json;
-using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -25,16 +23,6 @@ public abstract class GenePoolBase
             return Error.New($"Invalid gene part hash '{partHash}'");
 
         return (geneParts[0], geneParts[1].ToLowerInvariant());
-    }
-
-    protected static GenesetTagManifestData ReadGeneSetManifest(string json)
-    {
-        return JsonSerializer.Deserialize<GenesetTagManifestData>(json);
-    }
-
-    protected static GeneManifestData ReadGeneManifest(string json)
-    {
-        return JsonSerializer.Deserialize<GeneManifestData>(json);
     }
 
     protected static HashAlgorithm CreateHashAlgorithm(string name)
