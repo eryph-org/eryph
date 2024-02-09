@@ -34,7 +34,7 @@ public class OvsDriverProvider<RT> where RT : struct,
     HasHostNetworkCommands<RT>,
     HasRegistry<RT>
 {
-    public static Aff<RT, Unit> ensureDriver(string ovsRunDir, bool canInstall, bool canUpgrade) =>
+    public static Aff<RT, Unit> ensureDriver(string ovsRunDir, bool allowInstall, bool allowUpgrade) =>
         from hostNetworkCommands in default(RT).HostNetworkCommands
         from extensionInfo in hostNetworkCommands.GetInstalledSwitchExtension()
         from _ in match(extensionInfo,
@@ -42,7 +42,14 @@ public class OvsDriverProvider<RT> where RT : struct,
             None: () => logInformation("OVS Hyper-V switch extension is not installed"))
         let infPath = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
         from infVersion in getDriverVersionFromInfFile(infPath)
-        from __ in match(extensionInfo,
+        from isDriverTestSigningEnabled in isDriverTestSigningEnabled()
+        from isDriverPackageTestSigned in isDriverPackageTestSigned(infPath)
+        from __ in isDriverPackageTestSigned && ! isDriverTestSigningEnabled
+            ? logWarning("Driver package is test signed but test signing is disabled in the OS. The driver will not be used.")
+            : SuccessAff<RT, Unit>(unit)
+        let canInstall = allowInstall && (!isDriverPackageTestSigned || isDriverTestSigningEnabled)
+        let canUpgrade = allowUpgrade && (!isDriverPackageTestSigned || isDriverTestSigningEnabled)
+        from ___ in match(extensionInfo,
             Some: ei =>
                 from extensionVersion in parseVersion(ei.Version).ToAff(Error.New(
                     "Could not parse the version of the Hyper-V extension"))
