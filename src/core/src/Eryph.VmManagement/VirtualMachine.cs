@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
@@ -237,16 +235,36 @@ namespace Eryph.VmManagement
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
 
-            return engine.RunAsync(new PsCommandBuilder()
-                    .AddCommand("Set-VM")
+            return
+                from setVMCommand in engine.GetObjectsAsync<PowershellCommand>(
+                        new PsCommandBuilder().AddCommand("Get-Command")
+                            .AddArgument("Set-VM")).ToAsync()
+                    .ToError()
+                    .Bind(o => 
+                        o.HeadOrLeft(Error.New("Command Set-VM not found")).ToAsync())
+                let builder = BuildSetVMCommand(vmInfo, setVMCommand)
+                from uSet in 
+                engine.RunAsync(builder).ToAsync().ToError()
+                from reloaded in vmInfo.RecreateOrReload(engine)
+                select reloaded;
+
+            static PsCommandBuilder BuildSetVMCommand(TypedPsObject<VirtualMachineInfo> vmInfo, PowershellCommand commandInfo)
+            {
+                var builder = new PsCommandBuilder().AddCommand("Set-VM");
+                builder
                     .AddParameter("VM", vmInfo.PsObject)
                     .AddParameter("DynamicMemory", false)
-                    .AddParameter("AutomaticCheckpointsEnabled", false)
-                    .AddParameter("EnhancedSessionTransportType", "VMBus")
                     .AddParameter("AutomaticStartAction", "Nothing")
-                    .AddParameter("AutomaticStopAction", "Save")
+                    .AddParameter("AutomaticStopAction", "Save");
 
-            ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
+                if (commandInfo.Parameters.ContainsKey("AutomaticCheckpointsEnabled"))
+                    builder.AddParameter("AutomaticCheckpointsEnabled", false);
+
+                if (commandInfo.Parameters.ContainsKey("EnhancedSessionTransportType"))
+                    builder.AddParameter("EnhancedSessionTransportType", "VMBus");
+
+                return builder;
+            }
         }
 
         public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
