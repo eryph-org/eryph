@@ -51,6 +51,11 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
 
             var config = new MapperConfiguration(cfg =>
             {
+                cfg.CreateProfile("Powershell", c =>
+                {
+                    c.CreateMap<CommandInfo, PowershellCommand>();
+                });
+
                 cfg.CreateProfile("HyperV", c =>
                 {
                     var hyperVAssemblies = GetHyperVAssemblies();
@@ -96,7 +101,7 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
                         c.AddHyperVMapping<VMFirmwareInfo>(hyperVAssembly, "VMFirmware");
 
                         c.AddHyperVMapping<VMSwitchExtension>(hyperVAssembly, "VMSwitchExtension");
-
+                        
                     }
 
                     c.IgnoreUnmapped(_logger);
