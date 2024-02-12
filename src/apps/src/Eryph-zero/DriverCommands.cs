@@ -84,7 +84,7 @@ namespace Eryph.Runtime.Zero
                 loggerFactory);
         }
 
-        public static async Task<Fin<Unit>> Run(Aff<DriverCommandsRuntime, Unit> logic)
+        private static async Task<Fin<Unit>> Run(Aff<DriverCommandsRuntime, Unit> logic)
         {
             using var loggerFactory = new NullLoggerFactory();
             

@@ -25,7 +25,6 @@ using RT = OvsDriverProviderTests.TestRuntime;
 
 public class OvsDriverProviderTests
 {
-    private const string OvsRunDir = @"Z:\ovsrundir";
     private readonly RT _runtime;
 
     private readonly Mock<FileIO> _fileMock = new();
@@ -36,7 +35,7 @@ public class OvsDriverProviderTests
 
     public OvsDriverProviderTests()
     {
-        _runtime = new TestRuntime(new TestRuntimeEnv(
+        _runtime = new(new(
             new CancellationTokenSource(),
             _fileMock.Object,
             _hostNetworkCommandsMock.Object,
@@ -47,7 +46,7 @@ public class OvsDriverProviderTests
     }
 
     [Fact]
-    public async Task EnsureDriver_NoDriverAndInstallAllowed_InstallsDriver()
+    public async Task EnsureDriver_NoDriverInstalledAndInstallAllowed_InstallsDriver()
     {
         ArrangeIsTestSigningEnabled(false);
         ArrangeNoDriverInstalled();
@@ -65,7 +64,7 @@ public class OvsDriverProviderTests
             .Returns(SuccessAff<RT, Unit>(unit))
             .Verifiable();
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(OvsRunDir, true, true)
+        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
@@ -80,7 +79,7 @@ public class OvsDriverProviderTests
         ArrangeNoDriverInstalled();
         ArrangeDriverPackage("1.0.0.0", false);
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(OvsRunDir, false, true)
+        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", false, true)
             .Run(_runtime);
 
         result.Should().BeFail()
@@ -96,7 +95,7 @@ public class OvsDriverProviderTests
         ArrangeNoDriverInstalled();
         ArrangeDriverPackage("1.0.0.0", true);
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(OvsRunDir, true, true)
+        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
             .Run(_runtime);
 
         result.Should().BeFail()
@@ -112,7 +111,7 @@ public class OvsDriverProviderTests
         ArrangeInstalledDriver("1.0.0.0");
         ArrangeDriverPackage("1.0.0.0", false);
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(OvsRunDir, true, true)
+        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();

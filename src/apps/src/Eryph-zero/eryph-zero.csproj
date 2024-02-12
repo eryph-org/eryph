@@ -75,7 +75,7 @@
   <Import Project="..\..\..\..\exesign.custom.targets" />
   <!-- For self-contained deployments, we need to manually copy the Powershell modules
        which are included with the Powershell SDK. The modules are not copied to the
-	   correct place by default. See https://github.com/PowerShell/PowerShell/issues/15274-->
+       correct place by default. See https://github.com/PowerShell/PowerShell/issues/15274 -->
   <Target Name="MyTarget" AfterTargets="Publish">
     <ItemGroup>
       <FilesToMove Include="$(PublishDir)runtimes\win\lib\net6.0\**\*.*" />

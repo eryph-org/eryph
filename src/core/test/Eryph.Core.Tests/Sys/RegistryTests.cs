@@ -52,7 +52,7 @@ public class RegistryTests
             .Which.Should().BeOfType<ArgumentException>();
     }
 
-    private  Fin<Option<object>> Run(Eff<TestRuntime, Option<object>> logic)
+    private Fin<Option<object>> Run(Eff<TestRuntime, Option<object>> logic)
     {
         return logic.Run(new TestRuntime());
     }
