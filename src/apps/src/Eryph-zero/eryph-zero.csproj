@@ -73,13 +73,15 @@
     <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
   <Import Project="..\..\..\..\exesign.custom.targets" />
-  <!--https://github.com/PowerShell/PowerShell/issues/15274-->
-	<Target Name="MyTarget" AfterTargets="Publish">
-		<ItemGroup>
-			<FilesToMove Include="$(PublishDir)runtimes\win\lib\net6.0\**\*.*" />
-		</ItemGroup>
-		<Move SourceFiles="@(FilesToMove)"
-		      DestinationFolder="$(PublishDir)%(RecursiveDir)"/>
-		<RemoveDir Directories="$(PublishDir)runtimes" />
-	</Target>
+  <!-- For self-contained deployments, we need to manually copy the Powershell modules
+       which are included with the Powershell SDK. The modules are not copied to the
+	   correct place by default. See https://github.com/PowerShell/PowerShell/issues/15274-->
+  <Target Name="MyTarget" AfterTargets="Publish">
+    <ItemGroup>
+      <FilesToMove Include="$(PublishDir)runtimes\win\lib\net6.0\**\*.*" />
+    </ItemGroup>
+    <Move SourceFiles="@(FilesToMove)"
+          DestinationFolder="$(PublishDir)%(RecursiveDir)"/>
+    <RemoveDir Directories="$(PublishDir)runtimes" />
+  </Target>
 </Project>

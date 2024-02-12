@@ -39,10 +39,9 @@ namespace Eryph.Runtime.Zero
                     ? "Hyper-V switch extension driver service is running"
                     : "Hyper-V switch extension driver service is not running")
                 from installedDriverPackages in OvsDriverProvider<DriverCommandsRuntime>.getInstalledDriverPackages()
-                from newLine in Environment<DriverCommandsRuntime>.newLine
                 from ____ in Console<DriverCommandsRuntime>.writeLine(installedDriverPackages.Fold(
                     $"The following driver packages are installed:",
-                    (acc, info) => $"{acc}{newLine}\t{info.Driver} - {info.Version} {info.OriginalFileName}"))
+                    (acc, info) => $"{acc}{Environment.NewLine}\t{info.Driver} - {info.Version} {info.OriginalFileName}"))
                 let packageInfFile = Try(() => OVSPackage.UnpackAndProvide()).ToOption()
                     .Map(ovsRunDir => Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf"))
                 from _____ in match(packageInfFile,
@@ -97,7 +96,7 @@ namespace Eryph.Runtime.Zero
         {
             using var psEngine = new PowershellEngine(loggerFactory.CreateLogger<PowershellEngine>());
             using var cts = new CancellationTokenSource();
-            var runtime = new DriverCommandsRuntime(cts, loggerFactory, psEngine);
+            var runtime = new DriverCommandsRuntime(new(cts, loggerFactory, psEngine));
 
             return await logic.Run(runtime);
         }

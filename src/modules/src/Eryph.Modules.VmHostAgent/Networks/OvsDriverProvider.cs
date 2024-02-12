@@ -77,7 +77,7 @@ public class OvsDriverProvider<RT> where RT : struct,
         let infDirectoryPath = Path.GetDirectoryName(infPath)
         from result in ProcessRunner<RT>.runProcess(
             "netcfg.exe",
-            @$"-l ""{infFileName}"" -c s -i {EryphConstants.DriverModuleName}",
+            @$"/l ""{infFileName}"" /c s /i {EryphConstants.DriverModuleName}",
             infDirectoryPath)
         from __ in guard(result.ExitCode == 0,
             Error.New($"Failed to install OVS Hyper-V switch extension:{Environment.NewLine}{result.Output}"))
@@ -117,8 +117,8 @@ public class OvsDriverProvider<RT> where RT : struct,
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-WindowsDriver")
             .AddParameter("Online")
-        from result in psEngine.GetObjectsAsync<DismDriverInfo>(command).ToAff()
-        select result.Select(r => Optional(r.Value))
+        from result in psEngine.GetObjectValuesAsync<DismDriverInfo>(command).ToAff()
+        select result.Map(Optional)
             .Somes()
             .Filter(di => di.OriginalFileName?.Contains(
                  EryphConstants.DriverModuleName, StringComparison.OrdinalIgnoreCase) ?? false);

@@ -15,20 +15,17 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.VmHostAgent.Test
 {
     public readonly struct TestRuntime :
-           HasCancel<TestRuntime>, 
-           Traits.HasConsole<TestRuntime>, 
-           Traits.HasFile<TestRuntime>, 
-           Traits.HasEncoding<TestRuntime>, 
-           Traits.HasTextRead<TestRuntime>, 
-           Traits.HasTime<TestRuntime>, 
-           Traits.HasEnvironment<TestRuntime>, 
+           HasCancel<TestRuntime>,
+           Traits.HasConsole<TestRuntime>,
+           Traits.HasFile<TestRuntime>,
+           Traits.HasTextRead<TestRuntime>,
+           Traits.HasTime<TestRuntime>,
            Traits.HasDirectory<TestRuntime>,
            HasOVSControl<TestRuntime>,
            HasAgentSyncClient<TestRuntime>,
            HasHostNetworkCommands<TestRuntime>,
            HasNetworkProviderManager<TestRuntime>,
            HasLogger<TestRuntime>
-
     {
         public readonly RuntimeEnv<TestRuntime> env;
 

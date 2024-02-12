@@ -25,11 +25,8 @@ public readonly struct ConsoleRuntime :
     HasNetworkProviderManager<ConsoleRuntime>,
     HasLogger<ConsoleRuntime>,
     HasFile<ConsoleRuntime>,
-    HasDirectory<ConsoleRuntime>,
     HasProcessRunner<ConsoleRuntime>,
-    HasEnvironment<ConsoleRuntime>,
     HasRegistry<ConsoleRuntime>
-
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly IPowershellEngine _engine;
@@ -57,7 +54,7 @@ public readonly struct ConsoleRuntime :
         SuccessEff<IHostNetworkCommands<ConsoleRuntime>>(
             new HostNetworkCommands<ConsoleRuntime>());
 
-    public ConsoleRuntime LocalCancel => new(_loggerFactory,_engine, _sysEnv, CancellationTokenSource);
+    public ConsoleRuntime LocalCancel => new(_loggerFactory,_engine, _sysEnv, new CancellationTokenSource());
 
     public CancellationToken CancellationToken => CancellationTokenSource.Token;
     public CancellationTokenSource CancellationTokenSource { get; }
@@ -80,11 +77,7 @@ public readonly struct ConsoleRuntime :
 
     public Eff<ConsoleRuntime, FileIO> FileEff => SuccessEff(LanguageExt.Sys.Live.FileIO.Default);
 
-    public Eff<ConsoleRuntime, DirectoryIO> DirectoryEff => SuccessEff(LanguageExt.Sys.Live.DirectoryIO.Default);
-
     public Eff<ConsoleRuntime, ProcessRunnerIO> ProcessRunnerEff => SuccessEff(LiveProcessRunnerIO.Default);
-
-    public Eff<ConsoleRuntime, EnvironmentIO> EnvironmentEff => SuccessEff(LanguageExt.Sys.Live.EnvironmentIO.Default);
 
     public Eff<ConsoleRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
 }
