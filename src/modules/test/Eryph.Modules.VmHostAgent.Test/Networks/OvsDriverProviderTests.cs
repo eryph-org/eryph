@@ -164,7 +164,7 @@ public class OvsDriverProviderTests
             .Returns(SuccessAff<RT, Unit>(unit))
             .Verifiable();
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(OvsRunDir, true, true)
+        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
@@ -179,7 +179,7 @@ public class OvsDriverProviderTests
         ArrangeInstalledDriver("1.0.0.0");
         ArrangeDriverPackage("2.0.0.0", false);
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(OvsRunDir, true, false)
+        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, false)
             .Run(_runtime);
 
         result.Should().BeSuccess();
@@ -195,7 +195,7 @@ public class OvsDriverProviderTests
         ArrangeInstalledDriver("1.0.0.0");
         ArrangeDriverPackage("2.0.0.0", true);
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(OvsRunDir, true, true)
+        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
@@ -249,7 +249,7 @@ public class OvsDriverProviderTests
 
     private void ArrangeDriverPackage(string version, bool isTestSigned)
     {
-        _fileMock.Setup(m => m.ReadAllBytes(Path.Combine(OvsRunDir, "driver", "dbo_ovse.inf"),
+        _fileMock.Setup(m => m.ReadAllBytes(Path.Combine(@"Z:\ovsrundir", "driver", "dbo_ovse.inf"),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Encoding.ASCII.GetBytes($"""
                 DriverVer = 4/2/2020,{version}
