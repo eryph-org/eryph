@@ -54,7 +54,10 @@ public class OvsDriverProvider<RT> where RT : struct,
                 from _ in extensionVersion != infVersion && canUpgrade
                     ? from _ in uninstallDriver()
                       from __ in removeAllDriverPackages()
-                      from ___ in installDriver(infPath)
+                      // Wait for the driver service to be stopped/removed. Otherwise, the
+                      // installation of the new driver might fail with error code 0x80070430.
+                      from ___ in waitUntilDriverServiceHasStopped()
+                      from ____ in installDriver(infPath)
                       select unit
                     : from _ in extensionVersion != infVersion
                         ? logWarning("Hyper-V switch extension version {ExtensionVersion} does not match packaged driver version {DriverVersion}",
@@ -170,7 +173,6 @@ public class OvsDriverProvider<RT> where RT : struct,
         select content;
 
     internal static Eff<Version> extractDriverVersionFromInf(string infContent) =>
-
         from match in Eff(() => Regex.Match(
             infContent,
             @"DriverVer\s*=.*,(\d+\.\d+\.\d+\.\d+)",
@@ -178,6 +180,24 @@ public class OvsDriverProvider<RT> where RT : struct,
         from _ in guard(match.Success, Error.New("Could not extract driver version from INF"))
         from version in parseVersion(match.Groups[1].Value).ToEff(Error.New("Could not parse driver version"))
         select version;
+
+    internal static Aff<RT, Unit> waitUntilDriverServiceHasStopped() =>
+        from _ in repeatWhile(
+            Schedule.spaced(TimeSpan.FromSeconds(5)) | Schedule.upto(TimeSpan.FromMinutes(5)),
+            from _ in logInformation("Checking if driver service has stopped...")
+            from isRunning in isDriverServiceRunning()
+            select isRunning,
+            isRunning => isRunning)
+        select unit;
+
+    public static Aff<RT, bool> isDriverServiceRunning() =>
+        from processResult in ProcessRunner<RT>.runProcess("sc.exe", "query type=driver")
+        from __ in guard(processResult.ExitCode == 0, Error.New("Could not query running driver services"))
+        from match in Eff(() => Regex.Match(
+            processResult.Output,
+            @$"SERVICE_NAME:\s*{Regex.Escape(EryphConstants.DriverModuleName)}",
+            RegexOptions.Multiline | RegexOptions.IgnoreCase))
+        select match.Success;
 
     private static Option<Version> parseVersion(string input) =>
         Version.TryParse(input, out var version) ? Some(version) : None;

@@ -34,14 +34,18 @@ namespace Eryph.Runtime.Zero
                 from __ in Console<DriverCommandsRuntime>.writeLine(isDriverLoaded
                     ? "Hyper-V switch extension driver is loaded"
                     : "Hyper-V switch extension driver is not loaded. Overlay network might not work. Consider reinstalling the driver.")
+                from isDriverServiceRunning in OvsDriverProvider<DriverCommandsRuntime>.isDriverServiceRunning()
+                from ___ in Console<DriverCommandsRuntime>.writeLine(isDriverServiceRunning
+                    ? "Hyper-V switch extension driver service is running"
+                    : "Hyper-V switch extension driver service is not running")
                 from installedDriverPackages in OvsDriverProvider<DriverCommandsRuntime>.getInstalledDriverPackages()
                 from newLine in Environment<DriverCommandsRuntime>.newLine
-                from ___ in Console<DriverCommandsRuntime>.writeLine(installedDriverPackages.Fold(
+                from ____ in Console<DriverCommandsRuntime>.writeLine(installedDriverPackages.Fold(
                     $"The following driver packages are installed:",
                     (acc, info) => $"{acc}{newLine}\t{info.Driver} - {info.Version} {info.OriginalFileName}"))
                 let packageInfFile = Try(() => OVSPackage.UnpackAndProvide()).ToOption()
                     .Map(ovsRunDir => Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf"))
-                from ____ in match(packageInfFile,
+                from _____ in match(packageInfFile,
                     Some: infFile =>
                         from packageDriverVersion in OvsDriverProvider<DriverCommandsRuntime>.getDriverVersionFromInfFile(infFile)
                         from _ in Console<DriverCommandsRuntime>.writeLine($"Driver version in OVS package: {packageDriverVersion}")
@@ -52,7 +56,7 @@ namespace Eryph.Runtime.Zero
                         select unit,
                     None: () => Console<DriverCommandsRuntime>.writeLine("No OVS package found"))
                 from isDriverTestSigningEnabled in OvsDriverProvider<DriverCommandsRuntime>.isDriverTestSigningEnabled()
-                from _____ in Console<DriverCommandsRuntime>.writeLine(
+                from ______ in Console<DriverCommandsRuntime>.writeLine(
                     $"Driver test signing is {(isDriverTestSigningEnabled ? "" : "not ")}enabled")
                 select unit);
 
