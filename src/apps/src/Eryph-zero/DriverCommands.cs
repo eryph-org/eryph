@@ -42,20 +42,16 @@ namespace Eryph.Runtime.Zero
                 from ____ in Console<DriverCommandsRuntime>.writeLine(installedDriverPackages.Fold(
                     $"The following driver packages are installed:",
                     (acc, info) => $"{acc}{Environment.NewLine}\t{info.Driver} - {info.Version} {info.OriginalFileName}"))
-                let packageInfFile = Try(() => OVSPackage.UnpackAndProvide()).ToOption()
-                    .Map(ovsRunDir => Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf"))
-                from _____ in match(packageInfFile,
-                    Some: infFile =>
-                        from packageDriverVersion in OvsDriverProvider<DriverCommandsRuntime>.getDriverVersionFromInfFile(infFile)
-                        from _ in Console<DriverCommandsRuntime>.writeLine($"Driver version in OVS package: {packageDriverVersion}")
-                        from isDriverPackageTestSigned in OvsDriverProvider<DriverCommandsRuntime>.isDriverPackageTestSigned(infFile)
-                        from __ in isDriverPackageTestSigned
-                            ? Console<DriverCommandsRuntime>.writeLine($"Driver in OVS package is test signed")
-                            : SuccessEff(unit)
-                        select unit,
-                    None: () => Console<DriverCommandsRuntime>.writeLine("No OVS package found"))
+                from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide())
+                let packageInfFile = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
+                from packageDriverVersion in OvsDriverProvider<DriverCommandsRuntime>.getDriverVersionFromInfFile(packageInfFile)
+                from _____ in Console<DriverCommandsRuntime>.writeLine($"Driver version in OVS package: {packageDriverVersion}")
+                from isDriverPackageTestSigned in OvsDriverProvider<DriverCommandsRuntime>.isDriverPackageTestSigned(packageInfFile)
+                from ______ in isDriverPackageTestSigned
+                    ? Console<DriverCommandsRuntime>.writeLine($"Driver in OVS package is test signed")
+                    : SuccessEff(unit)
                 from isDriverTestSigningEnabled in OvsDriverProvider<DriverCommandsRuntime>.isDriverTestSigningEnabled()
-                from ______ in Console<DriverCommandsRuntime>.writeLine(
+                from _______ in Console<DriverCommandsRuntime>.writeLine(
                     $"Driver test signing is {(isDriverTestSigningEnabled ? "" : "not ")}enabled")
                 select unit);
 

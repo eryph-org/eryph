@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using LanguageExt;
 using Serilog;
 
 namespace Eryph.Runtime.Zero;
@@ -81,8 +82,9 @@ internal class OVSPackage
         if (ovsPackageExists)
         {
             log.Information("Installing Open VSwitch package");
-
-            runDirNo++;
+            runDirNo = ovsRootDir.GetDirectories("run_*")
+                .Map(d => Prelude.parseInt(d.Name.Replace("run_", "")))
+                .Somes().Max() + 1;
             var extractFolder = Path.Combine(ovsRootDir.FullName, $"run_{runDirNo:D}");
             ZipFile.ExtractToDirectory(ovsPackageFile, extractFolder);
 
