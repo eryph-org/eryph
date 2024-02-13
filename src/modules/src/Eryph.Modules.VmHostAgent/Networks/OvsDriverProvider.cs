@@ -52,12 +52,23 @@ public class OvsDriverProvider<RT> where RT : struct,
                 from extensionVersion in parseVersion(ei.Version).ToAff(Error.New(
                     "Could not parse the version of the Hyper-V extension"))
                 from _ in extensionVersion != infVersion && canUpgrade
-                    ? from _ in uninstallDriver()
-                      from __ in removeAllDriverPackages()
+                    ? from switchExtensions in hostNetworkCommands.GetSwitchExtensions()
+                      let activeSwitchExtensions = switchExtensions.Filter(e => e.Enabled)
+                          .OrderByDescending(e => e.SwitchName == EryphConstants.OverlaySwitchName)
+                          .ToSeq()
+                      from _ in activeSwitchExtensions.Map(e => hostNetworkCommands.DisableSwitchExtension(e.SwitchId))
+                          .SequenceSerial()
+                      from __ in uninstallDriver()
+                      from ___ in removeAllDriverPackages()
                       // Wait for the driver service to be stopped/removed. Otherwise, the
                       // installation of the new driver might fail with error code 0x80070430.
-                      from ___ in waitUntilDriverServiceHasStopped()
-                      from ____ in installDriver(infPath)
+                      from ____ in waitUntilDriverServiceHasStopped()
+                      from _____ in installDriver(infPath)
+                      // The OVS Hyper-V switch extension should only be enabled for a single
+                      // switch. We reenable it for the best match.
+                      from ______ in match(activeSwitchExtensions.HeadOrNone(),
+                          Some: e => hostNetworkCommands.EnableSwitchExtension(e.SwitchId),
+                          None: () => SuccessAff<RT, Unit>(unit))
                       select unit
                     : from _ in extensionVersion != infVersion
                         ? logWarning("Hyper-V switch extension version {ExtensionVersion} does not match packaged driver version {DriverVersion}",
@@ -82,14 +93,12 @@ public class OvsDriverProvider<RT> where RT : struct,
         from __ in guard(result.ExitCode == 0,
             Error.New($"Failed to install OVS Hyper-V switch extension:{Environment.NewLine}{result.Output}"))
         from hostNetworkCommands in default(RT).HostNetworkCommands
-        from ___ in hostNetworkCommands.EnableSwitchExtension()
         from ____ in logInformation("Successfully installed OVS Hyper-V switch extension {DriverVersion}", infVersion)
         select unit;
 
     public static Aff<RT, Unit> uninstallDriver() =>
         from _ in logInformation("Going to uninstall OVS Hyper-V switch extension...")
         from hostNetworkCommands in default(RT).HostNetworkCommands
-        from __ in hostNetworkCommands.DisableSwitchExtension()
         from result in ProcessRunner<RT>.runProcess("netcfg.exe", $"/u {EryphConstants.DriverModuleName}")
         from ___ in guard(result.ExitCode == 0,
             Error.New($"Failed to uninstall OVS Hyper-V switch extension:{Environment.NewLine}{result.Output}"))
@@ -125,11 +134,9 @@ public class OvsDriverProvider<RT> where RT : struct,
 
     public static Aff<RT, bool> isDriverLoaded() =>
         from result in ProcessRunner<RT>.runProcess("driverquery.exe", "/FO LIST")
-        from match in Eff(() => Regex.Match(
-            result.Output,
-            $@"Module Name:\s*{Regex.Escape(EryphConstants.DriverModuleName)}",
-            RegexOptions.Multiline | RegexOptions.IgnoreCase))
-        select match.Success;
+        from _ in guard(result.ExitCode == 0, Error.New("Could not query loaded drivers"))
+        // The output of driverquery.exe is localized. Hence, we just search for the driver name.
+        select result.Output.Contains(EryphConstants.DriverModuleName, StringComparison.OrdinalIgnoreCase);
 
     public static Aff<RT, Version> getDriverVersionFromInfFile(string filePath) =>
         from fileContent in getInfFileContent(filePath)

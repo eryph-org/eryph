@@ -56,30 +56,23 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                 .AddParameter("Name", EryphConstants.SwitchExtensionName)).ToAff()
         select vmSwitchExtensions.Map(s => s.ToValue());
 
-    public Aff<RT, Unit> DisableSwitchExtension() =>
+    public Aff<RT, Unit> DisableSwitchExtension(Guid switchId) =>
         from psEngine in default(RT).Powershell
         from _ in psEngine.RunAsync(PsCommandBuilder.Create()
             .AddCommand("Get-VMSwitch")
+            .AddParameter("Id", switchId)
             .AddCommand("Get-VMSwitchExtension")
             .AddParameter("Name", EryphConstants.SwitchExtensionName)
             .AddCommand("Disable-VMSwitchExtension")).ToAff()
         select unit;
 
-    public Aff<RT, Unit> EnableSwitchExtension() =>
+    public Aff<RT, Unit> EnableSwitchExtension(Guid switchId) =>
         from psEngine in default(RT).Powershell
-        from vmSwitches in psEngine.GetObjectValuesAsync<VMSwitch>(
-            PsCommandBuilder.Create().AddCommand("Get-VMSwitch")).ToAff()
-        let overlaySwitch = vmSwitches
-            .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
-            .HeadOrNone()
-        from _ in match(overlaySwitch,
-            Some: os =>
-                from _ in psEngine.RunAsync(PsCommandBuilder.Create()
-                    .AddCommand("Enable-VMSwitchExtension")
-                    .AddParameter("VMSwitchName", EryphConstants.OverlaySwitchName)
-                    .AddParameter("Name", EryphConstants.SwitchExtensionName)).ToAff()
-                select unit,
-            None: () => SuccessAff(unit))
+        from _ in psEngine.RunAsync(PsCommandBuilder.Create()
+            .AddCommand("Get-VMSwitch")
+            .AddParameter("Id", switchId)
+            .AddCommand("Enable-VMSwitchExtension")
+            .AddParameter("Name", EryphConstants.SwitchExtensionName)).ToAff()
         select unit;
     
     public Aff<RT, Seq<HostNetworkAdapter>> GetPhysicalAdapters() =>

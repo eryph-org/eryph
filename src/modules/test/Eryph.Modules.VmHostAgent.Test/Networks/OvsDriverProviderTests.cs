@@ -33,6 +33,8 @@ public class OvsDriverProviderTests
     private readonly Mock<ProcessRunnerIO> _processRunnerIOMock = new();
     private readonly Mock<RegistryIO> _registryIOMock = new();
 
+    private static readonly Guid SwitchId = Guid.NewGuid();
+
     public OvsDriverProviderTests()
     {
         _runtime = new(new(
@@ -58,10 +60,6 @@ public class OvsDriverProviderTests
                 @"Z:\ovsrundir\driver",
                 false))
             .ReturnsAsync(new ProcessRunnerResult(0, ""))
-            .Verifiable();
-
-        _hostNetworkCommandsMock.Setup(m => m.EnableSwitchExtension())
-            .Returns(SuccessAff<RT, Unit>(unit))
             .Verifiable();
 
         var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
@@ -117,7 +115,7 @@ public class OvsDriverProviderTests
         result.Should().BeSuccess();
 
         _processRunnerIOMock.VerifyNoOtherCalls();
-        _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(), Times.Never);
+        _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(It.IsAny<Guid>()), Times.Never);
     }
 
     [Fact]
@@ -127,7 +125,15 @@ public class OvsDriverProviderTests
         ArrangeInstalledDriver("1.0.0.0");
         ArrangeDriverPackage("2.0.0.0", false);
 
-        _hostNetworkCommandsMock.Setup(m => m.DisableSwitchExtension())
+        Guid otherSwitchId = Guid.NewGuid();
+
+        _hostNetworkCommandsMock.Setup(m => m.GetSwitchExtensions())
+            .Returns(SuccessAff<RT, Seq<VMSwitchExtension>>(Seq(
+                new VMSwitchExtension() { Enabled = true, SwitchId = SwitchId },
+                new VMSwitchExtension() {Enabled = false, SwitchId = otherSwitchId})))
+            .Verifiable();
+
+        _hostNetworkCommandsMock.Setup(m => m.DisableSwitchExtension(SwitchId))
             .Returns(SuccessAff<RT, Unit>(unit))
             .Verifiable();
 
@@ -160,7 +166,7 @@ public class OvsDriverProviderTests
             .ReturnsAsync(new ProcessRunnerResult(0, ""))
             .Verifiable();
 
-        _hostNetworkCommandsMock.Setup(m => m.EnableSwitchExtension())
+        _hostNetworkCommandsMock.Setup(m => m.EnableSwitchExtension(SwitchId))
             .Returns(SuccessAff<RT, Unit>(unit))
             .Verifiable();
 
@@ -170,6 +176,7 @@ public class OvsDriverProviderTests
         result.Should().BeSuccess();
 
         VerifyMocks();
+        _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(otherSwitchId), Times.Never);
     }
 
     [Fact]
@@ -185,7 +192,7 @@ public class OvsDriverProviderTests
         result.Should().BeSuccess();
 
         _processRunnerIOMock.VerifyNoOtherCalls();
-        _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(), Times.Never);
+        _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(It.IsAny<Guid>()), Times.Never);
     }
 
     [Fact]
@@ -201,7 +208,7 @@ public class OvsDriverProviderTests
         result.Should().BeSuccess();
 
         _processRunnerIOMock.VerifyNoOtherCalls();
-        _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(), Times.Never);
+        _hostNetworkCommandsMock.Verify(m => m.DisableSwitchExtension(It.IsAny<Guid>()), Times.Never);
     }
 
 
