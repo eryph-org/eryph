@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dbosoft.OVN.Hosting" Version="0.1.0-ci.50" />
+    <PackageReference Include="Dbosoft.OVN.Hosting" Version="1.0.0-rc.1" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
