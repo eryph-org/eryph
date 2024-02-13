@@ -165,6 +165,19 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                 string adapterName;
                 if (enumerable.Length() > 1)
                 {
+
+                    // check if it necessary to enable AllowNetLbfoTeams option
+                    // this is required for Windows Server 2022 and later
+                    var newSwitchCommand = ps.GetObjects<PowershellCommand>(
+                            new PsCommandBuilder().AddCommand("Get-Command").AddArgument("New-VMSwitch"))
+                        .RightAsEnumerable().Flatten().AsEnumerable().FirstOrDefault();
+
+                    if (newSwitchCommand is null)
+                        return Prelude.FailAff<Unit>(Error.New("Cannot find command New-VMSwitch"));
+
+                    if (newSwitchCommand.Value.Parameters.ContainsKey("AllowNetLbfoTeams"))
+                        createSwitchCommand.AddParameter("AllowNetLbfoTeams", true);
+
                     createTeam = () => ps.RunAsync(
                             PsCommandBuilder.Create()
                                 .AddCommand("New-NetSwitchTeam")
@@ -179,7 +192,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                 }
                 else
                     adapterName = enumerable[0];
-
+                
                 createSwitchCommand.AddParameter("NetAdapterName", adapterName)
                     .AddParameter("AllowManagementOS", false);
             }
