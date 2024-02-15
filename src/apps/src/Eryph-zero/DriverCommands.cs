@@ -20,7 +20,6 @@ namespace Eryph.Runtime.Zero
 
     internal static class DriverCommands
     {
-
         public static Task<int> GetDriverStatus()
         {
             return AdminGuard.CommandIsElevated(async () =>

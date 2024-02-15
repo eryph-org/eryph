@@ -11,18 +11,20 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core.Sys;
+using Eryph.VmManagement.Sys;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero
 {
     internal readonly struct DriverCommandsRuntime :
-            HasConsole<DriverCommandsRuntime>,
-            HasFile<DriverCommandsRuntime>,
-            HasHostNetworkCommands<DriverCommandsRuntime>,
-            HasLogger<DriverCommandsRuntime>,
-            HasProcessRunner<DriverCommandsRuntime>,
-            HasPowershell<DriverCommandsRuntime>,
-            HasRegistry<DriverCommandsRuntime>
+        HasConsole<DriverCommandsRuntime>,
+        HasDism<DriverCommandsRuntime>,
+        HasFile<DriverCommandsRuntime>,
+        HasHostNetworkCommands<DriverCommandsRuntime>,
+        HasLogger<DriverCommandsRuntime>,
+        HasProcessRunner<DriverCommandsRuntime>,
+        HasPowershell<DriverCommandsRuntime>,
+        HasRegistry<DriverCommandsRuntime>
     {
         public DriverCommandsRuntime(DriverCommandsRuntimeEnv env)
         {
@@ -41,6 +43,8 @@ namespace Eryph.Runtime.Zero
         public CancellationTokenSource CancellationTokenSource => Env.CancellationTokenSource;
 
         public Eff<DriverCommandsRuntime, ConsoleIO> ConsoleEff => SuccessEff(LanguageExt.Sys.Live.ConsoleIO.Default);
+
+        public Eff<DriverCommandsRuntime, DismIO> DismEff => SuccessEff(LiveDismIO.Default);
 
         public Encoding Encoding => Encoding.UTF8;
 

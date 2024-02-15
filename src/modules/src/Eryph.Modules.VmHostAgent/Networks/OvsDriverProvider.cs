@@ -20,11 +20,15 @@ using LanguageExt.Sys;
 using LanguageExt.Sys.IO;
 using LanguageExt.Sys.Traits;
 using static LanguageExt.Prelude;
+using Microsoft.PowerShell;
+using System.Management.Automation.Runspaces;
+using Eryph.VmManagement.Sys;
 
 namespace Eryph.Modules.VmHostAgent.Networks;
 
 public class OvsDriverProvider<RT> where RT : struct,
     HasCancel<RT>,
+    HasDism<RT>,
     HasFile<RT>,
     HasHostNetworkCommands<RT>,
     HasLogger<RT>,
@@ -59,10 +63,10 @@ public class OvsDriverProvider<RT> where RT : struct,
                       from _ in activeSwitchExtensions.Map(e => hostNetworkCommands.DisableSwitchExtension(e.SwitchId))
                           .SequenceSerial()
                       from __ in uninstallDriver()
-                      from ___ in removeAllDriverPackages()
                       // Wait for the driver service to be stopped/removed. Otherwise, the
                       // installation of the new driver might fail with error code 0x80070430.
-                      from ____ in waitUntilDriverServiceHasStopped()
+                      from ___ in waitUntilDriverServiceHasStopped()
+                      from ____ in removeAllDriverPackages()
                       from _____ in installDriver(infPath)
                       // The OVS Hyper-V switch extension should only be enabled for a single
                       // switch. We reenable it for the best match.
@@ -120,17 +124,6 @@ public class OvsDriverProvider<RT> where RT : struct,
             Error.New($"Failed to remove driver package {infName}:{Environment.NewLine}{result.Output}"))
         from ___ in logInformation("Successfully removed driver package {InfName}", infName)
         select unit;
-
-    public static Aff<RT, Seq<DismDriverInfo>> getInstalledDriverPackages() =>
-        from psEngine in default(RT).Powershell
-        let command = PsCommandBuilder.Create()
-            .AddCommand("Get-WindowsDriver")
-            .AddParameter("Online")
-        from result in psEngine.GetObjectValuesAsync<DismDriverInfo>(command).ToAff()
-        select result.Map(Optional)
-            .Somes()
-            .Filter(di => di.OriginalFileName?.Contains(
-                 EryphConstants.DriverModuleName, StringComparison.OrdinalIgnoreCase) ?? false);
 
     public static Aff<RT, bool> isDriverLoaded() =>
         from result in ProcessRunner<RT>.runProcess("driverquery.exe", "/FO LIST")
@@ -214,4 +207,9 @@ public class OvsDriverProvider<RT> where RT : struct,
 
     private static Eff<RT, Unit> logWarning(string message, params object[] args)
         => Logger<RT>.logWarning<OvsDriverProvider<RT>>(message, args);
+
+    public static Aff<RT, Seq<DismDriverInfo>> getInstalledDriverPackages() =>
+        from allDriverPackages in Dism<RT>.getInstalledDriverPackages()
+        select allDriverPackages.Filter(di => di.OriginalFileName?.Contains(
+            EryphConstants.DriverModuleName, StringComparison.OrdinalIgnoreCase) ?? false);
 }

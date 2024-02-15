@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.VmManagement.Sys;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -28,6 +29,7 @@ public class OvsDriverProviderTests
 {
     private readonly RT _runtime;
 
+    private readonly Mock<DismIO> _dismMock = new();
     private readonly Mock<FileIO> _fileMock = new();
     private readonly Mock<IHostNetworkCommands<RT>> _hostNetworkCommandsMock = new();
     private readonly Mock<IPowershellEngine> _powershellEngineMock = new();
@@ -40,6 +42,7 @@ public class OvsDriverProviderTests
     {
         _runtime = new(new(
             new CancellationTokenSource(),
+            _dismMock.Object,
             _fileMock.Object,
             _hostNetworkCommandsMock.Object,
             new NullLoggerFactory(),
@@ -226,18 +229,9 @@ public class OvsDriverProviderTests
         _hostNetworkCommandsMock.Setup(m => m.GetInstalledSwitchExtension())
             .Returns(SuccessAff(Optional(new VMSystemSwitchExtension(){ Version = version})));
 
-        var isGetWindowsDriverCommand = (PsCommandBuilder builder) =>
-        {
-            var chain = builder.ToChain();
-            return chain.Length >= 2
-               && chain[0] is PsCommandBuilder.CommandPart { Command: "Get-WindowsDriver" }
-               && chain[1] is PsCommandBuilder.ParameterPart { Parameter:  "Online" };
-        };
-
-        _powershellEngineMock.Setup(m => m.GetObjectValuesAsync<DismDriverInfo>(
-                It.Is<PsCommandBuilder>(b => isGetWindowsDriverCommand(b)), null))
-            .Returns(EitherAsync<PowershellFailure, Seq<DismDriverInfo>>.Right(
-                Seq(new DismDriverInfo()
+        _dismMock.Setup(m => m.GetInstalledDriverPackages())
+            .ReturnsAsync(Seq(
+                new DismDriverInfo()
                 {
                     OriginalFileName = @"Z:\driver\100\dbo_ovse.inf",
                     Driver = "oem100.inf",
@@ -246,7 +240,12 @@ public class OvsDriverProviderTests
                 {
                     OriginalFileName = @"Z:\driver\101\dbo_ovse.inf",
                     Driver = "oem101.inf",
-                })));
+                },
+                new DismDriverInfo()
+                {
+                    OriginalFileName = @"Z:\driver\102\acme_corp.inf",
+                    Driver = "oem102.inf",
+                }));
     }
 
     private void ArrangeNoDriverInstalled()
@@ -293,6 +292,7 @@ public class OvsDriverProviderTests
     }
 
     public readonly struct TestRuntime(TestRuntimeEnv env) :
+        HasDism<RT>,
         HasFile<RT>,
         HasHostNetworkCommands<RT>,
         HasLogger<RT>,
@@ -304,6 +304,7 @@ public class OvsDriverProviderTests
 
         public RT LocalCancel => new(new TestRuntimeEnv(
             new CancellationTokenSource(),
+            Env.Dism,
             Env.File,
             Env.HostNetworkCommands,
             Env.LoggerFactory,
@@ -314,6 +315,8 @@ public class OvsDriverProviderTests
         public CancellationToken CancellationToken => Env.CancellationTokenSource.Token;
 
         public CancellationTokenSource CancellationTokenSource => Env.CancellationTokenSource;
+
+        public Eff<RT, DismIO> DismEff => Eff<RT, DismIO>(rt => rt.Env.Dism);
 
         public Encoding Encoding => Encoding.UTF8;
 
@@ -335,6 +338,7 @@ public class OvsDriverProviderTests
 
     public class TestRuntimeEnv(
         CancellationTokenSource cancellationTokenSource,
+        DismIO dism,
         FileIO file,
         IHostNetworkCommands<RT> hostNetworkCommands,
         ILoggerFactory loggerFactory,
@@ -343,6 +347,8 @@ public class OvsDriverProviderTests
         RegistryIO registry)
     {
         public CancellationTokenSource CancellationTokenSource { get; } = cancellationTokenSource;
+        
+        public DismIO Dism { get; } = dism;
 
         public FileIO File { get; } = file;
 
