@@ -1,8 +1,11 @@
 ﻿using System.IO;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.VmAgent;
+using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
+using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Storage
 {
@@ -85,8 +88,26 @@ namespace Eryph.VmManagement.Storage
                         Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
                     let fileName = $"{driveConfig.Name}.vhdx"
                     let attachPath = Path.Combine(resolvedPath, identifier, fileName)
-                    // TODO Check if the VHD file exists
-                    from vhdInfo in VhdQuery.GetVhdInfo(powershellEngine, attachPath).ToError().ToAsync()
+                    from psVhdInfo in VhdQuery.GetVhdInfo(powershellEngine, attachPath).ToError().ToAsync()
+                    let vhdInfo = psVhdInfo.Map(ps => ps.Value)
+                    from parentOptions in match(
+                        Optional(driveConfig.Source).Filter(notEmpty),
+                        Some: src => 
+                            from dss in DiskStorageSettings.FromSourceString(vmHostAgentConfig, src)
+                                .ToEitherAsync(Error.New("The catlet drive source is invalid"))
+                            select Some(dss),
+                        None: () => RightAsync<Error, Option<DiskStorageSettings>>(None))
+                    from parentVhdInfo in match(
+                        parentOptions,
+                        Some: po =>
+                            from ovi in VhdQuery.GetVhdInfo(powershellEngine, Path.Combine(po.Path, po.FileName)).ToError().ToAsync()
+                            from vi in ovi.ToEitherAsync(Error.New("The catlet drive source does not exist"))
+                            select Some(vi.Value),
+                        None: () => RightAsync<Error, Option<VhdInfo>>(None))
+                    let minimumSize = vhdInfo.Map(i => i.MinimumSize ?? i.Size) | parentVhdInfo.Map(i => i.MinimumSize ?? i.Size)
+                    let configuredSize = Optional(driveConfig.Size).Filter(notDefault).Map(s => s * 1024L * 1024 * 1024)
+                    from _ in guard(configuredSize.IsNone || minimumSize.IsNone || configuredSize >= minimumSize,
+                        Error.New("Disk size is below minimum size of the virtual disk"))
                     let planned = new HardDiskDriveStorageSettings
                     {
                         Type = CatletDriveType.VHD,
@@ -95,19 +116,13 @@ namespace Eryph.VmManagement.Storage
                         {
                             StorageNames = names,
                             StorageIdentifier = storageIdentifier,
-                            ParentSettings =
-                                string.IsNullOrWhiteSpace(driveConfig.Source)
-                                    ? Option<DiskStorageSettings>.None
-                                    : DiskStorageSettings
-                                        .FromSourceString(vmHostAgentConfig, driveConfig.Source),
+                            ParentSettings = parentOptions,
                             Path = Path.Combine(resolvedPath, identifier),
                             // ReSharper disable once StringLiteralTypo
                             FileName = fileName,
                             Name = driveConfig.Name,
-                            SizeBytesCreate = driveConfig.Size.ToOption().Match(None: () => 1 * 1024L * 1024 * 1024,
-                                Some: s => s * 1024L * 1024 * 1024),
-                            SizeBytes = driveConfig.Size * 1024L * 1024 * 1024
-
+                            SizeBytesCreate = (configuredSize | parentVhdInfo.Map(i => i.Size)).IfNone(1 * 1024L * 1024 * 1024),
+                            SizeBytes = configuredSize.IsSome ? configuredSize.ValueUnsafe() : null,
                         },
                         ControllerNumber = controllerNumber,
                         ControllerLocation = controllerLocation
