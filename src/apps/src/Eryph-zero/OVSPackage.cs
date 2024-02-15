@@ -84,7 +84,7 @@ internal class OVSPackage
             log.Information("Installing Open VSwitch package");
             runDirNo = ovsRootDir.GetDirectories("run_*")
                 .Map(d => Prelude.parseInt(d.Name.Replace("run_", "")))
-                .Somes().Max() + 1;
+                .Somes().Fold(0, Math.Max) + 1;
             var extractFolder = Path.Combine(ovsRootDir.FullName, $"run_{runDirNo:D}");
             ZipFile.ExtractToDirectory(ovsPackageFile, extractFolder);
 
