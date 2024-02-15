@@ -17,11 +17,11 @@ using Project = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Projects;
 
-public class GetProjectTest : IClassFixture<WebModuleFactory<ComputeApiModule>>
+public class GetProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
-    public GetProjectTest(WebModuleFactory<ComputeApiModule> factory)
+    public GetProjectTests(WebModuleFactory<ComputeApiModule> factory)
     {
         _factory = factory.WithApiHost().WithModuleConfiguration(o =>
         {
