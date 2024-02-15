@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
+using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.StateDb.Model;
 using FluentAssertions;
 using Xunit;
