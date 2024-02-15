@@ -22,6 +22,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.VmHostAgent.Test.Networks;
 
 using RT = OvsDriverProviderTests.TestRuntime;
+using static OvsDriverProvider<OvsDriverProviderTests.TestRuntime>;
 
 public class OvsDriverProviderTests
 {
@@ -62,7 +63,7 @@ public class OvsDriverProviderTests
             .ReturnsAsync(new ProcessRunnerResult(0, ""))
             .Verifiable();
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
+        var result = await ensureDriver(@"Z:\ovsrundir", true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
@@ -77,7 +78,7 @@ public class OvsDriverProviderTests
         ArrangeNoDriverInstalled();
         ArrangeDriverPackage("1.0.0.0", false);
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", false, true)
+        var result = await ensureDriver(@"Z:\ovsrundir", false, true)
             .Run(_runtime);
 
         result.Should().BeFail()
@@ -93,7 +94,7 @@ public class OvsDriverProviderTests
         ArrangeNoDriverInstalled();
         ArrangeDriverPackage("1.0.0.0", true);
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
+        var result = await ensureDriver(@"Z:\ovsrundir", true, true)
             .Run(_runtime);
 
         result.Should().BeFail()
@@ -109,7 +110,7 @@ public class OvsDriverProviderTests
         ArrangeInstalledDriver("1.0.0.0");
         ArrangeDriverPackage("1.0.0.0", false);
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
+        var result = await ensureDriver(@"Z:\ovsrundir", true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
@@ -170,7 +171,7 @@ public class OvsDriverProviderTests
             .Returns(SuccessAff<RT, Unit>(unit))
             .Verifiable();
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
+        var result = await ensureDriver(@"Z:\ovsrundir", true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
@@ -186,7 +187,7 @@ public class OvsDriverProviderTests
         ArrangeInstalledDriver("1.0.0.0");
         ArrangeDriverPackage("2.0.0.0", false);
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, false)
+        var result = await ensureDriver(@"Z:\ovsrundir", true, false)
             .Run(_runtime);
 
         result.Should().BeSuccess();
@@ -202,7 +203,7 @@ public class OvsDriverProviderTests
         ArrangeInstalledDriver("1.0.0.0");
         ArrangeDriverPackage("2.0.0.0", true);
 
-        var result = await OvsDriverProvider<RT>.ensureDriver(@"Z:\ovsrundir", true, true)
+        var result = await ensureDriver(@"Z:\ovsrundir", true, true)
             .Run(_runtime);
 
         result.Should().BeSuccess();
@@ -316,7 +317,7 @@ public class OvsDriverProviderTests
 
         public Encoding Encoding => Encoding.UTF8;
 
-        public Eff<RT, FileIO> FileEff => Eff<TestRuntime, FileIO>(rt => rt.Env.File);
+        public Eff<RT, FileIO> FileEff => Eff<RT, FileIO>(rt => rt.Env.File);
 
         public Eff<RT, IHostNetworkCommands<RT>> HostNetworkCommands =>
             Eff<RT, IHostNetworkCommands<RT>>(rt => rt.Env.HostNetworkCommands);
