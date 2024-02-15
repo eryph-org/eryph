@@ -96,13 +96,11 @@ public class OvsDriverProvider<RT> where RT : struct,
             infDirectoryPath)
         from __ in guard(result.ExitCode == 0,
             Error.New($"Failed to install OVS Hyper-V switch extension:{Environment.NewLine}{result.Output}"))
-        from hostNetworkCommands in default(RT).HostNetworkCommands
         from ____ in logInformation("Successfully installed OVS Hyper-V switch extension {DriverVersion}", infVersion)
         select unit;
 
     public static Aff<RT, Unit> uninstallDriver() =>
         from _ in logInformation("Going to uninstall OVS Hyper-V switch extension...")
-        from hostNetworkCommands in default(RT).HostNetworkCommands
         from result in ProcessRunner<RT>.runProcess("netcfg.exe", $"/u {EryphConstants.DriverModuleName}")
         from ___ in guard(result.ExitCode == 0,
             Error.New($"Failed to uninstall OVS Hyper-V switch extension:{Environment.NewLine}{result.Output}"))
@@ -113,7 +111,7 @@ public class OvsDriverProvider<RT> where RT : struct,
         from installedDriverPackages in getInstalledDriverPackages()
         from ___ in installedDriverPackages
             .Map(di => removeDriverPackage(di.Driver))
-            .TraverseSerial(u => u)
+            .SequenceSerial()
         select unit;
 
     internal static Aff<RT, Unit> removeDriverPackage(string infName) =>

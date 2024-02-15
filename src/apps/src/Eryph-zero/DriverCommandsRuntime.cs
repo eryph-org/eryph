@@ -9,82 +9,80 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Eryph.Core.Sys;
 using Eryph.VmManagement.Sys;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Runtime.Zero
+namespace Eryph.Runtime.Zero;
+
+internal readonly struct DriverCommandsRuntime :
+    HasConsole<DriverCommandsRuntime>,
+    HasDism<DriverCommandsRuntime>,
+    HasFile<DriverCommandsRuntime>,
+    HasHostNetworkCommands<DriverCommandsRuntime>,
+    HasLogger<DriverCommandsRuntime>,
+    HasProcessRunner<DriverCommandsRuntime>,
+    HasPowershell<DriverCommandsRuntime>,
+    HasRegistry<DriverCommandsRuntime>
 {
-    internal readonly struct DriverCommandsRuntime :
-        HasConsole<DriverCommandsRuntime>,
-        HasDism<DriverCommandsRuntime>,
-        HasFile<DriverCommandsRuntime>,
-        HasHostNetworkCommands<DriverCommandsRuntime>,
-        HasLogger<DriverCommandsRuntime>,
-        HasProcessRunner<DriverCommandsRuntime>,
-        HasPowershell<DriverCommandsRuntime>,
-        HasRegistry<DriverCommandsRuntime>
+    public DriverCommandsRuntime(DriverCommandsRuntimeEnv env)
     {
-        public DriverCommandsRuntime(DriverCommandsRuntimeEnv env)
-        {
-            Env = env;
-        }
-
-        public DriverCommandsRuntimeEnv Env { get; }
-
-        public DriverCommandsRuntime LocalCancel => new(new(
-            new CancellationTokenSource(),
-            Env.LoggerFactory,
-            Env.PowershellEngine));
-
-        public CancellationToken CancellationToken => Env.CancellationTokenSource.Token;
-
-        public CancellationTokenSource CancellationTokenSource => Env.CancellationTokenSource;
-
-        public Eff<DriverCommandsRuntime, ConsoleIO> ConsoleEff => SuccessEff(LanguageExt.Sys.Live.ConsoleIO.Default);
-
-        public Eff<DriverCommandsRuntime, DismIO> DismEff => SuccessEff(LiveDismIO.Default);
-
-        public Encoding Encoding => Encoding.UTF8;
-
-        public Eff<DriverCommandsRuntime, FileIO> FileEff => SuccessEff(LanguageExt.Sys.Live.FileIO.Default);
-
-        public Eff<DriverCommandsRuntime, ProcessRunnerIO> ProcessRunnerEff => SuccessEff(LiveProcessRunnerIO.Default);
-
-        public Eff<DriverCommandsRuntime, IPowershellEngine> Powershell =>
-            Eff<DriverCommandsRuntime, IPowershellEngine>(rt => rt.Env.PowershellEngine);
-
-        public Eff<DriverCommandsRuntime, ILogger> Logger(string category) =>
-            Eff<DriverCommandsRuntime, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));
-
-        public Eff<DriverCommandsRuntime, ILogger<T>> Logger<T>() =>
-            Eff<DriverCommandsRuntime, ILogger<T>>(rt => rt.Env.LoggerFactory.CreateLogger<T>());
-
-        public Eff<DriverCommandsRuntime, IHostNetworkCommands<DriverCommandsRuntime>> HostNetworkCommands =>
-            Eff<DriverCommandsRuntime, IHostNetworkCommands<DriverCommandsRuntime>>(rt => rt.Env.HostNetworkCommands);
-
-        public Eff<DriverCommandsRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
+        Env = env;
     }
 
-    internal class DriverCommandsRuntimeEnv
+    public DriverCommandsRuntimeEnv Env { get; }
+
+    public DriverCommandsRuntime LocalCancel => new(new(
+        new CancellationTokenSource(),
+        Env.LoggerFactory,
+        Env.PowershellEngine));
+
+    public CancellationToken CancellationToken => Env.CancellationTokenSource.Token;
+
+    public CancellationTokenSource CancellationTokenSource => Env.CancellationTokenSource;
+
+    public Eff<DriverCommandsRuntime, ConsoleIO> ConsoleEff => SuccessEff(LanguageExt.Sys.Live.ConsoleIO.Default);
+
+    public Eff<DriverCommandsRuntime, DismIO> DismEff => SuccessEff(LiveDismIO.Default);
+
+    public Encoding Encoding => Encoding.UTF8;
+
+    public Eff<DriverCommandsRuntime, FileIO> FileEff => SuccessEff(LanguageExt.Sys.Live.FileIO.Default);
+
+    public Eff<DriverCommandsRuntime, ProcessRunnerIO> ProcessRunnerEff => SuccessEff(LiveProcessRunnerIO.Default);
+
+    public Eff<DriverCommandsRuntime, IPowershellEngine> Powershell =>
+        Eff<DriverCommandsRuntime, IPowershellEngine>(rt => rt.Env.PowershellEngine);
+
+    public Eff<DriverCommandsRuntime, ILogger> Logger(string category) =>
+        Eff<DriverCommandsRuntime, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));
+
+    public Eff<DriverCommandsRuntime, ILogger<T>> Logger<T>() =>
+        Eff<DriverCommandsRuntime, ILogger<T>>(rt => rt.Env.LoggerFactory.CreateLogger<T>());
+
+    public Eff<DriverCommandsRuntime, IHostNetworkCommands<DriverCommandsRuntime>> HostNetworkCommands =>
+        Eff<DriverCommandsRuntime, IHostNetworkCommands<DriverCommandsRuntime>>(rt => rt.Env.HostNetworkCommands);
+
+    public Eff<DriverCommandsRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
+}
+
+internal class DriverCommandsRuntimeEnv
+{
+    public DriverCommandsRuntimeEnv(
+        CancellationTokenSource cancellationTokenSource,
+        ILoggerFactory loggerFactory,
+        IPowershellEngine powershellEngine)
     {
-        public DriverCommandsRuntimeEnv(
-            CancellationTokenSource cancellationTokenSource,
-            ILoggerFactory loggerFactory,
-            IPowershellEngine powershellEngine)
-        {
-            CancellationTokenSource = cancellationTokenSource;
-            LoggerFactory = loggerFactory;
-            PowershellEngine = powershellEngine;
-        }
-
-        public CancellationTokenSource CancellationTokenSource { get; }
-
-        public IHostNetworkCommands<DriverCommandsRuntime> HostNetworkCommands { get; } = new HostNetworkCommands<DriverCommandsRuntime>();
-
-        public ILoggerFactory LoggerFactory { get; }
-
-        public IPowershellEngine PowershellEngine { get; }
+        CancellationTokenSource = cancellationTokenSource;
+        LoggerFactory = loggerFactory;
+        PowershellEngine = powershellEngine;
     }
+
+    public CancellationTokenSource CancellationTokenSource { get; }
+
+    public IHostNetworkCommands<DriverCommandsRuntime> HostNetworkCommands { get; } = new HostNetworkCommands<DriverCommandsRuntime>();
+
+    public ILoggerFactory LoggerFactory { get; }
+
+    public IPowershellEngine PowershellEngine { get; }
 }
