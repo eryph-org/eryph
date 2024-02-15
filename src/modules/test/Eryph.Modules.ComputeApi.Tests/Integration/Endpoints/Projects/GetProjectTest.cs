@@ -15,7 +15,7 @@ using SimpleInjector.Lifestyles;
 using Xunit;
 using Project = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 
-namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints;
+namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Projects;
 
 public class GetProjectTest : IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
@@ -72,7 +72,7 @@ public class GetProjectTest : IClassFixture<WebModuleFactory<ComputeApiModule>>
 
     private static readonly Guid UserId = Guid.NewGuid();
 
-    private static Dictionary<string, object> CreateClaims(string scope, Guid tenantId, bool isSuperAdmin )
+    private static Dictionary<string, object> CreateClaims(string scope, Guid tenantId, bool isSuperAdmin)
     {
         return new Dictionary<string, object>
         {
@@ -88,7 +88,7 @@ public class GetProjectTest : IClassFixture<WebModuleFactory<ComputeApiModule>>
     [Theory]
     [InlineData("dtid_norole", true, "compute:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
     [InlineData("dtid_norole", false, "compute:catlets:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("otid_norole", false,"compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("otid_norole", false, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
     [InlineData("dtid_role", true, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
     [InlineData("dtid_role", true, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", false)]
     public async Task Get_Returns_Existing_Project_when_authorized(
@@ -98,7 +98,7 @@ public class GetProjectTest : IClassFixture<WebModuleFactory<ComputeApiModule>>
 
         var response = await _factory.CreateDefaultClient()
             .SetFakeBearerToken(claims)
-            .GetAsync(($"v1/projects/{projectName}"));
+            .GetAsync($"v1/projects/{projectName}");
         response.Should().NotBeNull();
 
         if (isAuthorized)
@@ -124,7 +124,7 @@ public class GetProjectTest : IClassFixture<WebModuleFactory<ComputeApiModule>>
 
         var response = await _factory.CreateDefaultClient()
             .SetFakeBearerToken(claims)
-            .GetAsync(($"v1/projects/missing"));
+            .GetAsync($"v1/projects/missing");
         response.Should().HaveStatusCode(HttpStatusCode.NotFound);
 
     }

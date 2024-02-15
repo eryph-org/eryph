@@ -7,7 +7,7 @@ using Eryph.StateDb.Model;
 using FluentAssertions;
 using Xunit;
 
-namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints;
+namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Operations;
 
 public class GetOperationTest : IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
@@ -49,7 +49,7 @@ public class GetOperationTest : IClassFixture<WebModuleFactory<ComputeApiModule>
 
         var opId = Guid.NewGuid();
 
-        var response = await FactoryWithOperation().CreateDefaultClient().GetAsync(($"v1/operations/{opId}"));
+        var response = await FactoryWithOperation().CreateDefaultClient().GetAsync($"v1/operations/{opId}");
         response.Should().HaveStatusCode(HttpStatusCode.NotFound);
 
     }
