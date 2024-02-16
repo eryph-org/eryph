@@ -23,9 +23,9 @@ namespace Eryph.VmManagement.Storage
             VMStorageSettings storageSettings,
             IPowershellEngine powershellEngine)
         {
-            return config.Drives
-                .ToSeq().MapToEitherAsync((index, c) =>
-                    FromDriveConfig(vmHostAgentConfig, storageSettings, c, powershellEngine, index).ToEither()).ToAsync();
+            return config.Drives.ToSeq()
+                .Map((index, c) => FromDriveConfig(vmHostAgentConfig, storageSettings, c, powershellEngine, index))
+                .ToSeq().SequenceSerial();
         }
 
         public static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
@@ -35,12 +35,12 @@ namespace Eryph.VmManagement.Storage
             IPowershellEngine powershellEngine,
             int index)
         {
-            const int
-                controllerNumber = 0; //currently this will not be configurable, but keep it here at least as constant
-            var controllerLocation =
-                index; //later, when adding controller config support, we will have to add a logic to 
-            //set location relative to the free slots for each controller                   
-
+            //currently this will not be configurable, but keep it here at least as constant
+            const int controllerNumber = 0;
+            
+            //later, when adding controller config support, we will have to add a logic to 
+            //set location relative to the free slots for each controller   
+            var controllerLocation = index;
 
             //if it is not a vhd, we only need controller settings
             if (driveConfig.Type.HasValue && driveConfig.Type != CatletDriveType.VHD)
@@ -62,15 +62,15 @@ namespace Eryph.VmManagement.Storage
                         Type = driveConfig.Type.GetValueOrDefault(CatletDriveType.PHD)
                     };
 
-                return Prelude.RightAsync<Error, VMDriveStorageSettings>(result);
+                return RightAsync<Error, VMDriveStorageSettings>(result);
             }
 
             //so far for the simple part, now the complicated case - a vhd disk...
 
             var projectName = storageSettings.StorageNames.ProjectName;
             var environmentName = storageSettings.StorageNames.EnvironmentName;
-            var dataStoreName = Prelude.Optional(driveConfig.Store).Filter(Prelude.notEmpty).IfNone("default");
-            var storageIdentifier = Prelude.Optional(driveConfig.Location).Filter(Prelude.notEmpty).Match(
+            var dataStoreName = Optional(driveConfig.Store).Filter(notEmpty).IfNone("default");
+            var storageIdentifier = Optional(driveConfig.Location).Filter(notEmpty).Match(
                 Some: s => s,
                 None: storageSettings.StorageIdentifier);
 
@@ -81,53 +81,55 @@ namespace Eryph.VmManagement.Storage
                 DataStoreName = dataStoreName
             };
 
-
             return
-                (from resolvedPath in names.ResolveVolumeStorageBasePath(vmHostAgentConfig)
-                    from identifier in storageIdentifier.ToEitherAsync(
-                        Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
-                    let fileName = $"{driveConfig.Name}.vhdx"
-                    let attachPath = Path.Combine(resolvedPath, identifier, fileName)
-                    from psVhdInfo in VhdQuery.GetVhdInfo(powershellEngine, attachPath).ToError().ToAsync()
-                    let vhdInfo = psVhdInfo.Map(ps => ps.Value)
-                    from parentOptions in match(
-                        Optional(driveConfig.Source).Filter(notEmpty),
-                        Some: src => 
-                            from dss in DiskStorageSettings.FromSourceString(vmHostAgentConfig, src)
-                                .ToEitherAsync(Error.New("The catlet drive source is invalid"))
-                            select Some(dss),
-                        None: () => RightAsync<Error, Option<DiskStorageSettings>>(None))
-                    from parentVhdInfo in match(
-                        parentOptions,
-                        Some: po =>
-                            from ovi in VhdQuery.GetVhdInfo(powershellEngine, Path.Combine(po.Path, po.FileName)).ToError().ToAsync()
-                            from vi in ovi.ToEitherAsync(Error.New("The catlet drive source does not exist"))
-                            select Some(vi.Value),
-                        None: () => RightAsync<Error, Option<VhdInfo>>(None))
-                    let minimumSize = vhdInfo.Map(i => i.MinimumSize ?? i.Size) | parentVhdInfo.Map(i => i.MinimumSize ?? i.Size)
-                    let configuredSize = Optional(driveConfig.Size).Filter(notDefault).Map(s => s * 1024L * 1024 * 1024)
-                    from _ in guard(configuredSize.IsNone || minimumSize.IsNone || configuredSize >= minimumSize,
-                        Error.New("Disk size is below minimum size of the virtual disk"))
-                    let planned = new HardDiskDriveStorageSettings
+                from resolvedPath in names.ResolveVolumeStorageBasePath(vmHostAgentConfig)
+                from identifier in storageIdentifier.ToEitherAsync(
+                    Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
+                let fileName = $"{driveConfig.Name}.vhdx"
+                let attachPath = Path.Combine(resolvedPath, identifier, fileName)
+                let configuredSize = Optional(driveConfig.Size).Filter(notDefault).Map(s => s * 1024L * 1024 * 1024)
+                from psVhdInfo in VhdQuery.GetVhdInfo(powershellEngine, attachPath).ToError().ToAsync()
+                let vhdInfo = psVhdInfo.Map(ps => ps.Value)
+                let vhdMinimumSize = vhdInfo.Bind(i => Optional(i.MinimumSize))
+                let vhdSize = vhdInfo.Map(i => i.Size)
+                from parentOptions in match(
+                    Optional(driveConfig.Source).Filter(notEmpty),
+                    Some: src => 
+                        from dss in DiskStorageSettings.FromSourceString(vmHostAgentConfig, src)
+                            .ToEitherAsync(Error.New("The catlet drive source is invalid"))
+                        select Some(dss),
+                    None: () => RightAsync<Error, Option<DiskStorageSettings>>(None))
+                from parentVhdInfo in match(
+                    parentOptions,
+                    Some: po =>
+                        from ovi in VhdQuery.GetVhdInfo(powershellEngine, Path.Combine(po.Path, po.FileName)).ToError().ToAsync()
+                        from vi in ovi.ToEitherAsync(Error.New("The catlet drive source does not exist"))
+                        select Some(vi.Value),
+                    None: () => RightAsync<Error, Option<VhdInfo>>(None))
+                let parentVhdMinimumSize = parentVhdInfo.Bind(i => Optional(i.MinimumSize))
+                let parentVhdSize = parentVhdInfo.Map(i => i.Size)
+                let minimumSize = vhdMinimumSize | vhdSize | parentVhdMinimumSize | parentVhdSize
+                from _ in guard(configuredSize.IsNone || minimumSize.IsNone || configuredSize >= minimumSize,
+                    Error.New("Disk size is below minimum size of the virtual disk"))
+                let planned = new HardDiskDriveStorageSettings
+                {
+                    Type = CatletDriveType.VHD,
+                    AttachPath = attachPath,
+                    DiskSettings = new DiskStorageSettings
                     {
-                        Type = CatletDriveType.VHD,
-                        AttachPath = attachPath,
-                        DiskSettings = new DiskStorageSettings
-                        {
-                            StorageNames = names,
-                            StorageIdentifier = storageIdentifier,
-                            ParentSettings = parentOptions,
-                            Path = Path.Combine(resolvedPath, identifier),
-                            // ReSharper disable once StringLiteralTypo
-                            FileName = fileName,
-                            Name = driveConfig.Name,
-                            SizeBytesCreate = (configuredSize | parentVhdInfo.Map(i => i.Size)).IfNone(1 * 1024L * 1024 * 1024),
-                            SizeBytes = configuredSize.IsSome ? configuredSize.ValueUnsafe() : null,
-                        },
-                        ControllerNumber = controllerNumber,
-                        ControllerLocation = controllerLocation
-                    }
-                    select planned as VMDriveStorageSettings);
+                        StorageNames = names,
+                        StorageIdentifier = storageIdentifier,
+                        ParentSettings = parentOptions,
+                        Path = Path.Combine(resolvedPath, identifier),
+                        FileName = fileName,
+                        Name = driveConfig.Name,
+                        SizeBytesCreate = (configuredSize | parentVhdInfo.Map(i => i.Size)).IfNone(1 * 1024L * 1024 * 1024),
+                        SizeBytes = configuredSize.IsSome ? configuredSize.ValueUnsafe() : null,
+                    },
+                    ControllerNumber = controllerNumber,
+                    ControllerLocation = controllerLocation
+                }
+                select (VMDriveStorageSettings)planned;
         }
     }
 }
