@@ -273,17 +273,17 @@ namespace Eryph.VmManagement.Converging
                                                 .AddCommand("New-VHD")
                                                 .AddParameter("Path", vhdPath)
                                                 .AddParameter("ParentPath", parentFilePath)
-                                                .AddParameter("Differencing");
-
-                                                if (driveSettings.DiskSettings.SizeBytesCreate > 0)
-                                                    command.AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate);
+                                                .AddParameter("Differencing")
+                                                .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate);
 
                                             return await Context.Engine.RunAsync(command);
                                         },
-                                        async () => await Context.Engine.RunAsync(PsCommandBuilder.Create().Script(
-                                            $"New-VHD -Path \"{vhdPath}\" -Dynamic -SizeBytes {driveSettings.DiskSettings.SizeBytesCreate}")))
+                                        async () => await Context.Engine.RunAsync(PsCommandBuilder.Create()
+                                            .AddCommand("New-VHD")
+                                            .AddParameter("Path", vhdPath)
+                                            .AddParameter("Dynamic")
+                                            .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)))
                                     .ToError().ToAsync()
-
                                 select Prelude.unit,
 
                             // file exists

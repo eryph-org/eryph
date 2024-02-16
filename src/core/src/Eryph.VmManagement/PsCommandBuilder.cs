@@ -33,7 +33,7 @@ public class PsCommandBuilder
 
     public PsCommandBuilder AddParameter(string parameter)
     {
-        _dataChain.Add(new ParameterPart { Parameter = parameter});
+        _dataChain.Add(new SwitchParameterPart { Parameter = parameter});
         return this;
     }
 
@@ -141,7 +141,4 @@ public class PsCommandBuilder
         public object Value { get; init; }
 
     }
-
-
 }
-
