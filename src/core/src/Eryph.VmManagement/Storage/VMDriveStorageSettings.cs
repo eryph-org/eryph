@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Core;
@@ -21,18 +22,18 @@ namespace Eryph.VmManagement.Storage
             VmHostAgentConfiguration vmHostAgentConfig,
             CatletConfig config,
             VMStorageSettings storageSettings,
-            IPowershellEngine powershellEngine)
+            Func<string, EitherAsync<Error, Option<VhdInfo>>> getVhdInfo)
         {
             return config.Drives.ToSeq()
-                .Map((index, c) => FromDriveConfig(vmHostAgentConfig, storageSettings, c, powershellEngine, index))
+                .Map((index, c) => FromDriveConfig(vmHostAgentConfig, storageSettings, c, getVhdInfo, index))
                 .ToSeq().SequenceSerial();
         }
 
-        public static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
+        private static EitherAsync<Error, VMDriveStorageSettings> FromDriveConfig(
             VmHostAgentConfiguration vmHostAgentConfig,
             VMStorageSettings storageSettings,
             CatletDriveConfig driveConfig,
-            IPowershellEngine powershellEngine,
+            Func<string, EitherAsync<Error, Option<VhdInfo>>> getVhdInfo,
             int index)
         {
             //currently this will not be configurable, but keep it here at least as constant
@@ -88,8 +89,7 @@ namespace Eryph.VmManagement.Storage
                 let fileName = $"{driveConfig.Name}.vhdx"
                 let attachPath = Path.Combine(resolvedPath, identifier, fileName)
                 let configuredSize = Optional(driveConfig.Size).Filter(notDefault).Map(s => s * 1024L * 1024 * 1024)
-                from psVhdInfo in VhdQuery.GetVhdInfo(powershellEngine, attachPath).ToError().ToAsync()
-                let vhdInfo = psVhdInfo.Map(ps => ps.Value)
+                from vhdInfo in getVhdInfo(attachPath)
                 let vhdMinimumSize = vhdInfo.Bind(i => Optional(i.MinimumSize))
                 let vhdSize = vhdInfo.Map(i => i.Size)
                 from parentOptions in match(
@@ -102,12 +102,15 @@ namespace Eryph.VmManagement.Storage
                 from parentVhdInfo in match(
                     parentOptions,
                     Some: po =>
-                        from ovi in VhdQuery.GetVhdInfo(powershellEngine, Path.Combine(po.Path, po.FileName)).ToError().ToAsync()
+                        from ovi in getVhdInfo(Path.Combine(po.Path, po.FileName))
                         from vi in ovi.ToEitherAsync(Error.New("The catlet drive source does not exist"))
-                        select Some(vi.Value),
+                        select Some(vi),
                     None: () => RightAsync<Error, Option<VhdInfo>>(None))
                 let parentVhdMinimumSize = parentVhdInfo.Bind(i => Optional(i.MinimumSize))
                 let parentVhdSize = parentVhdInfo.Map(i => i.Size)
+                // The MinimumSize of a disk can be null. This seems to happen when the disk
+                // does not have a partition table. It this case, we use the current size as
+                // the minimum size.
                 let minimumSize = vhdMinimumSize | vhdSize | parentVhdMinimumSize | parentVhdSize
                 from _ in guard(configuredSize.IsNone || minimumSize.IsNone || configuredSize >= minimumSize,
                     Error.New("Disk size is below minimum size of the virtual disk"))
