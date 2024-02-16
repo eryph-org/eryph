@@ -15,7 +15,8 @@ public class NetworkProvider
     public string BridgeName { get; set; }
     public string SwitchName { get; set; }
 
-    public NetworkProviderVLan Vlan { get; set; }
+    [YamlMember(Alias = "provider_vlan")]
+    public int? ProviderVLan { get; set; }
 
     public string[] Adapters { get; set; }
 
@@ -45,9 +46,9 @@ public class NetworkProvider
                from nonInvalidType in provider.Type == NetworkProviderType.Invalid
                    ? Prelude.Fail<Error, NetworkProvider>($"network_provider {provider.Name}: network provider type has to of value overlay, nat_overlay or flat")
                    : Prelude.Success<Error, NetworkProvider>(provider)
-                   let hasTag = provider.Vlan is { Tag: > 0 }
-                   from nonInvalidVlan in provider.Type == NetworkProviderType.NatOverLay && hasTag
-                          ? Prelude.Fail<Error, NetworkProvider>($"network_provider {provider.Name}: vlan tag is not supported for nat_overlay network providers")
+                   let hasProviderTag = provider.ProviderVLan > 0
+                   from nonInvalidProviderVlan in provider.Type == NetworkProviderType.NatOverLay && hasProviderTag
+                          ? Prelude.Fail<Error, NetworkProvider>($"network_provider {provider.Name}: provider vlan tag is not supported for nat_overlay network providers")
                           : Prelude.Success<Error, NetworkProvider>(provider)
                select provider;
 
