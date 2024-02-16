@@ -43,7 +43,7 @@ public class VMDriveStorageSettingsTests
     };
 
     [Fact]
-    public void PlanDriveStorageSettings_MultipleDrives_DrivesHaveCorrectControllerLocations()
+    public async Task PlanDriveStorageSettings_MultipleDrives_DrivesHaveCorrectControllerLocations()
     {
         var config = new CatletConfig
         {
@@ -75,7 +75,7 @@ public class VMDriveStorageSettingsTests
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
-        var result = VMDriveStorageSettings.PlanDriveStorageSettings(
+        var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
 
 
