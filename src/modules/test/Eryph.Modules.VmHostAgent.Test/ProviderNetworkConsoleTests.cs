@@ -390,6 +390,12 @@ namespace Eryph.Modules.VmHostAgent.Test
                     It.IsAny<CancellationToken>()))
                 .Returns(Prelude.RightAsync<Error, Unit>(Prelude.unit));
 
+            ovsControlMock.Setup(x => x.UpdateBridgePort("br-nat",
+                    null,null,
+                    It.IsAny<CancellationToken>()))
+                .Returns(Prelude.RightAsync<Error, Unit>(Prelude.unit));
+
+
             hostCommandsMock.Setup(x => x.WaitForBridgeAdapter(
                     It.IsAny<string>()))
                 .Returns(Prelude.unitAff);
@@ -400,7 +406,7 @@ namespace Eryph.Modules.VmHostAgent.Test
             hostCommandsMock.Setup(x => x.GetAdapterIpV4Address("br-nat"))
                 .Returns(Prelude.SuccessAff(Seq<NetIpAddress>.Empty));
 
-            hostCommandsMock.Setup(x => x.ConfigureNATAdapter("br-nat",
+            hostCommandsMock.Setup(x => x.ConfigureAdapterIp("br-nat",
                     It.IsAny<IPAddress>(), It.IsAny<IPNetwork>()))
                 .Returns(Prelude.unitAff);
 

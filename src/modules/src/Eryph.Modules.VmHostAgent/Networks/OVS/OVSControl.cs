@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Model;
@@ -41,6 +42,29 @@ public class OVSControl : OVSControlTool, IOVSControl
             }),
             Enumerable.Empty<string>(), cancellationToken)
         select Unit.Default;
+
+    }
+
+    public EitherAsync<Error, Unit> UpdateBridgePort(string bridgeName, int? tag, string? vlanMode, CancellationToken cancellationToken)
+    {
+        var columns = new Map<string, IOVSField>();
+        if(tag > 0)
+            columns = columns.Add("tag", new OVSValue<int>(tag.Value));
+        if(vlanMode != null)
+            columns = columns.Add("vlan_mode", new OVSValue<string>(vlanMode));
+
+        var columnsToClear = new Lst<string>();
+        if(tag.GetValueOrDefault() == 0)
+            columnsToClear = columnsToClear.Add("tag");
+
+        if (string.IsNullOrWhiteSpace(vlanMode))
+            columnsToClear = columnsToClear.Add("vlan_mode");
+
+        return from ovsRecord in GetOVSTable(cancellationToken)
+            from _ in UpdateRecord("port", bridgeName,
+                Map<string, IOVSField>.Empty,columns,
+                columnsToClear, cancellationToken)
+            select Unit.Default;
 
     }
 

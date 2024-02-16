@@ -4,9 +4,6 @@ public class NetworkProvidersConfiguration
 {
     public NetworkProvider[] NetworkProviders { get; set; }
 
-    public string[] EnabledBridges { get; set; }
-
-
     public const string DefaultConfig = @"
 network_providers:
 - name: default

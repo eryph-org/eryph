@@ -60,16 +60,9 @@ public static class ProviderNetworkUpdate<RT>
 
     }
 
-    private static readonly NetworkChangeOperation[] UnsafeChanges = new[]
-    {
-        NetworkChangeOperation.RemoveAdapterPort,
-        NetworkChangeOperation.AddAdapterPort,
-        NetworkChangeOperation.RebuildOverLaySwitch,
-    };
-
     public static bool canBeAutoApplied(NetworkChanges<RT> changes) =>
        ! changes.Operations.Select(x => x.Operation)
-            .Any(x => UnsafeChanges.Contains(x));
+            .Any(x => ProviderNetworkUpdateConstants.UnsafeChanges.Contains(x));
     
     public static Aff<RT, NetworkChanges<RT>> generateChanges(
         HostState hostState,
@@ -85,6 +78,9 @@ public static class ProviderNetworkUpdate<RT>
             new Lst<string>(hostState.OVSBridges.Select(x => x.Name)),
             hostState.OvsBridgePorts.Map(port => (port.Name, hostState.OVSBridges.First(b =>
                     b.Ports.Contains(port.Id)).Name))
+                .ToHashMap(),
+            hostState.OvsBridgePorts.Map(port => (port.Name, new OVSBridgePortInfo(hostState.OVSBridges.First(b =>
+                    b.Ports.Contains(port.Id)).Name, port.Name, port.Tag, port.VlanMode)))
                 .ToHashMap())
         let newBridges = newConfig.NetworkProviders
             .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
@@ -92,14 +88,17 @@ public static class ProviderNetworkUpdate<RT>
                 x.Type == NetworkProviderType.NatOverLay
                     ? IPAddress.Parse(x.Subnets.First(s => s.Name == "default").Gateway)
                     : IPAddress.None,
-                IPNetwork.Parse(x.Subnets.First(s => s.Name == "default").Network)))
+                IPNetwork.Parse(x.Subnets.First(s => s.Name == "default").Network),
+                x.BridgeOptions))
             .ToSeq()
         let newOverlayAdapters = toHashSet(newConfig.NetworkProviders
             .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
             .Where(x => x.Adapters != null)
             .SelectMany(x => x.Adapters).Distinct())
 
-        let enabledBridges = (newConfig.EnabledBridges?? Array.Empty<string>())
+        let enabledBridges = (newConfig.NetworkProviders
+                .Filter(x=>x.BridgeOptions?.DefaultIpMode is not null and not BridgeHostIpMode.Disabled)
+                .Map(x=>x.BridgeName) ?? Array.Empty<string>())
             .AsEnumerable()
             .Append(newConfig.NetworkProviders
             .Where(x=>x.Type == NetworkProviderType.NatOverLay)
@@ -141,11 +140,14 @@ public static class ProviderNetworkUpdate<RT>
         from ovsBridges3 in changeBuilder.RecreateMissingNatAdapters(
             newConfig, hostState.AllNetAdaptersNames, ovsBridges2)
 
-            // add bridges from config missing in OVS
+        // add bridges from config missing in OVS
         from createdBridges in changeBuilder.AddMissingBridges(
             hasOverlaySwitch, enabledBridges, ovsBridges3, newBridges)
 
-        // remove no longer needed network nat(s) 
+        from updateBridgePorts in changeBuilder.UpdateBridgePorts(
+            newConfig, createdBridges, ovsBridges3)
+
+            // remove no longer needed network nat(s) 
         from uRemoveNat in changeBuilder.RemoveUnusedNat(
             hostState.NetNat, newConfig, newBridges)
 
@@ -157,11 +159,11 @@ public static class ProviderNetworkUpdate<RT>
         from uNatAdapter in changeBuilder.ConfigureNatAdapters(
             newConfig, hostState.NetNat, createdBridges, newBridges)
 
-        // create ports for adapters in overlay bridges
+            // create ports for adapters in overlay bridges
         from uCreatePorts in changeBuilder.CreateOverlayAdapterPorts(
             newConfig, ovsBridges4)
 
-        // update OVS bridge mapping to new network names and brdiges
+        // update OVS bridge mapping to new network names and bridges
         from uBrideMappings in changeBuilder.UpdateBridgeMappings(
             newConfig)
         select changeBuilder.Build();
