@@ -9,11 +9,12 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class GetByName : Specification<Catlet>, ISingleResultSpecification
         {
-            public GetByName(string name, Guid tenantId, string projectName)
+            public GetByName(string name, Guid tenantId, string projectName, string environment)
             {
                 Query
                     .Include(x => x.Project)
                     .Where(x => x.Project.TenantId == tenantId && x.Project.Name == projectName.ToLowerInvariant())
+                    .Where(x => x.Environment == environment.ToLowerInvariant())
                     .Where(x => x.Name == name.ToLowerInvariant());
 
 

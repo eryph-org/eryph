@@ -28,7 +28,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
     private static string GetEnvironmentName(string? environment, string network)
     {
         return environment == null 
-            ? $"env:none-{network}" 
+            ? $"env:default-{network}" 
             : $"env:{environment}-{network}";
     }
 
@@ -49,7 +49,8 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
             var savedNetwork = savedNetworks.Find(x => GetEnvironmentName(x.Environment, x.Name) == networkEnvName);
             if (savedNetwork == null)
             {
-                _log.LogDebug("Environment {env}: network {network} not found. Creating new network.", networkConfig.Environment ?? "none", networkConfig.Name);
+                _log.LogDebug("Environment {env}: network {network} not found. Creating new network.",
+                    networkConfig.Environment ?? "default", networkConfig.Name);
                 var newNetwork = new VirtualNetwork
                 {
                     Id = Guid.NewGuid(),
@@ -87,7 +88,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
             var providerSubnet = networkConfig.Provider?.Subnet ?? "default";
             var providerIpPool = networkConfig.Provider?.IpPool ?? "default";
 
-            _log.LogDebug("Environment {env}: Updating network {network}", savedNetwork.Environment ?? "none", savedNetwork.Name);
+            _log.LogDebug("Environment {env}: Updating network {network}", savedNetwork.Environment ?? "default", savedNetwork.Name);
 
             var networkProvider = providerConfig.NetworkProviders.First(x => x.Name == providerName);
             var isFlatNetwork = networkProvider.Type == NetworkProviderType.Flat;
@@ -183,7 +184,8 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                     !IPAddress.TryParse(ipAssignment.IpAddress, out var ipAddress) ||
                     !networkAddress.Contains(ipAddress))
                 {
-                    _log.LogInformation("Environment {env}, Network {network}: network router ip assignment changed to {ipAddress}.", savedNetwork.Environment ?? "none", savedNetwork.Name, networkAddress.FirstUsable);
+                    _log.LogInformation("Environment {env}, Network {network}: network router ip assignment changed to {ipAddress}.",
+                        savedNetwork.Environment ?? "default", savedNetwork.Name, networkAddress.FirstUsable);
 
                     savedNetwork.NetworkPorts.Remove(routerPort);
                     routerPort = null;
@@ -243,6 +245,9 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
             foreach (var subnetConfig in networkConfig.Subnets)
             {
+                if(subnetConfig.Name == null)
+                    continue;
+
                 foundNames.Add(subnetConfig.Name);
 
                 var savedSubnet = savedNetwork.Subnets.FirstOrDefault(x => x.Name ==

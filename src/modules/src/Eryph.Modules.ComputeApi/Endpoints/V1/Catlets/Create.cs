@@ -19,12 +19,12 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
 {
-    public class Create : NewOperationRequestEndpoint<NewCatletRequest, StateDb.Model.Catlet>
+    public class Create : NewOperationRequestEndpoint<NewCatletRequest, Catlet>
     {
-        private readonly IReadonlyStateStoreRepository<StateDb.Model.Catlet> _repository;
+        private readonly IReadonlyStateStoreRepository<Catlet> _repository;
         private readonly IUserRightsProvider _userRightsProvider;
 
-        public Create([NotNull] ICreateEntityRequestHandler<StateDb.Model.Catlet> operationHandler, IReadonlyStateStoreRepository<Catlet> repository, IUserRightsProvider userRightsProvider) : base(operationHandler)
+        public Create([NotNull] ICreateEntityRequestHandler<Catlet> operationHandler, IReadonlyStateStoreRepository<Catlet> repository, IUserRightsProvider userRightsProvider) : base(operationHandler)
         {
             _repository = repository;
             _userRightsProvider = userRightsProvider;
@@ -54,9 +54,6 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             Tags = new[] { "Catlets" })
         ]
 
-        //[SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]
-        //[SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status409Conflict, "Conflict")]
-
         public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromBody] NewCatletRequest request, CancellationToken cancellationToken = default)
         {
             var jsonString = request.Configuration.GetValueOrDefault().ToString();
@@ -73,8 +70,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
                 return Forbid();
 
             var existingCatlet = await _repository.GetBySpecAsync(new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId,
-                project), cancellationToken);
-
+                config.Project ?? "default", config.Environment ?? "default"), cancellationToken);
 
             if (existingCatlet != null)
                 return Conflict();

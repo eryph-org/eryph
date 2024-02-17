@@ -22,7 +22,7 @@ internal class CatletIpManager : BaseIpManager, ICatletIpManager
 
     public EitherAsync<Error, IPAddress[]> ConfigurePortIps(
         Guid projectId,
-        string? environment,
+        string environment,
         CatletNetworkPort port,
         CatletNetworkConfig[] networkConfigs, CancellationToken cancellationToken)
     {
@@ -47,17 +47,23 @@ internal class CatletIpManager : BaseIpManager, ICatletIpManager
                 var networkNameString = portNetwork.NetworkName.IfNone("default");
                 var subnetNameString = portNetwork.SubnetName.IfNone("default");
                 var poolNameString = portNetwork.PoolName.IfNone("default");
-
-                var environmentMessage = environment is not null ? $" (environment: {environment})" : "";
                 return
                     from network in _stateStore.Read<VirtualNetwork>()
                         .IO.GetBySpecAsync(new VirtualNetworkSpecs.GetByName(projectId, networkNameString,environment), cancellationToken)
-                        .Bind(r => r.ToEitherAsync(Error.New($"Network {networkNameString} not found {environmentMessage}.")))
+                        .Bind(r =>
+
+                            // it is optional to have a environment specific network
+                            // therefore fallback to network in default environment if not found
+                            r.IsNone && environment != "default" ?
+                                _stateStore.Read<VirtualNetwork>()
+                            .IO.GetBySpecAsync(new VirtualNetworkSpecs.GetByName(projectId, networkNameString, "default"), cancellationToken)
+                            .Bind(fr => fr.ToEitherAsync(Error.New($"Network {networkNameString} not found in environment {environment} and default environment.")))
+                            :  r.ToEitherAsync(Error.New($"Environments {environment}: Network {networkNameString} not found.")))
 
                     from subnet in _stateStore.Read<VirtualNetworkSubnet>().IO
                         .GetBySpecAsync(new SubnetSpecs.GetByNetwork(network.Id, subnetNameString), cancellationToken)
                         .Bind(r => r.ToEitherAsync(
-                            Error.New($"Subnet {subnetNameString} not found in network {networkNameString} {environmentMessage}.")))
+                            Error.New($"Environment {environment}: Subnet {subnetNameString} not found in network {networkNameString}.")))
 
                     let existingAssignment = CheckAssignmentExist(validAssignments, subnet, poolNameString)
 

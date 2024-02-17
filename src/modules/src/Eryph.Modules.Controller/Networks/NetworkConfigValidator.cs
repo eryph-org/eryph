@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Networks;
 using Eryph.Core.Network;
 using Eryph.StateDb;
@@ -27,8 +26,10 @@ namespace Eryph.Modules.Controller.Networks
         public ProjectNetworksConfig NormalizeConfig(ProjectNetworksConfig config)
         {
 
-            foreach (var networkConfig in config.Networks)
+            foreach (var networkConfig in config.Networks ?? Array.Empty<NetworkConfig>())
             {
+                if(string.IsNullOrWhiteSpace(networkConfig.Environment))
+                    networkConfig.Environment = "default";
 
                 networkConfig.Subnets ??= Array.Empty<NetworkSubnetConfig>();
 
@@ -72,10 +73,11 @@ namespace Eryph.Modules.Controller.Networks
                 .For<VirtualNetwork>()
                 .ListAsync(new VirtualNetworkSpecs.GetForProjectConfig(projectId));
 
+            var networkConfigs = config.Networks ?? Array.Empty<NetworkConfig>();
             // network validation (deleted)
             foreach (var network in savedNetworks)
             {
-                if (config.Networks.Any(x => x.Name == network.Name))
+                if (networkConfigs.Any(x => x.Name == network.Name))
                     continue;
                 var countOfCatletPorts = network.NetworkPorts.Count(x => x is CatletNetworkPort);
                 if (countOfCatletPorts == 0)
@@ -91,12 +93,13 @@ namespace Eryph.Modules.Controller.Networks
 
 
             // network validation (change)
-            foreach (var networkConfig in config.Networks)
+            foreach (var networkConfig in networkConfigs)
             {
                 var network = savedNetworks.Find(x => x.Name == networkConfig.Name);
                 if (network == null)
                     continue;
 
+                var subnetConfigs = networkConfig.Subnets ?? Array.Empty<NetworkSubnetConfig>();
                 var providerName = networkConfig.Provider?.Name ?? "default";
                 var providerSubnet = networkConfig.Provider?.Subnet ?? "default";
                 var providerIpPool = networkConfig.Provider?.IpPool ?? "default";
@@ -131,11 +134,14 @@ namespace Eryph.Modules.Controller.Networks
                         anyError = true;
                     }
 
-                    var currentSubnets = network.Subnets.Select(x => x.IpNetwork).Distinct();
-                    var newSubnets = networkConfig.Subnets
+                    var currentSubnets = network.Subnets?.Select(x => x.IpNetwork ?? "").Distinct()
+                        .Where(x => !string.IsNullOrWhiteSpace(x)).ToArray() ?? Array.Empty<string>();
+
+                    var newSubnets = subnetConfigs
                         .Select(x => x.Address ?? networkConfig.Address).Distinct();
 
-                    if (!currentSubnets.ToSeq().SequenceEqual(newSubnets))
+                    // could not be null here
+                    if (!currentSubnets.ToSeq()!.SequenceEqual(newSubnets))
                     {
                         _log.LogDebug(
                             "network '{networkName}': Detected unsupported change of network address. current subnets: {@currentSubnets}, new subnets: {@newSubnets}",
@@ -150,8 +156,9 @@ namespace Eryph.Modules.Controller.Networks
                             $"network '{networkConfig.Name}': To change the network first remove all ports or move them to another network.";
                 }
 
+                
                 // ip pool validation (deleted pools)
-                foreach (var subnet in network.Subnets)
+                foreach (var subnet in network.Subnets?.ToArray() ?? Array.Empty<VirtualNetworkSubnet>())
                 {
 
                     foreach (var ipPool in subnet.IpPools)
@@ -160,8 +167,8 @@ namespace Eryph.Modules.Controller.Networks
                         if (ipPool.IpAssignments.Count == 0)
                             continue;
 
-                        var subnetConfig = networkConfig.Subnets.FirstOrDefault(x => x.Name == subnet.Name);
-                        var poolConfig = subnetConfig?.IpPools.FirstOrDefault(x => x.Name == ipPool.Name);
+                        var subnetConfig = subnetConfigs.FirstOrDefault(x => x.Name == subnet.Name);
+                        var poolConfig = (subnetConfig?.IpPools ?? Array.Empty<IpPoolConfig>()).FirstOrDefault(x => x.Name == ipPool.Name);
 
                         if (poolConfig == null)
                             yield return
@@ -171,12 +178,12 @@ namespace Eryph.Modules.Controller.Networks
                 }
 
                 // ip pool validation (changed pools)
-                foreach (var subnetConfig in networkConfig.Subnets)
+                foreach (var subnetConfig in subnetConfigs)
                 {
-                    var subnet = network.Subnets.FirstOrDefault(x => x.Name == subnetConfig.Name);
+                    var subnet = network.Subnets?.FirstOrDefault(x => x.Name == subnetConfig.Name);
                     if (subnet == null) continue;
 
-                    foreach (var ipPoolConfig in subnetConfig.IpPools)
+                    foreach (var ipPoolConfig in subnetConfig.IpPools ?? Array.Empty<IpPoolConfig>())
                     {
                         _log.LogTrace("Validating ip pool config: {@config}", ipPoolConfig);
                         var ipPool = subnet.IpPools.FirstOrDefault(x => x.Name == ipPoolConfig.Name);
@@ -204,7 +211,7 @@ namespace Eryph.Modules.Controller.Networks
                             .Select(x => IPNetwork.ToBigInteger(IPAddress.Parse(x.IpAddress)))
                             .Max();
 
-                        var lastIpNo = IPNetwork.ToBigInteger(IPAddress.Parse(ipPoolConfig.LastIp));
+                        var lastIpNo = IPNetwork.ToBigInteger(IPAddress.Parse(ipPoolConfig.LastIp ?? maxIp.ToString()));
                         var maxAsIp = IPNetwork.ToIPAddress(maxIp, AddressFamily.InterNetwork);
 
                         if (maxIp > lastIpNo)
@@ -217,15 +224,16 @@ namespace Eryph.Modules.Controller.Networks
 
         public IEnumerable<string> ValidateConfig(ProjectNetworksConfig config, NetworkProvider[] networkProviders)
         {
+            var networkConfigs = config.Networks ?? Array.Empty<NetworkConfig>();
             var ipNetworksOfNetworks =
-                config.Networks.Select(x =>
+                networkConfigs.Select(x =>
                         (IPNetwork.TryParse(x.Address, out var ipNetwork), ipNetwork, x.Name))
                     .Where(x => x.Item1)
                     .Select(x => (Address: x.ipNetwork, Network: x.Name))
                     .ToArray();
 
 
-            foreach (var networkConfig in config.Networks)
+            foreach (var networkConfig in networkConfigs)
             {
                 if (string.IsNullOrWhiteSpace(networkConfig.Name))
                     yield return "Empty network name";
@@ -304,7 +312,7 @@ namespace Eryph.Modules.Controller.Networks
                     }
 
 
-                    foreach (var subnetConfig in networkConfig.Subnets)
+                    foreach (var subnetConfig in networkConfig.Subnets ?? Array.Empty<NetworkSubnetConfig>())
                     {
                         var subnetIPNetwork = networkIpNetwork;
                         var subnetAddress = subnetConfig.Address ?? networkConfig.Address;
@@ -330,7 +338,7 @@ namespace Eryph.Modules.Controller.Networks
 
                         }
 
-                        foreach (var poolConfig in subnetConfig.IpPools)
+                        foreach (var poolConfig in subnetConfig.IpPools ?? Array.Empty<IpPoolConfig>())
                         {
                             if (!IPAddress.TryParse(poolConfig.FirstIp, out var firstIp))
                                 yield return
