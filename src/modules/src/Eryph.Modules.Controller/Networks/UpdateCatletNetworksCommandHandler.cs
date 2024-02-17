@@ -48,8 +48,10 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
         await message.Command.Config.Networks.Map(cfg =>
 
                 from network in _stateStore.ReadBySpecAsync<VirtualNetwork, VirtualNetworkSpecs.GetByName>(
-                    new VirtualNetworkSpecs.GetByName(message.Command.ProjectId, cfg.Name)
-                    , Error.New($"Network '{cfg.Name}' not found in project {message.Command.ProjectId}"))
+                    new VirtualNetworkSpecs.GetByName(message.Command.ProjectId, cfg.Name, message.Command.Config.Environment)
+                    , message.Command.Config.Environment == null 
+                        ? Error.New($"Network '{cfg.Name}' not found in project {message.Command.ProjectId}")
+                        : Error.New($"Network '{cfg.Name}' not found in project {message.Command.ProjectId} and environment {message.Command.Config.Environment}"))
 
                 from networkProviders in _providerManager.GetCurrentConfiguration()
                 from networkProvider in networkProviders.NetworkProviders.Find(x=>x.Name == network.NetworkProvider)
@@ -83,6 +85,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     ? Prelude.RightAsync<Error, IPAddress[]>(Array.Empty<IPAddress>())
                     : _ipManager.ConfigurePortIps(
                     message.Command.ProjectId,
+                    message.Command.Config.Environment,
                     networkPort,
                     message.Command.Config.Networks,
                     c3.Token)

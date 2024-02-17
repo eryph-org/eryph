@@ -4,7 +4,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
-using Eryph.ConfigModel.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -23,6 +22,7 @@ internal class CatletIpManager : BaseIpManager, ICatletIpManager
 
     public EitherAsync<Error, IPAddress[]> ConfigurePortIps(
         Guid projectId,
+        string? environment,
         CatletNetworkPort port,
         CatletNetworkConfig[] networkConfigs, CancellationToken cancellationToken)
     {
@@ -48,15 +48,16 @@ internal class CatletIpManager : BaseIpManager, ICatletIpManager
                 var subnetNameString = portNetwork.SubnetName.IfNone("default");
                 var poolNameString = portNetwork.PoolName.IfNone("default");
 
+                var environmentMessage = environment is not null ? $" (environment: {environment})" : "";
                 return
                     from network in _stateStore.Read<VirtualNetwork>()
-                        .IO.GetBySpecAsync(new VirtualNetworkSpecs.GetByName(projectId, networkNameString), cancellationToken)
-                        .Bind(r => r.ToEitherAsync(Error.New($"Network {networkNameString} not found.")))
+                        .IO.GetBySpecAsync(new VirtualNetworkSpecs.GetByName(projectId, networkNameString,environment), cancellationToken)
+                        .Bind(r => r.ToEitherAsync(Error.New($"Network {networkNameString} not found {environmentMessage}.")))
 
                     from subnet in _stateStore.Read<VirtualNetworkSubnet>().IO
                         .GetBySpecAsync(new SubnetSpecs.GetByNetwork(network.Id, subnetNameString), cancellationToken)
                         .Bind(r => r.ToEitherAsync(
-                            Error.New($"Subnet {subnetNameString} not found in network {networkNameString}.")))
+                            Error.New($"Subnet {subnetNameString} not found in network {networkNameString} {environmentMessage}.")))
 
                     let existingAssignment = CheckAssignmentExist(validAssignments, subnet, poolNameString)
 

@@ -23,6 +23,7 @@ namespace Eryph.ModuleCore.Networks
                     var networkConfig = new NetworkConfig
                     {
                         Name = network.Name,
+                        Environment = network.Environment,
                         Address = network.IpNetwork,
                         Provider = new ProviderConfig
                         {

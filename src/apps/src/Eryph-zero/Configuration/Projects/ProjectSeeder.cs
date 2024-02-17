@@ -79,7 +79,7 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
             var projectId = project.Id;
 
             var network = await stateStore.For<VirtualNetwork>().GetBySpecAsync(
-                new VirtualNetworkSpecs.GetByName(projectId, "default")
+                new VirtualNetworkSpecs.GetByName(projectId, "default", null)
                 , stoppingToken);
 
 
