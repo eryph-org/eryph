@@ -1,6 +1,7 @@
 ﻿using Eryph.ConfigModel.Catlets;
 using Eryph.Resources.Disks;
 using Eryph.VmManagement.Converging;
+using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Storage;
 using FluentAssertions;
@@ -97,10 +98,12 @@ namespace Eryph.VmManagement.Test
                 .ShouldBeParam("SizeBytes", newSize*1024L*1024*1024);
         }
 
-        [Fact]
-        public async Task Converges_new_disk()
+        [Theory]
+        [InlineData(CatletDriveType.VHD)]
+        [InlineData(CatletDriveType.SharedVHD)]
+        public async Task Converges_new_disk(CatletDriveType driveType)
         {
-            _fixture.Config.Drives = new[] { new CatletDriveConfig { Name = "sdb" } };
+            _fixture.Config.Drives = new[] { new CatletDriveConfig { Name = "sdb", Type = driveType} };
             _fixture.StorageSettings = _fixture.StorageSettings with
             {
                 DefaultVhdPath = @"x:\disks\abc",
@@ -277,11 +280,11 @@ namespace Eryph.VmManagement.Test
         }
 
         [Fact]
-        public async Task Converges_new_shared_disk()
+        public async Task Converges_new_set_disk()
         {
             _fixture.Config.Drives = new[] { new CatletDriveConfig
             {
-                Name = "sdb", Type = CatletDriveType.SharedVHD
+                Name = "sdb", Type = CatletDriveType.VHDSet
 
             } };
             _fixture.StorageSettings = _fixture.StorageSettings with
@@ -373,15 +376,17 @@ namespace Eryph.VmManagement.Test
                 .ShouldBeParam("Path", @"x:\disks\abc\sdb.vhds");
         }
 
-        [Fact]
-        public async Task Converges_new_shared_disk_with_genepool_parent()
+        [Theory]
+        [InlineData(CatletDriveType.SharedVHD)]
+        [InlineData(CatletDriveType.VHDSet)]
+        public async Task Converges_new_set_or_shared_disk_with_genepool_parent(CatletDriveType driveType)
         {
             _fixture.Config.Drives = new[]
             {
                 new CatletDriveConfig
                 {
                     Name = "sda", Source = "gene:testorg/testset/testtag:sda",
-                    Type = CatletDriveType.SharedVHD
+                    Type =driveType
                 }
             };
             _fixture.StorageSettings = _fixture.StorageSettings with
@@ -399,6 +404,7 @@ namespace Eryph.VmManagement.Test
             AssertCommand? vhdCommand = null;
             AssertCommand? copyCommand = null;
             AssertCommand? attachCommand = null;
+            var diskName = driveType == CatletDriveType.SharedVHD ? "sda.vhdx" : "sda.vhds";
 
             _fixture.Engine.RunCallback = command =>
             {
@@ -421,14 +427,14 @@ namespace Eryph.VmManagement.Test
                 if (commandString.Contains("Get-VM"))
                     return new[] { _fixture.Engine.ToPsObject<object>(vmData.Value) }.ToSeq();
 
-                if (commandString.Contains(@"Test-Path [x:\disks\abc\sda.vhds]"))
+                if (commandString.Contains(@$"Test-Path [x:\disks\abc\{diskName}]"))
                     return new[] { _fixture.Engine.ToPsObject<object>(false) }.ToSeq();
 
 
                 if (commandString.Contains("Get-VHD"))
                     return new[] { _fixture.Engine.ToPsObject<object>(new VhdInfo
                     {
-                        Path =  @"x:\disks\abc\sda.vhds",
+                        Path =  @$"x:\disks\abc\{diskName}",
                         Size = 1073741824
                     }) }.ToSeq();
 
@@ -442,7 +448,7 @@ namespace Eryph.VmManagement.Test
                         ControllerLocation = 0,
                         ControllerNumber = 0,
                         ControllerType = ControllerType.SCSI,
-                        Path = @"x:\disks\abc\sda.vhds"
+                        Path = $@"x:\disks\abc\{diskName}"
                     };
 
                     return new[] { _fixture.Engine.ToPsObject<object>(res) }.ToSeq();
@@ -461,16 +467,35 @@ namespace Eryph.VmManagement.Test
                 .ShouldBeArgument(@"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")
                 .ShouldBeArgument(@"x:\disks\abc\sda.vhdx");
 
+            if (driveType == CatletDriveType.SharedVHD)
+            {
+                vhdCommand.Should().BeNull();
 
-            vhdCommand.Should().NotBeNull();
-            vhdCommand!.ShouldBeCommand("Convert-VHD")
-                .ShouldBeArgument(@"x:\disks\abc\sda.vhdx")
-                .ShouldBeArgument(@"x:\disks\abc\sda.vhds");
+            }
+            else
+            {
+                vhdCommand.Should().NotBeNull();
+                vhdCommand!.ShouldBeCommand("Convert-VHD")
+                    .ShouldBeArgument(@"x:\disks\abc\sda.vhdx")
+                    .ShouldBeArgument(@"x:\disks\abc\sda.vhds");
+            }
 
             attachCommand.Should().NotBeNull();
-            attachCommand?.ShouldBeCommand("Add-VMHardDiskDrive")
-                .ShouldBeParam("VM", vmData.PsObject)
-                .ShouldBeParam("Path", @"x:\disks\abc\sda.vhds");
+
+            if (driveType == CatletDriveType.SharedVHD)
+            {
+                attachCommand?.ShouldBeCommand("Add-VMHardDiskDrive")
+                    .ShouldBeParam("VM", vmData.PsObject)
+                    .ShouldBeParam("Path", $@"x:\disks\abc\{diskName}")
+                    .ShouldBeFlag("ShareVirtualDisk");
+            }
+            else
+            {
+                attachCommand?.ShouldBeCommand("Add-VMHardDiskDrive")
+                    .ShouldBeParam("VM", vmData.PsObject)
+                    .ShouldBeParam("Path", $@"x:\disks\abc\{diskName}");
+
+            }
         }
     }
 }

@@ -44,7 +44,9 @@ namespace Eryph.VmManagement.Storage
             var controllerLocation = index;
 
             //if it is not a vhd, we only need controller settings
-            if (driveConfig.Type.HasValue && driveConfig.Type != CatletDriveType.VHD && driveConfig.Type != CatletDriveType.SharedVHD)
+            if (driveConfig.Type.HasValue && 
+                driveConfig.Type != CatletDriveType.VHD && driveConfig.Type != CatletDriveType.SharedVHD &&
+                driveConfig.Type != CatletDriveType.VHDSet)
             {
                 VMDriveStorageSettings result;
                 if (driveConfig.Type == CatletDriveType.DVD)
@@ -86,7 +88,7 @@ namespace Eryph.VmManagement.Storage
                 from resolvedPath in names.ResolveVolumeStorageBasePath(vmHostAgentConfig)
                 from identifier in storageIdentifier.ToEitherAsync(
                     Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
-                let fileName = driveConfig.Type == CatletDriveType.SharedVHD ? $"{driveConfig.Name}.vhds" : $"{driveConfig.Name}.vhdx"
+                let fileName = driveConfig.Type == CatletDriveType.VHDSet ? $"{driveConfig.Name}.vhds" : $"{driveConfig.Name}.vhdx"
                 let attachPath = Path.Combine(resolvedPath, identifier, fileName)
                 let configuredSize = Optional(driveConfig.Size).Filter(notDefault).Map(s => s * 1024L * 1024 * 1024)
                 from vhdInfo in getVhdInfo(attachPath)
