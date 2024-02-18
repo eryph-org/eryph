@@ -265,7 +265,39 @@ namespace Eryph.VmManagement.Converging
                                 from p1 in Context.ReportProgressAsync(
                                     $"Creating HD Drive: {driveSettings.DiskSettings.Name}")
 
-                                from uCreate in driveSettings.DiskSettings.ParentSettings.MatchAsync(async parentSettings =>
+                                from uCreate in
+                                    driveSettings.Type == CatletDriveType.SharedVHD 
+                                        ? driveSettings.DiskSettings.ParentSettings.MatchAsync(async parentSettings =>
+                                                {
+                                                    // shared vhd set don't support differencing disks
+                                                    // so we need to to copy parent disks and then convert it to vhds
+                                                    var parentFilePath = Path.Combine(parentSettings.Path,
+                                                        parentSettings.FileName);
+
+                                                    var tempPath = Path.ChangeExtension(vhdPath, "vhdx");
+
+                                                    var commandConvert = PsCommandBuilder.Create()
+                                                        .AddCommand("Convert-VHD")
+                                                        .AddArgument(tempPath)
+                                                        .AddArgument(vhdPath);
+
+                                                    return
+                                                        await (from copy in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                                                            .AddCommand("Copy-Item")
+                                                            .AddArgument(parentFilePath)
+                                                            .AddArgument(tempPath)
+                                                            .AddParameter("Force")).ToAsync()
+                                                        from convert in Context.Engine.RunAsync(commandConvert).ToAsync()
+                                                        select Prelude.unit).ToEither();
+                                                },
+                                                async () => await Context.Engine.RunAsync(PsCommandBuilder.Create()
+                                                    .AddCommand("New-VHD")
+                                                    .AddParameter("Path", vhdPath)
+                                                    .AddParameter("Dynamic")
+                                                    .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)))
+                                            .ToError().ToAsync()
+                                        :
+                                    driveSettings.DiskSettings.ParentSettings.MatchAsync(async parentSettings =>
                                         {
                                             var parentFilePath = Path.Combine(parentSettings.Path,
                                                 parentSettings.FileName);
