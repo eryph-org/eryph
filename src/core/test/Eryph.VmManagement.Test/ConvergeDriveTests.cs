@@ -487,7 +487,7 @@ namespace Eryph.VmManagement.Test
                 attachCommand?.ShouldBeCommand("Add-VMHardDiskDrive")
                     .ShouldBeParam("VM", vmData.PsObject)
                     .ShouldBeParam("Path", $@"x:\disks\abc\{diskName}")
-                    .ShouldBeFlag("ShareVirtualDisk");
+                    .ShouldBeFlag("SupportPersistentReservations");
             }
             else
             {

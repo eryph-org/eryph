@@ -379,7 +379,7 @@ namespace Eryph.VmManagement.Converging
                 .AddParameter("Path", vhdPath);
 
             if (driveSettings.Type == CatletDriveType.SharedVHD)
-                command.AddParameter("ShareVirtualDisk");
+                command.AddParameter("SupportPersistentReservations");
 
             command.AddParameter("ControllerNumber", driveSettings.ControllerNumber)
                 .AddParameter("ControllerLocation", driveSettings.ControllerLocation)
