@@ -275,5 +275,202 @@ namespace Eryph.VmManagement.Test
                 .ShouldBeParam("VM", vmData.PsObject)
                 .ShouldBeParam("Path", @"x:\disks\abc\sda.vhdx");
         }
+
+        [Fact]
+        public async Task Converges_new_shared_disk()
+        {
+            _fixture.Config.Drives = new[] { new CatletDriveConfig
+            {
+                Name = "sdb", Type = CatletDriveType.SharedVHD
+
+            } };
+            _fixture.StorageSettings = _fixture.StorageSettings with
+            {
+                DefaultVhdPath = @"x:\disks\abc",
+                StorageIdentifier = "abc",
+                StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names
+            };
+
+
+            var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
+            {
+                Id = new Guid(),
+                HardDrives = new[]{new HardDiskDriveInfo
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ControllerLocation = 0,
+                    ControllerNumber = 0,
+                    ControllerType = ControllerType.SCSI,
+                    Path = @"x:\disks\abc\sda.vhdx"
+                }}
+            });
+
+            AssertCommand? vhdCommand = null;
+            AssertCommand? attachCommand = null;
+
+            _fixture.Engine.RunCallback = command =>
+            {
+                if (command.ToString().Contains("CheckpointType"))
+                {
+                    command.ShouldBeCommand("Set-VM")
+                        .ShouldBeParam("VM", vmData.PsObject)
+                        .ShouldBeParam("CheckpointType");
+                }
+
+                if (command.ToString().Contains("New-VHD")) vhdCommand = command;
+
+                return Unit.Default;
+            };
+
+            _fixture.Engine.GetObjectCallback = (type, command) =>
+            {
+                var commandString = command.ToString();
+                if (commandString.Contains("Get-VM"))
+                    return new[] { _fixture.Engine.ToPsObject<object>(vmData.Value) }.ToSeq();
+
+                if (commandString.Contains("Test-Path [x:\\disks\\abc\\sdb.vhds]"))
+                    return new[] { _fixture.Engine.ToPsObject<object>(false) }.ToSeq();
+
+
+                if (commandString.Contains("Get-VHD"))
+                    return new[] { _fixture.Engine.ToPsObject<object>(new VhdInfo
+                    {
+                        Path = commandString.Contains("sda") ? @"x:\disks\abc\sda.vhdx": @"x:\disks\abc\sdb.vhds",
+                        Size = 1073741824
+                    }) }.ToSeq();
+
+                if (command.ToString().Contains("Add-VMHardDiskDrive"))
+                {
+                    attachCommand = command;
+                    var res = new HardDiskDriveInfo
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        ControllerLocation = 0,
+                        ControllerNumber = 0,
+                        ControllerType = ControllerType.SCSI,
+                        Path = @"x:\disks\abc\sda.vhds"
+                    };
+
+                    return new[] { _fixture.Engine.ToPsObject<object>(res) }.ToSeq();
+                }
+
+
+                return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            };
+
+            var convergeTask = new ConvergeDrives(_fixture.Context);
+            _ = (await convergeTask.Converge(vmData)).IfLeft(l => l.Throw());
+
+            vhdCommand.Should().NotBeNull();
+            vhdCommand?.ShouldBeCommand("New-VHD")
+                .ShouldBeParam("Path", @"x:\disks\abc\sdb.vhds")
+                .ShouldBeFlag("Dynamic")
+                .ShouldBeParam("SizeBytes", 1073741824);
+
+            attachCommand.Should().NotBeNull();
+            attachCommand?.ShouldBeCommand("Add-VMHardDiskDrive")
+                .ShouldBeParam("VM", vmData.PsObject)
+                .ShouldBeParam("Path", @"x:\disks\abc\sdb.vhds");
+        }
+
+        [Fact]
+        public async Task Converges_new_shared_disk_with_genepool_parent()
+        {
+            _fixture.Config.Drives = new[]
+            {
+                new CatletDriveConfig
+                {
+                    Name = "sda", Source = "gene:testorg/testset/testtag:sda",
+                    Type = CatletDriveType.SharedVHD
+                }
+            };
+            _fixture.StorageSettings = _fixture.StorageSettings with
+            {
+                DefaultVhdPath = @"x:\disks\abc",
+                StorageIdentifier = "abc",
+                StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names
+            };
+
+            var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
+            {
+                Id = new Guid(),
+            });
+
+            AssertCommand? vhdCommand = null;
+            AssertCommand? copyCommand = null;
+            AssertCommand? attachCommand = null;
+
+            _fixture.Engine.RunCallback = command =>
+            {
+                if (command.ToString().Contains("CheckpointType"))
+                {
+                    command.ShouldBeCommand("Set-VM")
+                        .ShouldBeParam("VM", vmData.PsObject)
+                        .ShouldBeParam("CheckpointType");
+                }
+
+                if (command.ToString().Contains("Convert-VHD")) vhdCommand = command;
+                if (command.ToString().Contains("Copy-Item")) copyCommand = command;
+
+                return Unit.Default;
+            };
+
+            _fixture.Engine.GetObjectCallback = (type, command) =>
+            {
+                var commandString = command.ToString();
+                if (commandString.Contains("Get-VM"))
+                    return new[] { _fixture.Engine.ToPsObject<object>(vmData.Value) }.ToSeq();
+
+                if (commandString.Contains(@"Test-Path [x:\disks\abc\sda.vhds]"))
+                    return new[] { _fixture.Engine.ToPsObject<object>(false) }.ToSeq();
+
+
+                if (commandString.Contains("Get-VHD"))
+                    return new[] { _fixture.Engine.ToPsObject<object>(new VhdInfo
+                    {
+                        Path =  @"x:\disks\abc\sda.vhds",
+                        Size = 1073741824
+                    }) }.ToSeq();
+
+
+                if (command.ToString().Contains("Add-VMHardDiskDrive"))
+                {
+                    attachCommand = command;
+                    var res = new HardDiskDriveInfo
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        ControllerLocation = 0,
+                        ControllerNumber = 0,
+                        ControllerType = ControllerType.SCSI,
+                        Path = @"x:\disks\abc\sda.vhds"
+                    };
+
+                    return new[] { _fixture.Engine.ToPsObject<object>(res) }.ToSeq();
+                }
+
+
+                return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            };
+
+            var convergeTask = new ConvergeDrives(_fixture.Context);
+            _ = (await convergeTask.Converge(vmData)).IfLeft(l => l.Throw());
+
+
+            copyCommand.Should().NotBeNull();
+            copyCommand!.ShouldBeCommand("Copy-Item")
+                .ShouldBeArgument(@"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")
+                .ShouldBeArgument(@"x:\disks\abc\sda.vhdx");
+
+
+            vhdCommand.Should().NotBeNull();
+            vhdCommand!.ShouldBeCommand("Convert-VHD")
+                .ShouldBeArgument(@"x:\disks\abc\sda.vhdx")
+                .ShouldBeArgument(@"x:\disks\abc\sda.vhds");
+
+            attachCommand.Should().NotBeNull();
+            attachCommand?.ShouldBeCommand("Add-VMHardDiskDrive")
+                .ShouldBeParam("VM", vmData.PsObject)
+                .ShouldBeParam("Path", @"x:\disks\abc\sda.vhds");
+        }
     }
 }

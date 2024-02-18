@@ -44,7 +44,7 @@ namespace Eryph.VmManagement.Storage
             var controllerLocation = index;
 
             //if it is not a vhd, we only need controller settings
-            if (driveConfig.Type.HasValue && driveConfig.Type != CatletDriveType.VHD)
+            if (driveConfig.Type.HasValue && driveConfig.Type != CatletDriveType.VHD && driveConfig.Type != CatletDriveType.SharedVHD)
             {
                 VMDriveStorageSettings result;
                 if (driveConfig.Type == CatletDriveType.DVD)
@@ -116,7 +116,7 @@ namespace Eryph.VmManagement.Storage
                     Error.New("Disk size is below minimum size of the virtual disk"))
                 let planned = new HardDiskDriveStorageSettings
                 {
-                    Type = CatletDriveType.VHD,
+                    Type = driveConfig.Type.GetValueOrDefault(),
                     AttachPath = attachPath,
                     DiskSettings = new DiskStorageSettings
                     {
