@@ -32,7 +32,7 @@ namespace Eryph.Modules.Controller.ProjectMembers
 
             var name = message.Command.ProjectName.ToLowerInvariant();
             var existingProject = await _stateStore.For<Project>().GetBySpecAsync(
-                new ProjectSpecs.GetByName(EryphConstants.DefaultTenantId,
+                new ProjectSpecs.GetByName(message.Command.TenantId,
                     name), stoppingToken.Token);
 
             var assignmentRepo = _stateStore.For<ProjectRoleAssignment>();

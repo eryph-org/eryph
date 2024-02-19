@@ -46,11 +46,10 @@ namespace Eryph.Modules.Controller.Compute
             {
                 Data.State = CreateVMState.Created;
 
-                var tenantId = EryphConstants.DefaultTenantId;
                 var projectName = Data.Config?.Project ?? "default";
 
                 var project = await _stateStore.For<Project>()
-                    .GetBySpecAsync(new ProjectSpecs.GetByName(tenantId, projectName));
+                    .GetBySpecAsync(new ProjectSpecs.GetByName(Data.TenantId, projectName));
 
                 if (project == null)
                     throw new InvalidOperationException($"Project '{projectName}' not found.");
@@ -220,7 +219,7 @@ namespace Eryph.Modules.Controller.Compute
         {
             Data.Config = message.Config;
             Data.State = CreateVMState.Initiated;
-
+            Data.TenantId = message.TenantId;
             return StartNewTask(new ValidateCatletConfigCommand
                 {
                     MachineId = Guid.Empty,

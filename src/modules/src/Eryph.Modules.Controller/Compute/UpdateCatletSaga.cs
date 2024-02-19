@@ -97,6 +97,7 @@ namespace Eryph.Modules.Controller.Compute
                 var machineInfo = await _vmDataService.GetVM(Data.CatletId);
                 Data.ProjectId = machineInfo.Map(x => x.ProjectId).IfNone(Guid.Empty);
                 Data.AgentName = machineInfo.Map(x => x.AgentName).IfNone("");
+                Data.TenantId = machineInfo.Map(x => x.Project.TenantId).IfNone(Guid.Empty);
 
 
                 if (Data.ProjectId == Guid.Empty)
@@ -236,7 +237,8 @@ namespace Eryph.Modules.Controller.Compute
                 await _bus.SendLocal(new UpdateInventoryCommand
                 {
                     AgentName = Data.AgentName,
-                    Inventory = new List<VirtualMachineData> { r.Inventory }
+                    Inventory = new List<VirtualMachineData> { r.Inventory },
+                    TenantId = Data.TenantId
                 });
 
                 await await _vmDataService.GetVM(Data.CatletId).Match(

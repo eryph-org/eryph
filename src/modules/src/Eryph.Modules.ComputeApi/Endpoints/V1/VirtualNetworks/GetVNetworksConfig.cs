@@ -1,7 +1,9 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using Eryph.Core;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
@@ -16,14 +18,16 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
 {
     public class GetVNetworksConfig : SingleResultEndpoint<ProjectRequest, VirtualNetworkConfiguration, Project>
     {
+        readonly IUserRightsProvider _userRightsProvider;
 
-        public GetVNetworksConfig([NotNull] IGetRequestHandler<Project, VirtualNetworkConfiguration> requestHandler) : base(requestHandler)
+        public GetVNetworksConfig([NotNull] IGetRequestHandler<Project, VirtualNetworkConfiguration> requestHandler, IUserRightsProvider userRightsProvider) : base(requestHandler)
         {
+            _userRightsProvider = userRightsProvider;
         }
 
         protected override ISingleResultSpecification<Project> CreateSpecification(ProjectRequest request)
         {
-            return new ProjectSpecs.GetByName(EryphConstants.DefaultTenantId, request.Project);
+            return new ProjectSpecs.GetByName(_userRightsProvider.GetUserTenantId(), request.Project);
         }
 
         [HttpGet("projects/{project}/vnetworks/config")]

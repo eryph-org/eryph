@@ -51,7 +51,7 @@ namespace Eryph.Modules.Controller.Inventory
             parentDisks.Add(disk);
         }
 
-        protected async Task UpdateVMs(IEnumerable<VirtualMachineData> vmList, CatletFarm hostMachine)
+        protected async Task UpdateVMs(Guid tenantId, IEnumerable<VirtualMachineData> vmList, CatletFarm hostMachine)
         {
 
             var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
@@ -109,7 +109,7 @@ namespace Eryph.Modules.Controller.Inventory
                         Environment = diskInfo.Environment,
                         Frozen = diskInfo.Frozen,
                         StorageIdentifier = diskInfo.StorageIdentifier,
-                        Project = await FindRequiredProject(diskInfo.ProjectName)
+                        Project = await FindRequiredProject(tenantId,diskInfo.ProjectName)
                     };
                     d = await _vhdDataService.AddNewVHD(d);
                     addedDisks.Add(d);
@@ -168,7 +168,8 @@ namespace Eryph.Modules.Controller.Inventory
                             metadata.MachineId = Guid.NewGuid();
                             metadata.VMId = vmInfo.VMId;
                             
-                            await _dispatcher.StartNew(EryphConstants.DefaultTenantId,
+                            await _dispatcher.StartNew(
+                                tenantId,
                                 _messageContext.GetTraceId(),
                                 new UpdateCatletMetadataCommand
                             {
@@ -184,7 +185,7 @@ namespace Eryph.Modules.Controller.Inventory
                             metadata.MachineId = Guid.NewGuid();
 
                         
-                        var project = await FindRequiredProject(vmInfo.ProjectName);
+                        var project = await FindRequiredProject(tenantId,vmInfo.ProjectName);
 
                         await _vmDataService.AddNewVM(
                             VirtualMachineInfoToCatlet(vmInfo, hostMachine, metadata.MachineId, project),
@@ -231,7 +232,7 @@ namespace Eryph.Modules.Controller.Inventory
             }
         }
 
-        protected async Task<Option<Project>> FindProject(string projectIdentifier)
+        protected async Task<Option<Project>> FindProject(Guid tenantId, string projectIdentifier)
         {
             var isGuid = Guid.TryParse(projectIdentifier, out var projectId);
 
@@ -239,12 +240,12 @@ namespace Eryph.Modules.Controller.Inventory
                 return await StateStore.For<Project>().GetByIdAsync(projectId);
 
             return await StateStore.For<Project>()
-                .GetBySpecAsync(new ProjectSpecs.GetByName(EryphConstants.DefaultTenantId, projectIdentifier));
+                .GetBySpecAsync(new ProjectSpecs.GetByName(tenantId, projectIdentifier));
         }
 
-        protected async Task<Project> FindRequiredProject(string projectIdentifier)
+        protected async Task<Project> FindRequiredProject(Guid tenantId, string projectIdentifier)
         {
-            var foundProject = await FindProject(projectIdentifier);
+            var foundProject = await FindProject(tenantId, projectIdentifier);
 
             if(foundProject.IsNone)
                 throw new NotFoundException($"Project '{projectIdentifier}' not found.");

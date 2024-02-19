@@ -47,7 +47,7 @@ namespace Eryph.Modules.Controller.Projects
             }
 
             var existingProject = await _stateStore.For<Project>().GetBySpecAsync(
-                new ProjectSpecs.GetByName(EryphConstants.DefaultTenantId, name), stoppingToken.Token);
+                new ProjectSpecs.GetByName(message.Command.TenantId, name), stoppingToken.Token);
 
             if (existingProject != null)
             {
@@ -62,7 +62,7 @@ namespace Eryph.Modules.Controller.Projects
                 new Project
                 {
                     Id = message.Command.CorrelationId, Name = name,
-                    TenantId = EryphConstants.DefaultTenantId
+                    TenantId = message.Command.TenantId
                 }, stoppingToken.Token);
 
             await _messaging.ProgressMessage(message, $"Creating project '{name}'");

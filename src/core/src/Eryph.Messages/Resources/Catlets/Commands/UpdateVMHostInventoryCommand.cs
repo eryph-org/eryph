@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
 
@@ -11,5 +12,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands
         public VMHostMachineData HostInventory { get; set; }
 
         public List<VirtualMachineData> VMInventory { get; set; }
+
+        public Guid TenantId { get; set; }
     }
 }

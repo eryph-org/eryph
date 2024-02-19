@@ -5,6 +5,7 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
 using Eryph.Messages.Resources.Networks.Commands;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
@@ -18,9 +19,10 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
 {
     public class Update : NewOperationRequestEndpoint<UpdateProjectNetworksRequest, StateDb.Model.Project>
     {
-
-        public Update([NotNull] ICreateEntityRequestHandler<StateDb.Model.Project> operationHandler) : base(operationHandler)
+        IUserRightsProvider _userRightsProvider;
+        public Update([NotNull] ICreateEntityRequestHandler<StateDb.Model.Project> operationHandler, IUserRightsProvider userRightsProvider) : base(operationHandler)
         {
+            _userRightsProvider = userRightsProvider;
         }
 
         protected override object CreateOperationMessage(UpdateProjectNetworksRequest request)
@@ -35,7 +37,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
                 CorrelationId = request.CorrelationId == Guid.Empty 
                     ? new Guid()
                     : request.CorrelationId, 
-                    Config = config };
+                    Config = config,
+                    TenantId = _userRightsProvider.GetUserTenantId()
+            };
         }
 
         [Authorize(Policy = "compute:projects:write")]
