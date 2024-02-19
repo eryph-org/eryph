@@ -40,16 +40,7 @@ public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
         if (resource.Project == null)
             return false;
 
-        var projectRight = requiredAccess switch
-        {
-            AccessRight.None => AccessRight.None,
-            AccessRight.Read => AccessRight.Read,
-            AccessRight.Write => AccessRight.Write,
-            AccessRight.Admin => AccessRight.Write,
-            _ => throw new ArgumentOutOfRangeException(nameof(requiredAccess), requiredAccess, null)
-        };
-
-        return await HasProjectAccess(resource.Project, projectRight);
+        return await HasProjectAccess(resource.Project, requiredAccess);
 
     }
 
@@ -122,8 +113,15 @@ public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
                 EryphConstants.BuildInRoles.Reader, EryphConstants.BuildInRoles.Contributor,
                 EryphConstants.BuildInRoles.Owner
             },
-            AccessRight.Write => new[] { EryphConstants.BuildInRoles.Contributor, EryphConstants.BuildInRoles.Owner },
-            AccessRight.Admin => new[] { EryphConstants.BuildInRoles.Contributor, EryphConstants.BuildInRoles.Owner },
+            AccessRight.Write => new[]
+            {
+                EryphConstants.BuildInRoles.Contributor, 
+                EryphConstants.BuildInRoles.Owner
+            },
+            AccessRight.Admin => new[]
+            {
+                EryphConstants.BuildInRoles.Owner
+            },
             _ => throw new ArgumentOutOfRangeException(nameof(accessRight), accessRight, null)
         };
     }
