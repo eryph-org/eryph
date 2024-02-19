@@ -31,7 +31,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
 
         protected abstract object CreateOperationMessage(TEntity model, TRequest request);
 
-        private ISingleResultSpecification<TEntity> CreateSpecification(TRequest request)
+        private ISingleResultSpecification<TEntity>? CreateSpecification(TRequest request)
         {
             return _specBuilder.GetSingleEntitySpec(request, AccessRight.Write);
         }

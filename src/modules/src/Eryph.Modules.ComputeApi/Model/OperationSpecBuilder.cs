@@ -22,8 +22,11 @@ namespace Eryph.Modules.ComputeApi.Model
             var tenantId = _userRightsProvider.GetUserTenantId();
 
             return !Guid.TryParse(request.Id, out var requestId) 
-                ? null 
-                : new OperationSpecs.GetById(requestId, tenantId, request.Expand, request.LogTimestamp);
+                ? null
+                : new OperationSpecs.GetById(requestId,
+                    _userRightsProvider.GetAuthContext(), 
+                    _userRightsProvider.GetProjectRoles(AccessRight.Read),
+                        request.Expand, request.LogTimestamp);
         }
 
         public ISpecification<OperationModel> GetEntitiesSpec(OperationsListRequest request)
