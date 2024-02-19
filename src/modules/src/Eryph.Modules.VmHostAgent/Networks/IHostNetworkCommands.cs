@@ -23,7 +23,7 @@ public interface IHostNetworkCommands<RT> where RT : struct, HasCancel<RT>
 
     Aff<RT, Seq<NetNat>> GetNetNat();
     Aff<RT, Unit> EnableBridgeAdapter(string adapterName);
-    Aff<RT, Unit> ConfigureNATAdapter(string adapterName, IPAddress ipAddress, IPNetwork network);
+    Aff<RT, Unit> ConfigureAdapterIp(string adapterName, IPAddress ipAddress, IPNetwork network);
     Aff<RT, Seq<TypedPsObject<VMNetworkAdapter>>> GetNetAdaptersBySwitch(Guid switchId);
     Aff<RT, Unit> DisconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters);
     Aff<RT, Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters, string switchName);

@@ -171,7 +171,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
             from provider in overlayProviders.Where(p => providerNames.Contains(p.Name))
             let p1 = networkPlan.AddSwitch($"externalNet-{networkPlan.Id}-{provider.Name}")
             let p2 = p1.AddExternalNetworkPort($"externalNet-{networkPlan.Id}-{provider.Name}",
-                provider.Name)
+                provider.Name, provider.Vlan)
 
             select p2).Apply(s => JoinPlans(s, networkPlan));
     }

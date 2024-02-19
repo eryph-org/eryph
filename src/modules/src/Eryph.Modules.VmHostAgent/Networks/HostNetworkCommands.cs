@@ -105,7 +105,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                     .AddCommand("Enable-NetAdapter"))
                 .ToAff());
 
-    public Aff<RT, Unit> ConfigureNATAdapter(string adapterName, IPAddress ipAddress, IPNetwork network)
+    public Aff<RT, Unit> ConfigureAdapterIp(string adapterName, IPAddress ipAddress, IPNetwork network)
     {
         var ipCommand = PsCommandBuilder.Create()
             .AddCommand("New-NetIPAddress")

@@ -38,6 +38,7 @@ public enum NetworkChangeOperation
 
     RemoveAdapterPort,
     AddAdapterPort,
+    UpdateBridgePort,
 
     ConfigureNatIp,
     UpdateBridgeMapping
@@ -275,6 +276,22 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         }
     }
 
+    private (int? VlanTag, string? VlanMode) GetBridgePortSettings(NetworkProviderBridgeOptions? options)
+    {
+        var bridgeVlanTag = options?.BridgeVlan;
+        var vlanMode = options?.VLanMode switch
+        {
+            BridgeVlanMode.Invalid => null,
+            BridgeVlanMode.Access => "access",
+            BridgeVlanMode.NativeUntagged => "native-untagged",
+            BridgeVlanMode.NativeTagged => "native-tagged",
+            null => null,
+            _ => null
+        };
+
+        return (bridgeVlanTag, vlanMode);
+    }
+
     public Aff<RT, Seq<string>> AddMissingBridges(
         bool hadSwitchBefore,
         Seq<string> enableBridges,
@@ -292,11 +309,15 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
                     _logger.LogDebug("Adding operation to add bridge {bridge}", newBridge);
 
+                    var (vlanTag, vlanMode) = GetBridgePortSettings(newBridge.Options);
+
                     AddOperation(() =>
                         from c in default(RT).HostNetworkCommands
                         from ovs in default(RT).OVS
                         let cancelAddBridge = new CancellationTokenSource(TimeSpan.FromSeconds(30))
                         from uAddBridge in ovs.AddBridge(newBridge.BridgeName, cancelAddBridge.Token).ToAff(l => l)
+                        let cancelSetBridge = new CancellationTokenSource(TimeSpan.FromSeconds(30))
+                        from uSetBridgePort in ovs.UpdateBridgePort(newBridge.BridgeName, vlanTag, vlanMode, cancelSetBridge.Token).ToAff(l => l)
                         from uWait in c.WaitForBridgeAdapter(newBridge.BridgeName)
                         from uEnable in
                             enableBridges.Contains(newBridge.BridgeName)
@@ -458,7 +479,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                                      ? AddOperation(
                                          () => default(RT).HostNetworkCommands.Bind(cc => cc
                                              .EnableBridgeAdapter(newBridge.BridgeName)
-                                             .Bind(_ => c.ConfigureNATAdapter(newBridge.BridgeName, newBridge.IPAddress,
+                                             .Bind(_ => c.ConfigureAdapterIp(newBridge.BridgeName, newBridge.IPAddress,
                                                  newBridge.Network))), NetworkChangeOperation.ConfigureNatIp,
                                          newBridge.BridgeName)
                                      : unit
@@ -528,6 +549,54 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 return res.ToArray() //force enumeration to generate updates
                     .TraverseParallel(l => l);
             }).Map(_ => ovsBridges);
+        }
+    }
+
+    public Aff<RT, Unit> UpdateBridgePorts(
+        NetworkProvidersConfiguration newConfig,
+        Seq<string> createdBridges,
+        OVSBridgeInfo ovsBridges)
+    {
+        using (_logger.BeginScope("Method: {method}", nameof(UpdateBridgePorts)))
+        {
+
+            foreach (var networkProvider in newConfig.NetworkProviders
+                         .Where(x => x.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverLay))
+            {
+                var (vlanTag, vlanMode) = GetBridgePortSettings(networkProvider.BridgeOptions);
+
+                if (createdBridges.Contains(networkProvider.BridgeName))
+                    return SuccessAff(unit);
+
+                var (currentTag, currentVLanMode) = ovsBridges.Ports.Find(networkProvider.BridgeName)
+                    .Map(port => (port.Tag, port.VlanMode)).IfNone((null,null));
+
+                if(currentTag.GetValueOrDefault() == vlanTag.GetValueOrDefault() && currentVLanMode == vlanMode)
+                    return SuccessAff(unit);
+
+
+                AddOperation(
+                    () => default(RT).OVS.Bind(ovs =>
+                    {
+                        var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+                        return ovs.UpdateBridgePort(networkProvider.BridgeName, vlanTag, vlanMode, cancelSourceCommand.Token)
+                            .ToAff(l => l);
+                    }),
+                    _ => true,
+                    () => default(RT).OVS.Bind(ovs =>
+                    {
+                        var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                        return ovs
+                            .UpdateBridgePort(networkProvider.BridgeName, currentTag, currentVLanMode, cancelSourceCommand.Token)
+                            .ToAff(l => l);
+                    }),
+                    NetworkChangeOperation.UpdateBridgePort, networkProvider.BridgeName
+                );
+
+            }
+
+            return SuccessAff(unit);
         }
     }
 

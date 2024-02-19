@@ -15,4 +15,6 @@ public interface IOVSControl
     EitherAsync<Error, Seq<BridgePort>> GetPorts(CancellationToken cancellationToken);
     EitherAsync<Error, OVSTableRecord> GetOVSTable(CancellationToken cancellationToken);
     EitherAsync<Error, Unit> UpdateBridgeMapping(string bridgeMappings, CancellationToken cancellationToken);
+    EitherAsync<Error, Unit> UpdateBridgePort(string bridgeName, int? tag, string? vlanMode,  CancellationToken cancellationToken);
+
 }
