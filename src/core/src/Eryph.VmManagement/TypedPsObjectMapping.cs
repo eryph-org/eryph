@@ -101,9 +101,20 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
                         c.AddHyperVMapping<VMFirmwareInfo>(hyperVAssembly, "VMFirmware");
 
                         c.AddHyperVMapping<VMSwitchExtension>(hyperVAssembly, "VMSwitchExtension");
-                        
+                        c.AddHyperVMapping<VMSystemSwitchExtension>(hyperVAssembly, "VMSystemSwitchExtension");
                     }
 
+                    c.IgnoreUnmapped(_logger);
+                });
+                cfg.CreateProfile("Dism", c =>
+                {
+                    var assembly = AppDomain.CurrentDomain.GetAssemblies()
+                        .FirstOrDefault(a => a.FullName?.Contains("Microsoft.Dism.PowerShell") ?? false);
+                    var assemblyType = assembly?.GetType("Microsoft.Dism.Commands.BasicDriverObject", false);
+                    if (assemblyType is null)
+                        return;
+
+                    c.CreateMap(assemblyType, typeof(DismDriverInfo));
                     c.IgnoreUnmapped(_logger);
                 });
             });

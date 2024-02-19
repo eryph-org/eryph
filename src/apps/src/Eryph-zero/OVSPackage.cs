@@ -1,20 +1,17 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.AccessControl;
-using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
-using Eryph.Security.Cryptography;
-using Org.BouncyCastle.Security;
+using LanguageExt;
 using Serilog;
 
 namespace Eryph.Runtime.Zero;
 
 internal class OVSPackage
 {
-    public static string UnpackAndProvide(bool canInstallDriver, string? relativePackagePath = null)
+    public static string UnpackAndProvide(string? relativePackagePath = null)
     {
         var log = Log.ForContext<OVSPackage>();
         var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
@@ -52,7 +49,8 @@ internal class OVSPackage
         foreach (var ovsFilesDir in ovsRootDir.GetDirectories("run_*"))
         {
             log.Verbose("Checking path '{ovsFileDir}' for ovs files", ovsFilesDir.FullName);
-            var hasOvs = ovsFilesDir.GetFiles("ovs-vswitchd.exe", SearchOption.AllDirectories).Any();
+            var hasOvs = ovsFilesDir.GetFiles("ovs-vswitchd.exe", SearchOption.AllDirectories).Any()
+                && ovsFilesDir.GetFiles("dbo_ovse.inf", SearchOption.AllDirectories).Any();
            
             if(!hasOvs) continue;
            
@@ -84,74 +82,14 @@ internal class OVSPackage
         if (ovsPackageExists)
         {
             log.Information("Installing Open VSwitch package");
-
-            runDirNo++;
+            runDirNo = ovsRootDir.GetDirectories("run_*")
+                .Map(d => Prelude.parseInt(d.Name.Replace("run_", "")))
+                .Somes().Fold(0, Math.Max) + 1;
             var extractFolder = Path.Combine(ovsRootDir.FullName, $"run_{runDirNo:D}");
             ZipFile.ExtractToDirectory(ovsPackageFile, extractFolder);
 
-
-            if (canInstallDriver)
-            {
-                var exitCode = -1;
-                try
-                {
-                    log.Information("Installing Open VSwitch driver");
-
-
-                    var driverPathDir = new DirectoryInfo(Path.Combine(extractFolder, "driver"));
-
-                    if(Directory.Exists(Path.Combine(ovsRootPath, "driver")))
-                        Directory.Delete(Path.Combine(ovsRootPath, "driver"), true);
-
-                    driverPathDir.MoveTo(Path.Combine(ovsRootPath, "driver"));
-
-#if DEBUG
-                    //for development allow installation of self signed driver package
-                    if (File.Exists(Path.Combine(driverPathDir.FullName, "package.cer")))
-                    {
-                        var certService = new WindowsCertificateStoreService();
-                        var cert = X509Certificate.CreateFromCertFile(Path.Combine(driverPathDir.FullName,
-                            "package.cer"));
-                        certService.AddAsRootCertificate(DotNetUtilities.FromX509Certificate(cert));
-                    }
-#endif
-                        var process = Process.Start(new ProcessStartInfo("C:\\Windows\\system32\\netcfg.exe",
-                        $"-l \"dbo_ovse.inf\" -c s -i DBO_OVSE")
-                    {
-                        WorkingDirectory = driverPathDir.FullName,
-                        RedirectStandardError = true,
-                        RedirectStandardOutput = true
-                    });
-
-                    if (process != null)
-                    {
-                        process.WaitForExit();
-                        exitCode = process.HasExited ? process.ExitCode : exitCode;
-
-                        if (exitCode != 0)
-                        {
-                            var message = process.StandardError.ReadToEnd();
-                            if(string.IsNullOrWhiteSpace(message))
-                                message = process.StandardOutput.ReadToEnd();
-
-                            log.Error("Driver installation failed with: {message}", message);
-                        }
-                    }
-
-                }
-                catch
-                {
-                    //ignored
-                }
-
-                if (exitCode != 0)
-                    throw new IOException(
-                        $"Failed to install eryph overlay driver. Installation exit code: {exitCode}");
-
-                if(relativePackagePath==null)
-                    File.Move(ovsPackageFile, ovsPackageBackupFile, true);
-
-            }
+            if (relativePackagePath == null)
+                File.Move(ovsPackageFile, ovsPackageBackupFile, true);
         }
 
         //cleanup old rundirs (if not in use any more)

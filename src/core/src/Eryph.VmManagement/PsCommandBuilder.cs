@@ -59,6 +59,11 @@ public class PsCommandBuilder
         return data;
     }
 
+    public BasePart[] ToChain()
+    {
+        return _dataChain.ToArray();
+    }
+
     public IEnumerable Build(PowerShell ps)
     {
         TraceContext.Current.Write(PowershellCommandTraceData.FromObject(this));

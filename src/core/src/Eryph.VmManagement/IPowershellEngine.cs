@@ -14,6 +14,9 @@ public interface IPowershellEngine
     Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder,
         Func<int, Task> reportProgress = null);
 
+    EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(PsCommandBuilder builder,
+        Func<int, Task> reportProgress = null);
+
     Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder, Func<int, Task> reportProgress = null);
     ITypedPsObjectMapping ObjectMapping { get; }
 }

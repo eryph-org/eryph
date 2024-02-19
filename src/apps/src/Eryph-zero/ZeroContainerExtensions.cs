@@ -21,7 +21,7 @@ namespace Eryph.Runtime.Zero
 {
     internal static class ZeroContainerExtensions
     {
-        public static void Bootstrap(this Container container, string ovsPackageDir)
+        public static void Bootstrap(this Container container, string ovsRunDir)
         {
             container
                 .UseInMemoryBus()
@@ -31,9 +31,7 @@ namespace Eryph.Runtime.Zero
             container.Register<ICryptoIOServices, WindowsCryptoIOServices>();
             container.Register<ICertificateGenerator, CertificateGenerator>();
             container.Register<ICertificateStoreService, WindowsCertificateStoreService>();
-
-            var ovsPath = OVSPackage.UnpackAndProvide(!WindowsServiceHelpers.IsWindowsService(), ovsPackageDir);
-            container.RegisterInstance(new EryphOvsPathProvider(ovsPath));
+            container.RegisterInstance(new EryphOvsPathProvider(ovsRunDir));
             container.Register<IOVNSettings, LocalOVSWithOVNSettings>();
             container.Register<ISysEnvironment, EryphOVSEnvironment>();
             container.Register<INetworkProviderManager, NetworkProviderManager>();

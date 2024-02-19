@@ -48,6 +48,13 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
 
     }
 
+    public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
+        PsCommandBuilder builder,
+        Func<int, Task> reportProgress = null)
+    {
+        throw new NotImplementedException();
+    }
+
     public Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder, Func<int, Task>? reportProgress = null)
     {
         var commandInput = builder.ToDictionary();
