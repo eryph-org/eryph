@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel.Networks;
 using Eryph.Core;
 using Eryph.Core.Network;
+using Eryph.ModuleCore.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -90,7 +91,8 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
             _log.LogDebug("Environment {env}: Updating network {network}", savedNetwork.Environment ?? "default", savedNetwork.Name);
 
-            var networkProvider = providerConfig.NetworkProviders.First(x => x.Name == providerName);
+            var networkProvider = providerConfig.NetworkProviders.FirstOrDefault(x => x.Name == providerName) 
+                                  ?? throw new InconsistentNetworkConfigException($"Network provider {providerName} not found.");
             var isFlatNetwork = networkProvider.Type == NetworkProviderType.Flat;
 
             savedNetwork.NetworkProvider = providerName;
@@ -112,6 +114,9 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
                 continue;
             }
+
+            if(string.IsNullOrWhiteSpace(networkConfig.Address))
+                throw new InconsistentNetworkConfigException($"Network '{networkConfig.Name}': Network address not set.");
 
             var networkAddress = IPNetwork.Parse(networkConfig.Address);
 
@@ -275,7 +280,8 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
             foreach (var subnetConfig in networkConfig.Subnets.DistinctBy(x => x.Name))
             {
-                var savedSubnet = savedNetwork.Subnets.First(x => x.Name == subnetConfig.Name);
+                var savedSubnet = savedNetwork.Subnets.FirstOrDefault(x => x.Name == subnetConfig.Name)
+                                  ?? throw new InconsistentNetworkConfigException($"Subnet {subnetConfig} not found in network {savedNetwork.Name}");
 
                 _log.LogDebug("Updating subnet {network}/{subnet}", savedNetwork.Name, savedSubnet.Name);
 

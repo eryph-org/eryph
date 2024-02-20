@@ -7,6 +7,7 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages.Resources.Networks.Commands;
+using Eryph.ModuleCore.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -82,7 +83,16 @@ namespace Eryph.Modules.Controller.Networks
 
             if (messages.Length == 0)
             {
-                await _realizer.UpdateNetwork(project.Id, Data.Config, providerConfig);
+                try
+                {
+                    await _realizer.UpdateNetwork(project.Id, Data.Config, providerConfig);
+                }
+                catch (InconsistentNetworkConfigException ex)
+                {
+                    _log.LogError(ex, "Failed to update the network. Error: {message}", ex.Message);
+                    await Fail(new ErrorData { ErrorMessage = $"Failed to update the network. Error: {ex.Message}", });
+
+                }
 
                 await StartNewTask(new UpdateNetworksCommand
                 {
