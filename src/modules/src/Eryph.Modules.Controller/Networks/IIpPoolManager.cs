@@ -6,7 +6,7 @@ using LanguageExt.Common;
 
 namespace Eryph.Modules.Controller.Networks;
 
-internal interface IIpPoolManager
+public interface IIpPoolManager
 {
     EitherAsync<Error, IpPoolAssignment> AcquireIp(Guid subnetId, string poolName, CancellationToken cancellationToken);
 

@@ -12,7 +12,7 @@ using LanguageExt.Common;
 
 namespace Eryph.Modules.Controller.Networks;
 
-internal class CatletIpManager : BaseIpManager, ICatletIpManager
+public class CatletIpManager : BaseIpManager, ICatletIpManager
 {
 
     public CatletIpManager(IStateStore stateStore, IIpPoolManager poolManager): base(stateStore, poolManager)
