@@ -41,6 +41,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
                 CorrelationId = request.CorrelationId == Guid.Empty 
                     ? new Guid()
                     : request.CorrelationId, 
+                TenantId = _userRightsProvider.GetUserTenantId(),
                     Config = config };
         }
 

@@ -21,7 +21,8 @@ public class VirtualNetworkSpecBuilder : ResourceSpecBuilder<StateDb.Model.Virtu
 
     public ISpecification<StateDb.Model.VirtualNetwork> GetEntitiesSpec(ProjectListRequest request)
     {
-        return new ResourceSpecs<StateDb.Model.VirtualNetwork>.GetAllForProject(_userRightsProvider.GetUserTenantId(), request.Project);
+        return new ResourceSpecs<StateDb.Model.VirtualNetwork>
+            .GetAllForProject(_userRightsProvider.GetUserTenantId(), request.Project);
     }
 
 }
