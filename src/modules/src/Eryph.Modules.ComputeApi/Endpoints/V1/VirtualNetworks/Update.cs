@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
 using Eryph.Messages.Resources.Networks.Commands;
@@ -10,6 +9,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +19,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
 {
     public class Update : NewOperationRequestEndpoint<UpdateProjectNetworksRequest, StateDb.Model.Project>
     {
-        IUserRightsProvider _userRightsProvider;
+        private readonly IUserRightsProvider _userRightsProvider;
         public Update([NotNull] ICreateEntityRequestHandler<StateDb.Model.Project> operationHandler, IUserRightsProvider userRightsProvider) : base(operationHandler)
         {
             _userRightsProvider = userRightsProvider;
@@ -31,6 +31,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
                 return null;
 
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(request.Configuration.Value);
+            if (configDictionary == null)
+                return null;
+
             var config = ProjectNetworksConfigDictionaryConverter.Convert(configDictionary);
 
             return new CreateNetworksCommand{ 
@@ -43,6 +46,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
         }
 
         [Authorize(Policy = "compute:projects:write")]
+        // ReSharper disable once StringLiteralTypo
         [HttpPost("vnetworks")]
         [SwaggerOperation(
             Summary = "Creates or updates virtual networks of project",
@@ -51,9 +55,26 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
             Tags = new[] { "Virtual Networks" })
         ]
 
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromBody] UpdateProjectNetworksRequest request, CancellationToken cancellationToken = default)
+        public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromBody] UpdateProjectNetworksRequest request, CancellationToken cancellationToken = default)
         {
-            return base.HandleAsync(request, cancellationToken);
+            ProjectNetworksConfig config = null;
+            if (request.Configuration != null)
+            {
+                var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(request.Configuration.Value);
+                if (configDictionary != null)
+                {
+                    config = ProjectNetworksConfigDictionaryConverter.Convert(configDictionary);
+                }
+            }
+
+            if (config == null)
+                return BadRequest();
+
+            var projectAccess = await _userRightsProvider.HasProjectAccess(config.Project ?? "default", AccessRight.Admin);
+            if (!projectAccess)
+                return Forbid();
+
+            return await base.HandleAsync(request, cancellationToken);
         }
 
 

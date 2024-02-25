@@ -35,21 +35,21 @@ public class AddProjectMemberTests : IClassFixture<WebModuleFactory<ComputeApiMo
                 stateStore.Projects.Add(
                     new StateDb.Model.Project
                     {
-                        Id = Guid.NewGuid(),
+                        Id = Guid.Parse("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}"),
                         Name = "dtid_norole",
                         TenantId = EryphConstants.DefaultTenantId
                     });
                 stateStore.Projects.Add(
                     new StateDb.Model.Project
                     {
-                        Id = Guid.NewGuid(),
+                        Id = Guid.Parse("{D35830C0-3D25-406A-AE49-4E0E3B296D77}"),
                         Name = "otid_norole",
                         TenantId = new Guid()
                     });
 
                 var project = new StateDb.Model.Project
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.Parse("{4A8A6FFC-48D6-4BD7-A6B1-14D5340C34EB}"),
                     Name = "dtid_role",
                     TenantId = EryphConstants.DefaultTenantId
                 };
@@ -86,19 +86,19 @@ public class AddProjectMemberTests : IClassFixture<WebModuleFactory<ComputeApiMo
 
 
     [Theory]
-    [InlineData("dtid_norole", true, "compute:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("dtid_norole", false, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("otid_norole", false, "compute:projects:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("dtid_role", true, "compute:projects:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("dtid_role", true, "compute:projects:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", false)]
+    [InlineData("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}", true, "compute:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}", false, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{D35830C0-3D25-406A-AE49-4E0E3B296D77}", false, "compute:projects:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{4A8A6FFC-48D6-4BD7-A6B1-14D5340C34EB}", true, "compute:projects:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{4A8A6FFC-48D6-4BD7-A6B1-14D5340C34EB}", true, "compute:projects:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", false)]
     public async Task Can_Add_ProjectMember_when_authorized(
-        string projectName, bool isAuthorized, string scope, string tenantId, bool isSuperAdmin)
+        string projectIdString, bool isAuthorized, string scope, string tenantId, bool isSuperAdmin)
     {
         var claims = CreateClaims(scope, Guid.Parse(tenantId), isSuperAdmin);
-
+        var projectId = Guid.Parse(projectIdString);
         var response = await _factory.CreateDefaultClient()
             .SetFakeBearerToken(claims)
-            .PostAsJsonAsync($"v1/projects/{projectName}/members",
+            .PostAsJsonAsync($"v1/projects/{projectId}/members",
                 new NewProjectMemberBody()
                 {
                     RoleId = EryphConstants.BuildInRoles.Reader,

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Ardalis.Specification;
 using Eryph.Core;
 using Eryph.StateDb.Model;
@@ -15,27 +14,14 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class GetAll : Specification<T>
         {
-            public GetAll(AuthContext authContext, IEnumerable<Guid> sufficientRoles, [CanBeNull] string filteredProject,
+            public GetAll(AuthContext authContext, IEnumerable<Guid> sufficientRoles, [CanBeNull] Guid? filteredProject,
                 Action<ISpecificationBuilder<T>> customizeAction = null)
             {
 
-                Query.Where(x => x.Project.TenantId == authContext.TenantId);
+                authContext.QueryResourceAccess(Query, sufficientRoles);
 
-                if (filteredProject!= null)
-                {
-                    if(Guid.TryParse(filteredProject, out var projectId))
-                        Query.Where(x => x.ProjectId == projectId);
-                    else
-                        Query.Where(x => x.Project.Name == filteredProject);
-
-                }
-                
-                if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
-                    Query.Where(x => x.Project.ProjectRoles
-                        .Any(y=> authContext.Identities.Contains(y.IdentityId) 
-                                 && sufficientRoles.Contains(y.RoleId)));
-
-
+                if (filteredProject!= null) 
+                    Query.Where(x => x.ProjectId == filteredProject.GetValueOrDefault());
 
                 Query.OrderBy(x => x.Id);
                 customizeAction?.Invoke(Query);
@@ -45,11 +31,12 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class GetAllForProject : Specification<T>
         {
-            public GetAllForProject(Guid tenantId, string projectName,  Action<ISpecificationBuilder<T>> customizeAction = null)
+
+            public GetAllForProject(AuthContext authContext, Guid projectId, IEnumerable<Guid> sufficientRoles, Action<ISpecificationBuilder<T>> customizeAction = null)
             {
-                Query
-                    .Where(x=>x.Project.TenantId == tenantId && x.Project.Name == projectName)
-                    .OrderBy(x => x.Id);
+                Query.OrderBy(x => x.Id);
+                authContext.QueryResourceAccess(Query, sufficientRoles);
+
                 customizeAction?.Invoke(Query);
 
             }
@@ -76,24 +63,13 @@ namespace Eryph.StateDb.Specifications
             public GetById(Guid id, AuthContext authContext, IEnumerable<Guid> sufficientRoles,
                 Action<ISpecificationBuilder<T>> customizeAction = null)
             {
-
-                Query.Where(x => x.Id == id && x.Project.TenantId == authContext.TenantId)
-                    .Include(x => x.Project);
-
-
-                if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
-                    Query.Where(x => x.Project.ProjectRoles
-                        .Any(y => authContext.Identities.Contains(y.IdentityId)
-                                  && sufficientRoles.Contains(y.RoleId)));
-
+                Query.Where(x => x.Id == id);
+                authContext.QueryResourceAccess(Query, sufficientRoles);
+                
                 customizeAction?.Invoke(Query);
 
             }
         }
 
     }
-
-
-
-
 }

@@ -1,7 +1,9 @@
-﻿namespace Eryph.Modules.AspNetCore.ApiProvider.Model;
+﻿using System;
+
+namespace Eryph.Modules.AspNetCore.ApiProvider.Model;
 
 public interface IListRequest
 {
-    public string? Project { get; }
+    public Guid? Project { get; }
 
 }

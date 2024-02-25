@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using Eryph.Core;
@@ -11,6 +10,7 @@ using Eryph.Modules.ComputeApi.Model;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -18,7 +18,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
 {
     public class GetVNetworksConfig : SingleResultEndpoint<ProjectRequest, VirtualNetworkConfiguration, Project>
     {
-        readonly IUserRightsProvider _userRightsProvider;
+        private readonly IUserRightsProvider _userRightsProvider;
 
         public GetVNetworksConfig([NotNull] IGetRequestHandler<Project, VirtualNetworkConfiguration> requestHandler, IUserRightsProvider userRightsProvider) : base(requestHandler)
         {
@@ -27,10 +27,14 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
 
         protected override ISingleResultSpecification<Project> CreateSpecification(ProjectRequest request)
         {
-            return new ProjectSpecs.GetByName(_userRightsProvider.GetUserTenantId(), request.Project);
-        }
+            var sufficientRoles = _userRightsProvider.GetProjectRoles(AccessRight.Read);
 
-        [HttpGet("projects/{project}/vnetworks/config")]
+            return new ProjectSpecs.GetById(request.Project.GetValueOrDefault(),
+                _userRightsProvider.GetAuthContext(), sufficientRoles);
+        }
+        [Authorize(Policy = "compute:projects:read")]
+        // ReSharper disable once StringLiteralTypo
+        [HttpGet("projects/{projectId}/vnetworks/config")]
         [SwaggerOperation(
             Summary = "Get project virtual networks configuration",
             Description = "Get the configuration for all networks in a project",

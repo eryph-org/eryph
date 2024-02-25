@@ -21,7 +21,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
         }
 
         [Authorize(Policy = "compute:projects:read")]
-        [HttpGet("projects/{project}/members/{id}")]
+        [HttpGet("projects/{projectId}/members/{id}")]
         [SwaggerOperation(
             Summary = "Get a project member",
             Description = "Get a project member",

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Linq;
 using Ardalis.Specification;
 using Eryph.Core;
 using Eryph.StateDb.Model;
@@ -49,12 +48,12 @@ public static class ProjectRoleAssignmentSpecs
 
     public sealed class GetByProject : Specification<ProjectRoleAssignment>
     {
-        public GetByProject(string projectName, AuthContext authContext, IEnumerable<Guid> sufficientRoles)
+        public GetByProject(Guid projectId, AuthContext authContext, IEnumerable<Guid> sufficientRoles)
         {
             Query.Include(x => x.Project);
 
             Query.Where(x => x.Project.TenantId == authContext.TenantId 
-                             && x.Project.Name == projectName);
+                             && x.ProjectId == projectId);
 
             if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
                 Query.Where(x => x.Project.ProjectRoles

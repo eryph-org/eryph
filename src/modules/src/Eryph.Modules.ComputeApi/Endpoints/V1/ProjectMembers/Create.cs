@@ -24,7 +24,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
         }
 
         [Authorize(Policy = "compute:projects:write")]
-        [HttpPost("projects/{project}/members")]
+        [HttpPost("projects/{projectId}/members")]
         [SwaggerOperation(
             Summary = "Adds a project member",
             Description = "Add a project member",
@@ -34,7 +34,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
         public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
             [FromRoute] NewProjectMemberRequest request, CancellationToken cancellationToken = default)
         {
-            var hasAccess = await _userRightsProvider.HasProjectAccess(request.Project, AccessRight.Admin);
+            var hasAccess = await _userRightsProvider.HasProjectAccess(request.Project.GetValueOrDefault(), AccessRight.Admin);
             if(!hasAccess)
                 return Forbid();
 
@@ -48,7 +48,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
             {
                 CorrelationId = request.Body.CorrelationId.GetValueOrDefault(Guid.NewGuid()),
                 MemberId = request.Body.MemberId,
-                ProjectName = request.Project,
+                ProjectId = request.Project.GetValueOrDefault(),
                 TenantId = _userRightsProvider.GetUserTenantId(),
                 RoleId = request.Body.RoleId
             };

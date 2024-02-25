@@ -41,6 +41,10 @@ public static class ProjectSpecs
                               && sufficientRoles.Contains(y.RoleId)));
         }
 
+        public GetById(Guid tenantId, Guid projectId)
+        {
+            Query.Where(x => x.Id == projectId && x.TenantId == tenantId);
+        }
 
     }
 

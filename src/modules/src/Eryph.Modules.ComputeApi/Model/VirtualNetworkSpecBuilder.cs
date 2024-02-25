@@ -1,11 +1,9 @@
-﻿using System;
-using Ardalis.Specification;
-using Eryph.Core;
+﻿using Ardalis.Specification;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using Microsoft.AspNetCore.Http;
 
 namespace Eryph.Modules.ComputeApi.Model;
 
@@ -21,8 +19,9 @@ public class VirtualNetworkSpecBuilder : ResourceSpecBuilder<StateDb.Model.Virtu
 
     public ISpecification<StateDb.Model.VirtualNetwork> GetEntitiesSpec(ProjectListRequest request)
     {
+        var sufficientRoles = _userRightsProvider.GetResourceRoles<StateDb.Model.VirtualNetwork>(AccessRight.Read);
         return new ResourceSpecs<StateDb.Model.VirtualNetwork>
-            .GetAllForProject(_userRightsProvider.GetUserTenantId(), request.Project);
+            .GetAllForProject(_userRightsProvider.GetAuthContext(), request.Project.GetValueOrDefault(), sufficientRoles);
     }
 
 }

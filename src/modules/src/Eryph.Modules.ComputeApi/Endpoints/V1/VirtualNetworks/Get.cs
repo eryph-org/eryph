@@ -22,6 +22,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
         }
 
         [Authorize(Policy = "compute:projects:read")]
+        // ReSharper disable once StringLiteralTypo
         [HttpGet("vnetworks/{id}")]
         [SwaggerOperation(
             Summary = "Get a virtual network",

@@ -21,7 +21,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
         }
 
         [Authorize(Policy = "compute:projects:read")]
-        [HttpGet("projects/{project}/vnetworks")]
+        [HttpGet("projects/{projectId}/vnetworks")]
         [SwaggerOperation(
             Summary = "Get list of virtual networks in a project",
             Description = "Get list of virtual networks in project",

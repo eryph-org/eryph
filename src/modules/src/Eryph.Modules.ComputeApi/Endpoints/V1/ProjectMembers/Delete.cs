@@ -27,7 +27,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
         }
 
         [Authorize(Policy = "compute:projects:write")]
-        [HttpDelete("projects/{project}/members/{id}")]
+        [HttpDelete("projects/{projectId}/members/{id}")]
         [SwaggerOperation(
             Summary = "Remove a project member",
             Description = "Removes a project member assignment",

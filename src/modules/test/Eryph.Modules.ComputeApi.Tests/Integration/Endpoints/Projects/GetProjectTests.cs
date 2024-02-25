@@ -35,21 +35,21 @@ public class GetProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
                 stateStore.Projects.Add(
                     new StateDb.Model.Project
                     {
-                        Id = Guid.NewGuid(),
+                        Id = Guid.Parse("{75715EAD-21E2-44DC-A3C4-1CDAAB387F45}"),
                         Name = "dtid_norole",
                         TenantId = EryphConstants.DefaultTenantId
                     });
                 stateStore.Projects.Add(
                     new StateDb.Model.Project
                     {
-                        Id = Guid.NewGuid(),
+                        Id = Guid.Parse("{998CC7B4-AB19-4FBA-B287-5D2A70F1DB5D}"),
                         Name = "otid_norole",
                         TenantId = new Guid()
                     });
 
                 var project = new StateDb.Model.Project
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.Parse("{645D0AAA-2E34-4238-B0ED-65D2D307773C}"),
                     Name = "dtid_role",
                     TenantId = EryphConstants.DefaultTenantId
                 };
@@ -86,26 +86,26 @@ public class GetProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
 
 
     [Theory]
-    [InlineData("dtid_norole", true, "compute:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("dtid_norole", false, "compute:catlets:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("otid_norole", false, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("dtid_role", true, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
-    [InlineData("dtid_role", true, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", false)]
+    [InlineData("{75715EAD-21E2-44DC-A3C4-1CDAAB387F45}", true, "compute:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{75715EAD-21E2-44DC-A3C4-1CDAAB387F45}", false, "compute:catlets:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{75715EAD-21E2-44DC-A3C4-1CDAAB387F45}", false, "compute:projects:read", "{0F9E351B-7FB2-4CA5-B7A7-61C32FB3A7CC}", true)]
+    [InlineData("{645D0AAA-2E34-4238-B0ED-65D2D307773C}", true, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
+    [InlineData("{645D0AAA-2E34-4238-B0ED-65D2D307773C}", true, "compute:projects:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", false)]
     public async Task Get_Returns_Existing_Project_when_authorized(
-        string projectName, bool isAuthorized, string scope, string tenantId, bool isSuperAdmin)
+        string projectIdString, bool isAuthorized, string scope, string tenantId, bool isSuperAdmin)
     {
         var claims = CreateClaims(scope, Guid.Parse(tenantId), isSuperAdmin);
-
+        var projectId = Guid.Parse(projectIdString);
         var response = await _factory.CreateDefaultClient()
             .SetFakeBearerToken(claims)
-            .GetAsync($"v1/projects/{projectName}");
+            .GetAsync($"v1/projects/{projectId}");
         response.Should().NotBeNull();
 
         if (isAuthorized)
         {
             response!.StatusCode.Should().Be(HttpStatusCode.OK);
             var project = await response.Content.ReadFromJsonAsync<Project>();
-            project.Name.Should().Be(projectName);
+            project.Id.Should().Be(projectId.ToString("D"));
             project.Id.Should().NotBeNullOrWhiteSpace();
 
         }
@@ -124,7 +124,7 @@ public class GetProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
 
         var response = await _factory.CreateDefaultClient()
             .SetFakeBearerToken(claims)
-            .GetAsync($"v1/projects/missing");
+            .GetAsync($"v1/projects/{Guid.NewGuid()}");
         response.Should().HaveStatusCode(HttpStatusCode.NotFound);
 
     }

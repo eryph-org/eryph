@@ -30,16 +30,15 @@ namespace Eryph.Modules.Controller.ProjectMembers
         {
             var stoppingToken = new CancellationTokenSource(10000);
 
-            var name = message.Command.ProjectName.ToLowerInvariant();
             var existingProject = await _stateStore.For<Project>().GetBySpecAsync(
-                new ProjectSpecs.GetByName(message.Command.TenantId,
-                    name), stoppingToken.Token);
+                new ProjectSpecs.GetById(message.Command.TenantId,
+                    message.Command.ProjectId), stoppingToken.Token);
 
             var assignmentRepo = _stateStore.For<ProjectRoleAssignment>();
             if (existingProject == null)
             {
                 await _messaging.FailTask(message,
-                    $"Project with name '{name}' not found in tenant");
+                    $"Project with id '{message.Command.ProjectId}' not found in tenant");
                 return;
             }
 

@@ -17,7 +17,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
 {
     public class Create : NewOperationRequestEndpoint<NewProjectRequest, Project> 
     {
-        IUserRightsProvider _userRightsProvider;
+        private readonly IUserRightsProvider _userRightsProvider;
         public Create([NotNull] ICreateEntityRequestHandler<Project> operationHandler, IUserRightsProvider userRightsProvider) : base(operationHandler)
         {
             _userRightsProvider = userRightsProvider;
