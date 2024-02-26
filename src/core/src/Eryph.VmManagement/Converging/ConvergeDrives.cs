@@ -115,9 +115,6 @@ namespace Eryph.VmManagement.Converging
                     x.Type is CatletDriveType.VHD or CatletDriveType.SharedVHD)
                 .Cast<HardDiskDriveStorageSettings>().ToSeq();
 
-            var attachedPaths = planedDiskSettings.Map(s => s.AttachPath).Map(x => x.IfNone(""))
-                .Where(x => !string.IsNullOrWhiteSpace(x));
-
             var frozenDiskIds = currentDiskStorageSettings.Where(x => x.Frozen).Map(x => x.AttachedVMId);
 
             return ConvergeHelpers.FindAndApply(vmInfo,
@@ -269,12 +266,12 @@ namespace Eryph.VmManagement.Converging
                                     driveSettings.Type is CatletDriveType.SharedVHD or CatletDriveType.VHDSet
                                         ? driveSettings.DiskSettings.ParentSettings.MatchAsync(async parentSettings =>
                                                 {
-                                                    // shared vhd and vhd sets set don't support differencing disks
-                                                    // so we need to to copy parent disks (and then convert it to vhds in case of a vhd set)
+                                                    // Shared VHDs and VHD sets don't support differencing disks.
+                                                    // Hence, we need to copy parent disks (and then convert it to .vhds in case of a VHD set)
                                                     var parentFilePath = Path.Combine(parentSettings.Path,
                                                         parentSettings.FileName);
 
-                                                    // var shared vhd this don't change path, but for a vhd set
+                                                    // For shared VHD this doesn't change the path, but for a VHD set it does.
                                                     var copyToPath = Path.ChangeExtension(vhdPath, "vhdx");
 
                                                     var commandConvert = PsCommandBuilder.Create()

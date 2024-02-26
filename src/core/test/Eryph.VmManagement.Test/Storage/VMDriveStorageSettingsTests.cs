@@ -69,7 +69,7 @@ public class VMDriveStorageSettingsTests
                     Type = CatletDriveType.DVD,
                     Source = @"x:\dvds\disk2.iso",
                 },
-            }
+            },
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -110,6 +110,45 @@ public class VMDriveStorageSettingsTests
             });
     }
 
+    [Theory]
+    [InlineData(CatletDriveType.VHD, ".vhdx")]
+    [InlineData(CatletDriveType.SharedVHD, ".vhdx")]
+    [InlineData(CatletDriveType.VHDSet, ".vhds")]
+    public async Task PlanDriveStorageSettings_UsesCorrectExtensionForVhdType(
+        CatletDriveType driveType,
+        string expectedExtension)
+    {
+        var config = new CatletConfig
+        {
+            Drives = new[]
+            {
+                new CatletDriveConfig
+                {
+                    Type = driveType,
+                    Name = "sda",
+                },
+            },
+        };
+
+        _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
+            .Returns(RightAsync<Error, Option<VhdInfo>>(None));
+
+        var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
+            _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
+
+        result.Should().BeRight().Which.Should().SatisfyRespectively(
+            dss =>
+            {
+                dss.ControllerNumber.Should().Be(0);
+                dss.ControllerLocation.Should().Be(0);
+
+                var hdss = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
+                hdss.AttachPath.Should().Be($@"x:\disks\storage-id-vm\sda{expectedExtension}");
+                hdss.DiskSettings.FileName.Should().Be($"sda{expectedExtension}");
+                hdss.DiskSettings.Path.Should().Be(@"x:\disks\storage-id-vm");
+            });
+    }
+
     [Fact]
     public async Task PlanDriveStorageSettings_NewDiskWithoutConfiguredSizeAndWithParent_UsesParentSize()
     {
@@ -123,7 +162,7 @@ public class VMDriveStorageSettingsTests
                     Name = "sda",
                     Source = "gene:testorg/testset/testtag:sda",
                 },
-            }
+            },
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -166,7 +205,7 @@ public class VMDriveStorageSettingsTests
                     Type = CatletDriveType.VHD,
                     Name = "sda",
                 },
-            }
+            },
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -204,7 +243,7 @@ public class VMDriveStorageSettingsTests
                     Name = "sda",
                     Size = 42,
                 },
-            }
+            },
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -243,7 +282,7 @@ public class VMDriveStorageSettingsTests
                     Source = "gene:testorg/testset/testtag:sda",
                     Size = 42,
                 },
-            }
+            },
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -288,7 +327,7 @@ public class VMDriveStorageSettingsTests
                     Source = "gene:testorg/testset/testtag:sda",
                     Size = 42,
                 },
-            }
+            },
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -319,7 +358,7 @@ public class VMDriveStorageSettingsTests
                     Name = "sda",
                     Size = 42,
                 },
-            }
+            },
         };
 
         _getVhdInfoMock.Setup(m => m(@"x:\disks\storage-id-vm\sda.vhdx"))
@@ -347,7 +386,7 @@ public class VMDriveStorageSettingsTests
                     Name = "sda",
                     Size = 42,
                 },
-            }
+            },
         };
 
         _getVhdInfoMock.Setup(m => m(@"x:\disks\storage-id-vm\sda.vhdx"))
