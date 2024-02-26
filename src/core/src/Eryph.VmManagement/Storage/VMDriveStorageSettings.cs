@@ -5,7 +5,6 @@ using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 using LanguageExt.Common;
-using LanguageExt.UnsafeValueAccess;
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Storage
@@ -127,7 +126,7 @@ namespace Eryph.VmManagement.Storage
                         Name = driveConfig.Name,
                         SizeBytesCreate = (configuredSize | parentVhdInfo.Map(i => i.Size))
                             .IfNone(1 * 1024L * 1024 * 1024),
-                        SizeBytes = configuredSize.IsSome ? configuredSize.ValueUnsafe() : null,
+                        SizeBytes = configuredSize.Map(s => (long?)s).IfNoneUnsafe((long?)null),
                     },
                     ControllerNumber = controllerNumber,
                     ControllerLocation = controllerLocation
