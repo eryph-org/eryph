@@ -28,7 +28,13 @@ public class CatletIpManager : BaseIpManager, ICatletIpManager
     {
 
         var portNetworks = networkConfigs.Map(x =>
-            new PortNetwork(x.Name, Option<string>.None, Option<string>.None));
+            new PortNetwork(x.Name, 
+                x.SubnetV4 == null 
+                    ? Option<string>.None
+                : x.SubnetV4.Name , 
+                x.SubnetV4 == null 
+                    ? Option<string>.None 
+                    : x.SubnetV4.IpPool));
 
         var getPortAssignments =
             Prelude.TryAsync(_stateStore.For<IpAssignment>().ListAsync(new IPAssignmentSpecs.GetByPort(port.Id),
@@ -58,7 +64,7 @@ public class CatletIpManager : BaseIpManager, ICatletIpManager
                                 _stateStore.Read<VirtualNetwork>()
                             .IO.GetBySpecAsync(new VirtualNetworkSpecs.GetByName(projectId, networkNameString, "default"), cancellationToken)
                             .Bind(fr => fr.ToEitherAsync(Error.New($"Network {networkNameString} not found in environment {environment} and default environment.")))
-                            :  r.ToEitherAsync(Error.New($"Environments {environment}: Network {networkNameString} not found.")))
+                            :  r.ToEitherAsync(Error.New($"Environment {environment}: Network {networkNameString} not found.")))
 
                     from subnet in _stateStore.Read<VirtualNetworkSubnet>().IO
                         .GetBySpecAsync(new SubnetSpecs.GetByNetwork(network.Id, subnetNameString), cancellationToken)
