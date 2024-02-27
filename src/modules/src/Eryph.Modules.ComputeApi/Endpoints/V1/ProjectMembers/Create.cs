@@ -34,7 +34,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
         public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
             [FromRoute] NewProjectMemberRequest request, CancellationToken cancellationToken = default)
         {
-            var hasAccess = await _userRightsProvider.HasProjectAccess(request.Project.GetValueOrDefault(), AccessRight.Admin);
+            var hasAccess = await _userRightsProvider.HasProjectAccess(request.Project, AccessRight.Admin);
             if(!hasAccess)
                 return Forbid();
 
@@ -48,7 +48,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
             {
                 CorrelationId = request.Body.CorrelationId.GetValueOrDefault(Guid.NewGuid()),
                 MemberId = request.Body.MemberId,
-                ProjectId = request.Project.GetValueOrDefault(),
+                ProjectId = request.Project,
                 TenantId = _userRightsProvider.GetUserTenantId(),
                 RoleId = request.Body.RoleId
             };

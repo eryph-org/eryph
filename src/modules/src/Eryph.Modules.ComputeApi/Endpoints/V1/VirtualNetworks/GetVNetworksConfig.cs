@@ -29,7 +29,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
         {
             var sufficientRoles = _userRightsProvider.GetProjectRoles(AccessRight.Read);
 
-            return new ProjectSpecs.GetById(request.Project.GetValueOrDefault(),
+            return new ProjectSpecs.GetById(request.Project,
                 _userRightsProvider.GetAuthContext(), sufficientRoles);
         }
         [Authorize(Policy = "compute:projects:read")]
