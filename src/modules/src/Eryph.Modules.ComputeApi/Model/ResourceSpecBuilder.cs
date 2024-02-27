@@ -34,7 +34,7 @@ public class ResourceSpecBuilder<TResource> : ISingleEntitySpecBuilder<SingleEnt
             .GetAll(
                 _userRightsProvider.GetAuthContext(),
                 _userRightsProvider.GetResourceRoles<TResource>(AccessRight.Read), 
-                request.Project, CustomizeQuery);
+                request.ProjectId, CustomizeQuery);
     }
 
     protected virtual void CustomizeQuery(ISpecificationBuilder<TResource> specification)
