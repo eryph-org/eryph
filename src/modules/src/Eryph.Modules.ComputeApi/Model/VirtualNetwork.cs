@@ -11,6 +11,8 @@ public class VirtualNetwork
     public string ProjectId { get; set; }
     public string ProjectName { get; set; }
 
+    public string Environment { get; set; }
+
     public string TenantId { get; set; }
 
     public string ProviderName { get; set; }
