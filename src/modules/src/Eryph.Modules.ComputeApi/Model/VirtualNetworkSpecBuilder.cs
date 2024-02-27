@@ -21,7 +21,7 @@ public class VirtualNetworkSpecBuilder : ResourceSpecBuilder<StateDb.Model.Virtu
     {
         var sufficientRoles = _userRightsProvider.GetResourceRoles<StateDb.Model.VirtualNetwork>(AccessRight.Read);
         return new ResourceSpecs<StateDb.Model.VirtualNetwork>
-            .GetAllForProject(_userRightsProvider.GetAuthContext(), request.Project.GetValueOrDefault(), sufficientRoles);
+            .GetAll(_userRightsProvider.GetAuthContext(), sufficientRoles, request.Project.GetValueOrDefault());
     }
 
 }

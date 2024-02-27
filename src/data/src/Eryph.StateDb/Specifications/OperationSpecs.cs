@@ -45,8 +45,8 @@ namespace Eryph.StateDb.Specifications
                 Query.Where(x=>x.TenantId == authContext.TenantId);
 
                 if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
-                    // we have to check if the user is authorized for any project in the operation
-                    Query.Where(x =>  x.Projects.Any(projectRef =>
+                    // we have to check if the user is authorized for all project in the operation
+                    Query.Where(x =>  x.Projects.All(projectRef =>
                         projectRef.Project.ProjectRoles.Any(y => 
                             authContext.Identities.Contains(y.IdentityId) && sufficientRoles.Contains(y.RoleId))));
 
@@ -60,8 +60,7 @@ namespace Eryph.StateDb.Specifications
         {
             public GetById(Guid id, AuthContext authContext, IEnumerable<Guid> sufficientRoles, string expanded, DateTimeOffset requestLogTimestamp)
             {
-                Query.Where(x => x.Id == id &&
-                                 x.Projects.Any(project => project.Project.TenantId == authContext.TenantId));
+                Query.Where(x => x.Id == id && x.TenantId == authContext.TenantId);
 
                 if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
                     // we have to check if the user is authorized for all project in the operation

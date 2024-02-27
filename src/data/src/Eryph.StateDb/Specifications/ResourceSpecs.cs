@@ -29,19 +29,6 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
-        public sealed class GetAllForProject : Specification<T>
-        {
-
-            public GetAllForProject(AuthContext authContext, Guid projectId, IEnumerable<Guid> sufficientRoles, Action<ISpecificationBuilder<T>> customizeAction = null)
-            {
-                Query.OrderBy(x => x.Id);
-                authContext.QueryResourceAccess(Query, sufficientRoles);
-
-                customizeAction?.Invoke(Query);
-
-            }
-        }
-
         public sealed class GetByName : Specification<T>
         {
             public GetByName(string name, Action<ISpecificationBuilder<T>> customizeAction = null)

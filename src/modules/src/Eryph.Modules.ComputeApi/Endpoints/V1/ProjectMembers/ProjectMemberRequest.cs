@@ -5,6 +5,6 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class ProjectMemberRequest : SingleEntityRequest
 {
-    [FromRoute(Name = "project")] public virtual string Project { get; set; }
+    [FromRoute(Name = "projectId")] public virtual string Project { get; set; }
 
 }

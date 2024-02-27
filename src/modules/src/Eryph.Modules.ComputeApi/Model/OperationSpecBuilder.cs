@@ -19,7 +19,6 @@ namespace Eryph.Modules.ComputeApi.Model
 
         public ISingleResultSpecification<OperationModel> GetSingleEntitySpec(OperationRequest request, AccessRight accessRight)
         {
-            var tenantId = _userRightsProvider.GetUserTenantId();
 
             return !Guid.TryParse(request.Id, out var requestId) 
                 ? null
