@@ -6,6 +6,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model;
 
 public class ProjectRequest : RequestBase
 {
-    [Required] [FromRoute(Name = "projectId")] public Guid ProjectId { get; set; }
+    [Required] [FromRoute(Name = "projectId")] public Guid? ProjectId { get; set; }
 
 }

@@ -33,7 +33,7 @@ public class ProjectMemberSpecBuilder :
     public ISpecification<ProjectRoleAssignment> GetEntitiesSpec(ProjectMembersListRequest request)
     {
         return new ProjectRoleAssignmentSpecs.GetByProject(
-            request.ProjectId,
+            request.ProjectId.GetValueOrDefault(),
             _userRightsProvider.GetAuthContext(),
             _userRightsProvider.GetProjectRoles(AccessRight.Read)
         );

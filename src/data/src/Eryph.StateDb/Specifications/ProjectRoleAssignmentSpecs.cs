@@ -13,13 +13,13 @@ public static class ProjectRoleAssignmentSpecs
         ISingleResultSpecification<ProjectRoleAssignment>
     {
 
-        public GetById(Guid id, string projectName, AuthContext authContext, IEnumerable<Guid> sufficientRoles)
+        public GetById(Guid id, Guid projectId, AuthContext authContext, IEnumerable<Guid> sufficientRoles)
         {
             Query.Include(x => x.Project);
             Query.Where(x => x.Id == id);
 
             Query.Where(x => x.Project.TenantId == authContext.TenantId
-                             && x.Project.Name == projectName);
+                             && x.ProjectId == projectId);
 
             if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
                 Query.Where(x => x.Project.ProjectRoles
