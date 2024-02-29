@@ -23,6 +23,13 @@ namespace Eryph.Modules.Controller.Networks
             _log = log;
         }
 
+        private static string GetEnvironmentName(string? environment, string network)
+        {
+            return environment == null
+                ? $"env:default-{network}"
+                : $"env:{environment}-{network}";
+        }
+
         public ProjectNetworksConfig NormalizeConfig(ProjectNetworksConfig config)
         {
 
@@ -77,17 +84,21 @@ namespace Eryph.Modules.Controller.Networks
             // network validation (deleted)
             foreach (var network in savedNetworks)
             {
-                if (networkConfigs.Any(x => x.Name == network.Name))
+                var envName = GetEnvironmentName(network.Environment, network.Name);
+                if (networkConfigs.Any(x => GetEnvironmentName(x.Environment, x.Name ?? "default") == envName))
                     continue;
+
                 var countOfCatletPorts = network.NetworkPorts.Count(x => x is CatletNetworkPort);
                 if (countOfCatletPorts == 0)
                     continue;
 
-                _log.LogDebug("network '{networkName}': Network is in use ({countOfCatletPorts} ports) - cannot remove network.", network.Name, countOfCatletPorts);
+                _log.LogDebug("environment '{env}', network '{networkName}': Network is in use ({countOfCatletPorts} ports) - cannot remove network.", 
+                    network.Environment,
+                    network.Name, countOfCatletPorts);
 
 
                 yield return
-                    $"network '{network.Name}': Network is in use ({countOfCatletPorts} ports) - cannot remove network.";
+                    $"environment '{network.Environment}', network '{network.Name}': Network is in use ({countOfCatletPorts} ports) - cannot remove network.";
 
             }
 
@@ -95,7 +106,7 @@ namespace Eryph.Modules.Controller.Networks
             // network validation (change)
             foreach (var networkConfig in networkConfigs)
             {
-                var network = savedNetworks.Find(x => x.Name == networkConfig.Name);
+                var network = savedNetworks.Find(x => x.Environment == networkConfig.Environment && x.Name == networkConfig.Name);
                 if (network == null)
                     continue;
 
@@ -108,17 +119,18 @@ namespace Eryph.Modules.Controller.Networks
                 if (networkProvider.Type == NetworkProviderType.Flat) continue;
 
                 var countOfCatletPorts = network.NetworkPorts.Count(x => x is CatletNetworkPort);
+                var environmentMessage = networkConfig.Environment == "default" ? "" : $"environment '{networkConfig.Environment}', ";
 
                 // used ports validation 
                 if (countOfCatletPorts > 0)
                 {
                     _log.LogDebug(
-                        "network '{networkName}': Network is in use ({countOfCatletPorts} ports) - checking for prohibited changes.",
-                        network.Name, countOfCatletPorts);
+                        "environment '{env}', network '{networkName}': Network is in use ({countOfCatletPorts} ports) - checking for prohibited changes.",
+                        network.Environment,network.Name, countOfCatletPorts);
 
                     var anyError = false;
                     var messagePrefix =
-                        $"network '{networkConfig.Name}': Network is in use ({countOfCatletPorts} ports) - ";
+                        $"{environmentMessage}network '{networkConfig.Name}': Network is in use ({countOfCatletPorts} ports) - ";
                     var providerPorts = network.NetworkPorts
                         .Where(x => x is ProviderRouterPort).Cast<ProviderRouterPort>().ToArray();
 
@@ -127,8 +139,8 @@ namespace Eryph.Modules.Controller.Networks
                                                                  x.PoolName == providerIpPool);
                     if (!hasProviderPort)
                     {
-                        _log.LogDebug("network '{networkName}': Detected unsupported change of provider port.",
-                            network.Name);
+                        _log.LogDebug("environment {env}, network '{networkName}': Detected unsupported change of provider port.",
+                             network.Environment, network.Name);
 
                         yield return $"{messagePrefix} changing network provider is not supported.'";
                         anyError = true;
@@ -153,7 +165,7 @@ namespace Eryph.Modules.Controller.Networks
 
                     if (anyError)
                         yield return
-                            $"network '{networkConfig.Name}': To change the network first remove all ports or move them to another network.";
+                            $"{environmentMessage}network '{networkConfig.Name}': To change the network first remove all ports or move them to another network.";
                 }
 
                 
@@ -172,7 +184,7 @@ namespace Eryph.Modules.Controller.Networks
 
                         if (poolConfig == null)
                             yield return
-                                $"ip pool '{networkConfig.Name}/{subnet.Name}/{ipPool.Name}': Cannot delete a used ip pool ({ipPool.IpAssignments.Count} ip assignments found) .";
+                                $"{environmentMessage}ip pool '{networkConfig.Name}/{subnet.Name}/{ipPool.Name}': Cannot delete a used ip pool ({ipPool.IpAssignments.Count} ip assignments found) .";
 
                     }
                 }
@@ -196,13 +208,13 @@ namespace Eryph.Modules.Controller.Networks
 
                         if (ipPool.FirstIp != ipPoolConfig.FirstIp)
                             yield return
-                                $"ip pool '{networkConfig.Name}/{subnetConfig.Name}/{ipPoolConfig.Name}': Changing the first ip of a used ip pool is not supported.";
+                                $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{ipPoolConfig.Name}': Changing the first ip of a used ip pool is not supported.";
 
                         var effectiveNetwork = subnetConfig.Address ?? networkConfig.Address;
 
                         if (ipPool.IpNetwork != effectiveNetwork)
                             yield return
-                                $"ip pool '{networkConfig.Name}/{subnetConfig.Name}/{ipPoolConfig.Name}': Changing the address of a used ip pool is not supported.";
+                                $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{ipPoolConfig.Name}': Changing the address of a used ip pool is not supported.";
 
                         //check if it possible to move last ip
                         if (ipPoolConfig.LastIp == ipPool.LastIp) continue;
@@ -216,7 +228,7 @@ namespace Eryph.Modules.Controller.Networks
 
                         if (maxIp > lastIpNo)
                             yield return
-                                $"ip pool '{networkConfig.Name}/{subnetConfig.Name}/{ipPoolConfig.Name}': Cannot change last ip to '{ipPoolConfig.LastIp}' as there are already higher addresses assigned (e.g.: '{maxAsIp}').";
+                                $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{ipPoolConfig.Name}': Cannot change last ip to '{ipPoolConfig.LastIp}' as there are already higher addresses assigned (e.g.: '{maxAsIp}').";
                     }
                 }
             }
@@ -227,7 +239,8 @@ namespace Eryph.Modules.Controller.Networks
             var networkConfigs = config.Networks ?? Array.Empty<NetworkConfig>();
             var ipNetworksOfNetworks =
                 networkConfigs.Select(x =>
-                        (IPNetwork.TryParse(x.Address, out var ipNetwork), ipNetwork, x.Name))
+                        (IPNetwork.TryParse(x.Address, out var ipNetwork), ipNetwork, 
+                            Name: GetEnvironmentName(x.Environment, x.Name ?? "default")))
                     .Where(x => x.Item1)
                     .Select(x => (Address: x.ipNetwork, Network: x.Name))
                     .ToArray();
@@ -238,6 +251,7 @@ namespace Eryph.Modules.Controller.Networks
                 if (string.IsNullOrWhiteSpace(networkConfig.Name))
                     yield return "Empty network name";
 
+                var environmentMessage = networkConfig.Environment == "default" ? "": $"environment '{networkConfig.Environment}', ";
                 var providerName = networkConfig.Provider?.Name ?? "default";
                 var providerSubnetName = networkConfig.Provider?.Subnet ?? "default";
                 var providerIpPoolName = networkConfig.Provider?.IpPool ?? "default";
@@ -246,7 +260,7 @@ namespace Eryph.Modules.Controller.Networks
 
                 if (networkProvider == null)
                 {
-                    yield return $"network '{networkConfig.Name}': could not find network provider '{providerName}'";
+                    yield return $"{environmentMessage}network '{networkConfig.Name}': could not find network provider '{providerName}'";
                     continue;
                 }
 
@@ -254,13 +268,10 @@ namespace Eryph.Modules.Controller.Networks
                 {
                     if (providerIpPoolName != "default" || providerSubnetName != "default")
                     {
-                        yield return $"network '{networkConfig.Name}': provider subnets and ip pools are not supported for flat networks.";
+                        yield return $"{environmentMessage}network '{networkConfig.Name}': provider subnets and ip pools are not supported for flat networks.";
                     }
 
-                    //do not check - subnets will be removed silently
-                    //if (networkConfig.Subnets.Length > 0)
-                    //    yield return $"network '{networkConfig.Name}': subnet config not supported for flat networks.";
-
+                    
                 }
                 else
                 {
@@ -269,44 +280,44 @@ namespace Eryph.Modules.Controller.Networks
 
                     if (providerSubnet == null)
                     {
-                        yield return $"network '{networkConfig.Name}': provider subnet '{providerName}/{providerSubnetName}' not found";
+                        yield return $"{environmentMessage}network '{networkConfig.Name}': provider subnet '{providerName}/{providerSubnetName}' not found";
                         continue;
                     }
 
                     if (providerSubnet.IpPools.All(x => x.Name != providerIpPoolName))
                     {
-                        yield return $"network '{networkConfig.Name}': provider ip pool '{providerName}/{providerSubnetName}/{providerIpPoolName}' not found";
+                        yield return $"{environmentMessage}network '{networkConfig.Name}': provider ip pool '{providerName}/{providerSubnetName}/{providerIpPoolName}' not found";
                         continue;
                     }
 
                     if (!IPNetwork.TryParse(networkConfig.Address, out var networkIpNetwork))
                     {
                         yield return
-                            $"network '{networkConfig.Name}': Invalid network address '{networkConfig.Address}'";
+                            $"{environmentMessage}network '{networkConfig.Name}': Invalid network address '{networkConfig.Address}'";
                         continue;
                     }
 
                     if (networkIpNetwork.AddressFamily != AddressFamily.InterNetwork)
                         yield return
-                            $"network '{networkConfig.Name}': network address '{networkConfig.Address}' is not a IPV4 address'";
+                            $"{environmentMessage}network '{networkConfig.Name}': network address '{networkConfig.Address}' is not a IPV4 address'";
 
                     if (networkIpNetwork.ToString() != networkConfig.Address)
                     {
                         yield return
-                            $"network '{networkConfig.Name}': Invalid network address '{networkConfig.Address}' - network cidr match network '{networkIpNetwork}'";
+                            $"{environmentMessage}network '{networkConfig.Name}': Invalid network address '{networkConfig.Address}' - network cidr match network '{networkIpNetwork}'";
                         continue;
 
                     }
 
                     var overlappingNetworks = string.Join(',', ipNetworksOfNetworks
-                        .Where(x => x.Network != networkConfig.Name
+                        .Where(x => x.Network != GetEnvironmentName(networkConfig.Environment, networkConfig.Name ?? "default")
                                     && networkIpNetwork.Overlap(x.Address))
                         .Select(x => x.Network).Distinct());
 
                     if (!string.IsNullOrWhiteSpace(overlappingNetworks))
                     {
                         yield return
-                            $"network '{networkConfig.Name}': network address '{networkConfig.Address}' overlap with network(s) '{overlappingNetworks}'";
+                            $"{environmentMessage}network '{networkConfig.Name}': network address '{networkConfig.Address}' overlap with network(s) '{overlappingNetworks}'";
                         continue;
 
                     }
@@ -320,11 +331,11 @@ namespace Eryph.Modules.Controller.Networks
                         {
                             if (!IPNetwork.TryParse(subnetConfig.Address, out subnetIPNetwork))
                                 yield return
-                                    $"subnet '{networkConfig.Name}/{subnetConfig.Name}': Invalid network address '{subnetConfig.Address}'";
+                                    $"{environmentMessage}subnet '{networkConfig.Name}/{subnetConfig.Name}': Invalid network address '{subnetConfig.Address}'";
 
                             if (!networkIpNetwork.Contains(subnetIPNetwork))
                                 yield return
-                                    $"subnet '{networkConfig.Name}/{subnetConfig.Name}': network address '{subnetIPNetwork}' is not a subnet of '{networkConfig.Address}'";
+                                    $"{environmentMessage}subnet '{networkConfig.Name}/{subnetConfig.Name}': network address '{subnetIPNetwork}' is not a subnet of '{networkConfig.Address}'";
 
                         }
 
@@ -334,7 +345,7 @@ namespace Eryph.Modules.Controller.Networks
                         if (subnetIPNetwork.ToString() != subnetAddress)
                         {
                             yield return
-                                $"subnet '{networkConfig.Name}/{subnetConfig.Name}': Invalid network address '{subnetAddress}' - network cidr match network '{subnetIPNetwork}'";
+                                $"{environmentMessage}subnet '{networkConfig.Name}/{subnetConfig.Name}': Invalid network address '{subnetAddress}' - network cidr match network '{subnetIPNetwork}'";
 
                         }
 
@@ -342,23 +353,23 @@ namespace Eryph.Modules.Controller.Networks
                         {
                             if (!IPAddress.TryParse(poolConfig.FirstIp, out var firstIp))
                                 yield return
-                                    $"ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': Invalid ip address '{poolConfig.FirstIp}'";
+                                    $"{environmentMessage}ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': Invalid ip address '{poolConfig.FirstIp}'";
                             if (!IPAddress.TryParse(poolConfig.LastIp, out var lastIp))
                                 yield return
-                                    $"ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': Invalid ip address '{poolConfig.LastIp}'";
+                                    $"{environmentMessage}ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': Invalid ip address '{poolConfig.LastIp}'";
 
                             if (firstIp != null && !subnetIPNetwork.Contains(firstIp))
                                 yield return
-                                    $"ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': ip address '{poolConfig.FirstIp}' is not in subnet '{subnetIPNetwork}'";
+                                    $"{environmentMessage}ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': ip address '{poolConfig.FirstIp}' is not in subnet '{subnetIPNetwork}'";
 
                             if (lastIp != null && !subnetIPNetwork.Contains(lastIp))
                                 yield return
-                                    $"ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': ip address '{poolConfig.LastIp}' is not in subnet '{subnetIPNetwork}'";
+                                    $"{environmentMessage}ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': ip address '{poolConfig.LastIp}' is not in subnet '{subnetIPNetwork}'";
 
                             if (lastIp != null && firstIp != null &&
                                 IPNetwork.ToBigInteger(lastIp) < IPNetwork.ToBigInteger(firstIp))
                                 yield return
-                                    $"ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}':last ip address '{poolConfig.LastIp}' is not larger then first ip address '{poolConfig.FirstIp}'";
+                                    $"{environmentMessage}ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}':last ip address '{poolConfig.LastIp}' is not larger then first ip address '{poolConfig.FirstIp}'";
 
                         }
                     }
