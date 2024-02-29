@@ -239,12 +239,18 @@ namespace Eryph.Modules.Controller.Inventory
             if (isGuid)
                 return await StateStore.For<Project>().GetByIdAsync(projectId);
 
+            if(string.IsNullOrWhiteSpace(projectIdentifier))
+                projectIdentifier= "default";
+
             return await StateStore.For<Project>()
                 .GetBySpecAsync(new ProjectSpecs.GetByName(tenantId, projectIdentifier));
         }
 
         protected async Task<Project> FindRequiredProject(Guid tenantId, string projectIdentifier)
         {
+            if (string.IsNullOrWhiteSpace(projectIdentifier))
+                projectIdentifier = "default";
+
             var foundProject = await FindProject(tenantId, projectIdentifier);
 
             if(foundProject.IsNone)
