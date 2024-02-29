@@ -34,7 +34,7 @@ namespace Eryph.Modules.Controller.DataServices
 
         public async Task<Option<Catlet>> GetVM(Guid id)
         {
-            var res = await _repository.GetBySpecAsync(new CatletSpecs.GetByVMId(id));
+            var res = await _repository.GetBySpecAsync(new CatletSpecs.GetById(id));
             return res!;
         }
 
