@@ -2,6 +2,7 @@
 using System.Xml.Linq;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages;
+using Eryph.ConfigModel;
 using Eryph.Messages.Projects;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -24,11 +25,24 @@ namespace Eryph.Modules.Controller.Projects
 
         public async Task Handle(OperationTask<UpdateProjectCommand> message)
         {
+            var name = message.Command.Name;
+
+            var validation = ProjectName.Validate(name);
+            if (validation.IsFail)
+            {
+                await _messaging.FailTask(message, validation);
+                return;
+            }
+
+            if (name == "default")
+            {
+                await _messaging.FailTask(message, $"The project name '{name}' is reserved.");
+                return;
+            }
 
             var project = await _stateStore.For<Project>().GetByIdAsync(message.Command.ProjectId);
-            
-            if(project!= null &&  message.Command.Name!= null)
-                project.Name = message.Command.Name;
+            if (project is not null)
+                project.Name = name;
             
 
             await _messaging.CompleteTask(message, new ProjectReference

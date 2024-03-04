@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Messages.Projects;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.AspNetCore;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using LanguageExt;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -31,10 +34,14 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
             OperationId = "Projects_Create",
             Tags = new[] { "Projects" })
         ]
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+        public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
             [FromBody] NewProjectRequest request, CancellationToken cancellationToken = default)
         {
-            return base.HandleAsync(request, cancellationToken);
+            var validation = ValidateRequest(request);
+            if(validation.IsFail)
+                return ValidationProblem(validation.ToProblemDetails());
+
+            return await base.HandleAsync(request, cancellationToken);
         }
 
 
@@ -48,5 +55,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
                 TenantId = _userRightsProvider.GetUserTenantId()
             };
         }
+
+        private static Validation<ValidationIssue, Unit> ValidateRequest(NewProjectRequest request) =>
+            ConfigValidations.validateProperty(request, r => r.Name, "", ProjectName.Validate);
     }
 }

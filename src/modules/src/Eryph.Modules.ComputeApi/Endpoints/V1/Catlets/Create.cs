@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -60,6 +61,11 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
 
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
             var config = CatletConfigDictionaryConverter.Convert(configDictionary);
+
+            var validation = CatletConfigValidations.ValidateCatletConfig(
+                config, nameof(NewCatletRequest.Configuration));
+            if (validation.IsFail)
+                return ValidationProblem(validation.ToProblemDetails());
 
             var tenantId = _userRightsProvider.GetUserTenantId();
             

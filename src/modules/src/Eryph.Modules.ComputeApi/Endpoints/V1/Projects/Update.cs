@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Messages.Projects;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
@@ -9,6 +11,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using LanguageExt;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -30,9 +33,13 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
             OperationId = "Projects_Update",
             Tags = new[] { "Projects" })
         ]
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] UpdateProjectRequest request, CancellationToken cancellationToken = default)
+        public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] UpdateProjectRequest request, CancellationToken cancellationToken = default)
         {
-            return base.HandleAsync(request, cancellationToken);
+            var validation = ValidateRequest(request.Body);
+            if (validation.IsFail)
+                return ValidationProblem(validation.ToProblemDetails());
+
+            return await base.HandleAsync(request, cancellationToken);
         }
 
         protected override object CreateOperationMessage(Project model, UpdateProjectRequest request)
@@ -44,5 +51,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
                 Name = request.Body.Name
             };
         }
+
+        private static Validation<ValidationIssue, Unit> ValidateRequest(UpdateProjectBody requestBody) =>
+            ConfigValidations.validateProperty(requestBody, r => r.Name, "", ProjectName.Validate);
+
     }
 }
