@@ -57,6 +57,6 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         }
 
         private static Validation<ValidationIssue, Unit> ValidateRequest(NewProjectRequest request) =>
-            ConfigValidations.validateProperty(request, r => r.Name, "", ProjectName.Validate);
+            ConfigValidations.ValidateProperty(request, r => r.Name, "", ProjectName.Validate);
     }
 }
