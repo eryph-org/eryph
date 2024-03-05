@@ -52,13 +52,19 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
             if (model is Resource resource)
             {
                 if(!(await _userRightsProvider.HasResourceAccess(resource.Id, AccessRight.Write)))
-                    return new UnauthorizedResult();
+                    return new ForbidResult();
             }
 
             if (model is Project project)
             {
                 if (!(await _userRightsProvider.HasProjectAccess(project.Id, AccessRight.Admin)))
-                    return new UnauthorizedResult();
+                    return new ForbidResult();
+            }
+
+            if (model is ProjectRoleAssignment roleAssignment)
+            {
+                if (!(await _userRightsProvider.HasProjectAccess(roleAssignment.ProjectId, AccessRight.Admin)))
+                    return new ForbidResult();
             }
 
 

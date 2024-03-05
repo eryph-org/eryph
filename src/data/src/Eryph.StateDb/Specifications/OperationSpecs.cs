@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Ardalis.Specification;
 using Eryph.Core;
 using Eryph.StateDb.Model;
-using Eryph.StateDb.Workflows;
 
 namespace Eryph.StateDb.Specifications
 {
@@ -40,14 +40,15 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class GetAll : Specification<OperationModel>
         {
-            public GetAll(Guid tenantId, Guid[] roles, AccessRight requiredAccess, string expanded, DateTimeOffset requestLogTimestamp)
+            public GetAll(AuthContext authContext, IEnumerable<Guid> sufficientRoles, string expanded, DateTimeOffset requestLogTimestamp)
             {
-                Query.Where(x=>x.TenantId == tenantId);
+                Query.Where(x=>x.TenantId == authContext.TenantId);
 
-                if (!roles.Contains(EryphConstants.SuperAdminRole))
-                    Query.Where(x => x.Projects.Any(projectRef =>
-                        projectRef.Project.Roles.Any(y => roles.Contains(y.RoleId) && y.AccessRight >= requiredAccess)));
-
+                if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
+                    // we have to check if the user is authorized for all project in the operation
+                    Query.Where(x =>  x.Projects.All(projectRef =>
+                        projectRef.Project.ProjectRoles.Any(y => 
+                            authContext.Identities.Contains(y.IdentityId) && sufficientRoles.Contains(y.RoleId))));
 
                 Query.OrderBy(x => x.Id);
                 ExpandFields(Query, expanded, requestLogTimestamp);
@@ -57,14 +58,15 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class GetById : Specification<OperationModel>, ISingleResultSpecification<OperationModel>
         {
-            public GetById(Guid id, Guid tenantId, Guid[] roles, AccessRight requiredAccess,  string expanded, DateTimeOffset requestLogTimestamp)
+            public GetById(Guid id, AuthContext authContext, IEnumerable<Guid> sufficientRoles, string expanded, DateTimeOffset requestLogTimestamp)
             {
-                Query.Where(x => x.Id == id &&
-                                 x.Projects.Any(project => project.Project.TenantId == tenantId));
+                Query.Where(x => x.Id == id && x.TenantId == authContext.TenantId);
 
-                if (!roles.Contains(EryphConstants.SuperAdminRole))
-                    Query.Where(x => x.Projects.Any(projectRef=> 
-                        projectRef.Project.Roles.Any(y => roles.Contains(y.RoleId) && y.AccessRight >= requiredAccess)));
+                if (!authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
+                    // we have to check if the user is authorized for all project in the operation
+                    Query.Where(x => x.Projects.All(projectRef =>
+                        projectRef.Project.ProjectRoles.Any(y =>
+                            authContext.Identities.Contains(y.IdentityId) && sufficientRoles.Contains(y.RoleId))));
 
                 ExpandFields(Query, expanded, requestLogTimestamp);
 

@@ -8,6 +8,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
         where TRequest : SingleEntityRequest
     {
 
-        ISingleResultSpecification<T> GetSingleEntitySpec(TRequest request, AccessRight accessRight);
+        ISingleResultSpecification<T>? GetSingleEntitySpec(TRequest request, AccessRight accessRight);
     }
 }

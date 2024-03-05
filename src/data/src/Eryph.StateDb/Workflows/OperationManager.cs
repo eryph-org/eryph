@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.Messages;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
@@ -105,10 +107,10 @@ public class OperationManager : OperationManagerBase
         
     }
 
-    public override ValueTask<bool> TryChangeStatusAsync(IOperation operation,
+    public override async ValueTask<bool> TryChangeStatusAsync(IOperation operation,
         Dbosoft.Rebus.Operations.OperationStatus newStatus, object? additionalData, IDictionary<string, string> messageHeaders)
     {
-        if (operation is not Operation op) return new ValueTask<bool>(false);
+        if (operation is not Operation op) return false;
 
         op.Model.Status = newStatus switch
         {
@@ -126,7 +128,17 @@ public class OperationManager : OperationManagerBase
             _ => op.Model.Status.ToString()
         };
 
+        // make sure that just created projects are added to the operation
+        if (additionalData is ProjectReference projectReference)
+        { 
+            await _db.Entry(op.Model).Collection(x => x.Projects).LoadAsync();
+            if(op.Model.Projects.All(x => x.ProjectId != projectReference.ProjectId))
+                op.Model.Projects.Add(new OperationProjectModel
+                {
+                    ProjectId = projectReference.ProjectId,
+                });
+        }
 
-        return new ValueTask<bool>(true);
+        return true;
     }
 }

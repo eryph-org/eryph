@@ -15,6 +15,7 @@ namespace Eryph.Modules.Controller.Compute
         public Guid CatletId { get; set; }
         public string? AgentName { get; set; }
         public Guid ProjectId { get; set; }
+        public Guid TenantId { get; set; }
         public List<string>? PendingGeneNames { get; set; }
         public bool GenesPrepared { get; set; }
 

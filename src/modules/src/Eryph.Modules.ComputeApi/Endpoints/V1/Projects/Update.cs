@@ -8,6 +8,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -21,6 +22,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         {
         }
 
+        [Authorize(Policy = "compute:projects:write")]
         [HttpPut("projects/{id}")]
         [SwaggerOperation(
             Summary = "Updates a project",

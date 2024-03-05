@@ -74,6 +74,8 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                  from vmInventory in InventorizeAllVms(inventory, vms).ToAsync()
                 select new UpdateVMHostInventoryCommand
                 {
+                    // TODO: inventory currently don't support tenantId
+                    TenantId = EryphConstants.DefaultTenantId,
                     HostInventory = hostInventory,
                     VMInventory = vmInventory.ToList()
                 }).ToEither();

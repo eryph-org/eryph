@@ -1,5 +1,7 @@
 ﻿using System.Threading.Tasks;
+using System.Xml.Linq;
 using Dbosoft.Rebus.Operations;
+using Eryph.Messages;
 using Eryph.Messages.Projects;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -29,7 +31,11 @@ namespace Eryph.Modules.Controller.Projects
                 project.Name = message.Command.Name;
             
 
-            await _messaging.CompleteTask(message);
+            await _messaging.CompleteTask(message, new ProjectReference
+            {
+                ProjectId = message.Command.CorrelationId,
+                ProjectName = project?.Name
+            });
         }
     }
 }

@@ -4,5 +4,5 @@ namespace Eryph.Messages;
 
 public interface IHasProjectId
 {
-    Guid ProjectId { get; set; }
+    Guid ProjectId { get;  }
 }

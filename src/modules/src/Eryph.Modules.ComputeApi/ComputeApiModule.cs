@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Net;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.ComputeApi.Handlers;
 using Eryph.Modules.ComputeApi.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;
@@ -27,39 +29,20 @@ namespace Eryph.Modules.ComputeApi
         public override string ApiName => "Compute Api";
         public override string AudienceName => "compute_api";
 
-        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services, IHostEnvironment env)
+        public override void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
+            IHostEnvironment env)
         {
             base.ConfigureServices(serviceProvider, services, env);
 
             var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
             var authority = endpointResolver.GetEndpoint("identity").ToString();
 
-            services.AddAuthorization(options =>
-            {
-                options.AddPolicy("compute:catlets:read",
-                    policy => policy.Requirements.Add(new HasScopeRequirement(
-                        authority,
-                        "compute:catlets:read", "compute:catlets:write", "compute:read", "compute:write")));
-                options.AddPolicy("compute:catlets:write",
-                    policy => policy.Requirements.Add(new HasScopeRequirement(
-                        authority,
-                        "compute:catlets:write", "compute:write")));
-
-                options.AddPolicy("compute:catlets:control",
-                    policy => policy.Requirements.Add(new HasScopeRequirement(
-                        authority,
-                        "compute:catlets:control", "compute:catlets:write","compute:write")));
-
-                options.AddPolicy("compute:catlets:control",
-                    policy => policy.Requirements.Add(new HasScopeRequirement(
-                        authority,
-                        "compute:catlets:control", "compute:catlets:write", "compute:write")));
-            });
+            services.AddAuthorization(options => ConfigureScopes(options, authority));
         }
 
         public override void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
-            container.Register<IGetRequestHandler<StateDb.Model.Catlet, CatletConfiguration>, 
+            container.Register<IGetRequestHandler<StateDb.Model.Catlet, CatletConfiguration>,
                 GetCatletConfigurationHandler>();
 
             container.Register<IGetRequestHandler<StateDb.Model.Project, VirtualNetworkConfiguration>,
@@ -67,6 +50,33 @@ namespace Eryph.Modules.ComputeApi
 
 
             base.ConfigureContainer(serviceProvider, container);
+        }
+
+        public static void ConfigureScopes(AuthorizationOptions options, string authority)
+        {
+            options.AddPolicy("compute:catlets:read",
+                policy => policy.Requirements.Add(new HasScopeRequirement(
+                    authority,
+                    "compute:catlets:read", "compute:catlets:write", "compute:read", "compute:write")));
+            options.AddPolicy("compute:catlets:write",
+                policy => policy.Requirements.Add(new HasScopeRequirement(
+                    authority,
+                    "compute:catlets:write", "compute:write")));
+
+            options.AddPolicy("compute:catlets:control",
+                policy => policy.Requirements.Add(new HasScopeRequirement(
+                    authority,
+                    "compute:catlets:control", "compute:catlets:write", "compute:write")));
+
+            options.AddPolicy("compute:projects:read",
+                policy => policy.Requirements.Add(new HasScopeRequirement(
+                    authority,
+                    "compute:projects:read", "compute:projects:write", "compute:read", "compute:write")));
+            options.AddPolicy("compute:projects:write",
+                policy => policy.Requirements.Add(new HasScopeRequirement(
+                    authority,
+                    "compute:projects:write", "compute:write")));
+
         }
     }
 

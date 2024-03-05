@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Security.Claims;
+using Eryph.Core;
 using Microsoft.AspNetCore.Http;
 
 namespace Eryph.Modules.AspNetCore;
@@ -12,6 +13,13 @@ public class UserInfoProvider : IUserInfoProvider
     public UserInfoProvider(IHttpContextAccessor contextAccessor)
     {
         _contextAccessor = contextAccessor;
+    }
+
+    public string GetUserId()
+    {
+        var claims = _contextAccessor.HttpContext?.User.Claims.ToArray() ?? Array.Empty<Claim>();
+        var nameClaim = claims.FirstOrDefault(x => x.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+        return nameClaim?.Value ?? "";
     }
 
     public Guid GetUserTenantId()
@@ -37,5 +45,13 @@ public class UserInfoProvider : IUserInfoProvider
             .Select(x => x.guid).ToArray();
 
         return roles;
+    }
+
+    public AuthContext GetAuthContext()
+    {
+        return new AuthContext(GetUserTenantId(), new []
+        {
+            GetUserId()
+        }, GetUserRoles());
     }
 }

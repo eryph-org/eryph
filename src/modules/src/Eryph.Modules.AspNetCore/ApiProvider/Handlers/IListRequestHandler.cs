@@ -13,7 +13,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
         Task<ActionResult<ListResponse<TResponse>>> HandleListRequest<TRequest,TResponse>(
             TRequest request,
             Func<TRequest, ISpecification<TModel>> createSpecificationFunc, CancellationToken cancellationToken)
-            where TRequest: ListRequest;
+            where TRequest: IListRequest;
         
     }
 }

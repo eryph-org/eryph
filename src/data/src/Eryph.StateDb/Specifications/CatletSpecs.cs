@@ -29,6 +29,15 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
+        public sealed class GetById : Specification<Catlet>, ISingleResultSpecification
+        {
+            public GetById(Guid id)
+            {
+                Query.Where(x => x.Id == id)
+                    .Include(x => x.Project);
+            }
+        }
+
         public sealed class GetForConfig : Specification<Catlet>, ISingleResultSpecification
         {
             public GetForConfig(Guid catletId)

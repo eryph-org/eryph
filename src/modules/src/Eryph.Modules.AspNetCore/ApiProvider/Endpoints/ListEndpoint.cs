@@ -12,7 +12,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
     public abstract class ListEndpoint<TRequest,TResult,TModel> : EndpointBaseAsync
         .WithRequest<TRequest>
         .WithActionResult<ListResponse<TResult>> where TModel : class
-        where TRequest : ListRequest
+        where TRequest : IListRequest
     {
         private readonly IListRequestHandler<TModel> _listRequestHandler;
 

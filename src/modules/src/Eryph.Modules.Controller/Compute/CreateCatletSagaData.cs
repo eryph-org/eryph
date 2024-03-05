@@ -12,6 +12,6 @@ namespace Eryph.Modules.Controller.Compute
 
         public CreateVMState State { get; set; }
         public Guid MachineId { get; set; }
-
+        public Guid TenantId { get; set; }
     }
 }

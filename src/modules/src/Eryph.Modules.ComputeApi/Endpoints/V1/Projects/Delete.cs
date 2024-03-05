@@ -8,6 +8,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -22,6 +23,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         {
         }
 
+        [Authorize(Policy = "compute:projects:write")]
         [HttpDelete("projects/{id}")]
         [SwaggerOperation(
             Summary = "Deletes a project",
@@ -29,15 +31,19 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
             OperationId = "Projects_Delete",
             Tags = new[] { "Projects" })
         ]
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
+        public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
         {
-            return base.HandleAsync(request, cancellationToken);
+            if(!Guid.TryParse(request.Id, out _))
+                return BadRequest();
+
+            return await base.HandleAsync(request, cancellationToken);
         }
 
 
         protected override object CreateOperationMessage(Project model, SingleEntityRequest request)
         {
-            return new DestroyProjectCommand { CorrelationId = Guid.NewGuid(), ProjectId = Guid.Parse(request.Id) };
+            return new DestroyProjectCommand { CorrelationId = Guid.NewGuid(), 
+                ProjectId = Guid.Parse(request.Id ?? Guid.Empty.ToString() ) };
         }
     }
 }

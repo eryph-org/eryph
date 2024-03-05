@@ -8,6 +8,7 @@ using Eryph.Messages.Projects;
 using Eryph.Messages.Resources.Commands;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
@@ -74,8 +75,14 @@ namespace Eryph.Modules.Controller.Projects
             var project = await _stateStore.For<Project>().GetByIdAsync(Data.ProjectId);
 
             if (project != null)
-                await _stateStore.For<Project>().DeleteAsync(project);
+            {
+                var roleAssignments = await _stateStore.For<ProjectRoleAssignment>()
+                    .ListAsync(new ProjectRoleAssignmentSpecs.GetByProject(project.Id))
+                    .ConfigureAwait(false);
 
+                await _stateStore.For<ProjectRoleAssignment>().DeleteRangeAsync(roleAssignments).ConfigureAwait(false);
+                await _stateStore.For<Project>().DeleteAsync(project).ConfigureAwait(false);
+            }
         }
 
         public Task Handle(OperationTaskStatusEvent<DestroyResourcesCommand> message)

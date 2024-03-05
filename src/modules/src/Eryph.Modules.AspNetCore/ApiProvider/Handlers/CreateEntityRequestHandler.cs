@@ -34,13 +34,17 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
             _dbContext = dbContext;
         }
 
-        public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(Func<object> createOperationFunc,
+        public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(Func<object?> createOperationFunc,
             CancellationToken cancellationToken)
         {
             using var ta = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled);
             ta.EnlistRebus();
 
             var command = createOperationFunc();
+
+            if (command == null)
+                return new BadRequestResult();
+
             var operation = await _operationDispatcher.StartNew(_userRightsProvider.GetUserTenantId(), _httpContextAccessor.HttpContext?.TraceIdentifier??"",  command);
             var operationModel = (operation as StateDb.Workflows.Operation)?.Model;
 

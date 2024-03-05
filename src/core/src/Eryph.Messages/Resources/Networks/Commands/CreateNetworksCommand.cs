@@ -9,5 +9,6 @@ namespace Eryph.Messages.Resources.Networks.Commands
     {
         public ProjectNetworksConfig Config { get; set; }
         public Guid CorrelationId { get; set; }
+        public Guid TenantId { get; set; }
     }
 }

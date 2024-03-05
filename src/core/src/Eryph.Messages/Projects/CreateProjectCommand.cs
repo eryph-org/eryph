@@ -3,10 +3,12 @@
 namespace Eryph.Messages.Projects;
 
 [SendMessageTo(MessageRecipient.Controllers)]
-public class CreateProjectCommand : IHasCorrelationId
+public class CreateProjectCommand : IHasCorrelationId, IHasProjectName
 {
-    public string Name { get; set; }
+    public string ProjectName { get; set; }
     public Guid CorrelationId { get; set; }
 
     public bool NoDefaultNetwork { get; set; }
+    public string IdentityId { get; set; }
+    public Guid TenantId { get; set; }
 }

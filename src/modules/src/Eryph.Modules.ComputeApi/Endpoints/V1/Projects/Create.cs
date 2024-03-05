@@ -2,11 +2,13 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Projects;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -15,11 +17,13 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
 {
     public class Create : NewOperationRequestEndpoint<NewProjectRequest, Project> 
     {
-
-        public Create([NotNull] ICreateEntityRequestHandler<Project> operationHandler) : base(operationHandler)
+        private readonly IUserRightsProvider _userRightsProvider;
+        public Create([NotNull] ICreateEntityRequestHandler<Project> operationHandler, IUserRightsProvider userRightsProvider) : base(operationHandler)
         {
+            _userRightsProvider = userRightsProvider;
         }
 
+        [Authorize(Policy = "compute:projects:write")]
         [HttpPost("projects")]
         [SwaggerOperation(
             Summary = "Creates a new project",
@@ -39,7 +43,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
             return new CreateProjectCommand
             {
                 CorrelationId = request.CorrelationId.GetValueOrDefault(Guid.NewGuid()),
-                Name = request.Name
+                ProjectName = request.Name,
+                IdentityId = _userRightsProvider.GetUserId(),
+                TenantId = _userRightsProvider.GetUserTenantId()
             };
         }
     }

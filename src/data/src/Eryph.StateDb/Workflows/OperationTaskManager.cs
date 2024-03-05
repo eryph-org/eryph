@@ -90,6 +90,13 @@ public class OperationTaskManager : OperationTaskManagerBase
         if(opTask.Model.Status == Model.OperationTaskStatus.Completed)
              opTask.Model.Progress = 100;
 
+        if (additionalData is ITaskReference taskReference)
+        {
+            opTask.Model.ReferenceType = taskReference.ReferenceType;
+            opTask.Model.ReferenceId = taskReference.ReferenceId;
+            opTask.Model.ReferenceProjectName = taskReference.ProjectName;
+        }
+
         return new ValueTask<bool>(true);
     }
 }

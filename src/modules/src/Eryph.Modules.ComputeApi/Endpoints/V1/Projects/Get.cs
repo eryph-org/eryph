@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -6,6 +7,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using ProjectModel = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
@@ -20,6 +22,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         {
         }
 
+        [Authorize(Policy = "compute:projects:read")]
         [HttpGet("projects/{id}")]
         [SwaggerOperation(
             Summary = "Get a projects",
@@ -28,9 +31,12 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
             Tags = new[] { "Projects" })
         ]
         [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ProjectModel))]
-        public override Task<ActionResult<ProjectModel>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
+        public override async Task<ActionResult<ProjectModel>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
         {
-            return base.HandleAsync(request, cancellationToken);
+            if (!Guid.TryParse(request.Id, out _))
+                return BadRequest();
+
+            return await base.HandleAsync(request, cancellationToken);
         }
 
     }

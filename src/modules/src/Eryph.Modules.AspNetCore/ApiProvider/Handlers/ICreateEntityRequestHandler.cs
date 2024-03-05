@@ -11,7 +11,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
     public interface ICreateEntityRequestHandler<TEntity>
     {
         Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(
-            Func<object> createOperationFunc,
+            Func<object?> createOperationFunc,
             CancellationToken cancellationToken);
     }
 }

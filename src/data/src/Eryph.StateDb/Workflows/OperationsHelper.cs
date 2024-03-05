@@ -19,6 +19,14 @@ public static class OperationsHelper
         if (command is IHasProjectId hasProjectId)
             projects.Add(hasProjectId.ProjectId);
 
+        if (command is IHasProjectName hasProjectName)
+        {
+            var project = await db.Projects.FirstOrDefaultAsync(x =>
+                x.TenantId == hasProjectName.TenantId && x.Name == hasProjectName.ProjectName);
+
+            if(project != null)
+                projects.Add(project.Id);
+        }
 
         var resources = command switch
         {

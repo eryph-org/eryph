@@ -25,7 +25,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
             _operationHandler = operationHandler;
         }
 
-        protected abstract object CreateOperationMessage(TRequest request);
+        protected abstract object? CreateOperationMessage(TRequest request);
 
 
         [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Linq;
 using AutoMapper;
-using Eryph.StateDb;
+using Eryph.Core;
+using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.ComputeApi.Model.V1
@@ -77,6 +78,29 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>().ForMember(x => x.Path,
                 o => { o.MapFrom(s => userRole == "Admin" ? s.Path : null); });
 
+            var memberMap = CreateMap<ProjectRoleAssignment, ProjectMemberRole>();
+            memberMap
+                .ForMember(x => x.MemberId,
+                    o =>
+                        o.MapFrom(dest => dest.IdentityId));
+
+            memberMap.ForMember(x => x.ProjectName,
+                    o => 
+                        o.MapFrom(s => s.Project.Name));
+
+            memberMap.ForMember(x => x.RoleName,
+                    o =>
+                        o.MapFrom((src,m) =>
+                        {
+                            if(src.RoleId == EryphConstants.BuildInRoles.Owner)
+                                return "owner";
+                            if (src.RoleId == EryphConstants.BuildInRoles.Contributor)
+                                return "contributor";
+                            if (src.RoleId == EryphConstants.BuildInRoles.Reader)
+                                return "reader";
+
+                            return "";
+                        }));
 
         }
     }

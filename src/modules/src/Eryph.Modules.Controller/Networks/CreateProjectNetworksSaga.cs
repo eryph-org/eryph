@@ -58,7 +58,7 @@ namespace Eryph.Modules.Controller.Networks
             
             var project = await _projectRepository.GetBySpecAsync(
                 new ProjectSpecs.GetByName(
-                    EryphConstants.DefaultTenantId, Data.Config.Project ?? "default"));
+                    message.TenantId, Data.Config.Project ?? "default"));
 
             if (project == null)
             {

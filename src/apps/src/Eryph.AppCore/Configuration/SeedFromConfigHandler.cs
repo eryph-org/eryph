@@ -22,7 +22,11 @@ namespace Eryph.Configuration
         public async Task Execute(CancellationToken stoppingToken)
         {
             await using var scope = AsyncScopedLifestyle.BeginScope(_container);
-            _ = await _seeders.Map(s => s.Execute(stoppingToken).ToUnit()).TraverseParallel(l => l);
+
+            foreach (var configSeeder in _seeders)
+            {
+                await configSeeder.Execute(stoppingToken);
+            }
 
         }
     }

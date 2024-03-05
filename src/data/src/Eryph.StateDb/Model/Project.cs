@@ -14,5 +14,6 @@ public class Project
 
     public virtual List<Resource> Resources { get; set; }
 
-    public virtual List<ProjectRoles> Roles { get; set; }
+    public virtual List<ProjectRoleAssignment> ProjectRoles { get; set; }
+    public virtual List<OperationTaskModel> ReferencedTasks { get; set; }
 }
