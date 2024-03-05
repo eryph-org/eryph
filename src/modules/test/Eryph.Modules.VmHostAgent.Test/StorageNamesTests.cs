@@ -72,13 +72,13 @@ namespace Eryph.Modules.VmHostAgent.Test
             [Theory]
             [InlineData(@"x:\default\test\vms\eryph\A6RKKLNZNSOW", "default", "default", "default", "A6RKKLNZNSOW")]
             [InlineData(@"x:\default\test\vms\eryph\A6RKKLNZNSOW\test.file", "default", "default", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\default\test\vms\eryph\p_TestProject\A6RKKLNZNSOW", "default", "default", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\default\test\vms\eryph\p_testproject\A6RKKLNZNSOW", "default", "default", "testproject", "A6RKKLNZNSOW")]
             [InlineData(@"x:\scratch\test\A6RKKLNZNSOW", "default", "scratch", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\scratch\test\p_TestProject\A6RKKLNZNSOW", "default", "scratch", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\scratch\test\p_testproject\A6RKKLNZNSOW", "default", "scratch", "testproject", "A6RKKLNZNSOW")]
             [InlineData(@"x:\qa\test\vms\A6RKKLNZNSOW", "qa", "default", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\vms\p_TestProject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\qa\test\vms\p_testproject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
             [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "cluster", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\qa\cluster\test\p_testproject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
             public void FromVmPath_ValidPath_ReturnsStorageNames(
                 string path,
                 string expectedEnvironment,
@@ -115,13 +115,13 @@ namespace Eryph.Modules.VmHostAgent.Test
             [Theory]
             [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW", "default", "default", "default", "A6RKKLNZNSOW")]
             [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW\test.file", "default", "default", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\default\test\volumes\eryph\p_TestProject\A6RKKLNZNSOW", "default", "default", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\default\test\volumes\eryph\p_testproject\A6RKKLNZNSOW", "default", "default", "testproject", "A6RKKLNZNSOW")]
             [InlineData(@"x:\scratch\test\A6RKKLNZNSOW", "default", "scratch", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\scratch\test\p_TestProject\A6RKKLNZNSOW", "default", "scratch", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\scratch\test\p_testproject\A6RKKLNZNSOW", "default", "scratch", "testproject", "A6RKKLNZNSOW")]
             [InlineData(@"x:\qa\test\volumes\A6RKKLNZNSOW", "qa", "default", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\volumes\p_TestProject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\qa\test\volumes\p_testproject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
             [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "cluster", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\qa\cluster\test\p_testproject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
             [InlineData(@"x:\\default\test\volumes\eryph\genepool\testorg\testgene\testversion\volumes\test.vhdx", "default", "default", "default", "gene:testorg/testgene/testversion:test")]
             public void FromVhdPath_ValidPath_ReturnsStorageNames(
                 string path,
