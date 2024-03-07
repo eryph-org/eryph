@@ -8,6 +8,7 @@ using LanguageExt;
 using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
+using static LanguageExt.Seq;
 
 namespace Eryph.VmManagement.Storage
 {
@@ -49,19 +50,17 @@ namespace Eryph.VmManagement.Storage
             VmHostAgentConfiguration vmHostAgentConfig,
             Func<VmHostAgentDefaultsConfiguration, string> getDefault) =>
             match(
-                from pathCandidate in Seq(
-                        vmHostAgentConfig.Environments.ToSeq()
-                            .SelectMany(e => e.Datastores.ToSeq(),
-                                (e, ds) => (Environment: e.Name, Datastore: ds.Name, ds.Path)),
-                        vmHostAgentConfig.Environments.ToSeq()
-                            .Select(e => (Environment: e.Name, Datastore: "default", Path: getDefault(e.Defaults))),
-                        vmHostAgentConfig.Datastores.ToSeq()
-                            .Select(ds => (Environment: "default", Datastore: ds.Name, ds.Path)),
-                        Seq1((Environment: "default", Datastore: "default",
-                            Path: getDefault(vmHostAgentConfig.Defaults))))
-                    .Flatten()
-                    .Select(pc => from relativePath in GetContainedPath(pc.Path, path)
-                                  select (pc.Environment, pc.Datastore, RelativePath: relativePath))
+                from pathCandidate in append(
+                        vmHostAgentConfig.Environments.ToSeq().SelectMany(
+                            e => e.Datastores.ToSeq(), 
+                            (e, ds) => (Environment: e.Name, Datastore: ds.Name, ds.Path)),
+                        vmHostAgentConfig.Environments.ToSeq().Map(
+                            e => (Environment: e.Name, Datastore: "default", Path: getDefault(e.Defaults))),
+                        vmHostAgentConfig.Datastores.ToSeq().Map(
+                            ds => (Environment: "default", Datastore: ds.Name, ds.Path)),
+                        Seq1((Environment: "default", Datastore: "default", Path: getDefault(vmHostAgentConfig.Defaults)))
+                    ).Map(pc => from relativePath in GetContainedPath(pc.Path, path)
+                                select (pc.Environment, pc.Datastore, RelativePath: relativePath))
                     .Somes()
                     .HeadOrNone()
                 from root in pathCandidate.RelativePath.Split(Path.DirectorySeparatorChar).HeadOrNone()
