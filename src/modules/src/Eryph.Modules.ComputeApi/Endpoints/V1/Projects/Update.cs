@@ -13,9 +13,11 @@ using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
 {
@@ -54,6 +56,10 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         }
 
         private static Validation<ValidationIssue, Unit> ValidateRequest(UpdateProjectBody requestBody) =>
-            ComplexValidations.ValidateProperty(requestBody, r => r.Name, ProjectName.NewValidation);
+            ComplexValidations.ValidateProperty(requestBody, r => r.Name, ProjectName.NewValidation)
+            | ComplexValidations.ValidateProperty(requestBody, r => r.Name, n =>
+                from _ in guard(n != "default", Error.New("The project name 'default' is reserved."))
+                    .ToValidation()
+                select n);
     }
 }
