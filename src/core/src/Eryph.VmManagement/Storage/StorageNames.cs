@@ -61,7 +61,7 @@ namespace Eryph.VmManagement.Storage
                             Path: getDefault(vmHostAgentConfig.Defaults))))
                     .Flatten()
                     .Select(pc => from relativePath in GetContainedPath(pc.Path, path)
-                        select (pc.Environment, pc.Datastore, RelativePath: relativePath))
+                                  select (pc.Environment, pc.Datastore, RelativePath: relativePath))
                     .Somes()
                     .HeadOrNone()
                 from root in pathCandidate.RelativePath.Split(Path.DirectorySeparatorChar).HeadOrNone()
@@ -88,7 +88,6 @@ namespace Eryph.VmManagement.Storage
                     storageIdentifier),
                 Some: v => v,
                 None: () => (new StorageNames() { DataStoreName = None, EnvironmentName = None, ProjectName = None }, None));
-        
 
         public EitherAsync<Error, string> ResolveVmStorageBasePath(VmHostAgentConfiguration vmHostAgentConfig)
         {
@@ -116,7 +115,7 @@ namespace Eryph.VmManagement.Storage
             string vhdPath) =>
             from genePath in GetContainedPath(Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool"), vhdPath)
             let geneDirectory = Path.GetDirectoryName(genePath)
-            let genePathParts = geneDirectory.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
+            let genePathParts = geneDirectory.Split(Path.DirectorySeparatorChar)
             where genePathParts.Length == 4
             where string.Equals(genePathParts[3], "volumes", StringComparison.OrdinalIgnoreCase)
             let geneFileName = Path.GetFileNameWithoutExtension(genePath)
