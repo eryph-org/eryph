@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using Eryph.Messages.Projects;
 using Eryph.Modules.AspNetCore;
@@ -53,7 +54,6 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         }
 
         private static Validation<ValidationIssue, Unit> ValidateRequest(UpdateProjectBody requestBody) =>
-            ConfigValidations.ValidateProperty(requestBody, r => r.Name, "", ProjectName.Validate);
-
+            ComplexValidations.ValidateProperty(requestBody, r => r.Name, ProjectName.NewValidation);
     }
 }

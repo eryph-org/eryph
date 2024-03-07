@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using LanguageExt;
 using Microsoft.AspNetCore.Mvc;

@@ -27,7 +27,7 @@ namespace Eryph.Modules.Controller.Projects
         {
             var name = message.Command.Name;
 
-            var validation = ProjectName.Validate(name);
+            var validation = ProjectName.NewValidation(name);
             if (validation.IsFail)
             {
                 await _messaging.FailTask(message, validation);
