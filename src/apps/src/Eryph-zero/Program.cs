@@ -4,6 +4,7 @@ using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
+using System.DirectoryServices.ActiveDirectory;
 using System.IO;
 using System.Linq;
 using System.Management;
@@ -19,6 +20,7 @@ using Eryph.ModuleCore;
 using Eryph.Modules.ComputeApi;
 using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
+using Eryph.Modules.VmHostAgent.Configuration;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
@@ -56,6 +58,7 @@ using Serilog.Sinks.SystemConsole.Themes;
 using Microsoft.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 using Microsoft.IdentityModel.Logging;
+using Spectre.Console;
 
 namespace Eryph.Runtime.Zero;
 
@@ -990,29 +993,21 @@ internal static class Program
 
     private static async Task<int> GetAgentSettings(FileSystemInfo? outFile)
     {
-        var result = from hostSettings in new HostSettingsProvider().GetHostSettings()
-            from yaml in new VmHostAgentConfigurationManager().GetCurrentConfigurationYaml(hostSettings)
+        var action =
+            from hostSettings in new HostSettingsProvider().GetHostSettings().ToAff(e => e)
+            from yaml in VmHostAgentConfiguration<LanguageExt.Sys.Live.Runtime>.getConfigYaml(
+                Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
+                hostSettings)
             select yaml;
 
-        return await result.MatchAsync(
-                async config =>
+        return await action.Run(LanguageExt.Sys.Live.Runtime.New())
+            .Map(r => r.Match(
+                Succ: _ => 0,
+                Fail: error =>
                 {
-                    if (outFile != null)
-                    {
-                        await File.WriteAllTextAsync(outFile.FullName, config);
-                    }
-                    else
-                    {
-                        Console.WriteLine(config);
-                    }
-
-                    return 0;
-                }, l =>
-                {
-                    Console.WriteLine(l.Message);
+                    Console.WriteLine(error.ToString());
                     return -1;
-                }
-            );
+                }));
     }
 
     private static async Task<int> ImportAgentSettings(
@@ -1020,43 +1015,23 @@ internal static class Program
         bool nonInteractive,
         bool noCurrentConfigCheck)
     {
-        var configString = "";
-        if (inFile != null)
-        {
-            configString = await File.ReadAllTextAsync(inFile.FullName);
-        }
-        else
-        {
-            try
-            {
-                if (!Console.KeyAvailable)
+        var action =
+            from configString in ReadInput(inFile)
+            from hostSettings in new HostSettingsProvider().GetHostSettings().ToAff(e => e)
+            from _ in VmHostAgentConfigurationUpdate<LanguageExt.Sys.Live.Runtime>.updateConfig(
+                configString,
+                Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
+                hostSettings)
+            select Unit.Default;
+
+        return await action.Run(LanguageExt.Sys.Live.Runtime.New())
+            .Map(r => r.Match(
+                Succ: _ => 0,
+                Fail: error =>
                 {
-                    await Console.Error.WriteLineAsync(
-                        "Error: Supply the new network config to stdin or use --inFile option to read from file");
+                    WriteError(error);
                     return -1;
-                }
-            }
-            catch (InvalidOperationException)
-            {
-                // ignored, expected when console is redirected
-            }
-
-            await using var reader = Console.OpenStandardInput();
-            using var textReader = new StreamReader(reader);
-            configString = await textReader.ReadToEndAsync();
-        }
-
-        var manager = new VmHostAgentConfigurationManager();
-        return await Prelude.match(from config in manager.ParseConfigurationYaml(configString)
-            from hostSettings in new HostSettingsProvider().GetHostSettings()
-            from _ in manager.SaveConfiguration(config, hostSettings)
-            select Unit.Default,
-               Right: _ => 0,
-               Left: error =>
-               {
-                   Console.WriteLine(error.Message);
-                   return -1;
-               });
+                }));
     }
 
     private static async Task<int> GetNetworks(FileSystemInfo? outFile)
@@ -1088,38 +1063,12 @@ internal static class Program
     private static async Task<int> ImportNetworkConfig(FileSystemInfo? inFile, bool nonInteractive,
         bool noCurrentConfigCheck)
     {
-        var configString = "";
-        if (inFile != null)
-        {
-            configString = await File.ReadAllTextAsync(inFile.FullName);
-        }
-        else
-        {
-            try
-            {
-                if (!Console.KeyAvailable)
-                {
-                    await Console.Error.WriteLineAsync(
-                        "Error: Supply the new network config to stdin or use --inFile option to read from file");
-                    return -1;
-                }
-            }
-            catch (InvalidOperationException)
-            {
-                // ignored, expected when console is redirected
-            }
-
-            await using var reader = Console.OpenStandardInput();
-            using var textReader = new StreamReader(reader);
-            configString = await textReader.ReadToEndAsync();
-
-        }
-        
         using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
         var ovsRunDir = OVSPackage.UnpackAndProvide();
         var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), new NullLoggerFactory());
 
         var res = (await (
+            from configString in ReadInput(inFile)
             from _ in ensureDriver(ovsRunDir, true, true)
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
@@ -1150,6 +1099,57 @@ internal static class Program
             });
 
         return res;
+    }
+
+    private static Aff<string> ReadInput(FileSystemInfo? inFile) => Prelude.AffMaybe(async () =>
+    {
+        if (inFile is not null)
+            return await File.ReadAllTextAsync(inFile.FullName);
+
+        if (!Console.IsInputRedirected)
+            return Prelude.FinFail<string>(Error.New(
+                "Error: Supply the new config to stdin or use --inFile option to read from file"));
+
+        await using var reader = Console.OpenStandardInput();
+        using var textReader = new StreamReader(reader);
+        return await textReader.ReadToEndAsync();
+    });
+
+    private static Aff<Unit> WriteOutput(FileSystemInfo? outFile, string content) => Prelude.Aff(async () =>
+    {
+        if (outFile is not null)
+        {
+            await File.WriteAllTextAsync(outFile.FullName, content);
+            return Unit.Default;
+        }
+
+        Console.WriteLine(content);
+        return Unit.Default;
+    });
+
+    private static void WriteError(Error error)
+    {
+        void AddToNode<T>(T node, Error error) where T : IHasTreeNodes
+        {
+            switch(error)
+            {
+                case ManyErrors me:
+                    me.Errors.Iter(e => AddToNode(node, e));
+                    break;
+                default:
+                    var child = error.Exception.Match(
+                        Some: ex => node.AddNode(ex.GetRenderable()),
+                        None: () => node.AddNode(Markup.FromInterpolated($"{error.Message}")));
+
+                    error.Inner.IfSome(e => AddToNode(child, e));
+                    break;
+            }
+        }
+
+        var tree = new Tree("The command failed:");
+        AddToNode(tree, error);
+        AnsiConsole.Write(tree);
+        AnsiConsole.WriteLine();
     }
 
 
