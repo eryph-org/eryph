@@ -24,6 +24,7 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Dbosoft.Functional" Version="3.0.1-PullRequest0014.12" />
     <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="1.1.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
