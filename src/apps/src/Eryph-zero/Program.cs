@@ -59,6 +59,7 @@ using Microsoft.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 using Microsoft.IdentityModel.Logging;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace Eryph.Runtime.Zero;
 
@@ -1029,7 +1030,7 @@ internal static class Program
                 Succ: _ => 0,
                 Fail: error =>
                 {
-                    WriteError(error);
+                    WriteError2(error);
                     return -1;
                 }));
     }
@@ -1126,32 +1127,30 @@ internal static class Program
         Console.WriteLine(content);
         return Unit.Default;
     });
-
-    private static void WriteError(Error error)
+    
+    private static void WriteError2(Error error)
     {
-        void AddToNode<T>(T node, Error error) where T : IHasTreeNodes
+        Grid createGrid() => new Grid()
+            .AddColumn(new GridColumn() { Width = 2 })
+            .AddColumn();
+
+        Grid addToGrid(Grid grid, Error error) => error switch
         {
-            switch(error)
-            {
-                case ManyErrors me:
-                    me.Errors.Iter(e => AddToNode(node, e));
-                    break;
-                default:
-                    var child = error.Exception.Match(
-                        Some: ex => node.AddNode(ex.GetRenderable()),
-                        None: () => node.AddNode(Markup.FromInterpolated($"{error.Message}")));
+            ManyErrors me => me.Errors.Fold(grid, (g, e) => addToGrid(g, e)),
+            _ => Prelude.Seq(
+                    Prelude.Some(error.Exception.Match(
+                        Some: ex => ex.GetRenderable(),
+                        None: () => Markup.FromInterpolated($"{error.Message}"))),
+                    error.Inner.Map(e => (IRenderable)addToGrid(createGrid(), e)))
+                .Somes()
+                .Fold(grid, (g, r) => g.AddRow(new Markup(""), r)),
+        };
 
-                    error.Inner.IfSome(e => AddToNode(child, e));
-                    break;
-            }
-        }
-
-        var tree = new Tree("The command failed:");
-        AddToNode(tree, error);
-        AnsiConsole.Write(tree);
+        AnsiConsole.Write(new Rows(
+            new Text("The command was not successful."),
+            addToGrid(createGrid(), error)));
         AnsiConsole.WriteLine();
     }
-
 
     private static void CopyDirectory(string sourceDir, string destinationDir, params string[] ignoredFiles)
     {

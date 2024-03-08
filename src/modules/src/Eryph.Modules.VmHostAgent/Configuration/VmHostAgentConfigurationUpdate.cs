@@ -33,4 +33,8 @@ public static class VmHostAgentConfigurationUpdate<RT> where RT : struct,
         from __ in VmHostAgentConfiguration<RT>.saveConfig(newConfig, configPath, hostSettings)
         select unit;
 
+    // TODO missing validation
+    // - check if paths are accessible
+    // - block change of default paths when any VM exists (to prevent invalidation of the genepool)
+    // - block change of datastore/environment when it is used
 }
