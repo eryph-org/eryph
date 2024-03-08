@@ -11,7 +11,7 @@ using LanguageExt.Common;
 using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 using static LanguageExt.Seq;
-using static LanguageExt.HashSet;
+
 namespace Eryph.Core.VmAgent
 {
     public static class VmHostAgentConfigurationValidations
