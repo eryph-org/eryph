@@ -13,7 +13,9 @@ namespace Eryph.VmManagement.Test
     {
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_resolves_drive_config_from_parent(string geneset)
         {
             var config = new CatletConfig
@@ -55,7 +57,9 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_eats_food_source_from_parent(string geneset)
         {
              var config = new CatletConfig
@@ -82,7 +86,9 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_eats_food_from_source(string geneset)
         {
             var config = new CatletConfig
@@ -146,7 +152,9 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_eats_only_selected_food(string geneset)
         {
             var config = new CatletConfig
@@ -174,7 +182,9 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_eats_some_food_from_parent(string geneset)
         {
             var config = new CatletConfig
@@ -209,7 +219,9 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_eats_no_food_from_parent(string geneset)
         {
             var config = new CatletConfig
