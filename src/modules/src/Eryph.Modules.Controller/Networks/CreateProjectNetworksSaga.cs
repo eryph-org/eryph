@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages.Resources.Networks.Commands;
@@ -12,9 +13,12 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Rebus.Sagas;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks
 {
@@ -57,9 +61,12 @@ namespace Eryph.Modules.Controller.Networks
             Data.Config = _validator.NormalizeConfig(message.Config);
             _log.LogTrace("Update project networks. Config: {@Config}", Data.Config);
             
+            var projectName = Optional(Data.Config.Project).Filter(notEmpty).Match(
+                Some: n => ProjectName.New(n),
+                None: () => ProjectName.New("default"));
+
             var project = await _projectRepository.GetBySpecAsync(
-                new ProjectSpecs.GetByName(
-                    message.TenantId, Data.Config.Project ?? "default"));
+                new ProjectSpecs.GetByName(message.TenantId, projectName.Value));
 
             if (project == null)
             {

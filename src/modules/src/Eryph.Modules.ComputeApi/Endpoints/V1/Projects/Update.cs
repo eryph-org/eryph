@@ -51,14 +51,15 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
             {
                 ProjectId = Guid.Parse(request.Id),
                 CorrelationId = request.Body.CorrelationId.GetValueOrDefault(Guid.NewGuid()),
-                Name = request.Body.Name
+                Name = ProjectName.New(request.Body.Name).Value
             };
         }
 
         private static Validation<ValidationIssue, Unit> ValidateRequest(UpdateProjectBody requestBody) =>
             ComplexValidations.ValidateProperty(requestBody, r => r.Name, ProjectName.NewValidation)
             | ComplexValidations.ValidateProperty(requestBody, r => r.Name, n =>
-                from _ in guard(n != "default", Error.New("The project name 'default' is reserved."))
+                from _ in guardnot(string.Equals(n, "default", StringComparison.OrdinalIgnoreCase),
+                        Error.New("The project name 'default' is reserved."))
                     .ToValidation()
                 select n);
     }

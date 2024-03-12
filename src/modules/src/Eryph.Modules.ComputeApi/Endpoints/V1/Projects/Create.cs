@@ -53,7 +53,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
             return new CreateProjectCommand
             {
                 CorrelationId = request.CorrelationId.GetValueOrDefault(Guid.NewGuid()),
-                ProjectName = request.Name,
+                ProjectName = ProjectName.New(request.Name).Value,
                 IdentityId = _userRightsProvider.GetUserId(),
                 TenantId = _userRightsProvider.GetUserTenantId()
             };
@@ -62,9 +62,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         private static Validation<ValidationIssue, Unit> ValidateRequest(NewProjectRequest request) =>
             ComplexValidations.ValidateProperty(request, r => r.Name, ProjectName.NewValidation)
             | ComplexValidations.ValidateProperty(request, r => r.Name, n =>
-                from _ in guard(n != "default", Error.New("The project name 'default' is reserved."))
-                  .ToValidation()
+                from _ in guardnot(string.Equals(n, "default", StringComparison.OrdinalIgnoreCase),
+                        Error.New("The project name 'default' is reserved."))
+                    .ToValidation()
                 select n);
-
     }
 }

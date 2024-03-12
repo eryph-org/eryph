@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Functional.Validations;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
 using Eryph.Messages.Resources.Networks.Commands;
@@ -9,11 +11,16 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
 {
@@ -70,13 +77,23 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
             if (config == null)
                 return BadRequest();
 
-            var projectAccess = await _userRightsProvider.HasProjectAccess(config.Project ?? "default", AccessRight.Admin);
+            var validation = Validate(config, nameof(UpdateProjectNetworksRequest.Configuration));
+            if(validation.IsFail)
+                return ValidationProblem(validation.ToProblemDetails());
+            
+            var projectName = Optional(config.Project).Filter(notEmpty).Match(
+                Some: n => ProjectName.New(n),
+                None: () => ProjectName.New("default"));
+
+            var projectAccess = await _userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Admin);
             if (!projectAccess)
                 return Forbid();
 
             return await base.HandleAsync(request, cancellationToken);
         }
 
+        private static Validation<ValidationIssue, Unit> Validate(ProjectNetworksConfig config, string path = "") =>
+            ComplexValidations.ValidateProperty(config, r => r.Project, ProjectName.NewValidation, path);
 
     }
 }
