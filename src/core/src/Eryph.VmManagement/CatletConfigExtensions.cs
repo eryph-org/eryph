@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
@@ -14,6 +15,7 @@ namespace Eryph.VmManagement
 {
     public static class CatletConfigExtensions
     {
+        // TODO detect fodder to remove with GeneIdentifier and FodderName to avoid capitalization issues
         public static Either<Error,CatletConfig> BreedAndFeed(this CatletConfig machineConfig,
             ILocalGenepoolReader genepoolReader,
             Option<CatletConfig> optionalParentConfig)
@@ -47,24 +49,27 @@ namespace Eryph.VmManagement
             return updatedConfig;
         }
 
-        private static Either<Error,CatletDriveConfig[]> ExpandDriveConfig(ILocalGenepoolReader genepoolReader, 
+        private static Either<Error,CatletDriveConfig[]> ExpandDriveConfig(
+            ILocalGenepoolReader genepoolReader, 
             CatletDriveConfig drive)
         {
             if (string.IsNullOrEmpty(drive.Source) || !drive.Source.StartsWith("gene:"))
                 return new [] { drive };
 
-            return from geneIdentifier in GeneIdentifier.Parse(GeneType.Volume,drive.Source)
+            return from geneIdentifier in GeneIdentifier.NewEither(drive.Source)
             from resolvedIdentifier in ResolveGeneIdentifier(genepoolReader, geneIdentifier)
             let newConfig = drive.Apply(c =>
             {
-                c.Source = $"gene:{resolvedIdentifier.Name}";
+                c.Source = resolvedIdentifier.Value;
                 return c;
             })
             select new[] { newConfig };
         }
 
         private static Either<Error, FodderConfig[]> ExpandFodderConfig(
-            ILocalGenepoolReader genepoolReader, FodderConfig fodder, FodderConfig[] toRemove)
+            ILocalGenepoolReader genepoolReader,
+            FodderConfig fodder,
+            FodderConfig[] toRemove)
         {
             if (string.IsNullOrEmpty(fodder.Source) || !fodder.Source.StartsWith("gene:"))
             {
@@ -74,20 +79,20 @@ namespace Eryph.VmManagement
                     : new[] { fodder };
             }
 
-            return from geneIdentifier in GeneIdentifier.Parse(GeneType.Fodder,fodder.Source)
+            return from geneIdentifier in GeneIdentifier.NewEither(fodder.Source)
                 from resolvedIdentifier in ResolveGeneIdentifier(genepoolReader, geneIdentifier)
                 let newConfig = fodder.Apply(c =>
                 {
-                    c.Source = $"gene:{resolvedIdentifier.Name}";
+                    c.Source = resolvedIdentifier.Value;
                     return c;
                 })
                 from expandedConfig in ExpandFodderConfigFromSource(genepoolReader, newConfig, 
-                    toRemove.Where(x=>x.Source == $"gene:{geneIdentifier.Name}").ToArray())
+                    toRemove.Where(x => x.Source == geneIdentifier.Value).ToArray())
                 select expandedConfig.Where(x=>!x.Remove.GetValueOrDefault()).ToArray();
-
         }
 
-        private static Either<Error, FodderConfig[]> ExpandFodderConfigFromSource(ILocalGenepoolReader genepoolReader, 
+        private static Either<Error, FodderConfig[]> ExpandFodderConfigFromSource(
+            ILocalGenepoolReader genepoolReader, 
             FodderConfig config, 
             IEnumerable<FodderConfig> toRemove)
         {
@@ -96,9 +101,8 @@ namespace Eryph.VmManagement
                 return Array.Empty<FodderConfig>();
 
             return
-                from geneIdentifier in GeneIdentifier.Parse(GeneType.Fodder,
-                    config.Source ?? throw new InvalidDataException())
-                from geneContent in genepoolReader.ReadGeneContent(geneIdentifier)
+                from geneIdentifier in GeneIdentifier.NewEither(config.Source ?? throw new InvalidDataException())
+                from geneContent in genepoolReader.ReadGeneContent(GeneType.Fodder, geneIdentifier)
                 from fodder in Try(() =>
                 {
                     var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(geneContent);
@@ -113,7 +117,8 @@ namespace Eryph.VmManagement
         }
 
         private static Either<Error, GeneIdentifier> ResolveGeneIdentifier(
-            ILocalGenepoolReader genepoolReader, GeneIdentifier identifier)
+            ILocalGenepoolReader genepoolReader,
+            GeneIdentifier identifier)
         {
 
             var processedReferences = new List<string>();
@@ -121,13 +126,13 @@ namespace Eryph.VmManagement
 
             do
             {
-                var genesetName = identifier.GeneSet.Name;
+                var genesetName = identifier.GeneSet.Value;
 
                 if (processedReferences.Contains(genesetName))
                 {
                     var referenceStack = string.Join(" -> ", processedReferences);
                     throw new InvalidDataException(
-                        $"Circular reference detected in geneset '{startIdentifier.Name}': {referenceStack}.");
+                        $"Circular reference detected in geneset '{startIdentifier.Value}': {referenceStack}.");
                 }
 
                 processedReferences.Add(genesetName);
@@ -136,7 +141,7 @@ namespace Eryph.VmManagement
                 // to see if it is a reference or not
                 var res = genepoolReader.GetGenesetReference(identifier.GeneSet).Map(o => o.Map(s =>
                 {
-                    identifier = new GeneIdentifier(identifier.GeneType, s, identifier.Gene);
+                    identifier = new GeneIdentifier(s, identifier.GeneName);
                     return true;
                 }).IfNone(false));
 
@@ -148,8 +153,6 @@ namespace Eryph.VmManagement
 
                 return identifier;
             } while (true);
-
-
         }
     }
 }

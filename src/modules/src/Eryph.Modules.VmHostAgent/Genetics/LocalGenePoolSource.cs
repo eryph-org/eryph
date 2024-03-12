@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
@@ -33,7 +34,7 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
     {
         var orgDirectory = Path.Combine(basePath, genesetIdentifier.Organization.Value);
         if (shouldExists) _fileSystem.EnsureDirectoryExists(orgDirectory);
-        var poolBaseDirectory = Path.Combine(orgDirectory, genesetIdentifier.Geneset.Value);
+        var poolBaseDirectory = Path.Combine(orgDirectory, genesetIdentifier.GeneSet.Value);
         if (shouldExists) _fileSystem.EnsureDirectoryExists(poolBaseDirectory);
         var imageTagDirectory = Path.Combine(poolBaseDirectory, genesetIdentifier.Tag.Value);
         if (shouldExists) _fileSystem.EnsureDirectoryExists(imageTagDirectory);
@@ -219,7 +220,7 @@ internal class LocalGenePoolSource : GenePoolBase, ILocalGenePool
                 var genesetPath = BuildGeneSetPath(genesetIdentifier, path);
                 if (!File.Exists(Path.Combine(genesetPath, "geneset-tag.json")))
                     return await Prelude.LeftAsync<Error, GeneSetInfo>(Error.New(
-                        $"Geneset '{genesetIdentifier.Name}' not found in local gene pool.")).ToEither();
+                        $"Geneset '{genesetIdentifier.Value}' not found in local gene pool.")).ToEither();
 
                 await using var manifestStream = File.OpenRead(Path.Combine(genesetPath, "geneset-tag.json"));
                 var manifest =

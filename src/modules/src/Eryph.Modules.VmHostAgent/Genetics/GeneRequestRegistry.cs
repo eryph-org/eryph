@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.ConfigModel;
 using Eryph.GenePool.Model;
 using Eryph.Messages.Resources.Genes.Commands;
 using LanguageExt;
@@ -31,11 +32,11 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
         _geneProvider = geneProvider;
     }
 
-    private readonly Atom<HashMap<GeneIdentifier, Arr<ListeningTask>>> _pendingRequests = Prelude.Atom(HashMap<GeneIdentifier, 
-        Arr<ListeningTask>>.Empty);
+    private readonly Atom<HashMap<GeneIdentifierWithType, Arr<ListeningTask>>> _pendingRequests =
+        Prelude.Atom(HashMap<GeneIdentifierWithType, Arr<ListeningTask>>.Empty);
 
-    private readonly Atom<HashMap<string, Arr<GeneIdentifier>>> _pendingGenes = Prelude.Atom(HashMap<string,
-        Arr<GeneIdentifier>>.Empty);
+    private readonly Atom<HashMap<string, Arr<GeneIdentifierWithType>>> _pendingGenes =
+        Prelude.Atom(HashMap<string, Arr<GeneIdentifierWithType>>.Empty);
 
     public async ValueTask NewGeneRequestTask(IOperationTaskMessage message, GeneType geneType, string geneIdentifier)
     {
@@ -51,24 +52,19 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
         Func<object, IOperationTaskMessage> taskMessageCallback)
     {
         var queueTask = false;
-        var parsedGene = GeneIdentifier.Parse(geneType, geneIdentifier)
-            .Match(r => r, l =>
-            {
-                l.Throw();
-                return default;
-            });
+        var geneIdAndType = new GeneIdentifierWithType(geneType, GeneIdentifier.New(geneIdentifier));
 
         // the pending requests are used to send messages to all listeners and to complete the task once done
-        _pendingRequests.Swap(queue => queue.AddOrUpdate(parsedGene,
+        _pendingRequests.Swap(queue => queue.AddOrUpdate(geneIdAndType,
             Some: td => td.Add(new ListeningTask(context, completeCallback, taskMessageCallback)),
             None: () =>
             {
-                _pendingGenes.Swap(pendingGenes => pendingGenes.AddOrUpdate(parsedGene.GeneSet.UntaggedName,
-                    Some: genes => genes.Add(parsedGene),
+                _pendingGenes.Swap(pendingGenes => pendingGenes.AddOrUpdate(geneIdAndType.GeneIdentifier.GeneSet.ValueWithoutTag,
+                    Some: genes => genes.Add(geneIdAndType),
                     None: () =>
                     {
                         queueTask = true;
-                        return new Arr<GeneIdentifier>(new[] { parsedGene });
+                        return new Arr<GeneIdentifierWithType>(new[] { geneIdAndType });
                     })
                 );
 
@@ -78,10 +74,8 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
         // only queue a new task if it was not already queued (in that case we have added only a new listener)
         if (queueTask)
         {
-            await _queue.QueueBackgroundWorkItemAsync(token => ProvideGene(parsedGene, token));
+            await _queue.QueueBackgroundWorkItemAsync(token => ProvideGene(geneIdAndType, token));
         }
-
-
     }
 
     public async ValueTask NewGenomeRequestTask(IOperationTaskMessage message, string genesetName)
@@ -91,7 +85,7 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
 
     private async ValueTask NewGenomeRequestTaskInternal(GenomeContext context, string genesetName)
     {
-        var parsedGeneSet = GeneSetIdentifier.Parse(genesetName)
+        var parsedGeneSet = GeneSetIdentifier.NewEither(genesetName)
             .Match(r => r, l =>
             {
                 l.Throw();
@@ -99,11 +93,11 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
             });
 
 
-        await NewGeneRequestTaskInternal(GeneType.Catlet,$"{parsedGeneSet}:catlet", context,
+        await NewGeneRequestTaskInternal(GeneType.Catlet, $"{parsedGeneSet}:catlet", context,
             async (m, ctx, r) =>
             {
                 var innerContext = (GenomeContext)ctx;
-                return await r.Bind(prepareResponse => GeneIdentifier.Parse(GeneType.Catlet,prepareResponse.ResolvedGene))
+                return await r.Bind(prepareResponse => GeneIdentifier.NewEither(prepareResponse.ResolvedGene))
                     .ToAsync()
                     .Bind(resolvedGene =>
                         
@@ -117,7 +111,7 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
                             Some: async p =>
                             {
                                 await NewGenomeRequestTaskInternal(context with {ResolvedGenSets = 
-                                    context.ResolvedGenSets.Add(resolvedGene.GeneSet.Name)}, p);
+                                    context.ResolvedGenSets.Add(resolvedGene.GeneSet.Value)}, p);
                                 return Prelude.Right<Error, Unit>(Unit.Default);
                             },
                             None: async () =>
@@ -139,7 +133,7 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
                                 // parent hierarchy
                                 var resolvedParent = innerContext.ResolvedGenSets.Length > 0
                                     ? innerContext.ResolvedGenSets.FirstOrDefault()
-                                    : resolvedGene.GeneSet.Name;
+                                    : resolvedGene.GeneSet.Value;
 
                                 var result = new PrepareParentGenomeResponse
                                 {
@@ -164,7 +158,7 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
             ctx => ((GenomeContext)ctx).Message);
     }
 
-    private async ValueTask ProvideGene(GeneIdentifier geneIdentifier, CancellationToken cancel)
+    private async ValueTask ProvideGene(GeneIdentifierWithType geneIdWithType, CancellationToken cancel)
     {
         await using var scope = AsyncScopedLifestyle.BeginScope(_container);
 
@@ -172,22 +166,23 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
         try
         {
             var result = await _geneProvider.ProvideGene(
-                geneIdentifier,
-                (message, progress) => ReportProgress(taskMessaging, geneIdentifier, message, progress), cancel);
-            await EndRequest(taskMessaging, geneIdentifier, result);
+                geneIdWithType.GeneType,
+                geneIdWithType.GeneIdentifier,
+                (message, progress) => ReportProgress(taskMessaging, geneIdWithType, message, progress), cancel);
+            await EndRequest(taskMessaging, geneIdWithType, result);
         }
         catch (Exception ex)
         {
-            await EndRequest(taskMessaging, geneIdentifier, Error.New(ex));
+            await EndRequest(taskMessaging, geneIdWithType, Error.New(ex));
         }
 
 
     }
 
-    public async Task<Unit> ReportProgress(ITaskMessaging taskMessaging, GeneIdentifier geneIdentifier, string message, int progress)
+    private async Task<Unit> ReportProgress(ITaskMessaging taskMessaging, GeneIdentifierWithType geneIdWithType, string message, int progress)
     {
 
-        await _pendingRequests.Value.Find(geneIdentifier).IfSomeAsync(async listening =>
+        await _pendingRequests.Value.Find(geneIdWithType).IfSomeAsync(async listening =>
         {
             foreach (var task in listening)
             {
@@ -202,17 +197,17 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
         return Unit.Default;
     }
 
-    public Task EndRequest(ITaskMessaging taskMessaging, GeneIdentifier geneIdentifier, Either<Error, PrepareGeneResponse> result)
+    private Task EndRequest(ITaskMessaging taskMessaging, GeneIdentifierWithType geneIdWithType, Either<Error, PrepareGeneResponse> result)
     {
-        return from requestUpdate in _pendingRequests.Value.Find(geneIdentifier).IfSomeAsync(async listening =>
+        return from requestUpdate in _pendingRequests.Value.Find(geneIdWithType).IfSomeAsync(async listening =>
         {
-            _pendingRequests.Swap(requests => requests.Remove(geneIdentifier));
+            _pendingRequests.Swap(requests => requests.Remove(geneIdWithType));
             foreach (var task in listening)
             {
                 await task.CompleteCallback(taskMessaging, task.Context, result);
             }
         })
-        from nextQueued in _pendingGenes.Value.Find(geneIdentifier.GeneSet.UntaggedName).IfSomeAsync(async waitingGenes =>
+        from nextQueued in _pendingGenes.Value.Find(geneIdWithType.GeneIdentifier.GeneSet.ValueWithoutTag).IfSomeAsync(async waitingGenes =>
         {
             var next = waitingGenes.HeadOrNone();
             
@@ -220,10 +215,10 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
             {
                 //remove pending gene from waiting list
                 return next.Match(
-                    Some: n => genes.AddOrUpdate(geneIdentifier.GeneSet.UntaggedName,
+                    Some: n => genes.AddOrUpdate(geneIdWithType.GeneIdentifier.GeneSet.ValueWithoutTag,
                         w => w.Remove(n),
                         () => waitingGenes),
-                    None: () => genes.Remove(geneIdentifier.GeneSet.UntaggedName)
+                    None: () => genes.Remove(geneIdWithType.GeneIdentifier.GeneSet.ValueWithoutTag)
                 );
             });
 

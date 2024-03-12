@@ -137,17 +137,14 @@ namespace Eryph.Modules.VmHostAgent.Genetics
         }
 
 
-        private static string GetGenePath(string? type)
+        private static string GetGenePath(GeneType geneType)
         {
-            if (!Enum.TryParse<GeneType>(type, true, out var geneType))
-                throw new ArgumentOutOfRangeException(nameof(type), type, null);
-
             return geneType switch
             {
                 GeneType.Catlet => "",
                 GeneType.Volume => "volumes",
                 GeneType.Fodder => "fodder",
-                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+                _ => throw new ArgumentOutOfRangeException(nameof(geneType))
             };
         }
 
