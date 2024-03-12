@@ -41,18 +41,18 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
     public async ValueTask NewGeneRequestTask(IOperationTaskMessage message, GeneType geneType, string geneIdentifier)
     {
 
-        await NewGeneRequestTaskInternal(geneType, geneIdentifier, message, 
+        await NewGeneRequestTaskInternal(geneType, GeneIdentifier.New(geneIdentifier), message, 
             (m, ctx, r) => 
             r.ToAsync().FailOrComplete(m, (IOperationTaskMessage )ctx),
             ctx => (IOperationTaskMessage)ctx);
     }
 
-    private async ValueTask NewGeneRequestTaskInternal(GeneType geneType, string geneIdentifier, object context,
+    private async ValueTask NewGeneRequestTaskInternal(GeneType geneType, GeneIdentifier geneIdentifier, object context,
         Func<ITaskMessaging, object, Either<Error, PrepareGeneResponse>, Task<Unit>> completeCallback,
         Func<object, IOperationTaskMessage> taskMessageCallback)
     {
         var queueTask = false;
-        var geneIdAndType = new GeneIdentifierWithType(geneType, GeneIdentifier.New(geneIdentifier));
+        var geneIdAndType = new GeneIdentifierWithType(geneType, geneIdentifier);
 
         // the pending requests are used to send messages to all listeners and to complete the task once done
         _pendingRequests.Swap(queue => queue.AddOrUpdate(geneIdAndType,
@@ -80,20 +80,16 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
 
     public async ValueTask NewGenomeRequestTask(IOperationTaskMessage message, string genesetName)
     {
-        await NewGenomeRequestTaskInternal(new GenomeContext(message, genesetName, Arr<string>.Empty), genesetName);
+        await NewGenomeRequestTaskInternal(
+            new GenomeContext(message, genesetName, Arr<string>.Empty),
+            GeneSetIdentifier.New(genesetName));
     }
 
-    private async ValueTask NewGenomeRequestTaskInternal(GenomeContext context, string genesetName)
+    private async ValueTask NewGenomeRequestTaskInternal(GenomeContext context, GeneSetIdentifier geneSetId)
     {
-        var parsedGeneSet = GeneSetIdentifier.NewEither(genesetName)
-            .Match(r => r, l =>
-            {
-                l.Throw();
-                return default;
-            });
+        var geneIdentifier = new GeneIdentifier(geneSetId, GeneName.New("catlet"));
 
-
-        await NewGeneRequestTaskInternal(GeneType.Catlet, $"{parsedGeneSet}:catlet", context,
+        await NewGeneRequestTaskInternal(GeneType.Catlet, geneIdentifier, context,
             async (m, ctx, r) =>
             {
                 var innerContext = (GenomeContext)ctx;
@@ -107,7 +103,9 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
                                 await m.ProgressMessage(innerContext.Message,new { message , progress});
                                 return Unit.Default;
                             }, CancellationToken.None  )
-                        from uResponse in optionalParent.MatchAsync(
+                        from optionalParentId in optionalParent.Map(GeneSetIdentifier.NewEither)
+                            .Sequence().ToAsync()
+                        from uResponse in optionalParentId.MatchAsync(
                             Some: async p =>
                             {
                                 await NewGenomeRequestTaskInternal(context with {ResolvedGenSets = 
