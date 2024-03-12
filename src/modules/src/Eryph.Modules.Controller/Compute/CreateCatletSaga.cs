@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
@@ -13,6 +14,8 @@ using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Compute
 {
@@ -46,10 +49,13 @@ namespace Eryph.Modules.Controller.Compute
             {
                 Data.State = CreateVMState.Created;
 
-                var projectName = Data.Config?.Project ?? "default";
+                // TODO use ProjectName to be case insensitive or put projectId in the command
+                var projectName = Optional(Data.Config?.Project).Filter(notEmpty).Match(
+                    Some: n => ProjectName.New(n),
+                    None: () => ProjectName.New("default"));
 
                 var project = await _stateStore.For<Project>()
-                    .GetBySpecAsync(new ProjectSpecs.GetByName(Data.TenantId, projectName));
+                    .GetBySpecAsync(new ProjectSpecs.GetByName(Data.TenantId, projectName.Value));
 
                 if (project == null)
                     throw new InvalidOperationException($"Project '{projectName}' not found.");
