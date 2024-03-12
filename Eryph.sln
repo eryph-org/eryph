@@ -84,9 +84,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.Test", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "eryph-uninstaller", "src\apps\src\eryph-uninstaller\eryph-uninstaller.csproj", "{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.Controller.Tests", "src\modules\test\Eryph.Modules.Controller.Tests\Eryph.Modules.Controller.Tests.csproj", "{FF059DF9-5144-42C5-8797-92777C5B495E}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Core.Tests", "src\core\test\Eryph.Core.Tests\Eryph.Core.Tests.csproj", "{A22374A0-673A-466B-9231-5859EEB65E33}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.Controller.Tests", "src\modules\test\Eryph.Modules.Controller.Tests\Eryph.Modules.Controller.Tests.csproj", "{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -214,18 +214,18 @@ Global
 		{7ED587D0-DB83-4427-9A47-FC51FD8EF596}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7ED587D0-DB83-4427-9A47-FC51FD8EF596}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7ED587D0-DB83-4427-9A47-FC51FD8EF596}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A22374A0-673A-466B-9231-5859EEB65E33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A22374A0-673A-466B-9231-5859EEB65E33}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A22374A0-673A-466B-9231-5859EEB65E33}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A22374A0-673A-466B-9231-5859EEB65E33}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FF059DF9-5144-42C5-8797-92777C5B495E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FF059DF9-5144-42C5-8797-92777C5B495E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FF059DF9-5144-42C5-8797-92777C5B495E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FF059DF9-5144-42C5-8797-92777C5B495E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A22374A0-673A-466B-9231-5859EEB65E33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A22374A0-673A-466B-9231-5859EEB65E33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A22374A0-673A-466B-9231-5859EEB65E33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A22374A0-673A-466B-9231-5859EEB65E33}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -261,8 +261,9 @@ Global
 		{4CF54668-F3F0-403E-BA26-EC9F15D325BD} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{036EC2BD-8968-46D4-9FFD-901F3BB1FA70} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{7ED587D0-DB83-4427-9A47-FC51FD8EF596} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
-		{A22374A0-673A-466B-9231-5859EEB65E33} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6} = {5F41CD29-E6EF-4810-8A84-8B9E52AEAE70}
+		{A22374A0-673A-466B-9231-5859EEB65E33} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

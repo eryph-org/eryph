@@ -115,7 +115,14 @@ namespace Eryph.Modules.Controller.Networks
                 var providerSubnet = networkConfig.Provider?.Subnet ?? "default";
                 var providerIpPool = networkConfig.Provider?.IpPool ?? "default";
 
-                var networkProvider = networkProviders.First(x => x.Name == providerName);
+                var networkProvider = networkProviders.FirstOrDefault(x => x.Name == providerName);
+
+                if (networkProvider == null)
+                {
+                    yield return $"environment '{networkConfig.Environment}', network '{networkConfig.Name}': could not find network provider '{providerName}'";
+                    continue;
+                }
+
                 if (networkProvider.Type == NetworkProviderType.Flat) continue;
 
                 var countOfCatletPorts = network.NetworkPorts.Count(x => x is CatletNetworkPort);
@@ -245,11 +252,21 @@ namespace Eryph.Modules.Controller.Networks
                     .Select(x => (Address: x.ipNetwork, Network: x.Name))
                     .ToArray();
 
+            var environmentNetworkNames = 
+                networkConfigs.Select(x => GetEnvironmentName(x.Environment, x.Name ?? "default")).ToList();
 
             foreach (var networkConfig in networkConfigs)
             {
                 if (string.IsNullOrWhiteSpace(networkConfig.Name))
                     yield return "Empty network name";
+
+                var environmentNetworkName = GetEnvironmentName(networkConfig.Environment, networkConfig.Name ?? "default");
+                if (environmentNetworkNames.Count(x => x == environmentNetworkName) > 1)
+                {
+                    yield return
+                        $"Duplicate network name '{networkConfig.Name}' in environment '{networkConfig.Environment}'";
+                    environmentNetworkNames.Remove(environmentNetworkName);
+                }
 
                 var environmentMessage = networkConfig.Environment == "default" ? "": $"environment '{networkConfig.Environment}', ";
                 var providerName = networkConfig.Provider?.Name ?? "default";
@@ -333,7 +350,7 @@ namespace Eryph.Modules.Controller.Networks
                                 yield return
                                     $"{environmentMessage}subnet '{networkConfig.Name}/{subnetConfig.Name}': Invalid network address '{subnetConfig.Address}'";
 
-                            if (!networkIpNetwork.Contains(subnetIPNetwork))
+                            if (subnetIPNetwork != null && !networkIpNetwork.Contains(subnetIPNetwork))
                                 yield return
                                     $"{environmentMessage}subnet '{networkConfig.Name}/{subnetConfig.Name}': network address '{subnetIPNetwork}' is not a subnet of '{networkConfig.Address}'";
 
