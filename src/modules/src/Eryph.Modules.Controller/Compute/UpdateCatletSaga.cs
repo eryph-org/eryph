@@ -1,8 +1,13 @@
-﻿using Dbosoft.Rebus.Operations;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.GenePool.Model;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
@@ -13,15 +18,10 @@ using Eryph.Resources.Machines;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
-using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Eryph.Core;
+
 using static LanguageExt.Prelude;
 using static LanguageExt.Seq;
 
