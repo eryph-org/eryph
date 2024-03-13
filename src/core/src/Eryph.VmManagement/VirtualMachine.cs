@@ -174,8 +174,7 @@ namespace Eryph.VmManagement
                 
                 // read catlet config of parent
                 var eitherConfig = from parentIdentifier in GeneSetIdentifier.NewEither(parent)
-                    from geneName in GeneName.NewEither("catlet")
-                    let geneIdentifier = new GeneIdentifier(parentIdentifier, geneName)
+                    let geneIdentifier = new GeneIdentifier(parentIdentifier, GeneName.New("catlet"))
                     from catletGene in genepoolReader.ReadGeneContent(GeneType.Catlet, geneIdentifier)
                     from config in Try(() =>
                     {

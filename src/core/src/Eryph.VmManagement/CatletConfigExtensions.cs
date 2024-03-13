@@ -61,10 +61,10 @@ namespace Eryph.VmManagement
 
         private static Either<Error, FodderConfig[]> ExpandFodderConfigs(
             ILocalGenepoolReader genepoolReader,
-            Seq<FodderConfig> fodders) =>
+            Seq<FodderConfig> fodder) =>
             from toRemove in PrepareMetadata(
-                fodders.Filter(f => f.Remove.GetValueOrDefault() && !string.IsNullOrEmpty(f.Source)))
-            from expandedFodders in fodders
+                fodder.Filter(f => f.Remove.GetValueOrDefault() && !string.IsNullOrEmpty(f.Source)))
+            from expandedFodders in fodder
                 .Filter(f => !f.Remove.GetValueOrDefault())
                 .Map(f => ExpandFodderConfig(genepoolReader, f, toRemove))
                 .Sequence()

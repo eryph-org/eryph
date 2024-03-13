@@ -49,7 +49,6 @@ namespace Eryph.Modules.Controller.Compute
             {
                 Data.State = CreateVMState.Created;
 
-                // TODO use ProjectName to be case insensitive or put projectId in the command
                 var projectName = Optional(Data.Config?.Project).Filter(notEmpty).Match(
                     Some: n => ProjectName.New(n),
                     None: () => ProjectName.New("default"));
