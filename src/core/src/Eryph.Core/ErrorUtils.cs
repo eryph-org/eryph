@@ -12,7 +12,7 @@ public static class ErrorUtils
     public static string PrintError(Error error) => error switch
     {
         ManyErrors me => string.Join("\n", me.Errors.Map(PrintError)),
-        Exceptional ee => ee.Exception.ToString(),
+        Exceptional ee => ee.ToException().ToString(),
         _ => error.Message
              + error.Inner.Map(i => $"{Environment.NewLine}{PrintError(i)}").IfNone(""),
     };
