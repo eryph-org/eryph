@@ -49,6 +49,7 @@ using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt.Common;
+using LanguageExt.Effects.Traits;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
 using Serilog.Events;
@@ -992,48 +993,28 @@ internal static class Program
         Directory.Move(source, target);
     }
 
-    private static async Task<int> GetAgentSettings(FileSystemInfo? outFile)
-    {
-        var action =
+    private static Task<int> GetAgentSettings(FileSystemInfo? outFile) =>
+        RunAsAdmin(LanguageExt.Sys.Live.Runtime.New(),
             from hostSettings in new HostSettingsProvider().GetHostSettings().ToAff(e => e)
             from yaml in VmHostAgentConfiguration<LanguageExt.Sys.Live.Runtime>.getConfigYaml(
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
-            select yaml;
+            from _ in WriteOutput(outFile, yaml)
+            select Unit.Default);
 
-        return await action.Run(LanguageExt.Sys.Live.Runtime.New())
-            .Map(r => r.Match(
-                Succ: _ => 0,
-                Fail: error =>
-                {
-                    Console.WriteLine(error.ToString());
-                    return -1;
-                }));
-    }
-
-    private static async Task<int> ImportAgentSettings(
+    private static Task<int> ImportAgentSettings(
         FileSystemInfo? inFile,
         bool nonInteractive,
-        bool noCurrentConfigCheck)
-    {
-        var action =
+        bool noCurrentConfigCheck) =>
+        RunAsAdmin(
+            LanguageExt.Sys.Live.Runtime.New(),
             from configString in ReadInput(inFile)
             from hostSettings in new HostSettingsProvider().GetHostSettings().ToAff(e => e)
             from _ in VmHostAgentConfigurationUpdate<LanguageExt.Sys.Live.Runtime>.updateConfig(
                 configString,
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
-            select Unit.Default;
-
-        return await action.Run(LanguageExt.Sys.Live.Runtime.New())
-            .Map(r => r.Match(
-                Succ: _ => 0,
-                Fail: error =>
-                {
-                    WriteError2(error);
-                    return -1;
-                }));
-    }
+            select Unit.Default);
 
     private static async Task<int> GetNetworks(FileSystemInfo? outFile)
     {
@@ -1128,22 +1109,23 @@ internal static class Program
         return Unit.Default;
     });
     
-    private static void WriteError2(Error error)
+    private static void WriteError(Error error)
     {
         Grid createGrid() => new Grid()
             .AddColumn(new GridColumn() { Width = 2 })
             .AddColumn();
 
+        Grid addRow(Grid grid, IRenderable renderable) =>
+            grid.AddRow(new Markup(""), renderable);
+
         Grid addToGrid(Grid grid, Error error) => error switch
         {
-            ManyErrors me => me.Errors.Fold(grid, (g, e) => addToGrid(g, e)),
-            _ => Prelude.Seq(
-                    Prelude.Some(error.Exception.Match(
-                        Some: ex => ex.GetRenderable(),
-                        None: () => Markup.FromInterpolated($"{error.Message}"))),
-                    error.Inner.Map(e => (IRenderable)addToGrid(createGrid(), e)))
-                .Somes()
-                .Fold(grid, (g, r) => g.AddRow(new Markup(""), r)),
+            ManyErrors me => me.Errors.Fold(grid, addToGrid),
+            Exceptional ee => addRow(grid, ee.ToException().GetRenderable()),
+            _ => addRow(grid, Markup.FromInterpolated($"{error.Message}"))
+                    .Apply(g => error.Inner.Match(
+                        Some: ie => addRow(g, addToGrid(createGrid(), ie)),
+                        None: () => g)),
         };
 
         AnsiConsole.Write(new Rows(
@@ -1151,6 +1133,20 @@ internal static class Program
             addToGrid(createGrid(), error)));
         AnsiConsole.WriteLine();
     }
+
+    private static Task<int> Run<RT>(RT runtime, Aff<RT, Unit> action)
+        where RT : struct, HasCancel<RT> =>
+        action.Run(runtime).AsTask().Map(r => r.Match(
+            Succ: _ => 0,
+            Fail: error =>
+            {
+                WriteError(error);
+                return -1;
+            }));
+
+    private static Task<int> RunAsAdmin<RT>(RT runtime, Aff<RT, Unit> action)
+        where RT : struct, HasCancel<RT> =>
+        AdminGuard.CommandIsElevated(() => Run(runtime, action));
 
     private static void CopyDirectory(string sourceDir, string destinationDir, params string[] ignoredFiles)
     {
