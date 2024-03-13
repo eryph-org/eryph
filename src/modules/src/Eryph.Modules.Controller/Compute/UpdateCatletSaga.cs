@@ -21,6 +21,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.Core;
+using static LanguageExt.Prelude;
+using static LanguageExt.Seq;
 
 namespace Eryph.Modules.Controller.Compute
 {
@@ -104,70 +107,59 @@ namespace Eryph.Modules.Controller.Compute
 
 
                 if (Data.ProjectId == Guid.Empty)
-                    await Fail($"Catlet {Data.CatletId} is not assigned to any project.");
-                else
                 {
-                    var breedConfig = await machineInfo.ToAsync().Bind(m =>
-                            _metadataService.GetMetadata(m.MetadataId).MapAsync(m => m.ParentConfig ?? new CatletConfig()))
-                        .Map(parentConfig => parentConfig?.Breed(Data.Config, Data.Config.Parent) ?? Data.Config)
-                        .IfNone(Data.Config);
+                    await Fail($"Catlet {Data.CatletId} is not assigned to any project.");
+                    return;
+                }
 
-                    var driveIdentifiers = MapToGeneIdentifiers((breedConfig.Drives ?? Array.Empty<CatletDriveConfig>())
-                        .Select(x => x.Source).ToArray(), GeneType.Volume);
+                var breedConfig = await machineInfo.ToAsync()
+                    .Bind(m => _metadataService.GetMetadata(m.MetadataId).MapAsync(m => m.ParentConfig ?? new CatletConfig()))
+                    .Map(parentConfig => parentConfig?.Breed(Data.Config, Data.Config.Parent) ?? Data.Config)
+                    .IfNone(Data.Config);
 
-                    if (!driveIdentifiers.IsRight)
-                    {
-                        await Fail(driveIdentifiers);
-                        return;
-                    }
+                var identifiers = append(
+                    breedConfig.Drives.ToSeq().Map(c => (GeneType: GeneType.Volume, c.Source)),
+                    breedConfig.Fodder.ToSeq().Map(c => (GeneType: GeneType.Fodder, c.Source)));
 
-                    var fodderIdentifiers = MapToGeneIdentifiers((breedConfig.Fodder ?? Array.Empty<FodderConfig>())
-                        .Select(x => x.Source).ToArray(), GeneType.Fodder);
+                var validation = identifiers.Filter(t => notEmpty(t.Source))
+                    .Map(t => from id in GeneIdentifier.NewValidation(t.Source)
+                                  .ToEither()
+                                  .MapLeft(errors => Error.New($"The gene source '{t.Source}' is invalid.", Error.Many(errors)))
+                                  .ToValidation()
+                              select new PrepareGeneCommand()
+                              {
+                                  AgentName = Data.AgentName,
+                                  GeneType = t.GeneType,
+                                  GeneName = id.Value,
+                              })
+                    .Sequence();
 
-                    if (!fodderIdentifiers.IsRight)
-                    {
-                        await Fail(fodderIdentifiers);
-                        return;
-                    }
-                    
-                    var geneIdentifiers = driveIdentifiers.ValueUnsafe()
-                        .Concat(fodderIdentifiers.ValueUnsafe()).ToArray();
-                    
-                    // no images required - go directly to create
-                    if (geneIdentifiers.Length == 0)
-                    {
-                        await UpdateCatlet();
-                        return;
-                    }
+                if (validation.IsFail)
+                {
+                    await Fail(ErrorUtils.PrintError(Error.New(
+                        "Some gene sources are invalid.",
+                        Error.Many(validation.FailToSeq()))));
+                    return;
+                }
 
-                    Data.PendingGeneNames = geneIdentifiers.Select(x=>x.GeneIdentifier.Value).Distinct().ToList();
+                var commands = validation.SuccessToSeq().Flatten();
+                
+                // no images required - go directly to create
+                if (commands.IsEmpty)
+                {
+                    await UpdateCatlet();
+                    return;
+                }
 
-                    foreach (var geneIdentifier in geneIdentifiers)
-                    {
-                        await StartNewTask(new PrepareGeneCommand()
-                        {
-                            GeneType = geneIdentifier.GeneType,
-                            GeneName = geneIdentifier.GeneIdentifier.Value,
-                            AgentName = Data.AgentName
-                        });
-                    }
+                Data.PendingGeneNames = commands.Map(x => x.GeneName).Distinct().ToList();
+
+                foreach (var command in commands)
+                {
+                    await StartNewTask(command);
                 }
             });
-
-            static Either<Error, IEnumerable<(GeneType GeneType, GeneIdentifier GeneIdentifier)>> MapToGeneIdentifiers(string?[] sources,
-                GeneType geneType)
-            {
-                return from validSources in Prelude.Right(sources.Filter(
-                        t => !string.IsNullOrWhiteSpace(t) && t.StartsWith("gene:")))
-                    from identifiers in sources
-                        .Filter(t => !string.IsNullOrWhiteSpace(t) && !t.StartsWith("gene:"))
-                        .HeadOrNone()
-                        .Match(
-                            Some: i => Error.New($"Invalid gene source '{i}'"),
-                            None: () => validSources.Select(GeneIdentifier.NewEither).Sequence())
-                    select identifiers.Map(i => (geneType, i));
-            }
         }
+
         public Task Handle(OperationTaskStatusEvent<PrepareGeneCommand> message)
         {
             if (Data.GenesPrepared)
@@ -286,10 +278,5 @@ namespace Eryph.Modules.Controller.Compute
         {
             return FailOrRun(message, () => Complete());
         }
-
-        private Task Fail<T>(Either<Error, T> either) =>
-            either.Match(
-                Right: _ => throw new ArgumentException("The value is not in the failed state.", nameof(either)),
-                Left: e => Fail(e.ToString()));
     }
 }
