@@ -44,9 +44,9 @@ public static class VmHostAgentConfigurationValidations
         VmHostAgentEnvironmentConfiguration toValidate,
         string path) =>
         from _ in ValidateProperty(toValidate, c => c.Name, EnvironmentName.NewValidation, path)
-                  | ValidateList(toValidate, c => c.Datastores, ValidateDataStoreConfig, path)
                   | ValidateProperty(toValidate, c => c.Defaults, ValidateEnvironmentDefaultsConfig, path,
                       required: true)
+                  | ValidateList(toValidate, c => c.Datastores, ValidateDataStoreConfig, path)
         from __ in ValidateProperty(toValidate, c => c.Datastores, ValidateNoDuplicateDataStores, path)
         select unit;
 

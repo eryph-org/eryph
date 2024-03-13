@@ -11,6 +11,7 @@ using LanguageExt;
 using LanguageExt.Sys.Traits;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Configuration;
@@ -20,11 +21,11 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
     HasDirectory<RT>
 {
     public static Aff<RT, string> getConfigYaml(
-    string configPath,
-    HostSettings hostSettings) =>
-    from config in readConfig(configPath, hostSettings)
-    from yaml in serialize(config)
-    select yaml;
+        string configPath,
+        HostSettings hostSettings) =>
+        from config in readConfig(configPath, hostSettings)
+        from yaml in serialize(config)
+        select yaml;
 
     public static Aff<RT, VmHostAgentConfiguration> readConfig(
         string configPath,
@@ -37,7 +38,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
             : from config in SuccessEff(new VmHostAgentConfiguration())
               from _ in saveConfig(config, configPath, hostSettings)
               select config
-        select ApplyHostDefaults(config, hostSettings);
+        select applyHostDefaults(config, hostSettings);
 
     public static Aff<RT, Unit> saveConfig(
         VmHostAgentConfiguration config,
@@ -93,22 +94,22 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
             Volumes = hostSettings.DefaultVirtualHardDiskPath == defaults.Volumes ? null : defaults.Volumes,
         };
 
-    private static VmHostAgentConfiguration ApplyHostDefaults(
+    private static VmHostAgentConfiguration applyHostDefaults(
         VmHostAgentConfiguration config,
         HostSettings hostSettings) =>
         new()
         {
             Datastores = config.Datastores,
-            Defaults = ApplyHostDefaults(config.Defaults, hostSettings),
+            Defaults = applyHostDefaults(config.Defaults, hostSettings),
             Environments = config.Environments?.Select(env => new VmHostAgentEnvironmentConfiguration()
             {
                 Datastores = env.Datastores,
-                Defaults = ApplyHostDefaults(env.Defaults, hostSettings),
+                Defaults = applyHostDefaults(env.Defaults, hostSettings),
                 Name = env.Name,
             }).ToArray(),
         };
 
-    private static VmHostAgentDefaultsConfiguration ApplyHostDefaults(
+    private static VmHostAgentDefaultsConfiguration applyHostDefaults(
         VmHostAgentDefaultsConfiguration defaults,
         HostSettings hostSettings) =>
         new()

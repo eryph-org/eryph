@@ -4,7 +4,6 @@ using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
-using System.DirectoryServices.ActiveDirectory;
 using System.IO;
 using System.Linq;
 using System.Management;
@@ -1075,11 +1074,11 @@ internal static class Program
         if (outFile is not null)
         {
             await File.WriteAllTextAsync(outFile.FullName, content);
-            return Unit.Default;
+            return unit;
         }
 
         Console.WriteLine(content);
-        return Unit.Default;
+        return unit;
     });
     
     private static void WriteError(Error error)
