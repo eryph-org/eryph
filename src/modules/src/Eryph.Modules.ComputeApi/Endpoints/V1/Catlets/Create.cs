@@ -78,13 +78,16 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
                 Some: n => ProjectName.New(n),
                 None: () => ProjectName.New("default"));
 
+            var environmentName = Optional(config.Environment).Filter(notEmpty).Match(
+                Some: n => EnvironmentName.New(n),
+                None: () => EnvironmentName.New("default"));
+
             var projectAccess = await _userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
             if (!projectAccess)
                 return Forbid();
 
             var existingCatlet = await _repository.GetBySpecAsync(
-                new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId,
-                    projectName.Value, config.Environment ?? "default"),
+                new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId, projectName.Value, environmentName.Value),
                 cancellationToken);
 
             if (existingCatlet != null)
