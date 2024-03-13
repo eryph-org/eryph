@@ -62,6 +62,8 @@ using Microsoft.IdentityModel.Logging;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Runtime.Zero;
 
 internal static class Program
@@ -994,53 +996,35 @@ internal static class Program
     }
 
     private static Task<int> GetAgentSettings(FileSystemInfo? outFile) =>
-        RunAsAdmin(LanguageExt.Sys.Live.Runtime.New(),
+        RunAsAdmin(
             from hostSettings in new HostSettingsProvider().GetHostSettings().ToAff(e => e)
             from yaml in VmHostAgentConfiguration<LanguageExt.Sys.Live.Runtime>.getConfigYaml(
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
             from _ in WriteOutput(outFile, yaml)
-            select Unit.Default);
+            select unit,
+            LanguageExt.Sys.Live.Runtime.New());
 
     private static Task<int> ImportAgentSettings(
         FileSystemInfo? inFile,
         bool nonInteractive,
         bool noCurrentConfigCheck) =>
         RunAsAdmin(
-            LanguageExt.Sys.Live.Runtime.New(),
             from configString in ReadInput(inFile)
             from hostSettings in new HostSettingsProvider().GetHostSettings().ToAff(e => e)
             from _ in VmHostAgentConfigurationUpdate<LanguageExt.Sys.Live.Runtime>.updateConfig(
                 configString,
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
-            select Unit.Default);
+            select unit,
+            LanguageExt.Sys.Live.Runtime.New());
 
-    private static async Task<int> GetNetworks(FileSystemInfo? outFile)
-    {
-        var manager = new NetworkProviderManager();
-
-        return await manager.GetCurrentConfigurationYaml()
-                .MatchAsync(
-                    async config =>
-                    {
-                        if (outFile != null)
-                        {
-                            await File.WriteAllTextAsync(outFile.FullName, config);
-                        }
-                        else
-                        {
-                            Console.WriteLine(config);
-                        }
-
-                        return 0;
-                    }, l =>
-                    {
-                        Console.WriteLine(l.Message);
-                        return -1;
-                    }
-                    );
-    }
+    private static Task<int> GetNetworks(FileSystemInfo? outFile) =>
+        Run(
+            from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
+            from _ in  WriteOutput(outFile, yaml)
+            select unit,
+            LanguageExt.Sys.Live.Runtime.New());
 
     private static async Task<int> ImportNetworkConfig(FileSystemInfo? inFile, bool nonInteractive,
         bool noCurrentConfigCheck)
@@ -1049,14 +1033,14 @@ internal static class Program
         var ovsRunDir = OVSPackage.UnpackAndProvide();
         var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), new NullLoggerFactory());
 
-        var res = (await (
+        return await RunAsAdmin(
             from configString in ReadInput(inFile)
             from _ in ensureDriver(ovsRunDir, true, true)
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
             from syncResult in noCurrentConfigCheck
-                ? Prelude.SuccessAff((false, hostState))
+                ? SuccessAff((false, hostState))
                 : from currentConfigChanges in generateChanges(hostState, currentConfig)
                   from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
                   select r
@@ -1068,28 +1052,17 @@ internal static class Program
             from save in saveConfigurationYaml(configString)
             from sync in syncNetworks()
             from m in writeLine("New Network configuration was imported.")
-            select Unit.Default)
-
-            .Run(new ConsoleRuntime(
-                    new NullLoggerFactory(),
-                    psEngine,sysEnv, new CancellationTokenSource())))
-            .Match(
-                r => 0, l =>
-            {
-                Console.Error.WriteLine("Error: " + l.Message);
-                return -1;
-            });
-
-        return res;
+            select unit,
+            new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
     }
 
-    private static Aff<string> ReadInput(FileSystemInfo? inFile) => Prelude.AffMaybe(async () =>
+    private static Aff<string> ReadInput(FileSystemInfo? inFile) => AffMaybe(async () =>
     {
         if (inFile is not null)
             return await File.ReadAllTextAsync(inFile.FullName);
 
         if (!Console.IsInputRedirected)
-            return Prelude.FinFail<string>(Error.New(
+            return FinFail<string>(Error.New(
                 "Error: Supply the new config to stdin or use --inFile option to read from file"));
 
         await using var reader = Console.OpenStandardInput();
@@ -1097,7 +1070,7 @@ internal static class Program
         return await textReader.ReadToEndAsync();
     });
 
-    private static Aff<Unit> WriteOutput(FileSystemInfo? outFile, string content) => Prelude.Aff(async () =>
+    private static Aff<Unit> WriteOutput(FileSystemInfo? outFile, string content) => Aff(async () =>
     {
         if (outFile is not null)
         {
@@ -1134,7 +1107,7 @@ internal static class Program
         AnsiConsole.WriteLine();
     }
 
-    private static Task<int> Run<RT>(RT runtime, Aff<RT, Unit> action)
+    private static Task<int> Run<RT>(Aff<RT, Unit> action, RT runtime)
         where RT : struct, HasCancel<RT> =>
         action.Run(runtime).AsTask().Map(r => r.Match(
             Succ: _ => 0,
@@ -1144,9 +1117,9 @@ internal static class Program
                 return -1;
             }));
 
-    private static Task<int> RunAsAdmin<RT>(RT runtime, Aff<RT, Unit> action)
+    private static Task<int> RunAsAdmin<RT>(Aff<RT, Unit> action, RT runtime)
         where RT : struct, HasCancel<RT> =>
-        AdminGuard.CommandIsElevated(() => Run(runtime, action));
+        AdminGuard.CommandIsElevated(() => Run(action, runtime));
 
     private static void CopyDirectory(string sourceDir, string destinationDir, params string[] ignoredFiles)
     {
