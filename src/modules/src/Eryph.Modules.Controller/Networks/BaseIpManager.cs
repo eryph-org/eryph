@@ -5,7 +5,7 @@ using LanguageExt;
 
 namespace Eryph.Modules.Controller.Networks;
 
-internal abstract class BaseIpManager
+public abstract class BaseIpManager
 {
     protected readonly IStateStore _stateStore;
     protected readonly IIpPoolManager _poolManager;

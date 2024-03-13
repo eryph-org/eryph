@@ -16,6 +16,7 @@ public class VirtualNetwork : Resource
     public string IpNetwork { get; set; }
     
     public NetworkRouterPort RouterPort { get; set; }
+    public string Environment { get; set; }
 
     public virtual List<VirtualNetworkPort> NetworkPorts { get; set; }
     public virtual List<VirtualNetworkSubnet> Subnets { get; set; }

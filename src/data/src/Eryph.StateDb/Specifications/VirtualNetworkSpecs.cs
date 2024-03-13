@@ -8,9 +8,9 @@ public static class VirtualNetworkSpecs
 {
     public sealed class GetByName : Specification<VirtualNetwork>, ISingleResultSpecification
     {
-        public GetByName(Guid projectId, string name)
+        public GetByName(Guid projectId, string name, string environment)
         {
-            Query.Where(x => x.Project.Id == projectId && x.Name == name);
+            Query.Where(x => x.Project.Id == projectId && x.Name == name && x.Environment == environment);
         }
 
     }

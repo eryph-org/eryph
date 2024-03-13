@@ -124,6 +124,7 @@ namespace Eryph.Modules.Controller.Projects
                         {
                             Id = networkId,
                             Name = "default",
+                            Environment = "default",
                             ProjectId = project.Id,
                             IpNetwork = "10.0.0.0/20",
                             NetworkProvider = "default",

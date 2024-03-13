@@ -47,9 +47,17 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
         await message.Command.Config.Networks.Map(cfg =>
 
-                from network in _stateStore.ReadBySpecAsync<VirtualNetwork, VirtualNetworkSpecs.GetByName>(
-                    new VirtualNetworkSpecs.GetByName(message.Command.ProjectId, cfg.Name)
-                    , Error.New($"Network '{cfg.Name}' not found in project {message.Command.ProjectId}"))
+                from network in _stateStore.Read<VirtualNetwork>()
+                    .IO.GetBySpecAsync(new VirtualNetworkSpecs.GetByName(message.Command.ProjectId, cfg.Name, message.Command.Config.Environment))
+                    .Bind(r =>
+
+                        // it is optional to have a environment specific network
+                        // therefore fallback to network in default environment if not found
+                        r.IsNone && message.Command.Config.Environment != "default" ?
+                            _stateStore.Read<VirtualNetwork>()
+                                .IO.GetBySpecAsync(new VirtualNetworkSpecs.GetByName(message.Command.ProjectId, cfg.Name, "default"))
+                                .Bind(fr => fr.ToEitherAsync(Error.New($"Network {cfg.Name} not found in environment {message.Command.Config.Environment} and default environment.")))
+                            : r.ToEitherAsync(Error.New($"Environments {message.Command.Config.Environment}: Network {cfg.Name} not found.")))
 
                 from networkProviders in _providerManager.GetCurrentConfiguration()
                 from networkProvider in networkProviders.NetworkProviders.Find(x=>x.Name == network.NetworkProvider)
@@ -83,6 +91,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     ? Prelude.RightAsync<Error, IPAddress[]>(Array.Empty<IPAddress>())
                     : _ipManager.ConfigurePortIps(
                     message.Command.ProjectId,
+                    message.Command.Config.Environment ?? "default",
                     networkPort,
                     message.Command.Config.Networks,
                     c3.Token)

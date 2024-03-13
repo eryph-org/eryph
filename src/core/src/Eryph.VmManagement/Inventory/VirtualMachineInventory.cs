@@ -55,8 +55,8 @@ namespace Eryph.VmManagement.Inventory
                     VMPath = vmStorageSettings.Map(x => x.VMPath).IfNone(""),
                     StorageIdentifier = vmStorageSettings.Map(x=>x.StorageIdentifier.IfNone("")).IfNone(""),
                     ProjectName = vmStorageSettings.Map(x => x.StorageNames.ProjectName.IfNone("")).IfNone(""),
-                    DataStore = vmStorageSettings.Map(x => x.StorageNames.ProjectName.IfNone("")).IfNone(""),
-                    Environment = vmStorageSettings.Map(x => x.StorageNames.ProjectName.IfNone("")).IfNone(""),
+                    DataStore = vmStorageSettings.Map(x => x.StorageNames.DataStoreName.IfNone("")).IfNone(""),
+                    Environment = vmStorageSettings.Map(x => x.StorageNames.EnvironmentName.IfNone("")).IfNone(""),
                     Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x=>x.HardDrives)).ToArray(),
                     NetworkAdapters = vm.GetList(x=>x.NetworkAdapters).Map(a=>
                     {

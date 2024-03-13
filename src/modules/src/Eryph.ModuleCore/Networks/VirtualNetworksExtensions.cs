@@ -6,6 +6,7 @@ using System.Net;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Networks;
 using Eryph.StateDb.Model;
+using LanguageExt;
 
 namespace Eryph.ModuleCore.Networks
 {
@@ -23,6 +24,7 @@ namespace Eryph.ModuleCore.Networks
                     var networkConfig = new NetworkConfig
                     {
                         Name = network.Name,
+                        Environment = network.Environment != "default" ? network.Environment : null,
                         Address = network.IpNetwork,
                         Provider = new ProviderConfig
                         {
@@ -72,7 +74,7 @@ namespace Eryph.ModuleCore.Networks
 
 
                     return networkConfig;
-                }).ToArray()
+                }).OrderBy(x=>x.Environment ?? "A").ThenBy(x=>x.Name).ToArray()
             };
         }
     }

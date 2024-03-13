@@ -4,7 +4,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
-using Eryph.ConfigModel.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -13,7 +12,7 @@ using LanguageExt.Common;
 
 namespace Eryph.Modules.Controller.Networks;
 
-internal class CatletIpManager : BaseIpManager, ICatletIpManager
+public class CatletIpManager : BaseIpManager, ICatletIpManager
 {
 
     public CatletIpManager(IStateStore stateStore, IIpPoolManager poolManager): base(stateStore, poolManager)
@@ -23,12 +22,19 @@ internal class CatletIpManager : BaseIpManager, ICatletIpManager
 
     public EitherAsync<Error, IPAddress[]> ConfigurePortIps(
         Guid projectId,
+        string environment,
         CatletNetworkPort port,
         CatletNetworkConfig[] networkConfigs, CancellationToken cancellationToken)
     {
 
         var portNetworks = networkConfigs.Map(x =>
-            new PortNetwork(x.Name, Option<string>.None, Option<string>.None));
+            new PortNetwork(x.Name, 
+                x.SubnetV4 == null 
+                    ? Option<string>.None
+                : x.SubnetV4.Name , 
+                x.SubnetV4 == null 
+                    ? Option<string>.None 
+                    : x.SubnetV4.IpPool));
 
         var getPortAssignments =
             Prelude.TryAsync(_stateStore.For<IpAssignment>().ListAsync(new IPAssignmentSpecs.GetByPort(port.Id),
@@ -47,16 +53,23 @@ internal class CatletIpManager : BaseIpManager, ICatletIpManager
                 var networkNameString = portNetwork.NetworkName.IfNone("default");
                 var subnetNameString = portNetwork.SubnetName.IfNone("default");
                 var poolNameString = portNetwork.PoolName.IfNone("default");
-
                 return
                     from network in _stateStore.Read<VirtualNetwork>()
-                        .IO.GetBySpecAsync(new VirtualNetworkSpecs.GetByName(projectId, networkNameString), cancellationToken)
-                        .Bind(r => r.ToEitherAsync(Error.New($"Network {networkNameString} not found.")))
+                        .IO.GetBySpecAsync(new VirtualNetworkSpecs.GetByName(projectId, networkNameString,environment), cancellationToken)
+                        .Bind(r =>
+
+                            // it is optional to have a environment specific network
+                            // therefore fallback to network in default environment if not found
+                            r.IsNone && environment != "default" ?
+                                _stateStore.Read<VirtualNetwork>()
+                            .IO.GetBySpecAsync(new VirtualNetworkSpecs.GetByName(projectId, networkNameString, "default"), cancellationToken)
+                            .Bind(fr => fr.ToEitherAsync(Error.New($"Network {networkNameString} not found in environment {environment} and default environment.")))
+                            :  r.ToEitherAsync(Error.New($"Environment {environment}: Network {networkNameString} not found.")))
 
                     from subnet in _stateStore.Read<VirtualNetworkSubnet>().IO
                         .GetBySpecAsync(new SubnetSpecs.GetByNetwork(network.Id, subnetNameString), cancellationToken)
                         .Bind(r => r.ToEitherAsync(
-                            Error.New($"Subnet {subnetNameString} not found in network {networkNameString}.")))
+                            Error.New($"Environment {environment}: Subnet {subnetNameString} not found in network {networkNameString}.")))
 
                     let existingAssignment = CheckAssignmentExist(validAssignments, subnet, poolNameString)
 

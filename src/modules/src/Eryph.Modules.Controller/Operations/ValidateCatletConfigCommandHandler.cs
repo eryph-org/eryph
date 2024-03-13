@@ -34,6 +34,8 @@ namespace Eryph.Modules.Controller.Operations
             if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == Guid.Empty)
                 machineConfig.Name = $"catlet";
 
+            if(machineConfig.Environment!= null)
+                machineConfig.Environment = machineConfig.Environment.ToLowerInvariant();
 
             if (machineConfig.Cpu == null)
                 machineConfig.Cpu = new CatletCpuConfig();
