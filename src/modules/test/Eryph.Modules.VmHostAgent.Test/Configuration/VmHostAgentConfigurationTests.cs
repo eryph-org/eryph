@@ -40,6 +40,37 @@ public class VmHostAgentConfigurationTests
             _fileMock.Object));
     }
 
+    [Fact]
+    public async Task GetConfigYaml_ConfigWithHyperVDefaultPaths_ReturnsYamlWithPath()
+    {
+        _fileMock.Setup(m => m.Exists(ConfigPath))
+            .Returns(true)
+            .Verifiable();
+
+        _fileMock.Setup(m => m.ReadAllText(ConfigPath, Encoding.UTF8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("""
+                          defaults:
+                            vms:
+                            volumes:
+                          """)
+            .Verifiable();
+
+        var result = await getConfigYaml(ConfigPath, _hostSettings).Run(_runtime);
+
+        result.Should().BeSuccess().Which.Should().Be(
+            $$"""
+             defaults:
+               vms: {{_hostSettings.DefaultDataPath}}
+               volumes: {{_hostSettings.DefaultVirtualHardDiskPath}}
+             datastores: 
+             environments: 
+             
+             """);
+
+        _fileMock.VerifyAll();
+        _fileMock.VerifyNoOtherCalls();
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -78,8 +109,17 @@ public class VmHostAgentConfigurationTests
 
         _fileMock.Verify(f => f.WriteAllText(
                 ConfigPath,
-                It.IsRegex(@"defaults:\s*vms:\s*volumes:\s*datastores:\s*environments\s*", RegexOptions.Singleline),
-                It.IsAny<Encoding>(),
+                It.Is(
+                    """
+                    defaults:
+                      vms: 
+                      volumes: 
+                    datastores: 
+                    environments: 
+                    
+                    """,
+                    EqualityComparer<string>.Default),
+                Encoding.UTF8,
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -162,7 +202,16 @@ public class VmHostAgentConfigurationTests
 
         _fileMock.Verify(m => m.WriteAllText(
                 ConfigPath,
-                It.IsRegex(@"defaults:\s*vms:\s*volumes:\s*datastores:\s*environments\s*", RegexOptions.Singleline),
+                It.Is(
+                    """
+                    defaults:
+                      vms: 
+                      volumes: 
+                    datastores: 
+                    environments: 
+                    
+                    """,
+                    EqualityComparer<string>.Default),
                 Encoding.UTF8,
                 It.IsAny<CancellationToken>()),
             Times.Once);

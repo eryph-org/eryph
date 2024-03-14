@@ -76,7 +76,16 @@ public class VmHostAgentConfigurationUpdateTests
 
         _fileMock.Verify(f => f.WriteAllText(
                 ConfigPath,
-                It.IsRegex(@"defaults:\s*vms:\s*volumes:\s*datastores:\s*environments\s*", RegexOptions.Singleline),
+                It.Is(
+                    """
+                    defaults:
+                      vms: 
+                      volumes: 
+                    datastores: 
+                    environments: 
+                    
+                    """,
+                    EqualityComparer<string>.Default),
                 Encoding.UTF8,
                 It.IsAny<CancellationToken>()),
             Times.Once);
