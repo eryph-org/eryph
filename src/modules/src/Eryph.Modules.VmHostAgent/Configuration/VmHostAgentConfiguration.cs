@@ -52,28 +52,24 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         {
             Defaults = simplifyDefaults(config.Defaults, hostSettings),
             Datastores = config.Datastores,
-            Environments = config.Environments?.Select(
-                    e => new VmHostAgentEnvironmentConfiguration()
-                    {
-                        Datastores = e.Datastores,
-                        Defaults = simplifyDefaults(e.Defaults, hostSettings),
-                        Name = e.Name,
-                    })
-                .ToArray(),
+            Environments = config.Environments,
         }
         from yaml in serialize(configToSave)
         from __ in File<RT>.writeAllText(configPath, yaml)
         select unit;
 
     public static Eff<VmHostAgentConfiguration> parseConfigYaml(string yaml) =>
-        Eff(() =>
+        from y in Optional(yaml).Filter(notEmpty)
+            .ToEff(Error.New("The configuration must not be empty."))
+        from config in Eff(() =>
         {
             var yamlDeserializer = new DeserializerBuilder()
                 .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .Build();
 
             return yamlDeserializer.Deserialize<VmHostAgentConfiguration>(yaml);
-        });
+        }).MapFail(error => Error.New("The configuration is malformed.", error))
+        select config;
 
     private static Eff<string> serialize(VmHostAgentConfiguration configuration) =>
         Eff(() =>
@@ -101,12 +97,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         {
             Datastores = config.Datastores,
             Defaults = applyHostDefaults(config.Defaults, hostSettings),
-            Environments = config.Environments?.Select(env => new VmHostAgentEnvironmentConfiguration()
-            {
-                Datastores = env.Datastores,
-                Defaults = applyHostDefaults(env.Defaults, hostSettings),
-                Name = env.Name,
-            }).ToArray(),
+            Environments = config.Environments,
         };
 
     private static VmHostAgentDefaultsConfiguration applyHostDefaults(

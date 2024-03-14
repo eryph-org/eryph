@@ -19,7 +19,6 @@ public static class VmHostAgentConfigurationUpdate<RT> where RT : struct,
         from _ in VmHostAgentConfigurationValidations.ValidateVmHostAgentConfig(newConfig)
             .ToAff(issues => Error.New("The new configuration is invalid.",
                 Error.Many(issues.Map(i => i.ToError()))))
-        from oldConfig in VmHostAgentConfiguration<RT>.readConfig(configPath, hostSettings)
         from __ in VmHostAgentConfiguration<RT>.saveConfig(newConfig, configPath, hostSettings)
         select unit;
 }

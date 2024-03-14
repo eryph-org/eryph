@@ -49,6 +49,9 @@ using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
+using LanguageExt.Sys;
+using LanguageExt.Sys.IO;
+using LanguageExt.Sys.Traits;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
 using Serilog.Events;
@@ -1000,7 +1003,7 @@ internal static class Program
             from yaml in VmHostAgentConfiguration<LanguageExt.Sys.Live.Runtime>.getConfigYaml(
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
-            from _ in WriteOutput(outFile, yaml)
+            from _ in WriteOutput<LanguageExt.Sys.Live.Runtime>(outFile, yaml)
             select unit,
             LanguageExt.Sys.Live.Runtime.New());
 
@@ -1021,7 +1024,7 @@ internal static class Program
     private static Task<int> GetNetworks(FileSystemInfo? outFile) =>
         Run(
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
-            from _ in  WriteOutput(outFile, yaml)
+            from _ in  WriteOutput<LanguageExt.Sys.Live.Runtime>(outFile, yaml)
             select unit,
             LanguageExt.Sys.Live.Runtime.New());
 
@@ -1057,6 +1060,9 @@ internal static class Program
 
     private static Aff<string> ReadInput(FileSystemInfo? inFile) => AffMaybe(async () =>
     {
+        // This is not using a runtime for simplicity. We need to read from stdin
+        // which is not supported out of the box.
+
         if (inFile is not null)
             return await File.ReadAllTextAsync(inFile.FullName);
 
@@ -1069,17 +1075,12 @@ internal static class Program
         return await textReader.ReadToEndAsync();
     });
 
-    private static Aff<Unit> WriteOutput(FileSystemInfo? outFile, string content) => Aff(async () =>
-    {
-        if (outFile is not null)
-        {
-            await File.WriteAllTextAsync(outFile.FullName, content);
-            return unit;
-        }
-
-        Console.WriteLine(content);
-        return unit;
-    });
+    private static Aff<RT, Unit> WriteOutput<RT>(FileSystemInfo? outFile, string content)
+        where RT : struct, HasConsole<RT>, HasFile<RT> =>
+        from _ in Optional(outFile).Match(
+            Some: fsi => File<RT>.writeAllText(fsi.FullName, content),
+            None: () => Console<RT>.writeLine(content))
+        select unit;
     
     private static void WriteError(Error error)
     {
