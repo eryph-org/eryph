@@ -48,7 +48,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
             .Filter(notEmpty)
             .ToAff(Error.New("The config path is invalid"))
         from _ in Directory<RT>.create(configDirectory)
-        from configToSave in SuccessEff(new VmHostAgentConfiguration()
+        let configToSave = new VmHostAgentConfiguration()
         {
             Defaults = simplifyDefaults(config.Defaults, hostSettings),
             Datastores = config.Datastores,
@@ -60,7 +60,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
                         Name = e.Name,
                     })
                 .ToArray(),
-        })
+        }
         from yaml in serialize(configToSave)
         from __ in File<RT>.writeAllText(configPath, yaml)
         select unit;

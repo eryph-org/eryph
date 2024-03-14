@@ -81,7 +81,7 @@ public static class VmHostAgentConfigurationValidations
             .Map(e => e.Name)
             .GroupBy(identity)
             .Filter(g => g.Length() > 1)
-            .Map(g => Error.New($"The data store '${g.Key}' is not unique."))
+            .Map(g => Error.New($"The data store '{g.Key}' is not unique."))
             .Match(
                 Empty: () => Success<Error, Unit>(unit),
                 More: Fail<Error, Unit>);
@@ -92,7 +92,7 @@ public static class VmHostAgentConfigurationValidations
             .Map(e => e.Name)
             .GroupBy(identity)
             .Filter(g => g.Length() > 1)
-            .Map(g => Error.New($"The environment '${g.Key}' is not unique."))
+            .Map(g => Error.New($"The environment '{g.Key}' is not unique."))
             .Match(
                 Empty: () => Success<Error, Unit>(unit),
                 More: Fail<Error, Unit>);

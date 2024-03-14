@@ -212,4 +212,133 @@ public class VmHostAgentConfigurationValidationsTests
                 issue.Message.Should().Be(@"The path 'z:\default' is not unique.");
             });
     }
+
+    [Fact]
+    public void ValidateVmHostAgentConfig_DuplicateNames_ReturnsFail()
+    {
+        var config = new VmHostAgentConfiguration()
+        {
+            Datastores = new[]
+            {
+                new VmHostAgentDataStoreConfiguration()
+                {
+                    Name = "store1",
+                    Path = @"z:\stores\store1",
+                },
+                new VmHostAgentDataStoreConfiguration()
+                {
+                    Name = "store1",
+                    Path = @"z:\stores\store2",
+                },
+            },
+            Environments = new[]
+            {
+                new VmHostAgentEnvironmentConfiguration()
+                {
+                    Name = "env1",
+                    Defaults = new()
+                    {
+                        Vms = @"z:\envs\env1\vms",
+                        Volumes = @"z:\envs\env1\volumes",
+                    },
+                },
+                new VmHostAgentEnvironmentConfiguration()
+                {
+                    Name = "env1",
+                    Defaults = new()
+                    {
+                        Vms = @"z:\envs\env2\vms",
+                        Volumes = @"z:\envs\env2\volumes",
+                    },
+                }
+            },
+        };
+
+        var result = ValidateVmHostAgentConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("Datastores");
+                issue.Message.Should().Be("The data store 'store1' is not unique.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("Environments");
+                issue.Message.Should().Be("The environment 'env1' is not unique.");
+            });
+    }
+
+    [Fact]
+    public void ValidateVmHostAgentConfig_DuplicateNamesInEnvironment_ReturnsFail()
+    {
+        var config = new VmHostAgentConfiguration()
+        {
+            Environments = new[]
+            {
+                new VmHostAgentEnvironmentConfiguration()
+                {
+                    Name = "env1",
+                    Defaults = new()
+                    {
+                        Vms = @"z:\envs\env1\vms",
+                        Volumes = @"z:\envs\env1\volumes",
+                    },
+                    Datastores = new[]
+                    {
+
+                        new VmHostAgentDataStoreConfiguration()
+                        {
+                            Name = "store1",
+                            Path = @"z:\stores\store1",
+                        },
+                        new VmHostAgentDataStoreConfiguration()
+                        {
+                            Name = "store1",
+                            Path = @"z:\stores\store2",
+                        },
+                    },
+                },
+            },
+        };
+
+        var result = ValidateVmHostAgentConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("Environments[0].Datastores");
+                issue.Message.Should().Be("The data store 'store1' is not unique.");
+            });
+    }
+
+    [Fact]
+    public void ValidateVmHostAgentConfig_EnvironmentWithEmptyDefaults_ReturnsFail()
+    {
+        var config = new VmHostAgentConfiguration()
+        {
+            Environments = new[]
+            {
+                new VmHostAgentEnvironmentConfiguration()
+                {
+                    Name = "env1",
+                    Defaults = new(),
+                },
+            },
+        };
+
+        var result = ValidateVmHostAgentConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("Environments[0].Defaults.Vms");
+                issue.Message.Should().Be("The Vms is required.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("Environments[0].Defaults.Volumes");
+                issue.Message.Should().Be("The Volumes is required.");
+            });
+    }
 }
