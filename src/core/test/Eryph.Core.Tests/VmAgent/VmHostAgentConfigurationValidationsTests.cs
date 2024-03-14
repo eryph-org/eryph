@@ -68,7 +68,7 @@ public class VmHostAgentConfigurationValidationsTests
     }
 
     [Fact]
-    public void ValidateVmHostAgentConfig_InvalidNames_ReturnsFail()
+    public void ValidateVmHostAgentConfig_InvalidData_ReturnsFail()
     {
         var config = new VmHostAgentConfiguration()
         {
@@ -182,7 +182,6 @@ public class VmHostAgentConfigurationValidationsTests
                     },
                     Datastores = new[]
                     {
-
                         new VmHostAgentDataStoreConfiguration()
                         {
                             Name = "store1",

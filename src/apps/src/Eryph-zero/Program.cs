@@ -1081,7 +1081,21 @@ internal static class Program
             Some: fsi => File<RT>.writeAllText(fsi.FullName, content),
             None: () => Console<RT>.writeLine(content))
         select unit;
-    
+
+    private static Task<int> Run<RT>(Aff<RT, Unit> action, RT runtime)
+        where RT : struct, HasCancel<RT> =>
+        action.Run(runtime).AsTask().Map(r => r.Match(
+            Succ: _ => 0,
+            Fail: error =>
+            {
+                WriteError(error);
+                return -1;
+            }));
+
+    private static Task<int> RunAsAdmin<RT>(Aff<RT, Unit> action, RT runtime)
+        where RT : struct, HasCancel<RT> =>
+        AdminGuard.CommandIsElevated(() => Run(action, runtime));
+
     private static void WriteError(Error error)
     {
         Grid createGrid() => new Grid()
@@ -1106,20 +1120,6 @@ internal static class Program
             addToGrid(createGrid(), error)));
         AnsiConsole.WriteLine();
     }
-
-    private static Task<int> Run<RT>(Aff<RT, Unit> action, RT runtime)
-        where RT : struct, HasCancel<RT> =>
-        action.Run(runtime).AsTask().Map(r => r.Match(
-            Succ: _ => 0,
-            Fail: error =>
-            {
-                WriteError(error);
-                return -1;
-            }));
-
-    private static Task<int> RunAsAdmin<RT>(Aff<RT, Unit> action, RT runtime)
-        where RT : struct, HasCancel<RT> =>
-        AdminGuard.CommandIsElevated(() => Run(action, runtime));
 
     private static void CopyDirectory(string sourceDir, string destinationDir, params string[] ignoredFiles)
     {

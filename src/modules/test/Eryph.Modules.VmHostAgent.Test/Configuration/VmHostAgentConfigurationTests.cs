@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.Core.VmAgent;
 using Eryph.Modules.VmHostAgent.Configuration;
 using LanguageExt.Sys.Traits;
 using LanguageExt;
 using Moq;
 
 using static LanguageExt.Prelude;
-using System.Text.RegularExpressions;
-using Eryph.Core.VmAgent;
 
 namespace Eryph.Modules.VmHostAgent.Test.Configuration;
 
