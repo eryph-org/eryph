@@ -164,7 +164,7 @@ internal static class Program
         rootCommand.AddCommand(driverCommand);
 
         var getDriverStatusCommand = new Command("status");
-        getDriverStatusCommand.SetHandler(DriverCommands.GetDriverStatus);
+        getDriverStatusCommand.SetHandler(GetDriverStatus);
         driverCommand.AddCommand(getDriverStatusCommand);
 
         var commandLineBuilder = new CommandLineBuilder(rootCommand);
@@ -1021,6 +1021,16 @@ internal static class Program
             select unit,
             LanguageExt.Sys.Live.Runtime.New());
 
+    private static async Task<int> GetDriverStatus()
+    {
+        using var loggerFactory = new NullLoggerFactory();
+        using var psEngine = new PowershellEngine(loggerFactory.CreateLogger<PowershellEngine>());
+
+        return await RunAsAdmin(
+            DriverCommands.GetDriverStatus(),
+            new DriverCommandsRuntime(new(new CancellationTokenSource(), loggerFactory, psEngine)));
+    }
+
     private static Task<int> GetNetworks(FileSystemInfo? outFile) =>
         Run(
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
@@ -1109,14 +1119,14 @@ internal static class Program
         {
             ManyErrors me => me.Errors.Fold(grid, addToGrid),
             Exceptional ee => addRow(grid, ee.ToException().GetRenderable()),
-            _ => addRow(grid, Markup.FromInterpolated($"{error.Message}"))
+            _ => addRow(grid, new Text(error.Message))
                     .Apply(g => error.Inner.Match(
                         Some: ie => addRow(g, addToGrid(createGrid(), ie)),
                         None: () => g)),
         };
 
         AnsiConsole.Write(new Rows(
-            new Text("The command was not successful."),
+            new Markup("[red]The command failed with the following error(s):[/]"),
             addToGrid(createGrid(), error)));
         AnsiConsole.WriteLine();
     }
