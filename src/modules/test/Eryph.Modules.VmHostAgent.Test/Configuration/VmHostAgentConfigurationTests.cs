@@ -232,7 +232,7 @@ public class VmHostAgentConfigurationTests
                 new VmHostAgentDataStoreConfiguration()
                 {
                     Name = "store1",
-                    Path = @"Z:\stores\store1",
+                    Path = @"Z:\stores\store1\",
                 }
             ],
             Environments = [
@@ -249,7 +249,7 @@ public class VmHostAgentConfigurationTests
                         new VmHostAgentDataStoreConfiguration()
                         {
                             Name = "store1",
-                            Path = @"Z:\env1\stores\store1",
+                            Path = @"Z:\env1\stores\store1\",
 
                         },
                     ],

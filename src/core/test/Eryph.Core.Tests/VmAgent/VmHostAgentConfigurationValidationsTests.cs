@@ -215,7 +215,7 @@ public class VmHostAgentConfigurationValidationsTests
     }
 
     [Fact]
-    public void ValidateVmHostAgentConfig_DuplicatePathInDifferentRepresentations_ReturnsFail()
+    public void ValidateVmHostAgentConfig_DuplicatePathsInDifferentRepresentations_ReturnsFail()
     {
         var config = new VmHostAgentConfiguration()
         {
@@ -234,7 +234,12 @@ public class VmHostAgentConfigurationValidationsTests
                 new VmHostAgentDataStoreConfiguration()
                 {
                     Name = "store3",
-                    Path = @"Z:\STORES\STORE",
+                    Path = @"Z:\stores\store2",
+                },
+                new VmHostAgentDataStoreConfiguration()
+                {
+                    Name = "store4",
+                    Path = @"Z:\STORES\STORE2",
                 },
             },
         };
@@ -246,6 +251,11 @@ public class VmHostAgentConfigurationValidationsTests
             {
                 issue.Member.Should().BeEmpty();
                 issue.Message.Should().Be(@"The path 'z:\stores\store' is not unique.");
+            },
+            issue =>
+            {
+                issue.Member.Should().BeEmpty();
+                issue.Message.Should().Be(@"The path 'z:\stores\store2' is not unique.");
             });
     }
 
