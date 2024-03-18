@@ -28,7 +28,7 @@ public class VmHostAgentConfigurationTests
     private readonly HostSettings _hostSettings = new()
     {
         DefaultDataPath = @"Y:\defaults\vms",
-        DefaultVirtualHardDiskPath = @"Y:\defaults\disks",
+        DefaultVirtualHardDiskPath = @"Y:\defaults\disks\",
     };
 
     public VmHostAgentConfigurationTests()
@@ -187,8 +187,8 @@ public class VmHostAgentConfigurationTests
         {
             Defaults = new()
             {
-                Vms = _hostSettings.DefaultDataPath,
-                Volumes = _hostSettings.DefaultVirtualHardDiskPath,
+                Vms = @"Y:\defaults\vms\",
+                Volumes = @"Y:\defaults\disks",
             },
         };
 
@@ -209,6 +209,80 @@ public class VmHostAgentConfigurationTests
                     datastores: 
                     environments: 
                     
+                    """,
+                    EqualityComparer<string>.Default),
+                Encoding.UTF8,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _fileMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task SaveConfig_ConfigWithUnnormalizedPaths_SavesConfigWithNormalizedPaths()
+    {
+        var config = new VmHostAgentConfiguration()
+        {
+            Defaults = new()
+            {
+                Vms = @"Z:\defaults\vms\",
+                Volumes = @"Z:\defaults\volumes\",
+            },
+            Datastores =
+            [
+                new VmHostAgentDataStoreConfiguration()
+                {
+                    Name = "store1",
+                    Path = @"Z:\stores\store1",
+                }
+            ],
+            Environments = [
+                new VmHostAgentEnvironmentConfiguration()
+                {
+                    Name = "env1",
+                    Defaults = new VmHostAgentDefaultsConfiguration()
+                    {
+                        Vms = @"Z:\env1\vms\",
+                        Volumes = @"Z:\env1\volumes\",
+                    },
+                    Datastores =
+                    [
+                        new VmHostAgentDataStoreConfiguration()
+                        {
+                            Name = "store1",
+                            Path = @"Z:\env1\stores\store1",
+
+                        },
+                    ],
+                },
+            ],
+        };
+
+        var result = await saveConfig(config, ConfigPath, _hostSettings).Run(_runtime);
+
+        result.Should().BeSuccess();
+
+        _directoryMock.Verify(m => m.Create(@"Z:\configs"), Times.Once);
+        _directoryMock.VerifyNoOtherCalls();
+
+        _fileMock.Verify(m => m.WriteAllText(
+                ConfigPath,
+                It.Is(
+                    """
+                    defaults:
+                      vms: Z:\defaults\vms
+                      volumes: Z:\defaults\volumes
+                    datastores:
+                    - name: store1
+                      path: Z:\stores\store1
+                    environments:
+                    - name: env1
+                      defaults:
+                        vms: Z:\env1\vms
+                        volumes: Z:\env1\volumes
+                      datastores:
+                      - name: store1
+                        path: Z:\env1\stores\store1
+
                     """,
                     EqualityComparer<string>.Default),
                 Encoding.UTF8,

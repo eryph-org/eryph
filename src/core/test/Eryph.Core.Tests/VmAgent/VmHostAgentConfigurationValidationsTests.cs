@@ -109,11 +109,13 @@ public class VmHostAgentConfigurationValidationsTests
 
         var result = ValidateVmHostAgentConfig(config);
 
+        var issues = result.Should().BeFail().Which.ToList();
+
         result.Should().BeFail().Which.Should().SatisfyRespectively(
             issue =>
             {
                 issue.Member.Should().Be("Defaults.Vms");
-                issue.Message.Should().Be("The value must be a valid path but contains invalid characters.");
+                issue.Message.Should().Be("The value must be a valid Windows path but contains invalid characters.");
             },
             issue =>
             {
@@ -123,7 +125,7 @@ public class VmHostAgentConfigurationValidationsTests
             issue =>
             {
                 issue.Member.Should().Be("Datastores[0].Path");
-                issue.Message.Should().Be("The value must be a valid path but contains invalid characters.");
+                issue.Message.Should().Be("The value must be a valid Windows path but contains invalid characters.");
             },
             issue =>
             {
@@ -133,7 +135,7 @@ public class VmHostAgentConfigurationValidationsTests
             issue =>
             {
                 issue.Member.Should().Be("Environments[0].Defaults.Vms");
-                issue.Message.Should().Be("The value must be a valid path but contains invalid characters.");
+                issue.Message.Should().Be("The value must be a valid Windows path but contains invalid characters.");
             },
             issue =>
             {
@@ -143,7 +145,7 @@ public class VmHostAgentConfigurationValidationsTests
             issue =>
             {
                 issue.Member.Should().Be("Environments[0].Datastores[0].Path");
-                issue.Message.Should().Be("The value must be a valid path but contains invalid characters.");
+                issue.Message.Should().Be("The value must be a valid Windows path but contains invalid characters.");
             });
     }
 
@@ -213,6 +215,41 @@ public class VmHostAgentConfigurationValidationsTests
     }
 
     [Fact]
+    public void ValidateVmHostAgentConfig_DuplicatePathInDifferentRepresentations_ReturnsFail()
+    {
+        var config = new VmHostAgentConfiguration()
+        {
+            Datastores = new[]
+            {
+                new VmHostAgentDataStoreConfiguration()
+                {
+                    Name = "store1",
+                    Path = @"z:\stores\store",
+                },
+                new VmHostAgentDataStoreConfiguration()
+                {
+                    Name = "store2",
+                    Path = @"z:\stores\store\",
+                },
+                new VmHostAgentDataStoreConfiguration()
+                {
+                    Name = "store3",
+                    Path = @"Z:\STORES\STORE",
+                },
+            },
+        };
+
+        var result = ValidateVmHostAgentConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().BeEmpty();
+                issue.Message.Should().Be(@"The path 'z:\stores\store' is not unique.");
+            });
+    }
+
+    [Fact]
     public void ValidateVmHostAgentConfig_DuplicateNames_ReturnsFail()
     {
         var config = new VmHostAgentConfiguration()
@@ -226,7 +263,7 @@ public class VmHostAgentConfigurationValidationsTests
                 },
                 new VmHostAgentDataStoreConfiguration()
                 {
-                    Name = "store1",
+                    Name = "Store1",
                     Path = @"z:\stores\store2",
                 },
             },
@@ -243,7 +280,7 @@ public class VmHostAgentConfigurationValidationsTests
                 },
                 new VmHostAgentEnvironmentConfiguration()
                 {
-                    Name = "env1",
+                    Name = "Env1",
                     Defaults = new()
                     {
                         Vms = @"z:\envs\env2\vms",
@@ -293,7 +330,7 @@ public class VmHostAgentConfigurationValidationsTests
                         },
                         new VmHostAgentDataStoreConfiguration()
                         {
-                            Name = "store1",
+                            Name = "Store1",
                             Path = @"z:\stores\store2",
                         },
                     },

@@ -25,7 +25,7 @@ public class VmHostAgentConfigurationUpdateTests
     private readonly HostSettings _hostSettings = new()
     {
         DefaultDataPath = @"Y:\defaults\vms",
-        DefaultVirtualHardDiskPath = @"Y:\defaults\disks",
+        DefaultVirtualHardDiskPath = @"Y:\defaults\disks\",
     };
 
     public VmHostAgentConfigurationUpdateTests()

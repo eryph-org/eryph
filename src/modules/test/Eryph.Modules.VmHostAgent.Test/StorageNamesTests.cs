@@ -79,6 +79,7 @@ namespace Eryph.Modules.VmHostAgent.Test
             [InlineData(@"x:\qa\test\vms\p_TestProject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
             [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "cluster", "default", "A6RKKLNZNSOW")]
             [InlineData(@"x:\qa\cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\QA\Cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
             public void FromVmPath_ValidPath_ReturnsStorageNames(
                 string path,
                 string expectedEnvironment,
@@ -122,6 +123,7 @@ namespace Eryph.Modules.VmHostAgent.Test
             [InlineData(@"x:\qa\test\volumes\p_TestProject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
             [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "cluster", "default", "A6RKKLNZNSOW")]
             [InlineData(@"x:\qa\cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\QA\Cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
             [InlineData(@"x:\\default\test\volumes\eryph\genepool\testorg\testgene\testversion\volumes\test.vhdx", "default", "default", "default", "gene:testorg/testgene/testversion:test")]
             public void FromVhdPath_ValidPath_ReturnsStorageNames(
                 string path,

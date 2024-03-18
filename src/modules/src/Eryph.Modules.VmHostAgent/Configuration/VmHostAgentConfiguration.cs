@@ -48,12 +48,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
             .Filter(notEmpty)
             .ToAff(Error.New("The config path is invalid"))
         from _ in Directory<RT>.create(configDirectory)
-        let configToSave = new VmHostAgentConfiguration()
-        {
-            Defaults = simplifyDefaults(config.Defaults, hostSettings),
-            Datastores = config.Datastores,
-            Environments = config.Environments,
-        }
+        let configToSave = normalizePaths(config, hostSettings)
         from yaml in serialize(configToSave)
         from __ in File<RT>.writeAllText(configPath, yaml)
         select unit;
@@ -81,13 +76,61 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
             return yamlSerializer.Serialize(configuration);
         });
 
+    private static VmHostAgentConfiguration normalizePaths(
+        VmHostAgentConfiguration config,
+        HostSettings hostSettings) =>
+        new()
+        {
+            Defaults = simplifyDefaults(normalizePaths(config.Defaults), hostSettings),
+            Datastores = config.Datastores?.Select(normalizePaths).ToArray(),
+            Environments = config.Environments?.Select(normalizePaths).ToArray(),
+        };
+
+    private static VmHostAgentDefaultsConfiguration normalizePaths(
+        VmHostAgentDefaultsConfiguration? config) =>
+        new()
+        {
+            Vms = normalizePath(config?.Vms),
+            Volumes = normalizePath(config?.Volumes),
+
+        };
+
+    private static VmHostAgentDataStoreConfiguration normalizePaths(
+        VmHostAgentDataStoreConfiguration config) =>
+        new()
+        {
+            Name = config.Name,
+            Path = normalizePath(config.Path),
+        };
+
+    private static VmHostAgentEnvironmentConfiguration normalizePaths(
+        VmHostAgentEnvironmentConfiguration config) =>
+        new()
+        {
+            Name = config.Name,
+            Defaults = normalizePaths(config.Defaults),
+            Datastores = config.Datastores?.Select(normalizePaths).ToArray(),
+        };
+
+
+    private static string? normalizePath(string? path) =>
+        path is null ? null : Path.TrimEndingDirectorySeparator(path);
+
     private static VmHostAgentDefaultsConfiguration simplifyDefaults(
         VmHostAgentDefaultsConfiguration defaults,
         HostSettings hostSettings) =>
         new()
         {
-            Vms = hostSettings.DefaultDataPath == defaults.Vms ? null : defaults.Vms,
-            Volumes = hostSettings.DefaultVirtualHardDiskPath == defaults.Volumes ? null : defaults.Volumes,
+            Vms = string.Equals(
+                    Path.TrimEndingDirectorySeparator(hostSettings.DefaultDataPath),
+                    defaults.Vms,
+                    StringComparison.OrdinalIgnoreCase)
+                ? null : defaults.Vms,
+            Volumes = string.Equals(
+                    Path.TrimEndingDirectorySeparator(hostSettings.DefaultVirtualHardDiskPath),
+                    defaults.Volumes,
+                    StringComparison.OrdinalIgnoreCase)
+                ? null : defaults.Volumes,
         };
 
     private static VmHostAgentConfiguration applyHostDefaults(
