@@ -42,10 +42,9 @@ namespace Eryph.Runtime.Zero
             builder.ConfigureServices((ctc, services) =>
             {
                 services.AddAutoMapper(typeof(MapperProfile).Assembly);
-                services.AddSingleton<ISimpleConfigWriter<Project>>(
-                    sp => ActivatorUtilities.CreateInstance<ProjectConfigWriterService>(
-                        sp, Path.Combine(ZeroConfig.GetProjectsConfigPath())));
             });
+
+            container.Register<IConfigWriter<Project>, ProjectConfigDataService>(Lifestyle.Singleton);
 
             container.RegisterSingleton<IConfigReaderService<CatletMetadata>, VMMetadataConfigReaderService>();
             container.RegisterSingleton<IConfigWriterService<CatletMetadata>, VMMetadataConfigWriterService>();
@@ -71,7 +70,8 @@ namespace Eryph.Runtime.Zero
                     next(context, container);
 
                     container.Register(context.ModulesHostServices
-                        .GetRequiredService<ISimpleConfigWriter<Project>>, Lifestyle.Scoped);
+                        .GetRequiredService<IConfigWriter<Project>>, Lifestyle.Singleton);
+
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigWriterService<CatletMetadata>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
@@ -81,8 +81,9 @@ namespace Eryph.Runtime.Zero
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigReaderService<VirtualDisk>>, Lifestyle.Scoped);
 
-                    container.RegisterDecorator(typeof(IProjectDataService),
-                        typeof(ProjectDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
+                    
+                    container.RegisterDecorator(typeof(IDataUpdateService<>),
+                        typeof(DecoratedDataUpdateService<>), Lifestyle.Scoped);
 
                     container.RegisterDecorator(typeof(IVirtualMachineMetadataService),
                         typeof(MetadataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
@@ -94,7 +95,6 @@ namespace Eryph.Runtime.Zero
                     container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>();
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>();
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>();
-
                 };
             }
 
