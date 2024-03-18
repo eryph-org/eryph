@@ -24,13 +24,13 @@ namespace Eryph.Modules.Controller.Projects
     internal class CreateProjectCommandHandler : IHandleMessages<OperationTask<CreateProjectCommand>>
     {
         private readonly IStateStore _stateStore;
-        private readonly IProjectDataService _projectDataService;
+        private readonly IDataUpdateService<Project> _projectDataService;
         private readonly ITaskMessaging _messaging;
         private readonly INetworkProviderManager _networkProviderManager;
         
         public CreateProjectCommandHandler(
             IStateStore stateStore,
-            IProjectDataService projectDataService,
+            IDataUpdateService<Project> projectDataService,
             INetworkProviderManager networkProviderManager, 
             ITaskMessaging messaging)
         {
@@ -68,7 +68,7 @@ namespace Eryph.Modules.Controller.Projects
                 return;
             }
 
-            var project = await _projectDataService.AddProject(
+            var project = await _projectDataService.AddAsync(
                 new Project
                 {
                     Id = message.Command.CorrelationId,

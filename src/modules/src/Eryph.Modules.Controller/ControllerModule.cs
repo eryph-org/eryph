@@ -54,6 +54,7 @@ namespace Eryph.Modules.Controller
             container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
             container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
 
+            container.Register(typeof(IDataUpdateService<>), typeof(DataUpdateService<>), Lifestyle.Scoped);
             container.Register<IProjectDataService, ProjectDataService>(Lifestyle.Scoped);
             container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
             container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
