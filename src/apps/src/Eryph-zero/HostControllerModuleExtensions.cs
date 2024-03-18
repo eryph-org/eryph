@@ -1,10 +1,12 @@
 ﻿using System;
+using System.IO;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
 using Eryph.Modules.Controller;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Resources.Machines;
+using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.Projects;
 using Eryph.Runtime.Zero.Configuration.Storage;
 using Eryph.Runtime.Zero.Configuration.VMMetadata;
@@ -37,6 +39,14 @@ namespace Eryph.Runtime.Zero
                 services.AddTransient<IModuleServicesFilter<ControllerModule>, ControllerModuleFilters>();
             });
 
+            builder.ConfigureServices((ctc, services) =>
+            {
+                services.AddAutoMapper(typeof(MapperProfile).Assembly);
+                services.AddSingleton<ISimpleConfigWriter<Project>>(
+                    sp => ActivatorUtilities.CreateInstance<ProjectConfigWriterService>(
+                        sp, Path.Combine(ZeroConfig.GetProjectsConfigPath())));
+            });
+
             container.RegisterSingleton<IConfigReaderService<CatletMetadata>, VMMetadataConfigReaderService>();
             container.RegisterSingleton<IConfigWriterService<CatletMetadata>, VMMetadataConfigWriterService>();
             container.RegisterSingleton<IConfigReaderService<VirtualDisk>, VhdReaderService>();
@@ -61,6 +71,8 @@ namespace Eryph.Runtime.Zero
                     next(context, container);
 
                     container.Register(context.ModulesHostServices
+                        .GetRequiredService<ISimpleConfigWriter<Project>>, Lifestyle.Scoped);
+                    container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigWriterService<CatletMetadata>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigReaderService<CatletMetadata>>, Lifestyle.Scoped);
@@ -68,6 +80,9 @@ namespace Eryph.Runtime.Zero
                         .GetRequiredService<IConfigWriterService<VirtualDisk>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigReaderService<VirtualDisk>>, Lifestyle.Scoped);
+
+                    container.RegisterDecorator(typeof(IProjectDataService),
+                        typeof(ProjectDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
 
                     container.RegisterDecorator(typeof(IVirtualMachineMetadataService),
                         typeof(MetadataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
