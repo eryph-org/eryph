@@ -9,6 +9,7 @@ using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages;
 using Eryph.Messages.Projects;
+using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -23,13 +24,18 @@ namespace Eryph.Modules.Controller.Projects
     internal class CreateProjectCommandHandler : IHandleMessages<OperationTask<CreateProjectCommand>>
     {
         private readonly IStateStore _stateStore;
+        private readonly IProjectDataService _projectDataService;
         private readonly ITaskMessaging _messaging;
         private readonly INetworkProviderManager _networkProviderManager;
         
-        public CreateProjectCommandHandler(IStateStore stateStore, INetworkProviderManager networkProviderManager, 
+        public CreateProjectCommandHandler(
+            IStateStore stateStore,
+            IProjectDataService projectDataService,
+            INetworkProviderManager networkProviderManager, 
             ITaskMessaging messaging)
         {
             _stateStore = stateStore;
+            _projectDataService = projectDataService;
             _networkProviderManager = networkProviderManager;
             _messaging = messaging;
         }
@@ -62,14 +68,14 @@ namespace Eryph.Modules.Controller.Projects
                 return;
             }
 
-
-
-            var project = await _stateStore.For<Project>().AddAsync(
+            var project = await _projectDataService.AddProject(
                 new Project
                 {
-                    Id = message.Command.CorrelationId, Name = name,
+                    Id = message.Command.CorrelationId,
+                    Name = name,
                     TenantId = message.Command.TenantId
-                }, stoppingToken.Token);
+                },
+                stoppingToken.Token);
 
             await _messaging.ProgressMessage(message, $"Creating project '{name}'");
 
