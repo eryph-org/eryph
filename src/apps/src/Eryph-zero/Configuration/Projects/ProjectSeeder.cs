@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoMapper;
 using Eryph.Configuration;
+using Eryph.Configuration.Model;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.Controller;
@@ -21,164 +23,120 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
     [UsedImplicitly]
     internal class ProjectSeeder : IConfigSeeder<ControllerModule>
     {
-        private readonly Container _container;
         private readonly ILogger _logger;
-        private readonly INetworkProviderManager _networkProviderManager;
+        private readonly IStateStore _stateStore;
+        private readonly IConfigReader<ProjectConfigModel> _configReader;
+        private readonly IMapper _mapper;
 
-        public ProjectSeeder(Container container, ILogger logger, INetworkProviderManager networkProviderManager)
+        public ProjectSeeder(
+            ILogger logger,
+            IStateStore stateStore,
+            IConfigReader<ProjectConfigModel> configReader,
+            IMapper mapper)
         {
-            _container = container;
             _logger = logger;
-            _networkProviderManager = networkProviderManager;
+            _stateStore = stateStore;
+            _configReader = configReader;
+            _mapper = mapper;
         }
 
         public async Task Execute(CancellationToken stoppingToken)
         {
-            var tenantId = EryphConstants.DefaultTenantId;
             _logger.LogDebug("Entering state db project seeder");
-            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
-            var stateStore = scope.GetInstance<IStateStore>();
+            
+            await EnsureDefaultTenant(stoppingToken);
+            await EnsureProjectsFromConfig(stoppingToken);
+            await EnsureDefaultProject(stoppingToken);
+        }
 
-            var tenant = await stateStore.For<Tenant>().GetByIdAsync(tenantId, stoppingToken);
+        private async Task EnsureDefaultTenant(
+            CancellationToken stoppingToken)
+        {
+            var tenantId = EryphConstants.DefaultTenantId;
+            var tenant = await _stateStore.For<Tenant>().GetByIdAsync(tenantId, stoppingToken);
 
-            if (tenant == null)
+            if (tenant is null)
             {
-                _logger.LogInformation("Default tenant '{tenantId}' not found in state db. Creating tenant record.", EryphConstants.DefaultTenantId);
-                
+                _logger.LogInformation("Default tenant '{tenantId}' not found in state db. Creating tenant record.", tenantId);
+
                 tenant = new Tenant { Id = tenantId };
-                await stateStore.For<Tenant>().AddAsync(tenant, stoppingToken);
-                await stateStore.For<Tenant>().SaveChangesAsync(stoppingToken);
+                await _stateStore.For<Tenant>().AddAsync(tenant, stoppingToken);
+                await _stateStore.For<Tenant>().SaveChangesAsync(stoppingToken);
             }
+        }
 
-            var networkProvider = (await _networkProviderManager.GetCurrentConfiguration().IfLeft(_ =>
-                new NetworkProvidersConfiguration
-                {
-                    NetworkProviders = Array.Empty<NetworkProvider>()
-                }).Select(x => x.NetworkProviders)).FirstOrDefault(x=>x.Name == "default") 
-                ?? new NetworkProvider{ Name = "default" };
-
-
-            var project = await stateStore.For<Project>().GetBySpecAsync(
-                new ProjectSpecs.GetByName(tenantId, "default")
-                , stoppingToken);
-
-            if (project == null)
+        private async Task EnsureProjectsFromConfig(
+            CancellationToken stoppingToken)
+        {
+            await foreach (var projectConfig in _configReader.ReadAsync(stoppingToken))
             {
-                _logger.LogInformation("Default project '{projectId}' not found in state db. Creating project record.", EryphConstants.DefaultProjectId);
+                await EnsureProjectFromConfig(projectConfig, stoppingToken);
+            }
+        }
+
+        private async Task EnsureProjectFromConfig(
+            ProjectConfigModel projectConfig,
+            CancellationToken stoppingToken)
+        {
+            var tenantId = EryphConstants.DefaultTenantId;
+            var project = await _stateStore.For<Project>().GetBySpecAsync(
+                new ProjectSpecs.GetById(tenantId, projectConfig.Id),
+                stoppingToken);
+
+            // TODO Do we need to reseed the assignments when the project already exists?
+            if (project is null)
+            {
+                _logger.LogInformation("Project '{projectId}' not found in state db. Creating project record.", projectConfig.Id);
+
+                project = _mapper.Map<Project>(projectConfig);
+
+                await _stateStore.For<Project>().AddAsync(project, stoppingToken);
+                await _stateStore.For<Project>().SaveChangesAsync(stoppingToken);
+
+                var assignmentConfigs = projectConfig.Assignments ?? Array.Empty<ProjectRoleAssignmentConfigModel>();
+                foreach (var assignmentConfig in assignmentConfigs)
+                {
+                    var assignment = _mapper.Map<ProjectRoleAssignment>(assignmentConfig);
+                    assignment.ProjectId = project.Id;
+                    await _stateStore.For<ProjectRoleAssignment>().AddAsync(assignment, stoppingToken);
+                    await _stateStore.For<ProjectRoleAssignment>().SaveChangesAsync(stoppingToken);
+                }
+            }
+        }
+
+        private async Task EnsureDefaultProject(CancellationToken stoppingToken)
+        {
+            var tenantId = EryphConstants.DefaultTenantId;
+            var projectId = EryphConstants.DefaultProjectId;
+            var project = await _stateStore.For<Project>().GetBySpecAsync(
+                new ProjectSpecs.GetById(tenantId, projectId),
+                stoppingToken);
+
+            if (project is null)
+            {
+                _logger.LogInformation("Default project '{projectId}' not found in state db. Creating project record.", projectId);
 
                 project = new Project
                 {
-                    Id = EryphConstants.DefaultProjectId,
+                    Id = projectId,
                     Name = "default",
                     TenantId = tenantId
                 };
-                await stateStore.For<Project>().AddAsync(project, stoppingToken);
-            }
+                await _stateStore.For<Project>().AddAsync(project, stoppingToken);
+                await _stateStore.For<Project>().SaveChangesAsync(stoppingToken);
 
-            await stateStore.For<Project>().SaveChangesAsync(stoppingToken);
-            var projectId = project.Id;
-
-            var network = await stateStore.For<VirtualNetwork>().GetBySpecAsync(
-                new VirtualNetworkSpecs.GetByName(projectId, "default", "default")
-                , stoppingToken);
-
-
-            if (network == null)
-            {
-                _logger.LogInformation("Default network not found in state db. Creating network record.");
-
-                var networkId = Guid.NewGuid();
-
-                if (networkProvider.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
+                // TODO Should we create the assignment for the system-client? If not,
+                // we should also not create it when creating project in the API.
+                var assignment = new ProjectRoleAssignment
                 {
-                    var routerPort = new NetworkRouterPort
-                    {
-                        Id = Guid.NewGuid(),
-                        MacAddress = "d2:e7:a7:37:40:f9",
-                        IpAssignments = new List<IpAssignment>(new[]
-                        {
-                            new IpAssignment
-                            {
-                                Id = Guid.NewGuid(),
-                                IpAddress = "10.0.0.1",
-                            }
-                        }),
-                        Name = "default",
-                        RoutedNetworkId = networkId,
-                        NetworkId = networkId,
-                    };
+                    Id = Guid.NewGuid(),
+                    ProjectId = projectId,
+                    IdentityId = "system-client",
+                    RoleId = EryphConstants.BuildInRoles.Owner
+                };
 
-                    network = new VirtualNetwork
-                    {
-                        Id = networkId,
-                        Name = "default",
-                        Environment = "default",
-                        ProjectId = projectId,
-                        IpNetwork = "10.0.0.0/20",
-                        NetworkProvider = "default",
-                        RouterPort = routerPort,
-                        NetworkPorts = new List<VirtualNetworkPort>
-                        {
-                            routerPort,
-                            new ProviderRouterPort()
-                            {
-                                Name = "provider",
-                                Id = Guid.NewGuid(),
-                                ProviderName = "default",
-                                SubnetName = "default",
-                                PoolName = "default",
-                                MacAddress = "d2:e7:a7:37:40:f8"
-                            }
-
-                        },
-                        Subnets = new List<VirtualNetworkSubnet>(new[]
-                        {
-                            new VirtualNetworkSubnet
-                            {
-                                Id = Guid.NewGuid(),
-                                IpNetwork = "10.0.0.0/20",
-                                Name = "default",
-                                DhcpLeaseTime = 3600,
-                                MTU = 1400,
-                                DnsServersV4 = "9.9.9.9,8.8.8.8",
-                                IpPools = new List<IpPool>(new[]
-                                {
-                                    new IpPool
-                                    {
-                                        Id = Guid.NewGuid(),
-                                        Name = "default",
-                                        IpNetwork = "10.0.0.0/20",
-                                        Counter = 0,
-                                        FirstIp = "10.0.0.100",
-                                        LastIp = "10.0.2.240"
-                                    }
-                                })
-                            }
-                        })
-                    };
-                }
-                else
-                {
-                    network = new VirtualNetwork
-                    {
-                        Id = networkId,
-                        Name = "default",
-                        ProjectId = projectId,
-                        NetworkProvider = "default",
-                    };
-                }
-
-                await stateStore.For<VirtualNetwork>().AddAsync(network, stoppingToken);
-            }
-
-            try
-            {
-                await stateStore.For<VirtualNetwork>().SaveChangesAsync(stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogCritical(ex,"Failed to seed state db projects.");
-                throw;
+                await _stateStore.For<ProjectRoleAssignment>().AddAsync(assignment, stoppingToken);
+                await _stateStore.For<ProjectRoleAssignment>().SaveChangesAsync(stoppingToken);
             }
         }
     }

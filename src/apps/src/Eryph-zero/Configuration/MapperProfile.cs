@@ -15,6 +15,9 @@ namespace Eryph.Runtime.Zero.Configuration
         {
             CreateMap<Project, ProjectConfigModel>();
             CreateMap<ProjectConfigModel, Project>();
+
+            CreateMap<ProjectRoleAssignment, ProjectRoleAssignmentConfigModel>();
+            CreateMap<ProjectRoleAssignmentConfigModel, ProjectRoleAssignment>();
         }
     }
 }
