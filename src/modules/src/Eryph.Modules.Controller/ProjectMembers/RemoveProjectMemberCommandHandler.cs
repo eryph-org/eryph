@@ -4,6 +4,7 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages;
 using Eryph.Messages.Projects;
+using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -16,12 +17,16 @@ namespace Eryph.Modules.Controller.ProjectMembers
     internal class RemoveProjectMemberCommandHandler : IHandleMessages<OperationTask<RemoveProjectMemberCommand>>
     {
         private readonly IStateStore _stateStore;
+        private readonly IDataUpdateService<ProjectRoleAssignment> _assignmentUpdateService;
         private readonly ITaskMessaging _messaging;
         
-        public RemoveProjectMemberCommandHandler(IStateStore stateStore, 
+        public RemoveProjectMemberCommandHandler(
+            IStateStore stateStore,
+            IDataUpdateService<ProjectRoleAssignment> assignmentUpdateService,
             ITaskMessaging messaging)
         {
             _stateStore = stateStore;
+            _assignmentUpdateService = assignmentUpdateService;
             _messaging = messaging;
         }
 
@@ -29,7 +34,7 @@ namespace Eryph.Modules.Controller.ProjectMembers
         {
             var stoppingToken = new CancellationTokenSource(10000);
 
-            var assignment = await _stateStore.For<ProjectRoleAssignment>()
+            var assignment = await _stateStore.Read<ProjectRoleAssignment>()
                 .GetBySpecAsync(
                     new ProjectRoleAssignmentSpecs.GetById(
                         message.Command.AssignmentId, message.Command.ProjectId),
@@ -45,8 +50,7 @@ namespace Eryph.Modules.Controller.ProjectMembers
                     return;
                 }
 
-
-                await _stateStore.For<ProjectRoleAssignment>().DeleteAsync(assignment, stoppingToken.Token);
+                await _assignmentUpdateService.DeleteAsync(assignment, stoppingToken.Token);
             }
 
             await _messaging.CompleteTask(message,

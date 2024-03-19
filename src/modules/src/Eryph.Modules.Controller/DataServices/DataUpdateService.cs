@@ -19,19 +19,23 @@ namespace Eryph.Modules.Controller.DataServices
             _repository = repository;
         }
 
-        public Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken = default)
+        public async Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken = default)
         {
-            return _repository.AddAsync(entity, cancellationToken);
+            var result = await _repository.AddAsync(entity, cancellationToken);
+            await _repository.SaveChangesAsync(cancellationToken);
+            return result;
         }
 
-        public Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
+        public async Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
         {
-            return _repository.UpdateAsync(entity, cancellationToken);
+            await _repository.UpdateAsync(entity, cancellationToken);
+            await _repository.SaveChangesAsync(cancellationToken);
         }
 
-        public Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default)
         {
-            return _repository.DeleteAsync(entity, cancellationToken);
+            await _repository.DeleteAsync(entity, cancellationToken);
+            await _repository.SaveChangesAsync(cancellationToken);
         }
     }
 }

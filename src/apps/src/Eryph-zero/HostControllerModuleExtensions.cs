@@ -3,10 +3,12 @@ using System.IO;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
+using Eryph.Configuration.Model;
 using Eryph.Modules.Controller;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Resources.Machines;
 using Eryph.Runtime.Zero.Configuration;
+using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Runtime.Zero.Configuration.Projects;
 using Eryph.Runtime.Zero.Configuration.Storage;
 using Eryph.Runtime.Zero.Configuration.VMMetadata;
@@ -45,6 +47,8 @@ namespace Eryph.Runtime.Zero
             });
 
             container.Register<IConfigWriter<Project>, ProjectConfigDataService>(Lifestyle.Singleton);
+            container.Register<IConfigWriter<ProjectRoleAssignment>, ProjectConfigDataService>(Lifestyle.Singleton);
+            container.Register<IConfigReader<ProjectConfigModel>, ProjectConfigReader>(Lifestyle.Singleton);
 
             container.RegisterSingleton<IConfigReaderService<CatletMetadata>, VMMetadataConfigReaderService>();
             container.RegisterSingleton<IConfigWriterService<CatletMetadata>, VMMetadataConfigWriterService>();
@@ -71,6 +75,11 @@ namespace Eryph.Runtime.Zero
 
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigWriter<Project>>, Lifestyle.Singleton);
+                    container.Register(context.ModulesHostServices
+                        .GetRequiredService<IConfigWriter<ProjectRoleAssignment>>, Lifestyle.Singleton);
+
+                    container.Register(context.ModulesHostServices
+                        .GetRequiredService<IConfigReader<ProjectConfigModel>>, Lifestyle.Singleton);
 
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigWriterService<CatletMetadata>>, Lifestyle.Scoped);
@@ -92,12 +101,12 @@ namespace Eryph.Runtime.Zero
                         typeof(VirtualDiskDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
 
                     container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>();
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>();
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>();
+                    container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>(Lifestyle.Scoped);
+                    container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualNetworkSeeder>(Lifestyle.Scoped);
+                    container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>(Lifestyle.Scoped);
+                    container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>(Lifestyle.Scoped);
                 };
             }
-
 
             public Action<IModulesHostBuilderContext<ControllerModule>, IServiceCollection> Invoke(
                 Action<IModulesHostBuilderContext<ControllerModule>, IServiceCollection> next)

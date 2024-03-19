@@ -6,6 +6,7 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
 using Eryph.Messages.Projects;
 using Eryph.Messages.Resources.Commands;
+using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -21,10 +22,16 @@ namespace Eryph.Modules.Controller.Projects
         IHandleMessages<OperationTaskStatusEvent<DestroyResourcesCommand>>
     {
         private readonly IStateStore _stateStore;
+        private readonly IDataUpdateService<Project> _projectUpdateService;
 
-        public DestroyProjectSaga(IWorkflow workflow, IStateStore stateStore) : base(workflow)
+        public DestroyProjectSaga(
+            IWorkflow workflow, 
+            IStateStore stateStore,
+            IDataUpdateService<Project> projectUpdateService)
+            : base(workflow)
         {
             _stateStore = stateStore;
+            _projectUpdateService = projectUpdateService;
         }
 
 
@@ -72,16 +79,11 @@ namespace Eryph.Modules.Controller.Projects
 
         private async Task DeleteProject()
         {
-            var project = await _stateStore.For<Project>().GetByIdAsync(Data.ProjectId);
+            var project = await _stateStore.Read<Project>().GetByIdAsync(Data.ProjectId);
 
             if (project != null)
             {
-                var roleAssignments = await _stateStore.For<ProjectRoleAssignment>()
-                    .ListAsync(new ProjectRoleAssignmentSpecs.GetByProject(project.Id))
-                    .ConfigureAwait(false);
-
-                await _stateStore.For<ProjectRoleAssignment>().DeleteRangeAsync(roleAssignments).ConfigureAwait(false);
-                await _stateStore.For<Project>().DeleteAsync(project).ConfigureAwait(false);
+                await _projectUpdateService.DeleteAsync(project).ConfigureAwait(false);
             }
         }
 

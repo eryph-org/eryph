@@ -24,18 +24,21 @@ namespace Eryph.Modules.Controller.Projects
     internal class CreateProjectCommandHandler : IHandleMessages<OperationTask<CreateProjectCommand>>
     {
         private readonly IStateStore _stateStore;
-        private readonly IDataUpdateService<Project> _projectDataService;
+        private readonly IDataUpdateService<Project> _projectUpdateService;
+        private readonly IDataUpdateService<ProjectRoleAssignment> _assignmentUpdateService;
         private readonly ITaskMessaging _messaging;
         private readonly INetworkProviderManager _networkProviderManager;
         
         public CreateProjectCommandHandler(
             IStateStore stateStore,
-            IDataUpdateService<Project> projectDataService,
+            IDataUpdateService<Project> projectUpdateService,
+            IDataUpdateService<ProjectRoleAssignment> assignmentUpdateService,
             INetworkProviderManager networkProviderManager, 
             ITaskMessaging messaging)
         {
             _stateStore = stateStore;
-            _projectDataService = projectDataService;
+            _projectUpdateService = projectUpdateService;
+            _assignmentUpdateService = assignmentUpdateService;
             _networkProviderManager = networkProviderManager;
             _messaging = messaging;
         }
@@ -68,7 +71,7 @@ namespace Eryph.Modules.Controller.Projects
                 return;
             }
 
-            var project = await _projectDataService.AddAsync(
+            var project = await _projectUpdateService.AddAsync(
                 new Project
                 {
                     Id = message.Command.CorrelationId,
@@ -89,8 +92,7 @@ namespace Eryph.Modules.Controller.Projects
                     RoleId = EryphConstants.BuildInRoles.Owner
                 };
 
-                await _stateStore.For<ProjectRoleAssignment>().AddAsync(
-                    roleAssignment, stoppingToken.Token);
+                await _assignmentUpdateService.AddAsync(roleAssignment, stoppingToken.Token);
             }
 
             if (!message.Command.NoDefaultNetwork)
