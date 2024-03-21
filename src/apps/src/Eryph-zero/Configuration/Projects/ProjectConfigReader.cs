@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -15,7 +16,8 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
     {
         private readonly string _configPath = ZeroConfig.GetProjectsConfigPath();
 
-        public async IAsyncEnumerable<ProjectConfigModel> ReadAsync(CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<ProjectConfigModel> ReadAsync(
+             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             foreach (var configFile in Directory.EnumerateFiles(_configPath, "*.json"))
             {
