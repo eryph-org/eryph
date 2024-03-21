@@ -73,13 +73,13 @@ internal class ProjectConfigDataService :
 
     private async Task<ProjectConfigModel> ReadProjectConfigAsync(Guid projectId, CancellationToken cancellationToken)
     {
-        var json = await File.ReadAllTextAsync(Path.Combine(_configPath, $"{projectId}.json"));
+        var json = await File.ReadAllTextAsync(Path.Combine(_configPath, $"{projectId}.json"), cancellationToken);
         return JsonSerializer.Deserialize<ProjectConfigModel>(json);
     }
 
     private async Task WriteProjectConfigAsync(ProjectConfigModel configModel, CancellationToken cancellationToken)
     {
         var json = JsonSerializer.Serialize(configModel);
-        await File.WriteAllTextAsync(Path.Combine(_configPath, $"{configModel.Id}.json"), json, Encoding.UTF8);
+        await File.WriteAllTextAsync(Path.Combine(_configPath, $"{configModel.Id}.json"), json, Encoding.UTF8, cancellationToken);
     }
 }

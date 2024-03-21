@@ -2,6 +2,7 @@
 using System.IO;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
+using Eryph.ConfigModel.Networks;
 using Eryph.Configuration;
 using Eryph.Configuration.Model;
 using Eryph.Modules.Controller;
@@ -12,6 +13,7 @@ using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Runtime.Zero.Configuration.Projects;
 using Eryph.Runtime.Zero.Configuration.Storage;
 using Eryph.Runtime.Zero.Configuration.VMMetadata;
+using Eryph.Runtime.Zero.ZeroState;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
@@ -100,11 +102,15 @@ namespace Eryph.Runtime.Zero
                     container.RegisterDecorator(typeof(IVirtualDiskDataService),
                         typeof(VirtualDiskDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
 
+                    container.Register<IConfigReader<ProjectNetworksConfig>, ProjectNetworksReader>(Lifestyle.Singleton);
+
                     container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
                     container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualNetworkSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>(Lifestyle.Scoped);
+
+                    container.RegisterSingleton<ZeroStateDbTransactionInterceptor>();
                 };
             }
 
@@ -115,6 +121,11 @@ namespace Eryph.Runtime.Zero
                 {
                     next(context, services);
                     services.AddHostedHandler<SeedFromConfigHandler<ControllerModule>>();
+                    /*
+                    services
+                        .AddSingleton<IZeroStateChannel<ZeroStateChangeSet>, ZeroStateChannel<ZeroStateChangeSet>>();
+                    */
+                    services.AddHostedService<ZeroStateBackgroundService>();
                 };
             }
         }

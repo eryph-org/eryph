@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Dbosoft.OVN;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
@@ -65,6 +65,7 @@ namespace Eryph.Runtime.Zero
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
             container.Register<IDbContextConfigurer<StateStoreContext>, SqlLiteStateStoreContextConfigurer>();
+            container.RegisterSingleton<ZeroStateDbTransactionInterceptor>();
             return container;
         }
 

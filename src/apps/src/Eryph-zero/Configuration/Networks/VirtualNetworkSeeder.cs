@@ -13,6 +13,9 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
+using Eryph.ConfigModel.Networks;
+using Eryph.Modules.Controller.Networks;
+using LanguageExt.Common;
 
 namespace Eryph.Runtime.Zero.Configuration.Networks
 {
@@ -20,20 +23,44 @@ namespace Eryph.Runtime.Zero.Configuration.Networks
     {
         private readonly ILogger _logger;
         private readonly INetworkProviderManager _networkProviderManager;
+        private readonly IConfigReader<ProjectNetworksConfig> _configReader;
+        private readonly INetworkConfigRealizer _configRealizer;
         private readonly IStateStore _stateStore;
 
         public VirtualNetworkSeeder(
             ILogger logger,
             INetworkProviderManager networkProviderManager,
+            IConfigReader<ProjectNetworksConfig> configReader,
+            INetworkConfigRealizer configRealizer,
             IStateStore stateStore)
         {
             _logger = logger;
             _networkProviderManager = networkProviderManager;
+            _configReader = configReader;
+            _configRealizer = configRealizer;
             _stateStore = stateStore;
         }
 
         public async Task Execute(CancellationToken stoppingToken)
         {
+            await foreach (var config in _configReader.ReadAsync(stoppingToken))
+            {
+                var project = await _stateStore.For<Project>().GetBySpecAsync(new ProjectSpecs.GetByName(
+                    EryphConstants.DefaultTenantId, config.Project), stoppingToken);
+                if (project is null)
+                {
+                    _logger.LogWarning("Could not find project {ProjectName} during restore of networks", config.Project);
+                    continue;
+                }
+
+                // TODO skip restore if project already has networks
+
+                // TODO fix error handling
+                var providerConfig = await _networkProviderManager.GetCurrentConfiguration()
+                    .IfLeft(l => l.ToErrorException().Rethrow<NetworkProvidersConfiguration>());
+                await _configRealizer.UpdateNetwork(project.Id, config, providerConfig);
+            }
+
             await EnsureDefaultNetwork(stoppingToken);
         }
 

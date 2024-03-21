@@ -46,6 +46,7 @@ using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<E
 using static Eryph.Modules.VmHostAgent.Networks.OvsDriverProvider<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 using Eryph.Runtime.Zero.Configuration.Networks;
+using Eryph.Runtime.Zero.ZeroState;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
@@ -326,6 +327,9 @@ internal static class Program
 
                 var builder = ModulesHost.CreateDefaultBuilder(args) as ModulesHostBuilder;
 
+
+                var channel = new ZeroStateChannel<ZeroStateChangeSet>();
+
                 var host =
                     builder!
                         .ConfigureInternalHost(hb =>
@@ -353,6 +357,7 @@ internal static class Program
                         .AddControllerModule(container)
                         .HostModule<ComputeApiModule>()
                         .AddIdentityModule(container)
+                        .ConfigureServices(c => c.AddSingleton<IZeroStateChannel<ZeroStateChangeSet>>(channel))
                         .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
                         .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
                             EventLogSettings, EventLogLoggerProvider>)
