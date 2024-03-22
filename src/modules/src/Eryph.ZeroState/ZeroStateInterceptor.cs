@@ -10,7 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.ZeroState
 {
-    internal class ZeroStateInterceptor : DbTransactionInterceptor
+    /*
+    public class ZeroStateInterceptor : DbTransactionInterceptor
     {
         private readonly ILogger<ZeroStateInterceptor> _logger;
         private readonly IZeroStateQueue _queue;
@@ -23,16 +24,20 @@ namespace Eryph.ZeroState
             _queue = queue;
         }
 
-        public override ValueTask<InterceptionResult> TransactionCommittingAsync(
+        public override async ValueTask<InterceptionResult> TransactionCommittingAsync(
             DbTransaction transaction,
             TransactionEventData eventData,
             InterceptionResult result,
             CancellationToken cancellationToken = default)
         {
-            var changes = eventData.Context.ChangeTracker.Entries<VirtualNetwork>();
+            // Any access to the database needs to happen before the transaction is committed
+            foreach (var subnetEntry in eventData.Context.ChangeTracker.Entries<VirtualNetworkSubnet>())
+            {
+                await subnetEntry.Reference(s => s.Network).LoadAsync(cancellationToken);
+                var projectId = subnetEntry.Entity.Network.ProjectId;
+            }
 
-
-            return base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
+            return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
         }
 
         public override async Task TransactionCommittedAsync(
@@ -66,10 +71,18 @@ namespace Eryph.ZeroState
                     .ToList()
             };
 
+            foreach (var subnetEntry in eventData.Context.ChangeTracker.Entries<VirtualNetworkSubnet>())
+            {
+                await subnetEntry.Reference(s => s.Network).LoadAsync(cancellationToken);
+                var projectId = subnetEntry.Entity.Network.ProjectId;
+            }
+
+
             if (!changeSet.Changes.Any())
                 return;
 
             await _queue.EnqueueAsync(changeSet, cancellationToken);
         }
     }
+    */
 }
