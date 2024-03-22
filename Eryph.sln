@@ -84,9 +84,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.Test", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "eryph-uninstaller", "src\apps\src\eryph-uninstaller\eryph-uninstaller.csproj", "{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Core.Tests", "src\core\test\Eryph.Core.Tests\Eryph.Core.Tests.csproj", "{A22374A0-673A-466B-9231-5859EEB65E33}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Core.Tests", "src\core\test\Eryph.Core.Tests\Eryph.Core.Tests.csproj", "{A22374A0-673A-466B-9231-5859EEB65E33}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.Controller.Tests", "src\modules\test\Eryph.Modules.Controller.Tests\Eryph.Modules.Controller.Tests.csproj", "{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.ZeroState.Tests", "src\data\test\Eryph.ZeroState.Tests\Eryph.ZeroState.Tests.csproj", "{E8767EF1-D12C-4E74-AAE5-11EC0964AABC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.ZeroState", "src\data\src\Eryph.ZeroState\Eryph.ZeroState.csproj", "{A60C40CD-D36A-4500-BBCB-615989CA98D8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -226,6 +230,14 @@ Global
 		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8767EF1-D12C-4E74-AAE5-11EC0964AABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8767EF1-D12C-4E74-AAE5-11EC0964AABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8767EF1-D12C-4E74-AAE5-11EC0964AABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8767EF1-D12C-4E74-AAE5-11EC0964AABC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A60C40CD-D36A-4500-BBCB-615989CA98D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A60C40CD-D36A-4500-BBCB-615989CA98D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A60C40CD-D36A-4500-BBCB-615989CA98D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A60C40CD-D36A-4500-BBCB-615989CA98D8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -264,6 +276,8 @@ Global
 		{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6} = {5F41CD29-E6EF-4810-8A84-8B9E52AEAE70}
 		{A22374A0-673A-466B-9231-5859EEB65E33} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{E8767EF1-D12C-4E74-AAE5-11EC0964AABC} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{A60C40CD-D36A-4500-BBCB-615989CA98D8} = {7F64364D-A6A2-441C-9F30-3702BF35A02F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}
