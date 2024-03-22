@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.GenePool.Model;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
@@ -20,6 +21,9 @@ using LanguageExt.Common;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
+
+using static LanguageExt.Prelude;
+using static LanguageExt.Seq;
 
 namespace Eryph.Modules.Controller.Compute
 {
@@ -103,79 +107,59 @@ namespace Eryph.Modules.Controller.Compute
 
 
                 if (Data.ProjectId == Guid.Empty)
-                    await Fail($"Catlet {Data.CatletId} is not assigned to any project.");
-                else
                 {
-                    var breedConfig = await machineInfo.ToAsync().Bind(m =>
-                            _metadataService.GetMetadata(m.MetadataId).MapAsync(m => m.ParentConfig ?? new CatletConfig()))
-                        .Map(parentConfig => parentConfig?.Breed(Data.Config, Data.Config.Parent) ?? Data.Config)
-                        .IfNone(Data.Config);
+                    await Fail($"Catlet {Data.CatletId} is not assigned to any project.");
+                    return;
+                }
 
+                var breedConfig = await machineInfo.ToAsync()
+                    .Bind(m => _metadataService.GetMetadata(m.MetadataId).MapAsync(m => m.ParentConfig ?? new CatletConfig()))
+                    .Map(parentConfig => parentConfig?.Breed(Data.Config, Data.Config.Parent) ?? Data.Config)
+                    .IfNone(Data.Config);
 
-                    var driveIdentifiers = await 
-                        MapToGeneIdentifiers((breedConfig.Drives ?? Array.Empty<CatletDriveConfig>())
-                                .Select(x=>x.Source).ToArray() , GeneType.Volume)
-                        .MatchAsync(
-                            right => (Right: true, Genes: right.ToArray()),
-                            LeftAsync:async l =>
-                            {
-                                await Fail(l.ToString());
-                                return (Right: false, Genes: Array.Empty<GeneIdentifier>());
-                            });
+                var identifiers = append(
+                    breedConfig.Drives.ToSeq().Map(c => (GeneType: GeneType.Volume, c.Source)),
+                    breedConfig.Fodder.ToSeq().Map(c => (GeneType: GeneType.Fodder, c.Source)));
 
-                    if(!driveIdentifiers.Right)
-                        return;
+                var validation = identifiers.Filter(t => notEmpty(t.Source))
+                    .Map(t => from id in GeneIdentifier.NewValidation(t.Source)
+                                  .ToEither()
+                                  .MapLeft(errors => Error.New($"The gene source '{t.Source}' is invalid.", Error.Many(errors)))
+                                  .ToValidation()
+                              select new PrepareGeneCommand()
+                              {
+                                  AgentName = Data.AgentName,
+                                  GeneType = t.GeneType,
+                                  GeneName = id.Value,
+                              })
+                    .Sequence();
 
-                    var fodderIdentifiers = await 
-                        MapToGeneIdentifiers((breedConfig.Fodder ?? Array.Empty<FodderConfig>())
-                                .Select(x => x.Source).ToArray(), GeneType.Fodder)
-                        .MatchAsync(
-                            right => (Right: true, Genes: right.ToArray()),
-                            LeftAsync: async l =>
-                            {
-                                await Fail(l.ToString());
-                                return (Right: false, Genes: Array.Empty<GeneIdentifier>());
-                            });
+                if (validation.IsFail)
+                {
+                    await Fail(ErrorUtils.PrintError(Error.New(
+                        "Some gene sources are invalid.",
+                        Error.Many(validation.FailToSeq()))));
+                    return;
+                }
 
-                    if (!fodderIdentifiers.Right)
-                        return;
-                    
-                    var geneIdentifiers = driveIdentifiers.Genes.Concat(fodderIdentifiers.Genes).ToArray();
-                    
-                    // no images required - go directly to create
-                    if (geneIdentifiers.Length == 0)
-                    {
-                        await UpdateCatlet();
-                        return;
-                    }
+                var commands = validation.SuccessToSeq().Flatten();
+                
+                // no images required - go directly to create
+                if (commands.IsEmpty)
+                {
+                    await UpdateCatlet();
+                    return;
+                }
 
-                    Data.PendingGeneNames = geneIdentifiers.Select(x=>x.Name).Distinct().ToList();
+                Data.PendingGeneNames = commands.Map(x => x.GeneName).Distinct().ToList();
 
-                    foreach (var geneIdentifier in geneIdentifiers)
-                    {
-                        await StartNewTask(new PrepareGeneCommand()
-                        {
-                            GeneType = geneIdentifier.GeneType,
-                            GeneName = geneIdentifier.Name,
-                            AgentName = Data.AgentName
-                        });
-                    }
-
+                foreach (var command in commands)
+                {
+                    await StartNewTask(command);
                 }
             });
-
-            static Either<Error, IEnumerable<GeneIdentifier>> MapToGeneIdentifiers(string?[] sources,
-                GeneType geneType)
-            {
-                return from validSources in Prelude.Right(sources.Filter(
-                        t => !string.IsNullOrWhiteSpace(t) && t.StartsWith("gene:")))
-                    from identifiers in sources.Filter(
-                        t => !string.IsNullOrWhiteSpace(t) && !t.StartsWith("gene:")).HeadOrNone().Match(
-                        Some: i => Error.New($"Invalid gene source '{i}'"),
-                        None: () => validSources.Select(x => GeneIdentifier.Parse(geneType, x)).Traverse(l => l))
-                    select identifiers;
-            }
         }
+
         public Task Handle(OperationTaskStatusEvent<PrepareGeneCommand> message)
         {
             if (Data.GenesPrepared)

@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.GenePool.Client;
 using Eryph.GenePool.Model;
@@ -79,7 +80,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
 
                 if (downloadEntry == null)
                 {
-                    var geneClient = genePoolClient.GetGeneClient(geneIdentifier.GeneSet.Name, parsedGeneId.Hash);
+                    var geneClient = genePoolClient.GetGeneClient(geneIdentifier.GeneSet.Value, parsedGeneId.Hash);
 
                     var response = await geneClient.GetAsync(cancel)
                                    ?? throw new InvalidDataException("empty response from gene api");
@@ -123,7 +124,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
                         return urlEntry.DownloadUri;
                 }
 
-                var gene = genePoolClient.GetGeneClient(geneInfo.GeneId.GeneSet.Name, geneInfo.Hash);
+                var gene = genePoolClient.GetGeneClient(geneInfo.GeneId.GeneSet.Value, geneInfo.Hash);
                 var response = await gene.GetAsync(cancel)
                                ?? throw new InvalidDataException("empty response from gene api");
                 urlEntry = (response.DownloadUris ?? Array.Empty<GenePartDownloadUri>())

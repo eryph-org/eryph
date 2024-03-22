@@ -2,12 +2,13 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Core.VmAgent;
 using LanguageExt;
 using LanguageExt.Common;
-using LanguageExt.UnsafeValueAccess;
 
 using static LanguageExt.Prelude;
+using static LanguageExt.Seq;
 
 namespace Eryph.VmManagement.Storage
 {
@@ -32,67 +33,60 @@ namespace Eryph.VmManagement.Storage
 
         public static (StorageNames Names, Option<string> StorageIdentifier) FromVhdPath(
             string path,
-            VmHostAgentConfiguration vmHostAgentConfig)
-        {
-            return FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes);
-        }
+            VmHostAgentConfiguration vmHostAgentConfig) =>
+            GetGeneReference(vmHostAgentConfig, path).Match(
+                Some: geneIdentifier => (
+                    new StorageNames()
+                    {
+                        DataStoreName = "default",
+                        EnvironmentName = "default",
+                        ProjectName = "default",
+                    },
+                    Some(geneIdentifier.Value)),
+                None: () => FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes));
 
         private static (StorageNames Names, Option<string> StorageIdentifier) FromPath(
             string path,
             VmHostAgentConfiguration vmHostAgentConfig,
-            Func<VmHostAgentDefaultsConfiguration, string> getDefault)
-        {
-            var pathCandidates = Seq(
-                Optional(vmHostAgentConfig.Environments).ToSeq().Flatten()
-                    .Where(e => e.Datastores is not null)
-                    .SelectMany(e => e.Datastores, (e, ds) => (Environment: e.Name, Datastore: ds.Name, ds.Path)),
-                Optional(vmHostAgentConfig.Environments).ToSeq().Flatten()
-                    .Select(e => (Environment: e.Name, Datastore: "default", Path: getDefault(e.Defaults))),
-                Optional(vmHostAgentConfig.Datastores).ToSeq().Flatten()
-                    .Select(ds => (Environment: "default", Datastore: ds.Name, ds.Path)),
-                Seq1((Environment: "default", Datastore: "default", Path: getDefault(vmHostAgentConfig.Defaults)))
-            ).Flatten();
-
-            var match = pathCandidates
-                .Select(pc => from relativePath in GetContainedPath(pc.Path, path)
-                              select (pc.Environment, pc.Datastore, RelativePath: relativePath))
-                .Somes()
-                .HeadOrNone();
-
-            return match.Bind(e =>
-                from root in e.RelativePath.Split(Path.DirectorySeparatorChar).HeadOrNone()
-                select root.StartsWith("p_")
-                    ? new
+            Func<VmHostAgentDefaultsConfiguration, string> getDefault) =>
+            match(
+                from pathCandidate in append(
+                        vmHostAgentConfig.Environments.ToSeq().SelectMany(
+                            e => e.Datastores.ToSeq(), 
+                            (e, ds) => (Environment: e.Name, Datastore: ds.Name, ds.Path)),
+                        vmHostAgentConfig.Environments.ToSeq().Map(
+                            e => (Environment: e.Name, Datastore: "default", Path: getDefault(e.Defaults))),
+                        vmHostAgentConfig.Datastores.ToSeq().Map(
+                            ds => (Environment: "default", Datastore: ds.Name, ds.Path)),
+                        Seq1((Environment: "default", Datastore: "default", Path: getDefault(vmHostAgentConfig.Defaults)))
+                    ).Map(pc => from relativePath in GetContainedPath(pc.Path, path)
+                                select (pc.Environment, pc.Datastore, RelativePath: relativePath))
+                    .Somes()
+                    .HeadOrNone()
+                from root in pathCandidate.RelativePath.Split(Path.DirectorySeparatorChar).HeadOrNone()
+                from projectName in root.StartsWith("p_")
+                    ? ConfigModel.ProjectName.NewOption(root.Remove(0, "p_".Length))
+                    : ConfigModel.ProjectName.New("default")
+                let remainingPath = projectName.Value != "default"
+                    ? Path.GetRelativePath(root + Path.DirectorySeparatorChar, pathCandidate.RelativePath)
+                    : pathCandidate.RelativePath
+                // VM paths only point to a directory instead of a specific file. Hence, the path can end with
+                // a storage identifier.
+                from storageIdentifier in match(
+                    Optional(Path.HasExtension(remainingPath) ? Path.GetDirectoryName(remainingPath) : remainingPath).Filter(notEmpty),
+                    Some: s => from si in StorageIdentifier.NewOption(s)
+                               select Some(si.Value),
+                    None: () => Some(Option<string>.None))
+                select (
+                    new StorageNames()
                     {
-                        StorageNames = new StorageNames()
-                        {
-                            EnvironmentName = e.Environment,
-                            DataStoreName = e.Datastore,
-                            ProjectName = root.Remove(0, "p_".Length).ToLowerInvariant(),
-                        },
-                        RelativePath = Path.GetRelativePath(root + Path.DirectorySeparatorChar, e.RelativePath),
-                    }
-                    : new
-                    {
-                        StorageNames = new StorageNames()
-                        {
-                            EnvironmentName = e.Environment,
-                            DataStoreName = e.Datastore,
-                            ProjectName = "default",
-                        },
-                        e.RelativePath,
-                    }
-                ).Map(e =>
-                {
-                    var storageIdentifier = GetGeneReference(e.RelativePath).Match(
-                        Some: v => v,
-                        None: () => Path.HasExtension(e.RelativePath) ? Path.GetDirectoryName(e.RelativePath) : e.RelativePath);
-
-                    return (e.StorageNames, Optional(storageIdentifier).Filter(notEmpty));
-                }).Match(
-                    Some: v => v,
-                    None: () => (new StorageNames() { DataStoreName = None, EnvironmentName = None, ProjectName = None }, None));
-        }
+                        DataStoreName = pathCandidate.Datastore,
+                        EnvironmentName = pathCandidate.Environment,
+                        ProjectName = projectName.Value,
+                    },
+                    storageIdentifier),
+                Some: v => v,
+                None: () => (new StorageNames() { DataStoreName = None, EnvironmentName = None, ProjectName = None }, None));
 
         public EitherAsync<Error, string> ResolveVmStorageBasePath(VmHostAgentConfiguration vmHostAgentConfig)
         {
@@ -115,14 +109,19 @@ namespace Eryph.VmManagement.Storage
             return Some(relativePath);
         }
 
-        private static Option<string> GetGeneReference(string relativePath)
-        {
-            return from genePath in GetContainedPath("genepool", relativePath)
-                   let geneDirectory = Path.GetDirectoryName(genePath)
-                   let genePathParts = geneDirectory.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
-                   where genePathParts.Length == 4 && string.Equals(genePathParts[3], "volumes", StringComparison.OrdinalIgnoreCase)
-                   select $"gene:{genePathParts[0]}/{genePathParts[1]}/{genePathParts[2]}:{Path.GetFileNameWithoutExtension(genePath)}";
-        }
+        private static Option<GeneIdentifier> GetGeneReference(
+            VmHostAgentConfiguration vmHostAgentConfig,
+            string vhdPath) =>
+            from genePath in GetContainedPath(Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool"), vhdPath)
+            let geneDirectory = Path.GetDirectoryName(genePath)
+            let genePathParts = geneDirectory.Split(Path.DirectorySeparatorChar)
+            where genePathParts.Length == 4
+            where string.Equals(genePathParts[3], "volumes", StringComparison.OrdinalIgnoreCase)
+            let geneFileName = Path.GetFileNameWithoutExtension(genePath)
+            from geneIdentifer in GeneIdentifier.NewOption(
+                $"gene:{genePathParts[0]}/{genePathParts[1]}/{genePathParts[2]}:{geneFileName}")
+            select geneIdentifer;
+        
 
         private Either<Error, (string VmPath, string VhdPath)> ResolveStorageBasePaths(
             VmHostAgentConfiguration vmHostAgentConfig)

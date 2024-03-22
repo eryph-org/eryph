@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Eryph.ConfigModel;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
 

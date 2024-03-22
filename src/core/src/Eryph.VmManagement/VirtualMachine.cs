@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Core.VmAgent;
@@ -150,7 +151,7 @@ namespace Eryph.VmManagement
                 }
 
                 var eitherParentRef = 
-                    from parentIdentifier in GeneSetIdentifier.Parse(parent)
+                    from parentIdentifier in GeneSetIdentifier.NewEither(parent)
                     from optionalRef in genepoolReader.GetGenesetReference(parentIdentifier)
                     select optionalRef;
 
@@ -162,7 +163,7 @@ namespace Eryph.VmManagement
                 var reference = eitherParentRef
                     .RightAsEnumerable()
                     .Map(o => o.AsEnumerable()).Flatten().HeadOrNone()
-                    .Map(o => o.Name)
+                    .Map(o => o.Value)
                     .IfNone("");
 
                 if (!string.IsNullOrWhiteSpace(reference))
@@ -172,9 +173,9 @@ namespace Eryph.VmManagement
                 }
                 
                 // read catlet config of parent
-                var eitherConfig = from parentIdentifier in GeneSetIdentifier.Parse(parent)
-                    let geneIdentifier = new GeneIdentifier(GeneType.Catlet, parentIdentifier, "catlet")
-                    from catletGene in genepoolReader.ReadGeneContent(geneIdentifier)
+                var eitherConfig = from parentIdentifier in GeneSetIdentifier.NewEither(parent)
+                    let geneIdentifier = new GeneIdentifier(parentIdentifier, GeneName.New("catlet"))
+                    from catletGene in genepoolReader.ReadGeneContent(GeneType.Catlet, geneIdentifier)
                     from config in Try(() =>
                     {
                         var configDictionary =

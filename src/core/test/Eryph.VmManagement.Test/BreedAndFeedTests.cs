@@ -1,4 +1,5 @@
-﻿using Eryph.ConfigModel.Catlets;
+﻿using Eryph.ConfigModel;
+using Eryph.ConfigModel.Catlets;
 using Eryph.GenePool.Model;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
@@ -12,7 +13,9 @@ namespace Eryph.VmManagement.Test
     {
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_resolves_drive_config_from_parent(string geneset)
         {
             var config = new CatletConfig
@@ -37,8 +40,8 @@ namespace Eryph.VmManagement.Test
 
             genepoolReader.Setup(x => x.GetGenesetReference(It.IsAny<GeneSetIdentifier>()))
                 .Returns((GeneSetIdentifier id) =>
-                    id.Name == "dbosoft/utt/latest"
-                        ? GeneSetIdentifier.ParseUnsafe("dbosoft/utt/1.0")
+                    id.Value == "dbosoft/utt/latest"
+                        ? GeneSetIdentifier.New("dbosoft/utt/1.0")
                         : Option<GeneSetIdentifier>.None);
 
             var result = config.BreedAndFeed(genepoolReader.Object, parentConfig);
@@ -54,7 +57,9 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_eats_food_source_from_parent(string geneset)
         {
              var config = new CatletConfig
@@ -81,7 +86,9 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_eats_food_from_source(string geneset)
         {
             var config = new CatletConfig
@@ -112,11 +119,11 @@ namespace Eryph.VmManagement.Test
 
             genepoolReader.Setup(x => x.GetGenesetReference(It.IsAny<GeneSetIdentifier>()))
                 .Returns((GeneSetIdentifier id) =>
-                    id.Name == "dbosoft/utt/latest"
-                        ? GeneSetIdentifier.ParseUnsafe("dbosoft/utt/1.0")
+                    id.Value == "dbosoft/utt/latest"
+                        ? GeneSetIdentifier.New("dbosoft/utt/1.0")
                         : Option<GeneSetIdentifier>.None);
-            genepoolReader.Setup(x => x.ReadGeneContent(
-                    new GeneIdentifier(GeneType.Fodder, GeneSetIdentifier.ParseUnsafe("dbosoft/utt/1.0"), "gene1")))
+            genepoolReader.Setup(x => x.ReadGeneContent(GeneType.Fodder,
+                    new GeneIdentifier(GeneSetIdentifier.New("dbosoft/utt/1.0"), GeneName.New("gene1"))))
                 .Returns(
                     """
                         {
@@ -145,7 +152,9 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_eats_only_selected_food(string geneset)
         {
             var config = new CatletConfig
@@ -173,7 +182,9 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_eats_some_food_from_parent(string geneset)
         {
             var config = new CatletConfig
@@ -208,7 +219,9 @@ namespace Eryph.VmManagement.Test
 
         [Theory]
         [InlineData("dbosoft/utt/latest")]
+        [InlineData("dbosoft/UTT/latest")]
         [InlineData("dbosoft/utt/1.0")]
+        [InlineData("dbosoft/UTT/1.0")]
         public void Child_eats_no_food_from_parent(string geneset)
         {
             var config = new CatletConfig

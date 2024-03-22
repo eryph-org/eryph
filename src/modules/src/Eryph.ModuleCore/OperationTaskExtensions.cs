@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -25,4 +26,12 @@ public static class OperationTaskExtensions
     {
         return messaging.FailTask(message, error.Message);
     }
+
+    public static Task FailTask<T>(
+        this ITaskMessaging messaging,
+        IOperationTaskMessage message,
+        Validation<Error, T> validation) => 
+        validation.Match(
+            Succ: _ => throw new ArgumentException("The validation must have failed.", nameof(validation)),
+            Fail: errors => messaging.FailTask(message, $"One or more validations have failed: {errors.ToFullArrayString()}"));
 }

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Eryph.ConfigModel;
 using Eryph.Core.VmAgent;
 using Eryph.GenePool.Model;
 using LanguageExt;
@@ -22,9 +23,7 @@ public class LocalGenepoolReader : ILocalGenepoolReader
     {
         return from genesetManifest in Prelude.Try(() =>
             {
-                var genepoolPath = Path.Combine(_agentConfiguration.Defaults.Volumes, "genepool");
-                var pathName = geneset.Name.Replace('/', '\\');
-                var genesetManifestPath = Path.Combine(genepoolPath, pathName, "geneset-tag.json");
+                var genesetManifestPath = Path.Combine(GetGeneSetPath(geneset), "geneset-tag.json");
                 var manifest = JsonSerializer.Deserialize<JsonNode>(File.ReadAllText(genesetManifestPath));
                 var reference = manifest["ref"]?.GetValue<string>() ?? "";
                 if (!string.IsNullOrWhiteSpace(reference))
@@ -34,28 +33,27 @@ public class LocalGenepoolReader : ILocalGenepoolReader
                 return Option<string>.None;
             }).ToEither(Error.New)
             from reference in genesetManifest.Match(
-                Some: s => GeneSetIdentifier.Parse(s).Map(Option<GeneSetIdentifier>.Some),
+                Some: s => GeneSetIdentifier.NewEither(s).Map(Option<GeneSetIdentifier>.Some),
                 None: () => Option<GeneSetIdentifier>.None
             )
             select reference;
     }
 
-    public Either<Error, string> ReadGeneContent(GeneIdentifier geneIdentifier)
+    public Either<Error, string> ReadGeneContent(
+        GeneType geneType,
+        GeneIdentifier geneIdentifier)
     {
         return Prelude.Try(() =>
         {
-            var genepoolPath = Path.Combine(_agentConfiguration.Defaults.Volumes, "genepool");
-            var pathName = geneIdentifier.GeneSet.Name.Replace('/', '\\');
-
-            var geneFolder = geneIdentifier.GeneType switch
+            var geneFolder = geneType switch
             {
                 GeneType.Catlet => ".",
                 GeneType.Volume => "volumes",
                 GeneType.Fodder => "fodder",
                 _ => throw new ArgumentOutOfRangeException()
             };
-            var genePath = Path.Combine(genepoolPath, pathName, geneFolder,
-                $"{geneIdentifier.Gene}.json");
+            var genePath = Path.Combine(GetGeneSetPath(geneIdentifier.GeneSet), geneFolder,
+                $"{geneIdentifier.GeneName}.json");
             if (!File.Exists(genePath))
                 throw new InvalidDataException($"Gene '{geneIdentifier}' not found in local genepool.");
 
@@ -63,4 +61,11 @@ public class LocalGenepoolReader : ILocalGenepoolReader
 
         }).ToEither(Error.New);
     }
+
+    private string GetGeneSetPath(GeneSetIdentifier geneSetIdentifier) =>
+        Path.Combine(_agentConfiguration.Defaults.Volumes,
+            "genepool",
+            geneSetIdentifier.Organization.Value,
+            geneSetIdentifier.GeneSet.Value,
+            geneSetIdentifier.Tag.Value);
 }
