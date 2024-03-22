@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Eryph.ZeroState
 {
-    internal class ZeroStateQueueItem
+    public class ZeroStateQueueItem
     {
         public Guid TransactionId { get; set; }
 
