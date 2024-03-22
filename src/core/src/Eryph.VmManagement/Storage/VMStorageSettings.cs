@@ -1,12 +1,15 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.SomeHelp;
+
+using static LanguageExt.Prelude;
 
 #nullable enable
 
@@ -54,44 +57,41 @@ namespace Eryph.VmManagement.Storage
 
             }
 
-            return Prelude.RightAsync<Error, VMStorageSettings>(FromVMAsync())
+            return RightAsync<Error, VMStorageSettings>(FromVMAsync())
                 .Map(r => r.ToSome().ToOption());
         }
 
 
         public static EitherAsync<Error, VMStorageSettings> FromCatletConfig(
             CatletConfig config,
-            VmHostAgentConfiguration vmHostAgentConfig)
-        {
-            var projectName = Prelude.Some(string.IsNullOrWhiteSpace(config.Project) 
-                ? "default": config.Project);
-            var environmentName = Prelude.Some(string.IsNullOrWhiteSpace(config.Environment)
-                ? "default" : config.Environment);
-            var dataStoreName = Prelude.Some(string.IsNullOrWhiteSpace(config.Store)
-                ? "default" :  config.Store);
-            var storageIdentifier = Option<string>.None;
-
-            var names = new StorageNames
+            VmHostAgentConfiguration vmHostAgentConfig) =>
+            from projectName in Optional(config.Project).Filter(notEmpty).Match(
+                Some: n => ProjectName.NewEither(n).ToAsync(),
+                None: () => RightAsync<Error, ProjectName>(ProjectName.New("default")))
+            from environmentName in Optional(config.Environment).Filter(notEmpty).Match(
+                Some: n => EnvironmentName.NewEither(n).ToAsync(),
+                None: () => RightAsync<Error, EnvironmentName>(EnvironmentName.New("default")))
+            from dataStoreName in Optional(config.Store).Filter(notEmpty).Match(
+                Some: n => DataStoreName.NewEither(n).ToAsync(),
+                None: () => RightAsync<Error, DataStoreName>(DataStoreName.New("default")))
+            from storageIdentifier in Optional(config.Location).Filter(notEmpty)
+                .Map(n => ConfigModel.StorageIdentifier.NewEither(n).ToAsync())
+                .Sequence()
+            let storageNames = new StorageNames()
             {
-                ProjectName = projectName,
-                EnvironmentName = environmentName,
-                DataStoreName = dataStoreName
+                ProjectName = projectName.Value,
+                EnvironmentName = environmentName.Value,
+                DataStoreName = dataStoreName.Value,
+            }
+            from dataPath in storageNames.ResolveVmStorageBasePath(vmHostAgentConfig)
+            from importVhdPath in storageNames.ResolveVolumeStorageBasePath(vmHostAgentConfig)
+            select new VMStorageSettings
+            {
+                StorageNames = storageNames,
+                StorageIdentifier = storageIdentifier.Map(s => s.Value),
+                VMPath = dataPath,
+                DefaultVhdPath = importVhdPath
             };
-
-            if (!string.IsNullOrWhiteSpace(config.Location))
-                storageIdentifier = Prelude.Some(config.Location);
-
-            return from dataPath in  names.ResolveVmStorageBasePath(vmHostAgentConfig)
-                   from importVhdPath in names.ResolveVolumeStorageBasePath(vmHostAgentConfig)
-                   select new VMStorageSettings
-                {
-                    StorageNames = names,
-                    StorageIdentifier = storageIdentifier,
-                    VMPath = dataPath,
-                    DefaultVhdPath = importVhdPath 
-                };
-        }
-
 
         public static EitherAsync<Error, VMStorageSettings> Plan(
             VmHostAgentConfiguration vmHostAgentConfig,
@@ -116,12 +116,10 @@ namespace Eryph.VmManagement.Storage
                     var fullPath = Path.Combine(firstPath, id);
 
                     if (!secondPath.Equals(fullPath, StringComparison.InvariantCultureIgnoreCase))
-                        return Prelude
-                            .LeftAsync<Error, string>(Error.New(
+                        return LeftAsync<Error, string>(Error.New(
                                 "Path calculation failure"));
 
-                    return Prelude
-                        .RightAsync<Error, string>(firstPath);
+                    return RightAsync<Error, string>(firstPath);
                 });
         }
 
@@ -136,14 +134,14 @@ namespace Eryph.VmManagement.Storage
             VMStorageSettings first, VMStorageSettings second)
         {
             if (second.Frozen)
-                return Prelude.RightAsync<PowershellFailure, VMStorageSettings>(second).ToEither();
+                return RightAsync<PowershellFailure, VMStorageSettings>(second).ToEither();
 
 
             return first.StorageIdentifier.MatchAsync(
                 None:
                 () => second.StorageIdentifier.MatchAsync(
                     None: () => newStorageId,
-                    Some: s => Prelude.RightAsync<PowershellFailure, string>(s).ToEither()),
+                    Some: s => RightAsync<PowershellFailure, string>(s).ToEither()),
                 Some: s => Prelude.RightAsync<PowershellFailure, string>(s).ToEither()
             ).MapAsync(storageIdentifier =>
                 new VMStorageSettings

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.GenePool.Model;
 using Eryph.Messages.Resources.Genes.Commands;
@@ -35,6 +36,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
         }
 
         public EitherAsync<Error, PrepareGeneResponse> ProvideGene(
+            GeneType geneType,
             GeneIdentifier geneIdentifier,
             Func<string, int, Task<Unit>> reportProgress,
             CancellationToken cancel)
@@ -45,18 +47,18 @@ namespace Eryph.Modules.VmHostAgent.Genetics
                 from genesetInfo in ProvideGeneSet(genePoolPath, geneIdentifier.GeneSet, reportProgress, Array.Empty<string>(), cancel)
                     .Map(i =>
                     {
-                        if (i.Id.Name != geneIdentifier.GeneSet.Name)
-                            reportProgress($"Resolved geneset '{geneIdentifier.GeneSet}' as '{i.Id.Name}'", 0);
+                        if (i.Id != geneIdentifier.GeneSet)
+                            reportProgress($"Resolved geneset '{geneIdentifier.GeneSet}' as '{i.Id}'", 0);
                         return i;
                     })
-                let newGeneIdentifier = geneIdentifier with { GeneSet = genesetInfo.Id }
-                from geneHash in GetGeneHash(genesetInfo, newGeneIdentifier)
+                let newGeneIdentifier = new GeneIdentifier(genesetInfo.Id, geneIdentifier.GeneName)
+                from geneHash in GetGeneHash(genesetInfo, geneType, newGeneIdentifier)
                 from ensuredGene in EnsureGene(genesetInfo, newGeneIdentifier, geneHash, reportProgress, cancel)
                 select new PrepareGeneResponse
                 {
-                    GeneType = geneIdentifier.GeneType,
-                    RequestedGene = geneIdentifier.Name,
-                    ResolvedGene = ensuredGene.Name
+                    GeneType = geneType,
+                    RequestedGene = geneIdentifier.Value,
+                    ResolvedGene = ensuredGene.Value
                 };
         }
 
@@ -74,28 +76,23 @@ namespace Eryph.Modules.VmHostAgent.Genetics
                        : Option<string>.Some(genesetInfo.MetaData.Parent);
         }
 
-        private static EitherAsync<Error, string> GetGeneHash(GeneSetInfo genesetInfo, GeneIdentifier geneId)
+        private static EitherAsync<Error, string> GetGeneHash(GeneSetInfo genesetInfo, GeneType geneType, GeneIdentifier geneId)
         {
-            string hash = null;
-            switch (geneId.GeneType)
+            string hash = geneType switch
             {
-                case GeneType.Catlet:
-                    hash = genesetInfo.MetaData.CatletGene;
-                    break;
-                case GeneType.Volume:
-                    hash = genesetInfo.MetaData.VolumeGenes?.FirstOrDefault(x => x.Name == geneId.Gene)?.Hash;
-                    break;
-                case GeneType.Fodder:
-                    hash = genesetInfo.MetaData.FodderGenes?.FirstOrDefault(x => x.Name == geneId.Gene)?.Hash;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+                GeneType.Catlet => genesetInfo.MetaData.CatletGene,
+                GeneType.Volume => genesetInfo.MetaData.VolumeGenes
+                    ?.FirstOrDefault(x => x.Name == geneId.GeneName.Value)
+                    ?.Hash,
+                GeneType.Fodder => genesetInfo.MetaData.FodderGenes
+                    ?.FirstOrDefault(x => x.Name == geneId.GeneName.Value)
+                    ?.Hash,
+                _ => throw new ArgumentOutOfRangeException(nameof(geneType))
+            };
 
             return string.IsNullOrWhiteSpace(hash)
-                ? Error.New($"Could not find {geneId.GeneType.ToString().ToLowerInvariant()} gene {geneId.Gene} in geneset {genesetInfo.Id}")
+                ? Error.New($"Could not find {geneType.ToString().ToLowerInvariant()} gene {geneId.GeneName} in geneset {genesetInfo.Id}")
                 : Prelude.RightAsync<Error,string>(hash);
-
         }
 
 
@@ -104,9 +101,9 @@ namespace Eryph.Modules.VmHostAgent.Genetics
         {
 
             var geneSetRefs = previousRefs as string[] ?? previousRefs.ToArray();
-            if (geneSetRefs.Contains(geneSetIdentifier.Name))
+            if (geneSetRefs.Contains(geneSetIdentifier.Value))
             {
-                var genesetNames = string.Join('?', geneSetRefs.Append(new[] { geneSetIdentifier.Name })).Replace("?", " => ");
+                var genesetNames = string.Join('?', geneSetRefs.Append(new[] { geneSetIdentifier.Value })).Replace("?", " => ");
                 return Error.New(
                     $"Oops, we have disproved Darwin! A circular reference was found in the following gene sequence: '{genesetNames}'");
  
@@ -129,7 +126,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
                 .MapLeft(l =>
                 {
                     _log.LogInformation("Failed to find geneset on any gene pool. Local fallback result: {message}", l.Message);
-                    return Error.New($"Could not find geneset '{geneSetIdentifier.Name}' on any pool.");
+                    return Error.New($"Could not find geneset '{geneSetIdentifier.Value}' on any pool.");
                 })
                 .Bind(genesetInfo => localGenePool.CacheGeneSet(path,genesetInfo, cancel)) // cache anything received in local store
                 .Bind(genesetInfo => ResolveGeneSetReferenceAsync(genesetInfo).ToAsync());
@@ -141,9 +138,9 @@ namespace Eryph.Modules.VmHostAgent.Genetics
                     return geneSetInfo;
 
                 //resolve geneset reference
-                return await GeneSetIdentifier.Parse(geneSetInfo.MetaData.Reference)
+                return await GeneSetIdentifier.NewEither(geneSetInfo.MetaData.Reference)
                     .BindAsync(aliasId => ProvideGeneSet(path, aliasId, reportProgress,
-                        geneSetRefs.Append(new[] { geneSetIdentifier.Name }), cancel).ToEither());
+                        geneSetRefs.Append(new[] { geneSetIdentifier.Value }), cancel).ToEither());
 
             }
 
@@ -158,7 +155,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
 
             async Task<Either<Error, GeneSetInfo>> ProvideGeneSetFromRemoteAsync()
             {
-                _log.LogDebug("Trying to find geneset {geneset} on remote pools", genesetId.Name);
+                _log.LogDebug("Trying to find geneset {geneset} on remote pools", genesetId.Value);
                 foreach (var sourceName in _genepoolFactory.RemotePools)
                 {
                     cancel.ThrowIfCancellationRequested();

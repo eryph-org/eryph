@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -16,6 +17,9 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+
+using static LanguageExt.Prelude;
+using Project = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
 {
@@ -37,12 +41,14 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
             var config = CatletConfigDictionaryConverter.Convert(configDictionary);
 
-            return new CreateCatletCommand{ 
-                CorrelationId = request.CorrelationId == Guid.Empty 
+            return new CreateCatletCommand
+            { 
+                CorrelationId = request.CorrelationId == Guid.Empty
                     ? new Guid()
-                    : request.CorrelationId, 
+                    : request.CorrelationId,
                 TenantId = _userRightsProvider.GetUserTenantId(),
-                    Config = config };
+                Config = config,
+            };
         }
 
         [Authorize(Policy = "compute:catlets:write")]
@@ -61,16 +67,28 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
             var config = CatletConfigDictionaryConverter.Convert(configDictionary);
 
+            var validation = CatletConfigValidations.ValidateCatletConfig(
+                config, nameof(NewCatletRequest.Configuration));
+            if (validation.IsFail)
+                return ValidationProblem(validation.ToProblemDetails());
+
             var tenantId = _userRightsProvider.GetUserTenantId();
             
-            var project = config.Project ?? "default";
+            var projectName = Optional(config.Project).Filter(notEmpty).Match(
+                Some: n => ProjectName.New(n),
+                None: () => ProjectName.New("default"));
 
-            var projectAccess = await _userRightsProvider.HasProjectAccess(project, AccessRight.Write);
+            var environmentName = Optional(config.Environment).Filter(notEmpty).Match(
+                Some: n => EnvironmentName.New(n),
+                None: () => EnvironmentName.New("default"));
+
+            var projectAccess = await _userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
             if (!projectAccess)
                 return Forbid();
 
-            var existingCatlet = await _repository.GetBySpecAsync(new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId,
-                config.Project ?? "default", config.Environment ?? "default"), cancellationToken);
+            var existingCatlet = await _repository.GetBySpecAsync(
+                new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId, projectName.Value, environmentName.Value),
+                cancellationToken);
 
             if (existingCatlet != null)
                 return Conflict();

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages;
@@ -13,6 +14,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.Common;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Projects
@@ -36,13 +38,17 @@ namespace Eryph.Modules.Controller.Projects
         {
             var stoppingToken = new CancellationTokenSource(10000);
 
-            var name = message.Command.ProjectName.ToLowerInvariant();
-
-            if (string.IsNullOrWhiteSpace(name) || name.StartsWith("p_") 
-                                                || name == "default")
+            var name = message.Command.ProjectName;
+            var validation = ProjectName.NewValidation(name);
+            if (validation.IsFail)
             {
-                await _messaging.FailTask(message,
-                    $"Project name '{name}' is a reserved name.");
+                await _messaging.FailTask(message, validation);
+                return;
+            }
+
+            if (name == "default")
+            {
+                await _messaging.FailTask(message, $"The project name '{name}' is reserved.");
                 return;
             }
 

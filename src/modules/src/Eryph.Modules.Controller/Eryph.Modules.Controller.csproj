@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.2" />
+    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.3.1-ci.3" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

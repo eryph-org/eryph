@@ -19,7 +19,7 @@ namespace Eryph.Modules.VmHostAgent
     internal abstract class CatletConfigCommandHandler<TMessage, TResult>: IHandleMessages<OperationTask<TMessage>> 
         where TMessage : class, new()
     {
-        public const string DefaultDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        public const string DefaultDigits = "0123456789abcdefghijklmnopqrstuvwxyz";
         protected readonly ITaskMessaging _messaging;
         protected readonly ILogger Log;
         protected readonly IPowershellEngine Engine;

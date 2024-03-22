@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
@@ -50,10 +52,19 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             OperationId = "Catlets_Update",
             Tags = new[] { "Catlets" })
         ]
-
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] UpdateCatletRequest request, CancellationToken cancellationToken = default)
+        public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] UpdateCatletRequest request, CancellationToken cancellationToken = default)
         {
-            return base.HandleAsync(request, cancellationToken);
+            var jsonString = request.Body?.Configuration.GetValueOrDefault().ToString();
+
+            var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
+            var config = CatletConfigDictionaryConverter.Convert(configDictionary);
+
+            var validation = CatletConfigValidations.ValidateCatletConfig(
+                config, nameof(NewCatletRequest.Configuration));
+            if (validation.IsFail)
+                return ValidationProblem(validation.ToProblemDetails());
+
+            return await base.HandleAsync(request, cancellationToken);
         }
 
     }

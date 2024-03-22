@@ -1,17 +1,23 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Functional.Validations;
+using Eryph.ConfigModel;
 using Eryph.Messages.Projects;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.AspNetCore;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
 {
@@ -31,10 +37,14 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
             OperationId = "Projects_Create",
             Tags = new[] { "Projects" })
         ]
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+        public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
             [FromBody] NewProjectRequest request, CancellationToken cancellationToken = default)
         {
-            return base.HandleAsync(request, cancellationToken);
+            var validation = ValidateRequest(request);
+            if(validation.IsFail)
+                return ValidationProblem(validation.ToProblemDetails());
+
+            return await base.HandleAsync(request, cancellationToken);
         }
 
 
@@ -43,10 +53,18 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
             return new CreateProjectCommand
             {
                 CorrelationId = request.CorrelationId.GetValueOrDefault(Guid.NewGuid()),
-                ProjectName = request.Name,
+                ProjectName = ProjectName.New(request.Name).Value,
                 IdentityId = _userRightsProvider.GetUserId(),
                 TenantId = _userRightsProvider.GetUserTenantId()
             };
         }
+
+        private static Validation<ValidationIssue, Unit> ValidateRequest(NewProjectRequest request) =>
+            ComplexValidations.ValidateProperty(request, r => r.Name, ProjectName.NewValidation)
+            | ComplexValidations.ValidateProperty(request, r => r.Name, n =>
+                from _ in guardnot(string.Equals(n, "default", StringComparison.OrdinalIgnoreCase),
+                        Error.New("The project name 'default' is reserved."))
+                    .ToValidation()
+                select n);
     }
 }
