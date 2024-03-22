@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Json;
+using Eryph.Configuration.Model;
 using Eryph.ModuleCore.Networks;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.StateDb;
@@ -45,6 +47,7 @@ namespace Eryph.Runtime.Zero.ZeroState
                 try
                 {
                     await ProcessChangeSet(changeSet, stoppingToken);
+                    await ProcessFloatingPortChanges(changeSet, stoppingToken);
                 }
                 catch (Exception ex)
                 {
@@ -78,9 +81,53 @@ namespace Eryph.Runtime.Zero.ZeroState
 
                 var networkConfig = networks.ToNetworksConfig(project.Name);
                 var json = ConfigModelJsonSerializer.Serialize(networkConfig);
-                var path = Path.Combine(ZeroConfig.GetProjectsConfigPath(), "networks", $"{project.Id}.json");
+                var path = Path.Combine(ZeroConfig.GetProjectNetworksConfigPath(), $"{project.Id}.json");
                 await File.WriteAllTextAsync(path, json, Encoding.UTF8, stoppingToken);
             }
+        }
+
+        private async Task ProcessFloatingPortChanges(ZeroStateChangeSet changeSet, CancellationToken stoppingToken)
+        {
+            _logger.LogError("Received change set for transaction {TransactionId}", changeSet.TransactionId);
+            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
+
+            bool anyFloatingPortChanges = changeSet.Changes.Any(x => x.EntityType == typeof(FloatingNetworkPort));
+            if (!anyFloatingPortChanges)
+            {
+                //TODO check IP assignments of floating ports
+                return; 
+            }
+
+            var stateStore = scope.GetRequiredService<IStateStore>();
+            var floatingPorts = await stateStore.For<FloatingNetworkPort>()
+                .ListAsync(new FloatingNetworkPortSpecs.GetForConfig(), stoppingToken);
+
+            var floatingPortsConfig = floatingPorts
+                .Select(p => new FloatingNetworkPortConfigModel()
+                {
+                    Name = p.Name,
+                    ProviderName = p.ProviderName,
+                    SubnetName = p.SubnetName,
+                    IpAssignments = p.IpAssignments.Select(a =>
+                    {
+                        var poolAssignment = a as IpPoolAssignment;
+                        return new IpAssignmentConfigModel()
+                        {
+                            IpAddress = a.IpAddress,
+                            PoolName = poolAssignment?.Pool.Name,
+                            Number = poolAssignment?.Number,
+                        };
+                    }).ToArray()
+                }).ToArray();
+
+            var wrapper = new NetworkPortsConfigModel()
+            {
+                FloatingPorts = floatingPortsConfig,
+            };
+            var json = JsonSerializer.Serialize(wrapper);
+            var path = Path.Combine(ZeroConfig.GetNetworkPortsConfigPath(), "ports.json");
+
+            await File.WriteAllTextAsync(path, json, Encoding.UTF8, stoppingToken);
         }
     }
 }

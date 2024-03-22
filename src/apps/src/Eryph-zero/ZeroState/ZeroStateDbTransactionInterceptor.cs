@@ -42,10 +42,6 @@ namespace Eryph.StateDb
             TransactionEndEventData eventData,
             CancellationToken cancellationToken = default)
         {
-            var entries = eventData.Context.ChangeTracker.Entries<VirtualNetwork>();
-            if (!entries.Any())
-                return;
-
             _logger.LogError("Detected change to relevant to zero state in transaction {TransactionId}", eventData.TransactionId);
             var changeSet = new ZeroStateChangeSet
             {
@@ -55,8 +51,24 @@ namespace Eryph.StateDb
                     {
                         Id = e.Entity.Id,
                         EntityType = typeof(VirtualNetwork)
-                    }).ToList()
+                    }).Concat(eventData.Context.ChangeTracker.Entries<FloatingNetworkPort>()
+                        .Select(e => new ZeroStateChange()
+                        {
+
+                            Id = e.Entity.Id,
+                            EntityType = typeof(FloatingNetworkPort)
+                        }))
+                    .Concat(eventData.Context.ChangeTracker.Entries<CatletNetworkPort>()
+                        .Select(e => new ZeroStateChange()
+                        {
+                            Id = e.Entity.Id,
+                            EntityType = typeof(CatletNetworkPort)
+                        }))
+                    .ToList()
             };
+
+            if(!changeSet.Changes.Any())
+                return;
             
             await _channel.WriteAsync(changeSet, cancellationToken);
         }

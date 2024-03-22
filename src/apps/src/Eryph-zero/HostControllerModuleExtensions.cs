@@ -109,6 +109,7 @@ namespace Eryph.Runtime.Zero
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualNetworkSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>(Lifestyle.Scoped);
+                    container.Collection.Append<IConfigSeeder<ControllerModule>, NetworkPortsSeeder>(Lifestyle.Scoped);
 
                     container.RegisterSingleton<ZeroStateDbTransactionInterceptor>();
                 };
