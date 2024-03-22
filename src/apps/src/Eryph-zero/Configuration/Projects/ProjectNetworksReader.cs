@@ -15,7 +15,7 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
 {
     internal class ProjectNetworksReader : IConfigReader<ProjectNetworksConfig>
     {
-        private readonly string _configPath = Path.Combine(ZeroConfig.GetProjectsConfigPath(), "networks");
+        private readonly string _configPath = Path.Combine(ZeroConfig.GetProjectNetworksConfigPath());
 
         public async IAsyncEnumerable<ProjectNetworksConfig> ReadAsync(
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
