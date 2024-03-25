@@ -118,20 +118,26 @@ namespace Eryph.Modules.Controller.Compute
                     .IfNone(Data.Config);
 
                 var identifiers = append(
-                    breedConfig.Drives.ToSeq().Map(c => (GeneType: GeneType.Volume, c.Source)),
-                    breedConfig.Fodder.ToSeq().Map(c => (GeneType: GeneType.Fodder, c.Source)));
+                    breedConfig.Drives.ToSeq()
+                        .Map(c => Optional(c.Source).Filter(s => s.StartsWith("gene:")))
+                        .Somes()
+                        .Map(s => (GeneType: GeneType.Volume, Source: s)),
+                    breedConfig.Fodder.ToSeq()
+                        .Map(c => Optional(c.Source).Filter(notEmpty))
+                        .Somes()
+                        .Map(s => (GeneType: GeneType.Fodder, Source: s)));
 
-                var validation = identifiers.Filter(t => notEmpty(t.Source))
-                    .Map(t => from id in GeneIdentifier.NewValidation(t.Source)
-                                  .ToEither()
-                                  .MapLeft(errors => Error.New($"The gene source '{t.Source}' is invalid.", Error.Many(errors)))
-                                  .ToValidation()
-                              select new PrepareGeneCommand()
-                              {
-                                  AgentName = Data.AgentName,
-                                  GeneType = t.GeneType,
-                                  GeneName = id.Value,
-                              })
+                var validation = identifiers.Map(t =>
+                        from id in GeneIdentifier.NewValidation(t.Source)
+                            .ToEither()
+                            .MapLeft(errors => Error.New($"The gene source '{t.Source}' is invalid.", Error.Many(errors)))
+                            .ToValidation() 
+                        select new PrepareGeneCommand()
+                        {
+                            AgentName = Data.AgentName,
+                            GeneType = t.GeneType,
+                            GeneName = id.Value,
+                        })
                     .Sequence();
 
                 if (validation.IsFail)
