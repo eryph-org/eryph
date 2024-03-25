@@ -10,7 +10,14 @@ using SimpleInjector.Lifestyles;
 
 namespace Eryph.ZeroState
 {
-    public class ZeroStateBackgroundService2<TChange> : BackgroundService
+    public interface IZeroStateBackgroundService2<TChange>
+    {
+
+    }
+
+    public class ZeroStateBackgroundService2<TChange> :
+        BackgroundService,
+        IZeroStateBackgroundService2<TChange>
     {
         private readonly Container _container;
         private readonly ILogger<ZeroStateBackgroundService2<TChange>> _logger;

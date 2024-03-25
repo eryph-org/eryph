@@ -8,15 +8,10 @@ namespace Eryph.ZeroState
 {
     public interface IZeroStateConfig
     {
+        public string ProjectsConfigPath { get; }
 
         public string ProjectNetworksConfigPath { get; }
 
         public string NetworkPortsConfigPath { get; }
-    }
-
-    public class ZeroStateConfig : IZeroStateConfig
-    {
-        public string ProjectNetworksConfigPath { get; init; }
-        public string NetworkPortsConfigPath { get; init; }
     }
 }

@@ -12,9 +12,4 @@ namespace Eryph.ZeroState
             TChange change,
             CancellationToken cancellationToken = default);
     }
-
-    internal class ZeroStateChangeHandler<TChange>
-    {
-
-    }
 }

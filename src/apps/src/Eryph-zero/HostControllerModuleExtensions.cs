@@ -16,9 +16,11 @@ using Eryph.Runtime.Zero.Configuration.VMMetadata;
 using Eryph.Runtime.Zero.ZeroState;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.ZeroState;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Runtime.Zero
@@ -31,7 +33,6 @@ namespace Eryph.Runtime.Zero
             {
                 cfg.Configure(app =>
                 {
-                    
                     using var scope = app.Services.CreateScope();
                     scope.ServiceProvider.GetRequiredService<StateStoreContext>().Database.Migrate();
                 });
@@ -41,6 +42,7 @@ namespace Eryph.Runtime.Zero
             {
                 services.AddTransient<IConfigureContainerFilter<ControllerModule>, ControllerModuleFilters>();
                 services.AddTransient<IModuleServicesFilter<ControllerModule>, ControllerModuleFilters>();
+                services.AddTransient<IAddSimpleInjectorFilter<ControllerModule>, ControllerModuleFilters>();
             });
 
             builder.ConfigureServices((ctc, services) =>
@@ -61,12 +63,16 @@ namespace Eryph.Runtime.Zero
             container.Register<IPlacementCalculator, ZeroAgentLocator>();
             container.Register<IStorageManagementAgentLocator, ZeroAgentLocator>();
 
+            container.RegisterSingleton<IZeroStateConfig, ZeroStateConfig>();
+
             return builder;
         }
 
 
-        private class ControllerModuleFilters : IConfigureContainerFilter<ControllerModule>,
-            IModuleServicesFilter<ControllerModule>
+        private class ControllerModuleFilters :
+            IConfigureContainerFilter<ControllerModule>,
+            IModuleServicesFilter<ControllerModule>,
+            IAddSimpleInjectorFilter<ControllerModule>
         {
             public Action<IModuleContext<ControllerModule>, Container> Invoke(
                 Action<IModuleContext<ControllerModule>, Container> next)
@@ -92,7 +98,13 @@ namespace Eryph.Runtime.Zero
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigReaderService<VirtualDisk>>, Lifestyle.Scoped);
 
-                    
+                    container.Register(context.ModulesHostServices
+                        .GetRequiredService<IDbContextConfigurer<StateStoreContext>>, Lifestyle.Scoped);
+
+                    container.Register(context.ModulesHostServices
+                        .GetRequiredService<IZeroStateConfig>, Lifestyle.Singleton);
+
+
                     container.RegisterDecorator(typeof(IDataUpdateService<>),
                         typeof(DecoratedDataUpdateService<>), Lifestyle.Scoped);
 
@@ -112,6 +124,8 @@ namespace Eryph.Runtime.Zero
                     container.Collection.Append<IConfigSeeder<ControllerModule>, NetworkPortsSeeder>(Lifestyle.Scoped);
 
                     container.RegisterSingleton<ZeroStateDbTransactionInterceptor>();
+
+                    container.UseZeroState();
                 };
             }
 
@@ -126,7 +140,17 @@ namespace Eryph.Runtime.Zero
                     services
                         .AddSingleton<IZeroStateChannel<ZeroStateChangeSet>, ZeroStateChannel<ZeroStateChangeSet>>();
                     */
-                    services.AddHostedService<ZeroStateBackgroundService>();
+                    //services.AddHostedService<ZeroStateBackgroundService>();
+                };
+            }
+
+            public Action<IModulesHostBuilderContext<ControllerModule>, SimpleInjectorAddOptions> Invoke(
+                Action<IModulesHostBuilderContext<ControllerModule>, SimpleInjectorAddOptions> next)
+            {
+                return (context, options) =>
+                {
+                    next(context, options);
+                    options.AddZeroStateService();
                 };
             }
         }

@@ -106,6 +106,7 @@ namespace Eryph.ZeroState
                     .Select(p => new FloatingNetworkPortConfigModel()
                     {
                         Name = p.Name,
+                        MacAddress = p.MacAddress,
                         ProviderName = p.ProviderName,
                         SubnetName = p.SubnetName,
                         IpAssignments = p.IpAssignments.Select(a =>

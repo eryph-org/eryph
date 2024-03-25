@@ -4,11 +4,11 @@ using System.Text;
 
 namespace Eryph.Configuration.Model
 {
-    internal class CatletNetworkPortConfigModel
+    public class CatletNetworkPortConfigModel
     {
         public string VirtualNetworkName { get; set; }
 
-        public string SubnetName { get; set; }
+        public string MacAddress { get; set; }
 
         public FloatingPortReferenceConfigModel FloatingNetworkPort { get; set; }
 

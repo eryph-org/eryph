@@ -8,6 +8,8 @@ namespace Eryph.Configuration.Model
     {
         public string Name { get; set; }
 
+        public string MacAddress { get; set; }
+
         public string ProviderName { get; set; }
 
         public string SubnetName { get; set; }

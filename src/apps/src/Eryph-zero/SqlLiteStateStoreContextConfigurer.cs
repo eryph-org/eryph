@@ -12,10 +12,8 @@ public class SqlLiteStateStoreContextConfigurer : IDbContextConfigurer<StateStor
 {
     private readonly ZeroStateDbTransactionInterceptor _dbTransactionInterceptor;
 
-    public SqlLiteStateStoreContextConfigurer(
-        ZeroStateDbTransactionInterceptor dbTransactionInterceptor)
+    public SqlLiteStateStoreContextConfigurer()
     {
-        _dbTransactionInterceptor = dbTransactionInterceptor;
     }
 
     public void Configure(DbContextOptionsBuilder options)
@@ -25,6 +23,6 @@ public class SqlLiteStateStoreContextConfigurer : IDbContextConfigurer<StateStor
         options.ConfigureWarnings(x => x.Ignore(RelationalEventId.AmbientTransactionWarning));
         options.EnableDetailedErrors();
         options.EnableSensitiveDataLogging();
-        options.AddInterceptors(_dbTransactionInterceptor);
+        //options.AddInterceptors(_dbTransactionInterceptor);
     }
 }
