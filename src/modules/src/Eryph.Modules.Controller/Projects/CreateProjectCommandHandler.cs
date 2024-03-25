@@ -9,7 +9,6 @@ using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages;
 using Eryph.Messages.Projects;
-using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -24,21 +23,13 @@ namespace Eryph.Modules.Controller.Projects
     internal class CreateProjectCommandHandler : IHandleMessages<OperationTask<CreateProjectCommand>>
     {
         private readonly IStateStore _stateStore;
-        private readonly IDataUpdateService<Project> _projectUpdateService;
-        private readonly IDataUpdateService<ProjectRoleAssignment> _assignmentUpdateService;
         private readonly ITaskMessaging _messaging;
         private readonly INetworkProviderManager _networkProviderManager;
         
-        public CreateProjectCommandHandler(
-            IStateStore stateStore,
-            IDataUpdateService<Project> projectUpdateService,
-            IDataUpdateService<ProjectRoleAssignment> assignmentUpdateService,
-            INetworkProviderManager networkProviderManager, 
+        public CreateProjectCommandHandler(IStateStore stateStore, INetworkProviderManager networkProviderManager, 
             ITaskMessaging messaging)
         {
             _stateStore = stateStore;
-            _projectUpdateService = projectUpdateService;
-            _assignmentUpdateService = assignmentUpdateService;
             _networkProviderManager = networkProviderManager;
             _messaging = messaging;
         }
@@ -71,14 +62,14 @@ namespace Eryph.Modules.Controller.Projects
                 return;
             }
 
-            var project = await _projectUpdateService.AddAsync(
+
+
+            var project = await _stateStore.For<Project>().AddAsync(
                 new Project
                 {
-                    Id = message.Command.CorrelationId,
-                    Name = name,
+                    Id = message.Command.CorrelationId, Name = name,
                     TenantId = message.Command.TenantId
-                },
-                stoppingToken.Token);
+                }, stoppingToken.Token);
 
             await _messaging.ProgressMessage(message, $"Creating project '{name}'");
 
@@ -92,7 +83,8 @@ namespace Eryph.Modules.Controller.Projects
                     RoleId = EryphConstants.BuildInRoles.Owner
                 };
 
-                await _assignmentUpdateService.AddAsync(roleAssignment, stoppingToken.Token);
+                await _stateStore.For<ProjectRoleAssignment>().AddAsync(
+                    roleAssignment, stoppingToken.Token);
             }
 
             if (!message.Command.NoDefaultNetwork)
