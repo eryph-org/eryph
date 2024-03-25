@@ -45,7 +45,7 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
             _logger.LogDebug("Entering state db project seeder");
             
             await EnsureDefaultTenant(stoppingToken);
-            await EnsureProjectsFromConfig(stoppingToken);
+            //await EnsureProjectsFromConfig(stoppingToken);
             await EnsureDefaultProject(stoppingToken);
         }
 

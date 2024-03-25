@@ -6,7 +6,11 @@ namespace Eryph.Configuration.Model
 {
     public class CatletNetworkPortConfigModel
     {
+        public string Name { get; set; }
+
         public string VirtualNetworkName { get; set; }
+
+        public string EnvironmentName { get; set; }
 
         public string MacAddress { get; set; }
 

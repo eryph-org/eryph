@@ -15,6 +15,7 @@ namespace Eryph.StateDb.Specifications
             public GetForProjectConfig(Guid projectId)
             {
                 Query.Where(x => x.Network.ProjectId == projectId);
+                Query.Include(x => x.Catlet);
                 Query.Include(x => x.Network);
                 Query.Include(x => x.FloatingPort);
                 Query.Include(x => x.IpAssignments)

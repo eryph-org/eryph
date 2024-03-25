@@ -27,7 +27,7 @@ internal class ZeroStateVirtualNetworkPortChangeInterceptor
         if (eventData.Context is null)
             return None;
 
-        var networks = await eventData.Context.ChangeTracker.Entries<CatletNetworkPort>()
+        var networks = await eventData.Context.ChangeTracker.Entries<CatletNetworkPort>().ToList()
             .Map(async e =>
             {
                 var networkReference = e.Reference(n => n.Network);
