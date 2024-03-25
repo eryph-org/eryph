@@ -189,6 +189,9 @@ namespace Eryph.ZeroState.Tests
         public string ProjectsConfigPath => @"Z:\projects\networks";
 
         public string ProjectNetworksConfigPath => @"Z:\projects\networks";
+
+        public string ProjectNetworkPortsConfigPath => @"Z:\projects\ports";
+
         public string NetworkPortsConfigPath => @"Z:\networks\ports";
     }
 }

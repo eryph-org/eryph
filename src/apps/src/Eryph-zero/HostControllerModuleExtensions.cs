@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.ConfigModel.Networks;
@@ -33,8 +34,11 @@ namespace Eryph.Runtime.Zero
             {
                 cfg.Configure(app =>
                 {
-                    using var scope = app.Services.CreateScope();
-                    scope.ServiceProvider.GetRequiredService<StateStoreContext>().Database.Migrate();
+                    Task.Run(async () =>
+                    {
+                        await using var scope = app.Services.CreateAsyncScope();
+                        await scope.ServiceProvider.GetRequiredService<StateStoreContext>().Database.MigrateAsync();
+                    }).Wait();
                 });
             });
 
@@ -104,9 +108,10 @@ namespace Eryph.Runtime.Zero
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IZeroStateConfig>, Lifestyle.Singleton);
 
-
+                    
                     container.RegisterDecorator(typeof(IDataUpdateService<>),
                         typeof(DecoratedDataUpdateService<>), Lifestyle.Scoped);
+                    
 
                     container.RegisterDecorator(typeof(IVirtualMachineMetadataService),
                         typeof(MetadataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
@@ -121,9 +126,9 @@ namespace Eryph.Runtime.Zero
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualNetworkSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>(Lifestyle.Scoped);
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, NetworkPortsSeeder>(Lifestyle.Scoped);
+                    //container.Collection.Append<IConfigSeeder<ControllerModule>, NetworkPortsSeeder>(Lifestyle.Scoped);
 
-                    container.RegisterSingleton<ZeroStateDbTransactionInterceptor>();
+                    //container.RegisterSingleton<ZeroStateDbTransactionInterceptor>();
 
                     container.UseZeroState();
                 };
@@ -135,7 +140,7 @@ namespace Eryph.Runtime.Zero
                 return (context, services) =>
                 {
                     next(context, services);
-                    services.AddHostedHandler<SeedFromConfigHandler<ControllerModule>>();
+                    //services.AddHostedHandler<SeedFromConfigHandler<ControllerModule>>();
                     /*
                     services
                         .AddSingleton<IZeroStateChannel<ZeroStateChangeSet>, ZeroStateChannel<ZeroStateChangeSet>>();
@@ -151,6 +156,7 @@ namespace Eryph.Runtime.Zero
                 {
                     next(context, options);
                     options.AddZeroStateService();
+                    options.Services.AddHostedHandler<SeedFromConfigHandler<ControllerModule>>();
                 };
             }
         }

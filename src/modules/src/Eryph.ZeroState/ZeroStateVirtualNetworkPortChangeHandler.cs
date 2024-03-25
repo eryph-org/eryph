@@ -44,7 +44,9 @@ namespace Eryph.ZeroState
                 {
                     CatletNetworkPorts = ports.Map(p => new CatletNetworkPortConfigModel()
                     {
+                        Name = p.Name,
                         VirtualNetworkName = p.Network.Name,
+                        EnvironmentName = p.Network.Environment,
                         // TODO improve me
                         CatletMetadataId = p.Catlet!.MetadataId,
                         MacAddress = p.MacAddress,
@@ -74,7 +76,7 @@ namespace Eryph.ZeroState
                 };
 
                 var json = JsonSerializer.Serialize(config);
-                var path = Path.Combine(_config.ProjectNetworksConfigPath, $"{projectId}.json");
+                var path = Path.Combine(_config.ProjectNetworkPortsConfigPath, $"{projectId}.json");
                 await _fileSystem.File.WriteAllTextAsync(path, json, Encoding.UTF8, cancellationToken);
             }
         }

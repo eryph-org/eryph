@@ -43,6 +43,7 @@ namespace Eryph.Runtime.Zero.Configuration.Networks
 
         public async Task Execute(CancellationToken stoppingToken)
         {
+            /*
             await foreach (var config in _configReader.ReadAsync(stoppingToken))
             {
                 var project = await _stateStore.For<Project>().GetBySpecAsync(new ProjectSpecs.GetByName(
@@ -60,6 +61,7 @@ namespace Eryph.Runtime.Zero.Configuration.Networks
                     .IfLeft(l => l.ToErrorException().Rethrow<NetworkProvidersConfiguration>());
                 await _configRealizer.UpdateNetwork(project.Id, config, providerConfig);
             }
+            */
 
             await EnsureDefaultNetwork(stoppingToken);
         }
@@ -163,7 +165,6 @@ namespace Eryph.Runtime.Zero.Configuration.Networks
                 };
             }
 
-            // TODO use data update service
             await _stateStore.For<VirtualNetwork>().AddAsync(network, stoppingToken);
             await _stateStore.For<VirtualNetwork>().SaveChangesAsync(stoppingToken);
         }

@@ -27,7 +27,7 @@ namespace Eryph.ZeroState
             if (eventData.Context is null)
                 return None;
 
-            var subnets = await eventData.Context.ChangeTracker.Entries<IpPool>()
+            var subnets = await eventData.Context.ChangeTracker.Entries<IpPool>().ToList()
                 .Map(async e =>
                 {
                     var subnetReference = e.Reference(s => s.Subnet);
@@ -41,7 +41,7 @@ namespace Eryph.ZeroState
                     .Map(vns => eventData.Context.Entry(vns)));
 
             var networks = await subnets
-                .Concat(eventData.Context.ChangeTracker.Entries<VirtualNetworkSubnet>())
+                .Concat(eventData.Context.ChangeTracker.Entries<VirtualNetworkSubnet>().ToList())
                 .Map(async e =>
                 {
                     var networkReference = e.Reference(s => s.Network);
@@ -52,7 +52,7 @@ namespace Eryph.ZeroState
                 .Map(e => e.Somes());
 
             var projectIds = networks
-                .Concat(eventData.Context.ChangeTracker.Entries<VirtualNetwork>())
+                .Concat(eventData.Context.ChangeTracker.Entries<VirtualNetwork>().ToList())
                 .Map(e => e.Entity.ProjectId)
                 .Distinct()
                 .ToList();

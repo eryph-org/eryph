@@ -12,20 +12,20 @@ namespace Eryph.ZeroState
     internal class ZeroStateDbConfigurer : IDbContextConfigurer<StateStoreContext>
     {
         private readonly IDbContextConfigurer<StateStoreContext> _decoratedConfigurer;
-        private readonly ZeroStateVirtualNetworkInterceptor _interceptor;
+        private readonly IEnumerable<IZeroStateInterceptor> _interceptors;
 
         public ZeroStateDbConfigurer(
             IDbContextConfigurer<StateStoreContext> decoratedConfigurer,
-            ZeroStateVirtualNetworkInterceptor interceptor)
+            IEnumerable<IZeroStateInterceptor> interceptors)
         {
             _decoratedConfigurer = decoratedConfigurer;
-            _interceptor = interceptor;
+            _interceptors = interceptors;
         }
 
         public void Configure(DbContextOptionsBuilder options)
         {
             _decoratedConfigurer.Configure(options);
-            options.AddInterceptors(_interceptor);
+            options.AddInterceptors(_interceptors.ToList());
         }
     }
 }

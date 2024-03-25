@@ -9,7 +9,12 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Eryph.ZeroState
 {
-    public abstract class ZeroStateInterceptorBase<TChange> : DbTransactionInterceptor
+    public interface IZeroStateInterceptor : IInterceptor
+    {
+    }
+
+    public abstract class ZeroStateInterceptorBase<TChange>
+        : DbTransactionInterceptor, IZeroStateInterceptor
     {
         private readonly IZeroStateQueue<TChange> _queue;
         private Option<ZeroStateQueueItem2<TChange>> _currentItem = Option<ZeroStateQueueItem2<TChange>>.None;

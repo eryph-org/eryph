@@ -12,6 +12,9 @@ namespace Eryph.Runtime.Zero.Configuration
         public string ProjectsConfigPath => ZeroConfig.GetProjectsConfigPath();
 
         public string ProjectNetworksConfigPath => ZeroConfig.GetProjectNetworksConfigPath();
+
+        public string ProjectNetworkPortsConfigPath => ZeroConfig.GetProjectNetworkPortsConfigPath();
+
         public string NetworkPortsConfigPath => ZeroConfig.GetNetworkPortsConfigPath();
     }
 }

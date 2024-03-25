@@ -26,14 +26,12 @@ namespace Eryph.ZeroState
             if (eventData.Context is null)
                 return None;
 
-            var providers = eventData.Context.ChangeTracker.Entries<FloatingNetworkPort>()
+            var providers = eventData.Context.ChangeTracker.Entries<FloatingNetworkPort>().ToList()
                 .Map(e => e.Entity.ProviderName);
 
             return providers.Match(
                 Empty: () => None,
-                More: p => Some(new ProviderPortChange()
-                {
-                }));
+                More: p => Some(new ProviderPortChange()));
         }
     }
 }

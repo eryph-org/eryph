@@ -15,6 +15,7 @@
     <ProjectReference Include="..\..\..\apps\src\Eryph.AppCore\Eryph.AppCore.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
+    <ProjectReference Include="..\Eryph.Modules.Controller\Eryph.Modules.Controller.csproj" />
   </ItemGroup>
 
 </Project>

@@ -12,6 +12,8 @@ namespace Eryph.ZeroState
 
         public string ProjectNetworksConfigPath { get; }
 
+        public string ProjectNetworkPortsConfigPath { get; }
+
         public string NetworkPortsConfigPath { get; }
     }
 }
