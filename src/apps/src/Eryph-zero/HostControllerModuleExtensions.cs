@@ -86,14 +86,6 @@ namespace Eryph.Runtime.Zero
                     next(context, container);
 
                     container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigWriter<Project>>, Lifestyle.Singleton);
-                    container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigWriter<ProjectRoleAssignment>>, Lifestyle.Singleton);
-
-                    container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigReader<ProjectConfigModel>>, Lifestyle.Singleton);
-
-                    container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigWriterService<CatletMetadata>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigReaderService<CatletMetadata>>, Lifestyle.Scoped);
@@ -107,10 +99,6 @@ namespace Eryph.Runtime.Zero
 
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IZeroStateConfig>, Lifestyle.Singleton);
-
-                    
-                    container.RegisterDecorator(typeof(IDataUpdateService<>),
-                        typeof(DecoratedDataUpdateService<>), Lifestyle.Scoped);
                     
 
                     container.RegisterDecorator(typeof(IVirtualMachineMetadataService),
@@ -119,16 +107,12 @@ namespace Eryph.Runtime.Zero
                     container.RegisterDecorator(typeof(IVirtualDiskDataService),
                         typeof(VirtualDiskDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
 
-                    container.Register<IConfigReader<ProjectNetworksConfig>, ProjectNetworksReader>(Lifestyle.Singleton);
+                    
 
                     container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
                     container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>(Lifestyle.Scoped);
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualNetworkSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>(Lifestyle.Scoped);
-                    //container.Collection.Append<IConfigSeeder<ControllerModule>, NetworkPortsSeeder>(Lifestyle.Scoped);
-
-                    //container.RegisterSingleton<ZeroStateDbTransactionInterceptor>();
 
                     container.UseZeroState();
                 };

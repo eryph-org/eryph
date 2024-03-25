@@ -5,7 +5,6 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages;
 using Eryph.Messages.Projects;
-using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -18,15 +17,11 @@ namespace Eryph.Modules.Controller.ProjectMembers
     internal class AddProjectMemberCommandHandler : IHandleMessages<OperationTask<AddProjectMemberCommand>>
     {
         private readonly IStateStore _stateStore;
-        private readonly IDataUpdateService<ProjectRoleAssignment> _assignmentUpdateService;
         private readonly ITaskMessaging _messaging;
         
-        public AddProjectMemberCommandHandler(
-            IStateStore stateStore,
-            IDataUpdateService<ProjectRoleAssignment> assignmentUpdateService,
+        public AddProjectMemberCommandHandler(IStateStore stateStore, 
             ITaskMessaging messaging)
         {
-            _assignmentUpdateService = assignmentUpdateService;
             _stateStore = stateStore;
             _messaging = messaging;
         }
@@ -35,10 +30,11 @@ namespace Eryph.Modules.Controller.ProjectMembers
         {
             var stoppingToken = new CancellationTokenSource(10000);
 
-            var existingProject = await _stateStore.Read<Project>().GetBySpecAsync(
+            var existingProject = await _stateStore.For<Project>().GetBySpecAsync(
                 new ProjectSpecs.GetById(message.Command.TenantId,
                     message.Command.ProjectId), stoppingToken.Token);
 
+            var assignmentRepo = _stateStore.For<ProjectRoleAssignment>();
             if (existingProject == null)
             {
                 await _messaging.FailTask(message,
@@ -67,7 +63,7 @@ namespace Eryph.Modules.Controller.ProjectMembers
                 RoleId = roleId
             };
 
-            var existingAssignment = await _stateStore.Read<ProjectRoleAssignment>().GetBySpecAsync(
+            var existingAssignment = await assignmentRepo.GetBySpecAsync(
                                new ProjectRoleAssignmentSpecs.GetByMemberAndRole(
                               roleAssignment.ProjectId,
                               roleAssignment.IdentityId,
@@ -80,7 +76,7 @@ namespace Eryph.Modules.Controller.ProjectMembers
                 return;
             }
 
-            await _assignmentUpdateService.AddAsync(
+            await assignmentRepo.AddAsync(
                 roleAssignment, stoppingToken.Token);
         
 
