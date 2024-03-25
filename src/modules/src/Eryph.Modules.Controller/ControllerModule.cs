@@ -84,7 +84,7 @@ namespace Eryph.Modules.Controller
             container.Register(() =>
             {
                 var optionsBuilder = new DbContextOptionsBuilder<StateStoreContext>();
-                serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>().Configure(optionsBuilder);
+                container.GetInstance<IDbContextConfigurer<StateStoreContext>>().Configure(optionsBuilder);
                 return new StateStoreContext(optionsBuilder.Options);
             }, Lifestyle.Scoped);
 
