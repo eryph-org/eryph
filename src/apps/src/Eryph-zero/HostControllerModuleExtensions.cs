@@ -54,10 +54,6 @@ namespace Eryph.Runtime.Zero
                 services.AddAutoMapper(typeof(MapperProfile).Assembly);
             });
 
-            container.Register<IConfigWriter<Project>, ProjectConfigDataService>(Lifestyle.Singleton);
-            container.Register<IConfigWriter<ProjectRoleAssignment>, ProjectConfigDataService>(Lifestyle.Singleton);
-            container.Register<IConfigReader<ProjectConfigModel>, ProjectConfigReader>(Lifestyle.Singleton);
-
             container.RegisterSingleton<IConfigReaderService<CatletMetadata>, VMMetadataConfigReaderService>();
             container.RegisterSingleton<IConfigWriterService<CatletMetadata>, VMMetadataConfigWriterService>();
             container.RegisterSingleton<IConfigReaderService<VirtualDisk>, VhdReaderService>();
@@ -110,6 +106,7 @@ namespace Eryph.Runtime.Zero
                     
 
                     container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
+                    //container.Collection.Append<IConfigSeeder<ControllerModule>, TenantSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>(Lifestyle.Scoped);
@@ -138,9 +135,9 @@ namespace Eryph.Runtime.Zero
             {
                 return (context, options) =>
                 {
-                    next(context, options);
                     options.AddZeroStateService();
                     options.Services.AddHostedHandler<SeedFromConfigHandler<ControllerModule>>();
+                    next(context, options);
                 };
             }
         }
