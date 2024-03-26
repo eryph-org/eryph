@@ -13,6 +13,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
 using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
@@ -24,7 +25,11 @@ internal class NetworkSyncService : INetworkSyncService
     private readonly Container _container;
     private readonly INetworkProviderManager _providerManager;
     private readonly ILogger _log;
-    public NetworkSyncService(Container container, INetworkProviderManager providerManager, ILogger log)
+
+    public NetworkSyncService(
+        Container container,
+        INetworkProviderManager providerManager,
+        ILogger log)
     {
         _container = container;
         _providerManager = providerManager;
@@ -75,83 +80,15 @@ internal class NetworkSyncService : INetworkSyncService
         {
             await using var scope = AsyncScopedLifestyle.BeginScope(_container);
 
+            var configRealizer = scope.GetInstance<INetworkProvidersConfigRealizer>();
+
             var stateStore = scope.GetInstance<IStateStore>();
             var providerManager = scope.GetInstance<INetworkProviderManager>();
 
-            var config =
-                (await providerManager.GetCurrentConfiguration().ToEither()).IfLeft(
-                    new NetworkProvidersConfiguration());
+            var configResult = await providerManager.GetCurrentConfiguration();
+            var config =configResult.IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());
 
-            var existingSubnets = await stateStore.For<ProviderSubnet>()
-                .ListAsync(new NetplanBuilderSpecs.GetAllProviderSubnets(), cancellationToken);
-
-            var existingIpPools = existingSubnets.SelectMany(x => x.IpPools).ToArray();
-            var foundSubnets = new List<ProviderSubnet>();
-            var foundIpPools = new List<IpPool>();
-
-            foreach (var networkProvider in config.NetworkProviders.Where(x =>
-                         x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay))
-            {
-                foreach (var subnet in networkProvider.Subnets)
-                {
-                    var subnetEntity = existingSubnets.FirstOrDefault(e =>
-                        e.ProviderName == networkProvider.Name && e.Name == subnet.Name);
-
-                    if (subnetEntity != null)
-                    {
-                        foundSubnets.Add(subnetEntity);
-                        subnetEntity.IpNetwork = subnet.Network;
-                    }
-                    else
-                    {
-                        subnetEntity = new ProviderSubnet
-                        {
-                            Id = Guid.NewGuid(),
-                            IpNetwork = subnet.Network,
-                            Name = subnet.Name,
-                            ProviderName = networkProvider.Name,
-                            IpPools = new List<IpPool>()
-                        };
-
-                        await stateStore.For<ProviderSubnet>().AddAsync(subnetEntity, cancellationToken);
-                    }
-
-
-                    foreach (var ipPool in subnet.IpPools)
-                    {
-                        var ipPoolEntity = subnetEntity.IpPools.FirstOrDefault(x =>
-                            x.Name == ipPool.Name && x.FirstIp == ipPool.FirstIp && x.LastIp == ipPool.LastIp &&
-                            x.IpNetwork == subnetEntity.IpNetwork);
-
-                        if (ipPoolEntity != null)
-                            foundIpPools.Add(ipPoolEntity);
-                        else
-                        {
-                            await stateStore.For<IpPool>().AddAsync(new IpPool
-                            {
-                                Id = Guid.NewGuid(),
-                                FirstIp = ipPool.FirstIp,
-                                LastIp = ipPool.LastIp,
-                                Counter = 0,
-                                IpNetwork = subnet.Network,
-                                Name = ipPool.Name,
-                                SubnetId = subnetEntity.Id
-                            }, cancellationToken);
-                        }
-
-                    }
-
-                }
-
-            }
-
-            var removePools = existingIpPools.Where(e => foundIpPools.All(x => x.Id != e.Id)).ToArray();
-            var removeSubnets = existingSubnets.Where(e => foundSubnets.All(x => x.Id != e.Id)).ToArray();
-
-            await stateStore.For<IpPool>().DeleteRangeAsync(removePools, cancellationToken);
-            await stateStore.For<ProviderSubnet>().DeleteRangeAsync(removeSubnets, cancellationToken);
-            await stateStore.For<ProviderSubnet>().SaveChangesAsync(cancellationToken);
-
+            await configRealizer.RealizeConfigAsync(config, cancellationToken);
 
             var projects = (await stateStore.For<Project>().ListAsync(cancellationToken)).First();
             var res = await UpdateProjectNetworkPlan(projects.Id);

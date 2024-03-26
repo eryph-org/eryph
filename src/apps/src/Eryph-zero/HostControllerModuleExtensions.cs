@@ -96,20 +96,21 @@ namespace Eryph.Runtime.Zero
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IZeroStateConfig>, Lifestyle.Singleton);
                     
+                    /*
 
                     container.RegisterDecorator(typeof(IVirtualMachineMetadataService),
                         typeof(MetadataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
 
                     container.RegisterDecorator(typeof(IVirtualDiskDataService),
                         typeof(VirtualDiskDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
-
+                    */
                     
 
                     container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
                     //container.Collection.Append<IConfigSeeder<ControllerModule>, TenantSeeder>(Lifestyle.Scoped);
                     container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>(Lifestyle.Scoped);
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>(Lifestyle.Scoped);
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>(Lifestyle.Scoped);
+                    //container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>(Lifestyle.Scoped);
+                    //container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>(Lifestyle.Scoped);
 
                     container.UseZeroState();
                 };

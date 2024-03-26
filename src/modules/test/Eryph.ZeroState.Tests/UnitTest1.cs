@@ -193,5 +193,7 @@ namespace Eryph.ZeroState.Tests
         public string ProjectNetworkPortsConfigPath => @"Z:\projects\ports";
 
         public string NetworkPortsConfigPath => @"Z:\networks\ports";
+
+        public string VirtualMachinesConfigPath => @"Z:\vms\md";
     }
 }

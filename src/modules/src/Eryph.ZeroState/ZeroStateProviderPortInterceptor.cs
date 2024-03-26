@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 using static LanguageExt.Prelude;
@@ -19,19 +20,16 @@ namespace Eryph.ZeroState
         {
         }
 
-        protected override async Task<Option<ProviderPortChange>> DetectChanges(
-            TransactionEventData eventData,
+        protected override Task<Option<ProviderPortChange>> DetectChanges(
+            DbContext dbContext,
             CancellationToken cancellationToken = default)
         {
-            if (eventData.Context is null)
-                return None;
+            return dbContext.ChangeTracker.Entries<FloatingNetworkPort>().ToList()
+                .Map(e => e.Entity.ProviderName)
+                .Match(
+                    Empty: () => Task.FromResult<Option<ProviderPortChange>>(None),
+                    More: p => Task.FromResult(Some(new ProviderPortChange())));
 
-            var providers = eventData.Context.ChangeTracker.Entries<FloatingNetworkPort>().ToList()
-                .Map(e => e.Entity.ProviderName);
-
-            return providers.Match(
-                Empty: () => None,
-                More: p => Some(new ProviderPortChange()));
         }
     }
 }

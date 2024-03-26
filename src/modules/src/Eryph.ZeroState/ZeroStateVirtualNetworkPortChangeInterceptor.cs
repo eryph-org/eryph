@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 using static LanguageExt.Prelude;
@@ -21,13 +22,10 @@ internal class ZeroStateVirtualNetworkPortChangeInterceptor
     }
 
     protected override async Task<Option<VirtualNetworkPortChange>> DetectChanges(
-        TransactionEventData eventData,
+        DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is null)
-            return None;
-
-        var networks = await eventData.Context.ChangeTracker.Entries<CatletNetworkPort>().ToList()
+        var networks = await dbContext.ChangeTracker.Entries<CatletNetworkPort>().ToList()
             .Map(async e =>
             {
                 var networkReference = e.Reference(n => n.Network);
