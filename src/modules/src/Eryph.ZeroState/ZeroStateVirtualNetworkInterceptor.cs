@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
@@ -21,13 +22,10 @@ namespace Eryph.ZeroState
         }
 
         protected override async Task<Option<VirtualNetworkChange>> DetectChanges(
-            TransactionEventData eventData,
+            DbContext dbContext,
             CancellationToken cancellationToken = default)
         {
-            if (eventData.Context is null)
-                return None;
-
-            var subnets = await eventData.Context.ChangeTracker.Entries<IpPool>().ToList()
+            var subnets = await dbContext.ChangeTracker.Entries<IpPool>().ToList()
                 .Map(async e =>
                 {
                     var subnetReference = e.Reference(s => s.Subnet);
@@ -38,10 +36,10 @@ namespace Eryph.ZeroState
                 .Map(e => e.Somes()
                     .Map(s => s.Entity)
                     .OfType<VirtualNetworkSubnet>()
-                    .Map(vns => eventData.Context.Entry(vns)));
+                    .Map(dbContext.Entry));
 
             var networks = await subnets
-                .Concat(eventData.Context.ChangeTracker.Entries<VirtualNetworkSubnet>().ToList())
+                .Concat(dbContext.ChangeTracker.Entries<VirtualNetworkSubnet>().ToList())
                 .Map(async e =>
                 {
                     var networkReference = e.Reference(s => s.Network);
@@ -52,7 +50,7 @@ namespace Eryph.ZeroState
                 .Map(e => e.Somes());
 
             var projectIds = networks
-                .Concat(eventData.Context.ChangeTracker.Entries<VirtualNetwork>().ToList())
+                .Concat(dbContext.ChangeTracker.Entries<VirtualNetwork>().ToList())
                 .Map(e => e.Entity.ProjectId)
                 .Distinct()
                 .ToList();

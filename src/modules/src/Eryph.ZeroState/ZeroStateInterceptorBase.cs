@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LanguageExt;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Eryph.ZeroState
@@ -26,7 +27,7 @@ namespace Eryph.ZeroState
         }
 
         protected abstract Task<Option<TChange>> DetectChanges(
-            TransactionEventData eventData,
+            DbContext dbContext,
             CancellationToken cancellationToken = default);
 
         public override async ValueTask<InterceptionResult> TransactionCommittingAsync(
@@ -35,7 +36,10 @@ namespace Eryph.ZeroState
             InterceptionResult result,
             CancellationToken cancellationToken = default)
         {
-            _currentItem = await DetectChanges(eventData, cancellationToken)
+            if (eventData.Context is null)
+                return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
+
+            _currentItem = await DetectChanges(eventData.Context, cancellationToken)
                 .MapT(changes => new ZeroStateQueueItem2<TChange>()
                 {
                     TransactionId = eventData.TransactionId,

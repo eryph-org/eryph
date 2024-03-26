@@ -51,6 +51,7 @@ namespace Eryph.ZeroState
 
             project = new Project()
             {
+                Id = projectId,
                 Name = projectConfig.Name,
                 TenantId = tenantId,
                 ProjectRoles = projectConfig.Assignments?.Map(ac => new ProjectRoleAssignment()

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Eryph.Configuration;
 using Eryph.Modules.Controller;
 using Eryph.StateDb;
+using Eryph.ZeroState.Networks;
+using Eryph.ZeroState.VirtualMachines;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -31,8 +33,10 @@ namespace Eryph.ZeroState
             container.Collection.Register(typeof(IZeroStateInterceptor), new []{ typeof(IZeroStateInterceptor).Assembly }, Lifestyle.Scoped);
 
             // Seeders
+            container.Collection.Append<IZeroStateSeeder, NetworkProvidersSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateDefaultTenantSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateProjectSeeder>(Lifestyle.Scoped);
+            container.Collection.Append<IZeroStateSeeder, ZeroStateVmMetadataSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateProviderPortSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateVirtualNetworkSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateVirtualNetworkPortsSeeder>(Lifestyle.Scoped);
@@ -44,6 +48,7 @@ namespace Eryph.ZeroState
             options.AddHostedService<ZeroStateBackgroundService2<ProviderPortChange>>();
             options.AddHostedService<ZeroStateBackgroundService2<ProjectChange>>();
             options.AddHostedService<ZeroStateBackgroundService2<VirtualNetworkPortChange>>();
+            options.AddHostedService<ZeroStateBackgroundService2<ZeroStateCatletMetadataChange>>();
             options.AddHostedService<ZeroStateSeedingService>();
         }
     }
