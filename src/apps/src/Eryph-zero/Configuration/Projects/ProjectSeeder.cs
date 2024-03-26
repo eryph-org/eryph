@@ -39,17 +39,6 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
             await using var scope = AsyncScopedLifestyle.BeginScope(_container);
             var stateStore = scope.GetInstance<IStateStore>();
 
-            var tenant = await stateStore.For<Tenant>().GetByIdAsync(tenantId, stoppingToken);
-
-            if (tenant == null)
-            {
-                _logger.LogInformation("Default tenant '{tenantId}' not found in state db. Creating tenant record.", EryphConstants.DefaultTenantId);
-                
-                tenant = new Tenant { Id = tenantId };
-                await stateStore.For<Tenant>().AddAsync(tenant, stoppingToken);
-                await stateStore.For<Tenant>().SaveChangesAsync(stoppingToken);
-            }
-
             var networkProvider = (await _networkProviderManager.GetCurrentConfiguration().IfLeft(_ =>
                 new NetworkProvidersConfiguration
                 {

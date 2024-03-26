@@ -36,16 +36,6 @@ namespace Eryph.ZeroState
             CancellationToken cancellationToken = default)
         {
             var tenantId = EryphConstants.DefaultTenantId;
-            var tenant = await _stateStore.For<Tenant>().GetByIdAsync(tenantId, cancellationToken);
-
-            // TODO move to proper place
-            if (tenant is null)
-            {
-                _logger.LogInformation("Default tenant '{tenantId}' not found in state db. Creating tenant record.", tenantId);
-
-                tenant = new Tenant { Id = tenantId };
-                await _stateStore.For<Tenant>().AddAsync(tenant, cancellationToken);
-            }
 
             var project = await _stateStore.For<Project>().GetBySpecAsync(
                 new ProjectSpecs.GetById(tenantId, projectId),

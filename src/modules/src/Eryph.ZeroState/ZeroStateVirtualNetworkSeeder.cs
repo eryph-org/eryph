@@ -23,6 +23,7 @@ namespace Eryph.ZeroState
         private readonly ILogger _logger;
         private readonly INetworkProviderManager _networkProviderManager;
         private readonly INetworkConfigRealizer _configRealizer;
+        private readonly INetworkConfigValidator _configValidator;
         private readonly IStateStore _stateStore;
 
         public ZeroStateVirtualNetworkSeeder(
@@ -31,11 +32,13 @@ namespace Eryph.ZeroState
             IZeroStateConfig config,
             INetworkProviderManager networkProviderManager,
             INetworkConfigRealizer configRealizer,
+            INetworkConfigValidator configValidator,
             IStateStore stateStore) : base(fileSystem, config.ProjectNetworksConfigPath, logger)
         {
             _logger = logger;
             _networkProviderManager = networkProviderManager;
             _configRealizer = configRealizer;
+            _configValidator = configValidator;
             _stateStore = stateStore;
         }
 
@@ -45,22 +48,28 @@ namespace Eryph.ZeroState
             if (configDictionary == null)
                 return;
 
-            var config = ProjectNetworksConfigDictionaryConverter.Convert(configDictionary);
             var project = await _stateStore.For<Project>().GetBySpecAsync(
-                new ProjectSpecs.GetByName(EryphConstants.DefaultTenantId, config.Project),
+                new ProjectSpecs.GetById(EryphConstants.DefaultTenantId, projectId),
                 cancellationToken);
             if (project is null)
             {
-                _logger.LogWarning("Could not find project {ProjectName} during restore of networks", config.Project);
+                _logger.LogWarning("Could not find project {ProjectId} during restore of networks", projectId);
                 return;
             }
 
-            // TODO skip restore if project already has networks
+            var existingNetworks = await _stateStore.For<VirtualNetwork>().ListAsync(
+                new VirtualNetworkSpecs.GetForProjectConfig(project.Id),
+                cancellationToken);
+            if (existingNetworks.Any())
+                return;
+
+            var config = ProjectNetworksConfigDictionaryConverter.Convert(configDictionary);
+            var normalizedConfig = _configValidator.NormalizeConfig(config);
 
             // TODO fix error handling
             var providerConfig = await _networkProviderManager.GetCurrentConfiguration()
                 .IfLeft(l => l.ToErrorException().Rethrow<NetworkProvidersConfiguration>());
-            await _configRealizer.UpdateNetwork(project.Id, config, providerConfig);
+            await _configRealizer.UpdateNetwork(project.Id, normalizedConfig, providerConfig);
             await _stateStore.SaveChangesAsync(cancellationToken);
         }
     }

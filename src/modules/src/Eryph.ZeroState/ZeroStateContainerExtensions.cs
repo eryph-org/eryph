@@ -31,6 +31,7 @@ namespace Eryph.ZeroState
             container.Collection.Register(typeof(IZeroStateInterceptor), new []{ typeof(IZeroStateInterceptor).Assembly }, Lifestyle.Scoped);
 
             // Seeders
+            container.Collection.Append<IZeroStateSeeder, ZeroStateDefaultTenantSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateProjectSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateProviderPortSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateVirtualNetworkSeeder>(Lifestyle.Scoped);
