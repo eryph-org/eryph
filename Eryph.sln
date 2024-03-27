@@ -88,11 +88,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Core.Tests", "src\cor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.Controller.Tests", "src\modules\test\Eryph.Modules.Controller.Tests\Eryph.Modules.Controller.Tests.csproj", "{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.ZeroState", "src\data\src\Eryph.ZeroState\Eryph.ZeroState.csproj", "{A60C40CD-D36A-4500-BBCB-615989CA98D8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.ZeroState", "src\modules\src\Eryph.ZeroState\Eryph.ZeroState.csproj", "{3145E35E-6ED1-44B1-8305-FD7DD83E7B8C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.ZeroState", "src\modules\src\Eryph.ZeroState\Eryph.ZeroState.csproj", "{3145E35E-6ED1-44B1-8305-FD7DD83E7B8C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.ZeroState.Tests", "src\modules\test\Eryph.ZeroState.Tests\Eryph.ZeroState.Tests.csproj", "{FF4362F1-CAF7-4A75-BC22-ED70ACDB2E5B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.ZeroState.Tests", "src\modules\test\Eryph.ZeroState.Tests\Eryph.ZeroState.Tests.csproj", "{FF4362F1-CAF7-4A75-BC22-ED70ACDB2E5B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -232,10 +230,6 @@ Global
 		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A60C40CD-D36A-4500-BBCB-615989CA98D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A60C40CD-D36A-4500-BBCB-615989CA98D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A60C40CD-D36A-4500-BBCB-615989CA98D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A60C40CD-D36A-4500-BBCB-615989CA98D8}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3145E35E-6ED1-44B1-8305-FD7DD83E7B8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3145E35E-6ED1-44B1-8305-FD7DD83E7B8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3145E35E-6ED1-44B1-8305-FD7DD83E7B8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -282,7 +276,6 @@ Global
 		{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6} = {5F41CD29-E6EF-4810-8A84-8B9E52AEAE70}
 		{A22374A0-673A-466B-9231-5859EEB65E33} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
-		{A60C40CD-D36A-4500-BBCB-615989CA98D8} = {7F64364D-A6A2-441C-9F30-3702BF35A02F}
 		{3145E35E-6ED1-44B1-8305-FD7DD83E7B8C} = {E889B549-C333-46DC-B71F-9608CBA1FBAA}
 		{FF4362F1-CAF7-4A75-BC22-ED70ACDB2E5B} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
