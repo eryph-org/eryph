@@ -8,6 +8,8 @@ namespace Eryph.Configuration.Model
     {
         public string IpAddress { get; set; }
 
+        public string SubnetName { get; set; }
+
         public string PoolName { get; set; }
 
         public int? Number { get; set; }

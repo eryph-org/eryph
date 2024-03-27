@@ -15,8 +15,10 @@ namespace Eryph.StateDb.Specifications
         {
             public GetForConfig()
             {
-                Query.Include(x => x.IpAssignments)
-                    .ThenInclude(x => ((IpPoolAssignment)x).Pool);
+                Query.Include(p => p.IpAssignments)
+                    .ThenInclude(a => ((IpPoolAssignment)a).Pool);
+                Query.Include(p => p.IpAssignments)
+                    .ThenInclude(a => a.Subnet);
             }
         }
 

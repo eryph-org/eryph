@@ -68,12 +68,14 @@ internal class ZeroStateVirtualNetworkPortChangeHandler : IZeroStateChangeHandle
                             ? new IpAssignmentConfigModel()
                             {
                                 IpAddress = pa.IpAddress,
+                                SubnetName = pa.Subnet.Name,
                                 PoolName = pa.Pool.Name,
                                 Number = pa.Number,
                             }
                             : new IpAssignmentConfigModel()
                             {
-                                IpAddress = a.IpAddress
+                                IpAddress = a.IpAddress,
+                                SubnetName = a.Subnet.Name,
                             })
                     .ToArray(),
             }).ToArray(),

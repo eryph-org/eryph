@@ -49,6 +49,7 @@ internal class ZeroStateProviderPortChangeHandler : IZeroStateChangeHandler<Prov
                     return new IpAssignmentConfigModel()
                     {
                         IpAddress = a.IpAddress,
+                        SubnetName = a.Subnet.Name,
                         PoolName = poolAssignment?.Pool.Name,
                         Number = poolAssignment?.Number,
                     };
