@@ -18,28 +18,37 @@ namespace Eryph.ZeroState
     {
         public static void UseZeroState(this Container container)
         {
-            //var queue = new ZeroStateQueue<VirtualNetworkChange>();
             // TODO move file system registration somewhere else
             container.RegisterSingleton<IFileSystem, FileSystem>();
-            //container.RegisterInstance<IZeroStateQueue<VirtualNetworkChange>>(queue);
             container.Register(typeof(IZeroStateQueue<>), typeof(ZeroStateQueue<>), Lifestyle.Singleton);
             container.Register(typeof(IZeroStateChangeHandler<>),
                 typeof(IZeroStateChangeHandler<>).Assembly,
                 Lifestyle.Scoped);
-            //container.Register<ZeroStateVirtualNetworkInterceptor>(Lifestyle.Scoped);
-            container.RegisterDecorator(typeof(IDbContextConfigurer<StateStoreContext>), typeof(ZeroStateDbConfigurer),
+
+            container.RegisterDecorator(
+                typeof(IDbContextConfigurer<StateStoreContext>),
+                typeof(ZeroStateDbConfigurer),
                 Lifestyle.Scoped);
 
-            container.Collection.Register(typeof(IZeroStateInterceptor), new []{ typeof(IZeroStateInterceptor).Assembly }, Lifestyle.Scoped);
+            container.Collection.Register(
+                typeof(IZeroStateInterceptor),
+                new []{ typeof(IZeroStateInterceptor).Assembly },
+                Lifestyle.Scoped);
 
             // Seeders
             container.Collection.Append<IZeroStateSeeder, NetworkProvidersSeeder>(Lifestyle.Scoped);
-            container.Collection.Append<IZeroStateSeeder, ZeroStateDefaultTenantSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateProjectSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateVmMetadataSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateProviderPortSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateVirtualNetworkSeeder>(Lifestyle.Scoped);
             container.Collection.Append<IZeroStateSeeder, ZeroStateVirtualNetworkPortsSeeder>(Lifestyle.Scoped);
+
+            container.Collection.Append<IConfigSeeder<ControllerModule>, NetworkProvidersSeeder>(Lifestyle.Scoped);
+            container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateProjectSeeder>(Lifestyle.Scoped);
+            container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateVmMetadataSeeder>(Lifestyle.Scoped);
+            container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateProviderPortSeeder>(Lifestyle.Scoped);
+            container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateVirtualNetworkSeeder>(Lifestyle.Scoped);
+            container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateVirtualNetworkPortsSeeder>(Lifestyle.Scoped);
         }
 
         public static void AddZeroStateService(this SimpleInjectorAddOptions options)
@@ -49,7 +58,7 @@ namespace Eryph.ZeroState
             options.AddHostedService<ZeroStateBackgroundService2<ProjectChange>>();
             options.AddHostedService<ZeroStateBackgroundService2<VirtualNetworkPortChange>>();
             options.AddHostedService<ZeroStateBackgroundService2<ZeroStateCatletMetadataChange>>();
-            options.AddHostedService<ZeroStateSeedingService>();
+            //options.AddHostedService<ZeroStateSeedingService>();
         }
     }
 }

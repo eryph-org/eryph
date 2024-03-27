@@ -106,13 +106,12 @@ namespace Eryph.Runtime.Zero
                     */
                     
 
-                    container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
-                    //container.Collection.Append<IConfigSeeder<ControllerModule>, TenantSeeder>(Lifestyle.Scoped);
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>(Lifestyle.Scoped);
+                    //container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
+                    container.Collection.Append<IConfigSeeder<ControllerModule>, DefaultTenantSeeder>(Lifestyle.Scoped);
+                    container.UseZeroState();
+                    container.Collection.Append<IConfigSeeder<ControllerModule>, DefaultProjectSeeder>(Lifestyle.Scoped);
                     //container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>(Lifestyle.Scoped);
                     //container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>(Lifestyle.Scoped);
-
-                    container.UseZeroState();
                 };
             }
 
@@ -137,7 +136,7 @@ namespace Eryph.Runtime.Zero
                 return (context, options) =>
                 {
                     options.AddZeroStateService();
-                    options.Services.AddHostedHandler<SeedFromConfigHandler<ControllerModule>>();
+                    options.AddHostedService<SeedFromConfigHandler<ControllerModule>>();
                     next(context, options);
                 };
             }

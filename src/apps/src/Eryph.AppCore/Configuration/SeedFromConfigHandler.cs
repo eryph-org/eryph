@@ -4,13 +4,22 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.HostedServices;
 using LanguageExt;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
 namespace Eryph.Configuration
 {
-    public class SeedFromConfigHandler<TModule> : IHostedServiceHandler where TModule : class
+    /// <summary>
+    /// This handler is responsible for running code which seeds initial data
+    /// during startup.
+    /// </summary>
+    /// <remarks>
+    /// This handler intentionally implements <see cref="IHostedService"/> as
+    /// the startup should wait for the seeding to complete before continuing.
+    /// </remarks>
+    public class SeedFromConfigHandler<TModule> : IHostedService where TModule : class
     {
         private readonly IEnumerable<DependencyMetadata<IConfigSeeder<TModule>>> _seeders;
         private readonly Container _container;
@@ -40,6 +49,16 @@ namespace Eryph.Configuration
                     logger.LogError(ex, "Error executing config seeder {configSeeder}", configSeeder.ImplementationType.Name);
                 }
             }
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            return Execute(cancellationToken);
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
         }
     }
 }

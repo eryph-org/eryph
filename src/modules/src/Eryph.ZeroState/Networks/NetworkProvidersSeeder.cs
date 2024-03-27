@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.Configuration;
 using Eryph.Core;
 using Eryph.Core.Network;
+using Eryph.Modules.Controller;
 using Eryph.Modules.Controller.Networks;
 using LanguageExt;
 
 namespace Eryph.ZeroState.Networks
 {
-    internal class NetworkProvidersSeeder : IZeroStateSeeder
+    internal class NetworkProvidersSeeder : IZeroStateSeeder, IConfigSeeder<ControllerModule>
     {
         private readonly INetworkProviderManager _networkProviderManager;
         private readonly INetworkProvidersConfigRealizer _configRealizer;
@@ -29,6 +31,11 @@ namespace Eryph.ZeroState.Networks
             var config = configResult.IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());
 
             await _configRealizer.RealizeConfigAsync(config, stoppingToken);
+        }
+
+        public Task Execute(CancellationToken stoppingToken)
+        {
+            return SeedAsync(stoppingToken);
         }
     }
 }

@@ -19,25 +19,25 @@ using SimpleInjector.Lifestyles;
 namespace Eryph.Runtime.Zero.Configuration.Projects
 {
     [UsedImplicitly]
-    internal class ProjectSeeder : IConfigSeeder<ControllerModule>
+    internal class DefaultProjectSeeder : IConfigSeeder<ControllerModule>
     {
-        private readonly Container _container;
         private readonly ILogger _logger;
         private readonly INetworkProviderManager _networkProviderManager;
+        private readonly IStateStore _stateStore;
 
-        public ProjectSeeder(Container container, ILogger logger, INetworkProviderManager networkProviderManager)
+        public DefaultProjectSeeder(
+            ILogger logger,
+            INetworkProviderManager networkProviderManager,
+            IStateStore stateStore)
         {
-            _container = container;
             _logger = logger;
             _networkProviderManager = networkProviderManager;
+            _stateStore = stateStore;
         }
 
         public async Task Execute(CancellationToken stoppingToken)
         {
             var tenantId = EryphConstants.DefaultTenantId;
-            _logger.LogDebug("Entering state db project seeder");
-            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
-            var stateStore = scope.GetInstance<IStateStore>();
 
             var networkProvider = (await _networkProviderManager.GetCurrentConfiguration().IfLeft(_ =>
                 new NetworkProvidersConfiguration
@@ -47,7 +47,7 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
                 ?? new NetworkProvider{ Name = "default" };
 
 
-            var project = await stateStore.For<Project>().GetBySpecAsync(
+            var project = await _stateStore.For<Project>().GetBySpecAsync(
                 new ProjectSpecs.GetByName(tenantId, "default")
                 , stoppingToken);
 
@@ -61,13 +61,13 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
                     Name = "default",
                     TenantId = tenantId
                 };
-                await stateStore.For<Project>().AddAsync(project, stoppingToken);
+                await _stateStore.For<Project>().AddAsync(project, stoppingToken);
             }
 
-            await stateStore.For<Project>().SaveChangesAsync(stoppingToken);
+            await _stateStore.For<Project>().SaveChangesAsync(stoppingToken);
             var projectId = project.Id;
 
-            var network = await stateStore.For<VirtualNetwork>().GetBySpecAsync(
+            var network = await _stateStore.For<VirtualNetwork>().GetBySpecAsync(
                 new VirtualNetworkSpecs.GetByName(projectId, "default", "default")
                 , stoppingToken);
 
@@ -157,18 +157,10 @@ namespace Eryph.Runtime.Zero.Configuration.Projects
                     };
                 }
 
-                await stateStore.For<VirtualNetwork>().AddAsync(network, stoppingToken);
+                await _stateStore.For<VirtualNetwork>().AddAsync(network, stoppingToken);
             }
 
-            try
-            {
-                await stateStore.For<VirtualNetwork>().SaveChangesAsync(stoppingToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogCritical(ex,"Failed to seed state db projects.");
-                throw;
-            }
+            await _stateStore.For<VirtualNetwork>().SaveChangesAsync(stoppingToken);
         }
     }
 }
