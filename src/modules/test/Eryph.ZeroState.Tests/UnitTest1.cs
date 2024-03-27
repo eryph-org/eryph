@@ -3,6 +3,7 @@ using System.IO.Abstractions.TestingHelpers;
 using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.ZeroState.VirtualNetworks;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,7 +35,7 @@ namespace Eryph.ZeroState.Tests
                         .AddInterceptors(sp.GetRequiredService<ZeroStateVirtualNetworkInterceptor>()));
                 services.AddSimpleInjector(container, options =>
                 {
-                    options.AddHostedService<ZeroStateBackgroundService2<VirtualNetworkChange>>();
+                    options.AddHostedService<ZeroStateBackgroundService<VirtualNetworkChange>>();
                     options.AddLogging();
                 });
             });
@@ -192,7 +193,7 @@ namespace Eryph.ZeroState.Tests
 
         public string ProjectNetworkPortsConfigPath => @"Z:\projects\ports";
 
-        public string NetworkPortsConfigPath => @"Z:\networks\ports";
+        public string NetworksConfigPath => @"Z:\networks";
 
         public string VirtualMachinesConfigPath => @"Z:\vms\md";
     }

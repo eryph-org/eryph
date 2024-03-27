@@ -95,15 +95,6 @@ namespace Eryph.Runtime.Zero.Configuration
             return projectNetworkPortsConfigPath;
         }
 
-        public static string GetProjectAssignmentssConfigPath()
-        {
-            var projectsConfigPath = GetProjectsConfigPath();
-            var projectAssignmentsConfigPath = Path.Combine(projectsConfigPath, "assignments");
-
-
-            return projectAssignmentsConfigPath;
-        }
-
         public static string GetPrivateConfigPath()
         {
             return Path.Combine(GetConfigPath(), "private");;
@@ -124,7 +115,6 @@ namespace Eryph.Runtime.Zero.Configuration
             Config.EnsurePath(GetProjectsConfigPath());
             Config.EnsurePath(GetProjectNetworksConfigPath());
             Config.EnsurePath(GetProjectNetworkPortsConfigPath());
-            Config.EnsurePath(GetProjectAssignmentssConfigPath());
         }
 
         public static DirectorySecurity GetPrivateDirectorySecurity()
