@@ -95,7 +95,7 @@ namespace Eryph.ZeroState
                     MacAddress = portConfig.MacAddress,
                     FloatingPort = floatingPort,
                     Network = network,
-                    // TODO add catlet reference
+                    CatletMetadataId = portConfig.CatletMetadataId,
                     IpAssignments = assignments.ToList(),
                 };
 

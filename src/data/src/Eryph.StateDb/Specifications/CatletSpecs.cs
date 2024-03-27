@@ -45,13 +45,8 @@ namespace Eryph.StateDb.Specifications
             {
                 Query.Where(x => x.Id == catletId)
                     .Include(x => x.Project)
-                    .Include(x => x.NetworkPorts)
-                    .ThenInclude(x => x.IpAssignments)
-                    .ThenInclude(x => x.Subnet)
-                    .Include(x => x.NetworkPorts)
-                    .ThenInclude(x => x.Network)
-
-                    .Include(x => x.Drives).ThenInclude(x => x.AttachedDisk);
+                    .Include(x => x.Drives)
+                    .ThenInclude(x => x.AttachedDisk);
             }
         }
     }
