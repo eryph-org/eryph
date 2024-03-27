@@ -57,16 +57,6 @@ internal class ZeroStateVirtualNetworkPortsSeeder : ZeroStateSeederBase
 
             await _stateStore.LoadCollectionAsync(network, n => n.Subnets, cancellationToken);
 
-            // TODO where to store the subnet name?
-            string subnetName = "default";
-            var subnet = network.Subnets.FirstOrDefault(s => s.Name == subnetName);
-            if (subnet is null)
-            {
-                _logger.LogWarning("Could not seed network port {PortName} because subnet {SubnetName} is missing in network {NetworkName} of project {ProjectId}",
-                    portConfig.Name, subnetName, network.Name, entityId);
-                continue;
-            }
-
             FloatingNetworkPort? floatingPort = null;
             if (portConfig.FloatingNetworkPort is not null)
             {
@@ -86,7 +76,7 @@ internal class ZeroStateVirtualNetworkPortsSeeder : ZeroStateSeederBase
             }
 
             var assignments = await portConfig.IpAssignments
-                .Map(ac => ResolveIpAssignment(subnet, ac, cancellationToken))
+                .Map(ac => ResolveIpAssignment(network.Subnets, ac, cancellationToken))
                 .SequenceSerial();
 
             var port = new CatletNetworkPort()
@@ -106,10 +96,18 @@ internal class ZeroStateVirtualNetworkPortsSeeder : ZeroStateSeederBase
     }
 
     private async Task<IpAssignment?> ResolveIpAssignment(
-        VirtualNetworkSubnet subnet,
+        List<VirtualNetworkSubnet> subnets,
         IpAssignmentConfigModel config,
         CancellationToken stoppingToken)
     {
+        var subnet = subnets.FirstOrDefault(s => s.Name == config.SubnetName);
+        if (subnet is null)
+        {
+            _logger.LogWarning("Could not seed network port because subnet {SubnetName} is missing",
+                config.SubnetName);
+            return null;
+        }
+
         IpAssignment assignment;
         if (config.PoolName is not null)
         {
@@ -124,7 +122,7 @@ internal class ZeroStateVirtualNetworkPortsSeeder : ZeroStateSeederBase
             assignment = new IpPoolAssignment
             {
                 Pool = pool,
-                Number = config.Number.Value!,
+                Number = config.Number.GetValueOrDefault(),
                 Subnet = subnet,
             };
         }

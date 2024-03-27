@@ -70,7 +70,7 @@ internal class ZeroStateProviderPortSeeder : IConfigSeeder<ControllerModule>
             }
 
             var assignments = await portConfig.IpAssignments
-                .Map(ac => ResolveIpAssignment(subnet, ac, stoppingToken))
+                .Map(ac => ResolveIpAssignment(portConfig.ProviderName, ac, stoppingToken))
                 .SequenceSerial();
 
             var port = new FloatingNetworkPort()
@@ -89,10 +89,19 @@ internal class ZeroStateProviderPortSeeder : IConfigSeeder<ControllerModule>
     }
 
     private async Task<IpAssignment?> ResolveIpAssignment(
-        Subnet subnet,
+        string providerName,
         IpAssignmentConfigModel config,
         CancellationToken stoppingToken)
     {
+        var subnet = await _stateStore.For<ProviderSubnet>().GetBySpecAsync(
+            new SubnetSpecs.GetByProviderName(providerName, config.SubnetName),
+            stoppingToken);
+        if (subnet is null)
+        {
+            _logger.LogWarning("Could not seed network port because subnet {SubnetName} is missing on provider {ProviderName}",
+                config.SubnetName, providerName);
+            return null;
+        }
         IpAssignment assignment;
         if (config.PoolName is not null)
         {
@@ -107,7 +116,7 @@ internal class ZeroStateProviderPortSeeder : IConfigSeeder<ControllerModule>
             assignment = new IpPoolAssignment
             {
                 Pool = pool,
-                Number = config.Number.Value!,
+                Number = config.Number.GetValueOrDefault(),
                 Subnet = subnet,
             };
         }
