@@ -36,7 +36,9 @@ namespace Eryph.Modules.ComputeApi.Handlers
             _stateStore = stateStore;
         }
 
-        public async Task<ActionResult<CatletConfiguration>> HandleGetRequest(Func<ISingleResultSpecification<Catlet>> specificationFunc, CancellationToken cancellationToken)
+        public async Task<ActionResult<CatletConfiguration>> HandleGetRequest(
+            Func<ISingleResultSpecification<Catlet>> specificationFunc,
+            CancellationToken cancellationToken)
         {
             var catletSpec = specificationFunc();
 
@@ -86,12 +88,15 @@ namespace Eryph.Modules.ComputeApi.Handlers
             }
 
             config.Drives = driveConfigs.ToArray();
-            
 
-            if (catlet.NetworkPorts != null)
+            var networkPorts = await _stateStore.For<CatletNetworkPort>().ListAsync(
+                new CatletNetworkPortSpecs.GetByCatletMetadataId(catlet.MetadataId),
+                cancellationToken);
+
+            if (networkPorts.Count > 0)
             {
                 var networks = new List<CatletNetworkConfig>();
-                foreach (var catletNetworkPort in catlet.NetworkPorts)
+                foreach (var catletNetworkPort in networkPorts)
                 {
                     var network = new CatletNetworkConfig
                     {

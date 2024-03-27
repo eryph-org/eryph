@@ -5,9 +5,5 @@ namespace Eryph.StateDb.Model;
 
 public class CatletNetworkPort : VirtualNetworkPort
 {
-
-
-    public Guid? CatletId { get; set; }
-    [CanBeNull] public Catlet Catlet { get; set; }
-
+    public Guid CatletMetadataId { get; set; }
 }

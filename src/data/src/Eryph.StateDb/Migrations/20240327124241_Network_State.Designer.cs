@@ -3,6 +3,7 @@ using System;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Migrations
 {
     [DbContext(typeof(StateStoreContext))]
-    partial class StateStoreContextModelSnapshot : ModelSnapshot
+    [Migration("20240327124241_Network_State")]
+    partial class Network_State
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.16");
@@ -207,10 +209,6 @@ namespace Eryph.StateDb.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("LastUpdated")
-                        .IsConcurrencyToken()
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
@@ -282,10 +280,6 @@ namespace Eryph.StateDb.Migrations
                     b.Property<string>("DisplayName")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset?>("LastUpdated")
-                        .IsConcurrencyToken()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 
@@ -294,6 +288,9 @@ namespace Eryph.StateDb.Migrations
 
                     b.Property<Guid>("ParentTaskId")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Progress")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("ProjectId")
                         .HasColumnType("TEXT");
@@ -446,31 +443,6 @@ namespace Eryph.StateDb.Migrations
                     b.ToTable("Subnet");
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("Subnet");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.TaskProgressEntry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("OperationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Progress")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid>("TaskId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTimeOffset>("Timestamp")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TaskId");
-
-                    b.ToTable("TaskProgress");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Tenant", b =>
@@ -894,17 +866,6 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Project");
                 });
 
-            modelBuilder.Entity("Eryph.StateDb.Model.TaskProgressEntry", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.OperationTaskModel", "Task")
-                        .WithMany("Progress")
-                        .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Task");
-                });
-
             modelBuilder.Entity("Eryph.StateDb.Model.Catlet", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.CatletFarm", "Host")
@@ -1032,11 +993,6 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Resources");
 
                     b.Navigation("Tasks");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.OperationTaskModel", b =>
-                {
-                    b.Navigation("Progress");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Project", b =>

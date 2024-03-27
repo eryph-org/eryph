@@ -21,12 +21,14 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                 x => x.MapFrom(y => y.NetworkProvider))
             .ForMember(x => x.ProjectId, x => x.MapFrom(y => y.ProjectId))
             .ForMember(x => x.TenantId, x => x
-                .MapFrom(y => y.Project.TenantId))
-            ;
+                .MapFrom(y => y.Project.TenantId));
+
+            
 
             CreateMap<StateDb.Model.Catlet, Catlet>().ForMember(x => x.Networks, m =>
             {
                 m.MapAtRuntime();
+                /*
                 m.MapFrom((catlet,_) =>
                 {
                     return catlet.NetworkPorts.Map(port =>
@@ -72,6 +74,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
 
 
                 });
+                */
             });
             CreateMap<StateDb.Model.CatletDrive, CatletDrive>();
             CreateMap<StateDb.Model.CatletNetworkAdapter, CatletNetworkAdapter>();

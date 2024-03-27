@@ -47,8 +47,7 @@ namespace Eryph.ZeroState
                         Name = p.Name,
                         VirtualNetworkName = p.Network.Name,
                         EnvironmentName = p.Network.Environment,
-                        // TODO improve me
-                        CatletMetadataId = p.Catlet!.MetadataId,
+                        CatletMetadataId = p.CatletMetadataId,
                         MacAddress = p.MacAddress,
                         FloatingNetworkPort = p.FloatingPort is null
                             ? null

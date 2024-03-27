@@ -12,8 +12,6 @@ namespace Eryph.StateDb.Model
 
         public CatletType CatletType { get; set; }
 
-
-        public virtual ICollection<CatletNetworkPort> NetworkPorts { get; set; }
         public virtual ICollection<ReportedNetwork> ReportedNetworks { get; set; }
 
         public TimeSpan? UpTime { get; set; }

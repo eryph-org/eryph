@@ -75,16 +75,16 @@ namespace Eryph.Modules.Controller.DataServices
                 return Unit.Default;
 
             // remove floating port references
-            await _stateStore.LoadCollectionAsync(entity, x=>x.NetworkPorts);
-            var floatingPortRepository = _stateStore.For<FloatingNetworkPort>();
-            foreach (var entityNetworkPort in entity.NetworkPorts)
-            {
-                await _stateStore.LoadPropertyAsync(entityNetworkPort, x => x.FloatingPort);
-            }
-            
-            await floatingPortRepository.DeleteRangeAsync(entity.NetworkPorts
-                .Where(x => x.FloatingPort != null).Select(x => x.FloatingPort));
+            var catletPorts = await _stateStore.For<CatletNetworkPort>().ListAsync(
+                new CatletNetworkPortSpecs.GetByCatletMetadataId(entity.MetadataId));
 
+            foreach (var catletPort in catletPorts)
+            {
+                await _stateStore.LoadPropertyAsync(catletPort, np => np.FloatingPort);
+            }
+
+            await _stateStore.For<FloatingNetworkPort>().DeleteRangeAsync(
+                catletPorts.Where(x => x.FloatingPort != null).Select(x => x.FloatingPort));
 
             await _repository.DeleteAsync(entity);
             

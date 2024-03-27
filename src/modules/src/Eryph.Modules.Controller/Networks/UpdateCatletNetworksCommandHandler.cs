@@ -45,6 +45,12 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
     {
         await _messaging.ProgressMessage(message, "Updating Catlet network settings");
 
+        var catlet = await _stateStore.For<Catlet>().GetByIdAsync(
+            message.Command.CatletId);
+        if (catlet is null)
+            throw new InvalidOperationException($"Catlet {message.Command.CatletId} not found.");
+        var catletMetadataId = catlet.MetadataId;
+
         await message.Command.Config.Networks.Map(cfg =>
 
                 from network in _stateStore.Read<VirtualNetwork>()
@@ -69,7 +75,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                 let c1 = new CancellationTokenSource(5000)
 
                 from networkPort in GetOrAddAdapterPort(
-                    network, message.Command.CatletId, cfg.AdapterName, c1.Token)
+                    network, message.Command.CatletId, catletMetadataId, cfg.AdapterName, c1.Token)
 
                 let c2 = new CancellationTokenSource()
 
@@ -84,7 +90,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     message.Command.Config.NetworkAdapters.Find(x => x.Name == cfg.AdapterName)
                         .Map(x => x.MacAddress)
                         .IfNone("")
-                let _ = UpdatePort(networkPort, cfg.AdapterName, fixedMacAddress)
+                let _ = UpdatePort(networkPort, message.Command.CatletId, cfg.AdapterName, fixedMacAddress)
 
                 let c3 = new CancellationTokenSource()
                 from ips in isFlatNetwork
@@ -127,7 +133,11 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
     }
 
 
-    private EitherAsync<Error, CatletNetworkPort> GetOrAddAdapterPort(VirtualNetwork network, Guid catletId, string adapterName, 
+    private EitherAsync<Error, CatletNetworkPort> GetOrAddAdapterPort(
+        VirtualNetwork network,
+        Guid catletId,
+        Guid catletMetadataId,
+        string adapterName, 
         CancellationToken cancellationToken)
     {
         var portName = $"{catletId}_{adapterName}";
@@ -139,7 +149,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     var port = new CatletNetworkPort
                     {
                         Id = Guid.NewGuid(),
-                        CatletId = catletId,
+                        CatletMetadataId = catletMetadataId,
                         Name = portName,
                         NetworkId = network.Id,
                         IpAssignments = new List<IpAssignment>()
@@ -193,14 +203,18 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
     }
 
 
-    private static Unit UpdatePort(CatletNetworkPort networkPort, string adapterName, string fixedMacAddress)
+    private static Unit UpdatePort(
+        CatletNetworkPort networkPort,
+        Guid catletId,
+        string adapterName,
+        string fixedMacAddress)
     {
         if (!string.IsNullOrEmpty(fixedMacAddress))
             networkPort.MacAddress = MacAddresses.FormatMacAddress(fixedMacAddress);
         else
         {
             networkPort.MacAddress ??= MacAddresses.FormatMacAddress(MacAddresses.GenerateMacAddress(
-                $"{networkPort.CatletId.GetValueOrDefault()}_{adapterName}"));
+                $"{catletId}_{adapterName}"));
         }
 
         return Unit.Default;
