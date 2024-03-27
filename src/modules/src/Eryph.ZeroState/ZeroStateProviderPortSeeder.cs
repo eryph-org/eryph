@@ -8,13 +8,15 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Eryph.Configuration;
+using Eryph.Modules.Controller;
 using Eryph.StateDb;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.ZeroState
 {
-    internal class ZeroStateProviderPortSeeder : IZeroStateSeeder
+    internal class ZeroStateProviderPortSeeder : IZeroStateSeeder, IConfigSeeder<ControllerModule>
     {
         private readonly IStateStore _stateStore;
         private readonly IFileSystem _fileSystem;
@@ -117,6 +119,11 @@ namespace Eryph.ZeroState
             assignment.IpAddress = config.IpAddress;
 
             return assignment;
+        }
+
+        public Task Execute(CancellationToken stoppingToken)
+        {
+            return SeedAsync(stoppingToken);
         }
     }
 }

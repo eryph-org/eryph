@@ -14,12 +14,12 @@ using SimpleInjector;
 
 namespace Eryph.Runtime.Zero.Configuration.Projects
 {
-    internal class TenantSeeder : IConfigSeeder<ControllerModule>
+    internal class DefaultTenantSeeder : IConfigSeeder<ControllerModule>
     {
         private readonly ILogger _logger;
         private readonly IStateStore _stateStore;
 
-        public TenantSeeder(
+        public DefaultTenantSeeder(
             ILogger logger,
             IStateStore stateStore)
         {

@@ -4,12 +4,14 @@ using System.IO.Abstractions;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.Configuration;
+using Eryph.Modules.Controller;
 using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
 namespace Eryph.ZeroState
 {
-    internal abstract class ZeroStateProjectSeederBase : IZeroStateSeeder
+    internal abstract class ZeroStateProjectSeederBase : IZeroStateSeeder, IConfigSeeder<ControllerModule>
     {
         private readonly IFileSystem _fileSystem;
         private readonly string _configPath;
@@ -48,5 +50,10 @@ namespace Eryph.ZeroState
             Guid projectId,
             string json,
             CancellationToken cancellationToken = default);
+
+        public Task Execute(CancellationToken stoppingToken)
+        {
+            return SeedAsync(stoppingToken);
+        }
     }
 }
