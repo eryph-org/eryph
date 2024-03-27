@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Eryph.ZeroState
+namespace Eryph.ZeroState.NetworkProviders;
+
+public class ProviderPortChange
 {
-    public class ProviderPortChange
-    {
-    }
 }

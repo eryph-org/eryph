@@ -6,11 +6,10 @@ using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.ZeroState;
+namespace Eryph.ZeroState.VirtualNetworks;
 
 internal class ZeroStateVirtualNetworkPortChangeInterceptor
     : ZeroStateInterceptorBase<VirtualNetworkPortChange>
@@ -34,7 +33,7 @@ internal class ZeroStateVirtualNetworkPortChangeInterceptor
             })
             .SequenceSerial()
             .Map(e => e.Somes());
-            
+
         var projectId = networks
             .Map(e => e.Entity.ProjectId)
             .Distinct()

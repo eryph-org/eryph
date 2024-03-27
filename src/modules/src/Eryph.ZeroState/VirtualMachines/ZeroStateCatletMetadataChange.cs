@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Eryph.ZeroState.VirtualMachines
+namespace Eryph.ZeroState.VirtualMachines;
+
+internal class ZeroStateCatletMetadataChange
 {
-    internal class ZeroStateCatletMetadataChange
-    {
-        public List<Guid> Ids { get; set; } = new();
-    }
+    public List<Guid> Ids { get; set; } = new();
 }

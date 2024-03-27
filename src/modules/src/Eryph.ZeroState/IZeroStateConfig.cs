@@ -4,18 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Eryph.ZeroState
+namespace Eryph.ZeroState;
+
+public interface IZeroStateConfig
 {
-    public interface IZeroStateConfig
-    {
-        public string ProjectsConfigPath { get; }
+    public string ProjectsConfigPath { get; }
 
-        public string ProjectNetworksConfigPath { get; }
+    public string ProjectNetworksConfigPath { get; }
 
-        public string ProjectNetworkPortsConfigPath { get; }
+    public string ProjectNetworkPortsConfigPath { get; }
 
-        public string NetworkPortsConfigPath { get; }
+    public string NetworksConfigPath { get; }
 
-        public string VirtualMachinesConfigPath { get; }
-    }
+    public string VirtualMachinesConfigPath { get; }
 }
