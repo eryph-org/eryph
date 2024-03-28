@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Dbosoft.OVN;
+﻿using Dbosoft.OVN;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -11,7 +10,6 @@ using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Hosting.WindowsServices;
 using Rebus.Sagas;
 using Rebus.Subscriptions;
 using Rebus.Timeouts;
@@ -65,6 +63,7 @@ namespace Eryph.Runtime.Zero
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
             container.Register<IDbContextConfigurer<StateStoreContext>, SqlLiteStateStoreContextConfigurer>();
+            //container.RegisterSingleton<ZeroStateDbTransactionInterceptor>();
             return container;
         }
 

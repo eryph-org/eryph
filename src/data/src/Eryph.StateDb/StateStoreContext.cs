@@ -88,6 +88,13 @@ namespace Eryph.StateDb
                 .HasForeignKey(x=>x.ProjectId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // TODO might be configured this way implicitly
+            modelBuilder.Entity<Project>()
+                .HasMany(x => x.ProjectRoles)
+                .WithOne(x => x.Project)
+                .HasForeignKey(x => x.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<ProjectRoleAssignment>()
                 .HasKey(x => x.Id);
 
@@ -114,6 +121,7 @@ namespace Eryph.StateDb
                 .Navigation(x => x.ReportedNetworks);
 
 
+            /*
             modelBuilder.Entity<Catlet>()
                 .HasMany(x => x.NetworkPorts)
                 .WithOne(x => x.Catlet)
@@ -122,6 +130,8 @@ namespace Eryph.StateDb
 
             modelBuilder.Entity<Catlet>()
                 .Navigation(x => x.NetworkPorts);
+
+            */
 
             modelBuilder.Entity<Catlet>()
                 .HasOne(x => x.Host)
@@ -221,9 +231,6 @@ namespace Eryph.StateDb
                 .HasIndex(x => x.MacAddress)
                 .IsUnique();
 
-
-
-
             modelBuilder.Entity<Subnet>()
                 .HasKey(x => x.Id);
 
@@ -281,6 +288,11 @@ namespace Eryph.StateDb
             modelBuilder.Entity<CatletMetadata>()
                 .HasKey(x => x.Id);
 
+            modelBuilder.Entity<CatletMetadata>()
+                .HasMany<CatletNetworkPort>()
+                .WithOne()
+                .HasForeignKey(p => p.CatletMetadataId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             //this is for SQLLite only
             //TODO: add to SQLLite Model builder extension like in https://github.com/dbosoft/SAPHub/blob/main/src/SAPHub.StateDb/SqlModelBuilder.cs

@@ -54,8 +54,9 @@ namespace Eryph.Modules.Controller
             container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
             container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
 
+            container.Register(typeof(IDataUpdateService<>), typeof(DataUpdateService<>), Lifestyle.Scoped);
+            container.Register<IProjectDataService, ProjectDataService>(Lifestyle.Scoped);
             container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
-
             container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
             container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
             container.Register<IVirtualDiskDataService, VirtualDiskDataService>(Lifestyle.Scoped);
@@ -66,6 +67,7 @@ namespace Eryph.Modules.Controller
             container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
             container.Register<INetworkConfigValidator, NetworkConfigValidator>(Lifestyle.Scoped);
             container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
+            container.Register<INetworkProvidersConfigRealizer, NetworkProvidersConfigRealizer>(Lifestyle.Scoped);
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
             container.RegisterSingleton(() => new Id64Generator());
@@ -83,7 +85,7 @@ namespace Eryph.Modules.Controller
             container.Register(() =>
             {
                 var optionsBuilder = new DbContextOptionsBuilder<StateStoreContext>();
-                serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>().Configure(optionsBuilder);
+                container.GetInstance<IDbContextConfigurer<StateStoreContext>>().Configure(optionsBuilder);
                 return new StateStoreContext(optionsBuilder.Options);
             }, Lifestyle.Scoped);
 

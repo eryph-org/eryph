@@ -667,10 +667,10 @@ namespace Eryph.StateDb.Migrations
                 {
                     b.HasBaseType("Eryph.StateDb.Model.VirtualNetworkPort");
 
-                    b.Property<Guid?>("CatletId")
+                    b.Property<Guid>("CatletMetadataId")
                         .HasColumnType("TEXT");
 
-                    b.HasIndex("CatletId");
+                    b.HasIndex("CatletMetadataId");
 
                     b.HasDiscriminator().HasValue("CatletNetworkPort");
                 });
@@ -954,12 +954,11 @@ namespace Eryph.StateDb.Migrations
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkPort", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.Catlet", "Catlet")
-                        .WithMany("NetworkPorts")
-                        .HasForeignKey("CatletId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("Catlet");
+                    b.HasOne("Eryph.StateDb.Model.CatletMetadata", null)
+                        .WithMany()
+                        .HasForeignKey("CatletMetadataId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.NetworkRouterPort", b =>
@@ -1018,8 +1017,6 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Drives");
 
                     b.Navigation("NetworkAdapters");
-
-                    b.Navigation("NetworkPorts");
 
                     b.Navigation("ReportedNetworks");
                 });

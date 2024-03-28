@@ -51,11 +51,13 @@
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.34.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="6.0.2-mauipre.1.22102.15" />
+    <PackageReference Include="System.Text.Json" Version="7.0.4" />
     <PackageReference Include="WinHttpUrlAclDotNet" Version="1.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.NetworkModule\Eryph.Modules.NetworkModule.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Eryph.ZeroState\Eryph.ZeroState.csproj" />
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.ComputeApi\Eryph.Modules.ComputeApi.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.Controller\Eryph.Modules.Controller.csproj" />
@@ -82,8 +84,7 @@
     <ItemGroup>
       <FilesToMove Include="$(PublishDir)runtimes\win\lib\net6.0\**\*.*" />
     </ItemGroup>
-    <Move SourceFiles="@(FilesToMove)"
-          DestinationFolder="$(PublishDir)%(RecursiveDir)"/>
+    <Move SourceFiles="@(FilesToMove)" DestinationFolder="$(PublishDir)%(RecursiveDir)" />
     <RemoveDir Directories="$(PublishDir)runtimes" />
   </Target>
 </Project>
