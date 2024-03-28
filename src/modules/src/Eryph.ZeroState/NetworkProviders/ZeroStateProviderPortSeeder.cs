@@ -75,9 +75,10 @@ internal class ZeroStateProviderPortSeeder : IConfigSeeder<ControllerModule>
 
             var port = new FloatingNetworkPort()
             {
+                Name = portConfig.Name,
+                MacAddress = portConfig.MacAddress,
                 ProviderName = portConfig.ProviderName,
                 SubnetName = portConfig.SubnetName,
-                Name = portConfig.Name,
                 PoolName = portConfig.PoolName,
                 IpAssignments = assignments.ToList(),
             };
