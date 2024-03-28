@@ -14,12 +14,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.ZeroState.VirtualNetworks;
 
-internal class ZeroStateVirtualNetworkPortsSeeder : ZeroStateSeederBase
+internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
 {
     private readonly IStateStore _stateStore;
     private readonly ILogger _logger;
 
-    public ZeroStateVirtualNetworkPortsSeeder(
+    public ZeroStateCatletNetworkPortSeeder(
         IFileSystem fileSystem,
         IZeroStateConfig config,
         IStateStore stateStore,

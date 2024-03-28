@@ -11,23 +11,23 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.ZeroState.NetworkProviders;
 
-internal class ZeroStateProviderPortInterceptor : ZeroStateInterceptorBase<ProviderPortChange>
+internal class ZeroStateFloatingNetworkPortChangeInterceptor : ZeroStateInterceptorBase<ZeroStateFloatingNetworkPortChange>
 {
-    public ZeroStateProviderPortInterceptor(
-        IZeroStateQueue<ProviderPortChange> queue)
+    public ZeroStateFloatingNetworkPortChangeInterceptor(
+        IZeroStateQueue<ZeroStateFloatingNetworkPortChange> queue)
         : base(queue)
     {
     }
 
-    protected override Task<Option<ProviderPortChange>> DetectChanges(
+    protected override Task<Option<ZeroStateFloatingNetworkPortChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
         return dbContext.ChangeTracker.Entries<FloatingNetworkPort>().ToList()
             .Map(e => e.Entity.ProviderName)
             .Match(
-                Empty: () => Task.FromResult<Option<ProviderPortChange>>(None),
-                More: p => Task.FromResult(Some(new ProviderPortChange())));
+                Empty: () => Task.FromResult<Option<ZeroStateFloatingNetworkPortChange>>(None),
+                More: p => Task.FromResult(Some(new ZeroStateFloatingNetworkPortChange())));
 
     }
 }

@@ -11,7 +11,7 @@ using Eryph.StateDb.Model;
 
 namespace Eryph.ZeroState.Projects;
 
-internal class ZeroStateProjectChangeHandler : IZeroStateChangeHandler<ProjectChange>
+internal class ZeroStateProjectChangeHandler : IZeroStateChangeHandler<ZeroStateProjectChange>
 {
     private readonly IZeroStateConfig _config;
     private readonly IFileSystem _fileSystem;
@@ -28,7 +28,7 @@ internal class ZeroStateProjectChangeHandler : IZeroStateChangeHandler<ProjectCh
     }
 
     public async Task HandleChangeAsync(
-        ProjectChange change,
+        ZeroStateProjectChange change,
         CancellationToken cancellationToken = default)
     {
         foreach (var projectId in change.ProjectIds)

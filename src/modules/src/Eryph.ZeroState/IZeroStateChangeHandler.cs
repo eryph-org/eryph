@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Eryph.ZeroState;
 
-public interface IZeroStateChangeHandler<TChange>
+internal interface IZeroStateChangeHandler<TChange>
 {
     Task HandleChangeAsync(
         TChange change,

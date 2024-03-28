@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Eryph.ZeroState.Projects;
+namespace Eryph.ZeroState.VirtualNetworks;
 
-public class ProjectChange
+internal class ZeroStateCatletNetworkPortChange
 {
     public List<Guid> ProjectIds { get; set; } = new();
 }

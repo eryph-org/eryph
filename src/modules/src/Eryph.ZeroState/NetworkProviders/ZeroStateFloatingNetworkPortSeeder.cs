@@ -16,18 +16,18 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.ZeroState.NetworkProviders;
 
-internal class ZeroStateProviderPortSeeder : IConfigSeeder<ControllerModule>
+internal class ZeroStateFloatingNetworkPortSeeder : IConfigSeeder<ControllerModule>
 {
     private readonly IStateStore _stateStore;
     private readonly IFileSystem _fileSystem;
     private readonly string _configPath;
-    private readonly ILogger<ZeroStateProviderPortSeeder> _logger;
+    private readonly ILogger<ZeroStateFloatingNetworkPortSeeder> _logger;
 
-    public ZeroStateProviderPortSeeder(
+    public ZeroStateFloatingNetworkPortSeeder(
         IStateStore stateStore,
         IZeroStateConfig config,
         IFileSystem fileSystem,
-        ILogger<ZeroStateProviderPortSeeder> logger)
+        ILogger<ZeroStateFloatingNetworkPortSeeder> logger)
     {
         _stateStore = stateStore;
         _fileSystem = fileSystem;

@@ -1,6 +1,6 @@
 ﻿namespace Eryph.ZeroState.VirtualNetworks;
 
-public class VirtualNetworkChange
+internal class ZeroStateVirtualNetworkChange
 {
     public List<Guid> ProjectIds { get; set; } = new();
 }

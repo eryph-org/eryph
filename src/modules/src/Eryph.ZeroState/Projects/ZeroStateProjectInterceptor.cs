@@ -11,15 +11,15 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.ZeroState.Projects;
 
-internal class ZeroStateProjectInterceptor : ZeroStateInterceptorBase<ProjectChange>
+internal class ZeroStateProjectInterceptor : ZeroStateInterceptorBase<ZeroStateProjectChange>
 {
     public ZeroStateProjectInterceptor(
-        IZeroStateQueue<ProjectChange> queue)
+        IZeroStateQueue<ZeroStateProjectChange> queue)
         : base(queue)
     {
     }
 
-    protected override Task<Option<ProjectChange>> DetectChanges(
+    protected override Task<Option<ZeroStateProjectChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
@@ -29,8 +29,8 @@ internal class ZeroStateProjectInterceptor : ZeroStateInterceptorBase<ProjectCha
                 .Map(pra => pra.Entity.ProjectId))
             .ToList()
             .Match(
-                Empty: () => Task.FromResult(Option<ProjectChange>.None),
-                More: p => Task.FromResult(Some(new ProjectChange
+                Empty: () => Task.FromResult(Option<ZeroStateProjectChange>.None),
+                More: p => Task.FromResult(Some(new ZeroStateProjectChange
                 {
                     ProjectIds = p.ToList(),
                 })));

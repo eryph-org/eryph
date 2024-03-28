@@ -39,20 +39,20 @@ public static class ZeroStateContainerExtensions
             Lifestyle.Scoped);
 
         // Seeders
-        container.Collection.Append<IConfigSeeder<ControllerModule>, NetworkProvidersSeeder>(Lifestyle.Scoped);
+        container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateNetworkProvidersSeeder>(Lifestyle.Scoped);
         container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateProjectSeeder>(Lifestyle.Scoped);
-        container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateVmMetadataSeeder>(Lifestyle.Scoped);
-        container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateProviderPortSeeder>(Lifestyle.Scoped);
+        container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateCatletMetadataSeeder>(Lifestyle.Scoped);
+        container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateFloatingNetworkPortSeeder>(Lifestyle.Scoped);
         container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateVirtualNetworkSeeder>(Lifestyle.Scoped);
-        container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateVirtualNetworkPortsSeeder>(Lifestyle.Scoped);
+        container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateCatletNetworkPortSeeder>(Lifestyle.Scoped);
     }
 
     public static void AddZeroStateService(this SimpleInjectorAddOptions options)
     {
-        options.AddHostedService<ZeroStateBackgroundService<VirtualNetworkChange>>();
-        options.AddHostedService<ZeroStateBackgroundService<ProviderPortChange>>();
-        options.AddHostedService<ZeroStateBackgroundService<ProjectChange>>();
-        options.AddHostedService<ZeroStateBackgroundService<VirtualNetworkPortChange>>();
+        options.AddHostedService<ZeroStateBackgroundService<ZeroStateVirtualNetworkChange>>();
+        options.AddHostedService<ZeroStateBackgroundService<ZeroStateFloatingNetworkPortChange>>();
+        options.AddHostedService<ZeroStateBackgroundService<ZeroStateProjectChange>>();
+        options.AddHostedService<ZeroStateBackgroundService<ZeroStateCatletNetworkPortChange>>();
         options.AddHostedService<ZeroStateBackgroundService<ZeroStateCatletMetadataChange>>();
         //options.AddHostedService<ZeroStateSeedingService>();
     }

@@ -6,22 +6,20 @@ using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 
 using static LanguageExt.Prelude;
 
 namespace Eryph.ZeroState.VirtualNetworks;
 
-public class ZeroStateVirtualNetworkInterceptor : ZeroStateInterceptorBase<VirtualNetworkChange>
+internal class ZeroStateVirtualNetworkInterceptor : ZeroStateInterceptorBase<ZeroStateVirtualNetworkChange>
 {
     public ZeroStateVirtualNetworkInterceptor(
-        IZeroStateQueue<VirtualNetworkChange> queue)
+        IZeroStateQueue<ZeroStateVirtualNetworkChange> queue)
         : base(queue)
     {
     }
 
-    protected override async Task<Option<VirtualNetworkChange>> DetectChanges(
+    protected override async Task<Option<ZeroStateVirtualNetworkChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
@@ -57,7 +55,7 @@ public class ZeroStateVirtualNetworkInterceptor : ZeroStateInterceptorBase<Virtu
 
         return projectIds.Match(
             Empty: () => None,
-            More: p => Some(new VirtualNetworkChange
+            More: p => Some(new ZeroStateVirtualNetworkChange
             {
                 ProjectIds = p.ToList(),
             }));

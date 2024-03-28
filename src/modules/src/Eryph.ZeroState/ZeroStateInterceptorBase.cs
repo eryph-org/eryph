@@ -3,18 +3,15 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Text;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Eryph.ZeroState;
-    
-public interface IZeroStateInterceptor : IInterceptor
-{
-}
 
-public abstract class ZeroStateInterceptorBase<TChange> : DbTransactionInterceptor
+internal abstract class ZeroStateInterceptorBase<TChange> : DbTransactionInterceptor
 {
     private readonly IZeroStateQueue<TChange> _queue;
     private Option<ZeroStateQueueItem<TChange>> _currentItem = Option<ZeroStateQueueItem<TChange>>.None;
@@ -39,11 +36,7 @@ public abstract class ZeroStateInterceptorBase<TChange> : DbTransactionIntercept
             return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
 
         _currentItem = await DetectChanges(eventData.Context, cancellationToken)
-            .MapT(changes => new ZeroStateQueueItem<TChange>()
-            {
-                TransactionId = eventData.TransactionId,
-                Changes = changes,
-            });
+            .MapT(changes => new ZeroStateQueueItem<TChange>(eventData.TransactionId, changes));
 
         return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
     }
@@ -56,13 +49,17 @@ public abstract class ZeroStateInterceptorBase<TChange> : DbTransactionIntercept
         await _currentItem.IfSomeAsync(item => _queue.EnqueueAsync(item, cancellationToken));
     }
 
-    public override InterceptionResult TransactionCommitting(DbTransaction transaction, TransactionEventData eventData,
+    public override InterceptionResult TransactionCommitting(
+        DbTransaction transaction,
+        TransactionEventData eventData,
         InterceptionResult result)
     {
         throw new NotSupportedException();
     }
 
-    public override void TransactionCommitted(DbTransaction transaction, TransactionEndEventData eventData)
+    public override void TransactionCommitted(
+        DbTransaction transaction,
+        TransactionEndEventData eventData)
     {
         throw new NotSupportedException();
     }
