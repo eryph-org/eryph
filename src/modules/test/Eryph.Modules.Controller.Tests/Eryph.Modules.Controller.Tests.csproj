@@ -4,7 +4,7 @@
     <TargetFramework>net6.0-windows7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>11</LangVersion>
+    <LangVersion>12</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\data\test\Eryph.StateDb.TestBase\Eryph.StateDb.TestBase.csproj" />
     <ProjectReference Include="..\..\src\Eryph.Modules.Controller\Eryph.Modules.Controller.csproj" />
   </ItemGroup>
 

@@ -64,7 +64,7 @@ namespace Eryph.ZeroState.Tests
             /*
              *
              *{
-               var container = new Container();
+               var container = new _Container();
 
                IHost host = new HostBuilder()
                    .ConfigureHostConfiguration(configHost => { ... })

@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.3.1-ci.3" />
+    <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.3.1-PullRequest0067.5" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="21.0.2" />
   </ItemGroup>
 
