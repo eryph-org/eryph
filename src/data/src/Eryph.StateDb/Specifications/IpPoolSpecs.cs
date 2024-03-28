@@ -34,4 +34,12 @@ public static class IpPoolSpecs
         }
     }
 
+    public sealed class GetByIp : Specification<IpPoolAssignment>, ISingleResultSpecification
+    {
+        public GetByIp(Guid poolId, string ipAddress)
+        {
+            Query.Where(x => x.PoolId == poolId && x.IpAddress == ipAddress);
+        }
+    }
+
 }

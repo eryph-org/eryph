@@ -21,16 +21,21 @@ internal class IpPoolManager : IIpPoolManager
         _stateStore = stateStore;
     }
 
-    public EitherAsync<Error,IpPoolAssignment> AcquireIp(Guid subnetId, string poolName, CancellationToken cancellationToken)
+    public EitherAsync<Error,IpPoolAssignment> AcquireIp(
+        Guid subnetId,
+        string poolName,
+        CancellationToken cancellationToken = default)
     {
         return Prelude.TryAsync(async () =>
         {
-            var pool = await _stateStore.For<IpPool>()
-                .GetBySpecAsync(new IpPoolSpecs.GetByName(subnetId, poolName), cancellationToken)
-                .ConfigureAwait(false);
+            var pool = await _stateStore.For<IpPool>().GetBySpecAsync(
+                new IpPoolSpecs.GetByName(subnetId, poolName),
+                cancellationToken);
 
-            if (pool == null)
-                throw new NotFoundException($"IpPool {poolName} not found for subnet id {subnetId}");
+            if (pool is null)
+                throw new NotFoundException($"IP pool {poolName} not found for subnet id {subnetId}");
+
+
 
             var lastNumber = pool.Counter;
             GetPoolAddresses(pool, out var ipNetwork, out var firstIp, out var lastIp);
@@ -45,7 +50,7 @@ internal class IpPoolManager : IIpPoolManager
                     .CountAsync(new IpPoolSpecs.GetAssignments(pool.Id), cancellationToken);
 
             if (totalAssigned >= space)
-                throw new InvalidOperationException($"IpPool {pool.Id} has no more free ips.");
+                throw new InvalidOperationException($"IP pool {poolName}({pool.Id}) has no more free IP addresses.");
 
 
             async Task FindFreeNumber()
