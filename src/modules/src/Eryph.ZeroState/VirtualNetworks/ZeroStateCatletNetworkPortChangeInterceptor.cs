@@ -11,16 +11,16 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.ZeroState.VirtualNetworks;
 
-internal class ZeroStateVirtualNetworkPortChangeInterceptor
-    : ZeroStateInterceptorBase<VirtualNetworkPortChange>
+internal class ZeroStateCatletNetworkPortChangeInterceptor
+    : ZeroStateInterceptorBase<ZeroStateCatletNetworkPortChange>
 {
-    public ZeroStateVirtualNetworkPortChangeInterceptor(
-        IZeroStateQueue<VirtualNetworkPortChange> queue)
+    public ZeroStateCatletNetworkPortChangeInterceptor(
+        IZeroStateQueue<ZeroStateCatletNetworkPortChange> queue)
         : base(queue)
     {
     }
 
-    protected override async Task<Option<VirtualNetworkPortChange>> DetectChanges(
+    protected override async Task<Option<ZeroStateCatletNetworkPortChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
@@ -41,7 +41,7 @@ internal class ZeroStateVirtualNetworkPortChangeInterceptor
 
         return projectId.Match(
             Empty: () => None,
-            More: p => Some(new VirtualNetworkPortChange()
+            More: p => Some(new ZeroStateCatletNetworkPortChange()
             {
                 ProjectIds = p.ToList(),
             }));

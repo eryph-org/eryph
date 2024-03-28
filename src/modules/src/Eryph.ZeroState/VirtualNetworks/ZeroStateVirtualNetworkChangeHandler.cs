@@ -12,7 +12,7 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.ZeroState.VirtualNetworks;
 
-public class ZeroStateVirtualNetworkChangeHandler : IZeroStateChangeHandler<VirtualNetworkChange>
+internal class ZeroStateVirtualNetworkChangeHandler : IZeroStateChangeHandler<ZeroStateVirtualNetworkChange>
 {
     private readonly IZeroStateConfig _config;
     private readonly IFileSystem _fileSystem;
@@ -29,7 +29,7 @@ public class ZeroStateVirtualNetworkChangeHandler : IZeroStateChangeHandler<Virt
     }
 
     public async Task HandleChangeAsync(
-        VirtualNetworkChange change,
+        ZeroStateVirtualNetworkChange change,
         CancellationToken cancellationToken = default)
     {
         foreach (var projectId in change.ProjectIds)

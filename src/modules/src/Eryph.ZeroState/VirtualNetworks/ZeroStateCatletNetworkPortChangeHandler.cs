@@ -11,13 +11,13 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.ZeroState.VirtualNetworks;
 
-internal class ZeroStateVirtualNetworkPortChangeHandler : IZeroStateChangeHandler<VirtualNetworkPortChange>
+internal class ZeroStateCatletNetworkPortChangeHandler : IZeroStateChangeHandler<ZeroStateCatletNetworkPortChange>
 {
     private readonly IZeroStateConfig _config;
     private readonly IFileSystem _fileSystem;
     private readonly IStateStore _stateStore;
 
-    public ZeroStateVirtualNetworkPortChangeHandler(
+    public ZeroStateCatletNetworkPortChangeHandler(
         IZeroStateConfig config,
         IFileSystem fileSystem,
         IStateStore stateStore)
@@ -28,7 +28,7 @@ internal class ZeroStateVirtualNetworkPortChangeHandler : IZeroStateChangeHandle
     }
 
     public async Task HandleChangeAsync(
-        VirtualNetworkPortChange change,
+        ZeroStateCatletNetworkPortChange change,
         CancellationToken cancellationToken = default)
     {
         foreach (var projectId in change.ProjectIds)

@@ -27,7 +27,7 @@ namespace Eryph.ZeroState.Tests
             builder.ConfigureServices(services =>
             {
                 services.AddLogging();
-                services.AddSingleton<IZeroStateQueue<VirtualNetworkChange>, ZeroStateQueue<VirtualNetworkChange>>();
+                services.AddSingleton<IZeroStateQueue<ZeroStateVirtualNetworkChange>, ZeroStateQueue<ZeroStateVirtualNetworkChange>>();
                 services.AddScoped<ZeroStateVirtualNetworkInterceptor>();
                 services.AddDbContext<StateStoreContext>(
                     (sp, options) => options
@@ -35,7 +35,7 @@ namespace Eryph.ZeroState.Tests
                         .AddInterceptors(sp.GetRequiredService<ZeroStateVirtualNetworkInterceptor>()));
                 services.AddSimpleInjector(container, options =>
                 {
-                    options.AddHostedService<ZeroStateBackgroundService<VirtualNetworkChange>>();
+                    options.AddHostedService<ZeroStateBackgroundService<ZeroStateVirtualNetworkChange>>();
                     options.AddLogging();
                 });
             });
@@ -43,7 +43,7 @@ namespace Eryph.ZeroState.Tests
             var mockFileSystem = new MockFileSystem();
             container.RegisterSingleton<IZeroStateConfig, TestZeroStateConfig>();
             container.RegisterInstance<IFileSystem>(mockFileSystem);
-            container.Register<IZeroStateChangeHandler<VirtualNetworkChange>, ZeroStateVirtualNetworkChangeHandler>(Lifestyle.Scoped);
+            container.Register<IZeroStateChangeHandler<ZeroStateVirtualNetworkChange>, ZeroStateVirtualNetworkChangeHandler>(Lifestyle.Scoped);
             container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
 
             using var host = builder.Build();
@@ -52,7 +52,7 @@ namespace Eryph.ZeroState.Tests
 
             /*
             var services = new ServiceCollection();
-            services.AddSingleton<IZeroStateQueue<VirtualNetworkChange>, ZeroStateQueue<VirtualNetworkChange>>();
+            services.AddSingleton<IZeroStateQueue<ZeroStateVirtualNetworkChange>, ZeroStateQueue<ZeroStateVirtualNetworkChange>>();
             services.AddHosted
             services.AddLogging();
             services.AddScoped<ZeroStateVirtualNetworkInterceptor>();
@@ -173,7 +173,7 @@ namespace Eryph.ZeroState.Tests
             }
             */
 
-            var queueItem = await provider.GetRequiredService<IZeroStateQueue<VirtualNetworkChange>>()
+            var queueItem = await provider.GetRequiredService<IZeroStateQueue<ZeroStateVirtualNetworkChange>>()
                 .DequeueAsync();
             queueItem.Changes.ProjectIds.Should().Equal(projectId);
 

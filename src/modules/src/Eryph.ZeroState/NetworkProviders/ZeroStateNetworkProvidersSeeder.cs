@@ -12,12 +12,12 @@ using LanguageExt;
 
 namespace Eryph.ZeroState.NetworkProviders;
 
-internal class NetworkProvidersSeeder : IConfigSeeder<ControllerModule>
+internal class ZeroStateNetworkProvidersSeeder : IConfigSeeder<ControllerModule>
 {
     private readonly INetworkProviderManager _networkProviderManager;
     private readonly INetworkProvidersConfigRealizer _configRealizer;
 
-    public NetworkProvidersSeeder(
+    public ZeroStateNetworkProvidersSeeder(
         INetworkProviderManager networkProviderManager,
         INetworkProvidersConfigRealizer configRealizer)
     {

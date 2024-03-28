@@ -12,12 +12,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.ZeroState.VirtualMachines;
 
-internal class ZeroStateVmMetadataSeeder : ZeroStateSeederBase
+internal class ZeroStateCatletMetadataSeeder : ZeroStateSeederBase
 {
     private readonly ILogger _logger;
     private readonly IStateStore _stateStore;
 
-    public ZeroStateVmMetadataSeeder(
+    public ZeroStateCatletMetadataSeeder(
         IFileSystem fileSystem,
         IZeroStateConfig config,
         ILogger logger,

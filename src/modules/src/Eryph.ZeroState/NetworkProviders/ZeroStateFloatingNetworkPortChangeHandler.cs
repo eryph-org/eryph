@@ -13,13 +13,13 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.ZeroState.NetworkProviders;
 
-internal class ZeroStateProviderPortChangeHandler : IZeroStateChangeHandler<ProviderPortChange>
+internal class ZeroStateFloatingNetworkPortChangeHandler : IZeroStateChangeHandler<ZeroStateFloatingNetworkPortChange>
 {
     private readonly IZeroStateConfig _config;
     private readonly IFileSystem _fileSystem;
     private readonly IStateStore _stateStore;
 
-    public ZeroStateProviderPortChangeHandler(
+    public ZeroStateFloatingNetworkPortChangeHandler(
         IZeroStateConfig config,
         IFileSystem fileSystem,
         IStateStore stateStore)
@@ -30,7 +30,7 @@ internal class ZeroStateProviderPortChangeHandler : IZeroStateChangeHandler<Prov
     }
 
     public async Task HandleChangeAsync(
-        ProviderPortChange change,
+        ZeroStateFloatingNetworkPortChange change,
         CancellationToken cancellationToken = default)
     {
         var floatingPorts = await _stateStore.For<FloatingNetworkPort>()

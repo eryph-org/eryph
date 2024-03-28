@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Eryph.ZeroState.NetworkProviders;
 
-public class ProviderPortChange
+internal class ZeroStateFloatingNetworkPortChange
 {
+    public List<string> ProviderNames { get; set; } = new();
 }
