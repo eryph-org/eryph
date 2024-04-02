@@ -168,6 +168,22 @@ namespace Eryph.Modules.Controller.Tests.Networks
         }
 
         [Fact]
+        public async Task Cannot_change_used_ip_pool_next_to_already_assigned()
+        {
+            _projectConfig.Networks.Find(x => x.Name == "pool_network")
+                .IfSome(n => n.Subnets.Find(subnet => subnet.Name == "default")
+                    .IfSome(s => s.IpPools!.Find(p => p.Name == "pool2")
+                        .IfSome(pool => pool.NextIp = "192.168.15.104")));
+
+
+            var messages = await RunChangeValidator(_projectConfig);
+
+            messages.Should()
+                .Contain(
+                    "ip pool 'pool_network/default/pool2': Cannot change next ip to '192.168.15.104' as this ip is already assigned.");
+        }
+
+        [Fact]
         public void Config_requires_network_name()
         {
             _projectConfig.Networks![0].Name = null;
@@ -262,20 +278,24 @@ namespace Eryph.Modules.Controller.Tests.Networks
         public void Config_reports_invalid_pool_ips()
         {
             _projectConfig.Networks![2].Subnets![0].IpPools![1].FirstIp = "192.168.15.1/24";
+            _projectConfig.Networks![2].Subnets![0].IpPools![1].NextIp = "192.168.15.5/24";
             _projectConfig.Networks![2].Subnets![0].IpPools![1].LastIp = "192.168.15.10/24";
             var messages = RunConfigValidator(_projectConfig);
-            messages.Should().Contain("ip pool 'default/default/pool2': Invalid ip address '192.168.15.1/24'")
-                .And.Contain("ip pool 'default/default/pool2': Invalid ip address '192.168.15.10/24'");
+            messages.Should().Contain("ip pool 'pool_network/default/pool2': Invalid ip address '192.168.15.1/24'")
+                .And.Contain("ip pool 'pool_network/default/pool2': Invalid ip address '192.168.15.5/24'")
+                .And.Contain("ip pool 'pool_network/default/pool2': Invalid ip address '192.168.15.10/24'");
         }
 
         [Fact]
         public void Config_reports_pool_ips_mismatch()
         {
             _projectConfig.Networks![2].Subnets![0].IpPools![1].FirstIp = "192.168.1.1";
-            _projectConfig.Networks![2].Subnets![0].IpPools![1].LastIp = "192.168.2.1";
+            _projectConfig.Networks![2].Subnets![0].IpPools![1].NextIp = "192.168.2.1";
+            _projectConfig.Networks![2].Subnets![0].IpPools![1].LastIp = "192.168.3.1";
             var messages = RunConfigValidator(_projectConfig);
-            messages.Should().Contain("ip pool 'default/default/pool2': ip address '192.168.1.1' is not in subnet '192.168.15.0/24'")
-                .And.Contain("ip pool 'default/default/pool2': ip address '192.168.2.1' is not in subnet '192.168.15.0/24'");
+            messages.Should().Contain("ip pool 'pool_network/default/pool2': ip address '192.168.1.1' is not in subnet '192.168.15.0/24'")
+                .And.Contain("ip pool 'pool_network/default/pool2': ip address '192.168.2.1' is not in subnet '192.168.15.0/24'")
+                .And.Contain("ip pool 'pool_network/default/pool2': ip address '192.168.3.1' is not in subnet '192.168.15.0/24'");
         }
 
         [Fact]
@@ -286,7 +306,18 @@ namespace Eryph.Modules.Controller.Tests.Networks
             var messages = RunConfigValidator(_projectConfig);
             messages.Should()
                 .Contain(
-                    "ip pool 'default/default/pool2':last ip address '192.168.15.100' is not larger then first ip address '192.168.15.200'");
+                    "ip pool 'pool_network/default/pool2':last ip address '192.168.15.100' is not larger then first ip address '192.168.15.200'");
+        }
+
+        [Fact]
+        public void Config_reports_pool_ips_next_larger_than_last()
+        {
+            _projectConfig.Networks![2].Subnets![0].IpPools![1].NextIp = "192.168.15.200";
+            _projectConfig.Networks![2].Subnets![0].IpPools![1].LastIp = "192.168.15.150";
+            var messages = RunConfigValidator(_projectConfig);
+            messages.Should()
+                .Contain(
+                    "ip pool 'pool_network/default/pool2': Next ip address '192.168.15.200' is invalid as it is higher than last ip address '192.168.15.150'");
         }
 
         [Fact]
@@ -501,6 +532,11 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 }
             };
 
+            var firstCatletMetadata = new CatletMetadata();
+            await stateStore.For<CatletMetadata>().AddAsync(firstCatletMetadata);
+            var secondCatletMetadata = new CatletMetadata();
+            await stateStore.For<CatletMetadata>().AddAsync(secondCatletMetadata);
+
             await networkRepo.AddAsync(
                 new VirtualNetwork
                 {
@@ -525,7 +561,10 @@ namespace Eryph.Modules.Controller.Tests.Networks
                     Project = project,
                     NetworkPorts = new VirtualNetworkPort[]
                     {
-                        new CatletNetworkPort(),
+                        new CatletNetworkPort()
+                        {
+                            CatletMetadataId = firstCatletMetadata.Id,
+                        },
                         new ProviderRouterPort()
                         {
                             ProviderName = "default",
@@ -571,8 +610,16 @@ namespace Eryph.Modules.Controller.Tests.Networks
                                     IpNetwork = "192.168.15.0/24",
                                     IpAssignments = new []
                                     {
-                                        new IpPoolAssignment{IpAddress = "192.168.15.110"},
-                                        new IpPoolAssignment{IpAddress = "192.168.15.104"}
+                                        new IpPoolAssignment
+                                        {
+                                            IpAddress = "192.168.15.110",
+                                            Number = 11,
+                                        },
+                                        new IpPoolAssignment
+                                        {
+                                            IpAddress = "192.168.15.104",
+                                            Number = 5,
+                                        }
                                     }.ToList()
                                 }
                             }.ToList()
@@ -580,7 +627,10 @@ namespace Eryph.Modules.Controller.Tests.Networks
                     }.ToList(),
                     NetworkPorts = new VirtualNetworkPort[]
                     {
-                        new CatletNetworkPort(),
+                        new CatletNetworkPort()
+                        {
+                            CatletMetadataId = secondCatletMetadata.Id,
+                        },
                         new ProviderRouterPort()
                         {
                             ProviderName = "default",
