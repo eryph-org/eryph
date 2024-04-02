@@ -321,6 +321,11 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
                         savedIpPool.IpNetwork = savedSubnet.IpNetwork;
                         savedIpPool.FirstIp = ipPoolConfig.FirstIp;
+                        // Use the current next IP when the next IP has not been specified explicitly.
+                        // We want to avoid unnecessary changes to the next IP as it represents the
+                        // current state of the IP pool and is used to prevent reissuing of IP addresses
+                        // unless absolutely necessary.
+                        savedIpPool.NextIp = ipPoolConfig.NextIp ?? savedIpPool.NextIp;
                         savedIpPool.LastIp = ipPoolConfig.LastIp;
                     }
 
@@ -333,6 +338,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                         {
                             Name = ipPoolConfig.Name,
                             FirstIp = ipPoolConfig.FirstIp,
+                            NextIp = ipPoolConfig.NextIp ?? ipPoolConfig.FirstIp,
                             LastIp = ipPoolConfig.LastIp,
                             IpNetwork = savedSubnet.IpNetwork
                         });
