@@ -67,6 +67,7 @@ namespace Eryph.Modules.Controller
             container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
             container.Register<INetworkConfigValidator, NetworkConfigValidator>(Lifestyle.Scoped);
             container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
+            container.Register<IDefaultNetworkConfigRealizer, DefaultNetworkConfigRealizer>(Lifestyle.Scoped);
             container.Register<INetworkProvidersConfigRealizer, NetworkProvidersConfigRealizer>(Lifestyle.Scoped);
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
