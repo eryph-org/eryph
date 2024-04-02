@@ -14,23 +14,11 @@ public static class IpPoolSpecs
         }
     }
 
-
-    public sealed class GetMinNumberStartingAt : Specification<IpPoolAssignment>, ISingleResultSpecification
-    {
-        public GetMinNumberStartingAt(Guid poolId, long startingAt)
-        {
-            Query.Where(x => x.PoolId == poolId && x.Number >= startingAt)
-                .OrderBy(x => x.Number).Take(1);
-
-        }
-    }
-
     public sealed class GetAssignments : Specification<IpPoolAssignment>, ISingleResultSpecification
     {
         public GetAssignments(Guid poolId)
         {
             Query.Where(x => x.PoolId == poolId);
-
         }
     }
 
@@ -41,5 +29,4 @@ public static class IpPoolSpecs
             Query.Where(x => x.PoolId == poolId && x.IpAddress == ipAddress);
         }
     }
-
 }

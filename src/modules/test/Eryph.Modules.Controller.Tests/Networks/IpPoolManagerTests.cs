@@ -7,6 +7,7 @@ using Eryph.Core;
 using Eryph.Modules.Controller.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using Eryph.StateDb.TestBase;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
@@ -31,7 +32,7 @@ public class IpPoolManagerTests : StateDbTestBase
             assignment.IpAddress.Should().Be("10.0.0.100");
 
             var ipPool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
-            ipPool!.Counter.Should().Be(1);
+            ipPool!.NextIp.Should().Be("10.0.0.101");
         });
     }
 
@@ -47,7 +48,7 @@ public class IpPoolManagerTests : StateDbTestBase
         await WithScope(async (_, stateStore) =>
         {
             var pool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
-            pool!.Counter = 0;
+            pool!.NextIp = "10.0.0.100";
             await stateStore.SaveChangesAsync();
         });
 
@@ -59,17 +60,21 @@ public class IpPoolManagerTests : StateDbTestBase
             assignment.IpAddress.Should().Be("10.0.0.101");
 
             var ipPool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
-            ipPool!.Counter.Should().Be(2);
+            ipPool!.NextIp.Should().Be("10.0.0.102");
         });
     }
 
     [Fact]
-    public async Task AcquireIp_LastIpIsUsed_ReturnsFirstFreeIpAfterRollover()
+    public async Task AcquireIp_HighestIpIsUsed_ReturnsFirstFreeIpAfterRollover()
     {
+        Guid firstAssignmentId = default;
+        Guid secondAssignmentId = default;
         await WithScope(async (poolManager, stateStore) =>
         {
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
+            firstAssignmentId = (await poolManager.AcquireIp(SubnetId, IpPoolName))
+                .Should().BeRight().Subject.Id;
+            secondAssignmentId = (await poolManager.AcquireIp(SubnetId, IpPoolName))
+                .Should().BeRight().Subject.Id;
             (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
             (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
             (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
@@ -79,8 +84,10 @@ public class IpPoolManagerTests : StateDbTestBase
 
         await WithScope(async (_, stateStore) =>
         {
-            var assignments = await stateStore.For<IpAssignment>().ListAsync();
-            await stateStore.For<IpAssignment>().DeleteRangeAsync(assignments.GetRange(1, 2));
+            var firstAssignment = await stateStore.For<IpAssignment>().GetByIdAsync(firstAssignmentId);
+            var secondAssignment = await stateStore.For<IpAssignment>().GetByIdAsync(secondAssignmentId);
+            await stateStore.For<IpAssignment>().DeleteRangeAsync(
+                [firstAssignment!, secondAssignment!]);
 
             await stateStore.SaveChangesAsync();
         });
@@ -90,14 +97,53 @@ public class IpPoolManagerTests : StateDbTestBase
             var result = await poolManager.AcquireIp(SubnetId, IpPoolName);
 
             var assignment = result.Should().BeRight().Subject;
-            assignment.IpAddress.Should().Be("10.0.0.101");
+            assignment.IpAddress.Should().Be("10.0.0.100");
 
             var ipPool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
-            ipPool!.Counter.Should().Be(2);
+            ipPool!.NextIp.Should().Be("10.0.0.101");
         });
     }
 
-    // This test also ensures that the logic terminates
+    // This test also ensures that the logic terminates when all IP addresses
+    // have been allocated after a rollover.
+    [Fact]
+    public async Task AcquireIp_HighestIpIsUsedAndOneIpLeft_ReturnsFreeIpAfterRollover()
+    {
+        Guid assignmentId = default;
+        await WithScope(async (poolManager, stateStore) =>
+        {
+            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
+            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
+            assignmentId = (await poolManager.AcquireIp(SubnetId, IpPoolName))
+                .Should().BeRight().Subject.Id;
+            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
+            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (_, stateStore) =>
+        {
+            var assignment = await stateStore.For<IpAssignment>().GetByIdAsync(assignmentId);
+            await stateStore.For<IpAssignment>().DeleteAsync(assignment!);
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (poolManager, stateStore) =>
+        {
+            var result = await poolManager.AcquireIp(SubnetId, IpPoolName);
+
+            var assignment = result.Should().BeRight().Subject;
+            assignment.IpAddress.Should().Be("10.0.0.102");
+
+            var ipPool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
+            ipPool!.NextIp.Should().Be("10.0.0.100");
+        });
+    }
+
+    // This test also ensures that the logic terminates when all IP addresses
+    // have been allocated.
     [Fact]
     public async Task AcquireIp_AllIpAddressesInUse_ReturnsError()
     {
@@ -118,6 +164,9 @@ public class IpPoolManagerTests : StateDbTestBase
 
             var error = result.Should().BeLeft().Subject;
             error.Message.Should().Be($"IP pool {IpPoolName}({IpPoolId}) has no more free IP addresses.");
+
+            var ipPool = await stateStore.For<IpPool>().GetByIdAsync(IpPoolId);
+            ipPool!.NextIp.Should().Be($"10.0.0.100");
         });
     }
 
@@ -158,7 +207,8 @@ public class IpPoolManagerTests : StateDbTestBase
                                 Name = IpPoolName,
                                 IpNetwork = "10.0.0.0/24",
                                 FirstIp = "10.0.0.100",
-                                LastIp = "10.0.0.105",
+                                NextIp = "10.0.0.100",
+                                LastIp = "10.0.0.104",
                             }
                         ]
                     },

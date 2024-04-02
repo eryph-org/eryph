@@ -73,8 +73,8 @@ namespace Eryph.Modules.Controller.Networks
                             {
                                 Id = Guid.NewGuid(),
                                 FirstIp = ipPool.FirstIp,
+                                NextIp = ipPool.FirstIp,
                                 LastIp = ipPool.LastIp,
-                                Counter = 0,
                                 IpNetwork = subnet.Network,
                                 Name = ipPool.Name,
                                 SubnetId = subnetEntity.Id

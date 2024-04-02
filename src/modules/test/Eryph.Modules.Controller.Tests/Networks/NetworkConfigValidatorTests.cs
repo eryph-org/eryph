@@ -558,16 +558,16 @@ namespace Eryph.Modules.Controller.Tests.Networks
                                 {
                                     Name = "pool1",
                                     FirstIp = "192.168.15.10",
+                                    NextIp = "192.168.15.10",
                                     LastIp = "192.168.15.15",
-                                    Counter = 0,
                                     IpNetwork = "192.168.15.0/24",
                                 },
                                 new IpPool()
                                 {
                                     Name = "pool2",
                                     FirstIp = "192.168.15.100",
+                                    NextIp = "192.168.15.105",
                                     LastIp = "192.168.15.120",
-                                    Counter = 2,
                                     IpNetwork = "192.168.15.0/24",
                                     IpAssignments = new []
                                     {

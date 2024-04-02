@@ -49,13 +49,7 @@ namespace Eryph.ModuleCore.Networks
                                     Name = ipPool.Name,
                                     FirstIp = ipPool.FirstIp,
                                     LastIp = ipPool.LastIp,
-                                    NextIp = ipPool.Counter == 0
-                                        ? null
-                                        : IPNetwork.ToIPAddress(
-                                                IPNetwork.ToBigInteger(IPAddress.Parse(ipPool.FirstIp)) + ipPool.Counter,
-                                                IPNetwork.Parse(ipPool.IpNetwork).AddressFamily)
-                                            .ToString(),
-
+                                    NextIp = ipPool.NextIp,
                                 }).ToArray() : null
                             };
                         }).ToArray() : null

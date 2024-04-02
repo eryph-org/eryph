@@ -265,6 +265,10 @@ namespace Eryph.StateDb
             modelBuilder.Entity<IpPool>()
                 .Navigation(x => x.IpAssignments);
 
+            modelBuilder.Entity<IpPoolAssignment>()
+                .HasIndex(a => new { a.PoolId, a.Number })
+                .IsUnique();
+
             modelBuilder.Entity<ReportedNetwork>()
                 .HasKey(x => x.Id);
 
