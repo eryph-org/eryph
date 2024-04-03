@@ -48,11 +48,6 @@ namespace Eryph.Runtime.Zero
                 services.AddTransient<IAddSimpleInjectorFilter<ControllerModule>, ControllerModuleFilters>();
             });
 
-            builder.ConfigureServices((ctc, services) =>
-            {
-                services.AddAutoMapper(typeof(MapperProfile).Assembly);
-            });
-
             container.RegisterSingleton<IConfigReaderService<CatletMetadata>, VMMetadataConfigReaderService>();
             container.RegisterSingleton<IConfigWriterService<CatletMetadata>, VMMetadataConfigWriterService>();
             container.RegisterSingleton<IConfigReaderService<VirtualDisk>, VhdReaderService>();

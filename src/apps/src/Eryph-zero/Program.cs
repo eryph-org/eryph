@@ -325,8 +325,6 @@ internal static class Program
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
                 var builder = ModulesHost.CreateDefaultBuilder(args) as ModulesHostBuilder;
-
-
                 
 
                 var host =
