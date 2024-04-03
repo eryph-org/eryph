@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.ZeroState.VirtualMachines;
@@ -15,17 +16,17 @@ namespace Eryph.ZeroState.VirtualMachines;
 internal class ZeroStateCatletMetadataSeeder : ZeroStateSeederBase
 {
     private readonly ILogger _logger;
-    private readonly IStateStore _stateStore;
+    private readonly IStateStoreRepository<CatletMetadata> _metadataRepository;
 
     public ZeroStateCatletMetadataSeeder(
         IFileSystem fileSystem,
         IZeroStateConfig config,
         ILogger logger,
-        IStateStore stateStore)
+        IStateStoreRepository<CatletMetadata> metadataRepository)
         : base(fileSystem, config.VirtualMachinesConfigPath)
     {
         _logger = logger;
-        _stateStore = stateStore;
+        _metadataRepository = metadataRepository;
     }
 
     protected override async Task SeedAsync(
@@ -33,19 +34,25 @@ internal class ZeroStateCatletMetadataSeeder : ZeroStateSeederBase
         string json,
         CancellationToken cancellationToken = default)
     {
-        var existingMetadata = await _stateStore.For<CatletMetadata>()
-            .GetByIdAsync(entityId, cancellationToken);
-        if (existingMetadata is not null)
+        bool exists = await _metadataRepository.AnyAsync(
+            new CatletMetadataSpecs.GetById(entityId),
+            cancellationToken);
+        if (exists)
             return;
-
-        var metadata = JsonSerializer.Deserialize<CatletMetadata>(json);
+        
+        var metadata = JsonSerializer.Deserialize<Resources.Machines.CatletMetadata>(json);
         if (metadata is null)
         {
             _logger.LogWarning("Could not deserialize catlet metadata {MetadataId}", entityId);
             return;
         }
 
-        await _stateStore.For<CatletMetadata>().AddAsync(metadata, cancellationToken);
-        await _stateStore.SaveChangesAsync(cancellationToken);
+        await _metadataRepository.AddAsync(new CatletMetadata()
+        {
+            Id = entityId,
+            Metadata = JsonSerializer.Serialize(metadata),
+        },
+        cancellationToken);
+        await _metadataRepository.SaveChangesAsync(cancellationToken);
     }
 }

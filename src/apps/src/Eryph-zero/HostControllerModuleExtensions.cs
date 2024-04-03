@@ -13,7 +13,6 @@ using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Runtime.Zero.Configuration.Projects;
 using Eryph.Runtime.Zero.Configuration.Storage;
-using Eryph.Runtime.Zero.Configuration.VMMetadata;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.ZeroState;
@@ -44,12 +43,9 @@ namespace Eryph.Runtime.Zero
             builder.ConfigureFrameworkServices((ctx, services) =>
             {
                 services.AddTransient<IConfigureContainerFilter<ControllerModule>, ControllerModuleFilters>();
-                services.AddTransient<IModuleServicesFilter<ControllerModule>, ControllerModuleFilters>();
                 services.AddTransient<IAddSimpleInjectorFilter<ControllerModule>, ControllerModuleFilters>();
             });
 
-            container.RegisterSingleton<IConfigReaderService<CatletMetadata>, VMMetadataConfigReaderService>();
-            container.RegisterSingleton<IConfigWriterService<CatletMetadata>, VMMetadataConfigWriterService>();
             container.RegisterSingleton<IConfigReaderService<VirtualDisk>, VhdReaderService>();
             container.RegisterSingleton<IConfigWriterService<VirtualDisk>, VhdWriterService>();
 
@@ -65,7 +61,6 @@ namespace Eryph.Runtime.Zero
 
         private class ControllerModuleFilters :
             IConfigureContainerFilter<ControllerModule>,
-            IModuleServicesFilter<ControllerModule>,
             IAddSimpleInjectorFilter<ControllerModule>
         {
             public Action<IModuleContext<ControllerModule>, Container> Invoke(
@@ -75,10 +70,6 @@ namespace Eryph.Runtime.Zero
                 {
                     next(context, container);
 
-                    container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigWriterService<CatletMetadata>>, Lifestyle.Scoped);
-                    container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigReaderService<CatletMetadata>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IConfigWriterService<VirtualDisk>>, Lifestyle.Scoped);
                     container.Register(context.ModulesHostServices
@@ -90,14 +81,6 @@ namespace Eryph.Runtime.Zero
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IZeroStateConfig>, Lifestyle.Singleton);
                     
-                    /*
-
-                    container.RegisterDecorator(typeof(IVirtualMachineMetadataService),
-                        typeof(MetadataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
-
-                    container.RegisterDecorator(typeof(IVirtualDiskDataService),
-                        typeof(VirtualDiskDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
-                    */
                     container.UseZeroState();
 
                     // The order of the seeders is important. The default tenant must be seeded
@@ -105,21 +88,6 @@ namespace Eryph.Runtime.Zero
                     container.Collection.Append<IConfigSeeder<ControllerModule>, DefaultTenantSeeder>(Lifestyle.Scoped);
                     container.UseZeroStateSeeders();
                     container.Collection.Append<IConfigSeeder<ControllerModule>, DefaultProjectSeeder>(Lifestyle.Scoped);
-                };
-            }
-
-            public Action<IModulesHostBuilderContext<ControllerModule>, IServiceCollection> Invoke(
-                Action<IModulesHostBuilderContext<ControllerModule>, IServiceCollection> next)
-            {
-                return (context, services) =>
-                {
-                    next(context, services);
-                    //services.AddHostedHandler<SeedFromConfigHandler<ControllerModule>>();
-                    /*
-                    services
-                        .AddSingleton<IZeroStateChannel<ZeroStateChangeSet>, ZeroStateChannel<ZeroStateChangeSet>>();
-                    */
-                    //services.AddHostedService<ZeroStateBackgroundService>();
                 };
             }
 

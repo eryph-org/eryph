@@ -70,8 +70,7 @@ internal class DefaultProjectSeeder : IConfigSeeder<ControllerModule>
             _logger.LogInformation("Default network not found in state db. Creating network record.");
 
             await _defaultNetworkConfigRealizer.RealizeDefaultConfig(project.Id);
+            await _stateStore.SaveChangesAsync(stoppingToken);
         }
-
-        await _stateStore.SaveChangesAsync(stoppingToken);
     }
 }

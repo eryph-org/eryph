@@ -66,7 +66,6 @@ namespace Eryph.Runtime.Zero.Configuration
             var privateConfigPath = GetPrivateConfigPath();
             var projectsConfigPath = Path.Combine(privateConfigPath, "projects");
 
-
             return projectsConfigPath;
         }
 
@@ -74,7 +73,6 @@ namespace Eryph.Runtime.Zero.Configuration
         {
             var projectsConfigPath = GetProjectsConfigPath();
             var projectNetworksConfigPath = Path.Combine(projectsConfigPath, "networks");
-
 
             return projectNetworksConfigPath;
         }
