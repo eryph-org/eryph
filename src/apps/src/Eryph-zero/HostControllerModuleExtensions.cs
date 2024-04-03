@@ -14,7 +14,6 @@ using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Runtime.Zero.Configuration.Projects;
 using Eryph.Runtime.Zero.Configuration.Storage;
 using Eryph.Runtime.Zero.Configuration.VMMetadata;
-using Eryph.Runtime.Zero.ZeroState;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.ZeroState;
