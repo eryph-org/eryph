@@ -2,6 +2,7 @@
 using System.Net;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Handlers;
 using Eryph.Modules.ComputeApi.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
@@ -44,7 +45,10 @@ namespace Eryph.Modules.ComputeApi
         {
             container.Register<IGetRequestHandler<StateDb.Model.Catlet, CatletConfiguration>,
                 GetCatletConfigurationHandler>();
-
+            container.Register<IGetRequestHandler<StateDb.Model.Catlet, Catlet>,
+                GetCatletHandler>();
+            container.Register<IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet>,
+                ListCatletHandler>();
             container.Register<IGetRequestHandler<StateDb.Model.Project, VirtualNetworkConfiguration>,
                 GetVirtualNetworksConfigurationHandler>();
 

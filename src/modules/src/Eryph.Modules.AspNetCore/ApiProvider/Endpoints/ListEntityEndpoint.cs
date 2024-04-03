@@ -11,7 +11,10 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
     {
         private readonly IListEntitySpecBuilder<TRequest,TEntity> _specBuilder;
 
-        protected ListEntityEndpoint(IListRequestHandler<TEntity> listRequestHandler, IListEntitySpecBuilder<TRequest,TEntity> specBuilder) : base(listRequestHandler)
+        protected ListEntityEndpoint(
+            IListRequestHandler<TRequest, TResult, TEntity> listRequestHandler,
+            IListEntitySpecBuilder<TRequest,TEntity> specBuilder)
+            : base(listRequestHandler)
         {
             _specBuilder = specBuilder;
         }

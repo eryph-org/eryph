@@ -14,8 +14,10 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
 {
     public class ListProject : ListEntityEndpoint<ProjectListRequest, VirtualNetwork, StateDb.Model.VirtualNetwork>
     {
-        public ListProject([NotNull] IListRequestHandler<StateDb.Model.VirtualNetwork> listRequestHandler,
-            [NotNull] IListEntitySpecBuilder<ProjectListRequest, StateDb.Model.VirtualNetwork> specBuilder) : base(listRequestHandler, specBuilder)
+        public ListProject(
+            [NotNull] IListRequestHandler<ProjectListRequest, VirtualNetwork, StateDb.Model.VirtualNetwork> listRequestHandler,
+            [NotNull] IListEntitySpecBuilder<ProjectListRequest, StateDb.Model.VirtualNetwork> specBuilder)
+            : base(listRequestHandler, specBuilder)
         {
 
         }

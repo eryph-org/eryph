@@ -13,8 +13,10 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations
 {
     public class List : ListEntityEndpoint<OperationsListRequest, Operation, StateDb.Model.OperationModel>
     {
-        public List([NotNull] IListRequestHandler<StateDb.Model.OperationModel> listRequestHandler, 
-            [NotNull] IListEntitySpecBuilder<OperationsListRequest, StateDb.Model.OperationModel> specBuilder) : base(listRequestHandler, specBuilder)
+        public List(
+            [NotNull] IListRequestHandler<OperationsListRequest, Operation, StateDb.Model.OperationModel> listRequestHandler, 
+            [NotNull] IListEntitySpecBuilder<OperationsListRequest, StateDb.Model.OperationModel> specBuilder)
+            : base(listRequestHandler, specBuilder)
         {
         }
 

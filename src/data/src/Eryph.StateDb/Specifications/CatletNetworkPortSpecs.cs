@@ -34,9 +34,16 @@ namespace Eryph.StateDb.Specifications
                 Query.Include(x => x.Network)
                     .ThenInclude(x => x.Subnets)
                     .ThenInclude(x => x.IpPools);
-                Query.Include(x => x.FloatingPort);
+                Query.Include(x => x.Network)
+                    .ThenInclude(x => x.RouterPort)
+                    .ThenInclude(x => x.IpAssignments);
+                Query.Include(x => x.FloatingPort)
+                    .ThenInclude(x => x.IpAssignments)
+                    .ThenInclude(x => x.Subnet);
                 Query.Include(x => x.IpAssignments)
                     .ThenInclude(x => ((IpPoolAssignment)x).Pool);
+                Query.Include(x => x.IpAssignments)
+                    .ThenInclude(x => x.Subnet);
             }
         }
     }

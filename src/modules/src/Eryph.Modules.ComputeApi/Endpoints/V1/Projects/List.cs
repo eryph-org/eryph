@@ -14,8 +14,10 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
 {
     public class List : ListEntityEndpoint<AllProjectsListRequest, ProjectModel, StateDb.Model.Project>
     {
-        public List([NotNull]IListRequestHandler<StateDb.Model.Project> listRequestHandler, 
-            [NotNull] IListEntitySpecBuilder<AllProjectsListRequest, StateDb.Model.Project> specBuilder) : base(listRequestHandler, specBuilder)
+        public List(
+            [NotNull] IListRequestHandler<AllProjectsListRequest, ProjectModel, StateDb.Model.Project> listRequestHandler, 
+            [NotNull] IListEntitySpecBuilder<AllProjectsListRequest, StateDb.Model.Project> specBuilder)
+            : base(listRequestHandler, specBuilder)
         {
         }
 

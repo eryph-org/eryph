@@ -88,14 +88,17 @@ namespace Eryph.Modules.AspNetCore
         {
             container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
             container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
-            container.Register(typeof(IListRequestHandler<>), typeof(ListRequestHandler<>),Lifestyle.Scoped);
             container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
 
             container.Register<IUserRightsProvider, UserRightsProvider>(Lifestyle.Scoped);
 
-
             container.RegisterConditional(typeof(IGetRequestHandler<,>),
                 typeof(GetRequestHandler<,>), Lifestyle.Scoped,
+                c => !c.Handled);
+            container.RegisterConditional(
+                typeof(IListRequestHandler<,,>),
+                typeof(ListRequestHandler<,,>),
+                Lifestyle.Scoped,
                 c => !c.Handled);
 
             container.Register(typeof(IOperationRequestHandler<>), typeof(EntityOperationRequestHandler<>), Lifestyle.Scoped);

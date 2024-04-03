@@ -8,12 +8,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
 {
 
-    public interface IListRequestHandler<TModel> where TModel : class
+    public interface IListRequestHandler<TRequest, TResponse, TEntity>
+        where TEntity : class
+        where TRequest : IListRequest
     {
-        Task<ActionResult<ListResponse<TResponse>>> HandleListRequest<TRequest,TResponse>(
+        Task<ActionResult<ListResponse<TResponse>>> HandleListRequest(
             TRequest request,
-            Func<TRequest, ISpecification<TModel>> createSpecificationFunc, CancellationToken cancellationToken)
-            where TRequest: IListRequest;
-        
+            Func<TRequest, ISpecification<TEntity>> createSpecificationFunc, CancellationToken cancellationToken);
     }
 }
