@@ -16,6 +16,7 @@ public static class ProjectNetworksConfigDefault
             new()
             {
                 Name = "default",
+                Environment = "default",
                 Provider = new ProviderConfig()
                 {
                     Name = "default",

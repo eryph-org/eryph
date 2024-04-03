@@ -98,14 +98,13 @@ namespace Eryph.Runtime.Zero
                     container.RegisterDecorator(typeof(IVirtualDiskDataService),
                         typeof(VirtualDiskDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
                     */
-                    
-
-                    //container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, DefaultTenantSeeder>(Lifestyle.Scoped);
                     container.UseZeroState();
+
+                    // The order of the seeders is important. The default tenant must be seeded
+                    // before we try to recreate the state DB from the zero state config files.
+                    container.Collection.Append<IConfigSeeder<ControllerModule>, DefaultTenantSeeder>(Lifestyle.Scoped);
+                    container.UseZeroStateSeeders();
                     container.Collection.Append<IConfigSeeder<ControllerModule>, DefaultProjectSeeder>(Lifestyle.Scoped);
-                    //container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>(Lifestyle.Scoped);
-                    //container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>(Lifestyle.Scoped);
                 };
             }
 

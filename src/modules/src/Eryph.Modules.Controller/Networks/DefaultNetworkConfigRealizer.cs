@@ -28,14 +28,27 @@ internal class DefaultNetworkConfigRealizer : IDefaultNetworkConfigRealizer
         var providerConfig = await _networkProviderManager.GetCurrentConfiguration()
             .IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());
 
-
         var defaultProvider = providerConfig.NetworkProviders.FirstOrDefault(x => x.Name == "default");
         if (defaultProvider is null)
             throw new Exception("Default network provider not found");
 
         var config = defaultProvider.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverLay
             ? ProjectNetworksConfigDefault.Default
-            : new ProjectNetworksConfig();
+            : new ProjectNetworksConfig()
+            {
+                Networks = new NetworkConfig[]
+                {
+                    new()
+                    {
+                        Name = "default",
+                        Environment = "default",
+                        Provider = new ProviderConfig()
+                        {
+                            Name = "default",
+                        },
+                    },
+                },
+            };
 
         await _networkConfigRealizer.UpdateNetwork(projectId, config, providerConfig);
     }

@@ -65,7 +65,6 @@ namespace Eryph.Runtime.Zero
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
             container.Register<IDbContextConfigurer<StateStoreContext>, SqlLiteStateStoreContextConfigurer>();
-            //container.RegisterSingleton<ZeroStateDbTransactionInterceptor>();
             return container;
         }
 

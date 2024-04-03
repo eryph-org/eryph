@@ -54,7 +54,8 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
             var catletPort = new CatletNetworkPort
             {
-                Id = Guid.NewGuid()
+                Id = Guid.NewGuid(),
+                CatletMetadataId = Guid.Parse(CatletMetadata),
             };
             var projectId = Guid.Parse(projectIdString);
             var subnetId = Guid.Parse(subnetIdString);
@@ -115,6 +116,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             {
                 Id = Guid.NewGuid(),
                 NetworkId = Guid.Parse(NetworkA_Default_Subnet),
+                CatletMetadataId = Guid.Parse(CatletMetadata),
                 IpAssignments = new List<IpAssignment>
                 {
                     new IpPoolAssignment()
@@ -166,6 +168,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             {
                 Id = Guid.NewGuid(),
                 NetworkId = Guid.Parse(NetworkA_Default_Subnet),
+                CatletMetadataId = Guid.Parse(CatletMetadata),
                 IpAssignments = new List<IpAssignment>
                 {
                     new IpPoolAssignment()
@@ -215,6 +218,10 @@ namespace Eryph.Modules.Controller.Tests.Networks
             };
             await networkRepo.AddAsync(network);
 
+            await stateStore.For<CatletMetadata>().AddAsync(new()
+            {
+                Id = Guid.Parse(CatletMetadata),
+            });
 
             await context.SaveChangesAsync();
 
@@ -241,6 +248,8 @@ namespace Eryph.Modules.Controller.Tests.Networks
         private const string NetworkB_Env2_Default = "{29408ED0-F876-4879-9FAA-DEB519D1DF0A}";
         private const string NetworkB_Default_Subnet = "{AC451FA5-3364-4593-AA4D-14F95529FD54}";
         private const string NetworkB_Env2_Subnet = "{91A25D95-F417-482D-9264-E4179F61E379}";
+
+        private const string CatletMetadata = "{15E2B061-C625-4469-9FE7-7C455058FCC0}";
         // ReSharper restore InconsistentNaming
 
 

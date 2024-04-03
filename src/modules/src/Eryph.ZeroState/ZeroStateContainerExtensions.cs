@@ -37,8 +37,12 @@ public static class ZeroStateContainerExtensions
             typeof(IDbTransactionInterceptor),
             new []{ typeof(ZeroStateInterceptorBase<>).Assembly },
             Lifestyle.Scoped);
+    }
 
-        // Seeders
+    public static void UseZeroStateSeeders(this Container container)
+    {
+        // The order of the seeders is important as some later seeders
+        // might depend on the data seeded by the earlier ones.
         container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateNetworkProvidersSeeder>(Lifestyle.Scoped);
         container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateProjectSeeder>(Lifestyle.Scoped);
         container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateCatletMetadataSeeder>(Lifestyle.Scoped);

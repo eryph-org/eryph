@@ -39,6 +39,7 @@ public abstract class StateDbTestBase : IAsyncLifetime
             options.Services.AddLogging();
             options.Container.RegisterSingleton<IDbContextConfigurer<StateStoreContext>, TestDbContextConfigurer>();
             options.RegisterStateStore();
+            options.AddLogging();
             AddSimpleInjector(options);
         });
 

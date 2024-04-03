@@ -49,11 +49,6 @@ namespace Eryph.Modules.Controller
             container.RegisterConditional<IOperationMessaging, EryphRebusOperationMessaging>(Lifestyle.Scoped, _ => true);
             container.AddRebusOperationsHandlers<OperationManager, OperationTaskManager>();
 
-
-            container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
-            container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
-            container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
-
             container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
             container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
             container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
@@ -79,14 +74,6 @@ namespace Eryph.Modules.Controller
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
             container.RegisterInstance(serviceProvider.GetRequiredService<IOVNSettings>());
             container.RegisterInstance(serviceProvider.GetRequiredService<ISysEnvironment>());
-
-
-            container.Register(() =>
-            {
-                var optionsBuilder = new DbContextOptionsBuilder<StateStoreContext>();
-                container.GetInstance<IDbContextConfigurer<StateStoreContext>>().Configure(optionsBuilder);
-                return new StateStoreContext(optionsBuilder.Options);
-            }, Lifestyle.Scoped);
 
             container.ConfigureRebus(configurer => configurer
                 .Transport(t =>
@@ -118,6 +105,7 @@ namespace Eryph.Modules.Controller
             options.Services.AddHostedHandler<RealizeNetworkProviderHandler>();
             options.AddHostedService<InventoryTimerService>();
             options.AddLogging();
+            options.RegisterStateStore();
         }
 
     }
