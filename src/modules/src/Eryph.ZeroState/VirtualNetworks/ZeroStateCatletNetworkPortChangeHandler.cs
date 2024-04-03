@@ -61,7 +61,6 @@ internal class ZeroStateCatletNetworkPortChangeHandler : IZeroStateChangeHandler
                         Name = p.FloatingPort.Name,
                         SubnetName = p.FloatingPort.SubnetName,
                         ProviderName = p.FloatingPort.ProviderName,
-
                     },
                 IpAssignments = p.IpAssignments?.Map(a =>
                         a is IpPoolAssignment pa
@@ -70,7 +69,6 @@ internal class ZeroStateCatletNetworkPortChangeHandler : IZeroStateChangeHandler
                                 IpAddress = pa.IpAddress,
                                 SubnetName = pa.Subnet.Name,
                                 PoolName = pa.Pool.Name,
-                                Number = pa.Number,
                             }
                             : new IpAssignmentConfigModel()
                             {

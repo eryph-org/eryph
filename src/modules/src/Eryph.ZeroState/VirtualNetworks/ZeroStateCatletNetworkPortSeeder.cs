@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -119,10 +120,14 @@ internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
                     config.IpAddress, config.PoolName, subnet.Name);
                 return null;
             }
+
+            var startIp = IPAddress.Parse(pool.FirstIp);
+            var assignedIp = IPAddress.Parse(config.IpAddress);
+
             assignment = new IpPoolAssignment
             {
                 Pool = pool,
-                Number = config.Number.GetValueOrDefault(),
+                Number = (int)(IPNetwork.ToBigInteger(assignedIp) - IPNetwork.ToBigInteger(startIp)),
                 Subnet = subnet,
             };
         }

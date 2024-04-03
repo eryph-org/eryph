@@ -11,7 +11,5 @@ namespace Eryph.Configuration.Model
         public string SubnetName { get; set; }
 
         public string PoolName { get; set; }
-
-        public int? Number { get; set; }
     }
 }

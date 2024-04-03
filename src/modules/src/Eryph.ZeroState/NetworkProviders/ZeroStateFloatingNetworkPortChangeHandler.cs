@@ -37,23 +37,26 @@ internal class ZeroStateFloatingNetworkPortChangeHandler : IZeroStateChangeHandl
             .ListAsync(new FloatingNetworkPortSpecs.GetForConfig(), cancellationToken);
 
         var floatingPortsConfig = floatingPorts
-            .Select(p => new FloatingNetworkPortConfigModel()
+            .Map(p => new FloatingNetworkPortConfigModel()
             {
                 Name = p.Name,
                 MacAddress = p.MacAddress,
                 ProviderName = p.ProviderName,
                 SubnetName = p.SubnetName,
-                IpAssignments = p.IpAssignments.Select(a =>
-                {
-                    var poolAssignment = a as IpPoolAssignment;
-                    return new IpAssignmentConfigModel()
-                    {
-                        IpAddress = a.IpAddress,
-                        SubnetName = a.Subnet.Name,
-                        PoolName = poolAssignment?.Pool.Name,
-                        Number = poolAssignment?.Number,
-                    };
-                }).ToArray()
+                IpAssignments = p.IpAssignments.Map(a =>
+                    a is IpPoolAssignment pa
+                        ? new IpAssignmentConfigModel()
+                        {
+                            IpAddress = pa.IpAddress,
+                            SubnetName = pa.Subnet.Name,
+                            PoolName = pa.Pool.Name,
+                        }
+                        : new IpAssignmentConfigModel()
+                        {
+                            IpAddress = a.IpAddress,
+                            SubnetName = a.Subnet.Name,
+                        }
+                ).ToArray()
             }).ToArray();
 
         var wrapper = new NetworkPortsConfigModel()
