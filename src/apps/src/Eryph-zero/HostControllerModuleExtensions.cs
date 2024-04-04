@@ -96,8 +96,8 @@ namespace Eryph.Runtime.Zero
             {
                 return (context, options) =>
                 {
-                    options.AddZeroStateService();
                     options.AddHostedService<SeedFromConfigHandler<ControllerModule>>();
+                    options.AddZeroStateService();
                     next(context, options);
                 };
             }
