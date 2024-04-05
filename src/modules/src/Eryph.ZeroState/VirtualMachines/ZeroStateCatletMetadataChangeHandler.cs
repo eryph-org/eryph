@@ -50,7 +50,9 @@ internal class ZeroStateCatletMetadataChangeHandler : IZeroStateChangeHandler<Ze
             return;
         }
 
-        var json = JsonSerializer.Serialize(metadata);
+        var realMetadata = JsonSerializer.Deserialize<Resources.Machines.CatletMetadata>(metadata.Metadata);
+
+        var json = JsonSerializer.Serialize(realMetadata);
         await _fileSystem.File.WriteAllTextAsync(path, json, Encoding.UTF8, cancellationToken);
     }
 }
