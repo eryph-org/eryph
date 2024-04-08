@@ -56,7 +56,6 @@ internal class ListCatletHandler : IListRequestHandler<ListRequest, Catlet, Stat
             catlet.Networks = _mapper.Map<IEnumerable<CatletNetwork>>(catletPortsWithCatlet);
             return catlet;
         }).SequenceSerial();
-                
 
         return new JsonResult(new ListResponse<Catlet> { Value = result });
     }

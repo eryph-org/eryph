@@ -20,14 +20,21 @@ internal interface IZeroStateQueue<TChange>
 internal class ZeroStateQueue<TChange> : IZeroStateQueue<TChange>
 {
     private readonly Channel<ZeroStateQueueItem<TChange>> _channel =
-        Channel.CreateUnbounded<ZeroStateQueueItem<TChange>>();
+        Channel.CreateBounded<ZeroStateQueueItem<TChange>>(
+            new BoundedChannelOptions(5)
+            {
+                FullMode = BoundedChannelFullMode.Wait,
+            });
 
-    public async Task<ZeroStateQueueItem<TChange>> DequeueAsync(CancellationToken cancellationToken = default)
+    public async Task<ZeroStateQueueItem<TChange>> DequeueAsync(
+        CancellationToken cancellationToken = default)
     {
         return await _channel.Reader.ReadAsync(cancellationToken);
     }
 
-    public async Task EnqueueAsync(ZeroStateQueueItem<TChange> item, CancellationToken cancellationToken = default)
+    public async Task EnqueueAsync(
+        ZeroStateQueueItem<TChange> item,
+        CancellationToken cancellationToken = default)
     {
         await _channel.Writer.WriteAsync(item, cancellationToken);
     }
