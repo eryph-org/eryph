@@ -90,16 +90,19 @@ internal class NetworkSyncService : INetworkSyncService
 
             await configRealizer.RealizeConfigAsync(config, cancellationToken);
 
-            var projects = (await stateStore.For<Project>().ListAsync(cancellationToken)).First();
-            var res = await UpdateProjectNetworkPlan(projects.Id);
-            await stateStore.For<ProviderSubnet>().SaveChangesAsync(cancellationToken);
-
-            res.IfLeft(l =>
+            var projects = await stateStore.For<Project>().ListAsync(cancellationToken);
+            foreach (var project in projects)
             {
-                _log.LogError(
-                    "Failed to apply network plans: {message}", l.Message);
-                _log.LogDebug("Failed to apply network plans: {error}", l);
-            });
+                var res = await UpdateProjectNetworkPlan(project.Id);
+                res.IfLeft(l =>
+                {
+                    _log.LogError(l.ToException(),
+                        "Failed to apply network plan for project {ProjectName}({ProjectId})",
+                        project.Name, project.Id);
+                });
+            }
+
+            await stateStore.SaveChangesAsync(cancellationToken);
 
             return Unit.Default;
         }

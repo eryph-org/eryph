@@ -77,7 +77,18 @@ public class NetworkProviderManager : INetworkProviderManager
                 return Unit.Default;
             }
         ).ToEither();
-
     }
 
+    public EitherAsync<Error, Unit> SaveConfiguration(
+        NetworkProvidersConfiguration config) =>
+        from yaml in Prelude.Try(() =>
+        {
+            var yamlSerializer = new SerializerBuilder()
+                .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                .Build();
+
+            return yamlSerializer.Serialize(config);
+        }).ToEitherAsync()
+        from _ in SaveConfigurationYaml(yaml)
+        select Unit.Default;
 }

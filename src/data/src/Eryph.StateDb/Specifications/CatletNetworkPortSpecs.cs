@@ -3,6 +3,7 @@ using Eryph.StateDb.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -44,6 +45,14 @@ namespace Eryph.StateDb.Specifications
                     .ThenInclude(x => ((IpPoolAssignment)x).Pool);
                 Query.Include(x => x.IpAssignments)
                     .ThenInclude(x => x.Subnet);
+            }
+        }
+
+        public sealed class GetByName : Specification<CatletNetworkPort>, ISingleResultSpecification
+        {
+            public GetByName(Guid networkId, string name)
+            {
+                Query.Where(p => p.Network.Id == networkId && p.Name == name);
             }
         }
     }

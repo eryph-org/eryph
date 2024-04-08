@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Json;
 using Eryph.Configuration.Model;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -13,7 +12,8 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.ZeroState.NetworkProviders;
 
-internal class ZeroStateFloatingNetworkPortChangeHandler : IZeroStateChangeHandler<ZeroStateFloatingNetworkPortChange>
+internal class ZeroStateFloatingNetworkPortChangeHandler
+    : IZeroStateChangeHandler<ZeroStateFloatingNetworkPortChange>
 {
     private readonly IZeroStateConfig _config;
     private readonly IFileSystem _fileSystem;

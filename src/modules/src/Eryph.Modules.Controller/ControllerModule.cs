@@ -103,7 +103,7 @@ namespace Eryph.Modules.Controller
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
             options.Services.AddHostedHandler<StartBusModuleHandler>();
-            options.Services.AddHostedHandler<RealizeNetworkProviderHandler>();
+            options.Services.AddHostedHandler<SyncNetworksHandler>();
             options.AddHostedService<InventoryTimerService>();
             options.AddLogging();
             options.RegisterStateStore();

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration.Model;
 using Eryph.StateDb;
@@ -46,54 +47,68 @@ internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
 
         foreach (var portConfig in config.CatletNetworkPorts)
         {
-            var network = await _stateStore.For<VirtualNetwork>().GetBySpecAsync(
-                new VirtualNetworkSpecs.GetByName(entityId, portConfig.VirtualNetworkName, portConfig.EnvironmentName),
-                cancellationToken);
-            if (network is null)
-            {
-                _logger.LogWarning("Could not seed project network port {PortName} because network {NetworkName} is missing",
-                    portConfig.VirtualNetworkName, portConfig.VirtualNetworkName);
-                continue;
-            }
-
-            await _stateStore.LoadCollectionAsync(network, n => n.Subnets, cancellationToken);
-
-            FloatingNetworkPort? floatingPort = null;
-            if (portConfig.FloatingNetworkPort is not null)
-            {
-                floatingPort = await _stateStore.For<FloatingNetworkPort>().GetBySpecAsync(
-                    new FloatingNetworkPortSpecs.GetByName(
-                        portConfig.FloatingNetworkPort.ProviderName,
-                        portConfig.FloatingNetworkPort.SubnetName,
-                        portConfig.FloatingNetworkPort.Name),
-                    cancellationToken);
-
-                if (floatingPort is null)
-                {
-                    _logger.LogWarning("Could not seed project network port {PortName} because floating port {FloatingPortName} is missing",
-                        portConfig.VirtualNetworkName, portConfig.FloatingNetworkPort.Name);
-                    continue;
-                }
-            }
-
-            var assignments = await portConfig.IpAssignments
-                .Map(ac => ResolveIpAssignment(network.Subnets, ac, cancellationToken))
-                .SequenceSerial();
-
-            var port = new CatletNetworkPort()
-            {
-                Name = portConfig.Name,
-                MacAddress = portConfig.MacAddress,
-                FloatingPort = floatingPort,
-                Network = network,
-                CatletMetadataId = portConfig.CatletMetadataId,
-                IpAssignments = assignments.ToList(),
-            };
-
-            await _stateStore.For<CatletNetworkPort>().AddAsync(port, cancellationToken);
+            await SeedPort(entityId, portConfig, cancellationToken);
         }
 
         await _stateStore.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SeedPort(
+        Guid projectId, 
+        CatletNetworkPortConfigModel portConfig,
+        CancellationToken cancellationToken)
+    {
+        var network = await _stateStore.For<VirtualNetwork>().GetBySpecAsync(
+            new VirtualNetworkSpecs.GetByName(projectId, portConfig.VirtualNetworkName, portConfig.EnvironmentName),
+            cancellationToken);
+        if (network is null)
+        {
+            _logger.LogWarning("Could not seed project network port {PortName} because network {NetworkName} is missing",
+                portConfig.VirtualNetworkName, portConfig.VirtualNetworkName);
+            return;
+        }
+
+        bool exists = await _stateStore.For<CatletNetworkPort>().AnyAsync(
+            new CatletNetworkPortSpecs.GetByName(network.Id, portConfig.Name),
+            cancellationToken);
+        if (exists)
+            return;
+
+        await _stateStore.LoadCollectionAsync(network, n => n.Subnets, cancellationToken);
+
+        FloatingNetworkPort? floatingPort = null;
+        if (portConfig.FloatingNetworkPort is not null)
+        {
+            floatingPort = await _stateStore.For<FloatingNetworkPort>().GetBySpecAsync(
+                new FloatingNetworkPortSpecs.GetByName(
+                    portConfig.FloatingNetworkPort.ProviderName,
+                    portConfig.FloatingNetworkPort.SubnetName,
+                    portConfig.FloatingNetworkPort.Name),
+                cancellationToken);
+
+            if (floatingPort is null)
+            {
+                _logger.LogWarning("Could not seed catlet network port {PortName} because floating port {FloatingPortName} is missing",
+                    portConfig.VirtualNetworkName, portConfig.FloatingNetworkPort.Name);
+                return;
+            }
+        }
+
+        var assignments = await portConfig.IpAssignments
+            .Map(ac => ResolveIpAssignment(network.Subnets, ac, cancellationToken))
+            .SequenceSerial();
+
+        var port = new CatletNetworkPort()
+        {
+            Name = portConfig.Name,
+            MacAddress = portConfig.MacAddress,
+            FloatingPort = floatingPort,
+            Network = network,
+            CatletMetadataId = portConfig.CatletMetadataId,
+            IpAssignments = assignments.ToList(),
+        };
+
+        await _stateStore.For<CatletNetworkPort>().AddAsync(port, cancellationToken);
     }
 
     private async Task<IpAssignment?> ResolveIpAssignment(

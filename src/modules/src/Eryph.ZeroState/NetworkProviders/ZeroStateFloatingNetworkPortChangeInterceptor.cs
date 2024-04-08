@@ -11,7 +11,8 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.ZeroState.NetworkProviders;
 
-internal class ZeroStateFloatingNetworkPortChangeInterceptor : ZeroStateInterceptorBase<ZeroStateFloatingNetworkPortChange>
+internal class ZeroStateFloatingNetworkPortChangeInterceptor
+    : ZeroStateInterceptorBase<ZeroStateFloatingNetworkPortChange>
 {
     public ZeroStateFloatingNetworkPortChangeInterceptor(
         IZeroStateQueue<ZeroStateFloatingNetworkPortChange> queue)

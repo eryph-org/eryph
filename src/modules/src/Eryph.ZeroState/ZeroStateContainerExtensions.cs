@@ -55,9 +55,9 @@ public static class ZeroStateContainerExtensions
     {
         options.AddHostedService<ZeroStateBackgroundService<ZeroStateVirtualNetworkChange>>();
         options.AddHostedService<ZeroStateBackgroundService<ZeroStateFloatingNetworkPortChange>>();
+        options.AddHostedService<ZeroStateBackgroundService<ZeroStateProviderPoolChange>>();
         options.AddHostedService<ZeroStateBackgroundService<ZeroStateProjectChange>>();
         options.AddHostedService<ZeroStateBackgroundService<ZeroStateCatletNetworkPortChange>>();
         options.AddHostedService<ZeroStateBackgroundService<ZeroStateCatletMetadataChange>>();
-        //options.AddHostedService<ZeroStateSeedingService>();
     }
 }
