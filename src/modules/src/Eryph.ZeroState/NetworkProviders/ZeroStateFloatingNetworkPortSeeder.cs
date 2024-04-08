@@ -44,7 +44,7 @@ internal class ZeroStateFloatingNetworkPortSeeder : IConfigSeeder<ControllerModu
         File.Copy(_configPath, _configPath + ".bak", true);
 
         var json = await _fileSystem.File.ReadAllTextAsync(_configPath, Encoding.UTF8, stoppingToken);
-        var configs = JsonSerializer.Deserialize<NetworkPortsConfigModel>(json);
+        var configs = JsonSerializer.Deserialize<FloatingNetworkPortsConfigModel>(json);
         if (configs is null)
         {
             _logger.LogWarning("Could not deserialize network ports config from {ConfigPath}", _configPath);

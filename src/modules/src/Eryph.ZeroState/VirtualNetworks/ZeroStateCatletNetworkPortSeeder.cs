@@ -37,7 +37,7 @@ internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
         string json,
         CancellationToken cancellationToken = default)
     {
-        var config = JsonSerializer.Deserialize<ProjectNetworkPortsConfig>(json);
+        var config = JsonSerializer.Deserialize<CatletNetworkPortsConfigModel>(json);
         if (config is null)
         {
             _logger.LogWarning("Could not seed project network ports for project {ProjectId} because the config is invalid",
@@ -77,19 +77,19 @@ internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
         await _stateStore.LoadCollectionAsync(network, n => n.Subnets, cancellationToken);
 
         FloatingNetworkPort? floatingPort = null;
-        if (portConfig.FloatingNetworkPort is not null)
+        if (portConfig.FloatingNetworkNetworkPort is not null)
         {
             floatingPort = await _stateStore.For<FloatingNetworkPort>().GetBySpecAsync(
                 new FloatingNetworkPortSpecs.GetByName(
-                    portConfig.FloatingNetworkPort.ProviderName,
-                    portConfig.FloatingNetworkPort.SubnetName,
-                    portConfig.FloatingNetworkPort.Name),
+                    portConfig.FloatingNetworkNetworkPort.ProviderName,
+                    portConfig.FloatingNetworkNetworkPort.SubnetName,
+                    portConfig.FloatingNetworkNetworkPort.Name),
                 cancellationToken);
 
             if (floatingPort is null)
             {
                 _logger.LogWarning("Could not seed catlet network port {PortName} because floating port {FloatingPortName} is missing",
-                    portConfig.VirtualNetworkName, portConfig.FloatingNetworkPort.Name);
+                    portConfig.VirtualNetworkName, portConfig.FloatingNetworkNetworkPort.Name);
                 return;
             }
         }

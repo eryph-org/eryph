@@ -9,8 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
 {
-    internal class ListRequestHandler<TRequest, TResponse, TModel>
-        : IListRequestHandler<TRequest, TResponse, TModel>
+    internal class ListRequestHandler<TRequest, TResult, TModel>
+        : IListRequestHandler<TRequest, TResult, TModel>
         where TModel : class
         where TRequest : IListRequest
     {
@@ -23,15 +23,15 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
             _repository = repository;
         }
 
-        public async Task<ActionResult<ListResponse<TResponse>>> HandleListRequest(
+        public async Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
             TRequest request,
             Func<TRequest, ISpecification<TModel>> createSpecificationFunc,
             CancellationToken cancellationToken)
         {
             var queryResult = await _repository.ListAsync(createSpecificationFunc(request), cancellationToken);
-            var result = _mapper.Map<IEnumerable<TResponse>>(queryResult);
+            var result = _mapper.Map<IEnumerable<TResult>>(queryResult);
 
-            return new JsonResult(new ListResponse<TResponse> { Value = result });
+            return new JsonResult(new ListResponse<TResult> { Value = result });
         }
     }
 }

@@ -43,6 +43,7 @@ internal class ZeroStateFloatingNetworkPortChangeHandler
                 MacAddress = p.MacAddress,
                 ProviderName = p.ProviderName,
                 SubnetName = p.SubnetName,
+                PoolName = p.PoolName,
                 IpAssignments = p.IpAssignments.Map(a =>
                     a is IpPoolAssignment pa
                         ? new IpAssignmentConfigModel()
@@ -59,7 +60,7 @@ internal class ZeroStateFloatingNetworkPortChangeHandler
                 ).ToArray()
             }).ToArray();
 
-        var wrapper = new NetworkPortsConfigModel()
+        var wrapper = new FloatingNetworkPortsConfigModel()
         {
             FloatingPorts = floatingPortsConfig,
         };

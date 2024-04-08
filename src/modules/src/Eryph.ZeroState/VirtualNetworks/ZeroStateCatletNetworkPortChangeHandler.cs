@@ -45,7 +45,7 @@ internal class ZeroStateCatletNetworkPortChangeHandler : IZeroStateChangeHandler
             new CatletNetworkPortSpecs.GetForProjectConfig(projectId),
             cancellationToken);
 
-        var config = new ProjectNetworkPortsConfig()
+        var config = new CatletNetworkPortsConfigModel()
         {
             CatletNetworkPorts = ports.Map(p => new CatletNetworkPortConfigModel()
             {
@@ -54,9 +54,9 @@ internal class ZeroStateCatletNetworkPortChangeHandler : IZeroStateChangeHandler
                 EnvironmentName = p.Network.Environment,
                 CatletMetadataId = p.CatletMetadataId,
                 MacAddress = p.MacAddress,
-                FloatingNetworkPort = p.FloatingPort is null
+                FloatingNetworkNetworkPort = p.FloatingPort is null
                     ? null
-                    : new FloatingPortReferenceConfigModel()
+                    : new FloatingNetworkPortReferenceConfigModel()
                     {
                         Name = p.FloatingPort.Name,
                         SubnetName = p.FloatingPort.SubnetName,

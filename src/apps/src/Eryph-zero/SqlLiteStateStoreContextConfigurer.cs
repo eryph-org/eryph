@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore;

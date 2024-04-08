@@ -10,6 +10,8 @@ using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
+using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.ZeroState.Projects;
@@ -41,13 +43,17 @@ internal class ZeroStateProjectSeeder : ZeroStateSeederBase
             new ProjectSpecs.GetById(tenantId, entityId),
             cancellationToken);
 
-        // TODO Do we need to reseed the assignments when the project already exists?
         if (project is not null)
             return;
 
-        _logger.LogInformation("Project '{entityId}' not found in state db. Creating project record.", entityId);
-
         var projectConfig = JsonSerializer.Deserialize<ProjectConfigModel>(json);
+        if (projectConfig is null)
+        {
+            _logger.LogWarning("Could not seed project {entityId} because the config is invalid", entityId);
+            return;
+        }
+
+        _logger.LogInformation("Project '{entityId}' not found in state db. Creating project record.", entityId);
 
         project = new Project()
         {
@@ -57,7 +63,9 @@ internal class ZeroStateProjectSeeder : ZeroStateSeederBase
             ProjectRoles = projectConfig.Assignments?.Map(ac => new ProjectRoleAssignment()
             {
                 IdentityId = ac.IdentityId,
-                RoleId = ac.RoleId,
+                RoleId = RolesNames.GetRoleId(ac.RoleName)
+                    .ToEither(Error.New($"The role {ac.RoleName} does not exist"))
+                    .IfLeft(e => e.ToException().Rethrow<Guid>())
             }).ToList(),
         };
 

@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.Configuration.Model;
+using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 
@@ -59,8 +60,7 @@ internal class ZeroStateProjectChangeHandler : IZeroStateChangeHandler<ZeroState
             Assignments = project.ProjectRoles.Map(r => new ProjectRoleAssignmentConfigModel()
             {
                 IdentityId = r.IdentityId,
-                // TODO Should we save role names?
-                RoleId = r.RoleId,
+                RoleName = RolesNames.GetRoleName(r.RoleId),
             }).ToArray(),
         };
 

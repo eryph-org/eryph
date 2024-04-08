@@ -10,6 +10,10 @@ namespace Eryph.Configuration.Model
 
         public string SubnetName { get; set; }
 
+        /// <summary>
+        /// The name of the IP pool. Can be <see langword="null"/> when the IP
+        /// of the assignment was not taken from a pool.
+        /// </summary>
         public string PoolName { get; set; }
     }
 }

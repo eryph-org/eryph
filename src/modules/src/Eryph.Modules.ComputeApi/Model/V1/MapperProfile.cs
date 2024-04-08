@@ -34,7 +34,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                 {
                     target ??= new CatletNetwork();
                     var ipV4Addresses = src.Port.IpAssignments?.Map(assignment => assignment.IpAddress)
-                    ?? Array.Empty<string>();
+                        ?? Array.Empty<string>();
                     var routerIp = src.Port.Network.RouterPort.IpAssignments?.FirstOrDefault()?.IpAddress;
                     var subnets = src.Port.IpAssignments?.Map(x => x.Subnet.IpNetwork) ?? Array.Empty<string>();
                     var dnsServers = src.Port.IpAssignments?.Map(x => x.Subnet).Cast<VirtualNetworkSubnet>()
@@ -72,29 +72,10 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                 });
 
             var memberMap = CreateMap<ProjectRoleAssignment, ProjectMemberRole>();
-            memberMap
-                .ForMember(x => x.MemberId,
-                    o =>
-                        o.MapFrom(dest => dest.IdentityId));
-
-            memberMap.ForMember(x => x.ProjectName,
-                    o => 
-                        o.MapFrom(s => s.Project.Name));
-
+            memberMap.ForMember(x => x.MemberId, o => o.MapFrom(dest => dest.IdentityId));
+            memberMap.ForMember(x => x.ProjectName, o => o.MapFrom(s => s.Project.Name));
             memberMap.ForMember(x => x.RoleName,
-                    o =>
-                        o.MapFrom((src,m) =>
-                        {
-                            if(src.RoleId == EryphConstants.BuildInRoles.Owner)
-                                return "owner";
-                            if (src.RoleId == EryphConstants.BuildInRoles.Contributor)
-                                return "contributor";
-                            if (src.RoleId == EryphConstants.BuildInRoles.Reader)
-                                return "reader";
-
-                            return "";
-                        }));
-
+                o => o.MapFrom((src,m) => RolesNames.GetRoleName(src.RoleId)));
         }
     }
 }

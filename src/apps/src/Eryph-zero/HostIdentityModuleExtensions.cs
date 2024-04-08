@@ -23,7 +23,6 @@ namespace Eryph.Runtime.Zero
             builder.ConfigureFrameworkServices((ctx, services) =>
             {
                 services.AddTransient<IConfigureContainerFilter<IdentityModule>, IdentityModuleFilters>();
-                services.AddTransient<IModuleServicesFilter<IdentityModule>, IdentityModuleFilters>();
                 services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, IdentityModuleFilters>();
             });
 
@@ -39,7 +38,6 @@ namespace Eryph.Runtime.Zero
 
 
         private class IdentityModuleFilters : IConfigureContainerFilter<IdentityModule>,
-            IModuleServicesFilter<IdentityModule>,
             IAddSimpleInjectorFilter<IdentityModule>
         {
             public Action<IModuleContext<IdentityModule>, Container> Invoke(
@@ -56,21 +54,8 @@ namespace Eryph.Runtime.Zero
                     container.RegisterDecorator(typeof(IClientService),
                         typeof(ClientServiceWithConfigServiceDecorator));
 
-                    //container.RegisterSingleton<SeedFromConfigHandler<IdentityModule>>();
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityClientSeeder>();
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
-
-                };
-            }
-
-
-            public Action<IModulesHostBuilderContext<IdentityModule>, IServiceCollection> Invoke(
-                Action<IModulesHostBuilderContext<IdentityModule>, IServiceCollection> next)
-            {
-                return (context, services) =>
-                {
-                    next(context, services);
-                    //services.AddHostedHandler<SeedFromConfigHandler<IdentityModule>>();
                 };
             }
 
@@ -79,8 +64,8 @@ namespace Eryph.Runtime.Zero
             {
                 return (context, options) =>
                 {
-                    next(context, options);
                     options.AddHostedService<SeedFromConfigHandler<IdentityModule>>();
+                    next(context, options);
                 };
             }
         }

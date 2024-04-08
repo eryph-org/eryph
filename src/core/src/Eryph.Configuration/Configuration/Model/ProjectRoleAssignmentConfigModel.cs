@@ -8,6 +8,6 @@ namespace Eryph.Configuration.Model
     {
         public string IdentityId { get; set; }
 
-        public Guid RoleId { get; set; }
+        public string RoleName { get; set; }
     }
 }
