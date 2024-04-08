@@ -85,8 +85,8 @@ internal class NetworkSyncService : INetworkSyncService
             var stateStore = scope.GetInstance<IStateStore>();
             var providerManager = scope.GetInstance<INetworkProviderManager>();
 
-            var configResult = await providerManager.GetCurrentConfiguration();
-            var config =configResult.IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());
+            var config = await providerManager.GetCurrentConfiguration()
+                .IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());
 
             await configRealizer.RealizeConfigAsync(config, cancellationToken);
 

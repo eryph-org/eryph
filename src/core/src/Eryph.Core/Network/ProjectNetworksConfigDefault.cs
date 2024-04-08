@@ -47,4 +47,20 @@ public static class ProjectNetworksConfigDefault
             },
         },
     };
+
+    public static ProjectNetworksConfig FlatProviderDefault => new()
+    {
+        Networks = new NetworkConfig[]
+        {
+            new()
+            {
+                Name = "default",
+                Environment = "default",
+                Provider = new ProviderConfig()
+                {
+                    Name = "default",
+                },
+            },
+        },
+    };
 }

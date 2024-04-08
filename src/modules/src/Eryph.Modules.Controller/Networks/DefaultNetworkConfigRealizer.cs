@@ -34,21 +34,7 @@ internal class DefaultNetworkConfigRealizer : IDefaultNetworkConfigRealizer
 
         var config = defaultProvider.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverLay
             ? ProjectNetworksConfigDefault.Default
-            : new ProjectNetworksConfig()
-            {
-                Networks = new NetworkConfig[]
-                {
-                    new()
-                    {
-                        Name = "default",
-                        Environment = "default",
-                        Provider = new ProviderConfig()
-                        {
-                            Name = "default",
-                        },
-                    },
-                },
-            };
+            : ProjectNetworksConfigDefault.FlatProviderDefault;
 
         await _networkConfigRealizer.UpdateNetwork(projectId, config, providerConfig);
     }
