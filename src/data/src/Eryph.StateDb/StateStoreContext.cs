@@ -96,13 +96,6 @@ namespace Eryph.StateDb
                 .HasForeignKey(x=>x.ProjectId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // TODO might be configured this way implicitly
-            modelBuilder.Entity<Project>()
-                .HasMany(x => x.ProjectRoles)
-                .WithOne(x => x.Project)
-                .HasForeignKey(x => x.ProjectId)
-                .OnDelete(DeleteBehavior.Cascade);
-
             modelBuilder.Entity<ProjectRoleAssignment>()
                 .HasKey(x => x.Id);
 
@@ -127,19 +120,6 @@ namespace Eryph.StateDb
 
             modelBuilder.Entity<Catlet>()
                 .Navigation(x => x.ReportedNetworks);
-
-
-            /*
-            modelBuilder.Entity<Catlet>()
-                .HasMany(x => x.NetworkPorts)
-                .WithOne(x => x.Catlet)
-                .HasForeignKey(x => x.CatletId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<Catlet>()
-                .Navigation(x => x.NetworkPorts);
-
-            */
 
             modelBuilder.Entity<Catlet>()
                 .HasOne(x => x.Host)
