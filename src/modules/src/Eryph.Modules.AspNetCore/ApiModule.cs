@@ -84,6 +84,9 @@ namespace Eryph.Modules.AspNetCore
         [UsedImplicitly]
         public virtual void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
+            container.Register(
+                serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>,
+                Lifestyle.Scoped);
             container.Register<IUserRightsProvider, UserRightsProvider>(Lifestyle.Scoped);
 
             container.RegisterConditional(typeof(IGetRequestHandler<,>),
