@@ -63,7 +63,7 @@ internal class ProviderIpManager : BaseIpManager, IProviderIpManager
                         select newAssignment
                     select assignment;
 
-            }).TraverseParallel(l => l)
+            }).SequenceSerial()
 
             select validAndNewAssignments
                 .Select(x => IPAddress.Parse((string)x.IpAddress)).ToArray();

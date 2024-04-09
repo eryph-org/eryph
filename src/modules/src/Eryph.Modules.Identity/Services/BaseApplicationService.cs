@@ -35,7 +35,7 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
                 var descriptor = new TDescriptor();
                 await PopulateDescriptorFromApplication(descriptor, entity, cancellationToken);
                 return descriptor;
-            }).TraverseParallel(t=>t));
+            }).SequenceSerial());
 
     }
 

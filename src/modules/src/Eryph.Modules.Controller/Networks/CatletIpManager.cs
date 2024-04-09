@@ -81,7 +81,7 @@ public class CatletIpManager : BaseIpManager, ICatletIpManager
                           select newAssignment
                     select assignment;
 
-            }).TraverseParallel(l => l)
+            }).SequenceSerial()
 
             select validAndNewAssignments
                 .Select(x => IPAddress.Parse(x.IpAddress)).ToArray();
