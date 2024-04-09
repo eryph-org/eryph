@@ -63,7 +63,7 @@ internal class ZeroStateProjectSeeder : ZeroStateSeederBase
             ProjectRoles = projectConfig.Assignments?.Map(ac => new ProjectRoleAssignment()
             {
                 IdentityId = ac.IdentityId,
-                RoleId = RolesNames.GetRoleId(ac.RoleName)
+                RoleId = RoleNames.GetRoleId(ac.RoleName)
                     .ToEither(Error.New($"The role {ac.RoleName} does not exist"))
                     .IfLeft(e => e.ToException().Rethrow<Guid>())
             }).ToList(),

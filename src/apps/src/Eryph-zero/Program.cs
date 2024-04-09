@@ -193,39 +193,37 @@ internal static class Program
 
     }
 
-    private static Task<int> Run(string[] args)
+    private static async Task<int> Run(string[] args)
     {
-        return AdminGuard.CommandIsElevated(async () =>
-        {
+        var logFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "eryph", "zero", "logs", "debug.txt");
+        
+        await using var logger = new LoggerConfiguration()
+            .MinimumLevel.Verbose()
+            .Enrich.FromLogContext()
+            .WriteTo.Console(new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff} {@l:u3}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}", theme: TemplateTheme.Literate),
+                restrictedToMinimumLevel: LogEventLevel.Debug)
+            .WriteTo.File(
+                new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} {@l:u3}] [{SourceContext}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}"),
+                logFilePath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 10,
+                retainedFileTimeLimit: TimeSpan.FromDays(30))
+            .CreateLogger();
 
+        return await AdminGuard.CommandIsElevated(async () =>
+        {
             var returnCode = 0;
             var warmupMode = args.Contains("--warmup");
-
-            var logFilePath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "eryph", "zero", "logs", "debug.txt");
-
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Verbose()
-                .Enrich.FromLogContext()
-                .WriteTo.Console(new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff} {@l:u3}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}", theme: TemplateTheme.Literate),
-                    restrictedToMinimumLevel: LogEventLevel.Debug)
-                .WriteTo.File(
-                    new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} {@l:u3}] [{SourceContext}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}"),
-                    logFilePath,
-                    rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: 10,
-                    retainedFileTimeLimit: TimeSpan.FromDays(30))
-                
-                .CreateLogger();
 
             try
             {
                 var fileVersion = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location);
-                Log.Logger.Information("Starting eryph-zero {version}", fileVersion.ProductVersion);
+                logger.Information("Starting eryph-zero {version}", fileVersion.ProductVersion);
 
                 if (warmupMode)
-                    Log.Logger.Information("Running in warmup mode. Process will be stopped after start is completed");
+                    logger.Information("Running in warmup mode. Process will be stopped after start is completed");
                 
                 var startupConfig = StartupConfiguration(args,
                     sp =>
@@ -301,7 +299,7 @@ internal static class Program
                     }
                 }
 
-                var loggerFactory = new SerilogLoggerFactory(Log.Logger);
+                using var loggerFactory = new SerilogLoggerFactory(Log.Logger);
 
                 var ovsRunDir = OVSPackage.UnpackAndProvide(startupConfig.OVSPackageDir);
                 var ensureDriverResult = await DriverCommands.EnsureDriver(
@@ -314,6 +312,7 @@ internal static class Program
 
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+                
                 container.RegisterInstance<ILoggerFactory>(loggerFactory);
                 container.RegisterConditional(
                     typeof(ILogger),
@@ -343,9 +342,9 @@ internal static class Program
                             config.AddInMemoryCollection(new Dictionary<string, string>
                             {
                                 { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
-                                {"bus:type",  "inmemory"},
-                                {"databus:type", "inmemory"},
-                                { "store:type", "inmemory"}
+                                { "bus:type", "inmemory" },
+                                { "databus:type", "inmemory" },
+                                { "store:type", "inmemory" }
                             });
                         })
                         .HostModule<VmHostAgentModule>()
@@ -357,8 +356,9 @@ internal static class Program
                         .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
                             EventLogSettings, EventLogLoggerProvider>)
                         .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
-                        .UseSerilog(dispose: true)
-                    .Build();
+                        // The logger must not be disposed here as it is injected into multiple modules
+                        .UseSerilog(logger: logger, dispose: false)
+                        .Build();
 
                 //starting here all errors should be considered as recoverable
                 returnCode = -1;
@@ -395,7 +395,7 @@ internal static class Program
             }
             catch (Exception ex)
             {
-                Log.Logger.Fatal(ex, "eryph-zero failure");
+                logger.Fatal(ex, "eryph-zero failure");
                 await Console.Error.WriteAsync(ex.Message);
 
                 return returnCode;

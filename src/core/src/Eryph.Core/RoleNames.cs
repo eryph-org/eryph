@@ -7,7 +7,7 @@ using LanguageExt;
 
 namespace Eryph.Core;
 
-public static class RolesNames
+public static class RoleNames
 {
     public static string GetRoleName(Guid roleId) =>
         roleId switch

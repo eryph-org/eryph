@@ -25,6 +25,7 @@ internal class ZeroStateCatletMetadataInterceptor : ZeroStateInterceptorBase<Zer
     {
         return dbContext.ChangeTracker.Entries<CatletMetadata>().ToList()
             .Map(e => e.Entity.Id)
+            .Distinct()
             .Match(
                 Empty: () => Task.FromResult(Option<ZeroStateCatletMetadataChange>.None),
                 More: p => Task.FromResult(Some(new ZeroStateCatletMetadataChange

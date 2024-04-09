@@ -75,7 +75,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             memberMap.ForMember(x => x.MemberId, o => o.MapFrom(dest => dest.IdentityId));
             memberMap.ForMember(x => x.ProjectName, o => o.MapFrom(s => s.Project.Name));
             memberMap.ForMember(x => x.RoleName,
-                o => o.MapFrom((src,m) => RolesNames.GetRoleName(src.RoleId)));
+                o => o.MapFrom((src,m) => RoleNames.GetRoleName(src.RoleId)));
         }
     }
 }

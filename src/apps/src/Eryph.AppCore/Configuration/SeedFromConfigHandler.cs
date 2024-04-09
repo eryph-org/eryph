@@ -39,15 +39,8 @@ public class SeedFromConfigHandler<TModule> : IHostedService where TModule : cla
             await using var scope = AsyncScopedLifestyle.BeginScope(_container);
             var logger = scope.GetInstance<ILogger<SeedFromConfigHandler<TModule>>>();
             logger.LogInformation("Executing config seeder {configSeeder}", configSeeder.ImplementationType.Name);
-            try
-            {
-                await configSeeder.GetInstance().Execute(cancellationToken);
-            }
-
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error executing config seeder {configSeeder}", configSeeder.ImplementationType.Name);
-            }
+            
+            await configSeeder.GetInstance().Execute(cancellationToken);
         }
     }
 

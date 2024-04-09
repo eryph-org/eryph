@@ -28,6 +28,7 @@ internal class ZeroStateProjectInterceptor : ZeroStateInterceptorBase<ZeroStateP
             .Concat(dbContext.ChangeTracker.Entries<ProjectRoleAssignment>().ToList()
                 .Map(pra => pra.Entity.ProjectId))
             .ToList()
+            .Distinct()
             .Match(
                 Empty: () => Task.FromResult(Option<ZeroStateProjectChange>.None),
                 More: p => Task.FromResult(Some(new ZeroStateProjectChange

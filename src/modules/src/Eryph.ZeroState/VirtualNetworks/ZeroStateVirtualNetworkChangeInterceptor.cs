@@ -11,9 +11,9 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.ZeroState.VirtualNetworks;
 
-internal class ZeroStateVirtualNetworkInterceptor : ZeroStateInterceptorBase<ZeroStateVirtualNetworkChange>
+internal class ZeroStateVirtualNetworkChangeInterceptor : ZeroStateInterceptorBase<ZeroStateVirtualNetworkChange>
 {
-    public ZeroStateVirtualNetworkInterceptor(
+    public ZeroStateVirtualNetworkChangeInterceptor(
         IZeroStateQueue<ZeroStateVirtualNetworkChange> queue)
         : base(queue)
     {

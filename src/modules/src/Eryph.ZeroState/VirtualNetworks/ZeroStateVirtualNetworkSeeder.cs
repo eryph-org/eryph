@@ -65,9 +65,9 @@ internal class ZeroStateVirtualNetworkSeeder : ZeroStateSeederBase
         var config = ProjectNetworksConfigDictionaryConverter.Convert(configDictionary);
         var normalizedConfig = _configValidator.NormalizeConfig(config);
 
-        // TODO fix error handling
+
         var providerConfig = await _networkProviderManager.GetCurrentConfiguration()
-            .IfLeft(l => l.ToErrorException().Rethrow<NetworkProvidersConfiguration>());
+            .IfLeft(l => l.ToException().Rethrow<NetworkProvidersConfiguration>());
         await _configRealizer.UpdateNetwork(project.Id, normalizedConfig, providerConfig);
         await _stateStore.SaveChangesAsync(cancellationToken);
     }

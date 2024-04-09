@@ -30,20 +30,39 @@ internal class ZeroStateBackgroundService<TChange> : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var queueItem = await _queue.DequeueAsync(stoppingToken);
-            _logger.LogInformation("Processing changes of transaction {TransactionId}", queueItem.TransactionId);
 
             try
             {
-                await using var scope = AsyncScopedLifestyle.BeginScope(_container);
-                var handler = scope.GetInstance<IZeroStateChangeHandler<TChange>>();
-
-                await handler.HandleChangeAsync(queueItem.Changes, stoppingToken);
+                var queueItem = await _queue.DequeueAsync(stoppingToken);
+                await HandleChangeAsync(queueItem);
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to process changes of transaction {TransactionId}", queueItem.TransactionId);
+                //_logger.LogError(ex, "Failed to process changes of transaction {TransactionId}", queueItem.TransactionId);
             }
         }
+
+        await FlushQueue();
+    }
+
+    private async Task FlushQueue()
+    {
+        _logger.LogInformation("Going to flush {Count} remaining queue item(s).",
+            _queue.GetCount());
+        while (_queue.GetCount() > 0)
+        {
+            var queueItem = await _queue.DequeueAsync();
+            await HandleChangeAsync(queueItem);
+        }
+    }
+
+    private async Task HandleChangeAsync(ZeroStateQueueItem<TChange> queueItem)
+    {
+        _logger.LogInformation("Processing changes of transaction {TransactionId}", queueItem.TransactionId);
+
+        await using var scope = AsyncScopedLifestyle.BeginScope(_container);
+        var handler = scope.GetInstance<IZeroStateChangeHandler<TChange>>();
+        await handler.HandleChangeAsync(queueItem.Changes);
     }
 }

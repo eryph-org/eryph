@@ -16,7 +16,7 @@ namespace Eryph.StateDb.TestBase;
 
 /// <summary>
 /// This base class can be used for tests which require a working
-/// state database. It used an in-memory SQLite database.
+/// state database. It uses an in-memory SQLite database.
 /// </summary>
 public abstract class StateDbTestBase : IAsyncLifetime
 {
@@ -37,7 +37,7 @@ public abstract class StateDbTestBase : IAsyncLifetime
         services.AddSimpleInjector(_container, options =>
         {
             options.Services.AddLogging();
-            options.Container.RegisterSingleton<IDbContextConfigurer<StateStoreContext>, TestDbContextConfigurer>();
+            ConfigureDatabase(options.Container);
             options.RegisterStateStore();
             options.AddLogging();
             AddSimpleInjector(options);
@@ -47,6 +47,9 @@ public abstract class StateDbTestBase : IAsyncLifetime
         _provider.UseSimpleInjector(_container);
     }
 
+    /// <summary>
+    /// This method can be implemented to add additional services to the container.
+    /// </summary>
     protected virtual void AddSimpleInjector(SimpleInjectorAddOptions options) { }
 
     private class TestDbContextConfigurer : IDbContextConfigurer<StateStoreContext>
@@ -57,7 +60,7 @@ public abstract class StateDbTestBase : IAsyncLifetime
         }
     }
 
-    public async Task InitializeAsync()
+    public virtual async Task InitializeAsync()
     {
         await _connection.OpenAsync();
 
@@ -78,6 +81,9 @@ public abstract class StateDbTestBase : IAsyncLifetime
     /// </summary>
     protected virtual Task SeedAsync(IStateStore stateStore) => Task.CompletedTask;
 
+    /// <summary>
+    ///  This method can be invoked to seed the default tenant and project.
+    /// </summary>
     protected async Task SeedDefaultTenantAndProject()
     {
         var stateStore = _container.GetInstance<IStateStore>();
@@ -93,6 +99,11 @@ public abstract class StateDbTestBase : IAsyncLifetime
             TenantId = EryphConstants.DefaultTenantId,
             Name = "default",
         });
+    }
+
+    protected void ConfigureDatabase(Container container)
+    {
+        container.RegisterSingleton<IDbContextConfigurer<StateStoreContext>, TestDbContextConfigurer>();
     }
 
     public async Task DisposeAsync()

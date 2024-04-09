@@ -26,9 +26,13 @@ internal class ZeroStateFloatingNetworkPortChangeInterceptor
     {
         return dbContext.ChangeTracker.Entries<FloatingNetworkPort>().ToList()
             .Map(e => e.Entity.ProviderName)
+            .Distinct()
             .Match(
                 Empty: () => Task.FromResult<Option<ZeroStateFloatingNetworkPortChange>>(None),
-                More: p => Task.FromResult(Some(new ZeroStateFloatingNetworkPortChange())));
+                More: p => Task.FromResult(Some(new ZeroStateFloatingNetworkPortChange()
+                {
+                    ProviderNames = p.ToList(),
+                })));
 
     }
 }

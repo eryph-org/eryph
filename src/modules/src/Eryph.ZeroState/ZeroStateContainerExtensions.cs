@@ -21,7 +21,7 @@ public static class ZeroStateContainerExtensions
 {
     public static void UseZeroState(this Container container)
     {
-        container.RegisterSingleton<IFileSystem, FileSystem>();
+        //container.RegisterSingleton<IFileSystem, FileSystem>();
         container.Register(typeof(IZeroStateQueue<>), typeof(ZeroStateQueue<>), Lifestyle.Singleton);
         container.Register(typeof(IZeroStateChangeHandler<>),
             typeof(IZeroStateChangeHandler<>).Assembly,

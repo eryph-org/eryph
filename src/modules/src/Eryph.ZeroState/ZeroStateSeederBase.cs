@@ -28,7 +28,7 @@ internal abstract class ZeroStateSeederBase : IConfigSeeder<ControllerModule>
         var files = _fileSystem.Directory.EnumerateFiles(_configPath, "*.json");
         foreach (var file in files)
         {
-            // TODO error handling (LanguageExt to collect errors?)
+            File.Copy(file, $"{file}.bak", true);
             var content = await _fileSystem.File.ReadAllTextAsync(file, Encoding.UTF8, stoppingToken);
             var projectId = Guid.Parse(_fileSystem.Path.GetFileNameWithoutExtension(file));
             await SeedAsync(projectId, content, stoppingToken);

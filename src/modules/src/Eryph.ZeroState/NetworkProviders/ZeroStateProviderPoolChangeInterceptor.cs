@@ -37,8 +37,11 @@ internal class ZeroStateProviderPoolChangeInterceptor
                 .OfType<ProviderSubnet>()
                 .Map(s => s.ProviderName));
 
-        return providers.Match(
+        return providers.Distinct().Match(
             Empty: () => None,
-            More: p => Some(new ZeroStateProviderPoolChange()));
+            More: p => Some(new ZeroStateProviderPoolChange()
+            {
+                ProviderNames = p.ToList(),
+            }));
     }
 }

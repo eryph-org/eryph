@@ -9,6 +9,8 @@ namespace Eryph.ZeroState;
 
 internal interface IZeroStateQueue<TChange>
 {
+    int GetCount();
+
     Task<ZeroStateQueueItem<TChange>> DequeueAsync(
         CancellationToken cancellationToken = default);
 
@@ -25,6 +27,8 @@ internal class ZeroStateQueue<TChange> : IZeroStateQueue<TChange>
             {
                 FullMode = BoundedChannelFullMode.Wait,
             });
+
+    public int GetCount() => _channel.Reader.Count;
 
     public async Task<ZeroStateQueueItem<TChange>> DequeueAsync(
         CancellationToken cancellationToken = default)

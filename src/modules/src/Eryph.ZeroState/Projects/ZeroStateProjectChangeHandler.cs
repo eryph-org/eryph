@@ -60,7 +60,7 @@ internal class ZeroStateProjectChangeHandler : IZeroStateChangeHandler<ZeroState
             Assignments = project.ProjectRoles.Map(r => new ProjectRoleAssignmentConfigModel()
             {
                 IdentityId = r.IdentityId,
-                RoleName = RolesNames.GetRoleName(r.RoleId),
+                RoleName = RoleNames.GetRoleName(r.RoleId),
             }).ToArray(),
         };
 

@@ -13,7 +13,6 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
 using LanguageExt.Common;
-using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;

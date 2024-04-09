@@ -23,16 +23,27 @@ namespace Eryph.ZeroState.Tests
 
             var container = new Container();
             container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-            var builder = Host.CreateDefaultBuilder();
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureServices(services =>
+                {
+                    services.AddLogging();
+                    services.AddSimpleInjector(container, options =>
+                    {
+                        options.RegisterStateStore();
+                        options.AddZeroStateService();
+                        options.AddHostedService<ZeroStateBackgroundService<ZeroStateVirtualNetworkChange>>();
+                        options.AddLogging();
+                    });
+                });
             builder.ConfigureServices(services =>
             {
                 services.AddLogging();
                 services.AddSingleton<IZeroStateQueue<ZeroStateVirtualNetworkChange>, ZeroStateQueue<ZeroStateVirtualNetworkChange>>();
-                services.AddScoped<ZeroStateVirtualNetworkInterceptor>();
+                services.AddScoped<ZeroStateVirtualNetworkChangeInterceptor>();
                 services.AddDbContext<StateStoreContext>(
                     (sp, options) => options
                         .UseSqlite("Data Source=InMemorySample;Mode=Memory;Cache=Shared")
-                        .AddInterceptors(sp.GetRequiredService<ZeroStateVirtualNetworkInterceptor>()));
+                        .AddInterceptors(sp.GetRequiredService<ZeroStateVirtualNetworkChangeInterceptor>()));
                 services.AddSimpleInjector(container, options =>
                 {
                     options.AddHostedService<ZeroStateBackgroundService<ZeroStateVirtualNetworkChange>>();

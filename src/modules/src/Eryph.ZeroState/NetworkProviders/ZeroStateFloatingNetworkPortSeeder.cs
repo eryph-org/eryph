@@ -41,7 +41,7 @@ internal class ZeroStateFloatingNetworkPortSeeder : IConfigSeeder<ControllerModu
         if (!File.Exists(_configPath))
             return;
 
-        File.Copy(_configPath, _configPath + ".bak", true);
+        File.Copy(_configPath, $"{_configPath}.bak", true);
 
         var json = await _fileSystem.File.ReadAllTextAsync(_configPath, Encoding.UTF8, stoppingToken);
         var configs = JsonSerializer.Deserialize<FloatingNetworkPortsConfigModel>(json);
