@@ -14,7 +14,7 @@ namespace Eryph.Configuration.Model
 
         public string MacAddress { get; set; }
 
-        public FloatingNetworkPortReferenceConfigModel FloatingNetworkNetworkPort { get; set; }
+        public FloatingNetworkPortReferenceConfigModel FloatingNetworkPort { get; set; }
 
         public IpAssignmentConfigModel[] IpAssignments { get; set; }
 

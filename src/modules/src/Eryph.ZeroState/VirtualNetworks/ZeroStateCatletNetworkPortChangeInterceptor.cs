@@ -24,7 +24,21 @@ internal class ZeroStateCatletNetworkPortChangeInterceptor
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
-        var networks = await dbContext.ChangeTracker.Entries<CatletNetworkPort>().ToList()
+        var networkPorts = await dbContext.ChangeTracker.Entries<IpAssignment>().ToList()
+            .Map(async e =>
+            {
+                var networkPortReference = e.Reference(a => a.NetworkPort);
+                await networkPortReference.LoadAsync(cancellationToken);
+                return Optional(networkPortReference.TargetEntry);
+            })
+            .SequenceSerial()
+            .Map(e => e.Somes()
+                .Map(p => p.Entity)
+                .OfType<CatletNetworkPort>()
+                .Map(dbContext.Entry));
+
+        var networks = await networkPorts
+            .Concat(dbContext.ChangeTracker.Entries<CatletNetworkPort>().ToList())
             .Map(async e =>
             {
                 var networkReference = e.Reference(n => n.Network);

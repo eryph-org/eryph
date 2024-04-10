@@ -20,19 +20,32 @@ internal class ZeroStateFloatingNetworkPortChangeInterceptor
     {
     }
 
-    protected override Task<Option<ZeroStateFloatingNetworkPortChange>> DetectChanges(
+    protected override async Task<Option<ZeroStateFloatingNetworkPortChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
-        return dbContext.ChangeTracker.Entries<FloatingNetworkPort>().ToList()
+        var networkPorts = await dbContext.ChangeTracker.Entries<IpAssignment>().ToList()
+            .Map(async e =>
+            {
+                var networkPortReference = e.Reference(a => a.NetworkPort);
+                await networkPortReference.LoadAsync(cancellationToken);
+                return Optional(networkPortReference.TargetEntry);
+            })
+            .SequenceSerial()
+            .Map(e => e.Somes()
+                .Map(p => p.Entity)
+                .OfType<FloatingNetworkPort>()
+                .Map(dbContext.Entry));
+
+        return networkPorts
+            .Concat(dbContext.ChangeTracker.Entries<FloatingNetworkPort>().ToList())
             .Map(e => e.Entity.ProviderName)
             .Distinct()
             .Match(
-                Empty: () => Task.FromResult<Option<ZeroStateFloatingNetworkPortChange>>(None),
-                More: p => Task.FromResult(Some(new ZeroStateFloatingNetworkPortChange()
+                Empty: () => None,
+                More: p => Some(new ZeroStateFloatingNetworkPortChange()
                 {
                     ProviderNames = p.ToList(),
-                })));
-
+                }));
     }
 }

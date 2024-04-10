@@ -19,7 +19,7 @@ public class ZeroStateProjectChangeTests : ZeroStateTestBase
 
     private readonly ProjectConfigModel _expectedConfig = new()
     {
-        Name = "Test Project",
+        Name = "test-project",
         TenantId = EryphConstants.DefaultTenantId,
         Assignments =
         [
@@ -40,7 +40,7 @@ public class ZeroStateProjectChangeTests : ZeroStateTestBase
             await stateStore.For<Project>().AddAsync(new Project()
             {
                 Id = newProjectId,
-                Name = "New Project",
+                Name = "new-project",
                 TenantId = EryphConstants.DefaultTenantId,
             });
 
@@ -48,10 +48,9 @@ public class ZeroStateProjectChangeTests : ZeroStateTestBase
         });
 
         var config = await ReadConfig(newProjectId);
-        _expectedConfig.Name = "new name";
         config.Should().BeEquivalentTo(new ProjectConfigModel()
         {
-            Name = "New Project",
+            Name = "new-project",
             TenantId = EryphConstants.DefaultTenantId,
             Assignments = [],
         });
@@ -63,13 +62,13 @@ public class ZeroStateProjectChangeTests : ZeroStateTestBase
         await WithHostScope(async stateStore =>
         {
             var project = await stateStore.For<Project>().GetByIdAsync(ProjectId);
-            project!.Name = "new name";
+            project!.Name = "new-name";
 
             await stateStore.SaveChangesAsync();
         });
 
         var config = await ReadConfig(ProjectId);
-        _expectedConfig.Name = "new name";
+        _expectedConfig.Name = "new-name";
         config.Should().BeEquivalentTo(_expectedConfig);
     }
 
@@ -79,7 +78,7 @@ public class ZeroStateProjectChangeTests : ZeroStateTestBase
         await WithHostScope(async stateStore =>
         {
             var project = await stateStore.For<Project>().GetByIdAsync(ProjectId);
-            project!.Name = "new name";
+            project!.Name = "new-name";
 
             await stateStore.SaveChangesAsync();
         });
@@ -162,14 +161,13 @@ public class ZeroStateProjectChangeTests : ZeroStateTestBase
         await stateStore.For<Project>().AddAsync(new Project()
         {
             Id = ProjectId,
-            Name = "Test Project",
+            Name = "test-project",
             TenantId = EryphConstants.DefaultTenantId,
             ProjectRoles =
             [
                 new ProjectRoleAssignment()
                 {
                     Id = AssignmentId,
-
                     IdentityId = "test-identity",
                     RoleId = EryphConstants.BuildInRoles.Contributor,
                 },

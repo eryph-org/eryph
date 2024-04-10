@@ -11,9 +11,9 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.ZeroState.VirtualMachines;
 
-internal class ZeroStateCatletMetadataInterceptor : ZeroStateInterceptorBase<ZeroStateCatletMetadataChange>
+internal class ZeroStateCatletMetadataChangeInterceptor : ZeroStateInterceptorBase<ZeroStateCatletMetadataChange>
 {
-    public ZeroStateCatletMetadataInterceptor(
+    public ZeroStateCatletMetadataChangeInterceptor(
         IZeroStateQueue<ZeroStateCatletMetadataChange> queue)
         : base(queue)
     {

@@ -54,7 +54,7 @@ internal class ZeroStateCatletNetworkPortChangeHandler : IZeroStateChangeHandler
                 EnvironmentName = p.Network.Environment,
                 CatletMetadataId = p.CatletMetadataId,
                 MacAddress = p.MacAddress,
-                FloatingNetworkNetworkPort = p.FloatingPort is null
+                FloatingNetworkPort = p.FloatingPort is null
                     ? null
                     : new FloatingNetworkPortReferenceConfigModel()
                     {

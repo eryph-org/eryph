@@ -77,19 +77,19 @@ internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
         await _stateStore.LoadCollectionAsync(network, n => n.Subnets, cancellationToken);
 
         FloatingNetworkPort? floatingPort = null;
-        if (portConfig.FloatingNetworkNetworkPort is not null)
+        if (portConfig.FloatingNetworkPort is not null)
         {
             floatingPort = await _stateStore.For<FloatingNetworkPort>().GetBySpecAsync(
                 new FloatingNetworkPortSpecs.GetByName(
-                    portConfig.FloatingNetworkNetworkPort.ProviderName,
-                    portConfig.FloatingNetworkNetworkPort.SubnetName,
-                    portConfig.FloatingNetworkNetworkPort.Name),
+                    portConfig.FloatingNetworkPort.ProviderName,
+                    portConfig.FloatingNetworkPort.SubnetName,
+                    portConfig.FloatingNetworkPort.Name),
                 cancellationToken);
 
             if (floatingPort is null)
             {
                 _logger.LogWarning("Could not seed catlet network port {PortName} because floating port {FloatingPortName} is missing",
-                    portConfig.VirtualNetworkName, portConfig.FloatingNetworkNetworkPort.Name);
+                    portConfig.VirtualNetworkName, portConfig.FloatingNetworkPort.Name);
                 return;
             }
         }

@@ -24,24 +24,25 @@ public class ZeroStateVirtualNetworkChangeTests : ZeroStateTestBase
     private readonly ProjectNetworksConfig _expectedConfig = new()
     {
         Version = "1.0",
-        Project = "Test Project",
+        Project = "test-project",
         Networks =
         [
             new NetworkConfig()
             {
-                Name = "Test Network",
+                Name = "test-network",
+                Environment = "test-environment",
                 Subnets =
                 [
                     new NetworkSubnetConfig()
                     {
-                        Name = "Test Subnet",
+                        Name = "test-subnet",
                         Address = "10.0.0.0/20",
                         Mtu = 1400,
                         IpPools =
                         [
                             new IpPoolConfig()
                             {
-                                Name = "Test Pool",
+                                Name = "test-pool",
                                 FirstIp = "10.0.0.100",
                                 NextIp = "10.0.0.110",
                                 LastIp = "10.0.0.200",
@@ -60,7 +61,7 @@ public class ZeroStateVirtualNetworkChangeTests : ZeroStateTestBase
         {
             var network = new VirtualNetwork()
             {
-                Name = "New Network",
+                Name = "new-network",
                 ProjectId = ProjectId,
                 IpNetwork = "10.1.0.0/20",
             };
@@ -74,7 +75,7 @@ public class ZeroStateVirtualNetworkChangeTests : ZeroStateTestBase
             .._expectedConfig.Networks!,
             new NetworkConfig()
             {
-                Name = "New Network",
+                Name = "new-network",
                 Address = "10.1.0.0/20",
             },
         ];
@@ -120,7 +121,7 @@ public class ZeroStateVirtualNetworkChangeTests : ZeroStateTestBase
             await stateStore.LoadCollectionAsync(subnet!, s => s.IpPools);
             subnet!.IpPools!.Add(new IpPool()
             {
-                Name = "New Pool",
+                Name = "new-pool",
                 FirstIp = "10.0.1.100",
                 NextIp = "10.0.1.110",
                 LastIp = "10.0.1.200",
@@ -135,7 +136,7 @@ public class ZeroStateVirtualNetworkChangeTests : ZeroStateTestBase
             .._expectedConfig.Networks![0].Subnets![0].IpPools,
             new IpPoolConfig()
             {
-                Name = "New Pool",
+                Name = "new-pool",
                 FirstIp = "10.0.1.100",
                 NextIp = "10.0.1.110",
                 LastIp = "10.0.1.200",
@@ -183,7 +184,7 @@ public class ZeroStateVirtualNetworkChangeTests : ZeroStateTestBase
             await stateStore.LoadCollectionAsync(network!, s => s.Subnets);
             network!.Subnets!.Add(new VirtualNetworkSubnet()
             {
-                Name = "New Subnet",
+                Name = "new-subnet",
                 IpNetwork = "10.0.100.0/20",
                 MTU = 1200,
             });
@@ -197,7 +198,7 @@ public class ZeroStateVirtualNetworkChangeTests : ZeroStateTestBase
             .._expectedConfig.Networks![0].Subnets!,
             new NetworkSubnetConfig()
             {
-                Name = "New Subnet",
+                Name = "new-subnet",
                 Address = "10.0.100.0/20",
                 Mtu = 1200,
             },
@@ -242,21 +243,22 @@ public class ZeroStateVirtualNetworkChangeTests : ZeroStateTestBase
         await stateStore.For<Project>().AddAsync(new Project()
         {
             Id = ProjectId,
-            Name = "Test Project",
+            Name = "test-project",
             TenantId = EryphConstants.DefaultTenantId,
         });
 
         await stateStore.For<VirtualNetwork>().AddAsync(new VirtualNetwork()
         {
             Id = NetworkId,
-            Name = "Test Network",
+            Name = "test-network",
+            Environment = "test-environment",
             ProjectId = ProjectId,
             Subnets =
             [
                 new VirtualNetworkSubnet()
                 {
                     Id = SubnetId,
-                    Name = "Test Subnet",
+                    Name = "test-subnet",
                     IpNetwork = "10.0.0.0/20",
                     MTU = 1400,
                     IpPools =
@@ -264,7 +266,7 @@ public class ZeroStateVirtualNetworkChangeTests : ZeroStateTestBase
                         new IpPool()
                         {
                             Id = IpPoolId,
-                            Name = "Test Pool",
+                            Name = "test-pool",
                             FirstIp = "10.0.0.100",
                             NextIp = "10.0.0.110",
                             LastIp = "10.0.0.200",
@@ -273,19 +275,15 @@ public class ZeroStateVirtualNetworkChangeTests : ZeroStateTestBase
                 },
             ],
         });
-
-        await stateStore.For<CatletNetworkPort>().AddAsync(new CatletNetworkPort()
-        {
-
-        });
     }
 
-    private async Task<CatletNetworkPortsConfigModel> ReadConfig()
+    private async Task<ProjectNetworksConfig> ReadConfig()
     {
         var path = Path.Combine(
             ZeroStateConfig.ProjectNetworksConfigPath,
             $"{ProjectId}.json");
         var json = await MockFileSystem.File.ReadAllTextAsync(path, Encoding.UTF8);
-        return JsonSerializer.Deserialize<CatletNetworkPortsConfigModel>(json)!;
+        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);
+        return ProjectNetworksConfigDictionaryConverter.Convert(configDictionary!);
     }
 }
