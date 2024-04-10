@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
@@ -80,7 +81,8 @@ namespace Eryph.Runtime.Zero
 
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IZeroStateConfig>, Lifestyle.Singleton);
-                    
+
+                    container.RegisterSingleton<IFileSystem, FileSystem>();
                     container.UseZeroState();
 
                     // The order of the seeders is important. The default tenant must be seeded

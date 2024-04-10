@@ -30,16 +30,15 @@ internal class ZeroStateBackgroundService<TChange> : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-
             try
             {
                 var queueItem = await _queue.DequeueAsync(stoppingToken);
                 await HandleChangeAsync(queueItem);
             }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
+            catch (OperationCanceledException)
             {
-                //_logger.LogError(ex, "Failed to process changes of transaction {TransactionId}", queueItem.TransactionId);
+                // The exception will occur when the host is stopped.
+                // We swallow it and flush the remaining queue.
             }
         }
 
@@ -61,8 +60,18 @@ internal class ZeroStateBackgroundService<TChange> : BackgroundService
     {
         _logger.LogInformation("Processing changes of transaction {TransactionId}", queueItem.TransactionId);
 
-        await using var scope = AsyncScopedLifestyle.BeginScope(_container);
-        var handler = scope.GetInstance<IZeroStateChangeHandler<TChange>>();
-        await handler.HandleChangeAsync(queueItem.Changes);
+        try
+        {
+            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
+            var handler = scope.GetInstance<IZeroStateChangeHandler<TChange>>();
+            await handler.HandleChangeAsync(queueItem.Changes);
+        }
+        catch (Exception ex)
+        {
+            // We need to catch all exceptions here. Otherwise, the background
+            // service will stop when an exception occurs. We always want to write
+            // as many of the changes as possible to the filesystem.
+            _logger.LogError(ex, "Failed to process changes of transaction {TransactionId}", queueItem.TransactionId);
+        }
     }
 }

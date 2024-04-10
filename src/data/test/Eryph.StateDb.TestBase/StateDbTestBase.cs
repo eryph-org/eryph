@@ -20,7 +20,7 @@ namespace Eryph.StateDb.TestBase;
 /// </summary>
 public abstract class StateDbTestBase : IAsyncLifetime
 {
-    private const string DbConnection = "Data Source=InMemory;Mode=Memory;Cache=Shared";
+    private readonly string _dbConnection = $"Data Source={Guid.NewGuid()};Mode=Memory;Cache=Shared";
 
     private readonly SqliteConnection _connection;
     private readonly ServiceProvider _provider;
@@ -30,7 +30,7 @@ public abstract class StateDbTestBase : IAsyncLifetime
     {
         // This database connection is kept open for the duration of the test
         // to make sure that the in-memory database is not disposed.
-        _connection = new SqliteConnection(DbConnection);
+        _connection = new SqliteConnection(_dbConnection);
         _container = new Container();
         _container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
         var services = new ServiceCollection();
@@ -52,11 +52,12 @@ public abstract class StateDbTestBase : IAsyncLifetime
     /// </summary>
     protected virtual void AddSimpleInjector(SimpleInjectorAddOptions options) { }
 
-    private class TestDbContextConfigurer : IDbContextConfigurer<StateStoreContext>
+    private class TestDbContextConfigurer(string dbConnection)
+        : IDbContextConfigurer<StateStoreContext>
     {
         public void Configure(DbContextOptionsBuilder options)
         {
-            options.UseSqlite(DbConnection);
+            options.UseSqlite(dbConnection);
         }
     }
 
@@ -103,7 +104,8 @@ public abstract class StateDbTestBase : IAsyncLifetime
 
     protected void ConfigureDatabase(Container container)
     {
-        container.RegisterSingleton<IDbContextConfigurer<StateStoreContext>, TestDbContextConfigurer>();
+        container.RegisterInstance<IDbContextConfigurer<StateStoreContext>>(
+            new TestDbContextConfigurer(_dbConnection));
     }
 
     public async Task DisposeAsync()

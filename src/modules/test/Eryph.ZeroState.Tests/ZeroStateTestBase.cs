@@ -14,55 +14,78 @@ using Moq;
 using SimpleInjector.Lifestyles;
 using SimpleInjector;
 
-namespace Eryph.ZeroState.Tests
+namespace Eryph.ZeroState.Tests;
+
+public abstract class ZeroStateTestBase : StateDbTestBase
 {
-    public abstract class ZeroStateTestBase : StateDbTestBase
+    protected readonly MockFileSystem MockFileSystem = new();
+    protected readonly IZeroStateConfig ZeroStateConfig = new TestZeroStateConfig();
+    protected readonly Mock<INetworkProviderManager> MockNetworkProviderManager = new();
+
+    protected IHost CreateHost()
     {
-        protected readonly MockFileSystem MockFileSystem = new();
-        protected readonly IZeroStateConfig ZeroStateConfig = new TestZeroStateConfig();
-        protected readonly Mock<INetworkProviderManager> MockNetworkProviderManager = new();
-
-        private readonly Container _hostContainer = new();
-
-        protected IHost CreateHost()
-        {
-            var container = new Container();
-            container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-            //container.Options.AllowOverridingRegistrations = true;
+        var container = new Container();
+        container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
+        //container.Options.AllowOverridingRegistrations = true;
             
-            ConfigureDatabase(container);
-            container.RegisterInstance<IZeroStateConfig>(ZeroStateConfig);
-            container.RegisterInstance<IFileSystem>(MockFileSystem);
-            container.RegisterInstance<INetworkProviderManager>(MockNetworkProviderManager.Object);
+        ConfigureDatabase(container);
+        container.RegisterInstance<IZeroStateConfig>(ZeroStateConfig);
+        container.RegisterInstance<IFileSystem>(MockFileSystem);
+        container.RegisterInstance<INetworkProviderManager>(MockNetworkProviderManager.Object);
 
-            var builder = Host.CreateDefaultBuilder()
-                .ConfigureServices(services =>
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureServices(services =>
+            {
+                services.AddLogging();
+                services.AddSimpleInjector(container, options =>
                 {
-                    services.AddLogging();
-                    services.AddSimpleInjector(container, options =>
-                    {
-                        options.AddLogging();
-                        options.Container.UseZeroState();
-                        options.RegisterStateStore();
-                        options.AddZeroStateService();
-                    });
+                    options.AddLogging();
+                    options.Container.UseZeroState();
+                    options.RegisterStateStore();
+                    options.AddZeroStateService();
                 });
+            });
 
-            var host = builder.Build();
-            host.UseSimpleInjector(container);
+        var host = builder.Build();
+        host.UseSimpleInjector(container);
 
-            return host;
-        }
-
-        public override async Task InitializeAsync()
-        {
-            await base.InitializeAsync();
-
-            MockFileSystem.Directory.CreateDirectory(ZeroStateConfig.NetworksConfigPath);
-            MockFileSystem.Directory.CreateDirectory(ZeroStateConfig.ProjectsConfigPath);
-            MockFileSystem.Directory.CreateDirectory(ZeroStateConfig.ProjectNetworksConfigPath);
-            MockFileSystem.Directory.CreateDirectory(ZeroStateConfig.ProjectNetworkPortsConfigPath);
-            MockFileSystem.Directory.CreateDirectory(ZeroStateConfig.VirtualMachinesConfigPath);
-        }
+        return host;
     }
+
+    protected async Task WithHostScope(Func<IStateStore, Task> action)
+    {
+        using var host = CreateHost();
+        await host.StartAsync();
+        var container = host.Services.GetRequiredService<Container>();
+        await using (var scope = AsyncScopedLifestyle.BeginScope(container))
+        {
+            var stateStore = scope.GetInstance<IStateStore>();
+            await action(stateStore);
+        }
+        await host.StopAsync();
+    }
+
+    public override async Task InitializeAsync()
+    {
+        await base.InitializeAsync();
+
+        MockFileSystem.Directory.CreateDirectory(ZeroStateConfig.NetworksConfigPath);
+        MockFileSystem.Directory.CreateDirectory(ZeroStateConfig.ProjectsConfigPath);
+        MockFileSystem.Directory.CreateDirectory(ZeroStateConfig.ProjectNetworksConfigPath);
+        MockFileSystem.Directory.CreateDirectory(ZeroStateConfig.ProjectNetworkPortsConfigPath);
+        MockFileSystem.Directory.CreateDirectory(ZeroStateConfig.VirtualMachinesConfigPath);
+    }
+}
+
+public class TestZeroStateConfig : IZeroStateConfig
+{
+    public string ProjectsConfigPath => @"Z:\projects\networks";
+
+    public string ProjectNetworksConfigPath => @"Z:\projects\networks";
+
+    public string ProjectNetworkPortsConfigPath => @"Z:\projects\ports";
+
+    public string NetworksConfigPath => @"Z:\networks";
+
+    public string VirtualMachinesConfigPath => @"Z:\vms\md";
 }
