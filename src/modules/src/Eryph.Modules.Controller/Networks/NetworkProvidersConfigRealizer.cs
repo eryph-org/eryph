@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Eryph.Modules.Controller.Networks;
 
-internal class NetworkProvidersConfigRealizer : INetworkProvidersConfigRealizer
+public class NetworkProvidersConfigRealizer : INetworkProvidersConfigRealizer
 {
     private readonly IStateStore _stateStore;
 

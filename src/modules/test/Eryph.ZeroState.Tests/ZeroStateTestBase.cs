@@ -26,12 +26,11 @@ public abstract class ZeroStateTestBase : StateDbTestBase
     {
         var container = new Container();
         container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-        //container.Options.AllowOverridingRegistrations = true;
             
         ConfigureDatabase(container);
-        container.RegisterInstance<IZeroStateConfig>(ZeroStateConfig);
+        container.RegisterInstance(ZeroStateConfig);
         container.RegisterInstance<IFileSystem>(MockFileSystem);
-        container.RegisterInstance<INetworkProviderManager>(MockNetworkProviderManager.Object);
+        container.RegisterInstance(MockNetworkProviderManager.Object);
 
         var builder = Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
