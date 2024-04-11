@@ -1,17 +1,10 @@
 ﻿using System;
-using System.IO;
 using System.IO.Abstractions;
 using System.Threading.Tasks;
-using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Eryph.ConfigModel.Networks;
 using Eryph.Configuration;
-using Eryph.Configuration.Model;
 using Eryph.Modules.Controller;
-using Eryph.Modules.Controller.DataServices;
-using Eryph.Resources.Machines;
 using Eryph.Runtime.Zero.Configuration;
-using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Runtime.Zero.Configuration.Projects;
 using Eryph.Runtime.Zero.Configuration.Storage;
 using Eryph.StateDb;
@@ -21,7 +14,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
-using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Runtime.Zero
 {
