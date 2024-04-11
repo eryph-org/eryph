@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 using SimpleInjector.Lifestyles;
+using Xunit;
 
 namespace Eryph.StateDb.TestBase;
 
