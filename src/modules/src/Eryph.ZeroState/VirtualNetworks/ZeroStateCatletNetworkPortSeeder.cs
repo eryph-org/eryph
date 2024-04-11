@@ -19,17 +19,14 @@ namespace Eryph.ZeroState.VirtualNetworks;
 internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
 {
     private readonly IStateStore _stateStore;
-    private readonly ILogger _logger;
 
     public ZeroStateCatletNetworkPortSeeder(
         IFileSystem fileSystem,
         IZeroStateConfig config,
-        IStateStore stateStore,
-        ILogger logger)
+        IStateStore stateStore)
         : base(fileSystem, config.ProjectNetworkPortsConfigPath)
     {
         _stateStore = stateStore;
-        _logger = logger;
     }
 
     protected override async Task SeedAsync(
@@ -39,11 +36,7 @@ internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
     {
         var config = JsonSerializer.Deserialize<CatletNetworkPortsConfigModel>(json);
         if (config is null)
-        {
-            _logger.LogWarning("Could not seed project network ports for project {ProjectId} because the config is invalid",
-                entityId);
-            return;
-        }
+            throw new ZeroStateSeederException($"The network port configuration for project {entityId} is invalid");
 
         foreach (var portConfig in config.CatletNetworkPorts)
         {
@@ -62,13 +55,10 @@ internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
             new VirtualNetworkSpecs.GetByName(projectId, portConfig.VirtualNetworkName, portConfig.EnvironmentName),
             cancellationToken);
         if (network is null)
-        {
-            _logger.LogWarning("Could not seed project network port {PortName} because network {NetworkName} is missing",
-                portConfig.VirtualNetworkName, portConfig.VirtualNetworkName);
-            return;
-        }
+            throw new ZeroStateSeederException(
+                $"Cannot seed port {portConfig.Name} because network {portConfig.VirtualNetworkName} does not exist in environment {portConfig.EnvironmentName}");
 
-        bool exists = await _stateStore.For<CatletNetworkPort>().AnyAsync(
+        var exists = await _stateStore.For<CatletNetworkPort>().AnyAsync(
             new CatletNetworkPortSpecs.GetByName(network.Id, portConfig.Name),
             cancellationToken);
         if (exists)
@@ -87,11 +77,8 @@ internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
                 cancellationToken);
 
             if (floatingPort is null)
-            {
-                _logger.LogWarning("Could not seed catlet network port {PortName} because floating port {FloatingPortName} is missing",
-                    portConfig.VirtualNetworkName, portConfig.FloatingNetworkPort.Name);
-                return;
-            }
+                throw new ZeroStateSeederException(
+                    $"Cannot seed port {portConfig.Name} because floating port {portConfig.FloatingNetworkPort.Name} does not exist");
         }
 
         var assignments = await portConfig.IpAssignments
@@ -118,11 +105,8 @@ internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
     {
         var subnet = subnets.FirstOrDefault(s => s.Name == config.SubnetName);
         if (subnet is null)
-        {
-            _logger.LogWarning("Could not seed network port because subnet {SubnetName} is missing",
-                config.SubnetName);
-            return null;
-        }
+            throw new ZeroStateSeederException(
+                $"Cannot seed IP assignment {config.IpAddress} because subnet {config.SubnetName} does not exist");
 
         IpAssignment assignment;
         if (config.PoolName is not null)
@@ -130,11 +114,8 @@ internal class ZeroStateCatletNetworkPortSeeder : ZeroStateSeederBase
             await _stateStore.LoadCollectionAsync(subnet, s => s.IpPools, stoppingToken);
             var pool = subnet.IpPools.FirstOrDefault(p => p.Name == config.PoolName);
             if (pool is null)
-            {
-                _logger.LogWarning("Could not seed ip assignment {IpAddress} because pool {PoolName} is missing on subnet {SubnetName}",
-                    config.IpAddress, config.PoolName, subnet.Name);
-                return null;
-            }
+                throw new ZeroStateSeederException(
+                    $"Cannot seed IP assignment {config.IpAddress} because IP pool {config.PoolName} does not exist in subnet {config.SubnetName}");
 
             var startIp = IPAddress.Parse(pool.FirstIp);
             var assignedIp = IPAddress.Parse(config.IpAddress);

@@ -49,7 +49,7 @@ public static class ZeroStateContainerExtensions
         container.Collection.Append<IConfigSeeder<ControllerModule>, ZeroStateCatletNetworkPortSeeder>(Lifestyle.Scoped);
     }
 
-    public static void AddZeroStateService(this SimpleInjectorAddOptions options)
+    public static void AddZeroStateServices(this SimpleInjectorAddOptions options)
     {
         options.AddHostedService<ZeroStateBackgroundService<ZeroStateVirtualNetworkChange>>();
         options.AddHostedService<ZeroStateBackgroundService<ZeroStateFloatingNetworkPortChange>>();

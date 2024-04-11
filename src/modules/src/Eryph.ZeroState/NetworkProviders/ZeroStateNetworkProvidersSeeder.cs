@@ -25,16 +25,11 @@ internal class ZeroStateNetworkProvidersSeeder : IConfigSeeder<ControllerModule>
         _configRealizer = configRealizer;
     }
 
-    public async Task SeedAsync(CancellationToken stoppingToken = default)
+    public async Task Execute(CancellationToken stoppingToken)
     {
         var configResult = await _networkProviderManager.GetCurrentConfiguration();
         var config = configResult.IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());
 
         await _configRealizer.RealizeConfigAsync(config, stoppingToken);
-    }
-
-    public Task Execute(CancellationToken stoppingToken)
-    {
-        return SeedAsync(stoppingToken);
     }
 }

@@ -22,21 +22,18 @@ internal class ZeroStateFloatingNetworkPortSeeder : IConfigSeeder<ControllerModu
     private readonly IStateStore _stateStore;
     private readonly IFileSystem _fileSystem;
     private readonly string _configPath;
-    private readonly ILogger<ZeroStateFloatingNetworkPortSeeder> _logger;
 
     public ZeroStateFloatingNetworkPortSeeder(
         IStateStore stateStore,
         IZeroStateConfig config,
-        IFileSystem fileSystem,
-        ILogger<ZeroStateFloatingNetworkPortSeeder> logger)
+        IFileSystem fileSystem)
     {
         _stateStore = stateStore;
         _fileSystem = fileSystem;
         _configPath = Path.Combine(config.NetworksConfigPath, "ports.json");
-        _logger = logger;
     }
 
-    public async Task SeedAsync(CancellationToken stoppingToken = default)
+    public async Task Execute(CancellationToken stoppingToken)
     {
         if (!File.Exists(_configPath))
             return;
@@ -44,14 +41,11 @@ internal class ZeroStateFloatingNetworkPortSeeder : IConfigSeeder<ControllerModu
         File.Copy(_configPath, $"{_configPath}.bak", true);
 
         var json = await _fileSystem.File.ReadAllTextAsync(_configPath, Encoding.UTF8, stoppingToken);
-        var configs = JsonSerializer.Deserialize<FloatingNetworkPortsConfigModel>(json);
-        if (configs is null)
-        {
-            _logger.LogWarning("Could not deserialize network ports config from {ConfigPath}", _configPath);
-            return;
-        }
+        var config = JsonSerializer.Deserialize<FloatingNetworkPortsConfigModel>(json);
+        if (config is null)
+            throw new ZeroStateSeederException($"The port configuration for network providers is invalid");
 
-        foreach (var portConfig in configs.FloatingPorts)
+        foreach (var portConfig in config.FloatingPorts)
         {
             var existingPort = await _stateStore.For<FloatingNetworkPort>()
                 .GetBySpecAsync(new FloatingNetworkPortSpecs.GetByName(
@@ -59,16 +53,6 @@ internal class ZeroStateFloatingNetworkPortSeeder : IConfigSeeder<ControllerModu
                     stoppingToken);
             if (existingPort is not null)
                 continue;
-
-            var subnet = await _stateStore.For<ProviderSubnet>().GetBySpecAsync(
-                new SubnetSpecs.GetByProviderName(portConfig.ProviderName, portConfig.SubnetName),
-                stoppingToken);
-            if (subnet is null)
-            {
-                _logger.LogWarning("Could not seed network port {PortName} because subnet {SubnetName} is missing on provider {ProviderName}",
-                    portConfig.Name, portConfig.SubnetName, portConfig.ProviderName);
-                continue;
-            }
 
             var assignments = await portConfig.IpAssignments
                 .Map(ac => ResolveIpAssignment(portConfig.ProviderName, ac, stoppingToken))
@@ -99,22 +83,17 @@ internal class ZeroStateFloatingNetworkPortSeeder : IConfigSeeder<ControllerModu
             new SubnetSpecs.GetByProviderName(providerName, config.SubnetName),
             stoppingToken);
         if (subnet is null)
-        {
-            _logger.LogWarning("Could not seed network port because subnet {SubnetName} is missing on provider {ProviderName}",
-                config.SubnetName, providerName);
-            return null;
-        }
+            throw new ZeroStateSeederException(
+                $"Cannot seed IP assignment {config.IpAddress} because subnet {config.SubnetName} does not exist for provider {providerName}");
+
         IpAssignment assignment;
         if (config.PoolName is not null)
         {
             await _stateStore.LoadCollectionAsync(subnet, s => s.IpPools, stoppingToken);
             var pool = subnet.IpPools.FirstOrDefault(p => p.Name == config.PoolName);
             if (pool is null)
-            {
-                _logger.LogWarning("Could not seed ip assignment {IpAddress} because pool {PoolName} is missing on subnet {SubnetName}",
-                    config.IpAddress, config.PoolName, subnet.Name);
-                return null;
-            }
+                throw new ZeroStateSeederException(
+                    $"Cannot seed IP assignment {config.IpAddress} because IP pool {config.PoolName} does not exist in subnet {config.SubnetName} of provider {providerName}");
 
             var startIp = IPAddress.Parse(pool.FirstIp);
             var assignedIp = IPAddress.Parse(config.IpAddress);
@@ -134,10 +113,5 @@ internal class ZeroStateFloatingNetworkPortSeeder : IConfigSeeder<ControllerModu
         assignment.IpAddress = config.IpAddress;
 
         return assignment;
-    }
-
-    public Task Execute(CancellationToken stoppingToken)
-    {
-        return SeedAsync(stoppingToken);
     }
 }

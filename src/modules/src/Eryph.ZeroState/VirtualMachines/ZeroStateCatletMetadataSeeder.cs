@@ -15,17 +15,14 @@ namespace Eryph.ZeroState.VirtualMachines;
 
 internal class ZeroStateCatletMetadataSeeder : ZeroStateSeederBase
 {
-    private readonly ILogger _logger;
     private readonly IStateStoreRepository<CatletMetadata> _metadataRepository;
 
     public ZeroStateCatletMetadataSeeder(
         IFileSystem fileSystem,
         IZeroStateConfig config,
-        ILogger logger,
         IStateStoreRepository<CatletMetadata> metadataRepository)
         : base(fileSystem, config.VirtualMachinesConfigPath)
     {
-        _logger = logger;
         _metadataRepository = metadataRepository;
     }
 
@@ -42,10 +39,7 @@ internal class ZeroStateCatletMetadataSeeder : ZeroStateSeederBase
         
         var metadata = JsonSerializer.Deserialize<Resources.Machines.CatletMetadata>(json);
         if (metadata is null)
-        {
-            _logger.LogWarning("Could not deserialize catlet metadata {MetadataId}", entityId);
-            return;
-        }
+            throw new ZeroStateSeederException($"The catlet metadata {entityId} is invalid");
 
         await _metadataRepository.AddAsync(new CatletMetadata()
         {

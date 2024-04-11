@@ -41,7 +41,7 @@ public abstract class ZeroStateTestBase : StateDbTestBase
                     options.AddLogging();
                     options.Container.UseZeroState();
                     options.RegisterStateStore();
-                    options.AddZeroStateService();
+                    options.AddZeroStateServices();
                 });
             });
 

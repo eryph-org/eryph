@@ -19,22 +19,20 @@ namespace Eryph.ZeroState.VirtualNetworks;
 
 internal class ZeroStateVirtualNetworkSeeder : ZeroStateSeederBase
 {
-    private readonly ILogger _logger;
     private readonly INetworkProviderManager _networkProviderManager;
     private readonly INetworkConfigRealizer _configRealizer;
     private readonly INetworkConfigValidator _configValidator;
     private readonly IStateStore _stateStore;
 
     public ZeroStateVirtualNetworkSeeder(
-        ILogger logger,
         IFileSystem fileSystem,
         IZeroStateConfig config,
         INetworkProviderManager networkProviderManager,
         INetworkConfigRealizer configRealizer,
         INetworkConfigValidator configValidator,
-        IStateStore stateStore) : base(fileSystem, config.ProjectNetworksConfigPath)
+        IStateStore stateStore)
+        : base(fileSystem, config.ProjectNetworksConfigPath)
     {
-        _logger = logger;
         _networkProviderManager = networkProviderManager;
         _configRealizer = configRealizer;
         _configValidator = configValidator;
@@ -45,16 +43,13 @@ internal class ZeroStateVirtualNetworkSeeder : ZeroStateSeederBase
     {
         var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);
         if (configDictionary == null)
-            return;
+            throw new ZeroStateSeederException($"The network configuration for project {entityId} is invalid");
 
         var project = await _stateStore.For<Project>().GetBySpecAsync(
             new ProjectSpecs.GetById(EryphConstants.DefaultTenantId, entityId),
             cancellationToken);
         if (project is null)
-        {
-            _logger.LogWarning("Could not find project {ProjectId} during restore of networks", entityId);
-            return;
-        }
+            throw new ZeroStateSeederException($"The project {entityId} does not exist");
 
         var existingNetworks = await _stateStore.For<VirtualNetwork>().ListAsync(
             new VirtualNetworkSpecs.GetForProjectConfig(project.Id),
@@ -64,7 +59,6 @@ internal class ZeroStateVirtualNetworkSeeder : ZeroStateSeederBase
 
         var config = ProjectNetworksConfigDictionaryConverter.Convert(configDictionary);
         var normalizedConfig = _configValidator.NormalizeConfig(config);
-
 
         var providerConfig = await _networkProviderManager.GetCurrentConfiguration()
             .IfLeft(l => l.ToException().Rethrow<NetworkProvidersConfiguration>());

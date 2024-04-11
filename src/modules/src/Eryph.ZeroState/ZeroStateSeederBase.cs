@@ -28,10 +28,17 @@ internal abstract class ZeroStateSeederBase : IConfigSeeder<ControllerModule>
         var files = _fileSystem.Directory.EnumerateFiles(_configPath, "*.json");
         foreach (var file in files)
         {
-            File.Copy(file, $"{file}.bak", true);
-            var content = await _fileSystem.File.ReadAllTextAsync(file, Encoding.UTF8, stoppingToken);
-            var projectId = Guid.Parse(_fileSystem.Path.GetFileNameWithoutExtension(file));
-            await SeedAsync(projectId, content, stoppingToken);
+            try
+            {
+                File.Copy(file, $"{file}.bak", true);
+                var content = await _fileSystem.File.ReadAllTextAsync(file, Encoding.UTF8, stoppingToken);
+                var projectId = Guid.Parse(_fileSystem.Path.GetFileNameWithoutExtension(file));
+                await SeedAsync(projectId, content, stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                throw new ZeroStateSeederException($"Failed to seed database from file '{file}'", ex);
+            }
         }
     }
 
