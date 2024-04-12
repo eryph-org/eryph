@@ -8,13 +8,13 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.Modules.Controller.IdGenerator;
 using Eryph.Modules.Controller.Inventory;
 using Eryph.Modules.Controller.Networks;
 using Eryph.Modules.Controller.Operations;
 using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.Workflows;
+using IdGen;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,7 +68,7 @@ namespace Eryph.Modules.Controller
             container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
-            container.RegisterSingleton(() => new Id64Generator());
+            container.RegisterSingleton<IIdGenerator<long>>(IdGeneratorUtils.CreateIdGenerator);
 
             //use placement calculator of Host
             container.Register(serviceProvider.GetRequiredService<IPlacementCalculator>);

@@ -7,10 +7,10 @@ using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.Modules.Controller.IdGenerator;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
+using IdGen;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
@@ -28,11 +28,11 @@ namespace Eryph.Modules.Controller.Compute
         IHandleMessages<OperationTaskStatusEvent<PrepareParentGenomeCommand>>
 
     {
-        private readonly Id64Generator _idGenerator;
+        private readonly IIdGenerator<long> _idGenerator;
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IStateStore _stateStore;
 
-        public CreateCatletSaga(IWorkflow workflow, Id64Generator idGenerator,
+        public CreateCatletSaga(IWorkflow workflow, IIdGenerator<long> idGenerator,
             IVirtualMachineDataService vmDataService, IStateStore stateStore) : base(workflow)
         {
             _idGenerator = idGenerator;
@@ -170,7 +170,7 @@ namespace Eryph.Modules.Controller.Compute
                 Config = Data.Config,
                 NewMachineId = Data.MachineId,
                 AgentName = Data.AgentName,
-                StorageId = _idGenerator.GenerateId()
+                StorageId = _idGenerator.CreateId()
             }).AsTask();
         }
 
