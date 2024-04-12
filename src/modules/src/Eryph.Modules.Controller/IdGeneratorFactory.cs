@@ -7,7 +7,7 @@ using IdGen;
 
 namespace Eryph.Modules.Controller;
 
-public static class IdGeneratorUtils
+public static class IdGeneratorFactory
 {
     // The next values must not be changed as they define the structure
     // of the generated IDs. Any changes can lead to the generation of
@@ -22,7 +22,8 @@ public static class IdGeneratorUtils
     private static readonly ITimeSource TimeSource = new DefaultTimeSource(Epoch, TickDuration);
 
     /// <summary>
-    /// Create the singleton <see cref="IdGenerator"/>.
+    /// Create the <see cref="IdGenerator"/>. The returned instance should
+    /// be used as a singleton.
     /// </summary>
     public static IdGenerator CreateIdGenerator()
     {

@@ -68,7 +68,7 @@ namespace Eryph.Modules.Controller
             container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
             container.RegisterSingleton<INetworkSyncService, NetworkSyncService>();
 
-            container.RegisterSingleton<IIdGenerator<long>>(IdGeneratorUtils.CreateIdGenerator);
+            container.RegisterSingleton<IIdGenerator<long>>(IdGeneratorFactory.CreateIdGenerator);
 
             //use placement calculator of Host
             container.Register(serviceProvider.GetRequiredService<IPlacementCalculator>);

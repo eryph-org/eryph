@@ -13,7 +13,7 @@ public class IdGeneratorTests
     [Fact]
     public void Generator_settings_are_correct()
     {
-        var idGenerator = IdGeneratorUtils.CreateIdGenerator();
+        var idGenerator = IdGeneratorFactory.CreateIdGenerator();
 
         idGenerator.Options.TimeSource.Epoch.Should().Be(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
         idGenerator.Options.TimeSource.TickDuration.Should().Be(TimeSpan.FromMilliseconds(1));
