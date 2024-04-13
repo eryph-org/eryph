@@ -16,7 +16,9 @@ public class EryphTaskDispatcher : DefaultOperationTaskDispatcher
     {
     }
 
-    protected override ValueTask<(IOperationTask, object)> CreateTask(Guid operationId, Guid initiatingTaskId, object command, object? additionalData,
+    protected override ValueTask<(IOperationTask, object)> CreateTask(Guid operationId, 
+        Guid initiatingTaskId, object command,
+        DateTimeOffset created, object? additionalData,
         IDictionary<string, string>? additionalHeaders)
     {
         if (additionalData != null)
@@ -41,6 +43,6 @@ public class EryphTaskDispatcher : DefaultOperationTaskDispatcher
             }
         }
 
-        return base.CreateTask(operationId, initiatingTaskId, command, additionalData, additionalHeaders);
+        return base.CreateTask(operationId, initiatingTaskId, command,created, additionalData, additionalHeaders);
     }
 }

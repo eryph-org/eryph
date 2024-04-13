@@ -25,7 +25,8 @@ namespace Eryph.StateDb.Specifications
                             .Where(l => l.Timestamp > requestLogTimestamp));
                         break;
                     case "tasks":
-                        query.Include(x => x.Tasks);
+                        query.Include(x => x.Tasks)
+                            .ThenInclude(x=>x.Progress);
                         break;
                     case "resources":
                         query.Include(x => x.Resources);

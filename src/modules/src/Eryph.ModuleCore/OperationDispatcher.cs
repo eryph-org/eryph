@@ -19,7 +19,8 @@ public class OperationDispatcher : DefaultOperationDispatcher
         _operationManager = operationManager;
     }
 
-    protected override async ValueTask<(IOperation, object)> CreateOperation(object command, object? additionalData,
+    protected override async ValueTask<(IOperation, object)> CreateOperation(object command, 
+        DateTimeOffset timestamp, object? additionalData,
         IDictionary<string,string>? additionalHeaders)
     {
         var operationId = Guid.NewGuid();
@@ -30,6 +31,6 @@ public class OperationDispatcher : DefaultOperationDispatcher
                 : correlatedCommand.CorrelationId;
 
 
-        return (await _operationManager.GetOrCreateAsync(operationId, command, additionalData, additionalHeaders), command);
+        return (await _operationManager.GetOrCreateAsync(operationId, command, timestamp, additionalData, additionalHeaders), command);
     }
 }

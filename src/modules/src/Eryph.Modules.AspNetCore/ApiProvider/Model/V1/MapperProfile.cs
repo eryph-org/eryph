@@ -1,5 +1,7 @@
-﻿using AutoMapper;
+﻿using System.Linq;
+using AutoMapper;
 using Eryph.Core;
+using Eryph.StateDb.Model;
 
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
@@ -19,6 +21,17 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
             CreateMap<StateDb.Model.Project, Project>();
             CreateMap<StateDb.Model.OperationTaskModel, OperationTask>()
                 .ForMember(x => x.ParentTask, m => m.MapFrom(x => x.ParentTaskId))
+                .ForMember(x=>x.Progress, m =>
+                {
+                    m.MapFrom(x =>
+                        x.Status == OperationTaskStatus.Completed 
+                            ? 100
+                            : x.Progress == null 
+                                ? 0 
+                                : x.Progress.Count > 0 
+                                    ? x.Progress.Max(p => p.Progress) 
+                                    : 0);
+                })
                 .ForMember(x => x.Reference,
                     m =>
                     {
