@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net60</TargetFramework>
@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.Core\Eryph.Core.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />

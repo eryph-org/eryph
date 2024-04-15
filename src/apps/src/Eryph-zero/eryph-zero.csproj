@@ -56,7 +56,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.NetworkModule\Eryph.Modules.NetworkModule.csproj" />
-    <ProjectReference Include="..\..\..\modules\src\Eryph.ZeroState\Eryph.ZeroState.csproj" />
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.ComputeApi\Eryph.Modules.ComputeApi.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.Controller\Eryph.Modules.Controller.csproj" />

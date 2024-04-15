@@ -323,42 +323,51 @@ internal static class Program
                 container.Bootstrap(ovsRunDir);
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
-                var builder = ModulesHost.CreateDefaultBuilder(args) as ModulesHostBuilder;
+                var builder = ModulesHost.CreateDefaultBuilder(args);
 
-                var host =
-                    builder!
-                        .ConfigureInternalHost(hb =>
-                        {
-                            hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero");
-                        })
+                var host = builder
+                    .ConfigureInternalHost(hb =>
+                    {
+                        hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero");
+                    })
 
-                        .UseAspNetCore((module, webHostBuilder) =>
+                    .UseAspNetCore((module, webHostBuilder) =>
+                    {
+                        webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); });
+                    })
+                    .UseSimpleInjector(container)
+                    .ConfigureAppConfiguration((_, config) =>
+                    {
+                        config.AddInMemoryCollection(new Dictionary<string, string>
                         {
-                            webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); });
-                        })
-                        .UseSimpleInjector(container)
-                        .ConfigureAppConfiguration((_, config) =>
+                            { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
+                            { "bus:type", "inmemory" },
+                            { "databus:type", "inmemory" },
+                            { "store:type", "inmemory" },
+                        });
+                        config.AddInMemoryCollection(new Dictionary<string, string>
                         {
-                            config.AddInMemoryCollection(new Dictionary<string, string>
-                            {
-                                { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
-                                { "bus:type", "inmemory" },
-                                { "databus:type", "inmemory" },
-                                { "store:type", "inmemory" }
-                            });
-                        })
-                        .HostModule<VmHostAgentModule>()
-                        .HostModule<NetworkModule>()
-                        .AddControllerModule(container)
-                        .HostModule<ComputeApiModule>()
-                        .AddIdentityModule(container)
-                        .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
-                        .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
-                            EventLogSettings, EventLogLoggerProvider>)
-                        .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
-                        // The logger must not be disposed here as it is injected into multiple modules
-                        .UseSerilog(logger: logger, dispose: false)
-                        .Build();
+                            ["changeTracking:trackChanges"] = bool.TrueString,
+                            ["changeTracking:seedDatabase"] = bool.TrueString,
+                            ["changeTracking:networksConfigPath"] = ZeroConfig.GetNetworksConfigPath(),
+                            ["changeTracking:projectsConfigPath"] = ZeroConfig.GetProjectsConfigPath(),
+                            ["changeTracking:projectNetworksConfigPath"] = ZeroConfig.GetProjectNetworksConfigPath(),
+                            ["changeTracking:projectNetworkPortsConfigPath"] = ZeroConfig.GetProjectNetworkPortsConfigPath(),
+                            ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
+                        });
+                    })
+                    .HostModule<VmHostAgentModule>()
+                    .HostModule<NetworkModule>()
+                    .AddControllerModule(container)
+                    .HostModule<ComputeApiModule>()
+                    .AddIdentityModule(container)
+                    .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
+                    .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
+                        EventLogSettings, EventLogLoggerProvider>)
+                    .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
+                    // The logger must not be disposed here as it is injected into multiple modules
+                    .UseSerilog(logger: logger, dispose: false)
+                    .Build();
 
                 //starting here all errors should be considered as recoverable
                 returnCode = -1;

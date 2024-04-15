@@ -1,22 +1,28 @@
 ﻿using System;
+using System.IO.Abstractions;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.OVN;
 using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.Configuration;
 using Eryph.Core;
 using Eryph.ModuleCore;
+using Eryph.ModuleCore.Configuration;
+using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Inventory;
 using Eryph.Modules.Controller.Networks;
 using Eryph.Modules.Controller.Operations;
+using Eryph.Modules.Controller.Seeding;
 using Eryph.Rebus;
+using Eryph.Runtime.Zero.Configuration.Projects;
 using Eryph.StateDb;
 using Eryph.StateDb.Workflows;
 using IdGen;
 using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Rebus.Config;
 using Rebus.Handlers;
@@ -27,17 +33,29 @@ using Rebus.Subscriptions;
 using Rebus.Timeouts;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
+using IFileSystem = System.IO.Abstractions.IFileSystem;
 
 namespace Eryph.Modules.Controller
 {
     [UsedImplicitly]
     public class ControllerModule
     {
+        private readonly ChangeTrackingConfig _changeTrackingConfig;
+
         public string Name => "Eryph.Controller";
 
+        public ControllerModule(IConfiguration configuration)
+        {
+            _changeTrackingConfig = configuration
+                .GetSection("ChangeTracking")
+                .Get<ChangeTrackingConfig>();
+        }
 
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
+            container.RegisterSingleton<IFileSystem, FileSystem>();
+            container.RegisterInstance(_changeTrackingConfig);
+
             container.Register<StartBusModuleHandler>();
 
             container.Register<IRebusUnitOfWork, StateStoreDbUnitOfWork>(Lifestyle.Scoped);
@@ -95,13 +113,16 @@ namespace Eryph.Modules.Controller
                 .Subscriptions(s => serviceProvider.GetRequiredService<IRebusConfigurer<ISubscriptionStorage>>().Configure(s))
                 .Logging(x => x.Serilog())
                 .Start());
-                
-            
         }
 
         [UsedImplicitly]
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
+            options.AddSeeding(_changeTrackingConfig);
+            
+            if(_changeTrackingConfig.TrackChanges)
+                options.AddChangeTracking();
+            
             options.Services.AddHostedHandler<StartBusModuleHandler>();
             options.Services.AddHostedHandler<SyncNetworksHandler>();
             options.AddHostedService<InventoryTimerService>();
