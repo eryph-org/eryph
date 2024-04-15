@@ -95,7 +95,22 @@ param(
 
     [Parameter(Mandatory = $false)]
     [switch]
-    $Force
+    $Force,
+
+    # Download the latest version even it is unstable
+    [Parameter(Mandatory = $false)]
+    [switch]
+    $Unstable,
+
+    # EMail address for invitation code download
+    [Parameter(Mandatory = $false)]
+    [string]
+    $EMail,
+
+    # Code for invitation code download
+    [Parameter(Mandatory = $false)]
+    [string]
+    $InvitationCode
 )
 
 #region Functions
@@ -341,6 +356,59 @@ function Test-EryphInstalled {
     }
 }
 
+function Get-BetaDownloadUrl {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Management.Automation.PSObject]
+        $productFile
+    )
+
+    Write-Information "This version can only be downloaded with an invitation code." -InformationAction Continue
+
+    if(-not $EMail){
+        $EMail = Read-Host -Prompt "Please enter your email address"
+    }
+    if(-not $InvitationCode){
+        $InvitationCode = Read-Host -Prompt "Please enter your invitation code"
+    }
+
+    Write-Information "Requesting download url. This could take a moment..." -InformationAction Continue
+
+    $request = @{
+        beta = $productFile.Beta
+        betaPath = $productFile.BetaPath
+        email = $EMail
+        invitationCode = $InvitationCode
+    } | ConvertTo-Json
+
+    $response = Invoke-RestMethod -Uri 'https://identity-backend-eu1.dbosoft.eu/api/request/BetaDownload' -Method POST -Body $request -ContentType 'application/json' -SkipHttpErrorCheck
+
+    if($response.message){
+
+        $errorMessage = "Failed to retrieve download url. Error: ${response.message}"
+        if($response.message -eq "invalid invitation code"){
+            $errorMessage = @(
+                'The invitation code is invalid.'
+                'Please note that the invitation code has to match the email address.'
+                'If you have not received an invitation code, please join the waitlist on https://eryph.io'
+                ' '
+            ) -join [Environment]::NewLine
+        }
+        Write-Error $errorMessage
+        return
+    }
+
+    $betaUrl = $response.value.downloadUri
+
+    if(-not $betaUrl){
+        Write-Error "No download url found in response"
+        return
+    }
+    $betaUrl
+
+}
+
 #endregion Functions
 
 #region Pre-check
@@ -425,7 +493,7 @@ if ($DownloadUrl) {
 } elseif ($Version) {
     Write-Information "Downloading specific version of eryph-zero: $Version" -InformationAction Continue
 } else {
-    Write-Information "Getting latest version of eryph-zero." -InformationAction Continue
+    Write-Information "Fetching versions of eryph-zero." -InformationAction Continue
 }
 
 if(-not $DownloadUrl){
@@ -439,8 +507,20 @@ if(-not $DownloadUrl){
     $latestVersion = $productJson.latestVersion
     Write-Verbose "Latest version of eryph: ${latestVersion}"
 
+    $stableVersion = $productJson.stableVersion
+    Write-Verbose "Stable version of eryph: ${stableVersion}"
+
     if(-not $Version){
         $Version = $latestVersion
+
+        if(-not $Unstable){
+            $Version = $stableVersion
+            if(-not $Version){
+                $Version = $latestVersion
+            }
+        }
+
+        Write-Information "Selected version of eryph: ${Version}" -InformationAction Continue
     }
 
     $productFile = $productJson.versions."$Version".files | Where-Object arch -eq 'amd64' | Select-Object -First 1
@@ -450,7 +530,15 @@ if(-not $DownloadUrl){
         return
     }
 
-    $DownloadUrl = $productFile.url
+    if(-not $productFile.Beta){
+        $DownloadUrl = $productFile.url
+    }
+    else{
+        $DownloadUrl = Get-BetaDownloadUrl $productFile
+        if(-not $DownloadUrl){
+            return
+        }
+    }
 
 
 }
