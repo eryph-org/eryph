@@ -13,8 +13,8 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.Modules.Controller.IdGenerator;
 using Eryph.Resources.Machines;
+using IdGen;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
@@ -38,12 +38,12 @@ namespace Eryph.Modules.Controller.Compute
 
     {
         private readonly IBus _bus;
-        private readonly Id64Generator _idGenerator;
+        private readonly IIdGenerator<long> _idGenerator;
         private readonly IVirtualMachineMetadataService _metadataService;
         private readonly IVirtualMachineDataService _vmDataService;
 
 
-        public UpdateCatletSaga(IWorkflow workflow, IBus bus, Id64Generator idGenerator,
+        public UpdateCatletSaga(IWorkflow workflow, IBus bus, IIdGenerator<long> idGenerator,
             IVirtualMachineDataService vmDataService,
             IVirtualMachineMetadataService metadataService) : base(workflow)
         {
@@ -218,7 +218,7 @@ namespace Eryph.Modules.Controller.Compute
                             VMId = vm.VMId,
                             Config = Data.Config,
                             AgentName = Data.AgentName,
-                            NewStorageId = _idGenerator.GenerateId(),
+                            NewStorageId = _idGenerator.CreateId(),
                             MachineMetadata = metadata,
                             MachineNetworkSettings = r.NetworkSettings
                         }).AsTask();
