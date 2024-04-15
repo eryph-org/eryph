@@ -7,6 +7,8 @@ namespace Eryph.Modules.Controller.ChangeTracking;
 
 internal interface IChangeTrackingQueue<TChange>
 {
+    void Enable();
+
     int GetCount();
 
     Task<ChangeTrackingQueueItem<TChange>> DequeueAsync(
@@ -19,12 +21,16 @@ internal interface IChangeTrackingQueue<TChange>
 
 internal class ChangeTrackingQueue<TChange> : IChangeTrackingQueue<TChange>
 {
+    private bool _enabled;
+
     private readonly Channel<ChangeTrackingQueueItem<TChange>> _channel =
         Channel.CreateBounded<ChangeTrackingQueueItem<TChange>>(
             new BoundedChannelOptions(5)
             {
                 FullMode = BoundedChannelFullMode.Wait,
             });
+
+    public void Enable() => _enabled = true;
 
     public int GetCount() => _channel.Reader.Count;
 
@@ -38,6 +44,9 @@ internal class ChangeTrackingQueue<TChange> : IChangeTrackingQueue<TChange>
         ChangeTrackingQueueItem<TChange> item,
         CancellationToken cancellationToken = default)
     {
+        if(!_enabled)
+            return;
+
         await _channel.Writer.WriteAsync(item, cancellationToken);
     }
 }

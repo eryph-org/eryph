@@ -24,8 +24,9 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
         _queue = queue;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken) 
     {
+        _queue.Enable();
         while (!stoppingToken.IsCancellationRequested)
         {
             try

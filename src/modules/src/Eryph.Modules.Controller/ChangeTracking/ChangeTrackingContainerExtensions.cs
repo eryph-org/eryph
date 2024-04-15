@@ -1,13 +1,8 @@
-﻿using System.Threading.Tasks;
-using Dbosoft.Hosuto.HostedServices;
-using Eryph.Configuration;
-using Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
+﻿using Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
 using Eryph.Modules.Controller.ChangeTracking.Projects;
 using Eryph.Modules.Controller.ChangeTracking.VirtualMachines;
-using Eryph.Modules.Controller.Seeding;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -25,12 +20,6 @@ public static class ChangeTrackingContainerExtensions
         options.AddHostedService<ChangeTrackingBackgroundService<ProjectChange>>();
         options.AddHostedService<ChangeTrackingBackgroundService<CatletNetworkPortChange>>();
         options.AddHostedService<ChangeTrackingBackgroundService<CatletMetadataChange>>();
-        options.Services.AddHostedHandler((sp, _) =>
-        {
-            var changeTrackingInterceptorContext = sp.GetRequiredService<ChangeTrackingInterceptorContext>();
-            changeTrackingInterceptorContext.EnableInterceptors = true;
-            return Task.CompletedTask;
-        });
     }
 
     private static void RegisterChangeTracking(this Container container)
@@ -49,7 +38,5 @@ public static class ChangeTrackingContainerExtensions
             typeof(IDbTransactionInterceptor),
             new []{ typeof(ChangeInterceptorBase<>).Assembly },
             Lifestyle.Scoped);
-
-        container.Register<ChangeTrackingInterceptorContext>(Lifestyle.Singleton);
     }
 }
