@@ -1,6 +1,7 @@
 ﻿using Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
 using Eryph.Modules.Controller.ChangeTracking.Projects;
 using Eryph.Modules.Controller.ChangeTracking.VirtualMachines;
+using Eryph.Modules.Controller.ChangeTracking.VirtualNetworks;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using SimpleInjector;

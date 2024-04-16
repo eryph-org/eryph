@@ -17,7 +17,7 @@ internal class ProjectChangeInterceptor : ChangeInterceptorBase<ProjectChange>
     {
     }
 
-    protected override Task<Option<ProjectChange>> DetectChanges(
+    protected override Task<Seq<ProjectChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
@@ -27,11 +27,8 @@ internal class ProjectChangeInterceptor : ChangeInterceptorBase<ProjectChange>
                 .Map(pra => pra.Entity.ProjectId))
             .ToList()
             .Distinct()
-            .Match(
-                Empty: () => Task.FromResult(Option<ProjectChange>.None),
-                More: p => Task.FromResult(Some(new ProjectChange
-                {
-                    ProjectIds = p.ToList(),
-                })));
+            .Map(pId => new ProjectChange() { ProjectId = pId })
+            .ToSeq()
+            .AsTask();
     }
 }

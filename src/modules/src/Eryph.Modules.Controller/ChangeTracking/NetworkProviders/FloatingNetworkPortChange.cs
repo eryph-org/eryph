@@ -4,5 +4,5 @@ namespace Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
 
 internal class FloatingNetworkPortChange
 {
-    public List<string> ProviderNames { get; set; } = new();
+    public List<string> ProviderNames { get; init; } = new();
 }

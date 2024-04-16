@@ -33,16 +33,7 @@ internal class ProjectChangeHandler : IChangeHandler<ProjectChange>
         ProjectChange change,
         CancellationToken cancellationToken = default)
     {
-        foreach (var projectId in change.ProjectIds)
-        {
-            await HandleChangeAsync(projectId, cancellationToken);
-        }
-    }
-
-    private async Task HandleChangeAsync(
-        Guid projectId,
-        CancellationToken cancellationToken = default)
-    {
+        var projectId = change.ProjectId;
         var path = Path.Combine(_config.ProjectsConfigPath, $"{projectId}.json");
         var project = await _stateStore.For<Project>().GetByIdAsync(projectId, cancellationToken);
         if (project is null)

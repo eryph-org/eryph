@@ -17,7 +17,7 @@ internal class ProviderPoolChangeInterceptor
     {
     }
 
-    protected override async Task<Option<ProviderPoolChange>> DetectChanges(
+    protected override async Task<Seq<ProviderPoolChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
@@ -35,8 +35,8 @@ internal class ProviderPoolChangeInterceptor
                 .Map(s => s.ProviderName));
 
         return providers.Distinct().Match(
-            Empty: () => None,
-            More: p => Some(new ProviderPoolChange()
+            Empty: () => Empty,
+            More: p => Seq1(new ProviderPoolChange()
             {
                 ProviderNames = p.ToList(),
             }));

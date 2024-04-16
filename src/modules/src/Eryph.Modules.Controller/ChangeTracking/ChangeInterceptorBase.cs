@@ -11,7 +11,7 @@ namespace Eryph.Modules.Controller.ChangeTracking;
 internal abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
 {
     private readonly IChangeTrackingQueue<TChange> _queue;
-    private Option<ChangeTrackingQueueItem<TChange>> _currentItem = Option<ChangeTrackingQueueItem<TChange>>.None;
+    private Seq<ChangeTrackingQueueItem<TChange>> _currentItem = Prelude.Empty;
 
     protected ChangeInterceptorBase(
         IChangeTrackingQueue<TChange> queue)
@@ -19,7 +19,7 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
         _queue = queue;
     }
 
-    protected abstract Task<Option<TChange>> DetectChanges(
+    protected abstract Task<Seq<TChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default);
 
@@ -43,7 +43,10 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
         TransactionEndEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        await _currentItem.IfSomeAsync(item => _queue.EnqueueAsync(item, cancellationToken));
+        foreach (var item in _currentItem)
+        {
+            await _queue.EnqueueAsync(item, cancellationToken);
+        }
     }
 
     public override InterceptionResult TransactionCommitting(

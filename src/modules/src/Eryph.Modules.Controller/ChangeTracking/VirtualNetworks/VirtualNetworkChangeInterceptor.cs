@@ -1,12 +1,13 @@
 ﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Modules.Controller.ChangeTracking.Projects;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Controller.ChangeTracking;
+namespace Eryph.Modules.Controller.ChangeTracking.VirtualNetworks;
 
 internal class VirtualNetworkChangeInterceptor : ChangeInterceptorBase<VirtualNetworkChange>
 {
@@ -16,7 +17,7 @@ internal class VirtualNetworkChangeInterceptor : ChangeInterceptorBase<VirtualNe
     {
     }
 
-    protected override async Task<Option<VirtualNetworkChange>> DetectChanges(
+    protected override async Task<Seq<VirtualNetworkChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
@@ -44,17 +45,11 @@ internal class VirtualNetworkChangeInterceptor : ChangeInterceptorBase<VirtualNe
             .SequenceSerial()
             .Map(e => e.Somes());
 
-        var projectIds = networks
+        return networks
             .Concat(dbContext.ChangeTracker.Entries<VirtualNetwork>().ToList())
             .Map(e => e.Entity.ProjectId)
             .Distinct()
-            .ToList();
-
-        return projectIds.Match(
-            Empty: () => None,
-            More: p => Some(new VirtualNetworkChange
-            {
-                ProjectIds = p.ToList(),
-            }));
+            .Map(pId => new VirtualNetworkChange { ProjectId = pId })
+            .ToSeq();
     }
 }

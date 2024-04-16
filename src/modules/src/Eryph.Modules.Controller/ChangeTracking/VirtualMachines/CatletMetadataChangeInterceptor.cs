@@ -5,8 +5,6 @@ using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
 
-using static LanguageExt.Prelude;
-
 namespace Eryph.Modules.Controller.ChangeTracking.VirtualMachines;
 
 internal class CatletMetadataChangeInterceptor : ChangeInterceptorBase<CatletMetadataChange>
@@ -17,18 +15,15 @@ internal class CatletMetadataChangeInterceptor : ChangeInterceptorBase<CatletMet
     {
     }
 
-    protected override Task<Option<CatletMetadataChange>> DetectChanges(
+    protected override Task<Seq<CatletMetadataChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
         return dbContext.ChangeTracker.Entries<CatletMetadata>().ToList()
             .Map(e => e.Entity.Id)
             .Distinct()
-            .Match(
-                Empty: () => Task.FromResult(Option<CatletMetadataChange>.None),
-                More: p => Task.FromResult(Some(new CatletMetadataChange
-                {
-                    Ids = p.ToList(),
-                })));
+            .Map(mId => new CatletMetadataChange { MetadataId = mId })
+            .ToSeq()
+            .AsTask();
     }
 }

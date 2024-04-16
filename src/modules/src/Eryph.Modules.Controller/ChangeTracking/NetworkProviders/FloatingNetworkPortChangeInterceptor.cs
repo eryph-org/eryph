@@ -18,7 +18,7 @@ internal class FloatingNetworkPortChangeInterceptor
     {
     }
 
-    protected override async Task<Option<FloatingNetworkPortChange>> DetectChanges(
+    protected override async Task<Seq<FloatingNetworkPortChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
@@ -40,8 +40,8 @@ internal class FloatingNetworkPortChangeInterceptor
             .Map(e => e.Entity.ProviderName)
             .Distinct()
             .Match(
-                Empty: () => None,
-                More: p => Some(new FloatingNetworkPortChange()
+                Empty: () => Empty,
+                More: p => Seq1(new FloatingNetworkPortChange()
                 {
                     ProviderNames = p.ToList(),
                 }));

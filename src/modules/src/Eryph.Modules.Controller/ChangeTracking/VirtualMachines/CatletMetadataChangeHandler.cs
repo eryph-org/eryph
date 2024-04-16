@@ -30,23 +30,14 @@ internal class CatletMetadataChangeHandler : IChangeHandler<CatletMetadataChange
         CatletMetadataChange change,
         CancellationToken cancellationToken = default)
     {
-        foreach (var metadataId in change.Ids)
-        {
-            await HandleChangeAsync(metadataId, cancellationToken);
-        }
-    }
-
-    private async Task HandleChangeAsync(
-        Guid metadataId,
-        CancellationToken cancellationToken = default)
-    {
+        var metadataId = change.MetadataId;
         var path = Path.Combine(_config.VirtualMachinesConfigPath, $"{metadataId}.json");
 
         var metadata = await _stateStore.For<CatletMetadata>()
             .GetByIdAsync(metadataId, cancellationToken);
         if (metadata is null)
         {
-            _fileSystem.File.Delete(path); 
+            _fileSystem.File.Delete(path);
             return;
         }
 

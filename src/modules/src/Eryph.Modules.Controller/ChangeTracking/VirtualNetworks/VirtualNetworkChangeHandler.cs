@@ -10,7 +10,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 
-namespace Eryph.Modules.Controller.ChangeTracking;
+namespace Eryph.Modules.Controller.ChangeTracking.VirtualNetworks;
 
 internal class VirtualNetworkChangeHandler : IChangeHandler<VirtualNetworkChange>
 {
@@ -32,16 +32,7 @@ internal class VirtualNetworkChangeHandler : IChangeHandler<VirtualNetworkChange
         VirtualNetworkChange change,
         CancellationToken cancellationToken = default)
     {
-        foreach (var projectId in change.ProjectIds)
-        {
-            await HandleChangeAsync(projectId, cancellationToken);
-        }
-    }
-
-    private async Task HandleChangeAsync(
-        Guid projectId,
-        CancellationToken cancellationToken = default)
-    {
+        var projectId = change.ProjectId;
         var path = Path.Combine(_config.ProjectNetworksConfigPath, $"{projectId}.json");
 
         var project = await _stateStore.Read<Project>().GetByIdAsync(projectId, cancellationToken);

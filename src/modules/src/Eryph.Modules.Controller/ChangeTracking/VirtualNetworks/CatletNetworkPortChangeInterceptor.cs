@@ -6,7 +6,7 @@ using LanguageExt;
 using Microsoft.EntityFrameworkCore;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Controller.ChangeTracking;
+namespace Eryph.Modules.Controller.ChangeTracking.VirtualNetworks;
 
 internal class CatletNetworkPortChangeInterceptor
     : ChangeInterceptorBase<CatletNetworkPortChange>
@@ -17,7 +17,7 @@ internal class CatletNetworkPortChangeInterceptor
     {
     }
 
-    protected override async Task<Option<CatletNetworkPortChange>> DetectChanges(
+    protected override async Task<Seq<CatletNetworkPortChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
@@ -45,16 +45,10 @@ internal class CatletNetworkPortChangeInterceptor
             .SequenceSerial()
             .Map(e => e.Somes());
 
-        var projectId = networks
+        return networks
             .Map(e => e.Entity.ProjectId)
             .Distinct()
-            .ToList();
-
-        return projectId.Match(
-            Empty: () => None,
-            More: p => Some(new CatletNetworkPortChange()
-            {
-                ProjectIds = p.ToList(),
-            }));
+            .Map(pId => new CatletNetworkPortChange { ProjectId = pId })
+            .ToSeq();
     }
 }
