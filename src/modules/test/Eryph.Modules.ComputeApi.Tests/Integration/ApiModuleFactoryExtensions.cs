@@ -127,7 +127,7 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration
             });
         }
 
-        public static List<T> GetPendingMessages<T>(
+        public static List<T> GetPendingRebusMessages<T>(
             this WebModuleFactory<ComputeApiModule> factory)
         {
             var container = factory.Services.GetRequiredService<Container>();

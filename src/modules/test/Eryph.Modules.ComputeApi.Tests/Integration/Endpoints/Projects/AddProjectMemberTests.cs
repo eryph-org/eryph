@@ -91,7 +91,7 @@ public class AddProjectMemberTests : IClassFixture<WebModuleFactory<ComputeApiMo
                 });
 
         response.Should().NotBeNull();
-        var messages = _factory.GetPendingMessages<AddProjectMemberCommand>();
+        var messages = _factory.GetPendingRebusMessages<AddProjectMemberCommand>();
         if (isAuthorized)
         {
             response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
@@ -128,7 +128,7 @@ public class AddProjectMemberTests : IClassFixture<WebModuleFactory<ComputeApiMo
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        var messages = _factory.GetPendingMessages<AddProjectMemberCommand>();
+        var messages = _factory.GetPendingRebusMessages<AddProjectMemberCommand>();
         messages.Should().BeEmpty();
     }
 
@@ -149,7 +149,7 @@ public class AddProjectMemberTests : IClassFixture<WebModuleFactory<ComputeApiMo
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        var messages = _factory.GetPendingMessages<AddProjectMemberCommand>();
+        var messages = _factory.GetPendingRebusMessages<AddProjectMemberCommand>();
         messages.Should().BeEmpty();
     }
 }

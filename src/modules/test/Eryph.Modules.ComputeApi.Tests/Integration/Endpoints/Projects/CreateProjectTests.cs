@@ -38,7 +38,7 @@ public class CreateProjectTests : IClassFixture<WebModuleFactory<ComputeApiModul
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
         
-        var messages = _factory.GetPendingMessages<CreateProjectCommand>();
+        var messages = _factory.GetPendingRebusMessages<CreateProjectCommand>();
         messages.Should().SatisfyRespectively(
             m =>
             {
@@ -63,7 +63,7 @@ public class CreateProjectTests : IClassFixture<WebModuleFactory<ComputeApiModul
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
-        var messages = _factory.GetPendingMessages<CreateProjectCommand>();
+        var messages = _factory.GetPendingRebusMessages<CreateProjectCommand>();
         messages.Should().SatisfyRespectively(
             m =>
             {
@@ -88,7 +88,7 @@ public class CreateProjectTests : IClassFixture<WebModuleFactory<ComputeApiModul
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
-        var messages = _factory.GetPendingMessages<CreateProjectCommand>();
+        var messages = _factory.GetPendingRebusMessages<CreateProjectCommand>();
         messages.Should().SatisfyRespectively(
             m =>
             {
