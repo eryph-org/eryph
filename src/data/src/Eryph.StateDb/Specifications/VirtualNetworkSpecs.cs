@@ -25,8 +25,27 @@ public static class VirtualNetworkSpecs
                 .Include(x => x.RouterPort).ThenInclude(x => x.FloatingPort)
                 .Include(x => x.Subnets)
                 .ThenInclude(x => x.IpPools);
-
         }
+    }
 
+    public sealed class GetForChangeTracking : Specification<VirtualNetwork>
+    {
+        public GetForChangeTracking(Guid projectId)
+        {
+            Query.Where(x => x.ProjectId == projectId)
+                .Include(x => x.NetworkPorts)
+                .ThenInclude(p => p.FloatingPort)
+                .Include(n => n.NetworkPorts)
+                .ThenInclude(p => p.IpAssignments)
+                .ThenInclude(a => ((IpPoolAssignment)a).Pool)
+                .Include(n => n.NetworkPorts)
+                .ThenInclude(p => p.IpAssignments)
+                .ThenInclude(a => a.Subnet)
+                .Include(x => x.Subnets)
+                .Include(x => x.RouterPort)
+                .ThenInclude(x => x.FloatingPort)
+                .Include(x => x.Subnets)
+                .ThenInclude(x => x.IpPools);
+        }
     }
 }

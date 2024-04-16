@@ -5,15 +5,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
-using LanguageExt.Pipes;
 
 namespace Eryph.StateDb.Specifications;
 
 public sealed class FloatingNetworkPortSpecs
 {
-    public sealed class GetForConfig : Specification<FloatingNetworkPort>
+    public sealed class GetForChangeTracking : Specification<FloatingNetworkPort>
     {
-        public GetForConfig()
+        public GetForChangeTracking()
         {
             Query.Include(p => p.IpAssignments)
                 .ThenInclude(a => ((IpPoolAssignment)a).Pool);

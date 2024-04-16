@@ -34,7 +34,7 @@ internal class VirtualNetworkChangeInterceptor : ChangeInterceptorBase<VirtualNe
                 .OfType<VirtualNetworkSubnet>()
                 .Map(dbContext.Entry));
 
-        var networks = await subnets
+        var subnetNetworks = await subnets
             .Concat(dbContext.ChangeTracker.Entries<VirtualNetworkSubnet>().ToList())
             .Map(async e =>
             {
@@ -45,7 +45,32 @@ internal class VirtualNetworkChangeInterceptor : ChangeInterceptorBase<VirtualNe
             .SequenceSerial()
             .Map(e => e.Somes());
 
-        return networks
+        var networkPorts = await dbContext.ChangeTracker.Entries<IpAssignment>().ToList()
+            .Map(async e =>
+            {
+                var networkPortReference = e.Reference(a => a.NetworkPort);
+                await networkPortReference.LoadAsync(cancellationToken);
+                return Optional(networkPortReference.TargetEntry);
+            })
+            .SequenceSerial()
+            .Map(e => e.Somes()
+                .Map(p => p.Entity)
+                .OfType<CatletNetworkPort>()
+                .Map(dbContext.Entry));
+
+        var portNetworks = await networkPorts
+            .Concat(dbContext.ChangeTracker.Entries<CatletNetworkPort>().ToList())
+            .Map(async e =>
+            {
+                var networkReference = e.Reference(n => n.Network);
+                await networkReference.LoadAsync(cancellationToken);
+                return Optional(networkReference.TargetEntry);
+            })
+            .SequenceSerial()
+            .Map(e => e.Somes());
+
+        return subnetNetworks
+            .Concat(portNetworks)
             .Concat(dbContext.ChangeTracker.Entries<VirtualNetwork>().ToList())
             .Map(e => e.Entity.ProjectId)
             .Distinct()

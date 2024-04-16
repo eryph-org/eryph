@@ -16,10 +16,8 @@ public static class ChangeTrackingContainerExtensions
         RegisterChangeTracking(options.Container);
 
         options.AddHostedService<ChangeTrackingBackgroundService<VirtualNetworkChange>>();
-        options.AddHostedService<ChangeTrackingBackgroundService<FloatingNetworkPortChange>>();
-        options.AddHostedService<ChangeTrackingBackgroundService<ProviderPoolChange>>();
+        options.AddHostedService<ChangeTrackingBackgroundService<NetworkProvidersChange>>();
         options.AddHostedService<ChangeTrackingBackgroundService<ProjectChange>>();
-        options.AddHostedService<ChangeTrackingBackgroundService<CatletNetworkPortChange>>();
         options.AddHostedService<ChangeTrackingBackgroundService<CatletMetadataChange>>();
     }
 
