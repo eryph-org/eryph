@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
@@ -80,76 +79,50 @@ public class GetOperationTest : IClassFixture<WebModuleFactory<ComputeApiModule>
             {
                 TenantId = ExistingOperation.TenantId,
                 Id = Guid.NewGuid(),
-
             });
-
-
         });
-
-    }
-
-    private static Dictionary<string, object> CreateClaims(string scope, Guid tenantId, bool isSuperAdmin)
-    {
-        return new Dictionary<string, object>
-        {
-            { "iss", "fake"},
-            { "sub", UserId},
-            { "scope", scope },
-            { "tid", tenantId},
-            { ClaimTypes.Role, isSuperAdmin? EryphConstants.SuperAdminRole : Guid.NewGuid() }
-        };
     }
 
     [Fact]
     public async Task Get_Returns_Existing_Operation()
     {
-        var claims = CreateClaims("compute:project:read", TenantId, false);
-
         var result = await FactoryWithOperation().CreateDefaultClient()
-            .SetFakeBearerToken(claims)
+            .SetEryphToken(TenantId, UserId, "compute:project:read", false)
             .GetFromJsonAsync<OperationModel>($"v1/operations/{ExistingOperation.Id}");
+        
         result.Should().NotBeNull();
         result!.Id.Should().Be(ExistingOperation.Id.ToString());
-
-
     }
 
     [Fact]
     public async Task Get_Returns_404_If_Not_Found()
     {
-
         var opId = Guid.NewGuid();
-        var claims = CreateClaims("compute:project:read", TenantId, false);
         var response = await FactoryWithOperation().CreateDefaultClient()
-            .SetFakeBearerToken(claims)
+            .SetEryphToken(TenantId, UserId, "compute:project:read", false)
             .GetAsync($"v1/operations/{opId}");
-        response.Should().HaveStatusCode(HttpStatusCode.NotFound);
 
+        response.Should().HaveStatusCode(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Get_Returns_404_If_non_admin_and_multi_project_op()
     {
-
-        var claims = CreateClaims("compute:project:read", TenantId, false);
         var response = await FactoryWithOperation().CreateDefaultClient()
-            .SetFakeBearerToken(claims)
+            .SetEryphToken(TenantId, UserId, "compute:project:read", false)
             .GetAsync($"v1/operations/{CrossOperation.Id}");
+        
         response.Should().HaveStatusCode(HttpStatusCode.NotFound);
-
     }
 
     [Fact]
     public async Task Get_Returns_cross_Operation_as_admin()
     {
-        var claims = CreateClaims("compute:project:read", TenantId, true);
-
         var result = await FactoryWithOperation().CreateDefaultClient()
-            .SetFakeBearerToken(claims)
+            .SetEryphToken(TenantId, UserId, "compute:project:read", true)
             .GetFromJsonAsync<OperationModel>($"v1/operations/{CrossOperation.Id}");
+        
         result.Should().NotBeNull();
         result!.Id.Should().Be(CrossOperation.Id.ToString());
-
-
     }
 }

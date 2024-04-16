@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
+using Eryph.Messages.Projects;
 using Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -19,6 +19,7 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Projects;
 
 public class AddProjectMemberTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
+    private static readonly Guid UserId = Guid.NewGuid();
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
     public AddProjectMemberTests(WebModuleFactory<ComputeApiModule> factory)
@@ -66,24 +67,7 @@ public class AddProjectMemberTests : IClassFixture<WebModuleFactory<ComputeApiMo
                 stateStore.SaveChanges();
             });
         });
-
-
     }
-
-    private static readonly Guid UserId = Guid.NewGuid();
-
-    private static Dictionary<string, object> CreateClaims(string scope, Guid tenantId, bool isSuperAdmin)
-    {
-        return new Dictionary<string, object>
-        {
-            { "iss", "fake"},
-            { "sub", UserId},
-            { "scope", scope },
-            { "tid", tenantId},
-            { ClaimTypes.Role, isSuperAdmin? EryphConstants.SuperAdminRole : Guid.NewGuid() }
-        };
-    }
-
 
     [Theory]
     [InlineData("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}", true, "compute:write", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
@@ -94,28 +78,78 @@ public class AddProjectMemberTests : IClassFixture<WebModuleFactory<ComputeApiMo
     public async Task Can_Add_ProjectMember_when_authorized(
         string projectIdString, bool isAuthorized, string scope, string tenantId, bool isSuperAdmin)
     {
-        var claims = CreateClaims(scope, Guid.Parse(tenantId), isSuperAdmin);
+        var memberId = Guid.NewGuid().ToString();
         var projectId = Guid.Parse(projectIdString);
         var response = await _factory.CreateDefaultClient()
-            .SetFakeBearerToken(claims)
+            .SetEryphToken(Guid.Parse(tenantId), UserId, scope, isSuperAdmin)
             .PostAsJsonAsync($"v1/projects/{projectId}/members",
                 new NewProjectMemberBody()
                 {
                     RoleId = EryphConstants.BuildInRoles.Reader,
                     CorrelationId = Guid.NewGuid(),
-                    MemberId = Guid.NewGuid().ToString()
+                    MemberId = memberId,
                 });
-        response.Should().NotBeNull();
 
+        response.Should().NotBeNull();
+        var messages = _factory.GetPendingMessages<AddProjectMemberCommand>();
         if (isAuthorized)
         {
             response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
+            messages.Should().SatisfyRespectively(
+                m =>
+                {
+                    m.TenantId.Should().Be(Guid.Parse(tenantId));
+                    m.ProjectId.Should().Be(projectId);
+                    m.MemberId.Should().Be(memberId);
+                    m.RoleId.Should().Be(EryphConstants.BuildInRoles.Reader);
+                });
         }
         else
         {
             response!.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.Forbidden);
+            messages.Should().BeEmpty();
         }
-
     }
 
+    [Fact]
+    public async Task Returns_bad_request_when_adding_system_client()
+    {
+        var projectId = Guid.Parse("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}");
+        var response = await _factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, UserId, "compute:write", true)
+            .PostAsJsonAsync($"v1/projects/{projectId}/members",
+                new NewProjectMemberBody()
+                {
+                    RoleId = EryphConstants.BuildInRoles.Reader,
+                    CorrelationId = Guid.NewGuid(),
+                    MemberId = "system-client"
+                });
+
+        response.Should().NotBeNull();
+        response!.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var messages = _factory.GetPendingMessages<AddProjectMemberCommand>();
+        messages.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Returns_bad_request_when_adding_super_admin()
+    {
+        var projectId = Guid.Parse("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}");
+        var response = await _factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, UserId, "compute:write", true)
+            .PostAsJsonAsync($"v1/projects/{projectId}/members",
+                new NewProjectMemberBody()
+                {
+                    RoleId = EryphConstants.BuildInRoles.Reader,
+                    CorrelationId = Guid.NewGuid(),
+                    MemberId = UserId.ToString(),
+                });
+
+        response.Should().NotBeNull();
+        response!.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var messages = _factory.GetPendingMessages<AddProjectMemberCommand>();
+        messages.Should().BeEmpty();
+    }
 }
