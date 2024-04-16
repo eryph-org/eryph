@@ -364,14 +364,17 @@ function Get-BetaDownloadUrl {
         $productFile
     )
 
-    Write-Information "This version can only be downloaded with an invitation code." -InformationAction Continue
+    Write-Warning "This version can only be downloaded with an invitation code."
 
+    Write-Host ""
     if(-not $EMail){
         $EMail = Read-Host -Prompt "Please enter your email address"
     }
     if(-not $InvitationCode){
         $InvitationCode = Read-Host -Prompt "Please enter your invitation code"
     }
+
+    Write-Host ""
 
     Write-Information "Requesting download url. This could take a moment..." -InformationAction Continue
 
@@ -382,7 +385,24 @@ function Get-BetaDownloadUrl {
         invitationCode = $InvitationCode
     } | ConvertTo-Json
 
-    $response = Invoke-RestMethod -Uri 'https://identity-backend-eu1.dbosoft.eu/api/request/BetaDownload' -Method POST -Body $request -ContentType 'application/json' -SkipHttpErrorCheck
+    
+    if($PSVersionTable.PSVersion.Major -ge 7){    
+            $response = Invoke-RestMethod -Uri 'https://identity-backend-eu1.dbosoft.eu/api/request/BetaDownload' -Method POST -Body $request -ContentType 'application/json' -SkipHttpErrorCheck
+    }else{
+        try {
+            $response = Invoke-RestMethod -Uri 'https://identity-backend-eu1.dbosoft.eu/api/request/BetaDownload' -Method POST -Body $request -ContentType 'application/json'
+        } catch {
+            if ($null -ne $_.Exception.Response) {
+                $responseContent = ""
+                $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+                $responseContent = $streamReader.ReadToEnd()
+                $streamReader.Close()
+                $response = ConvertFrom-Json $responseContent
+            } else {
+                return
+            }
+        }
+    }
 
     if($response.message){
 
