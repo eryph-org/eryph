@@ -1,8 +1,6 @@
 ﻿using System.Collections.Generic;
+using LanguageExt;
 
 namespace Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
 
-internal class NetworkProvidersChange
-{
-    public List<string> ProviderNames { get; set; } = new();
-}
+internal record NetworkProvidersChange(Seq<string> ProviderNames);

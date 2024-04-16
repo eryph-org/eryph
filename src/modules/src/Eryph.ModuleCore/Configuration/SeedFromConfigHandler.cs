@@ -22,35 +22,24 @@ public class SeedFromConfigHandler<TModule> : IHostedService where TModule : cla
 {
     private readonly IEnumerable<DependencyMetadata<IConfigSeeder<TModule>>> _seeders;
     private readonly Container _container;
-    private readonly ILogger<SeedFromConfigHandler<TModule>> _logger;
 
     public SeedFromConfigHandler(
         IEnumerable<DependencyMetadata<IConfigSeeder<TModule>>> seeders,
-        Container container,
-        ILogger<SeedFromConfigHandler<TModule>> logger)
+        Container container)
     {
         _seeders = seeders;
         _container = container;
-        _logger = logger;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        try
+        foreach (var configSeeder in _seeders)
         {
-            foreach (var configSeeder in _seeders)
-            {
-                await using var scope = AsyncScopedLifestyle.BeginScope(_container);
-                var logger = scope.GetInstance<ILogger<SeedFromConfigHandler<TModule>>>();
-                logger.LogInformation("Executing config seeder {configSeeder}", configSeeder.ImplementationType.Name);
+            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
+            var logger = scope.GetInstance<ILogger<SeedFromConfigHandler<TModule>>>();
+            logger.LogInformation("Executing config seeder {configSeeder}", configSeeder.ImplementationType.Name);
 
-                await configSeeder.GetInstance().Execute(cancellationToken);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to seed from config");
-            throw;
+            await configSeeder.GetInstance().Execute(cancellationToken);
         }
     }
 

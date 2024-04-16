@@ -5,18 +5,22 @@ using System.Threading.Tasks;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.ChangeTracking;
 
 internal abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
 {
     private readonly IChangeTrackingQueue<TChange> _queue;
+    private readonly ILogger _logger;
     private Seq<ChangeTrackingQueueItem<TChange>> _currentItem = Prelude.Empty;
 
     protected ChangeInterceptorBase(
-        IChangeTrackingQueue<TChange> queue)
+        IChangeTrackingQueue<TChange> queue,
+        ILogger logger)
     {
         _queue = queue;
+        _logger = logger;
     }
 
     protected abstract Task<Seq<TChange>> DetectChanges(
@@ -45,6 +49,8 @@ internal abstract class ChangeInterceptorBase<TChange> : DbTransactionIntercepto
     {
         foreach (var item in _currentItem)
         {
+            _logger.LogDebug("Detected relevant changes in transaction {TransactionId}: {Changes}",
+                item.TransactionId, item.Changes);
             await _queue.EnqueueAsync(item, cancellationToken);
         }
     }

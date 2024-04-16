@@ -4,16 +4,16 @@ using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
-
-using static LanguageExt.Prelude;
+using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.ChangeTracking.Projects;
 
 internal class ProjectChangeInterceptor : ChangeInterceptorBase<ProjectChange>
 {
     public ProjectChangeInterceptor(
-        IChangeTrackingQueue<ProjectChange> queue)
-        : base(queue)
+        IChangeTrackingQueue<ProjectChange> queue,
+        ILogger logger)
+        : base(queue, logger)
     {
     }
 
@@ -27,7 +27,7 @@ internal class ProjectChangeInterceptor : ChangeInterceptorBase<ProjectChange>
                 .Map(pra => pra.Entity.ProjectId))
             .ToList()
             .Distinct()
-            .Map(pId => new ProjectChange() { ProjectId = pId })
+            .Map(projectId => new ProjectChange(projectId))
             .ToSeq()
             .AsTask();
     }

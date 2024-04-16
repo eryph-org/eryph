@@ -5,6 +5,7 @@ using Eryph.Modules.Controller.ChangeTracking.Projects;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.ChangeTracking.VirtualNetworks;
@@ -12,8 +13,9 @@ namespace Eryph.Modules.Controller.ChangeTracking.VirtualNetworks;
 internal class VirtualNetworkChangeInterceptor : ChangeInterceptorBase<VirtualNetworkChange>
 {
     public VirtualNetworkChangeInterceptor(
-        IChangeTrackingQueue<VirtualNetworkChange> queue)
-        : base(queue)
+        IChangeTrackingQueue<VirtualNetworkChange> queue,
+        ILogger logger)
+        : base(queue, logger)
     {
     }
 
@@ -74,7 +76,7 @@ internal class VirtualNetworkChangeInterceptor : ChangeInterceptorBase<VirtualNe
             .Concat(dbContext.ChangeTracker.Entries<VirtualNetwork>().ToList())
             .Map(e => e.Entity.ProjectId)
             .Distinct()
-            .Map(pId => new VirtualNetworkChange { ProjectId = pId })
+            .Map(projectId => new VirtualNetworkChange(projectId))
             .ToSeq();
     }
 }

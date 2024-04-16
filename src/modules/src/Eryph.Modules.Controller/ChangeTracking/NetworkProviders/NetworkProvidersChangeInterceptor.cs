@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
@@ -12,8 +13,9 @@ internal class NetworkProvidersChangeInterceptor
     : ChangeInterceptorBase<NetworkProvidersChange>
 {
     public NetworkProvidersChangeInterceptor(
-        IChangeTrackingQueue<NetworkProvidersChange> queue)
-        : base(queue)
+        IChangeTrackingQueue<NetworkProvidersChange> queue, 
+        ILogger logger)
+        : base(queue, logger)
     {
     }
 
@@ -53,11 +55,9 @@ internal class NetworkProvidersChangeInterceptor
 
         return poolProviders
             .Concat(portProviders)
-            .Distinct().Match(
+            .Distinct()
+            .Match(
                 Empty: () => Empty,
-                More: p => Seq1(new NetworkProvidersChange()
-                {
-                    ProviderNames = p.ToList(),
-                }));
+                More: p => Seq1(new NetworkProvidersChange(p.ToSeq())));
     }
 }

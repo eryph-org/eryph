@@ -57,7 +57,7 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
 
     private async Task HandleChangeAsync(ChangeTrackingQueueItem<TChange> queueItem)
     {
-        _logger.LogInformation("Processing changes of transaction {TransactionId}", queueItem.TransactionId);
+        _logger.LogDebug("Processing changes of transaction {TransactionId}", queueItem.TransactionId);
 
         try
         {

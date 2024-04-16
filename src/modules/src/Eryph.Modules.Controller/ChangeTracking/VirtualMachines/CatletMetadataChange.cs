@@ -2,7 +2,4 @@
 
 namespace Eryph.Modules.Controller.ChangeTracking.VirtualMachines;
 
-internal class CatletMetadataChange
-{
-    public Guid MetadataId { get; init; }
-}
+internal record CatletMetadataChange(Guid MetadataId);
