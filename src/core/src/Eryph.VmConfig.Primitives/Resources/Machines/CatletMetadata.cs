@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 
 namespace Eryph.Resources.Machines
 {
+    // The change tracking in the controller module must be updated when modifying this class.
     public sealed class CatletMetadata
     {
         public Guid Id { get; set; }

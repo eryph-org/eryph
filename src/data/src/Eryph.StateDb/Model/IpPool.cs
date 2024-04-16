@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace Eryph.StateDb.Model;
 
+// The change tracking in the controller module must be updated when modifying this entity.
 public class IpPool
 {
     public Guid Id { get; set; }

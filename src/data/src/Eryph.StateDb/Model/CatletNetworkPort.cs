@@ -3,6 +3,7 @@ using JetBrains.Annotations;
 
 namespace Eryph.StateDb.Model;
 
+// The change tracking in the controller module must be updated when modifying this entity.
 public class CatletNetworkPort : VirtualNetworkPort
 {
     // We reference the catlet metadata instead of the catlet itself

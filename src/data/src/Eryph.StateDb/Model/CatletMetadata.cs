@@ -1,5 +1,6 @@
 ﻿using System;
 
+// The change tracking in the controller module must be updated when modifying this entity.
 namespace Eryph.StateDb.Model
 {
     public class CatletMetadata
