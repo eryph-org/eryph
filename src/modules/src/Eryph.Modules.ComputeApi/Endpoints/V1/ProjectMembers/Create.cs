@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Functional.Validations;
+using Eryph.Core;
 using Eryph.Messages.Projects;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -8,10 +11,14 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
 {
@@ -38,9 +45,13 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
             if(!hasAccess)
                 return Forbid();
 
+            var authContext = _userRightsProvider.GetAuthContext();
+            var validation = ValidateRequest(request.Body, authContext);
+            if (validation.IsFail)
+                return ValidationProblem(validation.ToProblemDetails());
+
             return await base.HandleAsync(request, cancellationToken);
         }
-
 
         protected override object CreateOperationMessage(NewProjectMemberRequest request)
         {
@@ -53,5 +64,23 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
                 RoleId = request.Body.RoleId
             };
         }
+
+        private static Validation<ValidationIssue, Unit> ValidateRequest(
+            NewProjectMemberBody requestBody,
+            AuthContext authContext) =>
+            ComplexValidations.ValidateProperty(requestBody, r => r.MemberId,
+                i => ValidateMemberId(i, authContext), required: true);
+
+        private static Validation<Error, string> ValidateMemberId(
+            string memberId,
+            AuthContext authContext) =>
+            from _ in guardnot(memberId == EryphConstants.SystemClientId,
+                    Error.New("The predefined system client cannot be assigned to projects."))
+                .ToValidation()
+            from __ in guardnot(authContext.Identities.Contains(memberId)
+                                && authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole),
+                    Error.New("Super admins cannot be assigned to projects."))
+                .ToValidation()
+            select memberId;
     }
 }

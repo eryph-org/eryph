@@ -30,7 +30,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
 
             if (!recreateSystemClient && File.Exists(systemClientDataFile))
             {
-                var currentConfig = clientIO.ReadConfigFile<ClientConfigModel>("system-client");
+                var currentConfig = clientIO.ReadConfigFile<ClientConfigModel>(EryphConstants.SystemClientId);
                 if(!currentConfig.AllowedScopes.SequenceEqual(RequiredScopes))
                     recreateSystemClient = true;
             }
@@ -69,11 +69,11 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
             RemoveSystemClient();
 
             var (certificate, keyPair) = certificateGenerator.GenerateSelfSignedCertificate(
-                new X509Name("CN=system-client"), 5*365, 2048);
+                new X509Name($"CN={EryphConstants.SystemClientId}"), 5*365, 2048);
 
             var newClient = new ClientConfigModel
             {
-                ClientId = "system-client",
+                ClientId = EryphConstants.SystemClientId,
                 X509CertificateBase64 = Convert.ToBase64String(certificate.GetEncoded()),
                 AllowedScopes = RequiredScopes,
                 TenantId = EryphConstants.DefaultTenantId,
