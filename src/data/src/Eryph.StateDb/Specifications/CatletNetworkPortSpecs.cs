@@ -11,21 +11,6 @@ namespace Eryph.StateDb.Specifications;
 
 public sealed class CatletNetworkPortSpecs
 {
-    public sealed class GetForProjectConfig : Specification<CatletNetworkPort>
-    {
-        public GetForProjectConfig(Guid projectId)
-        {
-            Query.Where(p => p.Network.ProjectId == projectId);
-                
-            Query.Include(p => p.Network);
-            Query.Include(p => p.FloatingPort);
-            Query.Include(p => p.IpAssignments)
-                .ThenInclude(a => ((IpPoolAssignment)a).Pool);
-            Query.Include(p => p.IpAssignments)
-                .ThenInclude(a => a.Subnet);
-        }
-    }
-
     public sealed class GetByCatletMetadataId : Specification<CatletNetworkPort>
     {
         public GetByCatletMetadataId(Guid metadataId)

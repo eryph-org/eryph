@@ -1,23 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration;
 using Eryph.Core;
-using Eryph.Core.Network;
-using Eryph.Modules.Controller;
 using Eryph.Modules.Controller.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
-using LanguageExt;
 using Microsoft.Extensions.Logging;
-using SimpleInjector;
-using SimpleInjector.Lifestyles;
 
-namespace Eryph.Runtime.Zero.Configuration.Projects;
+namespace Eryph.Modules.Controller.Seeding;
 
 [UsedImplicitly]
 internal class DefaultProjectSeeder : IConfigSeeder<ControllerModule>

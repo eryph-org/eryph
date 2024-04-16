@@ -149,7 +149,7 @@ public class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBase
         await WithHostScope(async stateStore =>
         {
             var subnets = await stateStore.For<ProviderSubnet>().ListAsync(
-                new ProviderSubnetSpecs.GetForConfig());
+                new ProviderSubnetSpecs.GetForChangeTracking());
             var floatingPort = await stateStore.For<FloatingNetworkPort>().GetByIdAsync(FloatingPortId);
             await stateStore.LoadCollectionAsync(floatingPort!, p => p.IpAssignments);
             floatingPort!.IpAssignments.Add(new IpPoolAssignment()
@@ -226,7 +226,7 @@ public class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBase
         {
             var stateStore = scope.GetInstance<IStateStore>();
             var subnets = await stateStore.For<ProviderSubnet>().ListAsync(
-                new ProviderSubnetSpecs.GetForConfig());
+                new ProviderSubnetSpecs.GetForChangeTracking());
 
             await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort()
             {

@@ -53,7 +53,7 @@ internal class NetworkProvidersChangeHandler
         CancellationToken cancellationToken)
     {
         var providerSubnets = await _stateStore.For<ProviderSubnet>().ListAsync(
-            new ProviderSubnetSpecs.GetForConfig(), cancellationToken);
+            new ProviderSubnetSpecs.GetForChangeTracking(), cancellationToken);
 
         var config = await _networkProviderManager.GetCurrentConfiguration()
             .IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());

@@ -17,7 +17,6 @@ using Eryph.Modules.Controller.Networks;
 using Eryph.Modules.Controller.Operations;
 using Eryph.Modules.Controller.Seeding;
 using Eryph.Rebus;
-using Eryph.Runtime.Zero.Configuration.Projects;
 using Eryph.StateDb;
 using Eryph.StateDb.Workflows;
 using IdGen;

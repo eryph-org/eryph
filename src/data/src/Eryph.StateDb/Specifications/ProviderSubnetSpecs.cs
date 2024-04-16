@@ -10,9 +10,9 @@ namespace Eryph.StateDb.Specifications;
 
 public static class ProviderSubnetSpecs
 {
-    public sealed class GetForConfig : Specification<ProviderSubnet>
+    public sealed class GetForChangeTracking : Specification<ProviderSubnet>
     {
-        public GetForConfig()
+        public GetForChangeTracking()
         {
             Query.Include(s => s.IpPools);
         }

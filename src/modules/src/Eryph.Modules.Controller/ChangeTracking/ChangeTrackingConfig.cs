@@ -12,8 +12,6 @@ namespace Eryph.Modules.Controller.ChangeTracking
 
         public bool SeedDatabase { get; set; }
 
-        public bool SyncOnStartup { get; set; }
-
         public string NetworksConfigPath { get; set; } = "";
 
         public string ProjectsConfigPath { get; set; } = "";
