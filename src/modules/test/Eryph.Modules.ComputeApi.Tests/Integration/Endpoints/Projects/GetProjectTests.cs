@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
@@ -19,6 +18,7 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Projects;
 
 public class GetProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
+    private static readonly Guid UserId = Guid.NewGuid();
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
     public GetProjectTests(WebModuleFactory<ComputeApiModule> factory)
@@ -66,24 +66,7 @@ public class GetProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
                 stateStore.SaveChanges();
             });
         });
-
-
     }
-
-    private static readonly Guid UserId = Guid.NewGuid();
-
-    private static Dictionary<string, object> CreateClaims(string scope, Guid tenantId, bool isSuperAdmin)
-    {
-        return new Dictionary<string, object>
-        {
-            { "iss", "fake"},
-            { "sub", UserId},
-            { "scope", scope },
-            { "tid", tenantId},
-            { ClaimTypes.Role, isSuperAdmin? EryphConstants.SuperAdminRole : Guid.NewGuid() }
-        };
-    }
-
 
     [Theory]
     [InlineData("{75715EAD-21E2-44DC-A3C4-1CDAAB387F45}", true, "compute:read", "{C1813384-8ECB-4F17-B846-821EE515D19B}", true)]
@@ -94,13 +77,12 @@ public class GetProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
     public async Task Get_Returns_Existing_Project_when_authorized(
         string projectIdString, bool isAuthorized, string scope, string tenantId, bool isSuperAdmin)
     {
-        var claims = CreateClaims(scope, Guid.Parse(tenantId), isSuperAdmin);
         var projectId = Guid.Parse(projectIdString);
         var response = await _factory.CreateDefaultClient()
-            .SetFakeBearerToken(claims)
+            .SetEryphToken(Guid.Parse(tenantId), UserId, scope, isSuperAdmin)
             .GetAsync($"v1/projects/{projectId}");
+        
         response.Should().NotBeNull();
-
         if (isAuthorized)
         {
             response!.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -113,20 +95,15 @@ public class GetProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
         {
             response!.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.Forbidden);
         }
-
     }
 
     [Fact]
     public async Task Get_Returns_404_If_Not_Found()
     {
-        var claims = CreateClaims("compute:projects:read",
-            EryphConstants.DefaultTenantId, true);
-
         var response = await _factory.CreateDefaultClient()
-            .SetFakeBearerToken(claims)
+            .SetEryphToken(EryphConstants.DefaultTenantId, UserId, "compute:projects:read", true)
             .GetAsync($"v1/projects/{Guid.NewGuid()}");
+        
         response.Should().HaveStatusCode(HttpStatusCode.NotFound);
-
     }
-
 }

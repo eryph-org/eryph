@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
+using Eryph.Core;
 using Eryph.Messages.Projects;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -50,11 +52,15 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
 
         protected override object CreateOperationMessage(NewProjectRequest request)
         {
+            var authContext = _userRightsProvider.GetAuthContext();
+            var isSuperAdmin = authContext.Identities.Contains(EryphConstants.SystemClientId)
+                               || authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole);
+
             return new CreateProjectCommand
             {
                 CorrelationId = request.CorrelationId.GetValueOrDefault(Guid.NewGuid()),
                 ProjectName = ProjectName.New(request.Name).Value,
-                IdentityId = _userRightsProvider.GetUserId(),
+                IdentityId = isSuperAdmin ? null : _userRightsProvider.GetUserId(),
                 TenantId = _userRightsProvider.GetUserTenantId()
             };
         }

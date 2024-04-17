@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
+using Eryph.Core;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
 using Eryph.StateDb.Model;
@@ -51,7 +52,7 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
 
     public async ValueTask<TDescriptor> Update(TDescriptor descriptor, CancellationToken cancellationToken)
     {
-        if (descriptor.ClientId == "system-client")
+        if (descriptor.ClientId == EryphConstants.SystemClientId)
             throw new Exception("System client can't be updated");
 
         var currentApplication = await _repository.GetBySpecAsync(
@@ -80,7 +81,7 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
 
     public async ValueTask Delete(string clientId, Guid tenantId, CancellationToken cancellationToken)
     {
-        if (clientId == "system-client")
+        if (clientId == EryphConstants.SystemClientId)
             throw new Exception("System client can't be deleted");
 
         var entity = await _repository.GetBySpecAsync(GetSingleEntitySpec(clientId, tenantId), cancellationToken);

@@ -11,6 +11,7 @@ namespace Eryph.Core
         public static readonly string SwitchExtensionName = "dbosoft Open vSwitch Extension";
         public static readonly string DriverModuleName = "DBO_OVSE";
 
+        public static readonly string SystemClientId = "system-client";
         public static readonly Guid SuperAdminRole = Guid.Parse("{E5E83176-7543-4D01-BAEA-08A00EA064A6}");
 
         public static class BuildInRoles
