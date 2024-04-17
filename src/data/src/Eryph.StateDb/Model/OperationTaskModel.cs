@@ -23,7 +23,7 @@ namespace Eryph.StateDb.Model
         public string ReferenceId { get; set; }
         public string ReferenceProjectName { get; set; }
 
-        public DateTimeOffset? LastUpdated { get; set; }
+        public DateTimeOffset LastUpdated { get; set; }
         public virtual List<TaskProgressEntry> Progress { get; set; }
     }
 }
