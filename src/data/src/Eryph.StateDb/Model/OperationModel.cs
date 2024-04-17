@@ -19,6 +19,7 @@ public class OperationModel
     public OperationStatus Status { get; set; }
 
     public string StatusMessage { get; set; }
+    public DateTimeOffset LastUpdated { get; set; }
 
 
 }

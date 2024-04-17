@@ -34,9 +34,13 @@ public class OperationManager : OperationManagerBase
         return res == null ? null : new Operation(res);
     }
 
-    public override async ValueTask<IOperation> GetOrCreateAsync(Guid operationId, object command, [CanBeNull] object additionalData, 
+    public override async ValueTask<IOperation> GetOrCreateAsync(
+        Guid operationId, object command, DateTimeOffset timestamp,
+        object additionalData, 
         IDictionary<string,string> additionalHeaders)
     {
+        _log.LogTrace("Entering GetOrCreateAsync for operation {operationId}", operationId);
+
         if (additionalData is not OperationDataRecord dataRecord)
             throw new InvalidOperationException(
                 $"additional data of type {nameof(OperationDataRecord)} is required to create a operation");
@@ -53,8 +57,10 @@ public class OperationManager : OperationManagerBase
             TenantId = dataRecord.TenantId,
             StatusMessage = Dbosoft.Rebus.Operations.OperationStatus.Queued.ToString(),
             Resources = resources,
-            Projects = projects
+            Projects = projects,
+            LastUpdated = timestamp
         };
+        _log.LogTrace("created operation: {@operation}", res);
 
         await _db.AddAsync(res);
         return new Operation(res);
@@ -65,7 +71,8 @@ public class OperationManager : OperationManagerBase
         IOperationTask task,
         object? data, IDictionary<string, string> messageHeaders)
     {
-        _log.LogDebug("Received operation task progress event. Id : '{operationId}/{taskId}'", operation.Id, task.Id);
+        _log.LogTrace("Entering AddProgressAsync for operation {operationId} and task {taskId}",
+            operation.Id, task.Id);
 
         var message = "";
         var progress = 0;
@@ -85,13 +92,6 @@ public class OperationManager : OperationManagerBase
                 break;
         }
 
-
-        var taskEntry = await _db.OperationTasks.FindAsync(task.Id);
-        if (taskEntry != null)
-        {
-            taskEntry.Progress = progress;
-        }
-
         var opLogEntry =
             new OperationLogEntry
             {
@@ -99,18 +99,40 @@ public class OperationManager : OperationManagerBase
                 OperationId = operation.Id,
                 TaskId = task.Id,
                 Message = message,
-                Timestamp = timestamp
+                Timestamp = DateTimeOffset.UtcNow // event may be delayed, don't use timestamp from message
             };
+        _log.LogTrace("Adding progress entry: {@progressEntry}", opLogEntry);
 
         await _db.Logs.AddAsync(opLogEntry).ConfigureAwait(false);
 
-        
+        if (progress == 0)
+            return;
+
+        var progressEntry = new TaskProgressEntry
+        {
+            Timestamp = timestamp,
+            Id = Guid.NewGuid(),
+            TaskId = task.Id,
+            OperationId = operation.Id,
+            Progress = progress
+        };
+
+        await _db.TaskProgress.AddAsync(progressEntry).ConfigureAwait(false);
     }
 
     public override async ValueTask<bool> TryChangeStatusAsync(IOperation operation,
-        Dbosoft.Rebus.Operations.OperationStatus newStatus, object? additionalData, IDictionary<string, string> messageHeaders)
+        Dbosoft.Rebus.Operations.OperationStatus newStatus,
+        DateTimeOffset timestamp,
+        object? additionalData, IDictionary<string, string> messageHeaders)
     {
+        _log.LogTrace("Entering TryChangeStatusAsync for operation {operationId}", operation.Id);
         if (operation is not Operation op) return false;
+
+        if (op.Model.LastUpdated > timestamp)
+        {
+            _log.LogWarning("Operation {operationId} has been updated already after change timestamp. Skipping status change.", operation.Id);
+            return false;
+        }
 
         op.Model.Status = newStatus switch
         {
@@ -139,6 +161,8 @@ public class OperationManager : OperationManagerBase
                 });
         }
 
+        op.Model.LastUpdated = timestamp;
+        _log.LogTrace("operation {operationId}: Updated operation model: {@opModel}", newStatus, op.Model);
         return true;
     }
 }

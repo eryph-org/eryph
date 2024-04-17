@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+﻿using System;
 using Dbosoft.OVN;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
@@ -11,7 +11,6 @@ using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Hosting.WindowsServices;
 using Rebus.Sagas;
 using Rebus.Subscriptions;
 using Rebus.Timeouts;
@@ -46,6 +45,7 @@ namespace Eryph.Runtime.Zero
                 DispatchMode = WorkflowEventDispatchMode.Publish, 
                 EventDestination = QueueNames.Controllers,
                 OperationsDestination = QueueNames.Controllers,
+                DeferCompletion = TimeSpan.FromMinutes(1)
             });
         }
 

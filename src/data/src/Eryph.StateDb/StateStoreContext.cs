@@ -18,6 +18,7 @@ namespace Eryph.StateDb
         public DbSet<OperationModel> Operations { get; set; }
         public DbSet<OperationLogEntry> Logs { get; set; }
         public DbSet<OperationTaskModel> OperationTasks { get; set; }
+        public DbSet<TaskProgressEntry> TaskProgress { get; set; }
         public DbSet<OperationResourceModel> OperationResources { get; set; }
 
         public DbSet<Resource> Resources { get; set; }
@@ -66,6 +67,13 @@ namespace Eryph.StateDb
             modelBuilder.Entity<OperationModel>()
                 .Property(x => x.TenantId)
                 .HasDefaultValue(EryphConstants.DefaultTenantId);
+
+            modelBuilder.Entity<OperationModel>()
+                .Property(x => x.LastUpdated).IsConcurrencyToken();
+
+            modelBuilder.Entity<OperationTaskModel>()
+                .Property(x => x.LastUpdated).IsConcurrencyToken();
+
 
             modelBuilder.Entity<Tenant>()
                 .HasKey(x => x.Id);

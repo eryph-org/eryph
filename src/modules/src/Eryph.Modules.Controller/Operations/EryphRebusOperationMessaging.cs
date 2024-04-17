@@ -34,7 +34,7 @@ public class EryphRebusOperationMessaging : RebusOperationMessaging
         var messageType = command.GetType();
         var outboundMessage = Activator.CreateInstance(
             typeof(OperationTaskSystemMessage<>).MakeGenericType(messageType),
-            command, task.OperationId, task.InitiatingTaskId, task.Id);
+            command, task.OperationId, task.InitiatingTaskId, task.Id, DateTimeOffset.UtcNow);
         var sendCommandAttribute = messageType.GetCustomAttribute<SendMessageToAttribute>();
 
         if (sendCommandAttribute == null)
