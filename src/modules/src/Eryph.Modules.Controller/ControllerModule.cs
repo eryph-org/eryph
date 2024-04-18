@@ -101,7 +101,6 @@ namespace Eryph.Modules.Controller
                     x.SimpleRetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                     x.SetNumberOfWorkers(5);
                     x.EnableSimpleInjectorUnitOfWork();
-                    x.EnableOperationExclusiveAccess();
                 })
                 .Timeouts(t => serviceProvider.GetRequiredService<IRebusConfigurer<ITimeoutManager>>().Configure(t))
                 .Sagas(s =>
