@@ -4,8 +4,13 @@
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
     <ProjectReference Include="..\..\..\data\src\Eryph.StateDb\Eryph.StateDb.csproj" />
   </ItemGroup>
@@ -16,11 +21,14 @@
 
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.2" />
-    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.3.1-ci.3" />
+    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.3.1-ci.4" />
+    <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.3.1-ci.4" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
+    <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="21.0.2" />
     <PackageReference Include="IdGen" Version="3.0.5" />
   </ItemGroup>
 

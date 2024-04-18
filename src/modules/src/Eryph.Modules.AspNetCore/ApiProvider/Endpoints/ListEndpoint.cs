@@ -9,24 +9,25 @@ using Microsoft.AspNetCore.Mvc;
 namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
 {
     [Route("v{version:apiVersion}")]
-    public abstract class ListEndpoint<TRequest,TResult,TModel> : EndpointBaseAsync
+    public abstract class ListEndpoint<TRequest,TResult,TEntity> : EndpointBaseAsync
         .WithRequest<TRequest>
-        .WithActionResult<ListResponse<TResult>> where TModel : class
+        .WithActionResult<ListResponse<TResult>> where TEntity : class
         where TRequest : IListRequest
     {
-        private readonly IListRequestHandler<TModel> _listRequestHandler;
+        private readonly IListRequestHandler<TRequest, TResult, TEntity> _listRequestHandler;
 
-        protected ListEndpoint(IListRequestHandler<TModel> listRequestHandler)
+        protected ListEndpoint(
+            IListRequestHandler<TRequest, TResult, TEntity> listRequestHandler)
         {
             _listRequestHandler = listRequestHandler;
         }
 
-        protected abstract ISpecification<TModel> CreateSpecification(TRequest request);
+        protected abstract ISpecification<TEntity> CreateSpecification(TRequest request);
 
 
         public override Task<ActionResult<ListResponse<TResult>>> HandleAsync(TRequest request, CancellationToken cancellationToken = default)
         {
-            return _listRequestHandler.HandleListRequest<TRequest,TResult>(request,CreateSpecification, cancellationToken);
+            return _listRequestHandler.HandleListRequest(request,CreateSpecification, cancellationToken);
         }
     }
 

@@ -13,8 +13,10 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks
 {
     public class List : ListEntityEndpoint<ListRequest, VirtualDisk, StateDb.Model.VirtualDisk>
     {
-        public List([NotNull] IListRequestHandler<StateDb.Model.VirtualDisk> listRequestHandler, 
-            [NotNull] IListEntitySpecBuilder<ListRequest,StateDb.Model.VirtualDisk> specBuilder) : base(listRequestHandler, specBuilder)
+        public List(
+            [NotNull] IListRequestHandler<ListRequest, VirtualDisk, StateDb.Model.VirtualDisk> listRequestHandler, 
+            [NotNull] IListEntitySpecBuilder<ListRequest,StateDb.Model.VirtualDisk> specBuilder)
+            : base(listRequestHandler, specBuilder)
         {
         }
 

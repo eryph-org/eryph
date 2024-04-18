@@ -61,6 +61,30 @@ namespace Eryph.Runtime.Zero.Configuration
             return networksConfigPath;
         }
 
+        public static string GetProjectsConfigPath()
+        {
+            var privateConfigPath = GetPrivateConfigPath();
+            var projectsConfigPath = Path.Combine(privateConfigPath, "projects");
+
+            return projectsConfigPath;
+        }
+
+        public static string GetProjectNetworksConfigPath()
+        {
+            var projectsConfigPath = GetProjectsConfigPath();
+            var projectNetworksConfigPath = Path.Combine(projectsConfigPath, "networks");
+
+            return projectNetworksConfigPath;
+        }
+
+        public static string GetProjectNetworkPortsConfigPath()
+        {
+            var projectsConfigPath = GetProjectsConfigPath();
+            var projectNetworkPortsConfigPath = Path.Combine(projectsConfigPath, "ports");
+
+            return projectNetworkPortsConfigPath;
+        }
+
         public static string GetPrivateConfigPath()
         {
             return Path.Combine(GetConfigPath(), "private");;
@@ -77,6 +101,9 @@ namespace Eryph.Runtime.Zero.Configuration
             Config.EnsurePath(GetStorageConfigPath());
             Config.EnsurePath(GetNetworksConfigPath());
             Config.EnsurePath(GetVmHostAgentConfigPath());
+            Config.EnsurePath(GetProjectsConfigPath());
+            Config.EnsurePath(GetProjectNetworksConfigPath());
+            Config.EnsurePath(GetProjectNetworkPortsConfigPath());
         }
 
         public static DirectorySecurity GetPrivateDirectorySecurity()

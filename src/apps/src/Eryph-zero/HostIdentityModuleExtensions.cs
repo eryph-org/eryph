@@ -4,11 +4,14 @@ using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
 using Eryph.Configuration.Model;
 using Eryph.IdentityDb;
+using Eryph.ModuleCore.Configuration;
+using Eryph.Modules.Controller;
 using Eryph.Modules.Identity;
 using Eryph.Modules.Identity.Services;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 
 namespace Eryph.Runtime.Zero
 {
@@ -21,7 +24,7 @@ namespace Eryph.Runtime.Zero
             builder.ConfigureFrameworkServices((ctx, services) =>
             {
                 services.AddTransient<IConfigureContainerFilter<IdentityModule>, IdentityModuleFilters>();
-                services.AddTransient<IModuleServicesFilter<IdentityModule>, IdentityModuleFilters>();
+                services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, IdentityModuleFilters>();
             });
 
             container.RegisterSingleton<IConfigReaderService<ClientConfigModel>, ClientConfigReaderService>();
@@ -36,7 +39,7 @@ namespace Eryph.Runtime.Zero
 
 
         private class IdentityModuleFilters : IConfigureContainerFilter<IdentityModule>,
-            IModuleServicesFilter<IdentityModule>
+            IAddSimpleInjectorFilter<IdentityModule>
         {
             public Action<IModuleContext<IdentityModule>, Container> Invoke(
                 Action<IModuleContext<IdentityModule>, Container> next)
@@ -52,21 +55,18 @@ namespace Eryph.Runtime.Zero
                     container.RegisterDecorator(typeof(IClientService),
                         typeof(ClientServiceWithConfigServiceDecorator));
 
-                    container.RegisterSingleton<SeedFromConfigHandler<IdentityModule>>();
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityClientSeeder>();
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
-
                 };
             }
 
-
-            public Action<IModulesHostBuilderContext<IdentityModule>, IServiceCollection> Invoke(
-                Action<IModulesHostBuilderContext<IdentityModule>, IServiceCollection> next)
+            public Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> Invoke(
+                Action<IModulesHostBuilderContext<IdentityModule>, SimpleInjectorAddOptions> next)
             {
-                return (context, services) =>
+                return (context, options) =>
                 {
-                    next(context, services);
-                    services.AddHostedHandler<SeedFromConfigHandler<IdentityModule>>();
+                    options.AddHostedService<SeedFromConfigHandler<IdentityModule>>();
+                    next(context, options);
                 };
             }
         }

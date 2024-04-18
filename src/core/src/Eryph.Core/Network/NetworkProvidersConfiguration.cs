@@ -16,6 +16,7 @@ network_providers:
     ip_pools:
     - name: default
       first_ip: 10.249.248.10
+      next_ip: 10.249.248.10
       last_ip: 10.249.251.241
 ";
 }

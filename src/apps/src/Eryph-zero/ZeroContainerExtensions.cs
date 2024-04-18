@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Dbosoft.OVN;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;

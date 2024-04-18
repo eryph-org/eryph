@@ -8,6 +8,9 @@ namespace Eryph.Modules.Controller.Networks;
 
 public interface IIpPoolManager
 {
-    EitherAsync<Error, IpPoolAssignment> AcquireIp(Guid subnetId, string poolName, CancellationToken cancellationToken);
+    EitherAsync<Error, IpPoolAssignment> AcquireIp(
+        Guid subnetId,
+        string poolName,
+        CancellationToken cancellationToken = default);
 
 }

@@ -48,9 +48,9 @@ namespace Eryph.ModuleCore.Networks
                                 {
                                     Name = ipPool.Name,
                                     FirstIp = ipPool.FirstIp,
-                                    LastIp = ipPool.LastIp
+                                    LastIp = ipPool.LastIp,
+                                    NextIp = ipPool.NextIp,
                                 }).ToArray() : null
-
                             };
                         }).ToArray() : null
 

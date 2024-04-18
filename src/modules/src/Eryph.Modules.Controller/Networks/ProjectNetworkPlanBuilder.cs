@@ -76,14 +76,14 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
                     ? AcquireRouterPortIpAddress(port, network, providerSubnets, cancellationToken)
                         .Map(p => new ProviderRouterPortInfo(p, network, EmptyProviderSubnetInfo))
                     : new ProviderRouterPortInfo(port, network, EmptyProviderSubnetInfo)))
-            .Flatten().TraverseSerial(l => l)
+            .Flatten().SequenceSerial()
 
             // find and add provider subnet 
             .Bind(infoSeq => infoSeq.Map(info => providerSubnets
                 .Find(x => x.Subnet.ProviderName == info.Network.NetworkProvider && x.Subnet.Name == info.Port.SubnetName)
                 .ToEitherAsync(Error.New(
                     $"Network '{info.Network.Name}' configuration error: subnet {info.Port.SubnetName} of network provider {info.Network.NetworkProvider} not found."))
-                .Map(providerSubnet => info with { Subnet = providerSubnet })).TraverseParallel(l => l));
+                .Map(providerSubnet => info with { Subnet = providerSubnet })).SequenceSerial());
 
     private EitherAsync<Error, Seq<FloatingPortInfo>> GetFloatingPorts(
         Seq<CatletNetworkPort> catletPorts, Seq<ProviderSubnetInfo> providerSubnets)
@@ -97,7 +97,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
                            x.Subnet.Name == info.Port.SubnetName)
                 .ToEitherAsync(Error.New(
                     $"Port '{info.Port.Name}' configuration error: subnet {info.Port.SubnetName} of network provider {info.Port.ProviderName} not found."))
-                .Map(_ => info )).TraverseParallel(l => l);
+                .Map(_ => info )).SequenceSerial();
     }
 
 

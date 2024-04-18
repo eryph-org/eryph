@@ -1,19 +1,11 @@
 ﻿using System;
-using Dbosoft.Hosuto.HostedServices;
+using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Eryph.Configuration;
 using Eryph.Modules.Controller;
-using Eryph.Modules.Controller.DataServices;
-using Eryph.Resources.Machines;
-using Eryph.Runtime.Zero.Configuration.Projects;
-using Eryph.Runtime.Zero.Configuration.Storage;
-using Eryph.Runtime.Zero.Configuration.VMMetadata;
 using Eryph.StateDb;
-using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
-using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Runtime.Zero
 {
@@ -25,23 +17,18 @@ namespace Eryph.Runtime.Zero
             {
                 cfg.Configure(app =>
                 {
-                    
-                    using var scope = app.Services.CreateScope();
-                    scope.ServiceProvider.GetRequiredService<StateStoreContext>().Database.Migrate();
+                    Task.Run(async () =>
+                    {
+                        await using var scope = app.Services.CreateAsyncScope();
+                        await scope.ServiceProvider.GetRequiredService<StateStoreContext>().Database.MigrateAsync();
+                    }).Wait();
                 });
             });
 
             builder.ConfigureFrameworkServices((ctx, services) =>
             {
                 services.AddTransient<IConfigureContainerFilter<ControllerModule>, ControllerModuleFilters>();
-                services.AddTransient<IModuleServicesFilter<ControllerModule>, ControllerModuleFilters>();
             });
-
-            container.RegisterSingleton<IConfigReaderService<CatletMetadata>, VMMetadataConfigReaderService>();
-            container.RegisterSingleton<IConfigWriterService<CatletMetadata>, VMMetadataConfigWriterService>();
-            container.RegisterSingleton<IConfigReaderService<VirtualDisk>, VhdReaderService>();
-            container.RegisterSingleton<IConfigWriterService<VirtualDisk>, VhdWriterService>();
-
 
             container.Register<IPlacementCalculator, ZeroAgentLocator>();
             container.Register<IStorageManagementAgentLocator, ZeroAgentLocator>();
@@ -50,8 +37,8 @@ namespace Eryph.Runtime.Zero
         }
 
 
-        private class ControllerModuleFilters : IConfigureContainerFilter<ControllerModule>,
-            IModuleServicesFilter<ControllerModule>
+        private class ControllerModuleFilters :
+            IConfigureContainerFilter<ControllerModule>
         {
             public Action<IModuleContext<ControllerModule>, Container> Invoke(
                 Action<IModuleContext<ControllerModule>, Container> next)
@@ -61,36 +48,7 @@ namespace Eryph.Runtime.Zero
                     next(context, container);
 
                     container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigWriterService<CatletMetadata>>, Lifestyle.Scoped);
-                    container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigReaderService<CatletMetadata>>, Lifestyle.Scoped);
-                    container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigWriterService<VirtualDisk>>, Lifestyle.Scoped);
-                    container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigReaderService<VirtualDisk>>, Lifestyle.Scoped);
-
-                    container.RegisterDecorator(typeof(IVirtualMachineMetadataService),
-                        typeof(MetadataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
-
-                    container.RegisterDecorator(typeof(IVirtualDiskDataService),
-                        typeof(VirtualDiskDataServiceWithConfigServiceDecorator), Lifestyle.Scoped);
-
-                    container.RegisterSingleton<SeedFromConfigHandler<ControllerModule>>();
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, ProjectSeeder>();
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, VMMetadataSeeder>();
-                    container.Collection.Append<IConfigSeeder<ControllerModule>, VirtualDiskSeeder>();
-
-                };
-            }
-
-
-            public Action<IModulesHostBuilderContext<ControllerModule>, IServiceCollection> Invoke(
-                Action<IModulesHostBuilderContext<ControllerModule>, IServiceCollection> next)
-            {
-                return (context, services) =>
-                {
-                    next(context, services);
-                    services.AddHostedHandler<SeedFromConfigHandler<ControllerModule>>();
+                        .GetRequiredService<IDbContextConfigurer<StateStoreContext>>, Lifestyle.Scoped);
                 };
             }
         }

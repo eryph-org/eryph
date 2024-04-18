@@ -10,4 +10,5 @@ public interface INetworkProviderManager
     EitherAsync<Error, NetworkProvidersConfiguration> GetCurrentConfiguration();
     Either<Error, NetworkProvidersConfiguration> ParseConfigurationYaml(string yaml);
     EitherAsync<Error, Unit> SaveConfigurationYaml(string config);
+    EitherAsync<Error, Unit> SaveConfiguration(NetworkProvidersConfiguration config);
 }

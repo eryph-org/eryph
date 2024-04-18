@@ -64,10 +64,6 @@ namespace Eryph.Modules.AspNetCore
                 services.TryAddSingleton<IPolicyEvaluator, DisableAuthenticationPolicyEvaluator>();
 #endif
 
-            services.AddDbContext<StateStoreContext>(options =>
-                serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>().Configure(options));
-
-
             services.AddAutoMapper(typeof(TModule).Assembly, typeof(MapperProfile).Assembly);
         }
 
@@ -81,21 +77,25 @@ namespace Eryph.Modules.AspNetCore
         {
             options.AddAspNetCore()
                 .AddControllerActivation();
+
+            options.RegisterStateStore();
         }
 
         [UsedImplicitly]
         public virtual void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
-            container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
-            container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
-            container.Register(typeof(IListRequestHandler<>), typeof(ListRequestHandler<>),Lifestyle.Scoped);
-            container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
-
+            container.Register(
+                serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>,
+                Lifestyle.Scoped);
             container.Register<IUserRightsProvider, UserRightsProvider>(Lifestyle.Scoped);
-
 
             container.RegisterConditional(typeof(IGetRequestHandler<,>),
                 typeof(GetRequestHandler<,>), Lifestyle.Scoped,
+                c => !c.Handled);
+            container.RegisterConditional(
+                typeof(IListRequestHandler<,,>),
+                typeof(ListRequestHandler<,,>),
+                Lifestyle.Scoped,
                 c => !c.Handled);
 
             container.Register(typeof(IOperationRequestHandler<>), typeof(EntityOperationRequestHandler<>), Lifestyle.Scoped);

@@ -499,7 +499,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                                  select unit;
 
                 return res.ToArray() //force enumeration to generate updates
-                    .TraverseParallel(l => l);
+                    .SequenceSerial();
             }).Map(_ => unit);
         }
     }
@@ -547,7 +547,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     select networkProvider;
 
                 return res.ToArray() //force enumeration to generate updates
-                    .TraverseParallel(l => l);
+                    .SequenceSerial();
             }).Map(_ => ovsBridges);
         }
     }

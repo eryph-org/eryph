@@ -21,87 +21,61 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                 x => x.MapFrom(y => y.NetworkProvider))
             .ForMember(x => x.ProjectId, x => x.MapFrom(y => y.ProjectId))
             .ForMember(x => x.TenantId, x => x
-                .MapFrom(y => y.Project.TenantId))
-            ;
+                .MapFrom(y => y.Project.TenantId));
 
-            CreateMap<StateDb.Model.Catlet, Catlet>().ForMember(x => x.Networks, m =>
-            {
-                m.MapAtRuntime();
-                m.MapFrom((catlet,_) =>
-                {
-                    return catlet.NetworkPorts.Map(port =>
-                    {
-                        var ipV4Addresses = port.IpAssignments?.Map(assignment => assignment.IpAddress) 
-                                            ?? Array.Empty<string>();
-                        var routerIp = port.Network.RouterPort.IpAssignments?.FirstOrDefault()?.IpAddress;
-                        var subnets = port.IpAssignments?.Map(x => x.Subnet.IpNetwork) ?? Array.Empty<string>();
-                        var dnsServers = port.IpAssignments?.Map(x => x.Subnet).Cast<VirtualNetworkSubnet>()
-                            .Map(x => x.DnsServersV4) ?? Array.Empty<string>();
-
-                        var reportedNetwork = catlet.ReportedNetworks.FirstOrDefault(x => 
-                            x.IpV4Addresses.SequenceEqual(ipV4Addresses));
-
-                        FloatingNetworkPort floatingPort = null;
-                        if (port.FloatingPort != null)
-                        {
-                            var floatingPortIp = port.FloatingPort.IpAssignments?.Map(x=>x.IpAddress);
-                            floatingPort = new FloatingNetworkPort()
-                            {
-                                Name = port.FloatingPort.Name,
-                                Subnet = port.FloatingPort.SubnetName,
-                                Provider = port.FloatingPort.ProviderName,
-                                IpV4Addresses = floatingPortIp,
-                                IpV4Subnets = port.FloatingPort.IpAssignments?.Map(x => x.Subnet).Map(x=>x.IpNetwork)
-                            };
-                        }
-
-                        return new CatletNetwork
-                        {
-                            Name = port.Network.Name,
-                            Provider = port.Network.NetworkProvider,
-                            IpV4Addresses = reportedNetwork?.IpV4Addresses ?? ipV4Addresses,
-                            //IpV6Addresses = reportedNetwork?.IpV6Addresses ?? Enumerable.Empty<string>(),
-                            IPv4DefaultGateway = reportedNetwork?.IPv4DefaultGateway ?? routerIp,
-                            //IPv6DefaultGateway = reportedNetwork?.IPv6DefaultGateway,
-                            IpV4Subnets = reportedNetwork?.IpV4Subnets ?? subnets,
-                            //IpV6Subnets = reportedNetwork?.IpV6Subnets ?? Enumerable.Empty<string>(),
-                            DnsServerAddresses = reportedNetwork?.DnsServerAddresses ?? dnsServers,
-                            FloatingPort = floatingPort
-                        };
-                    });
-
-
-                });
-            });
+            CreateMap<StateDb.Model.Catlet, Catlet>();
             CreateMap<StateDb.Model.CatletDrive, CatletDrive>();
             CreateMap<StateDb.Model.CatletNetworkAdapter, CatletNetworkAdapter>();
             CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>().ForMember(x => x.Path,
                 o => { o.MapFrom(s => userRole == "Admin" ? s.Path : null); });
 
-            var memberMap = CreateMap<ProjectRoleAssignment, ProjectMemberRole>();
-            memberMap
-                .ForMember(x => x.MemberId,
-                    o =>
-                        o.MapFrom(dest => dest.IdentityId));
+            CreateMap<(StateDb.Model.Catlet Catlet, CatletNetworkPort Port), CatletNetwork>()
+                .ConvertUsing((src, target) =>
+                {
+                    target ??= new CatletNetwork();
+                    var ipV4Addresses = src.Port.IpAssignments?.Map(assignment => assignment.IpAddress)
+                        ?? Array.Empty<string>();
+                    var routerIp = src.Port.Network.RouterPort.IpAssignments?.FirstOrDefault()?.IpAddress;
+                    var subnets = src.Port.IpAssignments?.Map(x => x.Subnet.IpNetwork) ?? Array.Empty<string>();
+                    var dnsServers = src.Port.IpAssignments?.Map(x => x.Subnet).Cast<VirtualNetworkSubnet>()
+                        .Map(x => x.DnsServersV4) ?? Array.Empty<string>();
 
-            memberMap.ForMember(x => x.ProjectName,
-                    o => 
-                        o.MapFrom(s => s.Project.Name));
+                    var reportedNetwork = src.Catlet.ReportedNetworks.FirstOrDefault(x =>
+                        x.IpV4Addresses.SequenceEqual(ipV4Addresses));
 
-            memberMap.ForMember(x => x.RoleName,
-                    o =>
-                        o.MapFrom((src,m) =>
+                    FloatingNetworkPort floatingPort = null;
+                    if (src.Port.FloatingPort != null)
+                    {
+                        var floatingPortIp = src.Port.FloatingPort.IpAssignments?.Map(x => x.IpAddress);
+                        floatingPort = new FloatingNetworkPort()
                         {
-                            if(src.RoleId == EryphConstants.BuildInRoles.Owner)
-                                return "owner";
-                            if (src.RoleId == EryphConstants.BuildInRoles.Contributor)
-                                return "contributor";
-                            if (src.RoleId == EryphConstants.BuildInRoles.Reader)
-                                return "reader";
+                            Name = src.Port.FloatingPort.Name,
+                            Subnet = src.Port.FloatingPort.SubnetName,
+                            Provider = src.Port.FloatingPort.ProviderName,
+                            IpV4Addresses = floatingPortIp,
+                            IpV4Subnets = src.Port.FloatingPort.IpAssignments?.Map(x => x.Subnet).Map(x => x.IpNetwork)
+                        };
+                    }
 
-                            return "";
-                        }));
+                    target.Name = src.Port.Network.Name;
+                    target.Provider = src.Port.Network.NetworkProvider;
+                    target.IpV4Addresses = reportedNetwork?.IpV4Addresses ?? ipV4Addresses;
+                    //IpV6Addresses = reportedNetwork?.IpV6Addresses ?? Enumerable.Empty<string>(),
+                    target.IPv4DefaultGateway = reportedNetwork?.IPv4DefaultGateway ?? routerIp;
+                    //IPv6DefaultGateway = reportedNetwork?.IPv6DefaultGateway,
+                    target.IpV4Subnets = reportedNetwork?.IpV4Subnets ?? subnets;
+                    //IpV6Subnets = reportedNetwork?.IpV6Subnets ?? Enumerable.Empty<string>(),
+                    target.DnsServerAddresses = reportedNetwork?.DnsServerAddresses ?? dnsServers;
+                    target.FloatingPort = floatingPort;
 
+                    return target;
+                });
+
+            var memberMap = CreateMap<ProjectRoleAssignment, ProjectMemberRole>();
+            memberMap.ForMember(x => x.MemberId, o => o.MapFrom(dest => dest.IdentityId));
+            memberMap.ForMember(x => x.ProjectName, o => o.MapFrom(s => s.Project.Name));
+            memberMap.ForMember(x => x.RoleName,
+                o => o.MapFrom((src,m) => RoleNames.GetRoleName(src.RoleId)));
         }
     }
 }

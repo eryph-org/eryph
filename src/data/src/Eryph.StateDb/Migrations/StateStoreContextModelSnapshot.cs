@@ -115,9 +115,6 @@ namespace Eryph.StateDb.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Counter")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("FirstIp")
                         .HasColumnType("TEXT");
 
@@ -128,6 +125,9 @@ namespace Eryph.StateDb.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NextIp")
                         .HasColumnType("TEXT");
 
                     b.Property<byte[]>("RowVersion")
@@ -587,7 +587,8 @@ namespace Eryph.StateDb.Migrations
                     b.Property<Guid>("PoolId")
                         .HasColumnType("TEXT");
 
-                    b.HasIndex("PoolId");
+                    b.HasIndex("PoolId", "Number")
+                        .IsUnique();
 
                     b.HasDiscriminator().HasValue("IpPoolAssignment");
                 });
@@ -697,10 +698,10 @@ namespace Eryph.StateDb.Migrations
                 {
                     b.HasBaseType("Eryph.StateDb.Model.VirtualNetworkPort");
 
-                    b.Property<Guid?>("CatletId")
+                    b.Property<Guid>("CatletMetadataId")
                         .HasColumnType("TEXT");
 
-                    b.HasIndex("CatletId");
+                    b.HasIndex("CatletMetadataId");
 
                     b.HasDiscriminator().HasValue("CatletNetworkPort");
                 });
@@ -995,12 +996,11 @@ namespace Eryph.StateDb.Migrations
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkPort", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.Catlet", "Catlet")
-                        .WithMany("NetworkPorts")
-                        .HasForeignKey("CatletId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("Catlet");
+                    b.HasOne("Eryph.StateDb.Model.CatletMetadata", null)
+                        .WithMany()
+                        .HasForeignKey("CatletMetadataId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.NetworkRouterPort", b =>
@@ -1064,8 +1064,6 @@ namespace Eryph.StateDb.Migrations
                     b.Navigation("Drives");
 
                     b.Navigation("NetworkAdapters");
-
-                    b.Navigation("NetworkPorts");
 
                     b.Navigation("ReportedNetworks");
                 });
