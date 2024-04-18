@@ -13,7 +13,7 @@ namespace Eryph.StateDb.Design
     ///     to configure EfCore context without the normally required container setup that is executed on application startup.
     ///     To use the migrations set the environment variable MYSQL_CONNECTIONSTRING to the database connection string.
     ///     Then call the migration as follows:
-    ///     Add-Migration -StartupProject Eryph-zero -Project Eryph.StateDb -Name [name_of_migration]
+    ///     Add-Migration -StartupProject Eryph.StateDb.Design -Project Eryph.StateDb -Name [name_of_migration]
     /// </remarks>
     [UsedImplicitly]
     public class DesignTimeStateStoreContextFactory : IDesignTimeDbContextFactory<StateStoreContext>
