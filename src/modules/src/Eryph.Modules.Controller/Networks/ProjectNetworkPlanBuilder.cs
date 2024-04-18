@@ -241,7 +241,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
 
         return networks.Map(network =>
         {
-            var ipNetwork = IPNetwork.Parse(network.IpNetwork);
+            var ipNetwork = IPNetwork2.Parse(network.IpNetwork);
             if (network.RouterPort == null || network.RouterPort.IpAssignments?.Count == 0)
                 return networkPlan;
 
