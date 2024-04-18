@@ -11,7 +11,6 @@ using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Hosting.WindowsServices;
 using Rebus.Sagas;
 using Rebus.Subscriptions;
 using Rebus.Timeouts;
