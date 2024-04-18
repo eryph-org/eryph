@@ -1,11 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
-
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
@@ -13,11 +11,9 @@
     </PackageReference>
     <PackageReference Include="OpenIddict.AspNetCore" Version="4.7.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\..\data\src\Eryph.IdentityDb\Eryph.IdentityDb.csproj" />
     <ProjectReference Include="..\Eryph.Modules.AspNetCore\Eryph.Modules.AspNetCore.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.Security.Cryptography\Eryph.Security.Cryptography.csproj" />
   </ItemGroup>
-
 </Project>

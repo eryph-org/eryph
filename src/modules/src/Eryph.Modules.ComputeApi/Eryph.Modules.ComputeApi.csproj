@@ -1,13 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
-
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
-
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile></DocumentationFile>
+    <DocumentationFile>
+    </DocumentationFile>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.3.1-ci.4" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
@@ -15,13 +13,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Eryph.Modules.AspNetCore\Eryph.Modules.AspNetCore.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <Compile Update="Configuration\ModelConfiguration.cs" />
   </ItemGroup>
-
 </Project>
