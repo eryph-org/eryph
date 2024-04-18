@@ -104,7 +104,7 @@ internal class FloatingNetworkPortSeeder : IConfigSeeder<ControllerModule>
             assignment = new IpPoolAssignment
             {
                 Pool = pool,
-                Number = (int)(IPNetwork.ToBigInteger(assignedIp) - IPNetwork.ToBigInteger(startIp)),
+                Number = (int)(IPNetwork2.ToBigInteger(assignedIp) - IPNetwork2.ToBigInteger(startIp)),
                 Subnet = subnet,
             };
         }
