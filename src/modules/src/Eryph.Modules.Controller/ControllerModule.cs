@@ -98,7 +98,7 @@ namespace Eryph.Modules.Controller
                         .Configure(t, QueueNames.Controllers))
                 .Options(x =>
                 {
-                    x.SimpleRetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
+                    x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                     x.SetNumberOfWorkers(5);
                     x.EnableSimpleInjectorUnitOfWork();
                 })
