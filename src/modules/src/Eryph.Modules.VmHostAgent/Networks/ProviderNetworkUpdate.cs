@@ -88,7 +88,7 @@ public static class ProviderNetworkUpdate<RT>
                 x.Type == NetworkProviderType.NatOverLay
                     ? IPAddress.Parse(x.Subnets.First(s => s.Name == "default").Gateway)
                     : IPAddress.None,
-                IPNetwork.Parse(x.Subnets.First(s => s.Name == "default").Network),
+                IPNetwork2.Parse(x.Subnets.First(s => s.Name == "default").Network),
                 x.BridgeOptions))
             .ToSeq()
         let newOverlayAdapters = toHashSet(newConfig.NetworkProviders

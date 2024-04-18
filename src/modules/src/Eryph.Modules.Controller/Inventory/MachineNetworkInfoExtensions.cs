@@ -27,10 +27,10 @@ internal static class MachineNetworkInfoExtensions
                 .FirstOrDefault(n => n.AddressFamily == AddressFamily.InterNetwork)?.ToString(),
             IPv6DefaultGateway = mn.DefaultGateways.Select(IPAddress.Parse)
                 .FirstOrDefault(n => n.AddressFamily == AddressFamily.InterNetworkV6)?.ToString(),
-            IpV4Subnets = mn.Subnets.Select(IPNetwork.Parse)
+            IpV4Subnets = mn.Subnets.Select(IPNetwork2.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetwork)
                 .Select(n => n.ToString()).ToArray(),
-            IpV6Subnets = mn.Subnets.Select(IPNetwork.Parse)
+            IpV6Subnets = mn.Subnets.Select(IPNetwork2.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetworkV6)
                 .Select(n => n.ToString()).ToArray()
         });

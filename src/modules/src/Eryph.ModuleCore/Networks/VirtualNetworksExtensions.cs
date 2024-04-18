@@ -34,7 +34,7 @@ namespace Eryph.ModuleCore.Networks
                         Subnets = network.Subnets.Count > 0 ? network.Subnets.Map(subnet =>
                         {
 
-                            var ipNetwork = IPNetwork.Parse(subnet.IpNetwork);
+                            var ipNetwork = IPNetwork2.Parse(subnet.IpNetwork);
 
                             return new NetworkSubnetConfig
                             {

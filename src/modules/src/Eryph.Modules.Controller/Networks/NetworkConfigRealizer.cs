@@ -118,7 +118,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
             if(string.IsNullOrWhiteSpace(networkConfig.Address))
                 throw new InconsistentNetworkConfigException($"Network '{networkConfig.Name}': Network address not set.");
 
-            var networkAddress = IPNetwork.Parse(networkConfig.Address);
+            var networkAddress = IPNetwork2.Parse(networkConfig.Address);
 
             var providerPorts = savedNetwork.NetworkPorts
                 .Where(x => x is ProviderRouterPort).Cast<ProviderRouterPort>().ToArray();
@@ -224,7 +224,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
             foundNames.Clear();
 
             // if nothing has been configured for ip pool, we need second address after router to initialize pool
-            var secondIp = IPNetwork.ToIPAddress(IPNetwork.ToBigInteger(networkAddress.FirstUsable) + 1, AddressFamily.InterNetwork);
+            var secondIp = IPNetwork2.ToIPAddress(IPNetwork2.ToBigInteger(networkAddress.FirstUsable) + 1, AddressFamily.InterNetwork);
 
             networkConfig.Subnets ??= new[]
             {
@@ -242,7 +242,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                             Name = "default",
                             // default projects network network? if not try to initialize pool even if not completely configured
                             FirstIp = networkConfig.Address == "10.0.0.0/20" ? "10.0.0.100" :  secondIp.ToString(),
-                            LastIp =  networkConfig.Address == "10.0.0.0/20" ? "10.0.2.240" : IPNetwork.Parse(networkConfig.Address).LastUsable.ToString(),
+                            LastIp =  networkConfig.Address == "10.0.0.0/20" ? "10.0.2.240" : IPNetwork2.Parse(networkConfig.Address).LastUsable.ToString(),
                         },
                     }
                 }

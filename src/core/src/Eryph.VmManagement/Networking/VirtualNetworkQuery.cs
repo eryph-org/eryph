@@ -111,15 +111,15 @@ public static class VirtualNetworkQuery
             var netmask = netmasks[i];
             if (netmask.StartsWith("/"))
             {
-                yield return IPNetwork.Parse(address + netmask).ToString();
+                yield return IPNetwork2.Parse(address + netmask).ToString();
             }
             else
             {
                 if (netmask.IndexOf('.') == -1)
-                    yield return IPNetwork.Parse($"{address}/{netmask}").ToString();
+                    yield return IPNetwork2.Parse($"{address}/{netmask}").ToString();
                 else
                 {
-                    yield return IPNetwork.Parse(address, netmask).ToString();
+                    yield return IPNetwork2.Parse(address, netmask).ToString();
                 }
             }
 

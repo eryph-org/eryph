@@ -26,16 +26,16 @@ namespace Eryph.VmManagement.Networking
                 var netmask = netmasks[i];
 
                 if (netmask.StartsWith("/"))
-                    yield return IPNetwork.Parse(address + netmask).ToString();
+                    yield return IPNetwork2.Parse(address + netmask).ToString();
                 else
                 {
                     if (byte.TryParse(netmask, out _))
                     {
-                        yield return IPNetwork.Parse(address + "/" + netmask).ToString();
+                        yield return IPNetwork2.Parse(address + "/" + netmask).ToString();
                         continue;
                     }
 
-                    yield return IPNetwork.Parse(address, netmask).ToString();
+                    yield return IPNetwork2.Parse(address, netmask).ToString();
                 }
             }
         }

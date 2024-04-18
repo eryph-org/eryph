@@ -105,7 +105,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                     .AddCommand("Enable-NetAdapter"))
                 .ToAff());
 
-    public Aff<RT, Unit> ConfigureAdapterIp(string adapterName, IPAddress ipAddress, IPNetwork network)
+    public Aff<RT, Unit> ConfigureAdapterIp(string adapterName, IPAddress ipAddress, IPNetwork2 network)
     {
         var ipCommand = PsCommandBuilder.Create()
             .AddCommand("New-NetIPAddress")
@@ -310,7 +310,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             .AddParameter("Confirm", false)
         ).ToAff());
 
-    public Aff<RT,Unit> AddNetNat(string natName, IPNetwork network) =>
+    public Aff<RT,Unit> AddNetNat(string natName, IPNetwork2 network) =>
         default(RT).Powershell.Bind(ps => ps.RunAsync(PsCommandBuilder.Create()
             .AddCommand("New-NetNat")
             .AddParameter("Name", natName)

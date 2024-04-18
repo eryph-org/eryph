@@ -59,12 +59,6 @@ namespace Eryph.Modules.Controller.Networks
                             ipPoolConfig.FirstIp = firstIp.ToString();
                         }
 
-                        if (!string.IsNullOrWhiteSpace(ipPoolConfig.NextIp)
-                            && IPAddress.TryParse(ipPoolConfig.NextIp, out var nextIp))
-                        {
-                            ipPoolConfig.NextIp = nextIp.ToString();
-                        }
-
                         if (!string.IsNullOrWhiteSpace(ipPoolConfig.LastIp)
                             && IPAddress.TryParse(ipPoolConfig.LastIp, out var lastIp))
                         {
@@ -230,26 +224,18 @@ namespace Eryph.Modules.Controller.Networks
                                 $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{ipPoolConfig.Name}': Changing the address of a used ip pool is not supported.";
 
                         //check if it possible to move last ip
-                        if (ipPoolConfig.LastIp != ipPool.LastIp)
-                        {
-                            var maxIp = ipPool.IpAssignments
-                                .Select(x => IPNetwork.ToBigInteger(IPAddress.Parse(x.IpAddress)))
-                                .Max();
+                        if (ipPoolConfig.LastIp == ipPool.LastIp) continue;
 
-                            var lastIpNo = IPNetwork.ToBigInteger(IPAddress.Parse(ipPoolConfig.LastIp ?? maxIp.ToString()));
-                            var maxAsIp = IPNetwork.ToIPAddress(maxIp, AddressFamily.InterNetwork);
+                        var maxIp = ipPool.IpAssignments
+                            .Select(x => IPNetwork2.ToBigInteger(IPAddress.Parse(x.IpAddress)))
+                            .Max();
 
-                            if (maxIp > lastIpNo)
-                                yield return
-                                    $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{ipPoolConfig.Name}': Cannot change last ip to '{ipPoolConfig.LastIp}' as there are already higher addresses assigned (e.g.: '{maxAsIp}').";
-                        }
+                        var lastIpNo = IPNetwork2.ToBigInteger(IPAddress.Parse(ipPoolConfig.LastIp ?? maxIp.ToString()));
+                        var maxAsIp = IPNetwork2.ToIPAddress(maxIp, AddressFamily.InterNetwork);
 
-                        if (!string.IsNullOrWhiteSpace(ipPoolConfig.NextIp))
-                        {
-                            if (ipPool.IpAssignments.Any(a => a.IpAddress == ipPoolConfig.NextIp))
-                                yield return
-                                    $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{ipPoolConfig.Name}': Cannot change next ip to '{ipPoolConfig.NextIp}' as this ip is already assigned.";
-                        }
+                        if (maxIp > lastIpNo)
+                            yield return
+                                $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{ipPoolConfig.Name}': Cannot change last ip to '{ipPoolConfig.LastIp}' as there are already higher addresses assigned (e.g.: '{maxAsIp}').";
                     }
                 }
             }
@@ -260,7 +246,7 @@ namespace Eryph.Modules.Controller.Networks
             var networkConfigs = config.Networks ?? Array.Empty<NetworkConfig>();
             var ipNetworksOfNetworks =
                 networkConfigs.Select(x =>
-                        (IPNetwork.TryParse(x.Address, out var ipNetwork), ipNetwork, 
+                        (IPNetwork2.TryParse(x.Address, out var ipNetwork), ipNetwork, 
                             Name: GetEnvironmentName(x.Environment, x.Name ?? "default")))
                     .Where(x => x.Item1)
                     .Select(x => (Address: x.ipNetwork, Network: x.Name))
@@ -321,7 +307,7 @@ namespace Eryph.Modules.Controller.Networks
                         continue;
                     }
 
-                    if (!IPNetwork.TryParse(networkConfig.Address, out var networkIpNetwork))
+                    if (!IPNetwork2.TryParse(networkConfig.Address, out var networkIpNetwork))
                     {
                         yield return
                             $"{environmentMessage}network '{networkConfig.Name}': Invalid network address '{networkConfig.Address}'";
@@ -360,7 +346,7 @@ namespace Eryph.Modules.Controller.Networks
                         var subnetAddress = subnetConfig.Address ?? networkConfig.Address;
                         if (!string.IsNullOrWhiteSpace(subnetConfig.Address))
                         {
-                            if (!IPNetwork.TryParse(subnetConfig.Address, out subnetIPNetwork))
+                            if (!IPNetwork2.TryParse(subnetConfig.Address, out subnetIPNetwork))
                                 yield return
                                     $"{environmentMessage}subnet '{networkConfig.Name}/{subnetConfig.Name}': Invalid network address '{subnetConfig.Address}'";
 
@@ -384,38 +370,24 @@ namespace Eryph.Modules.Controller.Networks
                         {
                             if (!IPAddress.TryParse(poolConfig.FirstIp, out var firstIp))
                                 yield return
-                                    $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': Invalid ip address '{poolConfig.FirstIp}'";
+                                    $"{environmentMessage}ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': Invalid ip address '{poolConfig.FirstIp}'";
                             if (!IPAddress.TryParse(poolConfig.LastIp, out var lastIp))
                                 yield return
-                                    $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': Invalid ip address '{poolConfig.LastIp}'";
+                                    $"{environmentMessage}ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': Invalid ip address '{poolConfig.LastIp}'";
 
                             if (firstIp != null && !subnetIPNetwork.Contains(firstIp))
                                 yield return
-                                    $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': ip address '{poolConfig.FirstIp}' is not in subnet '{subnetIPNetwork}'";
+                                    $"{environmentMessage}ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': ip address '{poolConfig.FirstIp}' is not in subnet '{subnetIPNetwork}'";
 
                             if (lastIp != null && !subnetIPNetwork.Contains(lastIp))
                                 yield return
-                                    $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': ip address '{poolConfig.LastIp}' is not in subnet '{subnetIPNetwork}'";
+                                    $"{environmentMessage}ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': ip address '{poolConfig.LastIp}' is not in subnet '{subnetIPNetwork}'";
 
                             if (lastIp != null && firstIp != null &&
-                                IPNetwork.ToBigInteger(lastIp) < IPNetwork.ToBigInteger(firstIp))
+                                IPNetwork2.ToBigInteger(lastIp) < IPNetwork2.ToBigInteger(firstIp))
                                 yield return
-                                    $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}':last ip address '{poolConfig.LastIp}' is not larger then first ip address '{poolConfig.FirstIp}'";
+                                    $"{environmentMessage}ip pool '{subnetConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}':last ip address '{poolConfig.LastIp}' is not larger then first ip address '{poolConfig.FirstIp}'";
 
-                            if (!string.IsNullOrWhiteSpace(poolConfig.NextIp))
-                            {
-                                if(!IPAddress.TryParse(poolConfig.NextIp, out var nextIp))
-                                    yield return
-                                        $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': Invalid ip address '{poolConfig.NextIp}'";
-
-                                if (nextIp != null && !subnetIPNetwork.Contains(nextIp))
-                                    yield return
-                                        $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': ip address '{poolConfig.NextIp}' is not in subnet '{subnetIPNetwork}'";
-
-                                if (nextIp != null && lastIp != null && IPNetwork.ToBigInteger(lastIp) < IPNetwork.ToBigInteger(nextIp))
-                                    yield return
-                                        $"{environmentMessage}ip pool '{networkConfig.Name}/{subnetConfig.Name}/{poolConfig.Name}': Next ip address '{poolConfig.NextIp}' is invalid as it is higher than last ip address '{poolConfig.LastIp}'";
-                            }
                         }
                     }
                 }

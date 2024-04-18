@@ -9,125 +9,112 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
 using LanguageExt.Common;
-using Microsoft.Extensions.Logging;
-using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
 
 internal class IpPoolManager : IIpPoolManager
 {
-    private readonly ILogger _logger;
     private readonly IStateStore _stateStore;
 
-    public IpPoolManager(
-        ILogger logger,
-        IStateStore stateStore)
+    public IpPoolManager(IStateStore stateStore)
     {
-        _logger = logger;
         _stateStore = stateStore;
     }
 
-    public EitherAsync<Error, IpPoolAssignment> AcquireIp(
-        Guid subnetId,
-        string poolName,
-        CancellationToken cancellationToken = default) => TryAsync(async () =>
+    public EitherAsync<Error,IpPoolAssignment> AcquireIp(Guid subnetId, string poolName, CancellationToken cancellationToken)
+    {
+        return Prelude.TryAsync(async () =>
         {
-            var pool = await _stateStore.For<IpPool>().GetBySpecAsync(
-                new IpPoolSpecs.GetByName(subnetId, poolName),
-                cancellationToken);
+            var pool = await _stateStore.For<IpPool>()
+                .GetBySpecAsync(new IpPoolSpecs.GetByName(subnetId, poolName), cancellationToken)
+                .ConfigureAwait(false);
 
-            if (pool is null)
-                throw new InvalidOperationException($"IP pool {poolName} not found for subnet id {subnetId}");
+            if (pool == null)
+                throw new NotFoundException($"IpPool {poolName} not found for subnet id {subnetId}");
 
-            if(!IPNetwork.TryParse(pool.IpNetwork, out var ipNetwork))
-                throw new InvalidOperationException($"IP pool {pool.Id} has invalid network '{pool.IpNetwork}'");
-            if(!IPAddress.TryParse(pool.FirstIp, out var firstIp))
-                throw new InvalidOperationException($"IP pool {pool.Id} has invalid first IP '{pool.FirstIp}");
-            if (!IPAddress.TryParse(pool.NextIp, out var nextIp))
-                throw new InvalidOperationException($"IP pool {pool.Id} has invalid next IP '{pool.NextIp}'");
-            if (!IPAddress.TryParse(pool.LastIp, out var lastIp))
-                throw new InvalidOperationException($"IP pool {pool.Id} has invalid last IP '{pool.NextIp}'");
+            var lastNumber = pool.Counter;
+            GetPoolAddresses(pool, out var ipNetwork, out var firstIp, out var lastIp);
 
-            var firstIpBigInt = IPNetwork.ToBigInteger(firstIp);
+            var startNumber = IPNetwork2.ToBigInteger(firstIp);
+            var endNumber = IPNetwork2.ToBigInteger(lastIp);
 
-            var poolSize = (int)(IPNetwork.ToBigInteger(lastIp) - firstIpBigInt) + 1;
-            var nextNumber = (int)(IPNetwork.ToBigInteger(nextIp) - firstIpBigInt);
+            var space = endNumber - startNumber;
 
-            var totalAssigned = await _stateStore.Read<IpPoolAssignment>()
-                .CountAsync(new IpPoolSpecs.GetAssignments(pool.Id), cancellationToken);
+            var totalAssigned =
+                await _stateStore.Read<IpPoolAssignment>()
+                    .CountAsync(new IpPoolSpecs.GetAssignments(pool.Id), cancellationToken);
 
-            if (totalAssigned >= poolSize)
-                throw new InvalidOperationException($"IP pool {poolName}({pool.Id}) has no more free IP addresses.");
+            if (totalAssigned >= space)
+                throw new InvalidOperationException($"IpPool {pool.Id} has no more free ips.");
 
-            var isNextNumberFree = await IsNumberFree(pool.Id, nextNumber, cancellationToken);
-            if (!isNextNumberFree)
+
+            async Task FindFreeNumber()
             {
-                _logger.LogInformation("Next IP {NextIp} of IP pool {PoolName}({PoolId}) already in use. Looking for next free IP.",
-                    pool.NextIp, pool.Name, pool.Id);
-                nextNumber = await FindNextFreeNumber(pool.Id, nextNumber + 1, poolSize, cancellationToken)
-                    .IfNoneAsync((Func<int>)(() => throw new InvalidOperationException(
-                        $"IP pool {poolName}({pool.Id}) has no more free IP addresses.")));
+                // ReSharper disable once AccessToModifiedClosure
+                while (startNumber + lastNumber < endNumber)
+                {
+
+                    var minNumber = (await
+                        _stateStore.Read<IpPoolAssignment>()
+                            // ReSharper disable once AccessToModifiedClosure
+                            .GetBySpecAsync(new IpPoolSpecs.GetMinNumberStartingAt(pool.Id, lastNumber),
+                                cancellationToken))?.Number;
+
+                    if (!minNumber.HasValue)
+                    {
+                        break;
+                    }
+
+                    lastNumber = minNumber.Value;
+                    lastNumber++;
+
+                }
             }
 
+            await FindFreeNumber().ConfigureAwait(false);
+
+
+            if (startNumber + lastNumber > endNumber)
+            {
+                //rollover (there has to be a gap as there are free numbers)
+                lastNumber = 0;
+                await FindFreeNumber().ConfigureAwait(false);
+            }
+
+            var addressNo = startNumber + lastNumber;
+            var foundIp = IPNetwork2.ToIPAddress(addressNo, ipNetwork.AddressFamily);
             var assignment = new IpPoolAssignment
             {
                 Id = Guid.NewGuid(),
-                Number = nextNumber,
-                IpAddress = IPNetwork.ToIPAddress(firstIpBigInt + nextNumber, ipNetwork.AddressFamily)
-                    .ToString(),
+                Number = lastNumber,
+                IpAddress = foundIp.ToString(),
                 PoolId = pool.Id,
                 SubnetId = subnetId
             };
-            await _stateStore.For<IpPoolAssignment>().AddAsync(assignment, cancellationToken);
 
-            pool.NextIp = totalAssigned < poolSize - 1
-                ? await FindNextFreeNumber(pool.Id, nextNumber + 1, poolSize, cancellationToken)
-                    .Match(
-                        Some: n => IPNetwork.ToIPAddress(
-                                firstIpBigInt + n, ipNetwork.AddressFamily)
-                            .ToString(),
-                    None: () =>  pool.FirstIp)
-                : pool.FirstIp;
-
-            await _stateStore.For<IpPool>().UpdateAsync(pool, cancellationToken);
+            await _stateStore.For<IpPoolAssignment>().AddAsync(assignment, cancellationToken).ConfigureAwait(false);
+            pool.Counter = lastNumber;
 
             return assignment;
+
         }).ToEither();
-
-    private async Task<Option<int>> FindNextFreeNumber(
-        Guid poolId,
-        int startAt,
-        int poolSize,
-        CancellationToken cancellationToken)
-    {
-        var candidate = startAt;
-        while (candidate < poolSize)
-        {
-            if (await IsNumberFree(poolId, candidate, cancellationToken))
-                return Some(candidate);
-            
-            candidate++;
-        }
-
-        candidate = 0;
-        while (candidate < startAt)
-        {
-            if (await IsNumberFree(poolId, candidate, cancellationToken))
-                return Some(candidate);
-
-            candidate++;
-        }
-
-        return None;
     }
 
-    private async Task<bool> IsNumberFree(
-        Guid poolId,
-        int number,
-        CancellationToken cancellationToken)
+    private static void GetPoolAddresses(IpPool pool, out IPNetwork2 ipNetwork, out IPAddress firstIp,
+        out IPAddress? lastIp)
     {
-        return !await _stateStore.For<IpPoolAssignment>().AnyAsync(
-            new IpPoolAssignmentSpecs.GetByNumber(poolId, number),
-            cancellationToken);
+        ipNetwork = IPNetwork2.Parse(pool.IpNetwork);
+        firstIp = IPAddress.Parse(pool.FirstIp);
+        lastIp = IPAddress.Parse(pool.LastIp);
+
+        if (ipNetwork == null)
+            throw new InvalidDataException($"IpPool {pool.Id} has invalid network '{pool.IpNetwork}'");
+
+        if (firstIp == null)
+            throw new InvalidDataException($"IpPool {pool.Id} has invalid first ip '{pool.FirstIp}'");
+
+        if (lastIp == null)
+            throw new InvalidDataException($"IpPool {pool.Id} has invalid first ip '{pool.LastIp}'");
     }
+
 }
