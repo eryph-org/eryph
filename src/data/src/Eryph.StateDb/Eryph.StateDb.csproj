@@ -3,7 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Rebus.Operations.Core" Version="0.6.2-PullRequest0015.6" />
+    <PackageReference Include="Dbosoft.Rebus.Operations.Core" Version="0.6.2-PullRequest0015.7" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
