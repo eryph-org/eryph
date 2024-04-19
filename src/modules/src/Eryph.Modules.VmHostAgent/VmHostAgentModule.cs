@@ -122,8 +122,7 @@ namespace Eryph.Modules.VmHostAgent
                     x.SetNumberOfWorkers(5);
                     x.EnableSynchronousRequestReply();
                 })
-                .Subscriptions(s => 
-                    serviceProvider.GetRequiredService<IRebusConfigurer<ISubscriptionStorage>>().Configure(s))
+                .Subscriptions(s => serviceProvider.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
                 .Logging(x => x.Serilog()).Start());
         }
 
