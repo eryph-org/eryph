@@ -1,4 +1,5 @@
 ﻿using System;
+using Asp.Versioning;
 using Dbosoft.Hosuto.Modules;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
