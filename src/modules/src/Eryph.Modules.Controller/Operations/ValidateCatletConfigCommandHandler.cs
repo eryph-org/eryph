@@ -37,6 +37,9 @@ namespace Eryph.Modules.Controller.Operations
             if(machineConfig.Environment!= null)
                 machineConfig.Environment = machineConfig.Environment.ToLowerInvariant();
 
+            if (string.IsNullOrWhiteSpace(machineConfig.Environment))
+                machineConfig.Environment = "default";
+                
             if (machineConfig.Cpu == null)
                 machineConfig.Cpu = new CatletCpuConfig();
 
