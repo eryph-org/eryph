@@ -52,11 +52,9 @@ namespace Eryph.Runtime.Zero
         public static Container UseInMemoryBus(this Container container)
         {
             container.RegisterInstance(Info.Network);
-            container.RegisterInstance(Info.SubscriberStore);
             container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
             container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
             container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
-            container.Register<IRebusConfigurer<ISubscriptionStorage>, DefaultSubscriptionStoreSelector>();
 
             return container;
         }

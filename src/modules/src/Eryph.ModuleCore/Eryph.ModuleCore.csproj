@@ -4,13 +4,13 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto" Version="1.1.0" />
-    <PackageReference Include="Dbosoft.Rebus.Operations.SimpleInjector" Version="0.6.2-PullRequest0015.3" />
+    <PackageReference Include="Dbosoft.Hosuto" Version="1.2.0" />
+    <PackageReference Include="Dbosoft.Rebus.Operations.SimpleInjector" Version="0.6.2-PullRequest0015.6" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Rebus.Async" Version="7.2.0" />
+    <PackageReference Include="Rebus.Async" Version="10.0.0" />
     <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="5.4.0" />
   </ItemGroup>
   <ItemGroup>

@@ -85,11 +85,9 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
                 container.RegisterInstance(new InMemNetwork());
-                container.RegisterInstance(new InMemorySubscriberStore());
                 container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
                 container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
                 container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
-                container.Register<IRebusConfigurer<ISubscriptionStorage>, DefaultSubscriptionStoreSelector>();
 
                 container.RegisterInstance(new InMemoryDatabaseRoot());
                 container.Register<IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
