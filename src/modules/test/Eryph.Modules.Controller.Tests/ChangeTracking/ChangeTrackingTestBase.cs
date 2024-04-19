@@ -5,6 +5,7 @@ using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.Seeding;
 using Eryph.StateDb;
 using Eryph.StateDb.TestBase;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
@@ -13,8 +14,11 @@ using SimpleInjector.Lifestyles;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
-public abstract class ChangeTrackingTestBase : StateDbTestBase
+public abstract class ChangeTrackingTestBase(
+    AutoTransactionBehavior autoTransactionBehavior)
+    : StateDbTestBase
 {
+    private readonly AutoTransactionBehavior _autoTransactionBehavior = autoTransactionBehavior;
     protected readonly MockFileSystem MockFileSystem = new();
     protected readonly Mock<INetworkProviderManager> MockNetworkProviderManager = new();
     protected readonly ChangeTrackingConfig ChangeTrackingConfig = new()
@@ -63,6 +67,8 @@ public abstract class ChangeTrackingTestBase : StateDbTestBase
         var container = host.Services.GetRequiredService<Container>();
         await using (var scope = AsyncScopedLifestyle.BeginScope(container))
         {
+            var dbContext = scope.GetInstance<StateStoreContext>();
+            dbContext.Database.AutoTransactionBehavior = _autoTransactionBehavior;
             var stateStore = scope.GetInstance<IStateStore>();
             await action(stateStore);
         }

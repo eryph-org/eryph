@@ -4,10 +4,19 @@ using Eryph.Configuration.Model;
 using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Microsoft.EntityFrameworkCore;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
-public class ProjectChangeTrackingTests : ChangeTrackingTestBase
+public class ProjectChangeTrackingTestsWithTransaction()
+    : ProjectChangeTrackingTests(AutoTransactionBehavior.Always);
+
+public class ProjectChangeTrackingTestsWithoutTransaction()
+    : ProjectChangeTrackingTests(AutoTransactionBehavior.WhenNeeded);
+
+public abstract class ProjectChangeTrackingTests(
+    AutoTransactionBehavior autoTransactionBehavior)
+    : ChangeTrackingTestBase(autoTransactionBehavior)
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid AssignmentId = Guid.NewGuid();

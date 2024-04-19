@@ -4,22 +4,14 @@ using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.ChangeTracking.NetworkProviders;
 
-internal class NetworkProvidersChangeInterceptor
-    : ChangeInterceptorBase<NetworkProvidersChange>
+internal class NetworkProvidersChangeDetector : IChangeDetector<NetworkProvidersChange>
 {
-    public NetworkProvidersChangeInterceptor(
-        IChangeTrackingQueue<NetworkProvidersChange> queue, 
-        ILogger logger)
-        : base(queue, logger)
-    {
-    }
-
-    protected override async Task<Seq<NetworkProvidersChange>> DetectChanges(
+    public async Task<Seq<NetworkProvidersChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {

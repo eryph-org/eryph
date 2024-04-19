@@ -57,7 +57,8 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
 
     private async Task HandleChangeAsync(ChangeTrackingQueueItem<TChange> queueItem)
     {
-        _logger.LogDebug("Processing changes of transaction {TransactionId}", queueItem.TransactionId);
+        _logger.LogDebug("Processing changes of transaction {TransactionId}",
+            queueItem.TransactionId?.ToString() ?? "no-transaction");
 
         try
         {
@@ -70,7 +71,8 @@ internal class ChangeTrackingBackgroundService<TChange> : BackgroundService
             // We need to catch all exceptions here. Otherwise, the background
             // service will stop when an exception occurs. We always want to write
             // as many of the changes as possible to the filesystem.
-            _logger.LogError(ex, "Failed to process changes of transaction {TransactionId}", queueItem.TransactionId);
+            _logger.LogError(ex, "Failed to process changes of transaction {TransactionId}",
+                queueItem.TransactionId?.ToString() ?? "no-transaction");
         }
     }
 }

@@ -11,10 +11,19 @@ using Eryph.Configuration.Model;
 using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Microsoft.EntityFrameworkCore;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
-public class VirtualNetworkChangeTrackingTests : ChangeTrackingTestBase
+public class VirtualNetworkChangeTrackingTestsWithTransaction()
+    : VirtualNetworkChangeTrackingTests(AutoTransactionBehavior.Always);
+
+public class VirtualNetworkChangeTrackingTestsWithoutTransaction()
+    : VirtualNetworkChangeTrackingTests(AutoTransactionBehavior.WhenNeeded);
+
+public abstract class VirtualNetworkChangeTrackingTests(
+    AutoTransactionBehavior autoTransactionBehavior)
+    : ChangeTrackingTestBase(autoTransactionBehavior)
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid VirtualNetworkId = Guid.NewGuid();

@@ -4,20 +4,12 @@ using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.ChangeTracking.VirtualMachines;
 
-internal class CatletMetadataChangeInterceptor : ChangeInterceptorBase<CatletMetadataChange>
-{
-    public CatletMetadataChangeInterceptor(
-        IChangeTrackingQueue<CatletMetadataChange> queue,
-        ILogger logger)
-        : base(queue, logger)
-    {
-    }
-
-    protected override Task<Seq<CatletMetadataChange>> DetectChanges(
+internal class CatletMetadataChangeDetector : IChangeDetector<CatletMetadataChange>
+{ 
+    public Task<Seq<CatletMetadataChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {
