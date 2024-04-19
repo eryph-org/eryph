@@ -65,7 +65,7 @@ jobs:
       command: 'publish'
       publishWebProjects: false
       projects: '**/apps/**/*-zero/*.csproj'
-      arguments: '--runtime win7-x64 --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build /p:SignHash=$(signHash)'
+      arguments: '--runtime win-x64 --self-contained --configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build /p:SignHash=$(signHash)'
       zipAfterPublish: false
 
   - task: CmdLine@2
