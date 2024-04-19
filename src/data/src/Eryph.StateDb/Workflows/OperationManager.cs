@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using ErrorData = Dbosoft.Rebus.Operations.ErrorData;
 using OperationStatus = Eryph.StateDb.Model.OperationStatus;
+using OperationTaskStatus = Dbosoft.Rebus.Operations.OperationTaskStatus;
 
 namespace Eryph.StateDb.Workflows;
 
@@ -131,6 +132,14 @@ public class OperationManager : OperationManagerBase
         if (op.Model.LastUpdated > timestamp)
         {
             _log.LogWarning("Operation {operationId} has been updated already after change timestamp. Skipping status change.", operation.Id);
+            return false;
+        }
+
+        if (op.Status is Dbosoft.Rebus.Operations.OperationStatus.Completed 
+            or Dbosoft.Rebus.Operations.OperationStatus.Failed)
+        {
+            _log.LogWarning("Operation: {operationId}: has already been completed or failed. Skipping status change. Status: {status}",
+                op.Id, op.Status);
             return false;
         }
 
