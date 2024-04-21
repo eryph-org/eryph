@@ -459,7 +459,7 @@ if (Test-EryphInstalled) {
     }
 }
 
-if((Test-Command "Get-WindowsFeature" -ErrorAction SilentlyContinue)){
+if((Test-CommandExist "Get-WindowsFeature")){
 
     $HyperVPSFeature = Get-WindowsFeature -Name 'Hyper-V-PowerShell'
     $RestartRequired = $false
