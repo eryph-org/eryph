@@ -467,7 +467,6 @@ if((Test-CommandExist "Get-WindowsFeature")){
 		Write-Warning "Hyper-V PowerShell is not installed. Installing feature..."
         $result = $HyperVPSFeature | Install-WindowsFeature
         $RestartRequired = $result.RestartNeeded
-		return
 	}
 
 	$HyperVFeature = Get-WindowsFeature -Name 'Hyper-V'
@@ -475,7 +474,6 @@ if((Test-CommandExist "Get-WindowsFeature")){
 		Write-Warning "Hyper-V is not installed. Installing feature..."
         $result = $HyperVFeature | Install-WindowsFeature
         $RestartRequired = $result.RestartNeeded
-		return
 	}
 
     if($RestartRequired){
