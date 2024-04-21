@@ -459,6 +459,42 @@ if (Test-EryphInstalled) {
     }
 }
 
+if((Test-Command "Get-WindowsFeature" -ErrorAction SilentlyContinue)){
+
+    $HyperVPSFeature = Get-WindowsFeature -Name 'Hyper-V-PowerShell'
+    $RestartRequired = $false
+	if($HyperVPSFeature.Installed -eq $false){
+		Write-Warning "Hyper-V PowerShell is not installed. Installing feature..."
+        $result = $HyperVPSFeature | Install-WindowsFeature
+        $RestartRequired = $result.RestartNeeded
+		return
+	}
+
+	$HyperVFeature = Get-WindowsFeature -Name 'Hyper-V'
+	if($HyperVFeature.Installed -eq $false){
+		Write-Warning "Hyper-V is not installed. Installing feature..."
+        $result = $HyperVFeature | Install-WindowsFeature
+        $RestartRequired = $result.RestartNeeded
+		return
+	}
+
+    if($RestartRequired){
+		Write-Warning "A restart is required to complete the installation of Hyper-V features."
+		return
+	}
+    
+} else{
+    $HyperVFeature = Get-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V-All -Online
+    # Check if Hyper-V is enabled
+    if($hyperv.State -ne "Enabled") {
+        Write-Warning "Hyper-V is not installed. Installing feature..."
+        Enable-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V-All -Online
+
+        Write-Warning "A restart is required to complete the installation of Hyper-V features."
+		return
+    }
+}
+
 #endregion Pre-check
 
 #region Setup
