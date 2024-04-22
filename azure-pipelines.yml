@@ -42,7 +42,7 @@ jobs:
     inputs:
       command: 'restore'
       projects: '**/*.csproj'
-      arguments: '--runtime win-x64'
+      #arguments: '--runtime win-x64'
       feedsToUse: 'config'
       nugetConfigPath: 'nuget.config'
       
@@ -51,7 +51,7 @@ jobs:
     inputs:
       command: build
       projects: '**/*.csproj'
-      arguments: '--runtime win-x64 --configuration $(buildConfiguration) --no-restore'
+      arguments: '--configuration $(buildConfiguration) --no-restore'
 
   - task: DotNetCoreCLI@2
     displayName: dotnet test
