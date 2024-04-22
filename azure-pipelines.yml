@@ -43,6 +43,7 @@ jobs:
       command: 'restore'
       projects: '**/*.csproj'
       feedsToUse: 'config'
+      arguments: '--runtime win-x64'
       nugetConfigPath: 'nuget.config'
       
   - task: DotNetCoreCLI@2
