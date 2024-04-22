@@ -71,7 +71,13 @@
   <!-- For self-contained deployments, we need to manually copy the Powershell modules
        which are included with the Powershell SDK. The modules are not copied to the
        correct place by default. See https://github.com/PowerShell/PowerShell/issues/15274 -->
-  <Target Name="MyTarget" AfterTargets="Publish">
+  <Target Name="PwshModulesAfterBuild" AfterTargets="Build">
+    <ItemGroup>
+      <FilesToMove Include="$(OutputPath)runtimes\win\lib\net8.0\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FilesToMove)" DestinationFolder="$(OutputPath)%(RecursiveDir)" />
+  </Target>
+  <Target Name="PwshModulesAfterPublish" AfterTargets="Publish">
     <ItemGroup>
       <FilesToMove Include="$(PublishDir)runtimes\win\lib\net8.0\**\*.*" />
     </ItemGroup>

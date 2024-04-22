@@ -26,7 +26,7 @@ internal class DiagnosticTraceWriter : ITraceWriter
         NullValueHandling = NullValueHandling.Ignore,
         TypeNameHandling = TypeNameHandling.All,
         MaxDepth = 12,
-
+        PreserveReferencesHandling = PreserveReferencesHandling.All,
     };
 
 private async void AsyncTraceWriter(Guid traceContext, DateTimeOffset started, DateTimeOffset stopped,
