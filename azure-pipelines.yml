@@ -50,7 +50,7 @@ jobs:
     inputs:
       command: build
       projects: '**/*.csproj'
-      arguments: '--configuration $(buildConfiguration) --no-restore'
+      arguments: '--runtime win-x64 --self-contained --configuration $(buildConfiguration) --no-restore'
 
   - task: DotNetCoreCLI@2
     displayName: dotnet test
