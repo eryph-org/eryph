@@ -11,7 +11,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Rebus.Async" Version="10.0.0" />
-    <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="5.4.0" />
+    <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="5.5.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
