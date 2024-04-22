@@ -5,9 +5,9 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <!-- Use RuntimeIdentifiers instead of RuntimeIdentifier to
 	     to avoid publishing errors on Azure DevOps -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
-    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
-    <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
+    <SelfContained>true</SelfContained>
     <RootNamespace>Eryph.Runtime.Zero</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
