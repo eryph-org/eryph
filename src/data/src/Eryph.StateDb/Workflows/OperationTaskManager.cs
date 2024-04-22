@@ -101,6 +101,13 @@ public class OperationTaskManager : OperationTaskManagerBase
 
         }
 
+        if (opTask.Status is OperationTaskStatus.Completed or OperationTaskStatus.Failed)
+        {
+            _logger.LogWarning("Operation: {operationId}, Task {taskId}: has already been completed or failed. Skipping status change. Task status: {status}", 
+                               task.OperationId, task.Id, opTask.Status);
+            return new ValueTask<bool>(false);
+        }
+
         opTask.Model.Status = newStatus switch
         {
             OperationTaskStatus.Queued => Model.OperationTaskStatus.Queued,
