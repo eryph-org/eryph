@@ -53,13 +53,13 @@ internal class ChangeTrackingQueue<TChange> : IChangeTrackingQueue<TChange>
 
 internal class ChangeTrackingQueueItem<TChange>
 {
-    public ChangeTrackingQueueItem(Guid? transactionId, TChange changes)
+    public ChangeTrackingQueueItem(Guid transactionId, TChange changes)
     {
         TransactionId = transactionId;
         Changes = changes;
     }
 
-    public Guid? TransactionId { get; }
+    public Guid TransactionId { get; }
 
     public TChange Changes { get; }
 }

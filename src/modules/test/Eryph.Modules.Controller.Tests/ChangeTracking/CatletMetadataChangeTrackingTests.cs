@@ -6,19 +6,10 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using Microsoft.EntityFrameworkCore;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
-public class CatletMetadataChangeTrackingTestsWithTransaction()
-    : CatletMetadataChangeTrackingTests(AutoTransactionBehavior.Always);
-
-public class CatletMetadataChangeTrackingTestsWithoutTransaction()
-    : CatletMetadataChangeTrackingTests(AutoTransactionBehavior.WhenNeeded);
-
-public abstract class CatletMetadataChangeTrackingTests(
-    AutoTransactionBehavior autoTransactionBehavior)
-    : ChangeTrackingTestBase(autoTransactionBehavior)
+public class CatletMetadataChangeTrackingTests : ChangeTrackingTestBase
 {
     private static readonly Guid MetadataId = Guid.NewGuid();
     private static readonly Guid VmId = Guid.NewGuid();

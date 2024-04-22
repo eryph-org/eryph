@@ -33,29 +33,9 @@ public static class ChangeTrackingContainerExtensions
             typeof(ChangeTrackingDbConfigurer),
             Lifestyle.Scoped);
 
-        container.Register(
-            typeof(IChangeDetector<>),
-            typeof(IChangeDetector<>).Assembly,
-            Lifestyle.Scoped);
-
-        container.Collection.Register(
-            typeof(ISaveChangesInterceptor),
-            [
-                typeof(ChangeTrackingSaveChangesInterceptor<CatletMetadataChange>),
-                typeof(ChangeTrackingSaveChangesInterceptor<NetworkProvidersChange>),
-                typeof(ChangeTrackingSaveChangesInterceptor<ProjectChange>),
-                typeof(ChangeTrackingSaveChangesInterceptor<VirtualNetworkChange>),
-            ],
-            Lifestyle.Scoped);
-
         container.Collection.Register(
             typeof(IDbTransactionInterceptor),
-            [
-                typeof(ChangeTrackingDbTransactionInterceptor<CatletMetadataChange>),
-                typeof(ChangeTrackingDbTransactionInterceptor<NetworkProvidersChange>),
-                typeof(ChangeTrackingDbTransactionInterceptor<ProjectChange>),
-                typeof(ChangeTrackingDbTransactionInterceptor<VirtualNetworkChange>),
-            ],
+            new []{ typeof(ChangeInterceptorBase<>).Assembly },
             Lifestyle.Scoped);
     }
 }

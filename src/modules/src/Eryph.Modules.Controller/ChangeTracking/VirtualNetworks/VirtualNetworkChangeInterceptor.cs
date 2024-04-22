@@ -5,14 +5,21 @@ using Eryph.Modules.Controller.ChangeTracking.Projects;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.ChangeTracking.VirtualNetworks;
 
-internal class VirtualNetworkChangeDetector : IChangeDetector<VirtualNetworkChange>
+internal class VirtualNetworkChangeInterceptor : ChangeInterceptorBase<VirtualNetworkChange>
 {
-    public async Task<Seq<VirtualNetworkChange>> DetectChanges(
+    public VirtualNetworkChangeInterceptor(
+        IChangeTrackingQueue<VirtualNetworkChange> queue,
+        ILogger logger)
+        : base(queue, logger)
+    {
+    }
+
+    protected override async Task<Seq<VirtualNetworkChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {

@@ -4,12 +4,20 @@ using System.Threading.Tasks;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.ChangeTracking.Projects;
 
-internal class ProjectChangeDetector : IChangeDetector<ProjectChange>
+internal class ProjectChangeInterceptor : ChangeInterceptorBase<ProjectChange>
 {
-    public Task<Seq<ProjectChange>> DetectChanges(
+    public ProjectChangeInterceptor(
+        IChangeTrackingQueue<ProjectChange> queue,
+        ILogger logger)
+        : base(queue, logger)
+    {
+    }
+
+    protected override Task<Seq<ProjectChange>> DetectChanges(
         DbContext dbContext,
         CancellationToken cancellationToken = default)
     {

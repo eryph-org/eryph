@@ -8,7 +8,6 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
 using LanguageExt.Common;
-using Microsoft.EntityFrameworkCore;
 using Moq;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -16,13 +15,7 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
-public class NetworkProvidersChangeTrackingTestsWithTransaction()
-    : NetworkProvidersChangeTrackingTests(AutoTransactionBehavior.Always);
-
-public class NetworkProvidersChangeTrackingTestsWithoutTransaction()
-    : NetworkProvidersChangeTrackingTests(AutoTransactionBehavior.WhenNeeded);
-
-public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBase
+public class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBase
 {
     private static readonly Guid FloatingPortId = Guid.NewGuid();
     private static readonly Guid IpAssignmentId = Guid.NewGuid();
@@ -53,9 +46,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
 
     private NetworkProvidersConfiguration? _savedProvidersConfig;
 
-    protected NetworkProvidersChangeTrackingTests(
-        AutoTransactionBehavior autoTransactionBehavior)
-        : base(autoTransactionBehavior)
+    public NetworkProvidersChangeTrackingTests()
     {
         MockNetworkProviderManager.Setup(m => m.GetCurrentConfiguration())
             .Returns(RightAsync<Error, NetworkProvidersConfiguration>(GetProvidersConfig()));

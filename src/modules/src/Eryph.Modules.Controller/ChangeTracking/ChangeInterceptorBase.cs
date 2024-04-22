@@ -1,23 +1,31 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data.Common;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LanguageExt;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.ChangeTracking;
 
-internal class ChangeTrackingDbTransactionInterceptor<TChange>(
-    IChangeDetector<TChange> detector,
-    IChangeTrackingQueue<TChange> queue,
-    ILogger logger)
-    : DbTransactionInterceptor
+internal abstract class ChangeInterceptorBase<TChange> : DbTransactionInterceptor
 {
+    private readonly IChangeTrackingQueue<TChange> _queue;
+    private readonly ILogger _logger;
     private Seq<ChangeTrackingQueueItem<TChange>> _currentItem = Prelude.Empty;
+
+    protected ChangeInterceptorBase(
+        IChangeTrackingQueue<TChange> queue,
+        ILogger logger)
+    {
+        _queue = queue;
+        _logger = logger;
+    }
+
+    protected abstract Task<Seq<TChange>> DetectChanges(
+        DbContext dbContext,
+        CancellationToken cancellationToken = default);
 
     public override async ValueTask<InterceptionResult> TransactionCommittingAsync(
         DbTransaction transaction,
@@ -28,7 +36,7 @@ internal class ChangeTrackingDbTransactionInterceptor<TChange>(
         if (eventData.Context is null)
             return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
 
-        _currentItem = await detector.DetectChanges(eventData.Context, cancellationToken)
+        _currentItem = await DetectChanges(eventData.Context, cancellationToken)
             .MapT(changes => new ChangeTrackingQueueItem<TChange>(eventData.TransactionId, changes));
 
         return await base.TransactionCommittingAsync(transaction, eventData, result, cancellationToken);
@@ -41,9 +49,9 @@ internal class ChangeTrackingDbTransactionInterceptor<TChange>(
     {
         foreach (var item in _currentItem)
         {
-            logger.LogDebug("Detected relevant changes in transaction {TransactionId}: {Changes}",
+            _logger.LogDebug("Detected relevant changes in transaction {TransactionId}: {Changes}",
                 item.TransactionId, item.Changes);
-            await queue.EnqueueAsync(item, cancellationToken);
+            await _queue.EnqueueAsync(item, cancellationToken);
         }
     }
 
