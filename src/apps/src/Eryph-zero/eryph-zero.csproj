@@ -6,6 +6,8 @@
     <!-- Use RuntimeIdentifiers instead of RuntimeIdentifier to
 	     to avoid publishing errors on Azure DevOps -->
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
     <RootNamespace>Eryph.Runtime.Zero</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
