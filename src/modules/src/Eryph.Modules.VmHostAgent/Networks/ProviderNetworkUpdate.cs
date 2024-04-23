@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Threading;
+using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using LanguageExt;
@@ -107,34 +108,39 @@ public static class ProviderNetworkUpdate<RT>
                                     
         let needsOverlaySwitch = newBridges.Length > 0
         let hasOverlaySwitch = hostState.OverlaySwitch.IsSome
+        let allOverlaySwitches = hostState.VMSwitches
+            .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
 
         // bridge exists in OVS but not in config -> remove it
         from pendingBridges in changeBuilder
             .RemoveUnusedBridges(currentOvsBridges, newBridges)
 
-        // create, delete or rebuild overlay switch
-        from ovsBridges2 in
-            !hasOverlaySwitch
-                ? needsOverlaySwitch
-                    ? // no switch, but needs one
-                    changeBuilder.CreateOverlaySwitch(newOverlayAdapters.ToSeq())
-                        .Map(_ => pendingBridges)
-                    : // no switch needed
-                    SuccessAff(pendingBridges)
-                : // has switch
-                from switchInfo in hostState.OverlaySwitch.ToAff(Error.New("switch should exist"))
-                from overlayVMAdapters in hostCommands
-                    .GetNetAdaptersBySwitch(switchInfo.Id)
-                from bridgeChange in !needsOverlaySwitch
-                    ? // no switch needed
-                    changeBuilder.RemoveOverlaySwitch(
-                        overlayVMAdapters, pendingBridges)
-                    : // switch needs rebuild
-                    switchInfo.AdaptersInSwitch != newOverlayAdapters
-                        ? changeBuilder.RebuildOverlaySwitch(
-                            overlayVMAdapters, pendingBridges, newOverlayAdapters)
-                        : SuccessAff(pendingBridges)
-                select bridgeChange
+        from ovsBridges2 in hostState.OverlaySwitch.Match(
+            Some: overlaySwitch =>
+                from vmAdapters in allOverlaySwitches
+                    .Map(s => hostCommands.GetNetAdaptersBySwitch(s.Id))
+                    .SequenceSerial()
+                    .Map(l => l.Flatten())
+                from bridgeChange in needsOverlaySwitch
+                    // When the physical adapters are not correct or multiple overlay switches exist,
+                    // we must remove all overlay switches and rebuild a single overlay switch
+                    // with the proper adapters.
+                    ? overlaySwitch.AdaptersInSwitch != newOverlayAdapters || allOverlaySwitches.Count > 1
+                          ? from _ in allOverlaySwitches.Count > 1
+                                ? Logger<RT>.logInformation<NetworkChanges<RT>>(
+                                    "Multiple overlay switches found. The overlay switch must be completely rebuilt.")
+                                : SuccessEff(unit)
+                            from bridges in changeBuilder.RebuildOverlaySwitch(vmAdapters, pendingBridges, newOverlayAdapters)
+                            select bridges
+                          : SuccessAff(pendingBridges)
+                    : changeBuilder.RemoveOverlaySwitch(vmAdapters, pendingBridges)
+                select bridgeChange,
+            None: () => needsOverlaySwitch
+                // no switch, but needs one
+                ? changeBuilder.CreateOverlaySwitch(newOverlayAdapters.ToSeq())
+                    .Map(_ => pendingBridges)
+                // no switch needed
+                : SuccessAff(pendingBridges))
 
         // remove missing NAT bridges (renamed?)
         from ovsBridges3 in changeBuilder.RecreateMissingNatAdapters(

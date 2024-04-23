@@ -191,7 +191,7 @@ public class OVSChassisService : IHostedService
                        : Networks.Logger<AgentRuntime>.logWarning<OVSChassisService>(
                            "Network provider configuration is not fully applied to host." +
                            "\nSome of the required changes cannot be executed automatically." +
-                           "\nRun command 'eryph-zero networks providers sync' in a elevated command prompt " +
+                           "\nRun command 'eryph-zero networks sync' in a elevated command prompt " +
                            "to apply changes." +
                            "\nChanges: {changes} ", currentConfigChanges.Operations.Select(x => x.Text))
                    select unit)

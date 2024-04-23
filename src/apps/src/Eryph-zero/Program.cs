@@ -165,6 +165,12 @@ internal static class Program
         getNetworksStatusCommand.SetHandler(GetNetworkStatus);
         networksCommand.AddCommand(getNetworksStatusCommand);
 
+        var syncNetworkConfigCommand = new Command("sync");
+        syncNetworkConfigCommand.AddOption(nonInteractiveOption);
+        syncNetworkConfigCommand.SetHandler(SyncNetworkConfig,
+            nonInteractiveOption);
+        networksCommand.AddCommand(syncNetworkConfigCommand);
+
         var driverCommand = new Command("driver");
         rootCommand.AddCommand(driverCommand);
 
@@ -1091,6 +1097,8 @@ internal static class Program
         return await RunAsAdmin(
             from _ in ensureDriver(ovsRunDir, true, true)
             from currentConfig in getCurrentConfiguration()
+            from ovsTool in default(ConsoleRuntime).OVS
+            from ovsTable in ovsTool.GetOVSTable(default).ToAff(identity)
             from hostState in getHostStateWithProgress()
             from pendingChanges in generateChanges(hostState, currentConfig)
             from __ in pendingChanges.Operations.Match(
@@ -1100,6 +1108,24 @@ internal static class Program
                     "The network configuration is not fully applied. The following changes are pending:",
                     ..ops.Map(o => o.Text)
                 ])))
+            select unit,
+            new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
+    }
+
+    private static async Task<int> SyncNetworkConfig(bool nonInteractive)
+    {
+        using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
+        var ovsRunDir = OVSPackage.UnpackAndProvide();
+        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), new NullLoggerFactory());
+
+        return await RunAsAdmin(
+            from _ in ensureDriver(ovsRunDir, true, true)
+            from currentConfig in getCurrentConfiguration()
+            from ovsTool in default(ConsoleRuntime).OVS
+            from ovsTable in ovsTool.GetOVSTable(default).ToAff(identity)
+            from hostState in getHostStateWithProgress()
+            from pendingChanges in generateChanges(hostState, currentConfig)
+            from __ in applyChangesInConsole(currentConfig, pendingChanges, nonInteractive, false)
             select unit,
             new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
     }
