@@ -10,6 +10,11 @@ public class ConvergeFixture
 {
     public ConvergeFixture()
     {
+        Reset();
+    }
+
+    public void Reset()
+    {
         var mapping = new FakeTypeMapping();
         Engine = new TestPowershellEngine(mapping);
         Config = new CatletConfig();
@@ -18,7 +23,7 @@ public class ConvergeFixture
         HostInfo = new VMHostMachineData();
         VmHostAgentConfiguration = new VmHostAgentConfiguration()
         {
-            Defaults = new()
+            Defaults = new VmHostAgentDefaultsConfiguration
             {
                 Vms = "x:\\data",
                 Volumes = "x:\\disks",
@@ -29,14 +34,14 @@ public class ConvergeFixture
     public VMStorageSettings StorageSettings { get; set; }
 
 
-    public TestPowershellEngine Engine { get; }
-    public MachineNetworkSettings[] NetworkSettings { get; set; }
-    public CatletConfig Config { get; set; }
-    public CatletMetadata Metadata { get; set; }
+    public TestPowershellEngine Engine { get; private set; } = null!;
+    public MachineNetworkSettings[] NetworkSettings { get; set; } = null!;
+    public CatletConfig Config { get; set; } = null!;
+    public CatletMetadata Metadata { get; set; } = null!;
 
-    public VMHostMachineData HostInfo { get; set; }
+    public VMHostMachineData HostInfo { get; set; } = null!;
 
-    public VmHostAgentConfiguration VmHostAgentConfiguration { get; set; }
+    public VmHostAgentConfiguration VmHostAgentConfiguration { get; set; } = null!;
 
 
     public ConvergeContext Context =>

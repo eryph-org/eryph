@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Ardalis.Specification;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
+using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
@@ -242,6 +243,64 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 }
             }
 
+            // for reverse generation of capabilities we have to
+            // check if the capability is set enabled or configured on the parent
+
+            var parentCaps = metadata?.ParentConfig?.Capabilities ?? Array.Empty<CatletCapabilityConfig>();
+            var capabilities = new List<CatletCapabilityConfig>();
+            if (catlet.Features.Any(x =>
+                    x == CatletFeature.NestedVirtualization ||
+                    parentCaps.Any(c => c.Name == EryphConstants.Capabilities.NestedVirtualization)))
+            {
+                // nested virtualization is either on or off, so we can just check if it is set to on
+                var featureOff = catlet.Features.All(x => x != CatletFeature.NestedVirtualization);
+
+                var nestedVirtualizationCap = new CatletCapabilityConfig
+                {
+                    Name = EryphConstants.Capabilities.NestedVirtualization,
+                    Details = featureOff
+                                ? new[] { "off" } : null
+                };
+                capabilities.Add(nestedVirtualizationCap);
+            }
+
+            if (catlet.Features.Any(x =>
+                    x == CatletFeature.SecureBoot ||
+                    parentCaps.Any(c => c.Name == EryphConstants.Capabilities.SecureBoot)))
+            {
+                var featureOff = catlet.Features.All(x => x != CatletFeature.SecureBoot);
+                    
+                var details = new List<string>();
+                if(!string.IsNullOrWhiteSpace(catlet.SecureBootTemplate))
+                    details.Add($"Template:{catlet.SecureBootTemplate}");
+
+                if(featureOff)
+                    details.Add("off");
+
+                var secureBootCap = new CatletCapabilityConfig
+                {
+                    Name = EryphConstants.Capabilities.SecureBoot,
+                    Details = details.ToArray()
+                };
+
+                capabilities.Add(secureBootCap);
+            }
+
+            // reduce capabilities to only those that are not set same on parent
+            foreach (var capabilityConfig in capabilities.ToArray())
+            {
+                var parentCap = parentCaps
+                    .FirstOrDefault(x => x.Name == capabilityConfig.Name);
+                if (parentCap == null) continue;
+                if((parentCap.Details?.Length == 0                       
+                    && capabilityConfig.Details?.Length == 0)
+                       
+                   || parentCap.Details.SequenceEqual(capabilityConfig.Details))
+                    capabilities.Remove(capabilityConfig);
+            }
+            if(capabilities.Count > 0)
+                config.Capabilities = capabilities.ToArray();
+            
             if (config.Networks?.Length == 0)
                 config.Networks = null;
 

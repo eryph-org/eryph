@@ -286,6 +286,7 @@ namespace Eryph.VmManagement
             {
                 new ConvergeSecureBoot(convergeContext),
                 new ConvergeCPU(convergeContext),
+                new ConvergeNestedVirtualization(convergeContext),
                 new ConvergeMemory(convergeContext),
                 new ConvergeDrives(convergeContext),
                 new ConvergeNetworkAdapters(convergeContext),

@@ -18,4 +18,5 @@ namespace Eryph.VmManagement.Data.Core
 
         public OnOffState PauseAfterBootFailure { get; private set; }
     }
+
 }

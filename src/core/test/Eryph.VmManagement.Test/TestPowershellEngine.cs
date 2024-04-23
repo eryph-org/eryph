@@ -13,6 +13,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
 
     public Func<Type,AssertCommand, Either<PowershellFailure,Seq<TypedPsObject<object>>>>? GetObjectCallback;
     public Func<AssertCommand, Either<PowershellFailure, Unit>>? RunCallback;
+    public Func<Type, AssertCommand, Either<PowershellFailure, Seq<object>>>? GetValuesCallback;
 
     public TypedPsObject<T> ToPsObject<T>(T obj)
     {
@@ -50,9 +51,17 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
 
     public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null)
+        Func<int, Task>? reportProgress = null)
     {
-        throw new NotImplementedException();
+        var commandInput = builder.ToDictionary();
+
+        if(GetValuesCallback == null)
+            throw new InvalidOperationException("GetValuesCallback is not set");
+
+        var result = GetValuesCallback.Invoke(typeof(T), 
+            AssertCommand.Parse(commandInput));
+
+        return result.Map(s => s.Map(v =>(T) v)).ToAsync();
     }
 
     public Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder, Func<int, Task>? reportProgress = null)

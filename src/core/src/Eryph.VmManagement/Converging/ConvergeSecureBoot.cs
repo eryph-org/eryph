@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
+using Eryph.Core;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -19,14 +21,14 @@ public class ConvergeSecureBoot : ConvergeTaskBase
         TypedPsObject<VirtualMachineInfo> vmInfo)
     {
         var secureBootCapability = Context.Config.Capabilities?.FirstOrDefault(x => x.Name ==
-            "SecureBoot");
+            EryphConstants.Capabilities.SecureBoot);
 
         if (secureBootCapability == null)
             return vmInfo;
 
         var templateName =
             secureBootCapability.Details?.FirstOrDefault(x => x.StartsWith("Template:"))?.Split(':')[1]
-            ?? "Windows";
+            ?? "MicrosoftWindows";
 
         var onOffState = (secureBootCapability.Details?.Any(x =>
             string.Equals(x, "off", StringComparison.InvariantCultureIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;

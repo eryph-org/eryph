@@ -21,5 +21,11 @@ namespace Eryph.Core
             public static readonly Guid Reader = Guid.Parse("{47982531-A6D2-41E4-AD6C-D5023DEB7710}");
 
         }
+
+        public static class Capabilities
+        {
+            public static readonly string SecureBoot = "secure_boot";
+            public static readonly string NestedVirtualization = "nested_virtualization";
+        }
     }
 }
