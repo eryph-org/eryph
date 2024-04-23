@@ -1,28 +1,23 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net60</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto" Version="1.1.0" />
-    <PackageReference Include="Dbosoft.Rebus.Operations.SimpleInjector" Version="0.6.1" />
+    <PackageReference Include="Dbosoft.Hosuto" Version="1.2.0" />
+    <PackageReference Include="Dbosoft.Rebus.Operations.SimpleInjector" Version="0.7.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-            <PackageReference Include="Rebus.Async" Version="7.2.0" />
-            <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="5.4.0" />
-    
+    <PackageReference Include="Rebus.Async" Version="10.0.0" />
+    <PackageReference Include="SimpleInjector.Integration.GenericHost" Version="5.5.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.Core\Eryph.Core.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
     <ProjectReference Include="..\..\..\data\src\Eryph.StateDb\Eryph.StateDb.csproj" />
-
   </ItemGroup>
 </Project>

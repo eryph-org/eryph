@@ -39,7 +39,7 @@ internal class IpPoolManager : IIpPoolManager
             if (pool is null)
                 throw new InvalidOperationException($"IP pool {poolName} not found for subnet id {subnetId}");
 
-            if(!IPNetwork.TryParse(pool.IpNetwork, out var ipNetwork))
+            if(!IPNetwork2.TryParse(pool.IpNetwork, out var ipNetwork))
                 throw new InvalidOperationException($"IP pool {pool.Id} has invalid network '{pool.IpNetwork}'");
             if(!IPAddress.TryParse(pool.FirstIp, out var firstIp))
                 throw new InvalidOperationException($"IP pool {pool.Id} has invalid first IP '{pool.FirstIp}");
@@ -48,10 +48,10 @@ internal class IpPoolManager : IIpPoolManager
             if (!IPAddress.TryParse(pool.LastIp, out var lastIp))
                 throw new InvalidOperationException($"IP pool {pool.Id} has invalid last IP '{pool.NextIp}'");
 
-            var firstIpBigInt = IPNetwork.ToBigInteger(firstIp);
+            var firstIpBigInt = IPNetwork2.ToBigInteger(firstIp);
 
-            var poolSize = (int)(IPNetwork.ToBigInteger(lastIp) - firstIpBigInt) + 1;
-            var nextNumber = (int)(IPNetwork.ToBigInteger(nextIp) - firstIpBigInt);
+            var poolSize = (int)(IPNetwork2.ToBigInteger(lastIp) - firstIpBigInt) + 1;
+            var nextNumber = (int)(IPNetwork2.ToBigInteger(nextIp) - firstIpBigInt);
 
             var totalAssigned = await _stateStore.Read<IpPoolAssignment>()
                 .CountAsync(new IpPoolSpecs.GetAssignments(pool.Id), cancellationToken);
@@ -73,7 +73,7 @@ internal class IpPoolManager : IIpPoolManager
             {
                 Id = Guid.NewGuid(),
                 Number = nextNumber,
-                IpAddress = IPNetwork.ToIPAddress(firstIpBigInt + nextNumber, ipNetwork.AddressFamily)
+                IpAddress = IPNetwork2.ToIPAddress(firstIpBigInt + nextNumber, ipNetwork.AddressFamily)
                     .ToString(),
                 PoolId = pool.Id,
                 SubnetId = subnetId
@@ -83,7 +83,7 @@ internal class IpPoolManager : IIpPoolManager
             pool.NextIp = totalAssigned < poolSize - 1
                 ? await FindNextFreeNumber(pool.Id, nextNumber + 1, poolSize, cancellationToken)
                     .Match(
-                        Some: n => IPNetwork.ToIPAddress(
+                        Some: n => IPNetwork2.ToIPAddress(
                                 firstIpBigInt + n, ipNetwork.AddressFamily)
                             .ToString(),
                     None: () =>  pool.FirstIp)

@@ -10,7 +10,6 @@ using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using Eryph.Modules.AspNetCore;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;

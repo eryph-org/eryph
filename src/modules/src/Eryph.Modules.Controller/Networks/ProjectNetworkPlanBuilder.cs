@@ -147,7 +147,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
         return ports.Map(portInfo =>
             {
                 var externalIpAddress = portInfo.Port.IpAssignments.First().IpAddress.Apply(IPAddress.Parse);
-                var externalNetwork = IPNetwork.Parse(portInfo.Subnet.Subnet.IpNetwork);
+                var externalNetwork = IPNetwork2.Parse(portInfo.Subnet.Subnet.IpNetwork);
 
                 return networkPlan.AddRouterPort($"externalNet-{networkPlan.Id}-{portInfo.Network.NetworkProvider}",
                         $"project-{networkPlan.Id}",
@@ -187,7 +187,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
             let networkIp = network.RouterPort.IpAssignments.First()
          from subnet in network.Subnets
             let p1 = networkPlan.AddDHCPOptions(
-                subnet.Id.ToString(), IPNetwork.Parse(subnet.IpNetwork),
+                subnet.Id.ToString(), IPNetwork2.Parse(subnet.IpNetwork),
                 new Map<string, string>(
                     new []
                     {
@@ -241,7 +241,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
 
         return networks.Map(network =>
         {
-            var ipNetwork = IPNetwork.Parse(network.IpNetwork);
+            var ipNetwork = IPNetwork2.Parse(network.IpNetwork);
             if (network.RouterPort == null || network.RouterPort.IpAssignments?.Count == 0)
                 return networkPlan;
 

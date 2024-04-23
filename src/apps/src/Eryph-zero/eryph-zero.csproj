@@ -2,8 +2,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
-    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
     <RootNamespace>Eryph.Runtime.Zero</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
@@ -25,33 +26,25 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Dbosoft.Functional" Version="3.1.0" />
-    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="1.1.0" />
+    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="1.2.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.11">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.11" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.11">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="6.0.0" />
-    <PackageReference Include="Serilog" Version="2.12.0" />
+    <PackageReference Include="Serilog" Version="3.1.1" />
     <PackageReference Include="Serilog.Exceptions" Version="8.4.0" />
-    <PackageReference Include="Serilog.Expressions" Version="3.4.1" />
-    <PackageReference Include="Serilog.Extensions.Hosting" Version="5.0.1" />
-    <PackageReference Include="Serilog.Settings.Configuration" Version="3.4.0" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
+    <PackageReference Include="Serilog.Expressions" Version="4.0.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
     <PackageReference Include="Spectre.Console" Version="0.48.0" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.34.0" />
-    <PackageReference Include="System.ServiceProcess.ServiceController" Version="6.0.2-mauipre.1.22102.15" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.5.1" />
     <PackageReference Include="WinHttpUrlAclDotNet" Version="1.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
@@ -78,9 +71,15 @@
   <!-- For self-contained deployments, we need to manually copy the Powershell modules
        which are included with the Powershell SDK. The modules are not copied to the
        correct place by default. See https://github.com/PowerShell/PowerShell/issues/15274 -->
-  <Target Name="MyTarget" AfterTargets="Publish">
+  <Target Name="PwshModulesAfterBuild" AfterTargets="Build">
     <ItemGroup>
-      <FilesToMove Include="$(PublishDir)runtimes\win\lib\net6.0\**\*.*" />
+      <FilesToMove Include="$(OutputPath)runtimes\win\lib\net8.0\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FilesToMove)" DestinationFolder="$(OutputPath)%(RecursiveDir)" />
+  </Target>
+  <Target Name="PwshModulesAfterPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <FilesToMove Include="$(PublishDir)runtimes\win\lib\net8.0\**\*.*" />
     </ItemGroup>
     <Move SourceFiles="@(FilesToMove)" DestinationFolder="$(PublishDir)%(RecursiveDir)" />
     <RemoveDir Directories="$(PublishDir)runtimes" />

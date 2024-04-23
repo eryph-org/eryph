@@ -98,7 +98,7 @@ namespace Eryph.Modules.Controller
                         .Configure(t, QueueNames.Controllers))
                 .Options(x =>
                 {
-                    x.SimpleRetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
+                    x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength: 5);
                     x.SetNumberOfWorkers(5);
                     x.EnableSimpleInjectorUnitOfWork();
                 })
@@ -108,7 +108,7 @@ namespace Eryph.Modules.Controller
                     serviceProvider.GetRequiredService<IRebusConfigurer<ISagaStorage>>().Configure(s);
                     s.EnforceExclusiveAccess();
                 })
-                .Subscriptions(s => serviceProvider.GetRequiredService<IRebusConfigurer<ISubscriptionStorage>>().Configure(s))
+                .Subscriptions(s => serviceProvider.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
                 .Logging(x => x.Serilog())
                 .Start());
         }

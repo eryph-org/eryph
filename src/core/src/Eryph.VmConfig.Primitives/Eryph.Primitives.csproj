@@ -1,11 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net60</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>Eryph</RootNamespace>
     <AssemblyName>Eryph.Primitives</AssemblyName>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Eryph.GenePool.Model" Version="0.1.1-ci.3" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
@@ -13,9 +11,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Eryph.Core\Eryph.Core.csproj" />
   </ItemGroup>
-
 </Project>

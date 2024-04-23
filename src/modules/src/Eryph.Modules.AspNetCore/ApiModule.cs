@@ -122,7 +122,7 @@ namespace Eryph.Modules.AspNetCore
                         serviceProvider.GetRequiredService<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
                     .Options(x =>
                     {
-                        x.SimpleRetryStrategy();
+                        x.RetryStrategy();
                         x.SetNumberOfWorkers(5);
                     })
                     .Logging(x => x.Serilog()).Start();

@@ -56,6 +56,13 @@ namespace Eryph.StateDb
 
         public DbSet<Tenant> Tenants { get; set; }
 
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            // The change tracking in the controller module uses transaction
+            // interceptors to detect changes. Hence, we force EF Core
+            // to always create transactions.
+            Database.AutoTransactionBehavior = AutoTransactionBehavior.Always;
+        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -1,24 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <LangVersion>7.1</LangVersion>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="1.1.0" />
+    <PackageReference Include="Dbosoft.Hosuto.Hosting.AspNetCore" Version="1.2.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <!--<PackageReference Include="Microsoft.AspNetCore.App" />-->
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.Identity\Eryph.Modules.Identity.csproj" />
   </ItemGroup>
-
 </Project>

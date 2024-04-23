@@ -1,23 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net60</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Rebus.Operations.Core" Version="0.6.1" />
+    <PackageReference Include="Dbosoft.Rebus.Operations.Core" Version="0.7.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="SimpleInjector.Integration.ServiceCollection" Version="5.4.0" />
+    <PackageReference Include="SimpleInjector.Integration.ServiceCollection" Version="5.5.0" />
   </ItemGroup>
-
-
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
     <ProjectReference Include="..\..\..\data\src\Eryph.Data\Eryph.Data.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.VmConfig.Primitives\Eryph.Primitives.csproj" />
   </ItemGroup>
-
 </Project>

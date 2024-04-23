@@ -1,16 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>annotations</Nullable>
   </PropertyGroup>
-
   <ItemGroup>
     <None Include="..\..\..\..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
-
   <ItemGroup>
-    <PackageReference Include="Dbosoft.OVN.Hosting" Version="1.0.0-rc.2" />
+    <PackageReference Include="Dbosoft.OVN.Hosting" Version="1.0.0-rc.3" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.3.1-ci.4" />
     <PackageReference Include="Eryph.GenePool.Client" Version="0.1.1-ci.3" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
@@ -18,15 +15,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Joveler.Compression.XZ" Version="4.2.2" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
     <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.VmManagement\Eryph.VmManagement.csproj" />
   </ItemGroup>
-
 </Project>

@@ -1,4 +1,3 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32112.339
@@ -89,6 +88,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.Controller.Tests", "src\modules\test\Eryph.Modules.Controller.Tests\Eryph.Modules.Controller.Tests.csproj", "{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.StateDb.TestBase", "src\data\test\Eryph.StateDb.TestBase\Eryph.StateDb.TestBase.csproj", "{19AC241D-1F6F-4864-B799-3262C074274B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.StateDb.Design", "src\data\src\Eryph.StateDb.Design\Eryph.StateDb.Design.csproj", "{F9D6FC7B-757A-46A7-836E-A9E4DB070F5C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -232,6 +233,10 @@ Global
 		{19AC241D-1F6F-4864-B799-3262C074274B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{19AC241D-1F6F-4864-B799-3262C074274B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{19AC241D-1F6F-4864-B799-3262C074274B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9D6FC7B-757A-46A7-836E-A9E4DB070F5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9D6FC7B-757A-46A7-836E-A9E4DB070F5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9D6FC7B-757A-46A7-836E-A9E4DB070F5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9D6FC7B-757A-46A7-836E-A9E4DB070F5C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -271,6 +276,7 @@ Global
 		{A22374A0-673A-466B-9231-5859EEB65E33} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{AA15BA3C-F5A2-4DC5-8DA3-A386A9C2774F} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{19AC241D-1F6F-4864-B799-3262C074274B} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{F9D6FC7B-757A-46A7-836E-A9E4DB070F5C} = {7F64364D-A6A2-441C-9F30-3702BF35A02F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

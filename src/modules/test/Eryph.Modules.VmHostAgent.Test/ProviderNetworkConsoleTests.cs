@@ -407,11 +407,11 @@ namespace Eryph.Modules.VmHostAgent.Test
                 .Returns(Prelude.SuccessAff(Seq<NetIpAddress>.Empty));
 
             hostCommandsMock.Setup(x => x.ConfigureAdapterIp("br-nat",
-                    It.IsAny<IPAddress>(), It.IsAny<IPNetwork>()))
+                    It.IsAny<IPAddress>(), It.IsAny<IPNetwork2>()))
                 .Returns(Prelude.unitAff);
 
             hostCommandsMock.Setup(x => x.AddNetNat("eryph_default",
-                    It.IsAny<IPNetwork>()))
+                    It.IsAny<IPNetwork2>()))
                 .Returns(Prelude.unitAff);
 
             syncClientMock.Setup(x => x.CheckRunning(It.IsAny<CancellationToken>()))

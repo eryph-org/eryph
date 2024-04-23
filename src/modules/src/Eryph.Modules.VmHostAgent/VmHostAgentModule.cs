@@ -118,12 +118,11 @@ namespace Eryph.Modules.VmHostAgent
                         .Configure(t, localName))
                 .Options(x =>
                 {
-                    x.SimpleRetryStrategy(errorDetailsHeaderMaxLength:5);
+                    x.RetryStrategy(errorDetailsHeaderMaxLength:5);
                     x.SetNumberOfWorkers(5);
                     x.EnableSynchronousRequestReply();
                 })
-                .Subscriptions(s => 
-                    serviceProvider.GetRequiredService<IRebusConfigurer<ISubscriptionStorage>>().Configure(s))
+                .Subscriptions(s => serviceProvider.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
                 .Logging(x => x.Serilog()).Start());
         }
 

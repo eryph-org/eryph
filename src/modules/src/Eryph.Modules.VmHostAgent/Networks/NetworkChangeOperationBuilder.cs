@@ -364,7 +364,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                         },
                         Some: provider =>
                         {
-                            var network = IPNetwork.Parse(nat.InternalIPInterfaceAddressPrefix);
+                            var network = IPNetwork2.Parse(nat.InternalIPInterfaceAddressPrefix);
 
                             newBridges.Find(x => x.BridgeName == provider.BridgeName).IfSome(bridge =>
                             {
