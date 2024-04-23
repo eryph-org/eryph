@@ -47,6 +47,14 @@
         "DOTNET_ENVIRONMENT": "Development"
       },
       "remoteDebugEnabled": false
+    },
+    "networks status": {
+      "commandName": "Project",
+      "commandLineArgs": "networks status",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
     }
   }
 }

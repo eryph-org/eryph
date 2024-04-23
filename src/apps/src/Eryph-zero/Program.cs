@@ -160,6 +160,11 @@ internal static class Program
             nonInteractiveOption, noCurrentConfigCheckOption);
         networksCommand.AddCommand(importNetworksCommand);
 
+        var getNetworksStatusCommand = new Command("status");
+        getNetworksStatusCommand.AddOption(outFileOption);
+        getNetworksStatusCommand.SetHandler(GetNetworkStatus);
+        networksCommand.AddCommand(getNetworksStatusCommand);
+
         var driverCommand = new Command("driver");
         rootCommand.AddCommand(driverCommand);
 
@@ -1073,6 +1078,28 @@ internal static class Program
             from save in saveConfigurationYaml(configString)
             from sync in syncNetworks()
             from m in writeLine("New Network configuration was imported.")
+            select unit,
+            new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
+    }
+
+    private static async Task<int> GetNetworkStatus()
+    {
+        using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
+        var ovsRunDir = OVSPackage.UnpackAndProvide();
+        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), new NullLoggerFactory());
+
+        return await RunAsAdmin(
+            from _ in ensureDriver(ovsRunDir, true, true)
+            from currentConfig in getCurrentConfiguration()
+            from hostState in getHostStateWithProgress()
+            from pendingChanges in generateChanges(hostState, currentConfig)
+            from __ in pendingChanges.Operations.Match(
+                Empty: () => writeLine("The network configuration is fully applied."),
+                Seq: ops => writeLine(string.Join(Environment.NewLine,
+                [
+                    "The network configuration is not fully applied. The following changes are pending:",
+                    ..ops.Map(o => o.Text)
+                ])))
             select unit,
             new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
     }
