@@ -28,8 +28,8 @@ public class ConvergeNestedVirtualization : ConvergeTaskBase
             string.Equals(x, "off", StringComparison.InvariantCultureIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;
 
         return await (from exposedExtensions in Context.Engine.GetObjectValuesAsync<bool>(new PsCommandBuilder()
-                .AddCommand("get-VMProcessor")
-                .AddArgument(vmInfo.PsObject)
+                .AddCommand("Get-VMProcessor")
+                .AddParameter("VM",vmInfo.PsObject)
                 .AddCommand("Select-Object")
                 .AddParameter("ExpandProperty", "ExposeVirtualizationExtensions")
             ).ToError().Bind(

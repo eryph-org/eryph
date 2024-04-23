@@ -140,6 +140,10 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
 
         try
         {
+            // special case for bool as it is not mapped correctly
+            if(typeof(T) == typeof(bool))
+                return psObject.BaseObject is bool b ? (T)(object)b : default;
+
             // cast is required to map correctly
             // ReSharper disable once RedundantCast
             return _mapper.Map<T>((object) psObject);
