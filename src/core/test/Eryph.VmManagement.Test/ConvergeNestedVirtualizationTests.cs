@@ -51,7 +51,7 @@ namespace Eryph.VmManagement.Test
             };
             _fixture.Engine.GetValuesCallback = (_, command) =>
             {
-                if (command.ToString().StartsWith("get-VMProcessor"))
+                if (command.ToString().StartsWith("Get-VMProcessor"))
                 {
                     return new object []{exposed}.ToSeq();
                 }
