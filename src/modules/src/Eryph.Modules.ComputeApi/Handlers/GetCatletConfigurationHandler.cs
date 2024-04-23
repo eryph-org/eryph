@@ -259,7 +259,7 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 {
                     Name = EryphConstants.Capabilities.NestedVirtualization,
                     Details = featureOff
-                                ? new[] { "off" } : null
+                                ? new[] { EryphConstants.CapabilityDetails.Disabled } : null
                 };
                 capabilities.Add(nestedVirtualizationCap);
             }
@@ -272,10 +272,10 @@ namespace Eryph.Modules.ComputeApi.Handlers
                     
                 var details = new List<string>();
                 if(!string.IsNullOrWhiteSpace(catlet.SecureBootTemplate))
-                    details.Add($"Template:{catlet.SecureBootTemplate}");
+                    details.Add($"template:{catlet.SecureBootTemplate}");
 
                 if(featureOff)
-                    details.Add("off");
+                    details.Add(EryphConstants.CapabilityDetails.Disabled);
 
                 var secureBootCap = new CatletCapabilityConfig
                 {

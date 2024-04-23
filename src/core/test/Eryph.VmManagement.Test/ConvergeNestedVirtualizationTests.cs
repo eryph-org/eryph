@@ -7,14 +7,9 @@ using Xunit;
 
 namespace Eryph.VmManagement.Test
 {
-    public class ConvergeNestedVirtualizationTests : IClassFixture<ConvergeFixture>
+    public class ConvergeNestedVirtualizationTests
     {
-        private readonly ConvergeFixture _fixture;
-
-        public ConvergeNestedVirtualizationTests(ConvergeFixture fixture)
-        {
-            _fixture = fixture;
-        }
+        private readonly ConvergeFixture _fixture = new();
 
         [Theory]
         [InlineData(false, false)]
@@ -26,7 +21,6 @@ namespace Eryph.VmManagement.Test
 
         public async Task Converges_NestedVirtualization_if_necessary(bool exposed, bool? shouldExpose)
         {
-            _fixture.Reset();
             var vmData = _fixture.Engine.ToPsObject(
                 new Data.Full.VirtualMachineInfo());
             var called = false;
@@ -38,7 +32,9 @@ namespace Eryph.VmManagement.Test
                     new CatletCapabilityConfig
                     {
                         Name = EryphConstants.Capabilities.NestedVirtualization,
-                        Details = new []{shouldExpose.GetValueOrDefault() ? "on" : "off"}
+                        Details = new []{shouldExpose.GetValueOrDefault() 
+                            ? EryphConstants.CapabilityDetails.Enabled
+                            : EryphConstants.CapabilityDetails.Disabled}
                     }
                 };
 

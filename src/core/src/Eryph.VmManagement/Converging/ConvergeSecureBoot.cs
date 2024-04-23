@@ -27,11 +27,12 @@ public class ConvergeSecureBoot : ConvergeTaskBase
             return vmInfo;
 
         var templateName =
-            secureBootCapability.Details?.FirstOrDefault(x => x.StartsWith("Template:"))?.Split(':')[1]
+            secureBootCapability.Details?.FirstOrDefault(x => x.StartsWith("template:", 
+                StringComparison.CurrentCultureIgnoreCase))?.Split(':')[1]
             ?? "MicrosoftWindows";
 
         var onOffState = (secureBootCapability.Details?.Any(x =>
-            string.Equals(x, "off", StringComparison.InvariantCultureIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;
+            string.Equals(x, EryphConstants.CapabilityDetails.Disabled, StringComparison.InvariantCultureIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;
 
         return await (from currentFirmware in Context.Engine.GetObjectsAsync<VMFirmwareInfo>(new PsCommandBuilder()
                 .AddCommand("get-VMFirmware")

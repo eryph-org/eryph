@@ -27,5 +27,11 @@ namespace Eryph.Core
             public static readonly string SecureBoot = "secure_boot";
             public static readonly string NestedVirtualization = "nested_virtualization";
         }
+
+        public static class CapabilityDetails
+        {
+            public static readonly string Disabled = "disabled";
+            public static readonly string Enabled = "enabled";
+        }
     }
 }
