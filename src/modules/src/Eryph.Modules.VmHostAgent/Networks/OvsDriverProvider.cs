@@ -57,10 +57,17 @@ public class OvsDriverProvider<RT> where RT : struct,
                     "Could not parse the version of the Hyper-V extension"))
                 from _ in extensionVersion != infVersion && canUpgrade
                     ? from switchExtensions in hostNetworkCommands.GetSwitchExtensions()
-                      let activeSwitchExtensions = switchExtensions.Filter(e => e.Enabled)
-                          .OrderByDescending(e => e.SwitchName == EryphConstants.OverlaySwitchName)
-                          .ToSeq()
-                      from _ in activeSwitchExtensions.Map(e => hostNetworkCommands.DisableSwitchExtension(e.SwitchId))
+                      // The OVS Hyper-V switch extension should only be enabled for the single
+                      // overlay switch. Just in case, we disable the extension on all switches.
+                      // In case there are multiple overlay switches, the extension will be
+                      // enabled on one of them. The issue of multiple overlay switches will
+                      // be resolved separately.
+                      let overlaySwitchId = switchExtensions
+                          .Find(e => e.SwitchName == EryphConstants.OverlaySwitchName)
+                          .Map(e => e.SwitchId)
+                      from _ in switchExtensions
+                          .Filter(e => e.Enabled)
+                          .Map(e => hostNetworkCommands.DisableSwitchExtension(e.SwitchId))
                           .SequenceSerial()
                       from __ in uninstallDriver()
                       // Wait for the driver service to be stopped/removed. Otherwise, the
@@ -68,14 +75,12 @@ public class OvsDriverProvider<RT> where RT : struct,
                       from ___ in waitUntilDriverServiceHasStopped()
                       from ____ in removeAllDriverPackages()
                       from _____ in installDriver(infPath)
-                      // The OVS Hyper-V switch extension should only be enabled for a single
-                      // switch. We reenable it for the best match.
-                      from ______ in match(activeSwitchExtensions.HeadOrNone(),
-                          Some: e =>
-                              from _ in hostNetworkCommands.EnableSwitchExtension(e.SwitchId)
+                      from ______ in match(overlaySwitchId,
+                          Some: switchId =>
+                              from _ in hostNetworkCommands.EnableSwitchExtension(switchId)
                               // We suspect that the switch extension might not be enabled
                               // immediately on slow systems
-                              from __ in waitUntilSwitchExtensionIsEnabled(e.SwitchId)
+                              from __ in waitUntilSwitchExtensionIsEnabled(switchId)
                               select unit,
                           None: () => SuccessAff<RT, Unit>(unit))
                       select unit

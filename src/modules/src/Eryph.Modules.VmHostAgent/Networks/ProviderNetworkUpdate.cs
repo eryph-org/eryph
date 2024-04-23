@@ -185,7 +185,7 @@ public static class ProviderNetworkUpdate<RT>
         from p4 in progressCallback()
         from allAdapterNames in hostCommands.GetAdapterNames()
         from p5 in progressCallback()
-        from overlaySwitch in hostCommands.FindOverlaySwitch(vmSwitches, vmSwitchExtensions, netAdapters)
+        from overlaySwitch in hostCommands.FindOverlaySwitch(vmSwitches, netAdapters)
         from p6 in progressCallback()
         from netNat in hostCommands.GetNetNat()
         from p7 in progressCallback()

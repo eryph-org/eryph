@@ -31,7 +31,6 @@ public interface IHostNetworkCommands<RT> where RT : struct, HasCancel<RT>
 
     Aff<RT, Option<OverlaySwitchInfo>> FindOverlaySwitch(
         Seq<VMSwitch> vmSwitches,
-        Seq<VMSwitchExtension> extensions, 
         Seq<HostNetworkAdapter> adapters);
 
     Aff<RT, Unit> RemoveOverlaySwitch();
