@@ -12,7 +12,6 @@ using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
 using LanguageExt;
 using LanguageExt.Common;
-using Microsoft.Extensions.Hosting;
 using Moq;
 using Xunit;
 using Xunit.Abstractions;
