@@ -137,7 +137,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                         .DisconnectNetworkAdapters(overlayVMAdapters)),
                     _ => true,
                     () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ReconnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName))
+                        .ReconnectNetworkAdapters(overlayVMAdapters))
                     ,
                     NetworkChangeOperation.DisconnectVMAdapters);
             }
@@ -181,7 +181,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             {
                 AddOperation(
                     () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ReconnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)),
+                        .ConnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)),
                     NetworkChangeOperation.ConnectVMAdapters);
             }
 
@@ -208,7 +208,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     o =>
                         o!.Contains(NetworkChangeOperation.RemoveOverlaySwitch),
                     () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ReconnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)),
+                        .ReconnectNetworkAdapters(overlayVMAdapters)),
                     NetworkChangeOperation.DisconnectVMAdapters);
             }
 

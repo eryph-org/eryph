@@ -364,7 +364,6 @@ namespace Eryph.Modules.VmHostAgent.Test
                 .Returns(Prelude.SuccessAff(hostState.NetAdapters.Select(x=>x.Name)));
             hostCommandsMock.Setup(x => x.FindOverlaySwitch(
                     It.IsAny<Seq<VMSwitch>>(),
-                    It.IsAny<Seq<VMSwitchExtension>>(),
                     It.IsAny<Seq<HostNetworkAdapter>>()))
                 .Returns(Prelude.SuccessAff(hostState.OverlaySwitch));
 

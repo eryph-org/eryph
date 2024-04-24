@@ -246,7 +246,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
 
             return (!isEmpty
                     ? InteractiveCheck()
-                    : Console<RT>.writeLine("The new network configuration does not require any changes to the host network."))
+                    : Console<RT>.writeLine("The network configuration does not require any changes to the host network."))
                 .Bind(_ => executeChangesConsole(newConfigChanges)
 
                     // rollback changes that have a direct rollback attached

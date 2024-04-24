@@ -166,14 +166,31 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                         .ToAsync()).TraverseParallel(l => l)
                 .Map(_ => Unit.Default).ToAff());
 
-
-    public Aff<RT,Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters, string switchName) =>
+    public Aff<RT, Unit> ConnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters, string switchName) =>
         default(RT).Powershell.Bind(ps =>
             adapters.Map(adapter =>
 
-                    ps.RunAsync(PsCommandBuilder.Create().AddCommand("Connect-VMNetworkAdapter")
+                    ps.RunAsync(PsCommandBuilder.Create()
+                            .AddCommand("Connect-VMNetworkAdapter")
                             .AddParameter("VMNetworkAdapter", adapter.PsObject)
                             .AddParameter("SwitchName", switchName)
+                        )
+
+                        .ToAsync()).TraverseParallel(l => l)
+                .Map(_ => Unit.Default).ToAff());
+
+    public Aff<RT,Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters) =>
+        default(RT).Powershell.Bind(ps =>
+            adapters.Map(adapter =>
+
+                    ps.RunAsync(PsCommandBuilder.Create()
+                            // We resolve the switch by ID so the reconnect succeeds in case
+                            // there are multiple switches with the same name. Otherwise,
+                            // the rollback during network configuration might fail.
+                            .AddCommand("Get-VMSwitch")
+                            .AddParameter("Id", adapter.Value.SwitchId)
+                            .AddCommand("Connect-VMNetworkAdapter")
+                            .AddParameter("VMNetworkAdapter", adapter.PsObject)
                         )
 
                         .ToAsync()).TraverseParallel(l => l)

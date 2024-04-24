@@ -25,8 +25,9 @@ public interface IHostNetworkCommands<RT> where RT : struct, HasCancel<RT>
     Aff<RT, Unit> EnableBridgeAdapter(string adapterName);
     Aff<RT, Unit> ConfigureAdapterIp(string adapterName, IPAddress ipAddress, IPNetwork2 network);
     Aff<RT, Seq<TypedPsObject<VMNetworkAdapter>>> GetNetAdaptersBySwitch(Guid switchId);
+    Aff<RT, Unit> ConnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters, string switchName);
     Aff<RT, Unit> DisconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters);
-    Aff<RT, Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters, string switchName);
+    Aff<RT, Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters);
     Aff<RT, Unit> CreateOverlaySwitch(IEnumerable<string> adapters);
 
     Aff<RT, Option<OverlaySwitchInfo>> FindOverlaySwitch(

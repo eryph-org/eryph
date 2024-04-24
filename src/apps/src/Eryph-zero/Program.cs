@@ -160,11 +160,6 @@ internal static class Program
             nonInteractiveOption, noCurrentConfigCheckOption);
         networksCommand.AddCommand(importNetworksCommand);
 
-        var getNetworksStatusCommand = new Command("status");
-        getNetworksStatusCommand.AddOption(outFileOption);
-        getNetworksStatusCommand.SetHandler(GetNetworkStatus);
-        networksCommand.AddCommand(getNetworksStatusCommand);
-
         var syncNetworkConfigCommand = new Command("sync");
         syncNetworkConfigCommand.AddOption(nonInteractiveOption);
         syncNetworkConfigCommand.SetHandler(SyncNetworkConfig,
@@ -1088,30 +1083,6 @@ internal static class Program
             new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
     }
 
-    private static async Task<int> GetNetworkStatus()
-    {
-        using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
-        var ovsRunDir = OVSPackage.UnpackAndProvide();
-        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), new NullLoggerFactory());
-
-        return await RunAsAdmin(
-            from _ in ensureDriver(ovsRunDir, true, true)
-            from currentConfig in getCurrentConfiguration()
-            from ovsTool in default(ConsoleRuntime).OVS
-            from ovsTable in ovsTool.GetOVSTable(default).ToAff(identity)
-            from hostState in getHostStateWithProgress()
-            from pendingChanges in generateChanges(hostState, currentConfig)
-            from __ in pendingChanges.Operations.Match(
-                Empty: () => writeLine("The network configuration is fully applied."),
-                Seq: ops => writeLine(string.Join(Environment.NewLine,
-                [
-                    "The network configuration is not fully applied. The following changes are pending:",
-                    ..ops.Map(o => o.Text)
-                ])))
-            select unit,
-            new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
-    }
-
     private static async Task<int> SyncNetworkConfig(bool nonInteractive)
     {
         using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
@@ -1121,11 +1092,10 @@ internal static class Program
         return await RunAsAdmin(
             from _ in ensureDriver(ovsRunDir, true, true)
             from currentConfig in getCurrentConfiguration()
-            from ovsTool in default(ConsoleRuntime).OVS
-            from ovsTable in ovsTool.GetOVSTable(default).ToAff(identity)
             from hostState in getHostStateWithProgress()
             from pendingChanges in generateChanges(hostState, currentConfig)
             from __ in applyChangesInConsole(currentConfig, pendingChanges, nonInteractive, false)
+            from ___ in syncNetworks()
             select unit,
             new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
     }
