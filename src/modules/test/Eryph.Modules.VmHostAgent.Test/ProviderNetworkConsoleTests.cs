@@ -12,6 +12,7 @@ using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
 using LanguageExt;
 using LanguageExt.Common;
+using Microsoft.Extensions.Hosting;
 using Moq;
 using Xunit;
 using Xunit.Abstractions;
@@ -81,6 +82,45 @@ namespace Eryph.Modules.VmHostAgent.Test
                         );
                 });
 
+        }
+
+        [Fact]
+        public async Task GenerateChanges_multiple_overlay_switches_triggers_rebuild()
+        {
+            static HostState CreateHostStateWithMultipleSwitches()
+            {
+                var hostState = CreateHostState();
+                return hostState with
+                {
+                    VMSwitches = Prelude.Seq(
+                    [
+                        ..hostState.VMSwitches,
+                        new VMSwitch()
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = EryphConstants.OverlaySwitchName,
+                        }
+                    ]),
+                };
+            }
+
+            var runtime = TestRuntime.New();
+            var hostState = CreateHostStateWithMultipleSwitches();
+            AddMocks(runtime, hostState);
+
+            var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+                .Bind(c => generateChanges(hostState, c))
+                .Run(runtime);
+
+            var operations = res.Should().BeSuccess().Which.Operations;
+            operations.Should().SatisfyRespectively(
+                op => op.Operation.Should().Be(NetworkChangeOperation.StopOVN),
+                op => op.Operation.Should().Be(NetworkChangeOperation.RebuildOverLaySwitch),
+                op => op.Operation.Should().Be(NetworkChangeOperation.StartOVN),
+                op => op.Operation.Should().Be(NetworkChangeOperation.AddBridge),
+                op => op.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
+                op => op.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
+                op => op.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
         }
 
         [Fact]
@@ -343,6 +383,8 @@ namespace Eryph.Modules.VmHostAgent.Test
             var overlaySwitch = hostState.VMSwitches
                 .FirstOrDefault(x => x.Name == EryphConstants.OverlaySwitchName);
 
+            hostCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
+                .Returns(Prelude.SuccessAff(Seq.empty<TypedPsObject<VMNetworkAdapter>>()));
             if (overlaySwitch != null)
             {
                 hostCommandsMock.Setup(x =>
