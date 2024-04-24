@@ -292,10 +292,9 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 var parentCap = parentCaps
                     .FirstOrDefault(x => x.Name == capabilityConfig.Name);
                 if (parentCap == null) continue;
-                if((parentCap.Details?.Length == 0                       
-                    && capabilityConfig.Details?.Length == 0)
-                       
-                   || parentCap.Details.SequenceEqual(capabilityConfig.Details))
+                var parentDetails = parentCap.Details?.Map(x => x.ToLowerInvariant()).Order().ToArray() ?? Array.Empty<string>();
+                var capDetails = capabilityConfig.Details?.Map(x => x.ToLowerInvariant()).Order().ToArray() ?? Array.Empty<string>();
+                if(parentDetails.SequenceEqual(capDetails))
                     capabilities.Remove(capabilityConfig);
             }
             if(capabilities.Count > 0)

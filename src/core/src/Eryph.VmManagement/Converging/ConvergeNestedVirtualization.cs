@@ -26,7 +26,7 @@ public class ConvergeNestedVirtualization : ConvergeTaskBase
 
         var onOffState = (capability.Details?.Any(x =>
             string.Equals(x, EryphConstants.CapabilityDetails.Disabled, 
-                StringComparison.InvariantCultureIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;
+                StringComparison.OrdinalIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;
 
         return await (from exposedExtensions in Context.Engine.GetObjectValuesAsync<bool>(new PsCommandBuilder()
                 .AddCommand("Get-VMProcessor")

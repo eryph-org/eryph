@@ -28,7 +28,7 @@ public class ConvergeSecureBoot : ConvergeTaskBase
 
         var templateName =
             secureBootCapability.Details?.FirstOrDefault(x => x.StartsWith("template:", 
-                StringComparison.CurrentCultureIgnoreCase))?.Split(':')[1]
+                StringComparison.OrdinalIgnoreCase))?.Split(':')[1]
             ?? "MicrosoftWindows";
 
         var onOffState = (secureBootCapability.Details?.Any(x =>
