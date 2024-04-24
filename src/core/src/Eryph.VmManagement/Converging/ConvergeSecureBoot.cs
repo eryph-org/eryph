@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
+using Eryph.Core;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -19,17 +21,18 @@ public class ConvergeSecureBoot : ConvergeTaskBase
         TypedPsObject<VirtualMachineInfo> vmInfo)
     {
         var secureBootCapability = Context.Config.Capabilities?.FirstOrDefault(x => x.Name ==
-            "SecureBoot");
+            EryphConstants.Capabilities.SecureBoot);
 
         if (secureBootCapability == null)
             return vmInfo;
 
         var templateName =
-            secureBootCapability.Details?.FirstOrDefault(x => x.StartsWith("Template:"))?.Split(':')[1]
-            ?? "Windows";
+            secureBootCapability.Details?.FirstOrDefault(x => x.StartsWith("template:", 
+                StringComparison.OrdinalIgnoreCase))?.Split(':')[1]
+            ?? "MicrosoftWindows";
 
         var onOffState = (secureBootCapability.Details?.Any(x =>
-            string.Equals(x, "off", StringComparison.InvariantCultureIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;
+            string.Equals(x, EryphConstants.CapabilityDetails.Disabled, StringComparison.InvariantCultureIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;
 
         return await (from currentFirmware in Context.Engine.GetObjectsAsync<VMFirmwareInfo>(new PsCommandBuilder()
                 .AddCommand("get-VMFirmware")

@@ -18,18 +18,20 @@ public class ConvergeFixture
         HostInfo = new VMHostMachineData();
         VmHostAgentConfiguration = new VmHostAgentConfiguration()
         {
-            Defaults = new()
+            Defaults = new VmHostAgentDefaultsConfiguration
             {
                 Vms = "x:\\data",
                 Volumes = "x:\\disks",
             },
         };
+        Metadata = new CatletMetadata();
     }
+
 
     public VMStorageSettings StorageSettings { get; set; }
 
 
-    public TestPowershellEngine Engine { get; }
+    public TestPowershellEngine Engine { get;  }
     public MachineNetworkSettings[] NetworkSettings { get; set; }
     public CatletConfig Config { get; set; }
     public CatletMetadata Metadata { get; set; }
