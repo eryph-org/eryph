@@ -64,7 +64,7 @@ public static class ProviderNetworkUpdate<RT>
     public static bool canBeAutoApplied(NetworkChanges<RT> changes) =>
        ! changes.Operations.Select(x => x.Operation)
             .Any(x => ProviderNetworkUpdateConstants.UnsafeChanges.Contains(x));
-    
+
     public static Aff<RT, NetworkChanges<RT>> generateChanges(
         HostState hostState,
         NetworkProvidersConfiguration newConfig) =>
@@ -98,28 +98,36 @@ public static class ProviderNetworkUpdate<RT>
             .SelectMany(x => x.Adapters).Distinct())
 
         let enabledBridges = (newConfig.NetworkProviders
-                .Filter(x=>x.BridgeOptions?.DefaultIpMode is not null and not BridgeHostIpMode.Disabled)
-                .Map(x=>x.BridgeName) ?? Array.Empty<string>())
+                .Filter(x => x.BridgeOptions?.DefaultIpMode is not null and not BridgeHostIpMode.Disabled)
+                .Map(x => x.BridgeName) ?? Array.Empty<string>())
             .AsEnumerable()
             .Append(newConfig.NetworkProviders
-            .Where(x=>x.Type == NetworkProviderType.NatOverLay)
-            .Select(x=>x.BridgeName))
+                .Where(x => x.Type == NetworkProviderType.NatOverLay)
+                .Select(x => x.BridgeName))
             .ToSeq()
-                                    
+
         let needsOverlaySwitch = newBridges.Length > 0
         let hasOverlaySwitch = hostState.OverlaySwitch.IsSome
         let allOverlaySwitches = hostState.VMSwitches
             .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
 
-        // bridge exists in OVS but not in config -> remove it
-        from pendingBridges in changeBuilder
-            .RemoveUnusedBridges(currentOvsBridges, newBridges)
-
-        // Disable the OVS extension on all switches besides the overlay switch
+        // Enable the OVS extension of the overlay switch(es) in case
+        // it was disabled somehow. Otherwise, the execution of OVS
+        // commands might later fail.
         from _ in hostState.VMSwitchExtensions
+            .Filter(e => e.SwitchName == EryphConstants.OverlaySwitchName && !e.Enabled)
+            .Map(e => changeBuilder.EnableSwitchExtension(e.SwitchId, e.SwitchName))
+            .SequenceSerial()
+
+        // Disable the OVS extension on all switches besides the overlay switch.
+        from __ in hostState.VMSwitchExtensions
             .Filter(e => e.SwitchName != EryphConstants.OverlaySwitchName && e.Enabled)
             .Map(e => changeBuilder.DisableSwitchExtension(e.SwitchId, e.SwitchName))
             .SequenceSerial()
+
+        // bridge exists in OVS but not in config -> remove it
+        from pendingBridges in changeBuilder
+            .RemoveUnusedBridges(currentOvsBridges, newBridges)
 
         from ovsBridges2 in hostState.OverlaySwitch.Match(
             Some: overlaySwitch =>
@@ -151,7 +159,7 @@ public static class ProviderNetworkUpdate<RT>
                 // no switch needed
                 : SuccessAff(pendingBridges))
 
-        // remove missing NAT bridges (renamed?)
+            // remove missing NAT bridges (renamed?)
         from ovsBridges3 in changeBuilder.RecreateMissingNatAdapters(
             newConfig, hostState.AllNetAdaptersNames, ovsBridges2)
 
@@ -181,6 +189,7 @@ public static class ProviderNetworkUpdate<RT>
         // update OVS bridge mapping to new network names and bridges
         from uBrideMappings in changeBuilder.UpdateBridgeMappings(
             newConfig)
+
         select changeBuilder.Build();
 
     public static Aff<RT, HostState> getHostState() =>
