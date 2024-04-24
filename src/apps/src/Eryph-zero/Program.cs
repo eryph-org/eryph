@@ -1090,12 +1090,13 @@ internal static class Program
         var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), new NullLoggerFactory());
 
         return await RunAsAdmin(
-            from _ in ensureDriver(ovsRunDir, true, true)
+            from _ in writeLine("Going to sync network state with the current configuration...")
+            from __ in ensureDriver(ovsRunDir, true, true)
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
             from pendingChanges in generateChanges(hostState, currentConfig)
-            from __ in applyChangesInConsole(currentConfig, pendingChanges, nonInteractive, false)
-            from ___ in syncNetworks()
+            from ___ in applyChangesInConsole(currentConfig, pendingChanges, nonInteractive, false)
+            from ____ in syncNetworks()
             select unit,
             new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
     }
