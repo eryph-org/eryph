@@ -139,7 +139,7 @@ namespace Eryph.VmManagement.Inventory
             var metadataIdString = "";
             if (!string.IsNullOrWhiteSpace(notes))
             {
-                var metadataIndex = notes.IndexOf("Eryph metadata id: ", StringComparison.InvariantCultureIgnoreCase);
+                var metadataIndex = notes.IndexOf("Eryph metadata id: ", StringComparison.OrdinalIgnoreCase);
                 if (metadataIndex != -1)
                 {
                     var metadataEnd = metadataIndex + "Eryph metadata id: ".Length + 36;
