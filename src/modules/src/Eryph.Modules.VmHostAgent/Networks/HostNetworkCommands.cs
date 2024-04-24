@@ -249,7 +249,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             }
 
             createSwitchCommand.AddCommand("Enable-VMSwitchExtension")
-                .AddParameter("Name", "dbosoft Open vSwitch Extension");
+                .AddParameter("Name", EryphConstants.SwitchExtensionName);
 
             return
                 createTeam().Bind(_ =>

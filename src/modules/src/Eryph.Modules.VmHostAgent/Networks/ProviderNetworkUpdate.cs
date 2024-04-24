@@ -115,6 +115,12 @@ public static class ProviderNetworkUpdate<RT>
         from pendingBridges in changeBuilder
             .RemoveUnusedBridges(currentOvsBridges, newBridges)
 
+        // Disable the OVS extension on all switches besides the overlay switch
+        from _ in hostState.VMSwitchExtensions
+            .Filter(e => e.SwitchName != EryphConstants.OverlaySwitchName && e.Enabled)
+            .Map(e => changeBuilder.DisableSwitchExtension(e.SwitchId, e.SwitchName))
+            .SequenceSerial()
+
         from ovsBridges2 in hostState.OverlaySwitch.Match(
             Some: overlaySwitch =>
                 from vmAdapters in allOverlaySwitches
@@ -132,7 +138,10 @@ public static class ProviderNetworkUpdate<RT>
                                 : SuccessEff(unit)
                             from bridges in changeBuilder.RebuildOverlaySwitch(vmAdapters, pendingBridges, newOverlayAdapters)
                             select bridges
-                          : SuccessAff(pendingBridges)
+                          : hostState.VMSwitchExtensions.Any(e => e.SwitchId == overlaySwitch.Id && e.Enabled)
+                                ? SuccessAff(pendingBridges)
+                                : from _ in changeBuilder.EnableSwitchExtension(overlaySwitch.Id, EryphConstants.OverlaySwitchName)
+                                  select pendingBridges
                     : changeBuilder.RemoveOverlaySwitch(vmAdapters, pendingBridges)
                 select bridgeChange,
             None: () => needsOverlaySwitch
