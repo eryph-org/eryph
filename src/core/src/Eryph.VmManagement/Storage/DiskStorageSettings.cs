@@ -105,10 +105,9 @@ namespace Eryph.VmManagement.Storage
                 return System.IO.Path.GetFileNameWithoutExtension(path);
 
             var fileName = System.IO.Path.GetFileNameWithoutExtension(path);
-            var extension = System.IO.Path.GetExtension(path);
             var generationSuffix = $"_g{generation}";
             return fileName.EndsWith(generationSuffix)
-                ? fileName[..^generationSuffix.Length] + extension
+                ? fileName[..^generationSuffix.Length]
                 : fileName;
         }
     }

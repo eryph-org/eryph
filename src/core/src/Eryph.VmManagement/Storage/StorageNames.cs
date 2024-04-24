@@ -118,9 +118,9 @@ namespace Eryph.VmManagement.Storage
             where genePathParts.Length == 4
             where string.Equals(genePathParts[3], "volumes", StringComparison.OrdinalIgnoreCase)
             let geneFileName = Path.GetFileNameWithoutExtension(genePath)
-            from geneIdentifer in GeneIdentifier.NewOption(
+            from geneIdentifier in GeneIdentifier.NewOption(
                 $"gene:{genePathParts[0]}/{genePathParts[1]}/{genePathParts[2]}:{geneFileName}")
-            select geneIdentifer;
+            select geneIdentifier;
         
 
         private Either<Error, (string VmPath, string VhdPath)> ResolveStorageBasePaths(
