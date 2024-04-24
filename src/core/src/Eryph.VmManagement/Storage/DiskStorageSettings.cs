@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Eryph.Core.VmAgent;
+using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 
 namespace Eryph.VmManagement.Storage
@@ -10,6 +11,7 @@ namespace Eryph.VmManagement.Storage
         public string Name { get; set; }
         public string Path { get; set; }
         public string FileName { get; set; }
+        public int Generation { get; set; }
 
         public Option<DiskStorageSettings> ParentSettings { get; set; }
 
@@ -62,6 +64,7 @@ namespace Eryph.VmManagement.Storage
                 StorageIdentifier = geneDiskStorageIdentifier,
                 Path = System.IO.Path.GetDirectoryName(geneDiskPath),
                 FileName = System.IO.Path.GetFileName(geneDiskPath),
+                Generation = 0,
                 Name = System.IO.Path.GetFileNameWithoutExtension(geneDiskPath)
             };
 
@@ -81,17 +84,32 @@ namespace Eryph.VmManagement.Storage
                     ? Option<string>.None
                     : Option<string>.Some(vhdInfo.Value.ParentPath)
                 from parentSettings in FromVhdPath(engine, vmHostAgentConfig, parentPath).ToAsync()
+                let generation = parentSettings.Map(p => p.Generation).IfNone(-1) + 1
                 select
                     new DiskStorageSettings
                     {
                         Path = System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
-                        Name = System.IO.Path.GetFileNameWithoutExtension(vhdInfo.Value.Path),
+                        Name = GetNameWithoutGeneration(vhdInfo.Value.Path,generation),
                         FileName = System.IO.Path.GetFileName(vhdInfo.Value.Path),
                         StorageNames = nameAndId.Names,
                         StorageIdentifier = nameAndId.StorageIdentifier,
                         SizeBytes = vhdInfo.Value.Size,
+                        Generation = generation,
                         ParentSettings = parentSettings
                     }).Traverse(l => l).ToEither();
+        }
+
+        private static string GetNameWithoutGeneration(string path, int generation)
+        {
+            if (generation == 0)
+                return System.IO.Path.GetFileNameWithoutExtension(path);
+
+            var fileName = System.IO.Path.GetFileNameWithoutExtension(path);
+            var extension = System.IO.Path.GetExtension(path);
+            var generationSuffix = $"_g{generation}";
+            return fileName.EndsWith(generationSuffix)
+                ? fileName[..^generationSuffix.Length] + extension
+                : fileName;
         }
     }
 }

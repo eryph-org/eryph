@@ -185,7 +185,7 @@ public class VMDriveStorageSettingsTests
                 dss.ControllerLocation.Should().Be(0);
                 
                 var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
-                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
+                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda_g1.vhdx");
                 settings.DiskSettings.SizeBytes.Should().BeNull();
                 settings.DiskSettings.SizeBytesCreate.Should().Be(42);
 
@@ -305,7 +305,7 @@ public class VMDriveStorageSettingsTests
                 dss.ControllerLocation.Should().Be(0);
 
                 var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
-                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
+                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda_g1.vhdx");
                 settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
                 settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
 

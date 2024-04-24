@@ -250,7 +250,7 @@ namespace Eryph.VmManagement.Test
                 if (commandString.Contains("Get-VM"))
                     return new[] { _fixture.Engine.ToPsObject<object>(vmData.Value) }.ToSeq();
 
-                if (commandString.Contains(@"Test-Path [x:\disks\abc\sda.vhdx]"))
+                if (commandString.Contains(@"Test-Path [x:\disks\abc\sda_g1.vhdx]"))
                     return new[] { _fixture.Engine.ToPsObject<object>(false) }.ToSeq();
 
 
@@ -284,7 +284,7 @@ namespace Eryph.VmManagement.Test
 
             vhdCommand.Should().NotBeNull();
             vhdCommand!.ShouldBeCommand("New-VHD")
-                .ShouldBeParam("Path", @"x:\disks\abc\sda.vhdx")
+                .ShouldBeParam("Path", @"x:\disks\abc\sda_g1.vhdx")
                 .ShouldBeParam("ParentPath", @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")
                 .ShouldBeFlag("Differencing")
                 .ShouldBeParam("SizeBytes", 1073741824);
@@ -292,7 +292,7 @@ namespace Eryph.VmManagement.Test
             attachCommand.Should().NotBeNull();
             attachCommand!.ShouldBeCommand("Add-VMHardDiskDrive")
                 .ShouldBeParam("VM", vmData.PsObject)
-                .ShouldBeParam("Path", @"x:\disks\abc\sda.vhdx");
+                .ShouldBeParam("Path", @"x:\disks\abc\sda_g1.vhdx");
         }
 
         [Theory]
