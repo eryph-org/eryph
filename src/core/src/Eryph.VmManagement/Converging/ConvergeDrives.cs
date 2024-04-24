@@ -134,7 +134,7 @@ namespace Eryph.VmManagement.Converging
                         {
                             var plannedAttachPath = plannedDiskAtControllerPos.AttachPath.IfNone("");
                             if (hd.Path == null || !hd.Path.Equals(plannedAttachPath,
-                                StringComparison.InvariantCultureIgnoreCase))
+                                StringComparison.OrdinalIgnoreCase))
                                 detach = true;
                         }
 
@@ -237,7 +237,7 @@ namespace Eryph.VmManagement.Converging
                 currentStorageSettings.Find(x =>
                     driveSettings.DiskSettings.Path.Equals(x.DiskSettings.Path, StringComparison.OrdinalIgnoreCase)
                     && driveSettings.DiskSettings.Name.Equals(x.DiskSettings.Name,
-                        StringComparison.InvariantCultureIgnoreCase));
+                        StringComparison.OrdinalIgnoreCase));
 
             var frozenOptional = currentSettings.Map(x => x.Frozen);
 

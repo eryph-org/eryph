@@ -72,7 +72,7 @@ namespace Eryph.VmManagement.Test
                 if (commandString.Contains("Test-Path [x:\\disks\\abc\\sda.vhdx]"))
                     return new [] { _fixture.Engine.ToPsObject<object>(true) }.ToSeq();
 
-                if (commandString.Contains("Get-VHD [x:\\disks\\abc\\sda.vhdx]", StringComparison.InvariantCultureIgnoreCase))
+                if (commandString.Contains("Get-VHD [x:\\disks\\abc\\sda.vhdx]", StringComparison.OrdinalIgnoreCase))
                     return new[] { _fixture.Engine.ToPsObject<object>(new VhdInfo
                     {
                         Path = @"x:\disks\abc\sda.vhdx",

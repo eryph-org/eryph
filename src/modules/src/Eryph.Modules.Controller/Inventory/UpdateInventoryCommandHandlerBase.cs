@@ -61,8 +61,8 @@ namespace Eryph.Modules.Controller.Inventory
             foreach (var diskInfo in diskInfos) SelectAllParentDisks(ref allDisks, diskInfo);
 
             diskInfos = allDisks.Distinct((x, y) =>
-                string.Equals(x.Path, y.Path, StringComparison.InvariantCultureIgnoreCase) &&
-                string.Equals(x.FileName, y.FileName, StringComparison.InvariantCultureIgnoreCase)).ToList();
+                string.Equals(x.Path, y.Path, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(x.FileName, y.FileName, StringComparison.OrdinalIgnoreCase)).ToList();
 
             var addedDisks = new List<VirtualDisk>();
 
@@ -88,8 +88,8 @@ namespace Eryph.Modules.Controller.Inventory
                     disk = disksDataCandidates.FirstOrDefault() ?? Option<VirtualDisk>.None;
                 else
                     disk = disksDataCandidates.FirstOrDefault(x =>
-                        string.Equals(x.Path, diskInfo.Path, StringComparison.InvariantCultureIgnoreCase) &&
-                        string.Equals(x.FileName, diskInfo.FileName, StringComparison.InvariantCultureIgnoreCase))
+                        string.Equals(x.Path, diskInfo.Path, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(x.FileName, diskInfo.FileName, StringComparison.OrdinalIgnoreCase))
                            ?? Option<VirtualDisk>.None;
 
                 return disk;

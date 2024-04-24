@@ -115,7 +115,7 @@ namespace Eryph.VmManagement.Storage
                 {
                     var fullPath = Path.Combine(firstPath, id);
 
-                    if (!secondPath.Equals(fullPath, StringComparison.InvariantCultureIgnoreCase))
+                    if (!secondPath.Equals(fullPath, StringComparison.OrdinalIgnoreCase))
                         return LeftAsync<Error, string>(Error.New(
                                 "Path calculation failure"));
 

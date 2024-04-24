@@ -619,7 +619,7 @@ internal static class Program
                     var runDir = Path.Combine(targetDir, "bin");
 
                     if (pathVariableValue == null || 
-                        !pathVariableValue.Contains(runDir, StringComparison.InvariantCultureIgnoreCase))
+                        !pathVariableValue.Contains(runDir, StringComparison.OrdinalIgnoreCase))
                     {
                         Environment.SetEnvironmentVariable(pathVariable,
                             $"{pathVariableValue};{runDir}", EnvironmentVariableTarget.Machine);

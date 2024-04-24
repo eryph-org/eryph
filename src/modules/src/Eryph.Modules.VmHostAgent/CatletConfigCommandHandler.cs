@@ -106,7 +106,7 @@ namespace Eryph.Modules.VmHostAgent
             var metadataIdString = "";
             if (!string.IsNullOrWhiteSpace(notes))
             {
-                var metadataIndex = notes.IndexOf("eryph metadata id: ", StringComparison.InvariantCultureIgnoreCase);
+                var metadataIndex = notes.IndexOf("eryph metadata id: ", StringComparison.OrdinalIgnoreCase);
                 if (metadataIndex != -1)
                 {
                     var metadataEnd = metadataIndex + "eryph metadata id: ".Length + 36;
@@ -168,7 +168,7 @@ namespace Eryph.Modules.VmHostAgent
         {
             return Prelude.Cond<(string currentName, string newName)>(names =>
                     !string.IsNullOrWhiteSpace(names.newName) &&
-                    !names.newName.Equals(names.currentName, StringComparison.InvariantCulture))((vmInfo.Value.Name,
+                    !names.newName.Equals(names.currentName, StringComparison.Ordinal))((vmInfo.Value.Name,
                     config.Name))
                 .Match(
                     None: () => vmInfo,
