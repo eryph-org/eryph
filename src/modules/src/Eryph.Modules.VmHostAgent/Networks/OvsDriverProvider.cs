@@ -57,11 +57,10 @@ public class OvsDriverProvider<RT> where RT : struct,
                     "Could not parse the version of the Hyper-V extension"))
                 from _ in extensionVersion != infVersion && canUpgrade
                     ? from switchExtensions in hostNetworkCommands.GetSwitchExtensions()
-                      // The OVS Hyper-V switch extension should only be enabled for the single
+                      // The Open vSwitch extension should only be enabled for the single
                       // overlay switch. Just in case, we disable the extension on all switches.
-                      // In case there are multiple overlay switches, the extension will be
-                      // enabled on one of them. The issue of multiple overlay switches will
-                      // be resolved separately.
+                      // Normally, there should be only one overlay switch. Otherwise, the network
+                      // needs to be rebuilt.
                       let overlaySwitchId = switchExtensions
                           .Find(e => e.SwitchName == EryphConstants.OverlaySwitchName)
                           .Map(e => e.SwitchId)

@@ -1062,7 +1062,7 @@ internal static class Program
 
         return await RunAsAdmin(
             from configString in ReadInput(inFile)
-            from _ in ensureDriver(ovsRunDir, true, true)
+            from _ in ensureDriver(ovsRunDir, true, false)
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
@@ -1091,7 +1091,7 @@ internal static class Program
 
         return await RunAsAdmin(
             from _ in writeLine("Going to sync network state with the current configuration...")
-            from __ in ensureDriver(ovsRunDir, true, true)
+            from __ in ensureDriver(ovsRunDir, true, false)
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
             from pendingChanges in generateChanges(hostState, currentConfig)
