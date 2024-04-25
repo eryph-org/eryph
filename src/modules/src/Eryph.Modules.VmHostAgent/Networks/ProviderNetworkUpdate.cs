@@ -111,8 +111,6 @@ public static class ProviderNetworkUpdate<RT>
 
         let needsOverlaySwitch = newBridges.Length > 0
         let hasOverlaySwitch = hostState.OverlaySwitch.IsSome
-        let allOverlaySwitches = hostState.VMSwitches
-            .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
 
         // Enable the OVS extension of the overlay switch(es) in case
         // it was disabled somehow. Otherwise, the execution of OVS
@@ -184,11 +182,6 @@ public static class ProviderNetworkUpdate<RT>
                     .Map(s => hostCommands.GetNetAdaptersBySwitch(s.Id))
                     .SequenceSerial()
                     .Map(l => l.Flatten())
-                // When the physical adapters are not correct or multiple overlay switches exist,
-                // we must remove all overlay switches and rebuild a single overlay switch
-                // with the proper adapters.
-                let needsRebuild = overlaySwitch.AdaptersInSwitch != newOverlayAdapters
-                                   || allOverlaySwitches.Count > 1
                 from bridgeChange in needsOverlaySwitch switch
                 {
                     true => generateExistingOverlaySwitchChanges(
