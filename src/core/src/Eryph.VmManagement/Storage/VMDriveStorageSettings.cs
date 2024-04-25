@@ -80,16 +80,6 @@ namespace Eryph.VmManagement.Storage
 
             return
                 from resolvedPath in driveStorageNames.ResolveVolumeStorageBasePath(vmHostAgentConfig)
-                from identifier in storageIdentifier.ToEitherAsync(
-                    Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
-                let fileName = driveConfig.Type == CatletDriveType.VHDSet
-                    ? $"{driveConfig.Name}.vhds"
-                    : $"{driveConfig.Name}.vhdx"
-                let attachPath = Path.Combine(resolvedPath, identifier, fileName)
-                let configuredSize = Optional(driveConfig.Size).Filter(notDefault).Map(s => s * 1024L * 1024 * 1024)
-                from vhdInfo in getVhdInfo(attachPath)
-                let vhdMinimumSize = vhdInfo.Bind(i => Optional(i.MinimumSize))
-                let vhdSize = vhdInfo.Map(i => i.Size)
                 from parentOptions in match(
                     Optional(driveConfig.Source).Filter(notEmpty),
                     Some: src =>
@@ -97,6 +87,21 @@ namespace Eryph.VmManagement.Storage
                             .ToEitherAsync(Error.New("The catlet drive source is invalid"))
                         select Some(dss),
                     None: () => RightAsync<Error, Option<DiskStorageSettings>>(None))
+                let generation = parentOptions.Map(p => p.Generation).IfNone(-1) + 1
+                let generationSuffix = generation > 0 ? $"_g{generation}" : ""
+                from identifier in storageIdentifier.ToEitherAsync(
+                    Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
+                let fileName = driveConfig.Type switch
+                {
+                    CatletDriveType.SharedVHD => $"{driveConfig.Name}.vhdx",
+                    CatletDriveType.VHDSet => $"{driveConfig.Name}.vhds",
+                    _ => $"{driveConfig.Name}{generationSuffix}.vhdx",
+                }
+                let attachPath = Path.Combine(resolvedPath, identifier, fileName)
+                let configuredSize = Optional(driveConfig.Size).Filter(notDefault).Map(s => s * 1024L * 1024 * 1024)
+                from vhdInfo in getVhdInfo(attachPath)
+                let vhdMinimumSize = vhdInfo.Bind(i => Optional(i.MinimumSize))
+                let vhdSize = vhdInfo.Map(i => i.Size)
                 from parentVhdInfo in match(
                     parentOptions,
                     Some: po =>

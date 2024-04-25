@@ -185,7 +185,7 @@ public class VMDriveStorageSettingsTests
                 dss.ControllerLocation.Should().Be(0);
                 
                 var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
-                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
+                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda_g1.vhdx");
                 settings.DiskSettings.SizeBytes.Should().BeNull();
                 settings.DiskSettings.SizeBytesCreate.Should().Be(42);
 
@@ -305,7 +305,7 @@ public class VMDriveStorageSettingsTests
                 dss.ControllerLocation.Should().Be(0);
 
                 var settings = dss.Should().BeOfType<HardDiskDriveStorageSettings>().Subject;
-                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda.vhdx");
+                settings.AttachPath.Should().Be(@"x:\disks\storage-id-vm\sda_g1.vhdx");
                 settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
                 settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
 
@@ -419,5 +419,70 @@ public class VMDriveStorageSettingsTests
         var settings = parentSettings.Should().BeSome().Subject;
         settings.Path.Should().Be(@"x:\disks\genepool\testorg\testset\testtag\volumes");
         settings.Name.Should().Be("sda");
+    }
+
+    [Fact]
+    public async Task FromVhdPath_Resolved_Name_without_generation()
+    {
+        var path = @"x:\disks\genepool\testorg\testset\testtag\volumes\sda_g2.vhdx";
+        var mapping = new FakeTypeMapping();
+        var psEngine = new TestPowershellEngine(mapping);
+        psEngine.GetObjectCallback = (t, command) =>
+        {
+            if(command.ToString().StartsWith("Get-VHD"))
+            {
+                if (command.ToString().Contains("sda_g2"))
+                {
+                    return new[]
+                    {
+                        psEngine.ToPsObject<object>(new VhdInfo
+                        {
+                            ParentPath = @"x:\dummy\sda_g1.vhdx",
+                            Path = path,
+                        })
+                    }.ToSeq();
+                }
+
+                if (command.ToString().Contains("sda_g1"))
+                {
+                    return new[]
+                    {
+                        psEngine.ToPsObject<object>(new VhdInfo
+                        {
+                            ParentPath = @"x:\dummy\sda.vhdx",
+                            Path = @"x:\dummy\sda_g1.vhdx",
+                        })
+                    }.ToSeq();
+                }
+
+                return new[]
+                {
+                    psEngine.ToPsObject<object>(new VhdInfo
+                    {
+                        Path = @"x:\dummy\sda.vhdx",
+                    })
+                }.ToSeq();
+
+            }
+
+            return new PowershellFailure{Message = "Unknown command"};
+        };
+
+        var result = await DiskStorageSettings.FromVhdPath(
+            psEngine, new VmHostAgentConfiguration
+            {
+                Defaults = new VmHostAgentDefaultsConfiguration
+                {
+                    Volumes = @"x:\disks\genepool\testorg\testset\testtag\volumes",
+                }
+            }, Some(path));
+
+
+        result.Should().BeRight().Which.Should().BeSome(
+            dss =>
+            {
+                dss.Name.Should().Be("sda");
+                dss.Generation.Should().Be(2);
+            });
     }
 }
