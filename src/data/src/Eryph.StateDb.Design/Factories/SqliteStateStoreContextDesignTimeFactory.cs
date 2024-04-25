@@ -1,10 +1,9 @@
-﻿using Eryph.StateDb;
-using Eryph.StateDb.MySql;
+﻿using Eryph.StateDb.Sqlite;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Eryph.Controller
+namespace Eryph.StateDb.Design.Factories
 {
     /// <summary>
     ///     This type is required for EfCore migrations.
@@ -15,17 +14,17 @@ namespace Eryph.Controller
     ///     to configure EfCore context without the normally required container setup that is executed on application startup.
     ///     To use the migrations set the environment variable MYSQL_CONNECTIONSTRING to the database connection string.
     ///     Then call the migration as follows:
-    ///     Add-Migration -StartupProject Eryph.Controller -Project Eryph.StateDb.MySql -Name [name_of_migration]
+    ///     Add-Migration -StartupProject Eryph.StateDb.Design -Project Eryph.StateDb -Name [name_of_migration]
     /// </remarks>
     [UsedImplicitly]
-    public class DesignTimeStateStoreContextFactory : IDesignTimeDbContextFactory<StateStoreContext>
+    public class SqliteStateStoreContextDesignTimeFactory : IDesignTimeDbContextFactory<SqliteStateStoreContext>
     {
-        public StateStoreContext CreateDbContext(string[] args)
+        public SqliteStateStoreContext CreateDbContext(string[] args)
         {
-            var optionsBuilder = new DbContextOptionsBuilder<StateStoreContext>();
-            optionsBuilder.UseMySql();
+            var optionsBuilder = new DbContextOptionsBuilder<SqliteStateStoreContext>();
+            optionsBuilder.UseSqlite();
 
-            return new StateStoreContext(optionsBuilder.Options);
+            return new SqliteStateStoreContext(optionsBuilder.Options);
         }
     }
 }

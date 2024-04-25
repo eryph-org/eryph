@@ -4,6 +4,7 @@ using Eryph.Core;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.Seeding;
 using Eryph.StateDb;
+using Eryph.StateDb.Sqlite;
 using Eryph.StateDb.TestBase;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -45,7 +46,7 @@ public abstract class ChangeTrackingTestBase : StateDbTestBase
                 services.AddSimpleInjector(container, options =>
                 {
                     options.AddLogging();
-                    options.RegisterStateStore();
+                    options.RegisterSqliteStateStore();
                     options.AddChangeTracking();
                 });
             });

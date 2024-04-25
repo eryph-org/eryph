@@ -125,7 +125,6 @@ namespace Eryph.Modules.Controller
             options.Services.AddHostedHandler<SyncNetworksHandler>();
             options.AddHostedService<InventoryTimerService>();
             options.AddLogging();
-            options.RegisterStateStore();
         }
 
     }

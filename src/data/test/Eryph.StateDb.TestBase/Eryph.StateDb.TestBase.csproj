@@ -18,6 +18,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Eryph.StateDb.Sqlite\Eryph.StateDb.Sqlite.csproj" />
     <ProjectReference Include="..\..\src\Eryph.StateDb\Eryph.StateDb.csproj" />
   </ItemGroup>
 </Project>

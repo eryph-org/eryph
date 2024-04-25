@@ -77,8 +77,6 @@ namespace Eryph.Modules.AspNetCore
         {
             options.AddAspNetCore()
                 .AddControllerActivation();
-
-            options.RegisterStateStore();
         }
 
         [UsedImplicitly]

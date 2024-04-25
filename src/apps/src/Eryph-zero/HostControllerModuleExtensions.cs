@@ -3,9 +3,10 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Modules.Controller;
 using Eryph.StateDb;
-using Microsoft.EntityFrameworkCore;
+using Eryph.StateDb.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 
 namespace Eryph.Runtime.Zero
 {
@@ -13,21 +14,11 @@ namespace Eryph.Runtime.Zero
     {
         public static IModulesHostBuilder AddControllerModule(this IModulesHostBuilder builder, Container container)
         {
-            builder.HostModule<ControllerModule>(cfg =>
-            {
-                cfg.Configure(app =>
-                {
-                    Task.Run(async () =>
-                    {
-                        await using var scope = app.Services.CreateAsyncScope();
-                        await scope.ServiceProvider.GetRequiredService<StateStoreContext>().Database.MigrateAsync();
-                    }).Wait();
-                });
-            });
-
-            builder.ConfigureFrameworkServices((ctx, services) =>
+            builder.HostModule<ControllerModule>();
+            builder.ConfigureFrameworkServices((_, services) =>
             {
                 services.AddTransient<IConfigureContainerFilter<ControllerModule>, ControllerModuleFilters>();
+                services.AddTransient<IAddSimpleInjectorFilter<ControllerModule>, ControllerModuleFilters>();
             });
 
             container.Register<IPlacementCalculator, ZeroAgentLocator>();
@@ -36,9 +27,9 @@ namespace Eryph.Runtime.Zero
             return builder;
         }
 
-
-        private class ControllerModuleFilters :
-            IConfigureContainerFilter<ControllerModule>
+        private sealed class ControllerModuleFilters :
+            IConfigureContainerFilter<ControllerModule>,
+            IAddSimpleInjectorFilter<ControllerModule>
         {
             public Action<IModuleContext<ControllerModule>, Container> Invoke(
                 Action<IModuleContext<ControllerModule>, Container> next)
@@ -49,6 +40,17 @@ namespace Eryph.Runtime.Zero
 
                     container.Register(context.ModulesHostServices
                         .GetRequiredService<IDbContextConfigurer<StateStoreContext>>, Lifestyle.Scoped);
+                };
+            }
+
+            public Action<IModulesHostBuilderContext<ControllerModule>, SimpleInjectorAddOptions> Invoke(
+                Action<IModulesHostBuilderContext<ControllerModule>, SimpleInjectorAddOptions> next)
+            {
+                return (context, options) =>
+                {
+                    options.AddHostedService<DatabaseResetService>();
+                    options.RegisterSqliteStateStore();
+                    next(context, options);
                 };
             }
         }

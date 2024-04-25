@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,7 +40,7 @@ public abstract class StateDbTestBase : IAsyncLifetime
         {
             options.Services.AddLogging();
             ConfigureDatabase(options.Container);
-            options.RegisterStateStore();
+            options.RegisterSqliteStateStore();
             options.AddLogging();
             AddSimpleInjector(options);
         });

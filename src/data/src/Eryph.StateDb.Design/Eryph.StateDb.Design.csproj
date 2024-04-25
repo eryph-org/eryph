@@ -17,6 +17,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Infrastructure\src\Eryph.StateDb.MySql\Eryph.StateDb.MySql.csproj" />
+    <ProjectReference Include="..\Eryph.StateDb.Sqlite\Eryph.StateDb.Sqlite.csproj" />
+    <ProjectReference Include="..\Eryph.StateDb.SqlServer\Eryph.StateDb.SqlServer.csproj" />
     <ProjectReference Include="..\Eryph.StateDb\Eryph.StateDb.csproj" />
   </ItemGroup>
 

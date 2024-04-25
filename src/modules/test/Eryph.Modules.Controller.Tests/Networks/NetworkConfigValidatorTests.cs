@@ -5,6 +5,7 @@ using Eryph.Core.Network;
 using Eryph.Modules.Controller.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Sqlite;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -483,11 +484,11 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
         private async Task<string[]> RunChangeValidator(ProjectNetworksConfig projectConfig)
         {
-            var contextOptions = new DbContextOptionsBuilder<StateStoreContext>()
+            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
                 .UseSqlite(_connection)
                 .Options;
 
-            await using var context = new StateStoreContext(contextOptions);
+            await using var context = new SqliteStateStoreContext(contextOptions);
             var stateStore = new StateStore(context);
             await context.Database.EnsureCreatedAsync();
             await SeedData(stateStore);
