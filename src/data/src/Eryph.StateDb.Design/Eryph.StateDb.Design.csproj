@@ -7,12 +7,16 @@
   </PropertyGroup>
 	
 	  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="System.Text.Json" Version="8.0.3" />
     
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Infrastructure\src\Eryph.StateDb.MySql\Eryph.StateDb.MySql.csproj" />
+    <ProjectReference Include="..\Eryph.StateDb.MySql\Eryph.StateDb.MySql.csproj" />
     <ProjectReference Include="..\Eryph.StateDb.Sqlite\Eryph.StateDb.Sqlite.csproj" />
     <ProjectReference Include="..\Eryph.StateDb.SqlServer\Eryph.StateDb.SqlServer.csproj" />
     <ProjectReference Include="..\Eryph.StateDb\Eryph.StateDb.csproj" />

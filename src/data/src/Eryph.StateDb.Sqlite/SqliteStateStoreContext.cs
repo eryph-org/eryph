@@ -13,32 +13,20 @@ namespace Eryph.StateDb.Sqlite;
 public class SqliteStateStoreContext(DbContextOptions<SqliteStateStoreContext> options)
     : StateStoreContext(options)
 {
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<OperationLogEntry>().Property(e => e.Timestamp).HasConversion(
-            dateTimeOffset => dateTimeOffset.UtcDateTime,
-            dateTime => new DateTimeOffset(dateTime));
-    }
-
     protected override void ConfigureConventions(
         ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
 
+        // Store all DateTimeOffset values as strings in the database.
+        // This might be suboptimal for performance, but it is the only
+        // way to ensure that filtering, sorting and concurrency tokens
+        // work as expected.
+        // DateTimeOffsetToBinaryConverter has known issues with filtering
+        // and sorting.
+        // Converting to DateTime will be break concurrency tokens as the
+        // conversion is lossy (the timezone information is lost).
         configurationBuilder.Properties<DateTimeOffset>()
-            .HaveConversion<DateTimeOffsetToDateTimeConverter>();
-    }
-
-    private sealed class DateTimeOffsetToDateTimeConverter(ConverterMappingHints? mappingHints = null)
-        : ValueConverter<DateTimeOffset, DateTime>(
-            v => ToDateTime(v),
-            v => ToDateTimeOffset(v),
-            mappingHints)
-    {
-        private static DateTime ToDateTime(DateTimeOffset dateTimeOffset) => dateTimeOffset.UtcDateTime;
-
-        private static DateTimeOffset ToDateTimeOffset(DateTime dateTime) => new(dateTime.ToUniversalTime(), TimeSpan.Zero);
+            .HaveConversion<DateTimeOffsetToStringConverter>();
     }
 }

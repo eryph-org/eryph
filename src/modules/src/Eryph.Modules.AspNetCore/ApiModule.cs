@@ -75,6 +75,8 @@ namespace Eryph.Modules.AspNetCore
         [UsedImplicitly]
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
+            options.AddHostedService<DatabaseValidationService>();
+
             options.AddAspNetCore()
                 .AddControllerActivation();
         }

@@ -2,7 +2,7 @@
 
 namespace Eryph.StateDb.MySql
 {
-    public class MySqlDbContextConfigurer(string connectionString)
+    public class MySqlStateStoreContextConfigurer(string connectionString)
         : IStateStoreContextConfigurer
     {
         public void Configure(DbContextOptionsBuilder options)

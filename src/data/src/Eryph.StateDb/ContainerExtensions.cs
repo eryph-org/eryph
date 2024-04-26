@@ -22,6 +22,7 @@ public static class ContainerExtensions
             typeof(IStateStoreRepository<>),
             typeof(StateStoreRepository<>),
             Lifestyle.Scoped);
+
         options.Container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
 
         return options;

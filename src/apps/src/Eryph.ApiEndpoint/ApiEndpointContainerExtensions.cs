@@ -1,6 +1,5 @@
 ﻿using Eryph.Rebus;
 using Eryph.StateDb;
-using Eryph.StateDb.MySql;
 using SimpleInjector;
 
 namespace Eryph.ApiEndpoint
