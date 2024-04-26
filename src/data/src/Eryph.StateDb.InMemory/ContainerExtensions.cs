@@ -1,21 +1,20 @@
-﻿using System;
+﻿using SimpleInjector.Integration.ServiceCollection;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
-using SimpleInjector.Integration.ServiceCollection;
 
-namespace Eryph.StateDb.Sqlite;
+namespace Eryph.StateDb.InMemory;
 
 public static class ContainerExtensions
 {
-    public static void RegisterSqliteStateStore(this SimpleInjectorAddOptions options)
+    public static void RegisterInMemoryStateStore(this SimpleInjectorAddOptions options)
     {
         options.RegisterStateStore();
-        options.Services.AddDbContext<StateStoreContext, SqliteStateStoreContext>(
+        options.Services.AddDbContext<StateStoreContext, InMemoryStateStoreContext>(
             (sp, dbOptions) =>
             {
                 var configurer = sp.GetRequiredService<Container>()

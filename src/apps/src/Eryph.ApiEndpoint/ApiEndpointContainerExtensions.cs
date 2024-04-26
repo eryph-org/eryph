@@ -23,7 +23,7 @@ namespace Eryph.ApiEndpoint
 
         public static Container UseMySql(this Container container)
         {
-            container.Register<IDbContextConfigurer<StateStoreContext>, MySqlDbContextConfigurer<StateStoreContext>>();
+            //container.Register<IDbContextConfigurer<StateStoreContext>, MySqlDbContextConfigurer<StateStoreContext>>();
 
             return container;
         }

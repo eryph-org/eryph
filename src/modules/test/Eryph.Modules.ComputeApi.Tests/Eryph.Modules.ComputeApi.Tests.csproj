@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
@@ -22,6 +22,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.4" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\data\src\Eryph.StateDb.InMemory\Eryph.StateDb.InMemory.csproj" />
     <ProjectReference Include="..\..\src\Eryph.Modules.ComputeApi\Eryph.Modules.ComputeApi.csproj" />
   </ItemGroup>
 </Project>

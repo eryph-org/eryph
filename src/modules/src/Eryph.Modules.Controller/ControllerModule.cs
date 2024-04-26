@@ -111,6 +111,8 @@ namespace Eryph.Modules.Controller
                 .Subscriptions(s => serviceProvider.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
                 .Logging(x => x.Serilog())
                 .Start());
+
+            container.Register(serviceProvider.GetRequiredService<IStateStoreContextConfigurer>);
         }
 
         [UsedImplicitly]

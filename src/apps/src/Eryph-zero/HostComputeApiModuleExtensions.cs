@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Modules.ComputeApi;
 using Eryph.StateDb.Sqlite;
+using Eryph.StateDb.SqlServer;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -33,6 +34,7 @@ public static class HostComputeApiModuleExtensions
             return (context, options) =>
             {
                 options.RegisterSqliteStateStore();
+                //options.RegisterSqlServerStateStore();
                 next(context, options);
             };
         }

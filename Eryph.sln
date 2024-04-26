@@ -91,9 +91,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.StateDb.TestBase", "s
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.StateDb.Design", "src\data\src\Eryph.StateDb.Design\Eryph.StateDb.Design.csproj", "{F9D6FC7B-757A-46A7-836E-A9E4DB070F5C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.StateDb.Sqlite", "src\data\src\Eryph.StateDb.Sqlite\Eryph.StateDb.Sqlite.csproj", "{CF123039-B761-43A3-9E3D-9A3B1E6DA695}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.StateDb.Sqlite", "src\data\src\Eryph.StateDb.Sqlite\Eryph.StateDb.Sqlite.csproj", "{CF123039-B761-43A3-9E3D-9A3B1E6DA695}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.StateDb.SqlServer", "src\data\src\Eryph.StateDb.SqlServer\Eryph.StateDb.SqlServer.csproj", "{6200C440-E4BA-4C3B-9844-77B11FF55B11}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.StateDb.SqlServer", "src\data\src\Eryph.StateDb.SqlServer\Eryph.StateDb.SqlServer.csproj", "{6200C440-E4BA-4C3B-9844-77B11FF55B11}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.StateDb.InMemory", "src\data\src\Eryph.StateDb.InMemory\Eryph.StateDb.InMemory.csproj", "{37F1FBF3-839C-4FCE-97DC-D8CD78B3EE5D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -249,6 +251,10 @@ Global
 		{6200C440-E4BA-4C3B-9844-77B11FF55B11}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6200C440-E4BA-4C3B-9844-77B11FF55B11}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6200C440-E4BA-4C3B-9844-77B11FF55B11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37F1FBF3-839C-4FCE-97DC-D8CD78B3EE5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37F1FBF3-839C-4FCE-97DC-D8CD78B3EE5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37F1FBF3-839C-4FCE-97DC-D8CD78B3EE5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37F1FBF3-839C-4FCE-97DC-D8CD78B3EE5D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -291,6 +297,7 @@ Global
 		{F9D6FC7B-757A-46A7-836E-A9E4DB070F5C} = {7F64364D-A6A2-441C-9F30-3702BF35A02F}
 		{CF123039-B761-43A3-9E3D-9A3B1E6DA695} = {7F64364D-A6A2-441C-9F30-3702BF35A02F}
 		{6200C440-E4BA-4C3B-9844-77B11FF55B11} = {7F64364D-A6A2-441C-9F30-3702BF35A02F}
+		{37F1FBF3-839C-4FCE-97DC-D8CD78B3EE5D} = {7F64364D-A6A2-441C-9F30-3702BF35A02F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

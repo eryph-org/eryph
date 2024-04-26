@@ -83,7 +83,7 @@ namespace Eryph.Modules.AspNetCore
         public virtual void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.Register(
-                serviceProvider.GetRequiredService<IDbContextConfigurer<StateStoreContext>>,
+                serviceProvider.GetRequiredService<IStateStoreContextConfigurer>,
                 Lifestyle.Scoped);
             container.Register<IUserRightsProvider, UserRightsProvider>(Lifestyle.Scoped);
 

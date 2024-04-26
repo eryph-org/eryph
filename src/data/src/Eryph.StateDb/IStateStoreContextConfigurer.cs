@@ -9,7 +9,5 @@ namespace Eryph.StateDb;
 
 public interface IStateStoreContextConfigurer
 {
-    string ConnectionString { get; }
-
     public void Configure(DbContextOptionsBuilder options);
 }

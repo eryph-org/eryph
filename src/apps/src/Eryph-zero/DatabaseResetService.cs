@@ -20,10 +20,9 @@ internal class DatabaseResetService(Container container, ILogger logger) : IHost
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
         var database = scope.GetInstance<StateStoreContext>().Database;
         var pendingMigrations = await database.GetPendingMigrationsAsync(cancellationToken);
-        pendingMigrations = ["abc"];
         if (pendingMigrations.Any())
         {
-            logger.LogInformation("The state database is missing migrations. Going to recreate the database");
+            logger.LogInformation("The state database is missing migrations. Going to reseed the state database...");
             await database.EnsureDeletedAsync(cancellationToken);
             await database.MigrateAsync(cancellationToken);
         }

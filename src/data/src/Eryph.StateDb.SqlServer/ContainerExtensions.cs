@@ -16,7 +16,7 @@ public static class ContainerExtensions
         options.RegisterStateStore();
         options.Services.AddDbContext<StateStoreContext, SqlServerStateStoreContext>(
             (sp, dbOptions) => sp.GetRequiredService<Container>()
-                .GetInstance<IDbContextConfigurer<StateStoreContext>>()
+                .GetInstance<IStateStoreContextConfigurer>()
                 .Configure(dbOptions));
     }
 }

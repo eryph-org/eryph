@@ -54,15 +54,6 @@ public abstract class StateDbTestBase : IAsyncLifetime
     /// </summary>
     protected virtual void AddSimpleInjector(SimpleInjectorAddOptions options) { }
 
-    private class TestDbContextConfigurer(string dbConnection)
-        : IDbContextConfigurer<StateStoreContext>
-    {
-        public void Configure(DbContextOptionsBuilder options)
-        {
-            options.UseSqlite(dbConnection);
-        }
-    }
-
     public virtual async Task InitializeAsync()
     {
         await _connection.OpenAsync();
@@ -106,8 +97,8 @@ public abstract class StateDbTestBase : IAsyncLifetime
 
     protected void ConfigureDatabase(Container container)
     {
-        container.RegisterInstance<IDbContextConfigurer<StateStoreContext>>(
-            new TestDbContextConfigurer(_dbConnection));
+        container.RegisterInstance<IStateStoreContextConfigurer>(
+            new SqliteStateStoreContextConfigurer(_dbConnection));
     }
 
     public async Task DisposeAsync()
