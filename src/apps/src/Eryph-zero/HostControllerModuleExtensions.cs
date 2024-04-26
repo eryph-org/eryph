@@ -36,7 +36,6 @@ namespace Eryph.Runtime.Zero
                 {
                     options.AddHostedService<DatabaseResetService>();
                     options.RegisterSqliteStateStore();
-                    //options.RegisterSqlServerStateStore();
                     next(context, options);
                 };
             }

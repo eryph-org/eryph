@@ -31,7 +31,6 @@ namespace Eryph.Runtime.Zero
             container.UseInMemoryBus();
             
             container.UseSqlLite();
-            //container.UseSqlServer();
 
             container.Register<IRSAProvider, RSAProvider>();
             container.Register<ICryptoIOServices, WindowsCryptoIOServices>();
@@ -75,21 +74,6 @@ namespace Eryph.Runtime.Zero
             };
             container.RegisterInstance<IStateStoreContextConfigurer>(
                 new SqliteStateStoreContextConfigurer(builder.ToString()));
-            return container;
-        }
-
-        public static Container UseSqlServer(this Container container)
-        {
-            container.RegisterInstance(new InMemoryDatabaseRoot());
-            var builder = new SqlConnectionStringBuilder()
-            {
-                DataSource = "(LocalDb)\\\\MSSQLLocalDB",
-                IntegratedSecurity = true,
-                InitialCatalog = "eryph_state",
-                AttachDBFilename = Path.Combine(ZeroConfig.GetPrivateConfigPath(), "state.mdf"),
-            };
-            container.RegisterInstance<IStateStoreContextConfigurer>(
-                new SqlServerStateStoreContextConfigurer(builder.ToString()));
             return container;
         }
     }

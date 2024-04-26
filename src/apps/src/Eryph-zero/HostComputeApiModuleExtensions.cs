@@ -34,7 +34,6 @@ public static class HostComputeApiModuleExtensions
             return (context, options) =>
             {
                 options.RegisterSqliteStateStore();
-                //options.RegisterSqlServerStateStore();
                 next(context, options);
             };
         }
