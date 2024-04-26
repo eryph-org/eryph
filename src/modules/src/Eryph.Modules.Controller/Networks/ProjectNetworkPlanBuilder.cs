@@ -18,12 +18,12 @@ internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProvider
     : IProjectNetworkPlanBuilder
 {
 
-    private record FloatingPortInfo(FloatingNetworkPort Port);
+    private sealed record FloatingPortInfo(FloatingNetworkPort Port);
 
-    private record ProviderRouterPortInfo(ProviderRouterPort Port, VirtualNetwork Network, ProviderSubnetInfo Subnet);
-    private record ProviderSubnetInfo(ProviderSubnet Subnet, NetworkProviderSubnet Config);
+    private sealed record ProviderRouterPortInfo(ProviderRouterPort Port, VirtualNetwork Network, ProviderSubnetInfo Subnet);
+    private sealed record ProviderSubnetInfo(ProviderSubnet Subnet, NetworkProviderSubnet Config);
 
-    private record CatletDnsInfo(string CatletId, Map<string, string> Addresses);
+    private sealed record CatletDnsInfo(string CatletId, Map<string, string> Addresses);
 
     private static ProviderSubnetInfo EmptyProviderSubnetInfo => new(new ProviderSubnet(), new NetworkProviderSubnet());
 
@@ -79,7 +79,7 @@ internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProvider
                     $"Network '{info.Network.Name}' configuration error: subnet {info.Port.SubnetName} of network provider {info.Network.NetworkProvider} not found."))
                 .Map(providerSubnet => info with { Subnet = providerSubnet })).SequenceSerial());
 
-    private EitherAsync<Error, Seq<FloatingPortInfo>> GetFloatingPorts(
+    private static EitherAsync<Error, Seq<FloatingPortInfo>> GetFloatingPorts(
         Seq<CatletNetworkPort> catletPorts, Seq<ProviderSubnetInfo> providerSubnets)
     {
         return catletPorts
@@ -192,7 +192,7 @@ internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProvider
                         ("dns_server", string.IsNullOrWhiteSpace(subnet.DnsServersV4) ? "9.9.9.9" :
                             $"{{{string.Join(',', subnet.DnsServersV4.Split(','))}}}"),
                         ("router", networkIp.IpAddress ),
-                        //("domain_name", $"\"{subnet.DnsDomain}\"")
+                        ("domain_name", $"\\\\\\\"{subnet.DnsDomain}\\\\\\\"")
 
                     }
                 )
