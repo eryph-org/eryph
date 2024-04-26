@@ -44,6 +44,7 @@ namespace Eryph.ModuleCore.Networks
                                     ? subnet.DnsServersV4?.Split(",", StringSplitOptions.RemoveEmptyEntries)
                                     : null,
                                 Mtu = subnet.MTU,
+                                DnsDomain = subnet.DnsDomain == "home.arpa" ? null: subnet.DnsDomain,
                                 IpPools = subnet.IpPools.Count > 0 ? subnet.IpPools.Select(ipPool => new IpPoolConfig
                                 {
                                     Name = ipPool.Name,

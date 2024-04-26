@@ -79,6 +79,7 @@ internal class VirtualNetworkChangeHandler : IChangeHandler<VirtualNetworkChange
                 VirtualNetworkName = p.Network.Name,
                 EnvironmentName = p.Network.Environment,
                 CatletMetadataId = p.CatletMetadataId,
+                AddressName = p.AddressName,
                 MacAddress = p.MacAddress,
                 FloatingNetworkPort = p.FloatingPort is null
                     ? null

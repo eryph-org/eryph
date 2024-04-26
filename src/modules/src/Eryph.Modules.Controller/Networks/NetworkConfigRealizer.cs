@@ -292,8 +292,14 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                     ? string.Join(',', subnetConfig.DnsServers)
                     : null;
                 savedSubnet.IpNetwork = subnetConfig.Address ?? networkConfig.Address;
-                subnetConfig.IpPools ??= Array.Empty<IpPoolConfig>();
 
+                // default domain is home.arpa
+                // except for environments where the default is [environment].home.arpa
+                // user set domain names are always preferred (even if this could result in duplicate names)
+                savedSubnet.DnsDomain ??= savedNetwork.Environment is null or "default" 
+                            ? subnetConfig.DnsDomain ?? "home.arpa"
+                            : subnetConfig.DnsDomain ?? $"{(savedNetwork.Environment??"").ToLowerInvariant()}.home.arpa";
+                subnetConfig.IpPools ??= Array.Empty<IpPoolConfig>();
 
                 foundNames.Clear();
 

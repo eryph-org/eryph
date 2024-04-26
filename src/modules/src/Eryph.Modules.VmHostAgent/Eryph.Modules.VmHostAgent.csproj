@@ -8,7 +8,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Hosting" Version="1.0.0-rc.3" />
-    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.3.1-ci.4" />
+    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.3.1-PullRequest0070.6" />
     <PackageReference Include="Eryph.GenePool.Client" Version="0.1.1-ci.3" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>

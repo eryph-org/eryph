@@ -13,33 +13,26 @@ using LanguageExt.Common;
 
 namespace Eryph.Modules.Controller.Networks;
 
-internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
+internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProviderManager, IStateStore stateStore,
+        IIpPoolManager ipPoolManager)
+    : IProjectNetworkPlanBuilder
 {
-    private readonly INetworkProviderManager _networkProviderManager;
-    private readonly IIpPoolManager _ipPoolManager;
-    private readonly IStateStore _stateStore;
 
     private record FloatingPortInfo(FloatingNetworkPort Port);
 
     private record ProviderRouterPortInfo(ProviderRouterPort Port, VirtualNetwork Network, ProviderSubnetInfo Subnet);
     private record ProviderSubnetInfo(ProviderSubnet Subnet, NetworkProviderSubnet Config);
 
-    private static ProviderSubnetInfo EmptyProviderSubnetInfo => new(new ProviderSubnet(), new NetworkProviderSubnet());
+    private record CatletDnsInfo(string CatletId, Map<string, string> Addresses);
 
-    public ProjectNetworkPlanBuilder(
-        INetworkProviderManager networkProviderManager, IStateStore stateStore, IIpPoolManager ipPoolManager)
-    {
-        _networkProviderManager = networkProviderManager;
-        _stateStore = stateStore;
-        _ipPoolManager = ipPoolManager;
-    }
+    private static ProviderSubnetInfo EmptyProviderSubnetInfo => new(new ProviderSubnet(), new NetworkProviderSubnet());
 
     public EitherAsync<Error, NetworkPlan> GenerateNetworkPlan(Guid projectId, CancellationToken cancellationToken)
     {
 
         var networkPlan = new NetworkPlan(projectId.ToString());
 
-        return from providerConfig in _networkProviderManager.GetCurrentConfiguration()
+        return from providerConfig in networkProviderManager.GetCurrentConfiguration()
             let overLayProviders =
                 providerConfig.NetworkProviders
                     .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
@@ -52,17 +45,18 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
 
             let catletPorts = FindPortsOfType<CatletNetworkPort>(networks)
             from floatingPorts in GetFloatingPorts(catletPorts, providerSubnets)
-
+            let dnsInfo = MapCatletPortsToDnsInfos(catletPorts)
+            let dnsNames = dnsInfo.Select(info => info.CatletId).ToArray()
 
             let p1 = AddProjectRouterAndPorts(networkPlan, networks)
             let p2 = AddExternalNetSwitches(p1, providerSubnets, overLayProviders)
             let p3 = AddProviderRouterPorts(p2, providerRouterPorts)
-            let p4 = AddNetworksAsSwitches(p3, networks)
+            let p4 = AddNetworksAsSwitches(p3, networks, dnsNames)
             let p5 = AddSubnetsAsDhcpOptions(p4, networks)
             let p6 = AddCatletPorts(p5, catletPorts)
             let p7 = AddFloatingPorts(p6, floatingPorts)
-
-            select p7;
+            let p8 = AddDnsNames(p7, dnsInfo)
+            select p8;
 
     }
 
@@ -119,7 +113,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
             ).Flatten().Traverse(l => l).ToAsync()
             .Bind(rs => 
                 //get all provider configurations and filter for configured providers
-                _stateStore.For<ProviderSubnet>().IO
+                stateStore.For<ProviderSubnet>().IO
                 .ListAsync(new NetplanBuilderSpecs.GetAllProviderSubnets(), cancellationToken)
                 .Map(all => all.Where(a =>
                     rs.Any(r => r.NetworkProvider == a.ProviderName && r.SubnetName == a.Name)))
@@ -135,11 +129,10 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
 
     private EitherAsync<Error, Seq<VirtualNetwork>> GetAllOverlayNetworks(Guid projectId,
         Seq<NetworkProvider> overLayProviders, CancellationToken cancellationToken) =>
-        _stateStore.For<VirtualNetwork>().IO
+        stateStore.For<VirtualNetwork>().IO
             .ListAsync(new NetplanBuilderSpecs.GetAllNetworks(projectId), cancellationToken)
             .Map(s =>
                 s.Filter(x => overLayProviders.Any(p => p.Name == x.NetworkProvider)));
-
 
 
     private static NetworkPlan AddProviderRouterPorts(NetworkPlan networkPlan, Seq<ProviderRouterPortInfo> ports)
@@ -177,8 +170,9 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
     }
 
 
-    private static NetworkPlan AddNetworksAsSwitches(NetworkPlan networkPlan, Seq<VirtualNetwork> networks) =>
-        networks.Map(network => networkPlan.AddSwitch(network.Id.ToString()))
+    private static NetworkPlan AddNetworksAsSwitches(NetworkPlan networkPlan, Seq<VirtualNetwork> networks, 
+        string[] dnsNames) =>
+        networks.Map(network => networkPlan.AddSwitch(network.Id.ToString(), dnsNames))
             .Apply(s => JoinPlans(s, networkPlan));
 
 
@@ -197,7 +191,8 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
                         ("mtu", subnet.MTU == 0 ? "1400" : subnet.MTU.ToString() ),
                         ("dns_server", string.IsNullOrWhiteSpace(subnet.DnsServersV4) ? "9.9.9.9" :
                             $"{{{string.Join(',', subnet.DnsServersV4.Split(','))}}}"),
-                        ("router", networkIp.IpAddress )
+                        ("router", networkIp.IpAddress ),
+                        //("domain_name", $"\"{subnet.DnsDomain}\"")
 
                     }
                 )
@@ -213,6 +208,31 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
                     .IfNone(IPAddress.None), 
                         port.IpAssignments?.FirstOrDefault()?.SubnetId?.ToString() ?? ""))
             .Apply(s => JoinPlans(s, networkPlan));
+
+    private static Seq<CatletDnsInfo> MapCatletPortsToDnsInfos(Seq<CatletNetworkPort> ports) =>
+        ports
+            .Where(x=>!string.IsNullOrWhiteSpace(x.AddressName))
+            .Map(port => new CatletDnsInfo(port.CatletMetadataId.ToString(),
+            new Map<string, string>(
+                port.IpAssignments
+                    .Map(x => ($"{port.AddressName}.{x.Subnet.DnsDomain}", x.IpAddress)).ToArray())
+                    .Append(port.IpAssignments
+                        .Map(x => (GetPTRFromAddress(x.IpAddress), $"{port.AddressName}.{x.Subnet.DnsDomain}")).ToArray())
+                    
+                    .GroupBy(x=>x.Item1)
+                    .Map( g=> (g.Key,string.Join(' ', g.Map(gi=>gi.Item2))) )
+                    .ToMap()
+                    
+                )
+        );
+   
+    private static string GetPTRFromAddress(string address) =>
+        string.Join(".", address.Split('.').Reverse().ToArray()) + ".in-addr.arpa";
+
+    private static NetworkPlan AddDnsNames(NetworkPlan networkPlan,
+        Seq<CatletDnsInfo> catletDnsInfos ) =>
+        catletDnsInfos.Map(info => networkPlan.AddDnsRecords(
+            info.CatletId, info.Addresses)).Apply(s => JoinPlans(s, networkPlan));
 
 
     private static NetworkPlan AddFloatingPorts(NetworkPlan networkPlan, Seq<FloatingPortInfo> ports)
@@ -273,7 +293,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
                 .Find(x => x.Subnet.ProviderName == network.NetworkProvider && x.Subnet.Name == port.SubnetName)
                 .ToEitherAsync(Error.New(
                     $"Network '{network.Name}' configuration error: subnet {port.SubnetName} of network provider {network.NetworkProvider} not found."))
-            from ip in _ipPoolManager.AcquireIp(providerSubnet.Subnet.Id, port.PoolName, cancellationToken)
+            from ip in ipPoolManager.AcquireIp(providerSubnet.Subnet.Id, port.PoolName, cancellationToken)
             let _ = AddIpToPort(port, ip)
             select  port;
     }

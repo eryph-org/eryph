@@ -93,7 +93,8 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
         let c1 = new CancellationTokenSource(5000)
 
         from networkPort in GetOrAddAdapterPort(
-            network, command.CatletId, catletMetadataId, networkConfig.AdapterName, c1.Token)
+            network, command.CatletId, catletMetadataId, networkConfig.AdapterName,
+            command.Config.Hostname ?? command.Config.Name, c1.Token)
 
         let c2 = new CancellationTokenSource()
 
@@ -146,7 +147,8 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
         VirtualNetwork network,
         Guid catletId,
         Guid catletMetadataId,
-        string adapterName, 
+        string adapterName,
+        string addressName,
         CancellationToken cancellationToken)
     {
         var portName = $"{catletId}_{adapterName}";
@@ -167,7 +169,11 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     return _stateStore.For<VirtualNetworkPort>().AddAsync(port, cancellationToken);
                 }
             ).ConfigureAwait(false))
-            .Map(p => (CatletNetworkPort)p);
+            .Map(p =>
+            {
+                p.AddressName = addressName;
+                return (CatletNetworkPort)p;
+            });
 
     }
 
