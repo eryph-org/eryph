@@ -47,6 +47,14 @@
         "DOTNET_ENVIRONMENT": "Development"
       },
       "remoteDebugEnabled": false
+    },
+    "networks sync": {
+      "commandName": "Project",
+      "commandLineArgs": "networks sync",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
     }
   }
 }

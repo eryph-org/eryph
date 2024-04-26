@@ -9,6 +9,7 @@ using LanguageExt;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using Eryph.Core;
 using Eryph.VmManagement.Sys;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -129,8 +130,13 @@ public class OvsDriverProviderTests
 
         _hostNetworkCommandsMock.Setup(m => m.GetSwitchExtensions())
             .Returns(SuccessAff<RT, Seq<VMSwitchExtension>>(Seq(
-                new VMSwitchExtension() { Enabled = true, SwitchId = SwitchId },
-                new VMSwitchExtension() {Enabled = false, SwitchId = otherSwitchId})))
+                new VMSwitchExtension()
+                {
+                    Enabled = true,
+                    SwitchId = SwitchId,
+                    SwitchName = EryphConstants.OverlaySwitchName,
+                },
+                new VMSwitchExtension() { Enabled = false, SwitchId = otherSwitchId })))
             .Verifiable();
 
         _hostNetworkCommandsMock.Setup(m => m.DisableSwitchExtension(SwitchId))

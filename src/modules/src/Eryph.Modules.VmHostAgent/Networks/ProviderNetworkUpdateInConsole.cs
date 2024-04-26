@@ -42,7 +42,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
                     ? Console<RT>.writeLine(
                         "No changes found to be rolled back." +
                         "\nPlease note that rollback cannot undo all changes, you should check" +
-                        "\nif networking is still working probably in host and catlets.")
+                        "\nif networking is still working properly in host and catlets.")
                     : from _ in executeChangesConsole(currentConfigChanges)
                     from m2 in Console<RT>.writeLine("Rollback complete")
                     select Prelude.unit
@@ -84,7 +84,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
                         {
                             console.WriteLine("\nA rollback was executed for at least a part of the changes." +
                                               "\nPlease note that rollback cannot undo all changes, you should check" +
-                                              "\nif networking is still working probably in host and catlets.");
+                                              "\nif networking is still working properly in host and catlets.");
                         }
 
                         return Prelude.FailAff<T>(opError.Cause);
@@ -246,7 +246,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
 
             return (!isEmpty
                     ? InteractiveCheck()
-                    : Console<RT>.writeLine("The new network configuration does not require any changes to the host network."))
+                    : Console<RT>.writeLine("The network configuration does not require any changes to the host network."))
                 .Bind(_ => executeChangesConsole(newConfigChanges)
 
                     // rollback changes that have a direct rollback attached

@@ -8,5 +8,6 @@ internal static class ProviderNetworkUpdateConstants
         NetworkChangeOperation.AddAdapterPort,
         NetworkChangeOperation.RebuildOverLaySwitch,
         NetworkChangeOperation.UpdateBridgePort,
+        NetworkChangeOperation.DisableSwitchExtension,
     };
 }

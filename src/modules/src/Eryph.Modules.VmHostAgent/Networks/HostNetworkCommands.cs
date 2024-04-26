@@ -154,29 +154,42 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                     .Where(a => a.Value.SwitchId == switchId)));
 
     public Aff<RT, Unit> DisconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters) =>
-        default(RT).Powershell.Bind(ps =>
+        from psEngine in default(RT).Powershell
+        from _ in adapters
+            .Map(adapter => PsCommandBuilder.Create()
+                .AddCommand("Disconnect-VMNetworkAdapter")
+                .AddParameter("VMNetworkAdapter", adapter.PsObject))
+            .Map(cmd => psEngine.RunAsync(cmd).ToAsync().ToAff())
+            .SequenceParallel()
+        select unit;
 
-            adapters.Map(adapter =>
-                    ps.RunAsync(
-                            PsCommandBuilder.Create()
-                                .AddCommand("Disconnect-VMNetworkAdapter")
-                                .AddParameter("VMNetworkAdapter", adapter.PsObject)
-                        )
-                        .ToAsync()).TraverseParallel(l => l)
-                .Map(_ => Unit.Default).ToAff());
+    public Aff<RT, Unit> ConnectNetworkAdapters(
+        Seq<TypedPsObject<VMNetworkAdapter>> adapters,
+        string switchName) =>
+        from psEngine in default(RT).Powershell
+        from _ in adapters
+            .Map(adapter => PsCommandBuilder.Create()
+                .AddCommand("Connect-VMNetworkAdapter")
+                .AddParameter("VMNetworkAdapter", adapter.PsObject)
+                .AddParameter("SwitchName", switchName))
+            .Map(cmd => psEngine.RunAsync(cmd).ToAsync().ToAff())
+            .SequenceParallel()
+        select unit;
 
-
-    public Aff<RT,Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters, string switchName) =>
-        default(RT).Powershell.Bind(ps =>
-            adapters.Map(adapter =>
-
-                    ps.RunAsync(PsCommandBuilder.Create().AddCommand("Connect-VMNetworkAdapter")
-                            .AddParameter("VMNetworkAdapter", adapter.PsObject)
-                            .AddParameter("SwitchName", switchName)
-                        )
-
-                        .ToAsync()).TraverseParallel(l => l)
-                .Map(_ => Unit.Default).ToAff());
+    public Aff<RT,Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters) =>
+        from psEngine in default(RT).Powershell
+        from _ in adapters
+            // We resolve the switch by ID so the reconnect succeeds in case
+            // there are multiple switches with the same name. Otherwise,
+            // the rollback during network configuration might fail.
+            .Map(adapter => PsCommandBuilder.Create()
+                .AddCommand("Get-VMSwitch")
+                .AddParameter("Id", adapter.Value.SwitchId)
+                .AddCommand("Connect-VMNetworkAdapter")
+                .AddParameter("VMNetworkAdapter", adapter.PsObject))
+            .Map(cmd => psEngine.RunAsync(cmd).ToAsync().ToAff())
+            .SequenceParallel()
+        select unit;
 
     public Aff<RT,Unit> CreateOverlaySwitch(IEnumerable<string> adapters)
     {
@@ -231,7 +244,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             }
 
             createSwitchCommand.AddCommand("Enable-VMSwitchExtension")
-                .AddParameter("Name", "dbosoft Open vSwitch Extension");
+                .AddParameter("Name", EryphConstants.SwitchExtensionName);
 
             return
                 createTeam().Bind(_ =>
@@ -243,52 +256,37 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
 
     public Aff<RT, Option<OverlaySwitchInfo>> FindOverlaySwitch(
         Seq<VMSwitch> vmSwitches,
-        Seq<VMSwitchExtension> extensions, 
         Seq<HostNetworkAdapter> adapters) =>
+        from psEngine in default(RT).Powershell
+        // Only a single overlay switch exists when the network setup is valid.
+        // Otherwise, the network setup needs to be corrected by reapplying the
+        // network provider configuration.
+        let overlaySwitch = vmSwitches.Find(x => x.Name == EryphConstants.OverlaySwitchName)
+        from switchInfo in overlaySwitch
+            .Map(s => PrepareOverlaySwitchInfo(s, adapters))
+            .Sequence()
+        select switchInfo;
 
-        default(RT).Powershell.Bind(ps => extensions
-            .Find(x => x.Enabled)
-            .Map(extension =>
-            {
-                var overlaySwitchId = extension.SwitchId;
-
-                return vmSwitches
-                    .Find(x => x.Id == overlaySwitchId)
-                    .HeadOrLeft("Could not find overlay switch in switches even if extension was found")
-                    .ToAff()
-                    .Bind(vmSwitch =>
-                    {
-                        if (vmSwitch.NetAdapterInterfaceGuid is null or { Length: 0 })
-                        {
-                            return Prelude.SuccessAff(Seq<string>());
-                        }
-
-                        //even if it is a array only one adapter is supported in a switch
-                        var switchAdapterGuid = vmSwitch.NetAdapterInterfaceGuid[0];
-
-                        return adapters.Find(x =>
-                                x.InterfaceGuid == switchAdapterGuid)
-                            .Match(
-                                Some: a => 
-                                    Prelude.SuccessAff(new[]
-                                    {
-                                        a.Name
-                                    }.ToSeq()),
-                                None: () => ps.GetObjectsAsync<HostNetworkAdapter>(
-                                        PsCommandBuilder.Create()
-                                            .AddCommand("Get-NetSwitchTeamMember")
-                                            .AddParameter("Team", EryphConstants.OverlaySwitchName))
-                                    .ToAff()
-                                    .Map(members =>
-                                    {
-                                        //assume if team exists that it contains only eryph adapters
-                                        return members.Select(x => x.Value.Name);
-                                    }));
-
-                    }).Map(s => new OverlaySwitchInfo(
-                        overlaySwitchId, Prelude.toHashSet(s)));
-
-            }).Traverse(l => l));
+    private Aff<RT, OverlaySwitchInfo> PrepareOverlaySwitchInfo(
+        VMSwitch overlaySwitch,
+        Seq<HostNetworkAdapter> adapters) =>
+        from psEngine in default(RT).Powershell
+        from adapterNames in overlaySwitch.NetAdapterInterfaceGuid.ToSeq().Match(
+            Empty: () => SuccessAff(Seq<string>()),
+            Head: interfaceGuid => adapters.Find(x => x.InterfaceGuid == interfaceGuid).Match(
+                Some: adapter => SuccessAff(Seq([adapter.Name])),
+                None: () =>
+                    // No adapter with the interface guid found. We assume that the switch
+                    // has a switch embedded team attached and fetch the team members.
+                    from teamMembers in psEngine.GetObjectsAsync<HostNetworkAdapter>(
+                            PsCommandBuilder.Create()
+                                .AddCommand("Get-NetSwitchTeamMember")
+                                .AddParameter("Team", EryphConstants.OverlaySwitchName))
+                        .ToAff()
+                    // We assume that all members of the team are eryph adapters
+                    select teamMembers.Map(m => m.Value.Name).ToSeq()),
+            Tail: _ => FailAff<Seq<string>>(Error.New("More than one adapter in overlay switch")))
+        select new OverlaySwitchInfo(overlaySwitch.Id, toHashSet(adapterNames));
 
     public Aff<RT,Unit> RemoveOverlaySwitch() =>
         from psEngine in default(RT).Powershell.ToAff()

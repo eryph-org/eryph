@@ -57,10 +57,16 @@ public class OvsDriverProvider<RT> where RT : struct,
                     "Could not parse the version of the Hyper-V extension"))
                 from _ in extensionVersion != infVersion && canUpgrade
                     ? from switchExtensions in hostNetworkCommands.GetSwitchExtensions()
-                      let activeSwitchExtensions = switchExtensions.Filter(e => e.Enabled)
-                          .OrderByDescending(e => e.SwitchName == EryphConstants.OverlaySwitchName)
-                          .ToSeq()
-                      from _ in activeSwitchExtensions.Map(e => hostNetworkCommands.DisableSwitchExtension(e.SwitchId))
+                      // The Open vSwitch extension should only be enabled for the single
+                      // overlay switch. Just in case, we disable the extension on all switches.
+                      // Normally, there should be only one overlay switch. Otherwise, the network
+                      // needs to be rebuilt.
+                      let overlaySwitchId = switchExtensions
+                          .Find(e => e.SwitchName == EryphConstants.OverlaySwitchName)
+                          .Map(e => e.SwitchId)
+                      from _ in switchExtensions
+                          .Filter(e => e.Enabled)
+                          .Map(e => hostNetworkCommands.DisableSwitchExtension(e.SwitchId))
                           .SequenceSerial()
                       from __ in uninstallDriver()
                       // Wait for the driver service to be stopped/removed. Otherwise, the
@@ -68,10 +74,13 @@ public class OvsDriverProvider<RT> where RT : struct,
                       from ___ in waitUntilDriverServiceHasStopped()
                       from ____ in removeAllDriverPackages()
                       from _____ in installDriver(infPath)
-                      // The OVS Hyper-V switch extension should only be enabled for a single
-                      // switch. We reenable it for the best match.
-                      from ______ in match(activeSwitchExtensions.HeadOrNone(),
-                          Some: e => hostNetworkCommands.EnableSwitchExtension(e.SwitchId),
+                      from ______ in match(overlaySwitchId,
+                          Some: switchId =>
+                              from _ in hostNetworkCommands.EnableSwitchExtension(switchId)
+                              // We suspect that the switch extension might not be enabled
+                              // immediately on slow systems
+                              from __ in waitUntilSwitchExtensionIsEnabled(switchId)
+                              select unit,
                           None: () => SuccessAff<RT, Unit>(unit))
                       select unit
                     : from _ in extensionVersion != infVersion
@@ -181,11 +190,27 @@ public class OvsDriverProvider<RT> where RT : struct,
 
     internal static Aff<RT, Unit> waitUntilDriverServiceHasStopped() =>
         from _ in repeatWhile(
-            Schedule.spaced(TimeSpan.FromSeconds(5)) | Schedule.upto(TimeSpan.FromMinutes(5)),
+            Schedule.NoDelayOnFirst
+            & Schedule.spaced(TimeSpan.FromSeconds(5))
+            & Schedule.upto(TimeSpan.FromMinutes(5)),
             from _ in logInformation("Checking if driver service has stopped...")
             from isRunning in isDriverServiceRunning()
             select isRunning,
             isRunning => isRunning)
+        select unit;
+
+    internal static Aff<RT, Unit> waitUntilSwitchExtensionIsEnabled(Guid switchId) =>
+        from hostNetworkCommands in default(RT).HostNetworkCommands
+        from _ in repeatUntil(
+            Schedule.NoDelayOnFirst
+            & Schedule.spaced(TimeSpan.FromSeconds(5))
+            & Schedule.upto(TimeSpan.FromMinutes(5)),
+            from _ in logInformation("Checking if OVS Hyper-V switch extension is enabled...")
+            from extensionInfos in hostNetworkCommands.GetSwitchExtensions()
+            select extensionInfos.Find(e => e.SwitchId == switchId)
+                .Map(e => e.Enabled)
+                .IfNone(false),
+            isEnabled => isEnabled)
         select unit;
 
     public static Aff<RT, bool> isDriverServiceRunning() =>

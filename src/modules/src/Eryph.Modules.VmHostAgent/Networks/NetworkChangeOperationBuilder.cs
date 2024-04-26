@@ -41,7 +41,10 @@ public enum NetworkChangeOperation
     UpdateBridgePort,
 
     ConfigureNatIp,
-    UpdateBridgeMapping
+    UpdateBridgeMapping,
+
+    EnableSwitchExtension,
+    DisableSwitchExtension
 }
 
 public class NetworkChangeOperationBuilder<RT> where RT : struct,
@@ -137,7 +140,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                         .DisconnectNetworkAdapters(overlayVMAdapters)),
                     _ => true,
                     () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ReconnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName))
+                        .ReconnectNetworkAdapters(overlayVMAdapters))
                     ,
                     NetworkChangeOperation.DisconnectVMAdapters);
             }
@@ -181,7 +184,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             {
                 AddOperation(
                     () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ReconnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)),
+                        .ConnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)),
                     NetworkChangeOperation.ConnectVMAdapters);
             }
 
@@ -208,7 +211,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     o =>
                         o!.Contains(NetworkChangeOperation.RemoveOverlaySwitch),
                     () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ReconnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)),
+                        .ReconnectNetworkAdapters(overlayVMAdapters)),
                     NetworkChangeOperation.DisconnectVMAdapters);
             }
 
@@ -237,6 +240,34 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 NetworkChangeOperation.RemoveOverlaySwitch);
 
             return SuccessAff(default(OVSBridgeInfo));
+        }
+    }
+
+    public Aff<RT, Unit> EnableSwitchExtension(Guid switchId, string switchName)
+    {
+        using (_logger.BeginScope("Method: {method}", nameof(EnableSwitchExtension)))
+        {
+            AddOperation(
+                () => default(RT).HostNetworkCommands.Bind(c => c
+                    .EnableSwitchExtension(switchId)),
+                NetworkChangeOperation.EnableSwitchExtension,
+                switchName);
+
+            return unitAff;
+        }
+    }
+
+    public Aff<RT, Unit> DisableSwitchExtension(Guid switchId, string switchName)
+    {
+        using (_logger.BeginScope("Method: {method}", nameof(DisableSwitchExtension)))
+        {
+            AddOperation(
+                () => default(RT).HostNetworkCommands.Bind(c => c
+                    .DisableSwitchExtension(switchId)),
+                NetworkChangeOperation.DisableSwitchExtension,
+                switchName);
+
+            return unitAff;
         }
     }
 

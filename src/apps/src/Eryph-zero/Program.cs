@@ -160,6 +160,12 @@ internal static class Program
             nonInteractiveOption, noCurrentConfigCheckOption);
         networksCommand.AddCommand(importNetworksCommand);
 
+        var syncNetworkConfigCommand = new Command("sync");
+        syncNetworkConfigCommand.AddOption(nonInteractiveOption);
+        syncNetworkConfigCommand.SetHandler(SyncNetworkConfig,
+            nonInteractiveOption);
+        networksCommand.AddCommand(syncNetworkConfigCommand);
+
         var driverCommand = new Command("driver");
         rootCommand.AddCommand(driverCommand);
 
@@ -1056,7 +1062,7 @@ internal static class Program
 
         return await RunAsAdmin(
             from configString in ReadInput(inFile)
-            from _ in ensureDriver(ovsRunDir, true, true)
+            from _ in ensureDriver(ovsRunDir, true, false)
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
@@ -1073,6 +1079,24 @@ internal static class Program
             from save in saveConfigurationYaml(configString)
             from sync in syncNetworks()
             from m in writeLine("New Network configuration was imported.")
+            select unit,
+            new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
+    }
+
+    private static async Task<int> SyncNetworkConfig(bool nonInteractive)
+    {
+        using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
+        var ovsRunDir = OVSPackage.UnpackAndProvide();
+        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), new NullLoggerFactory());
+
+        return await RunAsAdmin(
+            from _ in writeLine("Going to sync network state with the current configuration...")
+            from __ in ensureDriver(ovsRunDir, true, false)
+            from currentConfig in getCurrentConfiguration()
+            from hostState in getHostStateWithProgress()
+            from pendingChanges in generateChanges(hostState, currentConfig)
+            from ___ in applyChangesInConsole(currentConfig, pendingChanges, nonInteractive, false)
+            from ____ in syncNetworks()
             select unit,
             new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
     }
