@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Eryph.StateDb.Sqlite.Migrations
+namespace Eryph.StateDb.SqlServer.Migrations
 {
     /// <inheritdoc />
-    public partial class MyMigration : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,8 +15,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "Metadata",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Metadata = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Metadata = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -27,11 +27,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "Operations",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TenantId = table.Column<Guid>(type: "TEXT", nullable: false, defaultValue: new Guid("c1813384-8ecb-4f17-b846-821ee515d19b")),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    StatusMessage = table.Column<string>(type: "TEXT", nullable: true),
-                    LastUpdated = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValue: new Guid("c1813384-8ecb-4f17-b846-821ee515d19b")),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    StatusMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastUpdated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -42,7 +42,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "Tenants",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -53,10 +53,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "OperationResources",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ResourceId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
-                    OperationId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ResourceType = table.Column<int>(type: "int", nullable: false),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -72,9 +72,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "Projects",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    TenantId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -91,9 +91,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "OperationProjectModel",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    OperationId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -115,18 +115,18 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "OperationTasks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ParentTaskId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    OperationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    AgentName = table.Column<string>(type: "TEXT", nullable: true),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    DisplayName = table.Column<string>(type: "TEXT", nullable: true),
-                    ReferenceType = table.Column<int>(type: "INTEGER", nullable: true),
-                    ReferenceId = table.Column<string>(type: "TEXT", nullable: true),
-                    ReferenceProjectName = table.Column<string>(type: "TEXT", nullable: true),
-                    LastUpdated = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ParentTaskId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    AgentName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DisplayName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ReferenceType = table.Column<int>(type: "int", nullable: true),
+                    ReferenceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ReferenceProjectName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastUpdated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -148,10 +148,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "ProjectRoles",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IdentityId = table.Column<string>(type: "TEXT", nullable: false),
-                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IdentityId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -169,10 +169,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "Resources",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ResourceType = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -189,11 +189,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "Logs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    OperationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TaskId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Message = table.Column<string>(type: "TEXT", nullable: true),
-                    Timestamp = table.Column<DateTimeOffset>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TaskId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Message = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Timestamp = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -216,11 +216,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "TaskProgress",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    OperationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TaskId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Timestamp = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
-                    Progress = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TaskId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Timestamp = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    Progress = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -237,17 +237,16 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "CatletDisks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    StorageIdentifier = table.Column<string>(type: "TEXT", nullable: true),
-                    Frozen = table.Column<bool>(type: "INTEGER", nullable: false),
-                    Path = table.Column<string>(type: "TEXT", nullable: true),
-                    FileName = table.Column<string>(type: "TEXT", nullable: true),
-                    SizeBytes = table.Column<long>(type: "INTEGER", nullable: true),
-                    ParentId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    DataStore = table.Column<string>(type: "TEXT", nullable: true),
-                    Environment = table.Column<string>(type: "TEXT", nullable: true),
-                    DiskType = table.Column<int>(type: "INTEGER", nullable: false),
-                    Foo = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    StorageIdentifier = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Frozen = table.Column<bool>(type: "bit", nullable: false),
+                    Path = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SizeBytes = table.Column<long>(type: "bigint", nullable: true),
+                    ParentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DataStore = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Environment = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DiskType = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -269,8 +268,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "CatletFarms",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    HardwareId = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    HardwareId = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -287,10 +286,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "VNetworks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    NetworkProvider = table.Column<string>(type: "TEXT", nullable: true),
-                    IpNetwork = table.Column<string>(type: "TEXT", nullable: true),
-                    Environment = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    NetworkProvider = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IpNetwork = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Environment = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -307,26 +306,26 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "Catlets",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AgentName = table.Column<string>(type: "TEXT", nullable: true),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    StatusTimestamp = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    CatletType = table.Column<int>(type: "INTEGER", nullable: false),
-                    UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: true),
-                    VMId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MetadataId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Path = table.Column<string>(type: "TEXT", nullable: true),
-                    StorageIdentifier = table.Column<string>(type: "TEXT", nullable: true),
-                    DataStore = table.Column<string>(type: "TEXT", nullable: true),
-                    Environment = table.Column<string>(type: "TEXT", nullable: true),
-                    Frozen = table.Column<bool>(type: "INTEGER", nullable: false),
-                    HostId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CpuCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    StartupMemory = table.Column<long>(type: "INTEGER", nullable: false),
-                    MinimumMemory = table.Column<long>(type: "INTEGER", nullable: false),
-                    MaximumMemory = table.Column<long>(type: "INTEGER", nullable: false),
-                    SecureBootTemplate = table.Column<string>(type: "TEXT", nullable: true),
-                    Features = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AgentName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    StatusTimestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CatletType = table.Column<int>(type: "int", nullable: false),
+                    UpTime = table.Column<TimeSpan>(type: "time", nullable: true),
+                    VMId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MetadataId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Path = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StorageIdentifier = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DataStore = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Environment = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Frozen = table.Column<bool>(type: "bit", nullable: false),
+                    HostId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CpuCount = table.Column<int>(type: "int", nullable: false),
+                    StartupMemory = table.Column<long>(type: "bigint", nullable: false),
+                    MinimumMemory = table.Column<long>(type: "bigint", nullable: false),
+                    MaximumMemory = table.Column<long>(type: "bigint", nullable: false),
+                    SecureBootTemplate = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Features = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -348,17 +347,17 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "NetworkPorts",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProviderName = table.Column<string>(type: "TEXT", nullable: true),
-                    MacAddress = table.Column<string>(type: "TEXT", nullable: true),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    Discriminator = table.Column<string>(type: "TEXT", maxLength: 21, nullable: false),
-                    SubnetName = table.Column<string>(type: "TEXT", nullable: true),
-                    PoolName = table.Column<string>(type: "TEXT", nullable: true),
-                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    FloatingPortId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CatletMetadataId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    RoutedNetworkId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProviderName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MacAddress = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Discriminator = table.Column<string>(type: "nvarchar(21)", maxLength: 21, nullable: false),
+                    SubnetName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PoolName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NetworkId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    FloatingPortId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CatletMetadataId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RoutedNetworkId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -393,15 +392,15 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "Subnet",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    IpNetwork = table.Column<string>(type: "TEXT", nullable: true),
-                    Discriminator = table.Column<string>(type: "TEXT", maxLength: 21, nullable: false),
-                    ProviderName = table.Column<string>(type: "TEXT", nullable: true),
-                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    DhcpLeaseTime = table.Column<int>(type: "INTEGER", nullable: true),
-                    MTU = table.Column<int>(type: "INTEGER", nullable: true),
-                    DnsServersV4 = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IpNetwork = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Discriminator = table.Column<string>(type: "nvarchar(21)", maxLength: 21, nullable: false),
+                    ProviderName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NetworkId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    DhcpLeaseTime = table.Column<int>(type: "int", nullable: true),
+                    MTU = table.Column<int>(type: "int", nullable: true),
+                    DnsServersV4 = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -418,10 +417,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "CatletDrives",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
-                    CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Type = table.Column<int>(type: "INTEGER", nullable: true),
-                    AttachedDiskId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CatletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: true),
+                    AttachedDiskId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -443,12 +442,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "CatletNetworkAdapters",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
-                    CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    SwitchName = table.Column<string>(type: "TEXT", nullable: true),
-                    NetworkProviderName = table.Column<string>(type: "TEXT", nullable: true),
-                    MacAddress = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CatletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SwitchName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NetworkProviderName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MacAddress = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -465,15 +464,15 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "ReportedNetworks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IpV4Addresses = table.Column<string>(type: "TEXT", nullable: true),
-                    IpV6Addresses = table.Column<string>(type: "TEXT", nullable: true),
-                    IPv4DefaultGateway = table.Column<string>(type: "TEXT", nullable: true),
-                    IPv6DefaultGateway = table.Column<string>(type: "TEXT", nullable: true),
-                    DnsServers = table.Column<string>(type: "TEXT", nullable: true),
-                    IpV4Subnets = table.Column<string>(type: "TEXT", nullable: true),
-                    IpV6Subnets = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CatletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IpV4Addresses = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IpV6Addresses = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IPv4DefaultGateway = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IPv6DefaultGateway = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DnsServers = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IpV4Subnets = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IpV6Subnets = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -490,14 +489,14 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IpPools",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    FirstIp = table.Column<string>(type: "TEXT", nullable: true),
-                    NextIp = table.Column<string>(type: "TEXT", nullable: true),
-                    LastIp = table.Column<string>(type: "TEXT", nullable: true),
-                    IpNetwork = table.Column<string>(type: "TEXT", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "BLOB", rowVersion: true, nullable: true),
-                    SubnetId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FirstIp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NextIp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastIp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IpNetwork = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true),
+                    SubnetId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -514,13 +513,13 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IpAssignment",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SubnetId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    IpAddress = table.Column<string>(type: "TEXT", nullable: true),
-                    NetworkPortId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    Discriminator = table.Column<string>(type: "TEXT", maxLength: 21, nullable: false),
-                    PoolId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    Number = table.Column<int>(type: "INTEGER", nullable: true)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SubnetId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IpAddress = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NetworkPortId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Discriminator = table.Column<string>(type: "nvarchar(21)", maxLength: 21, nullable: false),
+                    PoolId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Number = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -573,7 +572,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_IpAssignment_PoolId_Number",
                 table: "IpAssignment",
                 columns: new[] { "PoolId", "Number" },
-                unique: true);
+                unique: true,
+                filter: "[PoolId] IS NOT NULL AND [Number] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_IpAssignment_SubnetId",
@@ -604,13 +604,15 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_NetworkPorts_FloatingPortId",
                 table: "NetworkPorts",
                 column: "FloatingPortId",
-                unique: true);
+                unique: true,
+                filter: "[FloatingPortId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_MacAddress",
                 table: "NetworkPorts",
                 column: "MacAddress",
-                unique: true);
+                unique: true,
+                filter: "[MacAddress] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_NetworkId",
@@ -621,7 +623,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_NetworkPorts_RoutedNetworkId",
                 table: "NetworkPorts",
                 column: "RoutedNetworkId",
-                unique: true);
+                unique: true,
+                filter: "[RoutedNetworkId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OperationProjectModel_OperationId",

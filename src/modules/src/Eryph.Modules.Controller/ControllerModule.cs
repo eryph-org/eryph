@@ -118,7 +118,6 @@ namespace Eryph.Modules.Controller
         [UsedImplicitly]
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
-            options.AddHostedService<DatabaseValidationService>();
             options.AddSeeding(_changeTrackingConfig);
             
             if(_changeTrackingConfig.TrackChanges)

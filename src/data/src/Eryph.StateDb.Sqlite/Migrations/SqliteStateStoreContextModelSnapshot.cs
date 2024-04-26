@@ -195,7 +195,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid>("TaskId")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("Timestamp")
+                    b.Property<string>("Timestamp")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -213,8 +214,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("LastUpdated")
+                    b.Property<string>("LastUpdated")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Status")
@@ -288,8 +290,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("DisplayName")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("LastUpdated")
+                    b.Property<string>("LastUpdated")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -474,7 +477,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid>("TaskId")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("Timestamp")
+                    b.Property<string>("Timestamp")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -636,9 +640,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FileName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Foo")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Frozen")

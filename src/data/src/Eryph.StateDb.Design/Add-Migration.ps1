@@ -21,7 +21,6 @@ $ErrorActionPreference = 'Stop'
 dotnet build
 
 dotnet ef migrations add `
-    --json `
     --no-build `
     --project "$PSScriptRoot/../Eryph.StateDb.Sqlite/Eryph.StateDb.Sqlite.csproj" `
     --context SqliteStateStoreContext `

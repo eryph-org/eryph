@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Eryph.StateDb.Migrations
+namespace Eryph.StateDb.Sqlite.Migrations
 {
-    public partial class Initial : Migration
+    /// <inheritdoc />
+    public partial class InitialCreate : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -28,24 +30,12 @@ namespace Eryph.StateDb.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     TenantId = table.Column<Guid>(type: "TEXT", nullable: false, defaultValue: new Guid("c1813384-8ecb-4f17-b846-821ee515d19b")),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    StatusMessage = table.Column<string>(type: "TEXT", nullable: true)
+                    StatusMessage = table.Column<string>(type: "TEXT", nullable: true),
+                    LastUpdated = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Operations", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ProjectRoles",
-                columns: table => new
-                {
-                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AccessRight = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ProjectRoles", x => new { x.RoleId, x.ProjectId });
                 });
 
             migrationBuilder.CreateTable(
@@ -79,28 +69,6 @@ namespace Eryph.StateDb.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "OperationTasks",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ParentTaskId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    OperationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    AgentName = table.Column<string>(type: "TEXT", nullable: true),
-                    Name = table.Column<string>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_OperationTasks", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_OperationTasks_Operations_OperationId",
-                        column: x => x.OperationId,
-                        principalTable: "Operations",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Projects",
                 columns: table => new
                 {
@@ -117,33 +85,6 @@ namespace Eryph.StateDb.Migrations
                         principalTable: "Tenants",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Logs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    OperationId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TaskId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Message = table.Column<string>(type: "TEXT", nullable: true),
-                    Timestamp = table.Column<DateTime>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Logs", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Logs_Operations_OperationId",
-                        column: x => x.OperationId,
-                        principalTable: "Operations",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Logs_OperationTasks_TaskId",
-                        column: x => x.TaskId,
-                        principalTable: "OperationTasks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -171,25 +112,54 @@ namespace Eryph.StateDb.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ProjectProjectRoles",
+                name: "OperationTasks",
                 columns: table => new
                 {
-                    ProjectsId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RolesRoleId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RolesProjectId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ParentTaskId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    OperationId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
+                    AgentName = table.Column<string>(type: "TEXT", nullable: true),
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    DisplayName = table.Column<string>(type: "TEXT", nullable: true),
+                    ReferenceType = table.Column<int>(type: "INTEGER", nullable: true),
+                    ReferenceId = table.Column<string>(type: "TEXT", nullable: true),
+                    ReferenceProjectName = table.Column<string>(type: "TEXT", nullable: true),
+                    LastUpdated = table.Column<string>(type: "TEXT", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ProjectProjectRoles", x => new { x.ProjectsId, x.RolesRoleId, x.RolesProjectId });
+                    table.PrimaryKey("PK_OperationTasks", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ProjectProjectRoles_ProjectRoles_RolesRoleId_RolesProjectId",
-                        columns: x => new { x.RolesRoleId, x.RolesProjectId },
-                        principalTable: "ProjectRoles",
-                        principalColumns: new[] { "RoleId", "ProjectId" },
+                        name: "FK_OperationTasks_Operations_OperationId",
+                        column: x => x.OperationId,
+                        principalTable: "Operations",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ProjectProjectRoles_Projects_ProjectsId",
-                        column: x => x.ProjectsId,
+                        name: "FK_OperationTasks_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "Projects",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProjectRoles",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    IdentityId = table.Column<string>(type: "TEXT", nullable: false),
+                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProjectRoles", x => x.Id);
+                    table.UniqueConstraint("AK_ProjectRoles_ProjectId_IdentityId_RoleId", x => new { x.ProjectId, x.IdentityId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_ProjectRoles_Projects_ProjectId",
+                        column: x => x.ProjectId,
                         principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -216,32 +186,60 @@ namespace Eryph.StateDb.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Catlets",
+                name: "Logs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    AgentName = table.Column<string>(type: "TEXT", nullable: true),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    CatletType = table.Column<int>(type: "INTEGER", nullable: false),
-                    UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: true)
+                    OperationId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    TaskId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Message = table.Column<string>(type: "TEXT", nullable: true),
+                    Timestamp = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Catlets", x => x.Id);
+                    table.PrimaryKey("PK_Logs", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Catlets_Resources_Id",
-                        column: x => x.Id,
-                        principalTable: "Resources",
+                        name: "FK_Logs_OperationTasks_TaskId",
+                        column: x => x.TaskId,
+                        principalTable: "OperationTasks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Logs_Operations_OperationId",
+                        column: x => x.OperationId,
+                        principalTable: "Operations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "VDisks",
+                name: "TaskProgress",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    OperationId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    TaskId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Timestamp = table.Column<string>(type: "TEXT", nullable: false),
+                    Progress = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TaskProgress", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TaskProgress_OperationTasks_TaskId",
+                        column: x => x.TaskId,
+                        principalTable: "OperationTasks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CatletDisks",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     StorageIdentifier = table.Column<string>(type: "TEXT", nullable: true),
+                    Frozen = table.Column<bool>(type: "INTEGER", nullable: false),
                     Path = table.Column<string>(type: "TEXT", nullable: true),
                     FileName = table.Column<string>(type: "TEXT", nullable: true),
                     SizeBytes = table.Column<long>(type: "INTEGER", nullable: true),
@@ -252,18 +250,36 @@ namespace Eryph.StateDb.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_VDisks", x => x.Id);
+                    table.PrimaryKey("PK_CatletDisks", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_VDisks_Resources_Id",
+                        name: "FK_CatletDisks_CatletDisks_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "CatletDisks",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_CatletDisks_Resources_Id",
                         column: x => x.Id,
                         principalTable: "Resources",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CatletFarms",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    HardwareId = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletFarms", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_VDisks_VDisks_ParentId",
-                        column: x => x.ParentId,
-                        principalTable: "VDisks",
-                        principalColumn: "Id");
+                        name: "FK_CatletFarms_Resources_Id",
+                        column: x => x.Id,
+                        principalTable: "Resources",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -272,7 +288,8 @@ namespace Eryph.StateDb.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     NetworkProvider = table.Column<string>(type: "TEXT", nullable: true),
-                    IpNetwork = table.Column<string>(type: "TEXT", nullable: true)
+                    IpNetwork = table.Column<string>(type: "TEXT", nullable: true),
+                    Environment = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -281,6 +298,164 @@ namespace Eryph.StateDb.Migrations
                         name: "FK_VNetworks_Resources_Id",
                         column: x => x.Id,
                         principalTable: "Resources",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Catlets",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    AgentName = table.Column<string>(type: "TEXT", nullable: true),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
+                    StatusTimestamp = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CatletType = table.Column<int>(type: "INTEGER", nullable: false),
+                    UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: true),
+                    VMId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MetadataId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Path = table.Column<string>(type: "TEXT", nullable: true),
+                    StorageIdentifier = table.Column<string>(type: "TEXT", nullable: true),
+                    DataStore = table.Column<string>(type: "TEXT", nullable: true),
+                    Environment = table.Column<string>(type: "TEXT", nullable: true),
+                    Frozen = table.Column<bool>(type: "INTEGER", nullable: false),
+                    HostId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    CpuCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    StartupMemory = table.Column<long>(type: "INTEGER", nullable: false),
+                    MinimumMemory = table.Column<long>(type: "INTEGER", nullable: false),
+                    MaximumMemory = table.Column<long>(type: "INTEGER", nullable: false),
+                    SecureBootTemplate = table.Column<string>(type: "TEXT", nullable: true),
+                    Features = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Catlets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Catlets_CatletFarms_HostId",
+                        column: x => x.HostId,
+                        principalTable: "CatletFarms",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Catlets_Resources_Id",
+                        column: x => x.Id,
+                        principalTable: "Resources",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "NetworkPorts",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    ProviderName = table.Column<string>(type: "TEXT", nullable: true),
+                    MacAddress = table.Column<string>(type: "TEXT", nullable: true),
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    Discriminator = table.Column<string>(type: "TEXT", maxLength: 21, nullable: false),
+                    SubnetName = table.Column<string>(type: "TEXT", nullable: true),
+                    PoolName = table.Column<string>(type: "TEXT", nullable: true),
+                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    FloatingPortId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    CatletMetadataId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    RoutedNetworkId = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_NetworkPorts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_NetworkPorts_Metadata_CatletMetadataId",
+                        column: x => x.CatletMetadataId,
+                        principalTable: "Metadata",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_NetworkPorts_NetworkPorts_FloatingPortId",
+                        column: x => x.FloatingPortId,
+                        principalTable: "NetworkPorts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_NetworkPorts_VNetworks_NetworkId",
+                        column: x => x.NetworkId,
+                        principalTable: "VNetworks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_NetworkPorts_VNetworks_RoutedNetworkId",
+                        column: x => x.RoutedNetworkId,
+                        principalTable: "VNetworks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Subnet",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    IpNetwork = table.Column<string>(type: "TEXT", nullable: true),
+                    Discriminator = table.Column<string>(type: "TEXT", maxLength: 21, nullable: false),
+                    ProviderName = table.Column<string>(type: "TEXT", nullable: true),
+                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    DhcpLeaseTime = table.Column<int>(type: "INTEGER", nullable: true),
+                    MTU = table.Column<int>(type: "INTEGER", nullable: true),
+                    DnsServersV4 = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Subnet", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Subnet_VNetworks_NetworkId",
+                        column: x => x.NetworkId,
+                        principalTable: "VNetworks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CatletDrives",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Type = table.Column<int>(type: "INTEGER", nullable: true),
+                    AttachedDiskId = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletDrives", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CatletDrives_CatletDisks_AttachedDiskId",
+                        column: x => x.AttachedDiskId,
+                        principalTable: "CatletDisks",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_CatletDrives_Catlets_CatletId",
+                        column: x => x.CatletId,
+                        principalTable: "Catlets",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CatletNetworkAdapters",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    SwitchName = table.Column<string>(type: "TEXT", nullable: true),
+                    NetworkProviderName = table.Column<string>(type: "TEXT", nullable: true),
+                    MacAddress = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletNetworkAdapters", x => new { x.CatletId, x.Id });
+                    table.ForeignKey(
+                        name: "FK_CatletNetworkAdapters_Catlets_CatletId",
+                        column: x => x.CatletId,
+                        principalTable: "Catlets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -311,135 +486,15 @@ namespace Eryph.StateDb.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "VCatletHosts",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    HardwareId = table.Column<string>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_VCatletHosts", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_VCatletHosts_Catlets_Id",
-                        column: x => x.Id,
-                        principalTable: "Catlets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "NetworkPorts",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ProviderName = table.Column<string>(type: "TEXT", nullable: true),
-                    MacAddress = table.Column<string>(type: "TEXT", nullable: true),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    Discriminator = table.Column<string>(type: "TEXT", nullable: false),
-                    SubnetName = table.Column<string>(type: "TEXT", nullable: true),
-                    PoolName = table.Column<string>(type: "TEXT", nullable: true),
-                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    FloatingPortId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CatletId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    RoutedNetworkId = table.Column<Guid>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_NetworkPorts", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_NetworkPorts_Catlets_CatletId",
-                        column: x => x.CatletId,
-                        principalTable: "Catlets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_NetworkPorts_NetworkPorts_FloatingPortId",
-                        column: x => x.FloatingPortId,
-                        principalTable: "NetworkPorts",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_NetworkPorts_VNetworks_NetworkId",
-                        column: x => x.NetworkId,
-                        principalTable: "VNetworks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_NetworkPorts_VNetworks_RoutedNetworkId",
-                        column: x => x.RoutedNetworkId,
-                        principalTable: "VNetworks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Subnet",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    IpNetwork = table.Column<string>(type: "TEXT", nullable: true),
-                    Discriminator = table.Column<string>(type: "TEXT", nullable: false),
-                    ProviderName = table.Column<string>(type: "TEXT", nullable: true),
-                    NetworkId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    DhcpLeaseTime = table.Column<int>(type: "INTEGER", nullable: true),
-                    MTU = table.Column<int>(type: "INTEGER", nullable: true),
-                    DnsServersV4 = table.Column<string>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Subnet", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Subnet_VNetworks_NetworkId",
-                        column: x => x.NetworkId,
-                        principalTable: "VNetworks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "VCatlets",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    VMId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MetadataId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Path = table.Column<string>(type: "TEXT", nullable: true),
-                    HostId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    CpuCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    StartupMemory = table.Column<long>(type: "INTEGER", nullable: false),
-                    MinimumMemory = table.Column<long>(type: "INTEGER", nullable: false),
-                    MaximumMemory = table.Column<long>(type: "INTEGER", nullable: false),
-                    SecureBootTemplate = table.Column<string>(type: "TEXT", nullable: true),
-                    Features = table.Column<string>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_VCatlets", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_VCatlets_Catlets_Id",
-                        column: x => x.Id,
-                        principalTable: "Catlets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_VCatlets_VCatletHosts_HostId",
-                        column: x => x.HostId,
-                        principalTable: "VCatletHosts",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "IpPools",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: true),
                     FirstIp = table.Column<string>(type: "TEXT", nullable: true),
+                    NextIp = table.Column<string>(type: "TEXT", nullable: true),
                     LastIp = table.Column<string>(type: "TEXT", nullable: true),
                     IpNetwork = table.Column<string>(type: "TEXT", nullable: true),
-                    Counter = table.Column<int>(type: "INTEGER", nullable: false),
                     RowVersion = table.Column<byte[]>(type: "BLOB", rowVersion: true, nullable: true),
                     SubnetId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
@@ -455,53 +510,6 @@ namespace Eryph.StateDb.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "VDrives",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
-                    MachineId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Type = table.Column<int>(type: "INTEGER", nullable: true),
-                    AttachedDiskId = table.Column<Guid>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_VDrives", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_VDrives_VCatlets_MachineId",
-                        column: x => x.MachineId,
-                        principalTable: "VCatlets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_VDrives_VDisks_AttachedDiskId",
-                        column: x => x.AttachedDiskId,
-                        principalTable: "VDisks",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "VirtualCatletNetworkAdapters",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
-                    MachineId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    SwitchName = table.Column<string>(type: "TEXT", nullable: true),
-                    NetworkProviderName = table.Column<string>(type: "TEXT", nullable: true),
-                    MacAddress = table.Column<string>(type: "TEXT", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_VirtualCatletNetworkAdapters", x => new { x.MachineId, x.Id });
-                    table.ForeignKey(
-                        name: "FK_VirtualCatletNetworkAdapters_VCatlets_MachineId",
-                        column: x => x.MachineId,
-                        principalTable: "VCatlets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "IpAssignment",
                 columns: table => new
                 {
@@ -509,7 +517,7 @@ namespace Eryph.StateDb.Migrations
                     SubnetId = table.Column<Guid>(type: "TEXT", nullable: true),
                     IpAddress = table.Column<string>(type: "TEXT", nullable: true),
                     NetworkPortId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    Discriminator = table.Column<string>(type: "TEXT", nullable: false),
+                    Discriminator = table.Column<string>(type: "TEXT", maxLength: 21, nullable: false),
                     PoolId = table.Column<Guid>(type: "TEXT", nullable: true),
                     Number = table.Column<int>(type: "INTEGER", nullable: true)
                 },
@@ -536,14 +544,35 @@ namespace Eryph.StateDb.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_CatletDisks_ParentId",
+                table: "CatletDisks",
+                column: "ParentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CatletDrives_AttachedDiskId",
+                table: "CatletDrives",
+                column: "AttachedDiskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CatletDrives_CatletId",
+                table: "CatletDrives",
+                column: "CatletId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Catlets_HostId",
+                table: "Catlets",
+                column: "HostId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_IpAssignment_NetworkPortId",
                 table: "IpAssignment",
                 column: "NetworkPortId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_IpAssignment_PoolId",
+                name: "IX_IpAssignment_PoolId_Number",
                 table: "IpAssignment",
-                column: "PoolId");
+                columns: new[] { "PoolId", "Number" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_IpAssignment_SubnetId",
@@ -566,9 +595,9 @@ namespace Eryph.StateDb.Migrations
                 column: "TaskId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_NetworkPorts_CatletId",
+                name: "IX_NetworkPorts_CatletMetadataId",
                 table: "NetworkPorts",
-                column: "CatletId");
+                column: "CatletMetadataId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_FloatingPortId",
@@ -614,9 +643,9 @@ namespace Eryph.StateDb.Migrations
                 column: "OperationId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProjectProjectRoles_RolesRoleId_RolesProjectId",
-                table: "ProjectProjectRoles",
-                columns: new[] { "RolesRoleId", "RolesProjectId" });
+                name: "IX_OperationTasks_ProjectId",
+                table: "OperationTasks",
+                column: "ProjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Projects_TenantId",
@@ -639,36 +668,25 @@ namespace Eryph.StateDb.Migrations
                 column: "NetworkId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_VCatlets_HostId",
-                table: "VCatlets",
-                column: "HostId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VDisks_ParentId",
-                table: "VDisks",
-                column: "ParentId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VDrives_AttachedDiskId",
-                table: "VDrives",
-                column: "AttachedDiskId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VDrives_MachineId",
-                table: "VDrives",
-                column: "MachineId");
+                name: "IX_TaskProgress_TaskId",
+                table: "TaskProgress",
+                column: "TaskId");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "CatletDrives");
+
+            migrationBuilder.DropTable(
+                name: "CatletNetworkAdapters");
+
             migrationBuilder.DropTable(
                 name: "IpAssignment");
 
             migrationBuilder.DropTable(
                 name: "Logs");
-
-            migrationBuilder.DropTable(
-                name: "Metadata");
 
             migrationBuilder.DropTable(
                 name: "OperationProjectModel");
@@ -677,16 +695,16 @@ namespace Eryph.StateDb.Migrations
                 name: "OperationResources");
 
             migrationBuilder.DropTable(
-                name: "ProjectProjectRoles");
+                name: "ProjectRoles");
 
             migrationBuilder.DropTable(
                 name: "ReportedNetworks");
 
             migrationBuilder.DropTable(
-                name: "VDrives");
+                name: "TaskProgress");
 
             migrationBuilder.DropTable(
-                name: "VirtualCatletNetworkAdapters");
+                name: "CatletDisks");
 
             migrationBuilder.DropTable(
                 name: "IpPools");
@@ -695,31 +713,25 @@ namespace Eryph.StateDb.Migrations
                 name: "NetworkPorts");
 
             migrationBuilder.DropTable(
+                name: "Catlets");
+
+            migrationBuilder.DropTable(
                 name: "OperationTasks");
-
-            migrationBuilder.DropTable(
-                name: "ProjectRoles");
-
-            migrationBuilder.DropTable(
-                name: "VDisks");
-
-            migrationBuilder.DropTable(
-                name: "VCatlets");
 
             migrationBuilder.DropTable(
                 name: "Subnet");
 
             migrationBuilder.DropTable(
+                name: "Metadata");
+
+            migrationBuilder.DropTable(
+                name: "CatletFarms");
+
+            migrationBuilder.DropTable(
                 name: "Operations");
 
             migrationBuilder.DropTable(
-                name: "VCatletHosts");
-
-            migrationBuilder.DropTable(
                 name: "VNetworks");
-
-            migrationBuilder.DropTable(
-                name: "Catlets");
 
             migrationBuilder.DropTable(
                 name: "Resources");

@@ -3,60 +3,68 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Eryph.StateDb.SqlServer.Migrations
+namespace Eryph.StateDb.MySql.Migrations
 {
     /// <inheritdoc />
-    public partial class MyMigration : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AlterDatabase()
+                .Annotation("MySql:CharSet", "utf8mb4");
+
             migrationBuilder.CreateTable(
                 name: "Metadata",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Metadata = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Metadata = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Metadata", x => x.Id);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "Operations",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValue: new Guid("c1813384-8ecb-4f17-b846-821ee515d19b")),
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    TenantId = table.Column<Guid>(type: "char(36)", nullable: false, defaultValue: new Guid("c1813384-8ecb-4f17-b846-821ee515d19b"), collation: "ascii_general_ci"),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    StatusMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    LastUpdated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    StatusMessage = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    LastUpdated = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Operations", x => x.Id);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "Tenants",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Tenants", x => x.Id);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "OperationResources",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ResourceId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ResourceType = table.Column<int>(type: "int", nullable: false),
-                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    OperationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
@@ -66,15 +74,17 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         column: x => x.OperationId,
                         principalTable: "Operations",
                         principalColumn: "Id");
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "Projects",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    TenantId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    TenantId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
@@ -85,15 +95,16 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Tenants",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "OperationProjectModel",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    OperationId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
@@ -109,24 +120,30 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "OperationTasks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ParentTaskId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ParentTaskId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    OperationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    AgentName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DisplayName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AgentName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    DisplayName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     ReferenceType = table.Column<int>(type: "int", nullable: true),
-                    ReferenceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReferenceProjectName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    LastUpdated = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    ReferenceId = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ReferenceProjectName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    LastUpdated = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
@@ -142,16 +159,18 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         column: x => x.ProjectId,
                         principalTable: "Projects",
                         principalColumn: "Id");
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "ProjectRoles",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    IdentityId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    IdentityId = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    RoleId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
@@ -163,16 +182,18 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "Resources",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ResourceType = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -183,17 +204,19 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Projects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "Logs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TaskId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Message = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    OperationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    TaskId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Message = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Timestamp = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -210,16 +233,17 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Operations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "TaskProgress",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    TaskId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Timestamp = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    OperationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    TaskId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Timestamp = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     Progress = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -231,21 +255,27 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "OperationTasks",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "CatletDisks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    StorageIdentifier = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Frozen = table.Column<bool>(type: "bit", nullable: false),
-                    Path = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    StorageIdentifier = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    Path = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    FileName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     SizeBytes = table.Column<long>(type: "bigint", nullable: true),
-                    ParentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    DataStore = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Environment = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ParentId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    DataStore = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Environment = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     DiskType = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -262,14 +292,16 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Resources",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "CatletFarms",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    HardwareId = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    HardwareId = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -280,16 +312,20 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Resources",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "VNetworks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    NetworkProvider = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IpNetwork = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Environment = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    NetworkProvider = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IpNetwork = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Environment = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -300,32 +336,40 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Resources",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "Catlets",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    AgentName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    AgentName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    StatusTimestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    StatusTimestamp = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     CatletType = table.Column<int>(type: "int", nullable: false),
-                    UpTime = table.Column<TimeSpan>(type: "time", nullable: true),
-                    VMId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    MetadataId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Path = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    StorageIdentifier = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DataStore = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Environment = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Frozen = table.Column<bool>(type: "bit", nullable: false),
-                    HostId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    UpTime = table.Column<TimeSpan>(type: "time(6)", nullable: true),
+                    VMId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    MetadataId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Path = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    StorageIdentifier = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    DataStore = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Environment = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    HostId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     CpuCount = table.Column<int>(type: "int", nullable: false),
                     StartupMemory = table.Column<long>(type: "bigint", nullable: false),
                     MinimumMemory = table.Column<long>(type: "bigint", nullable: false),
                     MaximumMemory = table.Column<long>(type: "bigint", nullable: false),
-                    SecureBootTemplate = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Features = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    SecureBootTemplate = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Features = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -341,23 +385,30 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Resources",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "NetworkPorts",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ProviderName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    MacAddress = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Discriminator = table.Column<string>(type: "nvarchar(21)", maxLength: 21, nullable: false),
-                    SubnetName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PoolName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NetworkId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    FloatingPortId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    CatletMetadataId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    RoutedNetworkId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ProviderName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    MacAddress = table.Column<string>(type: "varchar(255)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Discriminator = table.Column<string>(type: "varchar(21)", maxLength: 21, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    SubnetName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    PoolName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    NetworkId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    FloatingPortId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    CatletMetadataId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    RoutedNetworkId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
@@ -386,21 +437,27 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "VNetworks",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "Subnet",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IpNetwork = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Discriminator = table.Column<string>(type: "nvarchar(21)", maxLength: 21, nullable: false),
-                    ProviderName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NetworkId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IpNetwork = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Discriminator = table.Column<string>(type: "varchar(21)", maxLength: 21, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ProviderName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    NetworkId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     DhcpLeaseTime = table.Column<int>(type: "int", nullable: true),
                     MTU = table.Column<int>(type: "int", nullable: true),
-                    DnsServersV4 = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    DnsServersV4 = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -411,16 +468,18 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "VNetworks",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "CatletDrives",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    CatletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CatletId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Type = table.Column<int>(type: "int", nullable: true),
-                    AttachedDiskId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    AttachedDiskId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
@@ -436,18 +495,24 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Catlets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "CatletNetworkAdapters",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    CatletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SwitchName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NetworkProviderName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    MacAddress = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CatletId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    SwitchName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    NetworkProviderName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    MacAddress = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -458,21 +523,29 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Catlets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "ReportedNetworks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CatletId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    IpV4Addresses = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IpV6Addresses = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IPv4DefaultGateway = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IPv6DefaultGateway = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DnsServers = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IpV4Subnets = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IpV6Subnets = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    CatletId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    IpV4Addresses = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IpV6Addresses = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IPv4DefaultGateway = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IPv6DefaultGateway = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    DnsServers = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IpV4Subnets = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IpV6Subnets = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
@@ -483,20 +556,26 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Catlets",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "IpPools",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    FirstIp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NextIp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    LastIp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IpNetwork = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true),
-                    SubnetId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Name = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    FirstIp = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    NextIp = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    LastIp = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IpNetwork = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    RowVersion = table.Column<DateTime>(type: "timestamp(6)", rowVersion: true, nullable: true),
+                    SubnetId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
@@ -507,18 +586,21 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         principalTable: "Subnet",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
                 name: "IpAssignment",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SubnetId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    IpAddress = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NetworkPortId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    Discriminator = table.Column<string>(type: "nvarchar(21)", maxLength: 21, nullable: false),
-                    PoolId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    SubnetId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    IpAddress = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    NetworkPortId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    Discriminator = table.Column<string>(type: "varchar(21)", maxLength: 21, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    PoolId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     Number = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
@@ -541,7 +623,8 @@ namespace Eryph.StateDb.SqlServer.Migrations
                         column: x => x.SubnetId,
                         principalTable: "Subnet",
                         principalColumn: "Id");
-                });
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CatletDisks_ParentId",
@@ -572,8 +655,7 @@ namespace Eryph.StateDb.SqlServer.Migrations
                 name: "IX_IpAssignment_PoolId_Number",
                 table: "IpAssignment",
                 columns: new[] { "PoolId", "Number" },
-                unique: true,
-                filter: "[PoolId] IS NOT NULL AND [Number] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_IpAssignment_SubnetId",
@@ -604,15 +686,13 @@ namespace Eryph.StateDb.SqlServer.Migrations
                 name: "IX_NetworkPorts_FloatingPortId",
                 table: "NetworkPorts",
                 column: "FloatingPortId",
-                unique: true,
-                filter: "[FloatingPortId] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_MacAddress",
                 table: "NetworkPorts",
                 column: "MacAddress",
-                unique: true,
-                filter: "[MacAddress] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_NetworkId",
@@ -623,8 +703,7 @@ namespace Eryph.StateDb.SqlServer.Migrations
                 name: "IX_NetworkPorts_RoutedNetworkId",
                 table: "NetworkPorts",
                 column: "RoutedNetworkId",
-                unique: true,
-                filter: "[RoutedNetworkId] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_OperationProjectModel_OperationId",
