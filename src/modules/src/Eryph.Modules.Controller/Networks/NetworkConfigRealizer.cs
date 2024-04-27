@@ -278,13 +278,12 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
             await _stateStore.For<VirtualNetworkSubnet>().DeleteRangeAsync(removeSubnets);
 
-            foreach (var subnetConfig in networkConfig.Subnets.DistinctBy(x => x.Name))
+            foreach (var subnetConfig in networkConfig.Subnets.DistinctBy(x => x.Name).ToArray())
             {
                 var savedSubnet = savedNetwork.Subnets.FirstOrDefault(x => x.Name == subnetConfig.Name)
                                   ?? throw new InconsistentNetworkConfigException($"Subnet {subnetConfig} not found in network {savedNetwork.Name}");
 
                 _log.LogDebug("Updating subnet {network}/{subnet}", savedNetwork.Name, savedSubnet.Name);
-
 
                 savedSubnet.DhcpLeaseTime = 3600;
                 savedSubnet.MTU = subnetConfig.Mtu.GetValueOrDefault() == 0 ? 1400 : subnetConfig.Mtu.GetValueOrDefault();
@@ -296,7 +295,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                 // default domain is home.arpa
                 // except for environments where the default is [environment].home.arpa
                 // user set domain names are always preferred (even if this could result in duplicate names)
-                savedSubnet.DnsDomain ??= savedNetwork.Environment is null or "default" 
+                savedSubnet.DnsDomain = savedNetwork.Environment is null or "default" 
                             ? subnetConfig.DnsDomain ?? "home.arpa"
                             : subnetConfig.DnsDomain ?? $"{(savedNetwork.Environment??"").ToLowerInvariant()}.home.arpa";
                 subnetConfig.IpPools ??= Array.Empty<IpPoolConfig>();
