@@ -29,21 +29,30 @@ internal class ArpUpdateRequestedEventHandler : IHandleMessages<ArpUpdateRequest
     {
         _log.LogTrace("Entering {method}", nameof(ArpUpdateRequestedEventHandler));
         var arpTable = GetIpNetTable();
-        foreach (var ipString in message.UpdatedAddresses)
+        foreach (var arpRecord in message.UpdatedAddresses)
         {
-            if (!IPAddress.TryParse(ipString, out var ip))
+            if (!IPAddress.TryParse(arpRecord.IpAddress, out var ip))
             {
-                _log.LogWarning("Invalid IP address {ip}. Skipping it for ARP cache check.", ipString);
+                _log.LogWarning("Invalid IP address {ip}. Skipping it for ARP cache check.", arpRecord.IpAddress);
                 continue;
             }
 
+            var macBytes = arpRecord.MacAddress.Split(':')
+                .Select(s => byte.Parse(s, System.Globalization.NumberStyles.HexNumber))
+                .Append(new byte[2]).ToArray();
             var row = arpTable.FirstOrDefault(r =>
             {
                 var rowAddress = new IPAddress(r.dwAddr.S_un_b);
                 return rowAddress.Equals(ip);
             } );
 
-            if (row.bPhysAddr == null) continue;
+            if (row.dwType != MIB_IPNET_TYPE.MIB_IPNET_TYPE_DYNAMIC) continue;
+
+            if (row.bPhysAddr.SequenceEqual(macBytes))
+            {
+                _log.LogTrace("ARP cache entry for IP {ip} is up to date.", ip);
+                continue;
+            }
 
             _log.LogTrace("Deleting ARP cache entry for IP {ip}", ip);
             DeleteIpNetEntry(row);

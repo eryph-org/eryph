@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
@@ -55,7 +54,7 @@ namespace Eryph.Modules.Controller.Networks
                 async response =>
                 {
                     Data.ProjectsCompleted ??= new List<Guid>();
-                    Data.UpdatedAddresses ??= new List<string>();
+                    Data.UpdatedAddresses ??= new List<ArpRecord>();
                     // ignore if already received
                     if (Data.ProjectsCompleted.Contains(response.ProjectId))
                         return;
@@ -68,7 +67,7 @@ namespace Eryph.Modules.Controller.Networks
                             $"broadcast_{QueueNames.VMHostAgent}",
                             new ArpUpdateRequestedEvent
                             {
-                                UpdatedAddresses = Data.UpdatedAddresses.Distinct()
+                                UpdatedAddresses = Data.UpdatedAddresses
                                     .ToArray()
                             });
                         await Complete();

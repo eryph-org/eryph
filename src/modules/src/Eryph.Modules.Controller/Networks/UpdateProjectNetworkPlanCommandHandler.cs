@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Dbosoft.OVN;
 using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.Rebus.Operations;
+using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.StateDb;
 using JetBrains.Annotations;
@@ -74,7 +75,11 @@ public class UpdateProjectNetworkPlanCommandHandler : IHandleMessages<OperationT
             {
                 ProjectId = message.Command.ProjectId,
                 UpdatedAddresses = plan.PlannedNATRules
-                    .Values.Map(port => port.ExternalIP)
+                    .Values.Map(port => new ArpRecord
+                    {
+                        IpAddress = port.ExternalIP,
+                        MacAddress = port.ExternalMAC
+                    })
                     .ToArray()
             })
             .FailOrComplete(_messaging, message);
