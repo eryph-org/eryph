@@ -29,7 +29,7 @@ internal class ArpUpdateRequestedEventHandler(ILogger log) : IHandleMessages<Arp
         var arpTable = GetIpNetTable();
         var arpLookup = GetIpNetTable()
             .Where(row => row.dwType == MIB_IPNET_TYPE.MIB_IPNET_TYPE_DYNAMIC)
-            .Where(row => addressBytes.Any( a => a.SequenceEqual(row.dwAddr.S_un_b)))
+            .Where(row => addressBytes.Exists( a => a.SequenceEqual(row.dwAddr.S_un_b)))
             .Select(row => (new IPAddress(row.dwAddr.S_un_b).ToString(), row)).ToMap();
         
         sw.Stop();
