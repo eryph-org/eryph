@@ -9,5 +9,6 @@ public class UpdateNetworksSagaData : TaskWorkflowSagaData
 {
     public List<Guid>? ProjectsCompleted;
     public Guid[]? ProjectIds;
+    public List<string>? UpdatedAddresses;
 
 }

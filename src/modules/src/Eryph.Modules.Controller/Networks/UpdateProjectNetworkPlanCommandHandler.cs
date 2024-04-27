@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.OVN;
@@ -69,9 +70,12 @@ public class UpdateProjectNetworkPlanCommandHandler : IHandleMessages<OperationT
             new NetworkPlanRealizer(new OVNControlTool(_sysEnvironment, _ovnSettings.NorthDBConnection), _logger);
 
         await networkPlanRealizer.ApplyNetworkPlan(networkPlan, cancelSource.Token)
-            .Map(_ => new UpdateProjectNetworkPlanResponse
+            .Map(plan => new UpdateProjectNetworkPlanResponse
             {
-                ProjectId = message.Command.ProjectId
+                ProjectId = message.Command.ProjectId,
+                UpdatedAddresses = plan.PlannedNATRules
+                    .Values.Map(port => port.ExternalIP)
+                    .ToArray()
             })
             .FailOrComplete(_messaging, message);
     }
