@@ -2,63 +2,71 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations;
-using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Events;
-using Eryph.Messages.Resources.Networks.Commands;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using JetBrains.Annotations;
+using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
-using Vanara.PInvoke;
 using static Vanara.PInvoke.IpHlpApi;
 
 namespace Eryph.Modules.VmHostAgent;
 
 [UsedImplicitly]
-internal class ArpUpdateRequestedEventHandler : IHandleMessages<ArpUpdateRequestedEvent>
+internal class ArpUpdateRequestedEventHandler(ILogger log) : IHandleMessages<ArpUpdateRequestedEvent>
 {
-    private readonly ILogger _log;
-
-    public ArpUpdateRequestedEventHandler(ILogger log)
-    {
-        _log = log;
-    }
-
     public Task Handle(ArpUpdateRequestedEvent message)
     {
-        _log.LogTrace("Entering {method}", nameof(ArpUpdateRequestedEventHandler));
+        log.LogTrace("Entering {method}", nameof(ArpUpdateRequestedEventHandler));
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        var addressBytes = 
+            message.UpdatedAddresses
+                .Select(a => IPAddress.Parse(a.IpAddress).GetAddressBytes()).ToArray();
+
+        // in case ARP table is very large, we can optimize this by using a lookup table
+        // that is already filtered by dynamic entries and the addresses we are interested in
         var arpTable = GetIpNetTable();
-        foreach (var arpRecord in message.UpdatedAddresses)
+        var arpLookup = GetIpNetTable()
+            .Where(row => row.dwType == MIB_IPNET_TYPE.MIB_IPNET_TYPE_DYNAMIC)
+            .Where(row => addressBytes.Any( a => a.SequenceEqual(row.dwAddr.S_un_b)))
+            .Select(row => (new IPAddress(row.dwAddr.S_un_b).ToString(), row)).ToMap();
+        
+        sw.Stop();
+        log.LogTrace("Time to parse arp table with {count} rows to lookup table: {elapsed}", 
+            arpTable.dwNumEntries, sw.Elapsed);
+
+        if (arpLookup.Count == 0)
         {
-            if (!IPAddress.TryParse(arpRecord.IpAddress, out var ip))
-            {
-                _log.LogWarning("Invalid IP address {ip}. Skipping it for ARP cache check.", arpRecord.IpAddress);
-                continue;
-            }
-
-            var macBytes = arpRecord.MacAddress.Split(':')
-                .Select(s => byte.Parse(s, System.Globalization.NumberStyles.HexNumber))
-                .Append(new byte[2]).ToArray();
-            var row = arpTable.FirstOrDefault(r =>
-            {
-                var rowAddress = new IPAddress(r.dwAddr.S_un_b);
-                return rowAddress.Equals(ip);
-            } );
-
-            if (row.dwType != MIB_IPNET_TYPE.MIB_IPNET_TYPE_DYNAMIC) continue;
-
-            if (row.bPhysAddr.SequenceEqual(macBytes))
-            {
-                _log.LogTrace("ARP cache entry for IP {ip} is up to date.", ip);
-                continue;
-            }
-
-            _log.LogTrace("Deleting ARP cache entry for IP {ip}", ip);
-            DeleteIpNetEntry(row);
+            log.LogTrace("No ARP cache entries found for updated addresses.");
+            return Task.CompletedTask;
         }
 
-        _log.LogTrace("Leaving {method}", nameof(ArpUpdateRequestedEventHandler));
+        foreach (var arpRecord in message.UpdatedAddresses)
+        {
+            _ = arpLookup.Find(arpRecord.IpAddress).Map(row =>
+            {
+                var macBytes =
+                    !string.IsNullOrWhiteSpace(arpRecord.MacAddress) 
+                    ? arpRecord.MacAddress.Split(':')
+                        .Select(s => byte.Parse(s, System.Globalization.NumberStyles.HexNumber))
+                        .Append(new byte[2]).ToArray() 
+                    : Array.Empty<byte>();
+
+                if (macBytes.Length > 0 && row.bPhysAddr.SequenceEqual(macBytes))
+                {
+                    log.LogTrace("ARP cache entry for IP {ip} is up to date.", arpRecord.IpAddress);
+                    return Unit.Default;
+                }
+
+                log.LogTrace("Deleting ARP cache entry for IP {ip}", arpRecord.IpAddress);
+                DeleteIpNetEntry(row);
+                return Unit.Default;
+            });
+
+        }
+
+        log.LogTrace("Leaving {method}", nameof(ArpUpdateRequestedEventHandler));
         return Task.CompletedTask;
     }
 }
