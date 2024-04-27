@@ -4,10 +4,10 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="13.0.1" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.3.1-PullRequest0070.6" />
-    <PackageReference Include="Eryph.ConfigModel.Core" Version="0.3.1-PullRequest0070.6" />
-    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.3.1-PullRequest0070.6" />
-    <PackageReference Include="Eryph.ConfigModel.Networks" Version="0.3.1-PullRequest0070.6" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.4.0" />
+    <PackageReference Include="Eryph.ConfigModel.Core" Version="0.4.0" />
+    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.4.0" />
+    <PackageReference Include="Eryph.ConfigModel.Networks" Version="0.4.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
