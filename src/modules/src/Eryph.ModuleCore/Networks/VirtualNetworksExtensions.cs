@@ -77,10 +77,12 @@ namespace Eryph.ModuleCore.Networks
             string? GetDnsDomain(VirtualNetwork network, Subnet subnet)
             {
                 // set to null in case it matches either the default or environment default
-                return network.Environment is null or "default" ? 
-                    subnet.DnsDomain == "home.arpa" ? null: subnet.DnsDomain
-                    : subnet.DnsDomain == $"{network.Environment??"".ToLowerInvariant()}.home.arpa" 
-                        ? null : subnet.DnsDomain;
+                if (network.Environment is null or "default")
+                    return subnet.DnsDomain == "home.arpa" ? null : subnet.DnsDomain;
+
+                return subnet.DnsDomain == $"{network.Environment ?? "".ToLowerInvariant()}.home.arpa"
+                    ? null
+                    : subnet.DnsDomain;
             }
 
             string[]? GetDnsServers(IPNetwork2 ipNetwork, VirtualNetworkSubnet subnet)
