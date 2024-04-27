@@ -484,7 +484,7 @@ if((Test-CommandExist "Get-WindowsFeature")){
 } else{
     $HyperVFeature = Get-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V-All -Online
     # Check if Hyper-V is enabled
-    if($hyperv.State -ne "Enabled") {
+    if($HyperVFeature.State -ne "Enabled") {
         Write-Warning "Hyper-V is not installed. Installing feature..."
         Enable-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V-All -Online
 
