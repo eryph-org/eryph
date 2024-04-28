@@ -18,9 +18,9 @@ namespace Eryph.VmManagement.Storage
         {
         }
 
-        public Option<string> DataStoreName { get; init; } = "default";
-        public Option<string> ProjectName { get; init; } = "default";
-        public Option<string> EnvironmentName { get; init; } = "default";
+        public Option<string> DataStoreName { get; init; } = EryphConstants.DefaultDataStoreName;
+        public Option<string> ProjectName { get; init; } = EryphConstants.DefaultProjectName;
+        public Option<string> EnvironmentName { get; init; } = EryphConstants.DefaultEnvironmentName;
         public Option<Guid> ProjectId { get; init; } = Option<Guid>.None;
 
         public bool IsValid => DataStoreName.IsSome && ProjectName.IsSome && EnvironmentName.IsSome;
@@ -39,9 +39,9 @@ namespace Eryph.VmManagement.Storage
                 Some: geneIdentifier => (
                     new StorageNames()
                     {
-                        DataStoreName = "default",
-                        EnvironmentName = "default",
-                        ProjectName = "default",
+                        DataStoreName = EryphConstants.DefaultDataStoreName,
+                        EnvironmentName = EryphConstants.DefaultEnvironmentName,
+                        ProjectName = EryphConstants.DefaultProjectName,
                         ProjectId = EryphConstants.DefaultProjectId
                     },
                     Some(geneIdentifier.Value)),
@@ -58,10 +58,19 @@ namespace Eryph.VmManagement.Storage
                             e => e.Datastores.ToSeq(), 
                             (e, ds) => (Environment: e.Name, Datastore: ds.Name, ds.Path)),
                         vmHostAgentConfig.Environments.ToSeq().Map(
-                            e => (Environment: e.Name, Datastore: "default", Path: getDefault(e.Defaults))),
+                            e => (
+                                Environment: e.Name, 
+                                Datastore:EryphConstants.DefaultDataStoreName, 
+                                Path: getDefault(e.Defaults))),
                         vmHostAgentConfig.Datastores.ToSeq().Map(
-                            ds => (Environment: "default", Datastore: ds.Name, ds.Path)),
-                        Seq1((Environment: "default", Datastore: "default", Path: getDefault(vmHostAgentConfig.Defaults)))
+                            ds => (
+                                Environment: EryphConstants.DefaultEnvironmentName, 
+                                Datastore: ds.Name, 
+                                ds.Path)),
+                        Seq1((
+                            Environment: EryphConstants.DefaultEnvironmentName, 
+                            Datastore: EryphConstants.DefaultDataStoreName, 
+                            Path: getDefault(vmHostAgentConfig.Defaults)))
                     ).Map(pc => from relativePath in GetContainedPath(pc.Path, path)
                         select (pc.Environment, pc.Datastore, RelativePath: relativePath))
                     .Somes()
@@ -170,7 +179,7 @@ namespace Eryph.VmManagement.Storage
 
         private static string JoinPathAndProject(string dsPath, string projectName)
         {
-            return projectName == "default" ? dsPath : Path.Combine(dsPath, $"p_{projectName}");
+            return projectName == EryphConstants.DefaultProjectName ? dsPath : Path.Combine(dsPath, $"p_{projectName}");
         }
         private static (Option<ProjectName> Name, Option<Guid> Id) GetProjectNameOrId(string root)
         {

@@ -111,7 +111,7 @@ namespace Eryph.Modules.Controller.Inventory
             {
                 var project = await FindProject(diskInfo.ProjectName, diskInfo.ProjectId)
                     .IfNoneAsync(() =>
-                        FindRequiredProject("default", Guid.Empty)).ConfigureAwait(false);
+                        FindRequiredProject(EryphConstants.DefaultProjectName, Guid.Empty)).ConfigureAwait(false);
 
                 await LookupVirtualDisk(diskInfo, project, addedDisks).IfSomeAsync(async currentDisk =>
                 {
@@ -247,7 +247,7 @@ namespace Eryph.Modules.Controller.Inventory
         protected async Task<Option<Project>> FindProject(
             string projectName, Guid? optionalProjectId)
         {
-            if (optionalProjectId.GetValueOrDefault() != default)
+            if (optionalProjectId.GetValueOrDefault() != Guid.Empty)
                 return await StateStore.For<Project>().GetByIdAsync(optionalProjectId.GetValueOrDefault()).ConfigureAwait(false);
 
             if(string.IsNullOrWhiteSpace(projectName))

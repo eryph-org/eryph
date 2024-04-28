@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
@@ -128,9 +129,9 @@ namespace Eryph.VmManagement.Inventory
             storageSettings.StorageIdentifier.IfSome(n => disk.StorageIdentifier = n);
             storageSettings.StorageNames.DataStoreName.IfSome(n => disk.DataStore = n);
             storageSettings.StorageNames.ProjectName.IfSome(n => disk.ProjectName = n);
-            disk.ProjectName ??= "default";
+            disk.ProjectName ??= EryphConstants.DefaultProjectName;
             storageSettings.StorageNames.EnvironmentName.IfSome(n => disk.Environment = n);
-            disk.Environment ??= "default";
+            disk.Environment ??= EryphConstants.DefaultEnvironmentName;
             storageSettings.StorageIdentifier.IfNone(() => disk.Frozen = true);
             storageSettings.ParentSettings.IfSome(parentSettings => disk.Parent = CreateDiskInfo(parentSettings));
             storageSettings.Geneset.IfSome(s => disk.Geneset = s.Value);
