@@ -22,6 +22,7 @@ namespace Eryph.StateDb.Model
         public string FileName { get; set; }
 
         public long? SizeBytes { get; set; }
+        public long? UsedSizeBytes { get; set; }
 
         public virtual VirtualDisk Parent { get; set; }
         public virtual ICollection<VirtualDisk> Childs { get; set; }
@@ -29,5 +30,6 @@ namespace Eryph.StateDb.Model
 
         public Guid? ParentId { get; set; }
         public DateTimeOffset LastSeen { get; set; }
+        public string LastSeenAgent { get; set; }
     }
 }

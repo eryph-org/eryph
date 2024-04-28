@@ -21,44 +21,24 @@ using System.Threading.Tasks;
 namespace Eryph.Modules.VmHostAgent.Inventory
 {
     [UsedImplicitly]
-    internal class InventoryRequestedEventHandler : IHandleMessages<InventoryRequestedEvent>
-    {
-        private readonly IBus _bus;
-        private readonly ILogger _log;
-        private readonly WorkflowOptions _workflowOptions;
-
-        private readonly IPowershellEngine _engine;
-        private readonly IHostInfoProvider _hostInfoProvider;
-        private readonly IHostSettingsProvider _hostSettingsProvider;
-        private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
-
-        public InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log,
-            WorkflowOptions _workflowOptions,
+    internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log,
+            WorkflowOptions workflowOptions,
             IHostInfoProvider hostInfoProvider,
-            IHostSettingsProvider HostSettingsProvider,
+            IHostSettingsProvider hostSettingsProvider,
             IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
-        {
-            _bus = bus;
-            _engine = engine;
-            _log = log;
-            this._workflowOptions = _workflowOptions;
-            _hostInfoProvider = hostInfoProvider;
-            _hostSettingsProvider = HostSettingsProvider;
-            _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
-        }
-
-
+        : IHandleMessages<InventoryRequestedEvent>
+    {
         public Task Handle(InventoryRequestedEvent message)
         {
-            return _engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
+            return engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
                     .AddCommand("get-vm")).ToError()
                 .BindAsync(VmsToInventory)
                 .ToAsync()
                 .MatchAsync(
-                    RightAsync: c => _bus.Advanced.Routing.Send(_workflowOptions.OperationsDestination, c),
+                    RightAsync: c => bus.Advanced.Routing.Send(workflowOptions.OperationsDestination, c),
                     Left: l =>
                     {
-                        _log.LogError(l.Message);
+                        log.LogError(l.Message);
                     }
                 );
         }
@@ -68,16 +48,14 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             Seq<TypedPsObject<VirtualMachineInfo>> vms)
         {
             return  
-                (from hostInventory in _hostInfoProvider.GetHostInfoAsync(true) 
+                (from hostInventory in hostInfoProvider.GetHostInfoAsync(true) 
                  let timestamp = DateTime.UtcNow
-                 from hostSettings in _hostSettingsProvider.GetHostSettings()
-                 from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-                 let inventory = new VirtualMachineInventory(_engine, vmHostAgentConfig, _hostInfoProvider)
+                 from hostSettings in hostSettingsProvider.GetHostSettings()
+                 from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+                 let inventory = new VirtualMachineInventory(engine, vmHostAgentConfig, hostInfoProvider)
                  from vmInventory in InventorizeAllVms(inventory, vms).ToAsync()
                 select new UpdateVMHostInventoryCommand
                 {
-                    // TODO: inventory currently don't support tenantId
-                    TenantId = EryphConstants.DefaultTenantId,
                     HostInventory = hostInventory,
                     VMInventory = vmInventory.ToList(),
                     Timestamp = timestamp
@@ -94,7 +72,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                             Right: Prelude.Some,
                             Left: l =>
                             {
-                                _log.LogError(
+                                log.LogError(
                                     "Inventory of virtual machine '{VMName}' (Id:{VmId}) failed. Error: {failure}",
                                     vm.Value.Name, vm.Value.Id, l.Message);
                                 return Prelude.None;

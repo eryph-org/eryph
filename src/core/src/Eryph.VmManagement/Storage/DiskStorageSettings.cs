@@ -21,6 +21,8 @@ namespace Eryph.VmManagement.Storage
         public Option<string> StorageIdentifier { get; set; }
         public StorageNames StorageNames { get; set; }
 
+        public long? UsedSizeBytes { get; set; }
+
         public long? SizeBytes { get; set; }
         public long? SizeBytesCreate { get; set; }
         public Option<GeneSetIdentifier> Geneset { get; set; }
@@ -98,6 +100,7 @@ namespace Eryph.VmManagement.Storage
                         StorageIdentifier = nameAndId.StorageIdentifier,
                         Geneset = nameAndId.StorageIdentifier.Bind(GeneIdentifier.NewOption).Map(g => g.GeneSet),
                         SizeBytes = vhdInfo.Value.Size,
+                        UsedSizeBytes = vhdInfo.Value.FileSize,
                         DiskIdentifier = vhdInfo.Value.DiskIdentifier,
                         Generation = generation,
                         ParentSettings = parentSettings

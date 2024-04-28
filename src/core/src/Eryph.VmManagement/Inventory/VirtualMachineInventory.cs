@@ -122,6 +122,7 @@ namespace Eryph.VmManagement.Inventory
                 Path = storageSettings.Path,
                 FileName = storageSettings.FileName,
                 SizeBytes = storageSettings.SizeBytes,
+                UsedSizeBytes = storageSettings.UsedSizeBytes
             };
 
             storageSettings.StorageIdentifier.IfSome(n => disk.StorageIdentifier = n);

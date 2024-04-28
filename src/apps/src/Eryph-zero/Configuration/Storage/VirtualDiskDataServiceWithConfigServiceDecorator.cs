@@ -1,70 +1,59 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Eryph.ConfigModel;
 using Eryph.Configuration;
-using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using LanguageExt;
-using LanguageExt.Sys;
 
 namespace Eryph.Runtime.Zero.Configuration.Storage
 {
-    internal class VirtualDiskDataServiceWithConfigServiceDecorator : IVirtualDiskDataService
-    {
-        private readonly IVirtualDiskDataService _decoratedService;
-        private readonly IConfigWriterService<VirtualDisk> _configService;
-        private readonly IStateStore _stateStore;
-
-        public VirtualDiskDataServiceWithConfigServiceDecorator(IVirtualDiskDataService decoratedService,
+    internal class VirtualDiskDataServiceWithConfigServiceDecorator(IVirtualDiskDataService decoratedService,
             IConfigWriterService<VirtualDisk> configService, IStateStore stateStore)
-        {
-            _decoratedService = decoratedService;
-            _configService = configService;
-            _stateStore = stateStore;
-        }
-
-
+        : IVirtualDiskDataService
+    {
         public Task<Option<VirtualDisk>> GetVHD(Guid id)
         {
-            return _decoratedService.GetVHD(id);
+            return decoratedService.GetVHD(id);
         }
 
         public async Task<VirtualDisk> AddNewVHD(VirtualDisk virtualDisk)
         {
-            var result = await _decoratedService.AddNewVHD(virtualDisk);
-            await _configService.Add(virtualDisk, virtualDisk.Project.Name);
+            var result = await decoratedService.AddNewVHD(virtualDisk);
+            await configService.Add(virtualDisk, virtualDisk.Project.Name);
 
             return result;
         }
 
-        public Task<IEnumerable<VirtualDisk>> FindVHDByLocation(string dataStore, string project, string environment, string storageIdentifier, string name)
+        public Task<IEnumerable<VirtualDisk>> FindVHDByLocation(
+            Guid projectId, string dataStore, string environment, 
+            string storageIdentifier, string name, Guid diskIdentifier)
         {
-            return _decoratedService.FindVHDByLocation(dataStore, project, environment, storageIdentifier, name);
+            return decoratedService.FindVHDByLocation(projectId, dataStore, environment, storageIdentifier, name,
+                diskIdentifier);
         }
         public Task<IEnumerable<VirtualDisk>> FindOutdated(DateTimeOffset lastSeenBefore)
         {
-            return _decoratedService.FindOutdated(lastSeenBefore);
+            return decoratedService.FindOutdated(lastSeenBefore);
         }
 
         public async Task<VirtualDisk> UpdateVhd(VirtualDisk virtualDisk)
         {
-            var res = await _decoratedService.UpdateVhd(virtualDisk);
-            await _configService.Update(res, virtualDisk.Project.Name);
+            var res = await decoratedService.UpdateVhd(virtualDisk);
+            await configService.Update(res, virtualDisk.Project.Name);
 
             return res;
         }
 
         public async Task<Unit> DeleteVHD(Guid id)
         {
-            var optionalData = await _decoratedService.GetVHD(id);
-            await _decoratedService.DeleteVHD(id);
+            var optionalData = await decoratedService.GetVHD(id);
+            await decoratedService.DeleteVHD(id);
             await optionalData.IfSomeAsync(data =>
             {
-                _stateStore.LoadProperty(data, x=>x.Project);
-                return _configService.Delete(data, data.Project.Name);
+                stateStore.LoadProperty(data, x=>x.Project);
+                return configService.Delete(data, data.Project.Name);
             });
 
             return Unit.Default;

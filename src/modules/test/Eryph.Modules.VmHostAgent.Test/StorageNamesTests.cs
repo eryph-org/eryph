@@ -2,6 +2,7 @@
 using Eryph.VmManagement.Storage;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
+using LanguageExt.SomeHelp;
 using Xunit;
 
 namespace Eryph.Modules.VmHostAgent.Test
@@ -114,30 +115,37 @@ namespace Eryph.Modules.VmHostAgent.Test
             }
 
             [Theory]
-            [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW", "default", "default", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW\test.file", "default", "default", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\default\test\volumes\eryph\p_testproject\A6RKKLNZNSOW", "default", "default", "testproject", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\scratch\test\A6RKKLNZNSOW", "default", "scratch", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\scratch\test\p_testproject\A6RKKLNZNSOW", "default", "scratch", "testproject", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\volumes\A6RKKLNZNSOW", "qa", "default", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\volumes\p_testproject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "cluster", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\cluster\test\p_testproject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\QA\Cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\\default\test\volumes\eryph\genepool\testorg\testgene\testversion\volumes\test.vhdx", "default", "default", "default", "gene:testorg/testgene/testversion:test")]
+            [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW", "default", "default", "default",false, "A6RKKLNZNSOW")]
+            [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW\test.file", "default", "default", "default", false, "A6RKKLNZNSOW")]
+            [InlineData(@"x:\default\test\volumes\eryph\p_testproject\A6RKKLNZNSOW", "default", "default", "testproject", false, "A6RKKLNZNSOW")]
+            [InlineData(@"x:\scratch\test\A6RKKLNZNSOW", "default", "scratch", "default", false,"A6RKKLNZNSOW")]
+            [InlineData(@"x:\scratch\test\p_testproject\A6RKKLNZNSOW", "default", "scratch", "testproject", false, "A6RKKLNZNSOW")]
+            [InlineData(@"x:\qa\test\volumes\A6RKKLNZNSOW", "qa", "default", "default",false, "A6RKKLNZNSOW")]
+            [InlineData(@"x:\qa\test\volumes\p_testproject\A6RKKLNZNSOW", "qa", "default", "testproject", false, "A6RKKLNZNSOW")]
+            [InlineData(@"x:\qa\test\volumes\p_21A549A0-683B-4686-9DD8-40B7D938E495\A6RKKLNZNSOW", "qa", "default", "{21A549A0-683B-4686-9DD8-40B7D938E495}",true, "A6RKKLNZNSOW" )]
+            [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "cluster", "default", false, "A6RKKLNZNSOW")]
+            [InlineData(@"x:\qa\cluster\test\p_testproject\A6RKKLNZNSOW", "qa", "cluster", "testproject", false, "A6RKKLNZNSOW")]
+            [InlineData(@"x:\QA\Cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", false, "A6RKKLNZNSOW")]
+            [InlineData(@"x:\\default\test\volumes\eryph\genepool\testorg\testgene\testversion\volumes\test.vhdx", "default", "default", "default", false, "gene:testorg/testgene/testversion:test")]
             public void FromVhdPath_ValidPath_ReturnsStorageNames(
                 string path,
                 string expectedEnvironment,
                 string expectedDataStore,
                 string expectedProject,
+                bool projectIsGuid,
                 string expectedIdentifier)
             {
                 var (names, storageIdentifier) = StorageNames.FromVhdPath(path, _vmHostAgentConfiguration);
 
-                names.EnvironmentName.Should().BeSome(expectedEnvironment);
-                names.DataStoreName.Should().BeSome(expectedDataStore);
-                names.ProjectName.Should().BeSome(expectedProject);
-                storageIdentifier.Should().BeSome(expectedIdentifier);
+                names.EnvironmentName.Should().BeSome().Which.Should().Be(expectedEnvironment);
+                names.DataStoreName.Should().BeSome().Which.Should().Be(expectedDataStore);
+
+                if(projectIsGuid)
+                    names.ProjectId.Should().BeSome().Which.Should().Be(Guid.Parse(expectedProject));
+                else
+                    names.ProjectName.Should().BeSome().Which.Should().Be(expectedProject);
+
+                storageIdentifier.Should().BeSome().Which.Should().Be(expectedIdentifier.ToLowerInvariant());
             }
 
             [Theory]
