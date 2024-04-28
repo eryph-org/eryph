@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Messages.Resources.Disks;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Rebus;
@@ -15,6 +16,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
+using Rebus.Messages;
 using Rebus.Pipeline;
 
 namespace Eryph.Modules.Controller.Inventory
@@ -212,9 +214,35 @@ namespace Eryph.Modules.Controller.Inventory
                         existingMachine.Features = newMachine.Features;
                         existingMachine.SecureBootTemplate = newMachine.SecureBootTemplate;
                     }).ConfigureAwait(false);
-
-
                 }).ConfigureAwait(false);
+            }
+
+            try
+            {
+                var outdatedDisks = (await _vhdDataService.FindOutdated(timestamp, hostMachine.Name)).ToArray();
+                if (outdatedDisks.Length == 0)
+                    return;
+                await _dispatcher.StartNew(new CheckDisksExistsCommand
+                {
+                    AgentName = hostMachine.Name,
+                    Disks = outdatedDisks.Select(d => new DiskInfo
+                    {
+                        Id = d.Id,
+                        ProjectId = d.Project.Id,
+                        ProjectName = d.Project.Name,
+                        DataStore = d.DataStore,
+                        Environment = d.Environment,
+                        StorageIdentifier = d.StorageIdentifier,
+                        Name = d.Name,
+                        FileName = d.FileName,
+                        Path = d.Path,
+                        DiskIdentifier = d.DiskIdentifier
+                    }).ToArray()
+                }, new OperationDataRecord(EryphConstants.DefaultTenantId, Guid.NewGuid().ToString()));
+            }
+            catch (Exception ex)
+            {
+                throw;
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
+using JetBrains.Annotations;
 
 namespace Eryph.StateDb.Specifications
 {
@@ -24,10 +25,12 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class FindOutdated : Specification<VirtualDisk>
         {
-            public FindOutdated(DateTimeOffset lastSeenBefore)
+            public FindOutdated(DateTimeOffset lastSeenBefore, [CanBeNull] string agentName)
             {
                 Query.Where(x => x.LastSeen < lastSeenBefore);
 
+                if(!string.IsNullOrEmpty(agentName))
+                    Query.Where(x => x.LastSeenAgent == agentName);
                 Query.Include(x => x.Project);
             }
         }

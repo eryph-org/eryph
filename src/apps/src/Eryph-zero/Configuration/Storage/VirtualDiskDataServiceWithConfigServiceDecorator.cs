@@ -33,9 +33,9 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
             return decoratedService.FindVHDByLocation(projectId, dataStore, environment, storageIdentifier, name,
                 diskIdentifier);
         }
-        public Task<IEnumerable<VirtualDisk>> FindOutdated(DateTimeOffset lastSeenBefore)
+        public Task<IEnumerable<VirtualDisk>> FindOutdated(DateTimeOffset lastSeenBefore, string agentName)
         {
-            return decoratedService.FindOutdated(lastSeenBefore);
+            return decoratedService.FindOutdated(lastSeenBefore, agentName);
         }
 
         public async Task<VirtualDisk> UpdateVhd(VirtualDisk virtualDisk)

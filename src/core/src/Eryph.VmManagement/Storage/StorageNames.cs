@@ -12,7 +12,7 @@ using static LanguageExt.Seq;
 
 namespace Eryph.VmManagement.Storage
 {
-    public readonly struct StorageNames
+    public readonly record struct StorageNames
     {
         public StorageNames()
         {

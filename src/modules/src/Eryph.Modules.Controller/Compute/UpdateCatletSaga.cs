@@ -245,8 +245,7 @@ namespace Eryph.Modules.Controller.Compute
                 await _bus.SendLocal(new UpdateInventoryCommand
                 {
                     AgentName = Data.AgentName,
-                    Inventory = new List<VirtualMachineData> { r.Inventory },
-                    TenantId = Data.TenantId
+                    Inventory = new List<VirtualMachineData> { r.Inventory }
                 });
 
                 await await _vmDataService.GetVM(Data.CatletId).Match(

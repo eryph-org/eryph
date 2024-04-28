@@ -298,6 +298,11 @@ namespace Eryph.StateDb
             modelBuilder.Entity<OperationLogEntry>().Property(e => e.Timestamp).HasConversion(
                 dateTimeOffset => dateTimeOffset.UtcDateTime,
                 dateTime => new DateTimeOffset(dateTime));
+
+            modelBuilder.Entity<VirtualDisk>().Property(e => e.LastSeen).HasConversion(
+                dateTimeOffset => dateTimeOffset.UtcDateTime,
+                dateTime => new DateTimeOffset(dateTime));
+
         }
     }
 }
