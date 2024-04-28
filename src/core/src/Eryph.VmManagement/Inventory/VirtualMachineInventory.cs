@@ -117,18 +117,22 @@ namespace Eryph.VmManagement.Inventory
             var disk = new DiskInfo
             {
                 Id = Guid.NewGuid(),
+                DiskIdentifier = storageSettings.DiskIdentifier,
                 Name = storageSettings.Name,
                 Path = storageSettings.Path,
                 FileName = storageSettings.FileName,
-                SizeBytes = storageSettings.SizeBytes
+                SizeBytes = storageSettings.SizeBytes,
             };
 
             storageSettings.StorageIdentifier.IfSome(n => disk.StorageIdentifier = n);
             storageSettings.StorageNames.DataStoreName.IfSome(n => disk.DataStore = n);
             storageSettings.StorageNames.ProjectName.IfSome(n => disk.ProjectName = n);
+            disk.ProjectName ??= "default";
             storageSettings.StorageNames.EnvironmentName.IfSome(n => disk.Environment = n);
+            disk.Environment ??= "default";
             storageSettings.StorageIdentifier.IfNone(() => disk.Frozen = true);
             storageSettings.ParentSettings.IfSome(parentSettings => disk.Parent = CreateDiskInfo(parentSettings));
+            storageSettings.Geneset.IfSome(s => disk.Geneset = s.Value);
             return disk;
         }
 

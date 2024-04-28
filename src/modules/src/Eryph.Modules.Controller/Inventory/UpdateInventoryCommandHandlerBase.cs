@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
-using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
@@ -51,7 +50,9 @@ namespace Eryph.Modules.Controller.Inventory
             parentDisks.Add(disk);
         }
 
-        protected async Task UpdateVMs(Guid tenantId, IEnumerable<VirtualMachineData> vmList, CatletFarm hostMachine)
+        protected async Task UpdateVMs(
+            DateTimeOffset timestamp,
+            Guid tenantId, IEnumerable<VirtualMachineData> vmList, CatletFarm hostMachine)
         {
 
             var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
@@ -66,48 +67,19 @@ namespace Eryph.Modules.Controller.Inventory
 
             var addedDisks = new List<VirtualDisk>();
 
-            async Task<Option<VirtualDisk>> LookupVirtualDisk(DiskInfo diskInfo)
-            {
-                var disksDataCandidates = await _vhdDataService.FindVHDByLocation(
-                        diskInfo.DataStore,
-                        diskInfo.ProjectName,
-                        diskInfo.Environment,
-                        diskInfo.StorageIdentifier,
-                        diskInfo.Name)
-                    .Map(l => addedDisks.Append(l))
-                    .Map(l => l.Filter(
-                        x => x.DataStore == diskInfo.DataStore &&
-                             x.Project.Name == diskInfo.ProjectName &&
-                             x.Environment == diskInfo.Environment &&
-                             x.StorageIdentifier == diskInfo.StorageIdentifier &&
-                             x.Name == diskInfo.Name))
-                    .Map(x => x.ToArray());
-
-                Option<VirtualDisk> disk;
-                if (disksDataCandidates.Length <= 1)
-                    disk = disksDataCandidates.FirstOrDefault() ?? Option<VirtualDisk>.None;
-                else
-                    disk = disksDataCandidates.FirstOrDefault(x =>
-                        string.Equals(x.Path, diskInfo.Path, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(x.FileName, diskInfo.FileName, StringComparison.OrdinalIgnoreCase))
-                           ?? Option<VirtualDisk>.None;
-
-                return disk;
-            }
-
             foreach (var diskInfo in diskInfos)
             {
                 var disk = await LookupVirtualDisk(diskInfo)
                     .IfNoneAsync(async () =>
                 {
-
+                    
                     var d = new VirtualDisk
                     {
                         Id = diskInfo.Id,
                         Name = diskInfo.Name,
                         DataStore = diskInfo.DataStore,
                         Environment = diskInfo.Environment,
-                        Frozen = diskInfo.Frozen,
+                        Geneset = diskInfo.Geneset,
                         StorageIdentifier = diskInfo.StorageIdentifier,
                         Project = await FindRequiredProject(tenantId,diskInfo.ProjectName)
                     };
@@ -118,8 +90,11 @@ namespace Eryph.Modules.Controller.Inventory
 
                 diskInfo.Id = disk.Id; // copy id of existing record
                 disk.FileName = diskInfo.FileName;
-                disk.Path = diskInfo.Path;
+                disk.DiskIdentifier = diskInfo.DiskIdentifier;
+                disk.Path = diskInfo.Path.ToLowerInvariant();
                 disk.SizeBytes = diskInfo.SizeBytes;
+                disk.Frozen = diskInfo.Frozen;
+                disk.LastSeen = timestamp;
                 await _vhdDataService.UpdateVhd(disk);
 
             }
@@ -230,6 +205,37 @@ namespace Eryph.Modules.Controller.Inventory
 
 
                 });
+            }
+
+            return;
+
+            async Task<Option<VirtualDisk>> LookupVirtualDisk(DiskInfo diskInfo)
+            {
+                var disksDataCandidates = await _vhdDataService.FindVHDByLocation(
+                        diskInfo.DataStore,
+                        diskInfo.ProjectName,
+                        diskInfo.Environment,
+                        diskInfo.StorageIdentifier,
+                        diskInfo.Name)
+                    .Map(l => addedDisks.Append(l))
+                    .Map(l => l.Filter(
+                        x => x.DataStore == diskInfo.DataStore &&
+                             x.Project.Name == diskInfo.ProjectName &&
+                             x.Environment == diskInfo.Environment &&
+                             x.StorageIdentifier == diskInfo.StorageIdentifier &&
+                             x.Name == diskInfo.Name))
+                    .Map(x => x.ToArray());
+
+                Option<VirtualDisk> disk;
+                if (disksDataCandidates.Length <= 1)
+                    disk = disksDataCandidates.FirstOrDefault() ?? Option<VirtualDisk>.None;
+                else
+                    disk = disksDataCandidates.FirstOrDefault(x =>
+                               string.Equals(x.Path, diskInfo.Path, StringComparison.OrdinalIgnoreCase) &&
+                               string.Equals(x.FileName, diskInfo.FileName, StringComparison.OrdinalIgnoreCase))
+                           ?? Option<VirtualDisk>.None;
+
+                return disk;
             }
         }
 

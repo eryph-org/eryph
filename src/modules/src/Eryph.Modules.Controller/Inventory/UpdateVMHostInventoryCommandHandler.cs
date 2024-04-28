@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
-using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
@@ -45,7 +44,7 @@ namespace Eryph.Modules.Controller.Inventory
             var existingMachine = await _vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
                 .IfNoneAsync(() => _vmHostDataService.AddNewVMHost(newMachineState));
 
-            await UpdateVMs(message.TenantId, message.VMInventory, existingMachine);
+            await UpdateVMs(message.Timestamp, message.TenantId, message.VMInventory, existingMachine);
 
         }
     }

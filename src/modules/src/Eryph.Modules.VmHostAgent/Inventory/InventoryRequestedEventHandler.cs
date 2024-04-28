@@ -1,4 +1,5 @@
-﻿using Dbosoft.Rebus.Operations;
+﻿using System;
+using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -68,6 +69,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         {
             return  
                 (from hostInventory in _hostInfoProvider.GetHostInfoAsync(true) 
+                 let timestamp = DateTime.UtcNow
                  from hostSettings in _hostSettingsProvider.GetHostSettings()
                  from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                  let inventory = new VirtualMachineInventory(_engine, vmHostAgentConfig, _hostInfoProvider)
@@ -77,7 +79,8 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                     // TODO: inventory currently don't support tenantId
                     TenantId = EryphConstants.DefaultTenantId,
                     HostInventory = hostInventory,
-                    VMInventory = vmInventory.ToList()
+                    VMInventory = vmInventory.ToList(),
+                    Timestamp = timestamp
                 }).ToEither();
         }
 

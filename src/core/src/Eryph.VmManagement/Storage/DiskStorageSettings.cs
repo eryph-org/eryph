@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Core.VmAgent;
+using Eryph.GenePool.Model;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 
@@ -12,6 +14,7 @@ namespace Eryph.VmManagement.Storage
         public string Path { get; set; }
         public string FileName { get; set; }
         public int Generation { get; set; }
+        public Guid DiskIdentifier { get; set; }
 
         public Option<DiskStorageSettings> ParentSettings { get; set; }
 
@@ -20,7 +23,7 @@ namespace Eryph.VmManagement.Storage
 
         public long? SizeBytes { get; set; }
         public long? SizeBytesCreate { get; set; }
-
+        public Option<GeneSetIdentifier> Geneset { get; set; }
 
         public static Option<DiskStorageSettings> FromSourceString(
             VmHostAgentConfiguration vmHostAgentConfig,
@@ -78,7 +81,7 @@ namespace Eryph.VmManagement.Storage
             return optionalPath.Map(path => from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path).ToAsync()
                 from vhdInfo in optionalVhdInfo.ToEither(new PowershellFailure {Message = "Failed to read VHD "})
                     .ToAsync()
-                let nameAndId = StorageNames.FromVhdPath(System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
+                let nameAndId = StorageNames.FromVhdPath(vhdInfo.Value.Path,
                     vmHostAgentConfig)
                 let parentPath = string.IsNullOrWhiteSpace(vhdInfo.Value.ParentPath)
                     ? Option<string>.None
@@ -93,7 +96,9 @@ namespace Eryph.VmManagement.Storage
                         FileName = System.IO.Path.GetFileName(vhdInfo.Value.Path),
                         StorageNames = nameAndId.Names,
                         StorageIdentifier = nameAndId.StorageIdentifier,
+                        Geneset = nameAndId.StorageIdentifier.Bind(GeneIdentifier.NewOption).Map(g => g.GeneSet),
                         SizeBytes = vhdInfo.Value.Size,
+                        DiskIdentifier = vhdInfo.Value.DiskIdentifier,
                         Generation = generation,
                         ParentSettings = parentSettings
                     }).Traverse(l => l).ToEither();

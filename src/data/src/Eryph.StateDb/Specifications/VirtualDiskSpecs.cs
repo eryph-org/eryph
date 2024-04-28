@@ -29,5 +29,15 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
+        public sealed class FindOutdated : Specification<VirtualDisk>
+        {
+            public FindOutdated(DateTimeOffset lastSeenBefore)
+            {
+                Query.Where(x => x.LastSeen < lastSeenBefore);
+
+                Query.Include(x => x.Project);
+            }
+        }
+
     }
 }

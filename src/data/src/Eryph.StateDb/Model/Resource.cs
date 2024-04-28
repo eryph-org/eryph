@@ -15,5 +15,6 @@ namespace Eryph.StateDb.Model
         public ResourceType ResourceType { get; set; }
 
         public string Name { get; set; }
+
     }
 }

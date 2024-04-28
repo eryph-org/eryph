@@ -41,6 +41,11 @@ namespace Eryph.Modules.Controller.DataServices
                 new VirtualDiskSpecs.GetByLocation(dataStore, projectName, environment, storageIdentifier, name));
         }
 
+        public async Task<IEnumerable<VirtualDisk>> FindOutdated(DateTimeOffset lastSeenBefore)
+        {
+            return await _stateStore.For<VirtualDisk>().ListAsync(
+            new VirtualDiskSpecs.FindOutdated(lastSeenBefore));
+        }
         public async Task<VirtualDisk> UpdateVhd(VirtualDisk virtualDisk)
         {
             await _stateStore.For<VirtualDisk>().UpdateAsync(virtualDisk);

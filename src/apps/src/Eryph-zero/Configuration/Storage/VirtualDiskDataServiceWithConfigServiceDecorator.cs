@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Configuration;
+using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using LanguageExt;
+using LanguageExt.Sys;
 
 namespace Eryph.Runtime.Zero.Configuration.Storage
 {
@@ -40,6 +43,10 @@ namespace Eryph.Runtime.Zero.Configuration.Storage
         public Task<IEnumerable<VirtualDisk>> FindVHDByLocation(string dataStore, string project, string environment, string storageIdentifier, string name)
         {
             return _decoratedService.FindVHDByLocation(dataStore, project, environment, storageIdentifier, name);
+        }
+        public Task<IEnumerable<VirtualDisk>> FindOutdated(DateTimeOffset lastSeenBefore)
+        {
+            return _decoratedService.FindOutdated(lastSeenBefore);
         }
 
         public async Task<VirtualDisk> UpdateVhd(VirtualDisk virtualDisk)

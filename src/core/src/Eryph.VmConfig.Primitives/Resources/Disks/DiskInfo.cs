@@ -11,6 +11,9 @@ namespace Eryph.Resources.Disks
         public string DataStore { get; set; }
         public string ProjectName { get; set; }
         public string Environment { get; set; }
+        public string Geneset { get; set; }
+        public Guid DiskIdentifier { get; set; }
+
 
         public bool Frozen { get; set; }
 

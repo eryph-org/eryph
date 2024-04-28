@@ -12,6 +12,10 @@ namespace Eryph.StateDb.Model
         }
 
         public string StorageIdentifier { get; set; }
+        public Guid DiskIdentifier { get; set; }
+
+        public string Geneset { get; set; }
+
         public bool Frozen { get; set; }
 
         public string Path { get; set; }
@@ -24,5 +28,6 @@ namespace Eryph.StateDb.Model
         public virtual ICollection<CatletDrive> AttachedDrives { get; set; }
 
         public Guid? ParentId { get; set; }
+        public DateTimeOffset LastSeen { get; set; }
     }
 }
