@@ -84,6 +84,13 @@ jobs:
       arguments: '--configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build\bin /p:SignHash=$(signHash)'
       zipAfterPublish: false
 
+  - task: PowerShell@2
+    displayName: Generate migration SQL
+    inputs:
+      filePath: .\src\data\src\Eryph.StateDb.Design\Generate-MigrationSql.ps1
+      arguments: -NoBuild -Output $(Build.ArtifactStagingDirectory)\zero_build\migrations
+      pwsh: true
+
   - task: AzureCLI@2
     displayName: 'Sign executables'
     condition: ne(variables['Build.Reason'], 'PullRequest')

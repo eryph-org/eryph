@@ -10,7 +10,7 @@
 [CmdletBinding()]
 param(
     # The name of the new migration
-    [Parameter()]
+    [Parameter($Mandatory=$true)]
     [string]
     $Name
 )
