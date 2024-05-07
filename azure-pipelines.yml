@@ -96,7 +96,7 @@ jobs:
   - task: PowerShell@2
     displayName: Generate migration SQL
     inputs:
-      filePath: .\Generate-MigrationSql.ps1
+      filePath: $(Build.SourcesDirectory)\src\data\src\Eryph.StateDb.Design\Generate-MigrationSql.ps1
       arguments: -NoBuild -Output $(Build.ArtifactStagingDirectory)\zero_build\migrations
       workingDirectory: $(Build.SourcesDirectory)\src\data\src\Eryph.StateDb.Design\
       pwsh: true
