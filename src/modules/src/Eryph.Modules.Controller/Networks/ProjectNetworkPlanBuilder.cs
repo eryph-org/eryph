@@ -232,7 +232,14 @@ internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProvider
     private static NetworkPlan AddDnsNames(NetworkPlan networkPlan,
         Seq<CatletDnsInfo> catletDnsInfos ) =>
         catletDnsInfos.Map(info => networkPlan.AddDnsRecords(
-            info.CatletId, info.Addresses)).Apply(s => JoinPlans(s, networkPlan));
+                info.CatletId,
+                info.Addresses,
+                // Mark the DNS records as owned by OVN. OVN will then not forward
+                // DNS requests (A, AAAA, ANY) for these records when it cannot resolve
+                // them itself. This prevents DNS requests from being forwarded when
+                // only IPv4 or IPv6 is configured.
+                Prelude.Map(("ovn-owned", "true"))))
+            .Apply(s => JoinPlans(s, networkPlan));
 
 
     private static NetworkPlan AddFloatingPorts(NetworkPlan networkPlan, Seq<FloatingPortInfo> ports)
