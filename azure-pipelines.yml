@@ -48,7 +48,8 @@ jobs:
   - task: DotNetCoreCLI@2
     displayName: dotnet tool restore
     inputs:
-      command: 'tool restore'
+      command: custom
+      custom: 'tool restore'
       feedsToUse: 'config'
       nugetConfigPath: 'nuget.config'
       
