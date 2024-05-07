@@ -44,6 +44,13 @@ jobs:
       projects: '**/*.csproj'
       feedsToUse: 'config'
       nugetConfigPath: 'nuget.config'
+  
+  - task: DotNetCoreCLI@2
+    displayName: dotnet tool restore
+    inputs:
+      command: 'tool restore'
+      feedsToUse: 'config'
+      nugetConfigPath: 'nuget.config'
       
   - task: DotNetCoreCLI@2
     displayName: dotnet build
