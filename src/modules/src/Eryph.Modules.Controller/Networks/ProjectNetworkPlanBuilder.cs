@@ -67,23 +67,36 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
     }
 
     private EitherAsync<Error, Seq<ProviderRouterPortInfo>> GetProviderRouterPorts(
-        Seq<VirtualNetwork> networks, Seq<ProviderSubnetInfo> providerSubnets, 
+        Seq<VirtualNetwork> networks,
+        Seq<ProviderSubnetInfo> providerSubnets,
         CancellationToken cancellationToken) =>
-        networks.Map(network => FindPortsOfType<ProviderRouterPort>(network.NetworkPorts)
-
-                // ensure that every port has a ip address
-                .Map(port => port.IpAssignments.Count == 0
-                    ? AcquireRouterPortIpAddress(port, network, providerSubnets, cancellationToken)
-                        .Map(p => new ProviderRouterPortInfo(p, network, EmptyProviderSubnetInfo))
-                    : new ProviderRouterPortInfo(port, network, EmptyProviderSubnetInfo)))
-            .Flatten().SequenceSerial()
-
-            // find and add provider subnet 
-            .Bind(infoSeq => infoSeq.Map(info => providerSubnets
-                .Find(x => x.Subnet.ProviderName == info.Network.NetworkProvider && x.Subnet.Name == info.Port.SubnetName)
+        from portInfos in networks.SelectMany(
+                network => FindPortsOfType<ProviderRouterPort>(network.NetworkPorts),
+                (network, port) => (Network: network, Port: port))
+            // Using Map() and SequenceSerial() here causes failures as EF Core detects
+            // parallel operations.
+            .Apply(l => Prelude.TryAsync(async () =>
+            {
+                var result = new List<ProviderRouterPortInfo>();
+                foreach (var (network, port) in l)
+                {
+                    result.Add(port.IpAssignments.Count == 0
+                        ? await AcquireRouterPortIpAddress(port, network, providerSubnets, cancellationToken)
+                            .Map(p => new ProviderRouterPortInfo(p, network, EmptyProviderSubnetInfo))
+                            .IfLeft(e => e.ToException().Rethrow<ProviderRouterPortInfo>())
+                        : new ProviderRouterPortInfo(port, network, EmptyProviderSubnetInfo));   
+                }
+                return result.ToSeq();
+            }).ToEither())
+        // find and add provider subnet 
+        from portInfos2 in portInfos.Map(portInfo => providerSubnets
+                .Find(x => x.Subnet.ProviderName == portInfo.Network.NetworkProvider && x.Subnet.Name == portInfo.Port.SubnetName)
                 .ToEitherAsync(Error.New(
-                    $"Network '{info.Network.Name}' configuration error: subnet {info.Port.SubnetName} of network provider {info.Network.NetworkProvider} not found."))
-                .Map(providerSubnet => info with { Subnet = providerSubnet })).SequenceSerial());
+                    $"Network '{portInfo.Network.Name}' configuration error: subnet {portInfo.Port.SubnetName} of network provider {portInfo.Network.NetworkProvider} not found."))
+                .Map(providerSubnet => portInfo with { Subnet = providerSubnet }))
+            .SequenceSerial()
+        select portInfos2;
+
 
     private EitherAsync<Error, Seq<FloatingPortInfo>> GetFloatingPorts(
         Seq<CatletNetworkPort> catletPorts, Seq<ProviderSubnetInfo> providerSubnets)
@@ -116,7 +129,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
                                     $"Network '{network.Name}' configuration error: subnet {rs.SubnetName} not found in network provider {rs.NetworkProvider}.")))
                             .Map(config => (rs.NetworkProvider, rs.SubnetName, Config: config))
                     ).ToSeq()
-            ).Flatten().Traverse(l => l).ToAsync()
+            ).Flatten().Sequence().ToAsync()
             .Bind(rs => 
                 //get all provider configurations and filter for configured providers
                 _stateStore.For<ProviderSubnet>().IO

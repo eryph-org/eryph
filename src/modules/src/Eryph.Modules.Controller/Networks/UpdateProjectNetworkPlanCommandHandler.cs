@@ -7,6 +7,7 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.StateDb;
 using JetBrains.Annotations;
+using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 
@@ -47,7 +48,8 @@ public class UpdateProjectNetworkPlanCommandHandler : IHandleMessages<OperationT
         // build plan and save it to DB (to make sure that everything can be saved
         // we cannot use unit of work here, as OVN changes are not included in uow
         var generatedPlan = await (from plan in _planBuilder.GenerateNetworkPlan(message.Command.ProjectId, cancelSource.Token)
-                let _ = _stateStore.SaveChangesAsync(cancelSource.Token)
+                from _ in Prelude.TryAsync(() =>_stateStore.SaveChangesAsync(cancelSource.Token))
+                    .ToEither()
                 select plan
 
             ).Match(
