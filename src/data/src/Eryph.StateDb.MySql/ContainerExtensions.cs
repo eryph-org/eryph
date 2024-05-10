@@ -11,7 +11,8 @@ namespace Eryph.StateDb.MySql;
 
 public static class ContainerExtensions
 {
-    public static void RegisterMySqlStateStore(this SimpleInjectorAddOptions options)
+    public static SimpleInjectorAddOptions RegisterMySqlStateStore(
+        this SimpleInjectorAddOptions options)
     {
         options.RegisterStateStore();
         options.Services.AddDbContext<StateStoreContext, MySqlStateStoreContext>(
@@ -21,5 +22,7 @@ public static class ContainerExtensions
                     .GetInstance<IStateStoreContextConfigurer>();
                 configurer.Configure(dbOptions);
             });
+        
+        return options;
     }
 }

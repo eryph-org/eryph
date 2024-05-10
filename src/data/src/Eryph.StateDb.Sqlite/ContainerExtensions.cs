@@ -12,7 +12,8 @@ namespace Eryph.StateDb.Sqlite;
 
 public static class ContainerExtensions
 {
-    public static void RegisterSqliteStateStore(this SimpleInjectorAddOptions options)
+    public static SimpleInjectorAddOptions RegisterSqliteStateStore(
+        this SimpleInjectorAddOptions options)
     {
         options.RegisterStateStore();
         options.Services.AddDbContext<StateStoreContext, SqliteStateStoreContext>(
@@ -22,5 +23,7 @@ public static class ContainerExtensions
                     .GetInstance<IStateStoreContextConfigurer>();
                 configurer.Configure(dbOptions);
             });
+
+        return options;
     }
 }

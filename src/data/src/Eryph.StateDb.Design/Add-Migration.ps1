@@ -10,7 +10,7 @@
 [CmdletBinding()]
 param(
     # The name of the new migration
-    [Parameter($Mandatory=$true)]
+    [Parameter(Mandatory=$true)]
     [string]
     $Name
 )
@@ -37,20 +37,3 @@ dotnet ef migrations add `
     --project "$PSScriptRoot/../Eryph.StateDb.MySql/Eryph.StateDb.MySql.csproj" `
     --context MySqlStateStoreContext `
     $Name
-
-# The migration code must be built again before generating the SQL scripts.
-dotnet build
-
-dotnet ef migrations script `
-    --no-build `
-    --idempotent `
-    --project "$PSScriptRoot/../Eryph.StateDb.SqlServer/Eryph.StateDb.SqlServer.csproj" `
-    --context SqlServerStateStoreContext `
-    --output "$PSScriptRoot/../../../../migrations/sqlserver.sql"
-
-dotnet ef migrations script `
-    --no-build `
-    --idempotent `
-    --project "$PSScriptRoot/../Eryph.StateDb.MySql/Eryph.StateDb.MySql.csproj" `
-    --context MySqlStateStoreContext `
-    --output "$PSScriptRoot/../../../../migrations/mysql.sql"

@@ -93,7 +93,7 @@ namespace Eryph.Modules.ComputeApi.Tests
             var (project,stateStore, context) = SetupMocks(roleId);
             var userRightsProvider = new UserRightsProvider(context, stateStore.Object);
 
-            var resource = new Resource()
+            var resource = new Catlet()
             {
                 Id = Guid.NewGuid(),
                 Project = project,
