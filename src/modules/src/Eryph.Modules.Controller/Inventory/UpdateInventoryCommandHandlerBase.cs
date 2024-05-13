@@ -15,6 +15,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
+using Microsoft.VisualBasic;
 using Rebus.Pipeline;
 
 namespace Eryph.Modules.Controller.Inventory
@@ -307,9 +308,9 @@ namespace Eryph.Modules.Controller.Inventory
             };
         }
 
-        private static List<CatletFeature> MapFeatures(VirtualMachineData vmInfo)
+        private static ISet<CatletFeature> MapFeatures(VirtualMachineData vmInfo)
         {
-            var features = new List<CatletFeature>();
+            var features = new System.Collections.Generic.HashSet<CatletFeature>();
             
             if(vmInfo.Firmware?.SecureBoot ?? false)
                 features.Add(CatletFeature.SecureBoot);

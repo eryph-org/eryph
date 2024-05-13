@@ -8,11 +8,11 @@ public class ProjectRoleAssignment
 {
     public Guid Id { get; set; }
 
-    public Project Project { get; set; }
+    public Project Project { get; set; } = null!;
+
     public Guid ProjectId { get; set; }
-    public string IdentityId { get; set; }
+
+    public string IdentityId { get; set; } = "";
 
     public Guid RoleId { get; set; }
-
-
 }

@@ -19,12 +19,11 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
     private readonly IIpPoolManager _ipPoolManager;
     private readonly IStateStore _stateStore;
 
-    private record FloatingPortInfo(FloatingNetworkPort Port);
+    private sealed record FloatingPortInfo(FloatingNetworkPort Port);
 
-    private record ProviderRouterPortInfo(ProviderRouterPort Port, VirtualNetwork Network, ProviderSubnetInfo Subnet);
-    private record ProviderSubnetInfo(ProviderSubnet Subnet, NetworkProviderSubnet Config);
-
-    private static ProviderSubnetInfo EmptyProviderSubnetInfo => new(new ProviderSubnet(), new NetworkProviderSubnet());
+    private sealed record ProviderRouterPortInfo(ProviderRouterPort Port, VirtualNetwork Network, ProviderSubnetInfo Subnet);
+    
+    private sealed record ProviderSubnetInfo(ProviderSubnet Subnet, NetworkProviderSubnet Config);
 
     public ProjectNetworkPlanBuilder(
         INetworkProviderManager networkProviderManager, IStateStore stateStore, IIpPoolManager ipPoolManager)
@@ -77,14 +76,14 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
             // parallel operations.
             .Apply(l => Prelude.TryAsync(async () =>
             {
-                var result = new List<ProviderRouterPortInfo>();
+                var result = new List<(VirtualNetwork Network, ProviderRouterPort Port)>();
                 foreach (var (network, port) in l)
                 {
                     result.Add(port.IpAssignments.Count == 0
                         ? await AcquireRouterPortIpAddress(port, network, providerSubnets, cancellationToken)
-                            .Map(p => new ProviderRouterPortInfo(p, network, EmptyProviderSubnetInfo))
-                            .IfLeft(e => e.ToException().Rethrow<ProviderRouterPortInfo>())
-                        : new ProviderRouterPortInfo(port, network, EmptyProviderSubnetInfo));   
+                            .Map(p => (network, p))
+                            .IfLeft(e => e.ToException().Rethrow<(VirtualNetwork Network, ProviderRouterPort Port)>())
+                        : (network, port));   
                 }
                 return result.ToSeq();
             }).ToEither())
@@ -93,7 +92,7 @@ internal class ProjectNetworkPlanBuilder : IProjectNetworkPlanBuilder
                 .Find(x => x.Subnet.ProviderName == portInfo.Network.NetworkProvider && x.Subnet.Name == portInfo.Port.SubnetName)
                 .ToEitherAsync(Error.New(
                     $"Network '{portInfo.Network.Name}' configuration error: subnet {portInfo.Port.SubnetName} of network provider {portInfo.Network.NetworkProvider} not found."))
-                .Map(providerSubnet => portInfo with { Subnet = providerSubnet }))
+                .Map(providerSubnet => new ProviderRouterPortInfo(portInfo.Port, portInfo.Network, providerSubnet)))
             .SequenceSerial()
         select portInfos2;
 

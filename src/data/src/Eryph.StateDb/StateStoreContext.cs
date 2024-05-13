@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Eryph.Core;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Eryph.StateDb;
 
@@ -83,6 +85,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<OperationTaskModel>()
             .Property(x => x.LastUpdated).IsConcurrencyToken();
 
+        modelBuilder.Entity<OperationLogEntry>().HasOne(c => c.Task)
+            .WithMany()
+            .HasForeignKey(l => l.TaskId)
+            .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<Tenant>()
             .HasKey(x => x.Id);
@@ -114,12 +120,11 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
         modelBuilder.Entity<Resource>()
             .HasKey(x => x.Id);
-
+        
+        /*
         modelBuilder.Entity<Resource>()
-            .ToTable("Resources");
-
-        modelBuilder.Entity<Catlet>()
-            .ToTable("Catlets");
+            .UseTpcMappingStrategy();
+        */
 
         modelBuilder.Entity<Catlet>()
             .HasMany(x => x.ReportedNetworks)
@@ -128,11 +133,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Catlet>()
-            .Navigation(x => x.ReportedNetworks);
-
-        modelBuilder.Entity<Catlet>()
             .HasOne(x => x.Host)
-            .WithMany(x => x.Catlets);
+            .WithMany(x => x.Catlets)
+            .HasForeignKey(x => x.HostId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Catlet>()
             .HasMany(x => x.NetworkAdapters)
@@ -158,15 +162,17 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<Catlet>()
             .Property(e => e.Features)
             .HasConversion(
-                v => string.Join(',', v),
+                v => string.Join(',', v.Order()),
                 v => v.Split(',',
                         StringSplitOptions.RemoveEmptyEntries)
                     .Map(Enum.Parse<CatletFeature>)
-                    .ToList());
+                    .ToHashSet(),
+                new ValueComparer<ISet<CatletFeature>>(
+                    (a, b) => a == b || a != null && b != null && a.SetEquals(b),
+                    s => s.Fold(0, HashCode.Combine)));
 
 
         modelBuilder.Entity<VirtualNetwork>()
-            .ToTable("VNetworks")
             .HasMany(x => x.NetworkPorts)
             .WithOne(x => x.Network)
             .HasForeignKey(x => x.NetworkId)
@@ -175,13 +181,8 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<NetworkRouterPort>()
             .HasOne(x => x.RoutedNetwork)
             .WithOne(x => x.RouterPort)
-            .HasForeignKey<NetworkRouterPort>(x=>x.RoutedNetworkId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-
-        modelBuilder.Entity<VirtualNetwork>()
-            .Navigation(x => x.NetworkPorts);
-
+            .HasForeignKey<NetworkRouterPort>(x => x.RoutedNetworkId)
+            .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<VirtualNetwork>()
             .HasMany(x => x.Subnets)
@@ -189,70 +190,71 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasForeignKey(x => x.NetworkId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<VirtualNetwork>()
-            .Navigation(x => x.Subnets);
-
-
         modelBuilder.Entity<NetworkPort>()
             .HasKey(x=>x.Id);
 
         modelBuilder.Entity<NetworkPort>()
+            //.UseTpcMappingStrategy()
             .HasMany(x => x.IpAssignments)
             .WithOne(x => x.NetworkPort)
             .HasForeignKey(x => x.NetworkPortId)
             .OnDelete(DeleteBehavior.Cascade);
 
-
-        modelBuilder.Entity<FloatingNetworkPort>()
-            .HasOne(x => x.AssignedPort)
-            .WithOne(x => x.FloatingPort)
-            .HasForeignKey<VirtualNetworkPort>(x => x.FloatingPortId)
-            .OnDelete(DeleteBehavior.SetNull);
-
-
-        modelBuilder.Entity<FloatingNetworkPort>()
-            .Property(x => x.PoolName).HasColumnName(nameof(FloatingNetworkPort.PoolName));
-        modelBuilder.Entity<FloatingNetworkPort>()
-            .Property(x => x.SubnetName).HasColumnName(nameof(FloatingNetworkPort.SubnetName));
-
-        modelBuilder.Entity<ProviderRouterPort>()
-            .Property(x => x.SubnetName).HasColumnName(nameof(ProviderRouterPort.SubnetName));
-        modelBuilder.Entity<ProviderRouterPort>()
-            .Property(x => x.PoolName).HasColumnName(nameof(ProviderRouterPort.PoolName));
-
-
-        modelBuilder.Entity<NetworkPort>()
-            .Navigation(x => x.IpAssignments);
-
         modelBuilder.Entity<NetworkPort>()
             .HasIndex(x => x.MacAddress)
             .IsUnique();
 
+        modelBuilder.Entity<FloatingNetworkPort>()
+            .HasOne(x => x.AssignedPort)
+            .WithOne(x => x.FloatingPort)
+            .HasForeignKey<VirtualNetworkPort>(x => x.FloatingPortId);
+
         modelBuilder.Entity<Subnet>()
+            //.UseTpcMappingStrategy()
             .HasKey(x => x.Id);
 
         modelBuilder.Entity<Subnet>()
             .HasMany(x => x.IpPools)
             .WithOne(x => x.Subnet)
             .HasForeignKey(x => x.SubnetId)
+            .IsRequired()
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Subnet>()
-            .Navigation(x => x.IpPools);
+            .HasMany(x => x.IpAssignments)
+            .WithOne(x => x.Subnet)
+            .HasForeignKey(x => x.SubnetId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        /*
+        modelBuilder.Entity<VirtualNetworkSubnet>()
+            .HasMany(x => x.IpAssignments)
+            .WithOne(x => (VirtualNetworkSubnet)x.Subnet)
+            .HasForeignKey(x => x.SubnetId)
+            .OnDelete(DeleteBehavior.ClientCascade);
+
+        modelBuilder.Entity<VirtualNetworkSubnet>()
+            .Navigation(x => x.IpAssignments)
+            .AutoInclude();
+
+        modelBuilder.Entity<ProviderSubnet>()
+            .HasMany(x => x.IpAssignments)
+            .WithOne(x => (ProviderSubnet)x.Subnet)
+            .HasForeignKey(x => x.SubnetId)
+            .OnDelete(DeleteBehavior.ClientCascade);
+        */
 
         modelBuilder.Entity<IpPool>()
             .HasKey(x => x.Id);
-        modelBuilder.Entity<IpPool>().Property(x => x.RowVersion)
-            .IsRowVersion();
+        modelBuilder.Entity<IpPool>()
+            .Property(x => x.NextIp)
+            .IsConcurrencyToken();
 
         modelBuilder.Entity<IpPool>()
             .HasMany(x => x.IpAssignments)
             .WithOne(x => x.Pool)
             .HasForeignKey(x => x.PoolId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<IpPool>()
-            .Navigation(x => x.IpAssignments);
 
         modelBuilder.Entity<IpPoolAssignment>()
             .HasIndex(a => new { a.PoolId, a.Number })
@@ -262,27 +264,20 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasKey(x => x.Id);
 
 
-        modelBuilder.Entity<CatletFarm>()
-            .ToTable("CatletFarms");
-
-
-        modelBuilder.Entity<CatletNetworkAdapter>().HasKey(x=>new {x.CatletId, x.Id});
+        modelBuilder.Entity<CatletNetworkAdapter>()
+            .HasKey(x=>new {x.CatletId, x.Id});
 
 
         modelBuilder.Entity<CatletDrive>()
-            .ToTable("CatletDrives")
             .HasKey(x => x.Id);
 
         modelBuilder.Entity<CatletDrive>()
             .HasOne(x => x.AttachedDisk)
             .WithMany(x => x.AttachedDrives)
             .HasForeignKey(x => x.AttachedDiskId);
-
-
-        modelBuilder.Entity<VirtualDisk>()
-            .ToTable("CatletDisks");
                 
-        modelBuilder.Entity<VirtualDisk>().HasOne(x => x.Parent)
+        modelBuilder.Entity<VirtualDisk>()
+            .HasOne(x => x.Parent)
             .WithMany(x => x.Childs)
             .HasForeignKey(x => x.ParentId);
 

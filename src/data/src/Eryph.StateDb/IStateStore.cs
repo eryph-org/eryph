@@ -23,12 +23,12 @@ public interface IStateStore
         where Spec : ISingleResultSpecification, ISpecification<T>;
 
 
-    public Task LoadPropertyAsync<T,TProperty>(T entry, Expression<Func<T, TProperty>> propertyExpression,
+    public Task LoadPropertyAsync<T,TProperty>(T entry, Expression<Func<T, TProperty?>> propertyExpression,
         CancellationToken cancellationToken = default)
         where T : class
         where TProperty : class;
 
-    public void LoadProperty<T, TProperty>(T entry, Expression<Func<T, TProperty>> propertyExpression)
+    public void LoadProperty<T, TProperty>(T entry, Expression<Func<T, TProperty?>> propertyExpression)
         where T : class
         where TProperty : class;
 

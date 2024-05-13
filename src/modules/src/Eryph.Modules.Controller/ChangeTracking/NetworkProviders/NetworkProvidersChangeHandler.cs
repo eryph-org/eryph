@@ -104,13 +104,13 @@ internal class NetworkProvidersChangeHandler
                         ? new IpAssignmentConfigModel()
                         {
                             IpAddress = pa.IpAddress,
-                            SubnetName = pa.Subnet.Name,
+                            SubnetName = pa.Subnet!.Name,
                             PoolName = pa.Pool.Name,
                         }
                         : new IpAssignmentConfigModel()
                         {
                             IpAddress = a.IpAddress,
-                            SubnetName = a.Subnet.Name,
+                            SubnetName = a.Subnet!.Name,
                         }
                 ).ToArray(),
             }).ToArray(),

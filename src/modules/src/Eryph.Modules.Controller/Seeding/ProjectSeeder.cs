@@ -68,7 +68,7 @@ internal class ProjectSeeder : SeederBase
                 RoleId = RoleNames.GetRoleId(ac.RoleName)
                     .ToEither(Error.New($"The role {ac.RoleName} does not exist"))
                     .IfLeft(e => e.ToException().Rethrow<Guid>())
-            }).ToList(),
+            }).ToList() ?? [],
         };
 
         await _stateStore.For<Project>().AddAsync(project, cancellationToken);

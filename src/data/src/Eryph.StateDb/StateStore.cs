@@ -42,13 +42,13 @@ public class StateStore : IStateStore
             .Bind(r => r.ToEitherAsync(notFound));
     }
 
-    public Task LoadPropertyAsync<T, TProperty>(T entry, Expression<Func<T, TProperty>> propertyExpression,
+    public Task LoadPropertyAsync<T, TProperty>(T entry, Expression<Func<T, TProperty?>> propertyExpression,
         CancellationToken cancellationToken = default) where T : class where TProperty : class
     {
         return _context.Entry(entry).Reference(propertyExpression).LoadAsync(cancellationToken);
     }
 
-    public void LoadProperty<T, TProperty>(T entry, Expression<Func<T, TProperty>> propertyExpression) where T : class where TProperty : class
+    public void LoadProperty<T, TProperty>(T entry, Expression<Func<T, TProperty?>> propertyExpression) where T : class where TProperty : class
     { 
         _context.Entry(entry).Reference(propertyExpression).Load();
     }
