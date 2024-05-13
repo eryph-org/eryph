@@ -161,16 +161,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
         modelBuilder.Entity<Catlet>()
             .Property(e => e.Features)
-            .HasConversion(
-                v => string.Join(',', v.Order()),
-                v => v.Split(',',
-                        StringSplitOptions.RemoveEmptyEntries)
-                    .Map(Enum.Parse<CatletFeature>)
-                    .ToHashSet(),
-                new ValueComparer<ISet<CatletFeature>>(
-                    (a, b) => a == b || a != null && b != null && a.SetEquals(b),
-                    s => s.Fold(0, HashCode.Combine)));
-
+            .HasSetConversion();
 
         modelBuilder.Entity<VirtualNetwork>()
             .HasMany(x => x.NetworkPorts)
@@ -289,5 +280,28 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .WithOne()
             .HasForeignKey(p => p.CatletMetadataId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ReportedNetwork>()
+            .HasKey(x => x.Id);
+
+        modelBuilder.Entity<ReportedNetwork>()
+            .Property(x => x.IpV4Addresses)
+            .HasListConversion();
+
+        modelBuilder.Entity<ReportedNetwork>()
+            .Property(x => x.IpV6Addresses)
+            .HasListConversion();
+
+        modelBuilder.Entity<ReportedNetwork>()
+            .Property(x => x.DnsServerAddresses)
+            .HasListConversion();
+
+        modelBuilder.Entity<ReportedNetwork>()
+            .Property(x => x.IpV4Subnets)
+            .HasListConversion();
+
+        modelBuilder.Entity<ReportedNetwork>()
+            .Property(x => x.IpV6Subnets)
+            .HasListConversion();
     }
 }
