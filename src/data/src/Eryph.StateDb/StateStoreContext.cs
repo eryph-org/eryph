@@ -173,7 +173,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasOne(x => x.RoutedNetwork)
             .WithOne(x => x.RouterPort)
             .HasForeignKey<NetworkRouterPort>(x => x.RoutedNetworkId)
-            .OnDelete(DeleteBehavior.NoAction);
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<VirtualNetwork>()
             .HasMany(x => x.Subnets)
@@ -215,7 +215,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasMany(x => x.IpAssignments)
             .WithOne(x => x.Subnet)
             .HasForeignKey(x => x.SubnetId)
-            .OnDelete(DeleteBehavior.NoAction);
+            .OnDelete(DeleteBehavior.Cascade);
 
         /*
         modelBuilder.Entity<VirtualNetworkSubnet>()
