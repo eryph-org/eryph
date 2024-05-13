@@ -104,7 +104,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
         modelBuilder.Entity<Project>()
             .HasKey(x=>x.Id);
-
+        
         modelBuilder.Entity<Project>()
             .HasMany(x => x.Resources)
             .WithOne(x => x.Project)
@@ -117,14 +117,9 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<ProjectRoleAssignment>()
             .HasAlternateKey(x => new { x.ProjectId, x.IdentityId, x.RoleId });
 
-
         modelBuilder.Entity<Resource>()
+            .UseTpcMappingStrategy()
             .HasKey(x => x.Id);
-        
-        /*
-        modelBuilder.Entity<Resource>()
-            .UseTpcMappingStrategy();
-        */
 
         modelBuilder.Entity<Catlet>()
             .HasMany(x => x.ReportedNetworks)
@@ -169,11 +164,15 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasForeignKey(x => x.NetworkId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<NetworkRouterPort>()
-            .HasOne(x => x.RoutedNetwork)
-            .WithOne(x => x.RouterPort)
+        modelBuilder.Entity<VirtualNetwork>()
+            .HasOne(x => x.RouterPort)
+            .WithOne(x => x.RoutedNetwork)
             .HasForeignKey<NetworkRouterPort>(x => x.RoutedNetworkId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
+
+        modelBuilder.Entity<VirtualNetwork>()
+            .Navigation(x => x.RouterPort)
+            .AutoInclude();
 
         modelBuilder.Entity<VirtualNetwork>()
             .HasMany(x => x.Subnets)
@@ -245,7 +244,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasMany(x => x.IpAssignments)
             .WithOne(x => x.Pool)
             .HasForeignKey(x => x.PoolId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.ClientCascade);
 
         modelBuilder.Entity<IpPoolAssignment>()
             .HasIndex(a => new { a.PoolId, a.Number })
