@@ -14,7 +14,7 @@ using SimpleInjector.Integration.ServiceCollection;
 
 namespace Eryph.Modules.Controller.Tests.Networks;
 
-public class IpPoolManagerTests() : StateDbTestBase(DatabaseType.Sqlite)
+public class IpPoolManagerTests : InMemoryStateDbTestBase
 {
     private static readonly Guid NetworkId = Guid.NewGuid();
     private static readonly Guid SubnetId = Guid.NewGuid();

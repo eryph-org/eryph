@@ -8,11 +8,9 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.MySql;
 using Eryph.StateDb.Sqlite;
 using Eryph.StateDb.SqlServer;
-using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MySqlConnector;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 using SimpleInjector.Lifestyles;
@@ -22,20 +20,21 @@ namespace Eryph.StateDb.TestBase;
 
 /// <summary>
 /// This base class can be used for tests which require a working
-/// state database. It uses an in-memory SQLite database.
+/// state database. It uses <see cref="IDatabaseFixture"/> to get
+/// a running database instance.
 /// </summary>
 public abstract class StateDbTestBase : IAsyncLifetime
 {
-    private readonly DatabaseType _databaseType;
+    private readonly IDatabaseFixture _databaseFixture;
     private readonly string _dbConnection;
     private SqliteConnection? _sqliteConnection;
     private readonly ServiceProvider _provider;
     private readonly Container _container;
 
-    protected StateDbTestBase(DatabaseType databaseType)
+    protected StateDbTestBase(IDatabaseFixture databaseFixture)
     {
-        _databaseType = databaseType;
-        _dbConnection = GetConnectionString(databaseType);
+        _databaseFixture = databaseFixture;
+        _dbConnection = _databaseFixture.GetConnectionString($"test_{DateTime.UtcNow.Ticks}");
         _container = new Container();
         _container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
         var services = new ServiceCollection();
@@ -59,9 +58,12 @@ public abstract class StateDbTestBase : IAsyncLifetime
 
     public virtual async Task InitializeAsync()
     {
-        if (_databaseType is DatabaseType.Sqlite)
+        if (_databaseFixture is SqliteFixture)
         {
-            _sqliteConnection= new SqliteConnection(_dbConnection);
+            // Sqlite is a special case as we use the in-memory database.
+            // We need to keep a connection open for the duration for the test
+            // to keep the database alive.
+            _sqliteConnection = new SqliteConnection(_dbConnection);
             await _sqliteConnection.OpenAsync();
         }
 
@@ -117,57 +119,30 @@ public abstract class StateDbTestBase : IAsyncLifetime
         }
     }
 
-    private static string GetConnectionString(DatabaseType databaseType) =>
-        databaseType switch
-        {
-            DatabaseType.MySql => new MySqlConnectionStringBuilder()
-            {
-                Server = "127.0.0.1",
-                UserID = "root",
-                Password = "root",
-                Database = $"test_{DateTime.UtcNow.Ticks}",
-            }.ToString(),
-            DatabaseType.Sqlite => new SqliteConnectionStringBuilder()
-            {
-                DataSource = DateTime.UtcNow.Ticks.ToString(),
-                Mode = SqliteOpenMode.Memory,
-                Cache = SqliteCacheMode.Shared,
-            }.ToString(),
-            DatabaseType.SqlServer => new SqlConnectionStringBuilder()
-            {
-                DataSource = "127.0.0.1",
-                InitialCatalog = $"test_{DateTime.UtcNow.Ticks}",
-                UserID = "sa",
-                Password = "InitialPassw0rd",
-                Encrypt = false,
-            }.ToString(),
-            _ => throw new NotSupportedException($"Database type '{databaseType}' is not supported."),
-        };
-
     private IStateStoreContextConfigurer GetConfigurer() =>
-        _databaseType switch
+        _databaseFixture switch
         {
-            DatabaseType.MySql => new MySqlStateStoreContextConfigurer(_dbConnection),
-            DatabaseType.Sqlite => new SqliteStateStoreContextConfigurer(_dbConnection),
-            DatabaseType.SqlServer => new SqlServerStateStoreContextConfigurer(_dbConnection),
-            _ => throw new NotSupportedException($"Database type '{_databaseType}' is not supported."),
+            MySqlFixture => new MySqlStateStoreContextConfigurer(_dbConnection),
+            SqliteFixture => new SqliteStateStoreContextConfigurer(_dbConnection),
+            SqlServerFixture => new SqlServerStateStoreContextConfigurer(_dbConnection),
+            _ => throw new NotSupportedException($"Database type '{_databaseFixture}' is not supported."),
         };
 
     private void RegisterStateStore(SimpleInjectorAddOptions options)
     {
-        switch (_databaseType)
+        switch (_databaseFixture)
         {
-            case DatabaseType.MySql:
+            case MySqlFixture:
                 options.RegisterMySqlStateStore();
                 break;
-            case DatabaseType.Sqlite:
+            case SqliteFixture:
                 options.RegisterSqliteStateStore();
                 break;
-            case DatabaseType.SqlServer:
+            case SqlServerFixture:
                 options.RegisterSqlServerStateStore();
                 break;
             default:
-                throw new NotSupportedException($"Database type '{_databaseType}' is not supported.");
+                throw new NotSupportedException($"Database type '{_databaseFixture}' is not supported.");
         }
     }
 }

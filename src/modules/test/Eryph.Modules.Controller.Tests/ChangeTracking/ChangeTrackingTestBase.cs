@@ -14,7 +14,7 @@ using SimpleInjector.Lifestyles;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
-public abstract class ChangeTrackingTestBase() : StateDbTestBase(DatabaseType.Sqlite)
+public abstract class ChangeTrackingTestBase : InMemoryStateDbTestBase
 {
     protected readonly MockFileSystem MockFileSystem = new();
     protected readonly Mock<INetworkProviderManager> MockNetworkProviderManager = new();
