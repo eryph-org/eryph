@@ -25,5 +25,6 @@ public class SqliteFixture : IDatabaseFixture
             DataSource = databaseName,
             Mode = SqliteOpenMode.Memory,
             Cache = SqliteCacheMode.Shared,
+            ForeignKeys = true,
         }.ToString();
 }
