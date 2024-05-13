@@ -8,15 +8,14 @@ using Eryph.StateDb.TestBase;
 
 namespace Eryph.Modules.Controller.Tests;
 
-[Trait("Database", "Mysql")]
+[Trait("Category", "Docker")]
 public class MySqlStateDbTests(MySqlFixture databaseFixture)
     : StateDbDeleteTests(databaseFixture), IClassFixture<MySqlFixture>;
 
-[Trait("Database", "Sqlite")]
 public class SqliteStateDbTests(SqliteFixture databaseFixture)
     : StateDbDeleteTests(databaseFixture), IClassFixture<SqliteFixture>;
 
-[Trait("Database", "SqlServer")]
+[Trait("Category", "Docker")]
 public class SqlServerStateDbTests(SqlServerFixture databaseFixture)
     : StateDbDeleteTests(databaseFixture), IClassFixture<SqlServerFixture>;
 
