@@ -475,14 +475,11 @@ public class VMDriveStorageSettingsTests
                 {
                     Volumes = @"x:\disks\genepool\testorg\testset\testtag\volumes",
                 }
-            }, Some(path));
+            }, path);
 
 
-        result.Should().BeRight().Which.Should().BeSome(
-            dss =>
-            {
-                dss.Name.Should().Be("sda");
-                dss.Generation.Should().Be(2);
-            });
+        var resultSettings = result.Should().BeRight().Subject;
+        resultSettings.Name.Should().Be("sda");
+        resultSettings.Generation.Should().Be(2);
     }
 }

@@ -40,7 +40,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
                     var storageNames = new StorageNames()
                     {
-                        ProjectId = disk.ProjectId.GetValueOrDefault(),
+                        ProjectId = Optional(disk.ProjectId),
                         ProjectName = disk.ProjectName,
                         DataStoreName = disk.DataStore,
                         EnvironmentName = disk.Environment,
@@ -49,11 +49,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                     _ =
                         await (from hostSettings in hostSettings.GetHostSettings()
                         from vmHostAgentConfig in configurationManager.GetCurrentConfiguration(hostSettings)
-                        from storageSettings in 
-                            
-                            DiskStorageSettings.FromVhdPath(psEngine, vmHostAgentConfig, fullPath)
-                                .ToAsync().ToError()
-                            .Bind(o=> o.ToEitherAsync(Error.New("Disk not found")))
+                        from storageSettings in DiskStorageSettings.FromVhdPath(psEngine, vmHostAgentConfig, fullPath)
                         select storageSettings).Match(
                         info =>
                         {

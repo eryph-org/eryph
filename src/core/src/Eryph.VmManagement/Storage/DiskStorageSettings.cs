@@ -5,6 +5,8 @@ using Eryph.Core.VmAgent;
 using Eryph.GenePool.Model;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;
+using LanguageExt.Common;
+using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Storage
 {
@@ -75,37 +77,35 @@ namespace Eryph.VmManagement.Storage
 
         }
 
-        public static Task<Either<PowershellFailure, Option<DiskStorageSettings>>> FromVhdPath(
+        public static EitherAsync<Error, DiskStorageSettings> FromVhdPath(
             IPowershellEngine engine,
             VmHostAgentConfiguration vmHostAgentConfig,
-            Option<string> optionalPath)
-        {
-            return optionalPath.Map(path => from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path).ToAsync()
-                from vhdInfo in optionalVhdInfo.ToEither(new PowershellFailure {Message = "Failed to read VHD "})
-                    .ToAsync()
-                let nameAndId = StorageNames.FromVhdPath(vhdInfo.Value.Path,
-                    vmHostAgentConfig)
-                let parentPath = string.IsNullOrWhiteSpace(vhdInfo.Value.ParentPath)
-                    ? Option<string>.None
-                    : Option<string>.Some(vhdInfo.Value.ParentPath)
-                from parentSettings in FromVhdPath(engine, vmHostAgentConfig, parentPath).ToAsync()
-                let generation = parentSettings.Map(p => p.Generation).IfNone(-1) + 1
-                select
-                    new DiskStorageSettings
-                    {
-                        Path = System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
-                        Name = GetNameWithoutGeneration(vhdInfo.Value.Path,generation),
-                        FileName = System.IO.Path.GetFileName(vhdInfo.Value.Path),
-                        StorageNames = nameAndId.Names,
-                        StorageIdentifier = nameAndId.StorageIdentifier,
-                        Geneset = nameAndId.StorageIdentifier.Bind(GeneIdentifier.NewOption).Map(g => g.GeneSet),
-                        SizeBytes = vhdInfo.Value.Size,
-                        UsedSizeBytes = vhdInfo.Value.FileSize,
-                        DiskIdentifier = vhdInfo.Value.DiskIdentifier,
-                        Generation = generation,
-                        ParentSettings = parentSettings
-                    }).Traverse(l => l).ToEither();
-        }
+            string path) =>
+            from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path).ToAsync().ToError()
+            from vhdInfo in optionalVhdInfo.ToEitherAsync(
+                Error.New("Failed to read VHD"))
+            let nameAndId = StorageNames.FromVhdPath(vhdInfo.Value.Path,
+                vmHostAgentConfig)
+            let parentPath = Optional(vhdInfo.Value.ParentPath).Filter(notEmpty)
+            from parentSettings in parentPath.Map(p => FromVhdPath(engine, vmHostAgentConfig, p))
+                .Sequence()
+            let generation = parentSettings.Map(p => p.Generation).IfNone(-1) + 1
+            select
+                new DiskStorageSettings
+                {
+                    Path = System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
+                    Name = GetNameWithoutGeneration(vhdInfo.Value.Path, generation),
+                    FileName = System.IO.Path.GetFileName(vhdInfo.Value.Path),
+                    StorageNames = nameAndId.Names,
+                    StorageIdentifier = nameAndId.StorageIdentifier,
+                    Geneset = nameAndId.StorageIdentifier.Bind(GeneIdentifier.NewOption).Map(g => g.GeneSet),
+                    SizeBytes = vhdInfo.Value.Size,
+                    UsedSizeBytes = vhdInfo.Value.FileSize,
+                    DiskIdentifier = vhdInfo.Value.DiskIdentifier,
+                    Generation = generation,
+                    ParentSettings = parentSettings
+                };
+        
 
         private static string GetNameWithoutGeneration(string path, int generation)
         {

@@ -37,13 +37,11 @@ namespace Eryph.VmManagement.Storage
             HardDiskDriveInfo hdInfo)
         {
             return Prelude.Cond<HardDiskDriveInfo>(h => !string.IsNullOrWhiteSpace(h.Path))(hdInfo).Map(hd =>
-                from vhdInfo in VhdQuery.GetVhdInfo(engine, hdInfo.Path).ToAsync()
-                from snapshotInfo in VhdQuery.GetSnapshotAndActualVhd(engine, vhdInfo).ToAsync()
+                from vhdInfo in VhdQuery.GetVhdInfo(engine, hdInfo.Path).ToAsync().ToError()
+                from snapshotInfo in VhdQuery.GetSnapshotAndActualVhd(engine, vhdInfo).ToAsync().ToError()
                 let vhdPath = snapshotInfo.ActualVhd.Map(vhd => vhd.Value.Path).IfNone(hdInfo.Path)
                 let snapshotPath = snapshotInfo.SnapshotVhd.Map(vhd => vhd.Value.Path)
-                from optionalDiskSettings in DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, vhdPath).ToAsync()
-                from diskSettings in optionalDiskSettings.ToEither(new PowershellFailure
-                    {Message = "Missing disk settings for existing disk. Should not happen."}).ToAsync()
+                from diskSettings in DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, vhdPath)
                 select
                     new CurrentHardDiskDriveStorageSettings
                     {
@@ -54,7 +52,7 @@ namespace Eryph.VmManagement.Storage
                         ControllerNumber = hdInfo.ControllerNumber,
                         ControllerLocation = hdInfo.ControllerLocation,
                         DiskSettings = diskSettings
-                    }).Traverse(l => l).ToError();
+                    }).Sequence();
         }
     }
 }
