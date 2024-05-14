@@ -49,7 +49,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         {
             return  
                 (from hostInventory in hostInfoProvider.GetHostInfoAsync(true) 
-                 let timestamp = DateTime.UtcNow
+                 let timestamp = DateTimeOffset.UtcNow
                  from hostSettings in hostSettingsProvider.GetHostSettings()
                  from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                  let inventory = new VirtualMachineInventory(engine, vmHostAgentConfig, hostInfoProvider)

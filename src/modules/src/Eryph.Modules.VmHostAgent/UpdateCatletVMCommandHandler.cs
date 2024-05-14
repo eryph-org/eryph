@@ -1,4 +1,5 @@
-﻿using Dbosoft.Rebus.Operations;
+﻿using System;
+using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
@@ -68,7 +69,8 @@ namespace Eryph.Modules.VmHostAgent
                 select new ConvergeCatletResult
                 {
                     Inventory = inventory,
-                    MachineMetadata = metadata
+                    MachineMetadata = metadata,
+                    Timestamp = DateTimeOffset.UtcNow,
                 };
         }
 

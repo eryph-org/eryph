@@ -1,4 +1,5 @@
-﻿using Eryph.Resources.Machines;
+﻿using System;
+using Eryph.Resources.Machines;
 
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
@@ -6,5 +7,6 @@ namespace Eryph.Messages.Resources.Catlets.Commands
     {
         public CatletMetadata MachineMetadata { get; set; }
         public VirtualMachineData Inventory { get; set; }
+        public DateTimeOffset Timestamp { get; set; }
     }
 }
