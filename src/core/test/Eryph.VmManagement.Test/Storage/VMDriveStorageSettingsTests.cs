@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Storage;
@@ -424,7 +426,7 @@ public class VMDriveStorageSettingsTests
     [Fact]
     public async Task FromVhdPath_Resolved_Name_without_generation()
     {
-        var path = @"x:\disks\genepool\testorg\testset\testtag\volumes\sda_g2.vhdx";
+        var path = @"x:\disks\sda_g2.vhdx";
         var mapping = new FakeTypeMapping();
         var psEngine = new TestPowershellEngine(mapping);
         psEngine.GetObjectCallback = (t, command) =>
@@ -473,7 +475,7 @@ public class VMDriveStorageSettingsTests
             {
                 Defaults = new VmHostAgentDefaultsConfiguration
                 {
-                    Volumes = @"x:\disks\genepool\testorg\testset\testtag\volumes",
+                    Volumes = @"x:\disks\",
                 }
             }, path);
 
@@ -481,5 +483,51 @@ public class VMDriveStorageSettingsTests
         var resultSettings = result.Should().BeRight().Subject;
         resultSettings.Name.Should().Be("sda");
         resultSettings.Generation.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task FromVhdPath_genepool_disk_is_resolved()
+    {
+        var path = @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx";
+        var mapping = new FakeTypeMapping();
+        var psEngine = new TestPowershellEngine(mapping);
+        psEngine.GetObjectCallback = (t, command) =>
+        {
+            if (command.ToString().StartsWith("Get-VHD"))
+            {
+                return new[]
+                {
+                    psEngine.ToPsObject<object>(new VhdInfo
+                    {
+                        Path = path,
+                    })
+                }.ToSeq();
+            }
+
+            return new PowershellFailure { Message = "Unknown command" };
+        };
+
+        var result = await DiskStorageSettings.FromVhdPath(
+            psEngine, new VmHostAgentConfiguration
+            {
+                Defaults = new VmHostAgentDefaultsConfiguration
+                {
+                    Volumes = @"x:\disks\",
+                }
+            }, path);
+
+
+        var resultSettings = result.Should().BeRight().Subject;
+        resultSettings.Name.Should().Be("sda");
+        resultSettings.Generation.Should().Be(0);
+        resultSettings.StorageNames.ProjectName.Should().BeSome()
+            .Which.Should().Be(EryphConstants.DefaultProjectName);
+        resultSettings.StorageNames.EnvironmentName.Should().BeSome()
+            .Which.Should().Be(EryphConstants.DefaultEnvironmentName);
+        resultSettings.StorageNames.DataStoreName.Should().BeSome()
+            .Which.Should().Be(EryphConstants.DefaultDataStoreName);
+        resultSettings.StorageIdentifier.Should().BeSome().Which.Should().Be("gene:testorg/testset/testtag:sda");
+        resultSettings.Geneset.Should().BeSome()
+            .Which.Should().Be(GeneSetIdentifier.New("testorg/testset/testtag"));
     }
 }
