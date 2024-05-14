@@ -23,7 +23,7 @@ internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProvider
     private sealed record ProviderRouterPortInfo(ProviderRouterPort Port, VirtualNetwork Network, ProviderSubnetInfo Subnet);
     private sealed record ProviderSubnetInfo(ProviderSubnet Subnet, NetworkProviderSubnet Config);
 
-    private sealed record CatletDnsInfo(string CatletId, Map<string, string> Addresses);
+    private sealed record CatletDnsInfo(string CatletMetadataId, Map<string, string> Addresses);
 
     private static ProviderSubnetInfo EmptyProviderSubnetInfo => new(new ProviderSubnet(), new NetworkProviderSubnet());
 
@@ -46,7 +46,7 @@ internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProvider
             let catletPorts = FindPortsOfType<CatletNetworkPort>(networks)
             from floatingPorts in GetFloatingPorts(catletPorts, providerSubnets)
             let dnsInfo = MapCatletPortsToDnsInfos(catletPorts)
-            let dnsNames = dnsInfo.Select(info => info.CatletId).ToArray()
+            let dnsNames = dnsInfo.Select(info => info.CatletMetadataId).ToArray()
 
             let p1 = AddProjectRouterAndPorts(networkPlan, networks)
             let p2 = AddExternalNetSwitches(p1, providerSubnets, overLayProviders)
@@ -232,7 +232,7 @@ internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProvider
     private static NetworkPlan AddDnsNames(NetworkPlan networkPlan,
         Seq<CatletDnsInfo> catletDnsInfos ) =>
         catletDnsInfos.Map(info => networkPlan.AddDnsRecords(
-                info.CatletId,
+                info.CatletMetadataId,
                 info.Addresses,
                 // Mark the DNS records as owned by OVN. OVN will then not forward
                 // DNS requests (A, AAAA, ANY) for these records when it cannot resolve

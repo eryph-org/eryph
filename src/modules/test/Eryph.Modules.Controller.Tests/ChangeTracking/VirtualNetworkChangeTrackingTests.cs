@@ -128,6 +128,7 @@ public class VirtualNetworkChangeTrackingTests : ChangeTrackingTestBase
         await WithHostScope(async stateStore =>
         {
             var catletPort = await stateStore.For<CatletNetworkPort>().GetByIdAsync(CatletPortId);
+            catletPort!.AddressName = "test";
             catletPort!.MacAddress = "00:00:00:00:00:02";
 
             await stateStore.SaveChangesAsync();
@@ -136,6 +137,7 @@ public class VirtualNetworkChangeTrackingTests : ChangeTrackingTestBase
         var networksConfig = await ReadNetworksConfig();
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
+        _expectedPortsConfig.CatletNetworkPorts[0].AddressName = "test";
         _expectedPortsConfig.CatletNetworkPorts[0].MacAddress = "00:00:00:00:00:02";
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
@@ -419,11 +421,13 @@ public class VirtualNetworkChangeTrackingTests : ChangeTrackingTestBase
         await WithHostScope(async stateStore =>
         {
             var subnet = await stateStore.For<VirtualNetworkSubnet>().GetByIdAsync(VirtualSubnetId);
+            subnet!.DnsDomain = "eryph.invalid";
             subnet!.MTU = 1300;
             await stateStore.SaveChangesAsync();
         });
 
         var networksConfig = await ReadNetworksConfig();
+        _expectedNetworksConfig.Networks![0].Subnets![0].DnsDomain = "eryph.invalid";
         _expectedNetworksConfig.Networks![0].Subnets![0].Mtu = 1300;
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
