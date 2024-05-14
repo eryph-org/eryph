@@ -71,16 +71,16 @@ namespace Eryph.Modules.VmHostAgent.Test
             };
 
             [Theory]
-            [InlineData(@"x:\default\test\vms\eryph\A6RKKLNZNSOW", "default", "default", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\default\test\vms\eryph\A6RKKLNZNSOW\test.file", "default", "default", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\default\test\vms\eryph\p_testproject\A6RKKLNZNSOW", "default", "default", "testproject", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\scratch\test\A6RKKLNZNSOW", "default", "scratch", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\scratch\test\p_testproject\A6RKKLNZNSOW", "default", "scratch", "testproject", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\vms\A6RKKLNZNSOW", "qa", "default", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\vms\p_testproject\A6RKKLNZNSOW", "qa", "default", "testproject", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "cluster", "default", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\cluster\test\p_testproject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
-            [InlineData(@"x:\QA\Cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", "A6RKKLNZNSOW")]
+            [InlineData(@"x:\default\test\vms\eryph\a6rkklnznsow", "default", "default", "default", "a6rkklnznsow")]
+            [InlineData(@"x:\default\test\vms\eryph\a6rkklnznsow\test.file", "default", "default", "default", "a6rkklnznsow")]
+            [InlineData(@"x:\default\test\vms\eryph\p_testproject\a6rkklnznsow", "default", "default", "testproject", "a6rkklnznsow")]
+            [InlineData(@"x:\scratch\test\a6rkklnznsow", "default", "scratch", "default", "a6rkklnznsow")]
+            [InlineData(@"x:\scratch\test\p_testproject\a6rkklnznsow", "default", "scratch", "testproject", "a6rkklnznsow")]
+            [InlineData(@"x:\qa\test\vms\a6rkklnznsow", "qa", "default", "default", "a6rkklnznsow")]
+            [InlineData(@"x:\qa\test\vms\p_testproject\a6rkklnznsow", "qa", "default", "testproject", "a6rkklnznsow")]
+            [InlineData(@"x:\qa\cluster\test\a6rkklnznsow", "qa", "cluster", "default", "a6rkklnznsow")]
+            [InlineData(@"x:\qa\cluster\test\p_testproject\a6rkklnznsow", "qa", "cluster", "testproject", "a6rkklnznsow")]
+            [InlineData(@"x:\QA\Cluster\test\p_TestProject\a6rkklnznsow", "qa", "cluster", "testproject", "a6rkklnznsow")]
             public void FromVmPath_ValidPath_ReturnsStorageNames(
                 string path,
                 string expectedEnvironment,
@@ -90,20 +90,20 @@ namespace Eryph.Modules.VmHostAgent.Test
             {
                 var (names, storageIdentifier) = StorageNames.FromVmPath(path, _vmHostAgentConfiguration);
 
-                names.EnvironmentName.Should().BeSome(expectedEnvironment);
-                names.DataStoreName.Should().BeSome(expectedDataStore);
-                names.ProjectName.Should().BeSome(expectedProject);
-                storageIdentifier.Should().BeSome(expectedIdentifier);
+                names.EnvironmentName.Should().BeSome().Which.Should().Be(expectedEnvironment);
+                names.DataStoreName.Should().BeSome().Which.Should().Be(expectedDataStore);
+                names.ProjectName.Should().BeSome().Which.Should().Be(expectedProject);
+                storageIdentifier.Should().BeSome().Which.Should().Be(expectedIdentifier);
             }
 
             [Theory]
             [InlineData(@"x:\some\folder")]
             // It must not match any default paths for volumes
-            [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW")]
-            [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW\test.file")]
-            [InlineData(@"x:\default\test\volumes\eryph\p_TestProject\A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\volumes\A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\volumes\p_TestProject\A6RKKLNZNSOW")]
+            [InlineData(@"x:\default\test\volumes\eryph\a6rkklnznsow")]
+            [InlineData(@"x:\default\test\volumes\eryph\a6rkklnznsow\test.file")]
+            [InlineData(@"x:\default\test\volumes\eryph\p_TestProject\a6rkklnznsow")]
+            [InlineData(@"x:\qa\test\volumes\a6rkklnznsow")]
+            [InlineData(@"x:\qa\test\volumes\p_TestProject\a6rkklnznsow")]
             public void FromVmPath_InvalidPath_ReturnsNone(string path)
             {
                 var (names, storageIdentifier) = StorageNames.FromVmPath(path, _vmHostAgentConfiguration);
@@ -115,17 +115,17 @@ namespace Eryph.Modules.VmHostAgent.Test
             }
 
             [Theory]
-            [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW", "default", "default", "default",false, "A6RKKLNZNSOW")]
-            [InlineData(@"x:\default\test\volumes\eryph\A6RKKLNZNSOW\test.file", "default", "default", "default", false, "A6RKKLNZNSOW")]
-            [InlineData(@"x:\default\test\volumes\eryph\p_testproject\A6RKKLNZNSOW", "default", "default", "testproject", false, "A6RKKLNZNSOW")]
-            [InlineData(@"x:\scratch\test\A6RKKLNZNSOW", "default", "scratch", "default", false,"A6RKKLNZNSOW")]
-            [InlineData(@"x:\scratch\test\p_testproject\A6RKKLNZNSOW", "default", "scratch", "testproject", false, "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\volumes\A6RKKLNZNSOW", "qa", "default", "default",false, "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\volumes\p_testproject\A6RKKLNZNSOW", "qa", "default", "testproject", false, "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\volumes\p_21A549A0-683B-4686-9DD8-40B7D938E495\A6RKKLNZNSOW", "qa", "default", "{21A549A0-683B-4686-9DD8-40B7D938E495}",true, "A6RKKLNZNSOW" )]
-            [InlineData(@"x:\qa\cluster\test\A6RKKLNZNSOW", "qa", "cluster", "default", false, "A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\cluster\test\p_testproject\A6RKKLNZNSOW", "qa", "cluster", "testproject", false, "A6RKKLNZNSOW")]
-            [InlineData(@"x:\QA\Cluster\test\p_TestProject\A6RKKLNZNSOW", "qa", "cluster", "testproject", false, "A6RKKLNZNSOW")]
+            [InlineData(@"x:\default\test\volumes\eryph\a6rkklnznsow", "default", "default", "default",false, "a6rkklnznsow")]
+            [InlineData(@"x:\default\test\volumes\eryph\a6rkklnznsow\test.file", "default", "default", "default", false, "a6rkklnznsow")]
+            [InlineData(@"x:\default\test\volumes\eryph\p_testproject\a6rkklnznsow", "default", "default", "testproject", false, "a6rkklnznsow")]
+            [InlineData(@"x:\scratch\test\a6rkklnznsow", "default", "scratch", "default", false, "a6rkklnznsow")]
+            [InlineData(@"x:\scratch\test\p_testproject\a6rkklnznsow", "default", "scratch", "testproject", false, "a6rkklnznsow")]
+            [InlineData(@"x:\qa\test\volumes\a6rkklnznsow", "qa", "default", "default",false, "a6rkklnznsow")]
+            [InlineData(@"x:\qa\test\volumes\p_testproject\a6rkklnznsow", "qa", "default", "testproject", false, "a6rkklnznsow")]
+            [InlineData(@"x:\qa\test\volumes\p_21A549A0-683B-4686-9DD8-40B7D938E495\a6rkklnznsow", "qa", "default", "{21A549A0-683B-4686-9DD8-40B7D938E495}",true, "a6rkklnznsow")]
+            [InlineData(@"x:\qa\cluster\test\a6rkklnznsow", "qa", "cluster", "default", false, "a6rkklnznsow")]
+            [InlineData(@"x:\qa\cluster\test\p_testproject\a6rkklnznsow", "qa", "cluster", "testproject", false, "a6rkklnznsow")]
+            [InlineData(@"x:\QA\Cluster\test\p_TestProject\a6rkklnznsow", "qa", "cluster", "testproject", false, "a6rkklnznsow")]
             [InlineData(@"x:\\default\test\volumes\eryph\genepool\testorg\testgene\testversion\volumes\test.vhdx", "default", "default", "default", false, "gene:testorg/testgene/testversion:test")]
             public void FromVhdPath_ValidPath_ReturnsStorageNames(
                 string path,
@@ -145,17 +145,17 @@ namespace Eryph.Modules.VmHostAgent.Test
                 else
                     names.ProjectName.Should().BeSome().Which.Should().Be(expectedProject);
 
-                storageIdentifier.Should().BeSome().Which.Should().Be(expectedIdentifier.ToLowerInvariant());
+                storageIdentifier.Should().BeSome().Which.Should().Be(expectedIdentifier);
             }
 
             [Theory]
             [InlineData(@"x:\some\folder")]
             // It must not match any default paths for virtual machines
-            [InlineData(@"x:\default\test\vms\eryph\A6RKKLNZNSOW")]
-            [InlineData(@"x:\default\test\vms\eryph\A6RKKLNZNSOW\test.file")]
-            [InlineData(@"x:\default\test\vms\eryph\p_TestProject\A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\vms\A6RKKLNZNSOW")]
-            [InlineData(@"x:\qa\test\vms\p_TestProject\A6RKKLNZNSOW")]
+            [InlineData(@"x:\default\test\vms\eryph\a6rkklnznsow")]
+            [InlineData(@"x:\default\test\vms\eryph\a6rkklnznsow\test.file")]
+            [InlineData(@"x:\default\test\vms\eryph\p_TestProject\a6rkklnznsow")]
+            [InlineData(@"x:\qa\test\vms\a6rkklnznsow")]
+            [InlineData(@"x:\qa\test\vms\p_TestProject\a6rkklnznsow")]
             public void FromVhdPath_InvalidPath_ReturnsNone(string path)
             {
                 var (names, storageIdentifier) = StorageNames.FromVhdPath(path, _vmHostAgentConfiguration);
@@ -300,12 +300,12 @@ namespace Eryph.Modules.VmHostAgent.Test
             public void FromVmPath_ValidPath_ReturnsStorageNames()
             {
                 var (names, storageIdentifier) = StorageNames.FromVmPath(
-                    @"x:\default\test\vms\eryph\A6RKKLNZNSOW", _vmHostAgentConfiguration);
+                    @"x:\default\test\vms\eryph\a6rkklnznsow", _vmHostAgentConfiguration);
 
-                names.EnvironmentName.Should().BeSome("default");
-                names.DataStoreName.Should().BeSome("default");
-                names.ProjectName.Should().BeSome("default");
-                storageIdentifier.Should().BeSome("A6RKKLNZNSOW");
+                names.EnvironmentName.Should().BeSome().Which.Should().Be("default");
+                names.DataStoreName.Should().BeSome().Which.Should().Be("default");
+                names.ProjectName.Should().BeSome().Which.Should().Be("default");
+                storageIdentifier.Should().BeSome().Which.Should().Be("a6rkklnznsow");
             }
 
             [Fact]
@@ -323,12 +323,12 @@ namespace Eryph.Modules.VmHostAgent.Test
             public void FromVhdPath_ValidPath_ReturnsStorageNames()
             {
                 var (names, storageIdentifier) = StorageNames.FromVhdPath(
-                    @"x:\default\test\volumes\eryph\A6RKKLNZNSOW", _vmHostAgentConfiguration);
+                    @"x:\default\test\volumes\eryph\a6rkklnznsow", _vmHostAgentConfiguration);
 
-                names.EnvironmentName.Should().BeSome("default");
-                names.DataStoreName.Should().BeSome("default");
-                names.ProjectName.Should().BeSome("default");
-                storageIdentifier.Should().BeSome("A6RKKLNZNSOW");
+                names.EnvironmentName.Should().BeSome().Which.Should().Be("default");
+                names.DataStoreName.Should().BeSome().Which.Should().Be("default");
+                names.ProjectName.Should().BeSome().Which.Should().Be("default");
+                storageIdentifier.Should().BeSome().Which.Should().Be("a6rkklnznsow");
             }
 
             [Fact]
