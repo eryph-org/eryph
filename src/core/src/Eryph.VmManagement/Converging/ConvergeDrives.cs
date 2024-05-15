@@ -10,8 +10,8 @@ using Eryph.VmManagement.Storage;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
-using Prelude = LanguageExt.Prelude;
-using Unit = LanguageExt.Unit;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging
 {
@@ -67,7 +67,7 @@ namespace Eryph.VmManagement.Converging
 
             return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine,
                     Context.VmHostAgentConfig, vmInfo.GetList(x=>x.HardDrives))
-                from _ in plannedDiskSettings.MapToEitherAsync(s => VirtualDisk(s, vmInfo, currentDiskSettings).ToEither()).ToAsync()
+                from _ in plannedDiskSettings.MapToEitherAsync(s => ConvergeVirtualDisk(s, vmInfo, currentDiskSettings).ToEither()).ToAsync()
                 select Unit.Default);
         }
         
@@ -228,148 +228,148 @@ namespace Eryph.VmManagement.Converging
 
         }
 
-        private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> VirtualDisk(
+        private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeVirtualDisk(
             HardDiskDriveStorageSettings driveSettings,
             TypedPsObject<VirtualMachineInfo> vmInfo,
-            Seq<CurrentHardDiskDriveStorageSettings> currentStorageSettings)
-        {
-            var currentSettings =
-                currentStorageSettings.Find(x =>
-                    driveSettings.DiskSettings.Path.Equals(x.DiskSettings.Path, StringComparison.OrdinalIgnoreCase)
-                    && driveSettings.DiskSettings.Name.Equals(x.DiskSettings.Name,
-                        StringComparison.OrdinalIgnoreCase));
-
-            var frozenOptional = currentSettings.Map(x => x.Frozen);
-
-            if (frozenOptional.IsSome && frozenOptional.ValueUnsafe())
+            Seq<CurrentHardDiskDriveStorageSettings> currentStorageSettings) =>
+            from _ in RightAsync<Error, Unit>(unit)
+            let currentSettings = currentStorageSettings.Find(x =>
+                driveSettings.DiskSettings.Path.Equals(x.DiskSettings.Path, StringComparison.OrdinalIgnoreCase)
+                && driveSettings.DiskSettings.Name.Equals(x.DiskSettings.Name, StringComparison.OrdinalIgnoreCase))
+            let isFrozen = currentSettings.Map(s => s.Frozen).IfNone(false)
+            from reloadedVmInfo in isFrozen switch
             {
-                return Context
-                    .ReportProgressAsync(
+                true =>
+                    from _ in Context.ReportProgressAsync(
                         $"Skipping HD Drive '{driveSettings.DiskSettings.Name}': storage management is disabled for this disk.")
-                    .Map(_ => vmInfo);
+                    select vmInfo,
+                false =>
+                    from vhdPath in driveSettings.AttachPath.ToEitherAsync(Error.New(
+                        $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
+                    from testPathResult in Context.Engine.GetObjectsAsync<bool>(
+                            new PsCommandBuilder().AddCommand("Test-Path").AddArgument(vhdPath))
+                        .ToError().ToAsync()
+                    let fileExists = testPathResult.Any(v => v.Value)
+                    from __ in fileExists
+                        ? UpdateVirtualDisk(driveSettings)
+                        : CreateVirtualDisk(driveSettings)
+                    from uAttach in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
+                        i => i.HardDrives,
+                        device => device.Cast<HardDiskDriveInfo>()
+                            .Map(disk => currentSettings.Map(x => x.AttachedVMId) == disk.Id),
+                        async () =>
+                        {
+                            await Context
+                                .ReportProgress(
+                                    $"Attaching HD Drive {driveSettings.DiskSettings.Name} to controller: {driveSettings.ControllerNumber}, Location: {driveSettings.ControllerLocation}")
+                                .ConfigureAwait(false);
+                            return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
+                                BuildAttachCommand(vmInfo, vhdPath, driveSettings)
+                            ).ConfigureAwait(false);
+                        }).ToAsync()
+                    from reloadedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+                    select reloadedVmInfo
             }
+            select reloadedVmInfo;
 
 
-            var diskSizeUpdateInGb = Math.Round(driveSettings.DiskSettings.SizeBytes.GetValueOrDefault() / 1024d / 1024 / 1024, 1);
+        private EitherAsync<Error, Unit> CreateVirtualDisk(
+            HardDiskDriveStorageSettings driveSettings) =>
+            from vhdPath in driveSettings.AttachPath.ToEitherAsync(Error.New(
+                $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
+            from p1 in Context.ReportProgressAsync($"Creating HD Drive: {driveSettings.DiskSettings.Name}")
+            from uCreate in driveSettings.Type switch
+            {
+                CatletDriveType.SharedVHD or CatletDriveType.VHDSet =>
+                    driveSettings.DiskSettings.ParentSettings.Match(
+                        Some: parentSettings =>
+                            from _ in RightAsync<Error, Unit>(unit)
+                            // Shared VHDs and VHD sets don't support differencing disks.
+                            // Hence, we need to copy the parent disk (and then convert it to .vhds in case of a VHD set)
+                            let parentFilePath = Path.Combine(parentSettings.Path, parentSettings.FileName)
+                            // For shared VHD this doesn't change the path, but for a VHD set it does.
+                            let copyToPath = Path.ChangeExtension(vhdPath, "vhdx")
+                            from __ in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                                .AddCommand("Copy-Item")
+                                .AddArgument(parentFilePath)
+                                .AddArgument(copyToPath)
+                                .AddParameter("Force")).ToAsync().ToError()
+                            from ___ in ResetDiskIdentifier(copyToPath)
+                            from ____ in driveSettings.Type == CatletDriveType.SharedVHD
+                                ? RightAsync<Error, Unit>(unit)
+                                : Context.Engine.RunAsync(PsCommandBuilder.Create()
+                                    .AddCommand("Convert-VHD")
+                                    .AddArgument(copyToPath)
+                                    .AddArgument(vhdPath)).ToError().ToAsync()
+                            select unit,
+                        None: () =>
+                            from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                                .AddCommand("New-VHD")
+                                .AddParameter("Path", vhdPath)
+                                .AddParameter("Dynamic")
+                                .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate))
+                                .ToError().ToAsync()
+                            select unit),
+                _ => driveSettings.DiskSettings.ParentSettings.Match(
+                    Some: parentSettings =>
+                        from _ in RightAsync<Error, Unit>(unit)
+                        let parentFilePath = Path.Combine(parentSettings.Path, parentSettings.FileName)
+                        let newCommand = PsCommandBuilder.Create()
+                            .AddCommand("New-VHD")
+                            .AddParameter("Path", vhdPath)
+                            .AddParameter("ParentPath", parentFilePath)
+                            .AddParameter("Differencing")
+                            .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)
+                            .AddCommand("Set-VHD")
+                            .AddParameter("ResetDiskIdentifier")
+                            .AddParameter("Force")
+                        from __ in Context.Engine.RunAsync(newCommand).ToAsync().ToError()
+                        from ___ in ResetDiskIdentifier(vhdPath)
+                        select unit,
+                    None: () =>
+                        from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                            .AddCommand("New-VHD")
+                            .AddParameter("Path", vhdPath)
+                            .AddParameter("Dynamic")
+                            .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)).ToAsync().ToError()
+                        select unit)
+            }
+            select unit;
 
-            return driveSettings.AttachPath.Map(vhdPath =>
-                        from fileExists in 
-                            Context.Engine.GetObjectsAsync<bool>(new PsCommandBuilder().AddCommand("Test-Path").AddArgument(vhdPath)).ToError().ToAsync()
-                        from uFile in fileExists.Find(x=> x.PsObject?.ToString() == "True").Match(
+        private EitherAsync<Error, Unit> ResetDiskIdentifier(string path) =>
+            from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                    .AddCommand("Set-VHD")
+                    .AddParameter("Path", path)
+                    .AddParameter("ResetDiskIdentifier")
+                    .AddParameter("Force"))
+                .ToAsync().ToError()
+            select unit;
 
-                            // file doesn't exists
-                            None: () =>
-                                from p1 in Context.ReportProgressAsync(
-                                    $"Creating HD Drive: {driveSettings.DiskSettings.Name}")
-
-                                from uCreate in
-                                    driveSettings.Type is CatletDriveType.SharedVHD or CatletDriveType.VHDSet
-                                        ? driveSettings.DiskSettings.ParentSettings.MatchAsync(async parentSettings =>
-                                                {
-                                                    // Shared VHDs and VHD sets don't support differencing disks.
-                                                    // Hence, we need to copy the parent disk (and then convert it to .vhds in case of a VHD set)
-                                                    var parentFilePath = Path.Combine(parentSettings.Path,
-                                                        parentSettings.FileName);
-
-                                                    // For shared VHD this doesn't change the path, but for a VHD set it does.
-                                                    var copyToPath = Path.ChangeExtension(vhdPath, "vhdx");
-
-                                                    var commandConvert = PsCommandBuilder.Create()
-                                                        .AddCommand("Convert-VHD")
-                                                        .AddArgument(copyToPath)
-                                                        .AddArgument(vhdPath);
-
-                                                    return
-                                                        await (from copy in Context.Engine.RunAsync(PsCommandBuilder.Create()
-                                                            .AddCommand("Copy-Item")
-                                                            .AddArgument(parentFilePath)
-                                                            .AddArgument(copyToPath)
-                                                            .AddParameter("Force")).ToAsync()
-                                                        from convert in
-                                                            driveSettings.Type == CatletDriveType.SharedVHD 
-                                                                ? Prelude.RightAsync<PowershellFailure, Unit>(Prelude.unit)
-                                                                : Context.Engine.RunAsync(commandConvert).ToAsync()
-                                                        select Prelude.unit).ToEither();
-                                                },
-                                                async () => await Context.Engine.RunAsync(PsCommandBuilder.Create()
-                                                    .AddCommand("New-VHD")
-                                                    .AddParameter("Path", vhdPath)
-                                                    .AddParameter("Dynamic")
-                                                    .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)))
-                                            .ToError().ToAsync()
-                                        :
-                                    driveSettings.DiskSettings.ParentSettings.MatchAsync(async parentSettings =>
-                                        {
-                                            var parentFilePath = Path.Combine(parentSettings.Path,
-                                                parentSettings.FileName);
-
-                                            var command = PsCommandBuilder.Create()
-                                                .AddCommand("New-VHD")
-                                                .AddParameter("Path", vhdPath)
-                                                .AddParameter("ParentPath", parentFilePath)
-                                                .AddParameter("Differencing")
-                                                .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)
-                                                .AddCommand("Set-VHD")
-                                                .AddParameter("ResetDiskIdentifier")
-                                                .AddParameter("Force");
-
-                                            return await Context.Engine.RunAsync(command);
-                                        },
-                                        async () => await Context.Engine.RunAsync(PsCommandBuilder.Create()
-                                            .AddCommand("New-VHD")
-                                            .AddParameter("Path", vhdPath)
-                                            .AddParameter("Dynamic")
-                                            .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)))
-                                    .ToError().ToAsync()
-                                select Prelude.unit,
-
-                            // file exists
-                            Some: _ => from size in
-
-                                    // get disk
-                                    from vhdInfo in Context.Engine.GetObjectsAsync<VhdInfo>(new PsCommandBuilder()
-                                            .AddCommand("get-vhd").AddArgument(vhdPath))
-                                        .ToError().ToAsync()
-                                        .Bind(s => s.HeadOrLeft(Errors.SequenceEmpty).ToAsync())
-
-                                    // resize if necessary
-                                    let sameSize = driveSettings.DiskSettings.SizeBytes.GetValueOrDefault() == 0
-                                                   || vhdInfo.Value.Size == driveSettings.DiskSettings.SizeBytes
-                                    from newSize in sameSize 
-                                        ? Prelude.RightAsync<Error, long>(vhdInfo.Value.Size)
-                                        : from pS in Context.ReportProgressAsync(
-                                                $"Resizing disk {driveSettings.DiskSettings.Name} to {diskSizeUpdateInGb} GB")
-                                          from uResize in Context.Engine.RunAsync(PsCommandBuilder.Create()
-                                                                   .AddCommand("Resize-VHD")
-                                                                   .AddParameter("Path", vhdPath)
-                                                                   .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytes))
-                                                .ToError().ToAsync()
-                                            select vhdInfo.Value.Size
-                                    select vhdInfo.Value.Size
-                                  select Prelude.unit)
-
-                        from uAttach in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
-                                i => i.HardDrives,
-                                device => device.Cast<HardDiskDriveInfo>()
-                                    .Map(disk => currentSettings.Map(x => x.AttachedVMId) == disk.Id),
-                                async () =>
-                                {
-                                    await Context
-                                        .ReportProgress(
-                                            $"Attaching HD Drive {driveSettings.DiskSettings.Name} to controller: {driveSettings.ControllerNumber}, Location: {driveSettings.ControllerLocation}")
-                                        .ConfigureAwait(false);
-                                    return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
-                                        BuildAttachCommand(vmInfo, vhdPath, driveSettings)
-                                    ).ConfigureAwait(false);
-                                }).ToAsync()
-
-                        select Prelude.unit
-
-
-            )
-                .Traverse(l=>l)
-                .Bind(_ => vmInfo.RecreateOrReload(Context.Engine));
-        }
+        private EitherAsync<Error, Unit> UpdateVirtualDisk(
+            HardDiskDriveStorageSettings driveSettings) =>
+            from vhdPath in driveSettings.AttachPath.ToEitherAsync(Error.New(
+                $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
+            // get disk
+            from vhdInfos in Context.Engine.GetObjectsAsync<VhdInfo>(new PsCommandBuilder()
+                    .AddCommand("get-vhd").AddArgument(vhdPath))
+                .ToError().ToAsync()
+            from vhdInfo in vhdInfos.HeadOrLeft(Errors.SequenceEmpty).ToAsync()
+            // resize if necessary
+            let newSize = driveSettings.DiskSettings.SizeBytes.GetValueOrDefault()
+            let hasCorrectSize = newSize == 0 || vhdInfo.Value.Size == newSize
+            from _ in hasCorrectSize
+                ? RightAsync<Error, Unit>(unit)
+                : from _ in RightAsync<Error, Unit>(unit)
+                  let diskSizeUpdateInGb = Math.Round(newSize / 1024d / 1024 / 1024, 1)
+                  from pS in Context.ReportProgressAsync(
+                      $"Resizing disk {driveSettings.DiskSettings.Name} to {diskSizeUpdateInGb} GB")
+                  from uResize in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                          .AddCommand("Resize-VHD")
+                          .AddParameter("Path", vhdPath)
+                          .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytes))
+                      .ToError().ToAsync()
+                  select unit
+            select unit;
 
         private static PsCommandBuilder BuildAttachCommand(TypedPsObject<VirtualMachineInfo> vmInfo, string vhdPath, VMDriveStorageSettings driveSettings)
         {
