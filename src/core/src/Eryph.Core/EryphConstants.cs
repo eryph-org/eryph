@@ -13,7 +13,7 @@ namespace Eryph.Core
         public static readonly string DefaultNetworkName = "default";
         public static readonly string DefaultProviderName = "default";
         public static readonly string DefaultSubnetName = "default";
-        public static readonly string DefaultIPPoolName = "default";
+        public static readonly string DefaultIpPoolName = "default";
 
         public static readonly string OverlaySwitchName = "eryph_overlay";
         public static readonly string SwitchExtensionName = "dbosoft Open vSwitch Extension";

@@ -308,7 +308,10 @@ namespace Eryph.VmManagement.Converging
                                                 .AddParameter("Path", vhdPath)
                                                 .AddParameter("ParentPath", parentFilePath)
                                                 .AddParameter("Differencing")
-                                                .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate);
+                                                .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)
+                                                .AddCommand("Set-VHD")
+                                                .AddParameter("ResetDiskIdentifier")
+                                                .AddParameter("Force");
 
                                             return await Context.Engine.RunAsync(command);
                                         },

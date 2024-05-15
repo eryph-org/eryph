@@ -93,7 +93,7 @@ namespace Eryph.VmManagement.Storage
                         DataStoreName = pathCandidate.Datastore,
                         EnvironmentName = pathCandidate.Environment,
                         ProjectName = projectNameOrId.Id.IsNone 
-                            ? projectNameOrId.Name.Map(n => n.Value).IfNone("default")
+                            ? projectNameOrId.Name.Map(n => n.Value).IfNone(EryphConstants.DefaultProjectName)
                             : None,
                         ProjectId = projectNameOrId.Id
                     },
@@ -154,8 +154,8 @@ namespace Eryph.VmManagement.Storage
             string environment,
             VmHostAgentConfiguration vmHostAgentConfig)
         {
-            return dataStore == "default"
-                ? from defaults in environment == "default"
+            return dataStore == EryphConstants.DefaultDataStoreName
+                ? from defaults in environment == EryphConstants.DefaultEnvironmentName
                     ? vmHostAgentConfig.Defaults
                     : from envConfig in Optional(vmHostAgentConfig.Environments).ToSeq().Flatten()
                         .Where(e => e.Name == environment)
@@ -165,7 +165,7 @@ namespace Eryph.VmManagement.Storage
                 : from defaultDatastoreConfig in Optional(vmHostAgentConfig.Datastores).ToSeq().Flatten()
                     .Where(ds => ds.Name == dataStore)
                     .HeadOrLeft(Error.New($"The datastore {dataStore} is not configured"))
-                  let datastoreConfig = environment == "default"
+                  let datastoreConfig = environment == EryphConstants.DefaultEnvironmentName
                         ? defaultDatastoreConfig
                         : match(from envConfig in vmHostAgentConfig.Environments
                                 where envConfig.Name == environment

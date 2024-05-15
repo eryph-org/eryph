@@ -2,7 +2,6 @@
 using Eryph.VmManagement.Storage;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
-using LanguageExt.SomeHelp;
 using Xunit;
 
 namespace Eryph.Modules.VmHostAgent.Test

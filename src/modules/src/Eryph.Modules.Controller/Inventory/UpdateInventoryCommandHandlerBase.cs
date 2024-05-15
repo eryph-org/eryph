@@ -217,12 +217,14 @@ namespace Eryph.Modules.Controller.Inventory
                 }).ConfigureAwait(false);
             }
 
-            try
-            {
-                var outdatedDisks = (await _vhdDataService.FindOutdated(timestamp, hostMachine.Name)).ToArray();
-                if (outdatedDisks.Length == 0)
-                    return;
-                await _dispatcher.StartNew(new CheckDisksExistsCommand
+            
+            var outdatedDisks = (await _vhdDataService.FindOutdated(timestamp, hostMachine.Name)).ToArray();
+            if (outdatedDisks.Length == 0)
+                return;
+            await _dispatcher.StartNew(
+                EryphConstants.DefaultTenantId,
+                Guid.NewGuid().ToString(),
+                new CheckDisksExistsCommand
                 {
                     AgentName = hostMachine.Name,
                     Disks = outdatedDisks.Select(d => new DiskInfo
@@ -238,12 +240,7 @@ namespace Eryph.Modules.Controller.Inventory
                         Path = d.Path,
                         DiskIdentifier = d.DiskIdentifier
                     }).ToArray()
-                }, new OperationDataRecord(EryphConstants.DefaultTenantId, Guid.NewGuid().ToString()));
-            }
-            catch (Exception ex)
-            {
-                throw;
-            }
+                });
         }
 
         private async Task<Option<VirtualDisk>> LookupVirtualDisk(DiskInfo diskInfo, Project project,
