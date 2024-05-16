@@ -10,6 +10,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;
+using YamlDotNet.Core.Tokens;
 
 namespace Eryph.Modules.Controller.Networks;
 
@@ -210,21 +211,15 @@ internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProvider
             .Apply(s => JoinPlans(s, networkPlan));
 
     private static Seq<CatletDnsInfo> MapCatletPortsToDnsInfos(Seq<CatletNetworkPort> ports) =>
-        ports
-            .Where(x=>!string.IsNullOrWhiteSpace(x.AddressName))
-            .Map(port => new CatletDnsInfo(port.CatletMetadataId.ToString(),
-            new Map<string, string>(
-                port.IpAssignments
-                    .Map(x => ($"{port.AddressName}.{x.Subnet.DnsDomain}", x.IpAddress)).ToArray())
-                    .Append(port.IpAssignments
-                        .Map(x => (GetPTRFromAddress(x.IpAddress), $"{port.AddressName}.{x.Subnet.DnsDomain}")).ToArray())
-                    
-                    .GroupBy(x=>x.Item1)
-                    .Map( g=> (g.Key,string.Join(' ', g.Map(gi=>gi.Item2))) )
-                    .ToMap()
-                    
-                )
-        );
+        ports.Where(x => !string.IsNullOrWhiteSpace(x.AddressName))
+            .Map(port => new CatletDnsInfo(
+                port.CatletMetadataId.ToString(),
+                port.IpAssignments.SelectMany(a => Prelude.Seq(
+                        (Name: $"{port.AddressName}.{a.Subnet.DnsDomain}", Value: a.IpAddress),
+                        (Name: GetPTRFromAddress(a.IpAddress), Value: $"{port.AddressName}.{a.Subnet.DnsDomain}")))
+                    .GroupBy(x => x.Name)
+                    .Map(g => (g.Key, string.Join(' ', g.Map(gi => gi.Value))))
+                    .ToMap()));
    
     private static string GetPTRFromAddress(string address) =>
         string.Join(".", address.Split('.').Reverse().ToArray()) + ".in-addr.arpa";
