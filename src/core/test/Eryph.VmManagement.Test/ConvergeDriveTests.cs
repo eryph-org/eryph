@@ -36,7 +36,7 @@ namespace Eryph.VmManagement.Test
 
             var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
             {
-                Id = new Guid(),
+                Id = Guid.NewGuid(),
                 HardDrives = new[]{new HardDiskDriveInfo
                 {
                     Id = Guid.NewGuid().ToString(),
@@ -116,7 +116,7 @@ namespace Eryph.VmManagement.Test
 
             var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
             {
-                Id = new Guid(),
+                Id = Guid.NewGuid(),
                 HardDrives = new []
                 {
                     new HardDiskDriveInfo
@@ -224,10 +224,11 @@ namespace Eryph.VmManagement.Test
 
             var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
             {
-                Id = new Guid(),
+                Id = Guid.NewGuid(),
             });
 
-            AssertCommand? vhdCommand = null;
+            AssertCommand? newVhdCommand = null;
+            AssertCommand? setVhdCommand = null;
             AssertCommand? attachCommand = null;
 
             _fixture.Engine.RunCallback = command =>
@@ -239,7 +240,9 @@ namespace Eryph.VmManagement.Test
                         .ShouldBeParam("CheckpointType");
                 }
 
-                if (command.ToString().Contains("New-VHD")) vhdCommand = command;
+                if (command.ToString().Contains("New-VHD")) newVhdCommand = command;
+
+                if (command.ToString().Contains("Set-VHD")) setVhdCommand = command;
 
                 return Unit.Default;
             };
@@ -282,12 +285,18 @@ namespace Eryph.VmManagement.Test
             var convergeTask = new ConvergeDrives(_fixture.Context);
             _ = (await convergeTask.Converge(vmData)).IfLeft(l => l.Throw());
 
-            vhdCommand.Should().NotBeNull();
-            vhdCommand!.ShouldBeCommand("New-VHD")
+            newVhdCommand.Should().NotBeNull();
+            newVhdCommand!.ShouldBeCommand("New-VHD")
                 .ShouldBeParam("Path", @"x:\disks\abc\sda_g1.vhdx")
                 .ShouldBeParam("ParentPath", @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")
                 .ShouldBeFlag("Differencing")
                 .ShouldBeParam("SizeBytes", 1073741824);
+
+            setVhdCommand.Should().NotBeNull();
+            setVhdCommand!.ShouldBeCommand("Set-VHD").
+                ShouldBeParam("Path", @"x:\disks\abc\sda_g1.vhdx")
+                .ShouldBeFlag("ResetDiskIdentifier")
+                .ShouldBeFlag("Force");
 
             attachCommand.Should().NotBeNull();
             attachCommand!.ShouldBeCommand("Add-VMHardDiskDrive")
@@ -317,10 +326,11 @@ namespace Eryph.VmManagement.Test
 
             var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
             {
-                Id = new Guid(),
+                Id = Guid.NewGuid(),
             });
 
-            AssertCommand? vhdCommand = null;
+            AssertCommand? convertVhdCommand = null;
+            AssertCommand? setVhdCommand = null;
             AssertCommand? copyCommand = null;
             AssertCommand? attachCommand = null;
             var diskName = driveType == CatletDriveType.SharedVHD ? "sda.vhdx" : "sda.vhds";
@@ -334,7 +344,8 @@ namespace Eryph.VmManagement.Test
                         .ShouldBeParam("CheckpointType");
                 }
 
-                if (command.ToString().Contains("Convert-VHD")) vhdCommand = command;
+                if (command.ToString().Contains("Convert-VHD")) convertVhdCommand = command;
+                if (command.ToString().Contains("Set-VHD")) setVhdCommand = command;
                 if (command.ToString().Contains("Copy-Item")) copyCommand = command;
 
                 return Unit.Default;
@@ -385,14 +396,20 @@ namespace Eryph.VmManagement.Test
                 .ShouldBeArgument(@"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")
                 .ShouldBeArgument(@"x:\disks\abc\sda.vhdx");
 
+            setVhdCommand.Should().NotBeNull();
+            setVhdCommand!.ShouldBeCommand("Set-VHD").
+                ShouldBeParam("Path", @"x:\disks\abc\sda.vhdx")
+                .ShouldBeFlag("ResetDiskIdentifier")
+                .ShouldBeFlag("Force");
+
             if (driveType == CatletDriveType.SharedVHD)
             {
-                vhdCommand.Should().BeNull();
+                convertVhdCommand.Should().BeNull();
             }
             else
             {
-                vhdCommand.Should().NotBeNull();
-                vhdCommand!.ShouldBeCommand("Convert-VHD")
+                convertVhdCommand.Should().NotBeNull();
+                convertVhdCommand!.ShouldBeCommand("Convert-VHD")
                     .ShouldBeArgument(@"x:\disks\abc\sda.vhdx")
                     .ShouldBeArgument(@"x:\disks\abc\sda.vhds");
             }

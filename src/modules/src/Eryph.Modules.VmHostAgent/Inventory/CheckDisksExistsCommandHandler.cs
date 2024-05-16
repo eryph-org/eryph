@@ -16,80 +16,62 @@ using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Inventory
+namespace Eryph.Modules.VmHostAgent.Inventory;
+
+[UsedImplicitly]
+public class CheckDisksExistsCommandHandler(
+    ITaskMessaging taskMessaging,
+    ILogger logger,
+    IPowershellEngine psEngine,
+    IHostSettingsProvider hostSettings,
+    IVmHostAgentConfigurationManager configurationManager)
+    : IHandleMessages<OperationTask<CheckDisksExistsCommand>>
 {
-    [UsedImplicitly]
-    public class CheckDisksExistsCommandHandler(
-        ITaskMessaging taskMessaging, ILogger logger, IPowershellEngine psEngine,
-        IHostSettingsProvider hostSettings,
-        IVmHostAgentConfigurationManager configurationManager) : IHandleMessages<OperationTask<CheckDisksExistsCommand>>
+    public async Task Handle(OperationTask<CheckDisksExistsCommand> message)
     {
-        public async Task Handle(OperationTask<CheckDisksExistsCommand> message)
+        var missingDisks = new List<DiskInfo>();
+        foreach (var disk in message.Command.Disks)
         {
-            var missingDisks = new List<DiskInfo>();
-            foreach (var disk in message.Command.Disks)
+            if (!File.Exists(Path.Combine(disk.Path, disk.FileName)))
             {
-                var fullPath = Path.Combine(disk.Path, disk.FileName);
-                try
+                missingDisks.Add(disk);
+                continue;
+            }
+
+            await ShouldRemoveDisk(disk).Match(
+                Right: shouldRemove =>
                 {
-                    if (!File.Exists(fullPath))
+                    if (shouldRemove)
                     {
                         missingDisks.Add(disk);
-                        continue;
                     }
-
-                    var storageNames = new StorageNames()
-                    {
-                        ProjectId = Optional(disk.ProjectId),
-                        ProjectName = disk.ProjectName,
-                        DataStoreName = disk.DataStore,
-                        EnvironmentName = disk.Environment,
-                    };
-
-                    _ =
-                        await (from hostSettings in hostSettings.GetHostSettings()
-                        from vmHostAgentConfig in configurationManager.GetCurrentConfiguration(hostSettings)
-                        from storageSettings in DiskStorageSettings.FromVhdPath(psEngine, vmHostAgentConfig, fullPath)
-                        select storageSettings).Match(
-                        info =>
-                        {
-                            if (info.DiskIdentifier != disk.DiskIdentifier
-                                || info.StorageIdentifier != (disk.StorageIdentifier == null 
-                                    ? None : Some(disk.StorageIdentifier))
-
-                                // check if storage names are different if they could be detected
-                                // otherwise saved data was auto assigned to default project and environment
-                                || info.StorageNames is { IsValid: true } 
-                                    && (info.StorageNames.ProjectId.IsSome && storageNames.ProjectId != info.StorageNames.ProjectId
-                                        || (info.StorageNames.ProjectId.IsNone
-                                            && storageNames.ProjectName != info.StorageNames.ProjectName)
-                                        || storageNames.EnvironmentName != info.StorageNames.EnvironmentName))
-
-                            {
-                                missingDisks.Add(disk);
-                            }
-                            return Unit.Default;
-                        },
-                        l =>
-                        {
-                            l.Throw();
-                            return Unit.Default;
-                        }
-
-                    );
-
-                }
-                catch (Exception ex)
+                },
+                Left: error =>
                 {
-                    logger.LogError(ex, "Error checking disk {disk}", disk.Path);
-                }
-            }
-            
-            await taskMessaging.CompleteTask(message, new CheckDisksExistsReply
-            {
-                MissingDisks = missingDisks.ToArray()
-            });
-
+                    logger.LogError(error, "Failed to check disk {Path}", disk.Path);
+                });
         }
+            
+        await taskMessaging.CompleteTask(message, new CheckDisksExistsReply
+        {
+            MissingDisks = missingDisks.ToArray()
+        });
+
     }
+
+    private EitherAsync<Error, bool> ShouldRemoveDisk(DiskInfo toCheck) =>
+        from hostSettings in hostSettings.GetHostSettings()
+        from vmHostAgentConfig in configurationManager.GetCurrentConfiguration(hostSettings)
+        let fullPath = Path.Combine(toCheck.Path, toCheck.FileName)
+        from storageSettings in DiskStorageSettings.FromVhdPath(psEngine, vmHostAgentConfig, fullPath)
+        select storageSettings.DiskIdentifier != toCheck.DiskIdentifier
+               || storageSettings.StorageIdentifier != Optional(toCheck.StorageIdentifier)
+               // check if storage names are different if they could be detected
+               // otherwise saved data was auto assigned to default project and environment
+               || storageSettings.StorageNames is { IsValid: true }
+               && (storageSettings.StorageNames.ProjectId.Match(
+                       Some: projectId => projectId != Optional(toCheck.ProjectId),
+                       None: () => storageSettings.StorageNames.ProjectName != Optional(toCheck.ProjectName))
+                   || storageSettings.StorageNames.EnvironmentName != toCheck.Environment
+                   || storageSettings.StorageNames.DataStoreName != toCheck.DataStore);
 }

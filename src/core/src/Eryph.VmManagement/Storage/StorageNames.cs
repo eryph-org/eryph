@@ -23,7 +23,9 @@ namespace Eryph.VmManagement.Storage
         public Option<string> EnvironmentName { get; init; } = EryphConstants.DefaultEnvironmentName;
         public Option<Guid> ProjectId { get; init; } = Option<Guid>.None;
 
-        public bool IsValid => DataStoreName.IsSome && ProjectName.IsSome && EnvironmentName.IsSome;
+        public bool IsValid => (ProjectId.IsSome || ProjectName.IsSome)
+            && DataStoreName.IsSome 
+            && EnvironmentName.IsSome;
 
         public static (StorageNames Names, Option<string> StorageIdentifier) FromVmPath(
             string path,
@@ -76,7 +78,7 @@ namespace Eryph.VmManagement.Storage
                     .Somes()
                     .HeadOrNone()
                 from root in pathCandidate.RelativePath.Split(Path.DirectorySeparatorChar).HeadOrNone()
-                let projectNameOrId = GetProjectNameOrId(root)
+                from projectNameOrId in GetProjectNameOrId(root)
                 let remainingPath = projectNameOrId.Id.IsSome || projectNameOrId.Name.IsSome
                     ? Path.GetRelativePath(root + Path.DirectorySeparatorChar, pathCandidate.RelativePath)
                     : pathCandidate.RelativePath
@@ -181,18 +183,19 @@ namespace Eryph.VmManagement.Storage
         {
             return projectName == EryphConstants.DefaultProjectName ? dsPath : Path.Combine(dsPath, $"p_{projectName}");
         }
-        private static (Option<ProjectName> Name, Option<Guid> Id) GetProjectNameOrId(string root)
+
+        private static Option<(Option<ProjectName> Name, Option<Guid> Id)> GetProjectNameOrId(string root)
         {
             if (!root.StartsWith("p_"))
                 return (None, None);
 
-            var name = root.Remove(0, "p_".Length);
+            var name = root["p_".Length..];
             if(Guid.TryParse(name, out var id))
                 return (None, Some(id));
 
-            return (ConfigModel.ProjectName.NewOption(name),None);
+            return ConfigModel.ProjectName.NewOption(name).Match(
+                Some: n => Option<(Option<ProjectName> Name, Option<Guid> Id)>.Some((n, None)),
+                None: () => Option<(Option<ProjectName> Name, Option<Guid> Id)>.None);
         }
-
-        
     }
 }
