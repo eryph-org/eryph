@@ -82,8 +82,8 @@ namespace Eryph.VmManagement.Storage
             VmHostAgentConfiguration vmHostAgentConfig,
             string path) =>
             from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path).ToAsync().ToError()
-            from vhdInfo in optionalVhdInfo.ToEitherAsync(
-                Error.New("Failed to read VHD"))
+            from vhdInfo in optionalVhdInfo.ToEitherAsync(Error.New(
+                $"Could not read VHD {path}"))
             let nameAndId = StorageNames.FromVhdPath(vhdInfo.Value.Path,
                 vmHostAgentConfig)
             let parentPath = Optional(vhdInfo.Value.ParentPath).Filter(notEmpty)
