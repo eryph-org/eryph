@@ -31,7 +31,14 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             services.AddOptions<ApiProviderOptions>();
             services.Configure(options);
 
-            services.AddProblemDetails();
+            services.AddProblemDetails(options =>
+            {
+                options.CustomizeProblemDetails = (context) =>
+                {
+                    context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+
+                };
+            });
 
             services.AddTransient<ICorrelationIdGenerator, CorrelationIdGenerator>();
             //mvcBuilder.AddApplicationPart(typeof(VersionedMetadataController).Assembly);
@@ -125,6 +132,8 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             //var modelBuilder = app.ApplicationServices.GetRequiredService<VersionedODataModelBuilder>();
             var provider = app.ApplicationServices.GetRequiredService<IApiVersionDescriptionProvider>();
 
+            app.UseMiddleware<CorrelationIdMiddleware>();
+
             app.UseExceptionHandler();
             app.UseStatusCodePages();
 
@@ -136,8 +145,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
 
             app.UseAuthentication();
             app.UseAuthorization();
-
-            app.UseMiddleware<CorrelationIdMiddleware>();
 
             //uncomment this when endpoint routing is working again
             app.UseEndpoints(endpoints =>
