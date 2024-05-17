@@ -75,7 +75,7 @@ public class UpdateProjectNetworkPlanCommandHandler : IHandleMessages<OperationT
             {
                 ProjectId = message.Command.ProjectId,
                 UpdatedAddresses = plan.PlannedNATRules
-                    .Values.Map(port => new ArpRecord
+                    .Values.Map(port => new NetworkNeighborRecord
                     {
                         IpAddress = port.ExternalIP,
                         MacAddress = port.ExternalMAC

@@ -10,6 +10,6 @@ public class UpdateNetworksSagaData : TaskWorkflowSagaData
 {
     public List<Guid>? ProjectsCompleted { get; set; }
     public Guid[]? ProjectIds { get; set; }
-    public List<ArpRecord>? UpdatedAddresses { get; set; }
+    public List<NetworkNeighborRecord>? UpdatedAddresses { get; set; }
 
 }

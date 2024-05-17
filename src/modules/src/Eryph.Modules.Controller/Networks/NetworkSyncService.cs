@@ -7,13 +7,16 @@ using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVN;
 using Eryph.Core;
 using Eryph.Core.Network;
+using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.ModuleCore.Networks;
+using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
+using Rebus.Bus;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
@@ -116,13 +119,30 @@ internal class NetworkSyncService : INetworkSyncService
         var ovnSettings = _container.GetInstance<IOVNSettings>();
         var planBuilder = _container.GetInstance<IProjectNetworkPlanBuilder>();
         var logger = _container.GetInstance<ILogger>();
+        var bus = _container.GetInstance<IBus>();
 
         var networkplanRealizer =
             new NetworkPlanRealizer(new OVNControlTool(sysEnv, ovnSettings.NorthDBConnection), logger);
 
 
         return from networkPlan in planBuilder.GenerateNetworkPlan(projectId, CancellationToken.None)
-               from _ in networkplanRealizer.ApplyNetworkPlan(networkPlan)
+               from appliedNetworkPlan in networkplanRealizer.ApplyNetworkPlan(networkPlan)
+               let arpRecords = appliedNetworkPlan.PlannedNATRules.Values
+                   .Map(port => new NetworkNeighborRecord
+                   {
+                       IpAddress = port.ExternalIP,
+                       MacAddress = port.ExternalMAC
+                   }).ToArray()
+               from _ in Prelude.TryAsync(async () =>
+               {
+                   await bus.Advanced.Topics.Publish(
+                       $"broadcast_{QueueNames.VMHostAgent}",
+                       new NetworkNeighborsUpdateRequestedEvent
+                       {
+                           UpdatedAddresses = arpRecords
+                       });
+                   return Prelude.unit;
+               }).ToEither()
                select Unit.Default;
     }
 

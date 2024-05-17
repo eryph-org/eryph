@@ -54,7 +54,7 @@ namespace Eryph.Modules.Controller.Networks
                 async response =>
                 {
                     Data.ProjectsCompleted ??= new List<Guid>();
-                    Data.UpdatedAddresses ??= new List<ArpRecord>();
+                    Data.UpdatedAddresses ??= new List<NetworkNeighborRecord>();
                     // ignore if already received
                     if (Data.ProjectsCompleted.Contains(response.ProjectId))
                         return;
@@ -65,7 +65,7 @@ namespace Eryph.Modules.Controller.Networks
                     {
                         await _bus.Advanced.Topics.Publish(
                             $"broadcast_{QueueNames.VMHostAgent}",
-                            new ArpUpdateRequestedEvent
+                            new NetworkNeighborsUpdateRequestedEvent
                             {
                                 UpdatedAddresses = Data.UpdatedAddresses
                                     .ToArray()

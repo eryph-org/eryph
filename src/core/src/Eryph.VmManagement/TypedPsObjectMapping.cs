@@ -10,6 +10,7 @@ using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Data.Planned;
 using Microsoft.Extensions.Logging;
+using Microsoft.Management.Infrastructure;
 
 namespace Eryph.VmManagement;
 
@@ -143,6 +144,10 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
             // special case for bool as it is not mapped correctly
             if(typeof(T) == typeof(bool))
                 return psObject.BaseObject is bool b ? (T)(object)b : default;
+
+            // Some Cmdlets return generic CimInstance objects
+            if (psObject?.BaseObject is CimInstance cimInstance)
+                return _mapper.Map<T>(cimInstance.CimInstanceProperties.ToDictionary(p => p.Name, p => p.Value));
 
             // cast is required to map correctly
             // ReSharper disable once RedundantCast
