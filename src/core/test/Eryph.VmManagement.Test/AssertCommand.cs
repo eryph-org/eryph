@@ -49,6 +49,17 @@ public class AssertCommand
         return new AssertCommand(_position + 1, _chain);
     }
 
+    public AssertCommand ShouldBeParam<T>(string name, Action<T> validate)
+    {
+        _chain.Should().HaveCountGreaterThanOrEqualTo(_position);
+        var part = _chain[_position];
+        var subject = part.Should().BeOfType<PsCommandBuilder.ParameterPart>().Subject;
+        subject.Parameter.Should().Be(name);
+        validate((T)subject.Value);
+
+        return new AssertCommand(_position + 1, _chain);
+    }
+
     public AssertCommand ShouldBeParam(string name)
     {
         _chain.Should().HaveCountGreaterThanOrEqualTo(_position);
