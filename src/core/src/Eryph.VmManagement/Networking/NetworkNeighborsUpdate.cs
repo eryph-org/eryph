@@ -16,7 +16,10 @@ public static class NetworkNeighborsUpdate
         Seq<(string IpAddress, string MacAddress)> updatedNeighbors) =>
         from parsedUpdatedNeighbors in updatedNeighbors
             .Map(t => from ip in ParseIpAddress(t.IpAddress)
-                      from mac in ParseMacAddress(t.MacAddress)
+                      from mac in Optional(t.MacAddress)
+                          .Filter(notEmpty)
+                          .Map(ParseMacAddress)
+                          .Sequence()
                       select (IpAddress: ip, MacAddress: mac))
             .Sequence()
             .ToEitherAsync()
@@ -39,18 +42,19 @@ public static class NetworkNeighborsUpdate
             Empty: () => RightAsync<Error, Unit>(unit),
             Seq: n => powershellEngine.RunAsync(PsCommandBuilder.Create()
                     .AddCommand("Remove-NetNeighbor")
-                    .AddParameter("InputObject", n.Map(v => v.PsObject).ToArray()))
+                    .AddParameter("InputObject", n.Map(v => v.PsObject).ToArray())
+                    .AddParameter("Confirm", false))
                 .ToError().ToAsync())
         select unit;
 
     private static Fin<bool> IsOutdated(
         CimNetworkNeighbor psNeighbor,
-        Seq<(IPAddress IpAddress, PhysicalAddress MacAddress)> updatedNeighbors) =>
-        from ipAddress in ParseIpAddress(psNeighbor.IpAddress)
+        Seq<(IPAddress IpAddress, Option<PhysicalAddress> MacAddress)> updatedNeighbors) =>
+        from ipAddress in ParseIpAddress(psNeighbor.IPAddress)
         from macAddress in ParseMacAddress(psNeighbor.LinkLayerAddress)
         select updatedNeighbors
             .Find(updatedNeighbor => updatedNeighbor.IpAddress.Equals(ipAddress))
-            .Map(updatedNeighbor => !updatedNeighbor.MacAddress.Equals(macAddress))
+            .Map(updatedNeighbor => !updatedNeighbor.MacAddress.Equals(Some(macAddress)))
             .IfNone(false);
 
     private static Fin<IPAddress> ParseIpAddress(string value) =>
@@ -59,7 +63,7 @@ public static class NetworkNeighborsUpdate
             : Error.New($"The IP address '{value}' is invalid");
 
     private static Fin<PhysicalAddress> ParseMacAddress(string value) =>
-        PhysicalAddress.TryParse(value, out var macAddress)
+        !string.IsNullOrWhiteSpace(value) && PhysicalAddress.TryParse(value, out var macAddress)
             ? macAddress
             : Error.New($"The MAC address '{value}' is invalid");
 }

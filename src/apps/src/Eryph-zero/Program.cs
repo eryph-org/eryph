@@ -211,6 +211,7 @@ internal static class Program
                 retainedFileCountLimit: 10,
                 retainedFileTimeLimit: TimeSpan.FromDays(30))
             .CreateLogger();
+        Log.Logger = logger;
 
         return await AdminGuard.CommandIsElevated(async () =>
         {

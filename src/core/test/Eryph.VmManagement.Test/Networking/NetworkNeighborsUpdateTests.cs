@@ -25,22 +25,22 @@ public class NetworkNeighborsUpdateTests
         Seq<CimNetworkNeighbor> existingNeighbors = Seq(
             new CimNetworkNeighbor()
             {
-                IpAddress = "192.168.1.1",
+                IPAddress = "192.168.1.1",
                 LinkLayerAddress = "02:11:22:33:44:55",
             },
             new CimNetworkNeighbor()
             {
-                IpAddress = "192.168.1.2",
+                IPAddress = "192.168.1.2",
                 LinkLayerAddress = "02:11:22:33:44:56",
             },
             new CimNetworkNeighbor()
             {
-                IpAddress = "192.168.1.3",
+                IPAddress = "192.168.1.3",
                 LinkLayerAddress = "02:11:22:33:44:57",
             },
             new CimNetworkNeighbor()
             {
-                IpAddress = "192.168.1.4",
+                IPAddress = "192.168.1.4",
                 LinkLayerAddress = "02:11:22:33:44:58",
             });
 
@@ -85,13 +85,14 @@ public class NetworkNeighborsUpdateTests
                     o =>
                     {
                         var n = o.BaseObject.Should().BeOfType<CimNetworkNeighbor>().Subject;
-                        n.IpAddress.Should().Be("192.168.1.2");
+                        n.IPAddress.Should().Be("192.168.1.2");
                     },
                     o =>
                     {
                         var n = o.BaseObject.Should().BeOfType<CimNetworkNeighbor>().Subject;
-                        n.IpAddress.Should().Be("192.168.1.3");
-                    }));
+                        n.IPAddress.Should().Be("192.168.1.3");
+                    }))
+            .ShouldBeParam("Confirm", false);
     }
 
     [Theory]
@@ -118,7 +119,7 @@ public class NetworkNeighborsUpdateTests
         {
             return Seq1(new CimNetworkNeighbor()
                 {
-                    IpAddress = ipAddress,
+                    IPAddress = ipAddress,
                     LinkLayerAddress = macAddress,
                 })
                 .Cast<object>()

@@ -12,7 +12,7 @@ namespace Eryph.VmManagement.Data.Core;
 /// </summary>
 public class CimNetworkNeighbor
 {
-    public string IpAddress { get; set; }
+    public string IPAddress { get; set; }
     
     public string LinkLayerAddress { get; set; }
 }
