@@ -20,25 +20,25 @@ public class NetworkNeighborsUpdateTests
     private readonly TestPowershellEngine _powershellEngine = new(new FakeTypeMapping());
 
     [Fact]
-    public async Task RemoveOutdatedNetNeighbors_RemovesExpectedNeighbors()
+    public async Task RemoveOutdatedNetworkNeighbors_ValidUpdatedNeighbors_RemovesOutdatedNeighbors()
     {
-        Seq<CimNetNeighbor> existingNeighbors = Seq(
-            new CimNetNeighbor()
+        Seq<CimNetworkNeighbor> existingNeighbors = Seq(
+            new CimNetworkNeighbor()
             {
                 IpAddress = "192.168.1.1",
                 LinkLayerAddress = "02:11:22:33:44:55",
             },
-            new CimNetNeighbor()
+            new CimNetworkNeighbor()
             {
                 IpAddress = "192.168.1.2",
                 LinkLayerAddress = "02:11:22:33:44:56",
             },
-            new CimNetNeighbor()
+            new CimNetworkNeighbor()
             {
                 IpAddress = "192.168.1.3",
                 LinkLayerAddress = "02:11:22:33:44:57",
             },
-            new CimNetNeighbor()
+            new CimNetworkNeighbor()
             {
                 IpAddress = "192.168.1.4",
                 LinkLayerAddress = "02:11:22:33:44:58",
@@ -46,7 +46,7 @@ public class NetworkNeighborsUpdateTests
 
         AssertCommand? getCommand = null;
         AssertCommand? removeCommand = null;
-        _powershellEngine.GetObjectCallback = (type, command) =>
+        _powershellEngine.GetObjectCallback = (_, command) =>
         {
             getCommand = command;
             return existingNeighbors
@@ -61,7 +61,7 @@ public class NetworkNeighborsUpdateTests
             return unit;
         };
 
-        var result = await NetworkNeighborsUpdate.RemoveOutdatedNetNeighbors(
+        var result = await NetworkNeighborsUpdate.RemoveOutdatedNetworkNeighbors(
             _powershellEngine,
             Seq(("192.168.1.1", "02:11:22:33:44:55"),
                 ("192.168.1.2", "02:99:99:99:99:99"),
@@ -84,13 +84,51 @@ public class NetworkNeighborsUpdateTests
                 param => param.Should().SatisfyRespectively(
                     o =>
                     {
-                        var n = o.BaseObject.Should().BeOfType<CimNetNeighbor>().Subject;
+                        var n = o.BaseObject.Should().BeOfType<CimNetworkNeighbor>().Subject;
                         n.IpAddress.Should().Be("192.168.1.2");
                     },
                     o =>
                     {
-                        var n = o.BaseObject.Should().BeOfType<CimNetNeighbor>().Subject;
+                        var n = o.BaseObject.Should().BeOfType<CimNetworkNeighbor>().Subject;
                         n.IpAddress.Should().Be("192.168.1.3");
                     }));
+    }
+
+    [Theory]
+    [InlineData("999.999.999.999", "02:11:22:33:44:55")]
+    [InlineData("192.168.1.1", "invalid")]
+    public async Task RemoveOutdatedNetworkNeighbors_InvalidUpdatedNeighbor_ReturnsError(
+        string ipAddress, string macAddress)
+    {
+        var result = await NetworkNeighborsUpdate.RemoveOutdatedNetworkNeighbors(
+            _powershellEngine,
+            Seq1((ipAddress, macAddress)));
+
+        result.Should().BeLeft().Which.Message.Should().Contain("invalid");
+    }
+
+
+    [Theory]
+    [InlineData("999.999.999.999", "02:11:22:33:44:55")]
+    [InlineData("192.168.1.1", "invalid")]
+    public async Task RemoveOutdatedNetworkNeighbors_InvalidExistingNeighbor_ReturnsError(
+        string ipAddress, string macAddress)
+    {
+        _powershellEngine.GetObjectCallback = (_, _) =>
+        {
+            return Seq1(new CimNetworkNeighbor()
+                {
+                    IpAddress = ipAddress,
+                    LinkLayerAddress = macAddress,
+                })
+                .Cast<object>()
+                .Map(n => _powershellEngine.ToPsObject(n))
+                .ToSeq();
+        };
+
+        var result = await NetworkNeighborsUpdate.RemoveOutdatedNetworkNeighbors(
+            _powershellEngine, Empty);
+
+        result.Should().BeLeft().Which.Message.Should().Contain("invalid");
     }
 }

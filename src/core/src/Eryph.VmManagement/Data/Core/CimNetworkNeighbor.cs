@@ -10,7 +10,7 @@ namespace Eryph.VmManagement.Data.Core;
 /// Represents a network neighbor as returned by the
 /// <c>>Get-NetNeighbor</c> cmdlet.
 /// </summary>
-public class CimNetNeighbor
+public class CimNetworkNeighbor
 {
     public string IpAddress { get; set; }
     

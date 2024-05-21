@@ -22,11 +22,14 @@ public class NetworkNeighborsUpdateRequestedEventHandler(ILogger log, IPowershel
 {
     public async Task Handle(NetworkNeighborsUpdateRequestedEvent message)
     {
+        if (message.UpdatedAddresses?.Length is null or 0)
+            return;
+
         log.LogTrace("Going to update network neighbors (ARP cache)...");
 
         var stopwatch = Stopwatch.StartNew();
 
-        _ = await NetworkNeighborsUpdate.RemoveOutdatedNetNeighbors(
+        _ = await NetworkNeighborsUpdate.RemoveOutdatedNetworkNeighbors(
                 powershellEngine,
                 message.UpdatedAddresses.Map(r => (r.IpAddress, r.MacAddress)).ToSeq())
             .IfLeft(e => e.Throw());

@@ -81,8 +81,6 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
             container.RegisterInstance(serviceProvider.GetRequiredService<IAgentControlService>());
 
-            container.RegisterSingleton<IWindowsArpCache, WindowsArpCache>();
-
             container.Register<StartBusModuleHandler>();
             container.RegisterSingleton<ITracer, Tracer>();
             container.RegisterSingleton<ITraceWriter, DiagnosticTraceWriter>();

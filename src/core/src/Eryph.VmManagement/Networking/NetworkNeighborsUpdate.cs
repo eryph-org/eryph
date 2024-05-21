@@ -5,11 +5,13 @@ using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.VmManagement.Networking;
 
 public static class NetworkNeighborsUpdate
 {
-    public static EitherAsync<Error, Unit> RemoveOutdatedNetNeighbors(
+    public static EitherAsync<Error, Unit> RemoveOutdatedNetworkNeighbors(
         IPowershellEngine powershellEngine,
         Seq<(string IpAddress, string MacAddress)> updatedNeighbors) =>
         from parsedUpdatedNeighbors in updatedNeighbors
@@ -19,7 +21,7 @@ public static class NetworkNeighborsUpdate
             .Sequence()
             .ToEitherAsync()
         let ipAddresses = updatedNeighbors.Map(a => a.IpAddress).ToArray()
-        from psNetNeighbors in powershellEngine.GetObjectsAsync<CimNetNeighbor>(PsCommandBuilder.Create()
+        from psNetNeighbors in powershellEngine.GetObjectsAsync<CimNetworkNeighbor>(PsCommandBuilder.Create()
                 .AddCommand("Get-NetNeighbor")
                 .AddParameter("IPAddress", ipAddresses)
                 // The Cmdlet will return an error when there is no entry for an
@@ -34,15 +36,15 @@ public static class NetworkNeighborsUpdate
             .MapT(t => t.Neighbor)
             .ToEitherAsync()
         from __ in psNeighborsToRemove.Match(
-            Empty: () => Prelude.RightAsync<Error, Unit>(Prelude.unit),
+            Empty: () => RightAsync<Error, Unit>(unit),
             Seq: n => powershellEngine.RunAsync(PsCommandBuilder.Create()
                     .AddCommand("Remove-NetNeighbor")
                     .AddParameter("InputObject", n.Map(v => v.PsObject).ToArray()))
                 .ToError().ToAsync())
-        select Prelude.unit;
+        select unit;
 
     private static Fin<bool> IsOutdated(
-        CimNetNeighbor psNeighbor,
+        CimNetworkNeighbor psNeighbor,
         Seq<(IPAddress IpAddress, PhysicalAddress MacAddress)> updatedNeighbors) =>
         from ipAddress in ParseIpAddress(psNeighbor.IpAddress)
         from macAddress in ParseMacAddress(psNeighbor.LinkLayerAddress)

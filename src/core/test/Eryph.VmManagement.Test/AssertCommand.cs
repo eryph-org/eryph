@@ -55,7 +55,8 @@ public class AssertCommand
         var part = _chain[_position];
         var subject = part.Should().BeOfType<PsCommandBuilder.ParameterPart>().Subject;
         subject.Parameter.Should().Be(name);
-        validate((T)subject.Value);
+        var subjectValue = subject.Value.Should().BeOfType<T>().Subject;
+        validate(subjectValue);
 
         return new AssertCommand(_position + 1, _chain);
     }
