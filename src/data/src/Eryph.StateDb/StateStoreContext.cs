@@ -118,7 +118,6 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasAlternateKey(x => new { x.ProjectId, x.IdentityId, x.RoleId });
 
         modelBuilder.Entity<Resource>()
-            .UseTpcMappingStrategy()
             .HasKey(x => x.Id);
 
         modelBuilder.Entity<Catlet>()
@@ -174,11 +173,32 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .Navigation(x => x.RouterPort)
             .AutoInclude();
 
+        /*
+        modelBuilder.Entity<NetworkRouterPort>()
+            .Navigation(x => x.RoutedNetwork)
+            .AutoInclude();
+        */
+
         modelBuilder.Entity<VirtualNetwork>()
             .HasMany(x => x.Subnets)
             .WithOne(x => x.Network)
             .HasForeignKey(x => x.NetworkId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        /*
+        modelBuilder.Entity<VirtualNetwork>()
+            .HasMany(x => x.NetworkPorts)
+            .WithOne(x => x.Network)
+            .OnDelete(DeleteBehavior.ClientCascade);
+
+        modelBuilder.Entity<VirtualNetwork>()
+            .Navigation(x => x.NetworkPorts)
+            .AutoInclude();
+
+        modelBuilder.Entity<VirtualNetworkPort>()
+            .Navigation(x => x.Network)
+            .AutoInclude();
+        */
 
         modelBuilder.Entity<NetworkPort>()
             .HasKey(x=>x.Id);
@@ -245,6 +265,27 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .WithOne(x => x.Pool)
             .HasForeignKey(x => x.PoolId)
             .OnDelete(DeleteBehavior.ClientCascade);
+
+        modelBuilder.Entity<IpPool>()
+            .Navigation(x => x.IpAssignments)
+            .AutoInclude();
+
+        modelBuilder.Entity<IpPoolAssignment>()
+            .Navigation(x => x.Pool)
+            .AutoInclude();
+
+        modelBuilder.Entity<IpAssignment>()
+            .HasOne(x => x.NetworkPort)
+            .WithMany(x => x.IpAssignments)
+            .OnDelete(DeleteBehavior.ClientCascade);
+
+        modelBuilder.Entity<IpAssignment>()
+            .Navigation(x => x.NetworkPort)
+            .AutoInclude();
+
+        modelBuilder.Entity<NetworkPort>()
+            .Navigation(x => x.IpAssignments)
+            .AutoInclude();
 
         modelBuilder.Entity<IpPoolAssignment>()
             .HasIndex(a => new { a.PoolId, a.Number })

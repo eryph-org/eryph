@@ -18,6 +18,10 @@ param(
 $PSNativeCommandUseErrorActionPreference = $true
 $ErrorActionPreference = 'Stop'
 
+Remove-Item -Path "$PSScriptRoot/../Eryph.StateDb.Sqlite/Migrations" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$PSScriptRoot/../Eryph.StateDb.SqlServer/Migrations" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "$PSScriptRoot/../Eryph.StateDb.MySql/Migrations" -Recurse -Force -ErrorAction SilentlyContinue
+
 dotnet build
 
 dotnet ef migrations add `
