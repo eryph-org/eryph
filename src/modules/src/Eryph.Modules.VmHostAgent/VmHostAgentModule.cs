@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO.Abstractions;
 using System.Net.Http;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.OVN;
@@ -28,6 +29,7 @@ using Rebus.Retry.Simple;
 using Rebus.Subscriptions;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
+using IFileSystem = System.IO.Abstractions.IFileSystem;
 
 namespace Eryph.Modules.VmHostAgent
 {
@@ -79,6 +81,7 @@ namespace Eryph.Modules.VmHostAgent
             container.Register<IOVSControl, OVSControl>();
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkSyncService>());
 
+            container.RegisterSingleton<IFileSystem, FileSystem>();
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
             container.RegisterInstance(serviceProvider.GetRequiredService<IAgentControlService>());
 

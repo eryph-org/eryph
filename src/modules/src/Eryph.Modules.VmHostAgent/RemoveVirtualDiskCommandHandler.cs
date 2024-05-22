@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -10,40 +11,42 @@ using Rebus.Handlers;
 namespace Eryph.Modules.VmHostAgent;
 
 [UsedImplicitly]
-public class RemoveVirtualDiskCommandHandler : IHandleMessages<OperationTask<RemoveVirtualDiskCommand>>
+public class RemoveVirtualDiskCommandHandler(
+    ITaskMessaging messaging,
+    ILogger log,
+    IFileSystem fileSystem)
+    : IHandleMessages<OperationTask<RemoveVirtualDiskCommand>>
 {
-    private readonly ITaskMessaging _messaging;
-    private readonly ILogger _log;
-    public RemoveVirtualDiskCommandHandler(ITaskMessaging messaging, ILogger log)
-    {
-        _messaging = messaging;
-        _log = log;
-    }
-
     public async Task Handle(OperationTask<RemoveVirtualDiskCommand> message)
     {
-
         try
         {
             var fullPath = Path.Combine(message.Command.Path, message.Command.FileName);
-            if(File.Exists(fullPath))
-                File.Delete(fullPath);
+            DeleteDisk(fullPath);
 
-            if (Directory.Exists(message.Command.Path))
-            {
-                if (Directory.GetFiles(message.Command.Path, "*", SearchOption.AllDirectories).Length == 0)
-                {
-                    Directory.Delete(message.Command.Path);
-                }
-            }
-
-            await _messaging.CompleteTask(message);
+            await messaging.CompleteTask(message);
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, $"Command '{nameof(RemoveVirtualDiskCommand)}' failed.");
-            await _messaging.FailTask(message, ex.Message);
-
+            log.LogError(ex, "Command {CommandName} failed.",
+                nameof(RemoveVirtualDiskCommandHandler));
+            await messaging.FailTask(message, ex.Message);
         }
+    }
+
+    private void DeleteDisk(string path)
+    {
+        if(!fileSystem.File.Exists(path))
+            return;
+
+        fileSystem.File.Delete(path);
+
+        var directoryInfo = fileSystem.DirectoryInfo.New(path);
+        if (!directoryInfo.Exists)
+            return;
+
+        // TODO should we actually delete the directory?
+        if (directoryInfo.GetFileSystemInfos().Length == 0)
+            directoryInfo.Delete();
     }
 }

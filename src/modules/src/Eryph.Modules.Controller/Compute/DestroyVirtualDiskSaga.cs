@@ -5,81 +5,85 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Resources;
+using Eryph.StateDb;
+using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using LanguageExt;
 using Rebus.Handlers;
 using Rebus.Sagas;
+using Resource = Eryph.Resources.Resource;
 
-namespace Eryph.Modules.Controller.Compute
-{
-    [UsedImplicitly]
-    internal class DestroyVirtualDiskSaga : OperationTaskWorkflowSaga<DestroyVirtualDiskCommand, DestroyVirtualDiskSagaData>,
+namespace Eryph.Modules.Controller.Compute;
+
+[UsedImplicitly]
+internal class DestroyVirtualDiskSaga(
+    IWorkflow workflow,
+    IVirtualDiskDataService virtualDiskDataService,
+    IStateStore stateStore,
+    IStorageManagementAgentLocator agentLocator)
+    : OperationTaskWorkflowSaga<DestroyVirtualDiskCommand, DestroyVirtualDiskSagaData>(workflow),
         IHandleMessages<OperationTaskStatusEvent<RemoveVirtualDiskCommand>>
+{
+    public Task Handle(OperationTaskStatusEvent<RemoveVirtualDiskCommand> message)
     {
-        private readonly IVirtualDiskDataService _virtualDiskDataService;
-        private readonly IStorageManagementAgentLocator _agentLocator;
-
-        public DestroyVirtualDiskSaga(IWorkflow workflow,
-            IVirtualDiskDataService virtualDiskDataService, IStorageManagementAgentLocator agentLocator) : base(workflow)
+        return FailOrRun(message, async () =>
         {
-            _virtualDiskDataService = virtualDiskDataService;
-            _agentLocator = agentLocator;
-        }
+            await virtualDiskDataService.DeleteVHD(Data.DiskId);
 
-        public Task Handle(OperationTaskStatusEvent<RemoveVirtualDiskCommand> message)
-        {
-            return FailOrRun(message, async () =>
+            await Complete(new DestroyResourcesResponse
             {
-                await _virtualDiskDataService.DeleteVHD(Data.DiskId);
-
-                await Complete(new DestroyResourcesResponse
-                {
-                    DestroyedResources = new[] { new Resource(ResourceType.VirtualDisk, Data.DiskId) },
-                });
+                DestroyedResources = [ new Resource(ResourceType.VirtualDisk, Data.DiskId) ],
             });
-        }
+        });
+    }
 
-        protected override void CorrelateMessages(ICorrelationConfig<DestroyVirtualDiskSagaData> config)
+    protected override void CorrelateMessages(ICorrelationConfig<DestroyVirtualDiskSagaData> config)
+    {
+        base.CorrelateMessages(config);
+        config.Correlate<OperationTaskStatusEvent<RemoveVirtualDiskCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
+    }
+
+    protected override async Task Initiated(DestroyVirtualDiskCommand message)
+    {
+        Data.DiskId = message.Resource.Id;
+        var virtualDisk = await virtualDiskDataService.GetVHD(Data.DiskId)
+            .Map(d => d.IfNoneUnsafe((VirtualDisk?)null));
+
+        if (virtualDisk is null)
         {
-            base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<RemoveVirtualDiskCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
-
+            await Complete(new DestroyResourcesResponse
+            {
+                DestroyedResources = [ new Resource(ResourceType.VirtualDisk, Data.DiskId) ],
+            });
+            return;
         }
 
-
-        protected override async Task Initiated(DestroyVirtualDiskCommand message)
+        await stateStore.LoadCollectionAsync(virtualDisk, d => d.Childs);
+        if (virtualDisk.Childs.Count > 0)
         {
-            Data.DiskId = message.Resource.Id;
-            var res = await _virtualDiskDataService.GetVHD(Data.DiskId);
-
-            await res.Match(
-                None: () => Complete(new DestroyResourcesResponse
-                {
-                    DestroyedResources = new[] { new Resource(ResourceType.VirtualDisk, Data.DiskId) },
-                }),
-                Some: vhd =>
-                {
-                    //if (vhd.AttachedDrives.Any())
-                    //{
-                    //    Complete(new DestroyResourcesResponse
-                    //    {
-                    //        DetachedResources = new[] { new Resource(ResourceType.VirtualDisk, Data.DiskId) },
-                    //    });
-                    //}
-
-                    var agentName = _agentLocator.FindAgentForDataStore(vhd.DataStore, vhd.Environment);
-
-                    return StartNewTask(new RemoveVirtualDiskCommand
-                    {
-                        DiskId = Data.DiskId,
-                        Path = vhd.Path,
-                        FileName = vhd.FileName,
-                        AgentName = agentName
-                    }).AsTask();
-                });
-
-
+            await Fail($"The disk {virtualDisk.Name} ({virtualDisk.Id}) has children");
+            return;
+        }
+        
+        await stateStore.LoadCollectionAsync(virtualDisk, d => d.AttachedDrives);
+        if (virtualDisk.AttachedDrives.Count > 0)
+        {
+            await Fail($"The disk {virtualDisk.Name} ({virtualDisk.Id}) is attached to a virtual machine");
+            return;
         }
 
+        // TODO how to handle snapshots
+        // TODO handle genepool disks
 
+        // TODO Use LastSeenAgent as env and datastore are not useful to identify the agent 
+        var agentName = agentLocator.FindAgentForDataStore(virtualDisk.DataStore, virtualDisk.Environment);
+
+        await StartNewTask(new RemoveVirtualDiskCommand
+        {
+            DiskId = Data.DiskId,
+            Path = virtualDisk.Path,
+            FileName = virtualDisk.FileName,
+            AgentName = agentName
+        });
     }
 }
