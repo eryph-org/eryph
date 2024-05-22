@@ -45,95 +45,17 @@ namespace Eryph.Modules.Controller.Inventory
             _messageContext = messageContext;
         }
 
-        private static void SelectAllParentDisks(ref List<DiskInfo> parentDisks, DiskInfo disk)
-        {
-            if (disk.Parent != null)
-                SelectAllParentDisks(ref parentDisks, disk.Parent);
 
-            parentDisks.Add(disk);
-        }
 
         protected async Task UpdateVMs(
             DateTimeOffset timestamp,
             IEnumerable<VirtualMachineData> vmList, CatletFarm hostMachine)
         {
-
             var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
-
             var diskInfos = vms.SelectMany(x => x.Drives.Select(d => d.Disk)).ToList();
-            var allDisks = new List<DiskInfo>();
-            foreach (var diskInfo in diskInfos) SelectAllParentDisks(ref allDisks, diskInfo);
-
-            diskInfos = allDisks.Distinct((x, y) =>
-                string.Equals(x.Path, y.Path, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(x.FileName, y.FileName, StringComparison.OrdinalIgnoreCase)).ToList();
-
-            var addedDisks = new List<VirtualDisk>();
-
-            foreach (var diskInfo in diskInfos)
-            {
-                var project = await FindProject(diskInfo.ProjectName, diskInfo.ProjectId)
-                    .IfNoneAsync(() =>
-                        FindRequiredProject("default", Guid.Empty)).ConfigureAwait(false);
-
-                var disk = await LookupVirtualDisk(diskInfo, project, addedDisks)
-                    .IfNoneAsync(async () =>
-                    {
-                    
-                        var d = new VirtualDisk
-                        {
-                            Id = diskInfo.Id,
-                            Name = diskInfo.Name,
-                            DiskIdentifier = diskInfo.DiskIdentifier,
-                            DataStore = diskInfo.DataStore,
-                            Environment = diskInfo.Environment,
-                            Geneset = diskInfo.Geneset,
-                            StorageIdentifier = diskInfo.StorageIdentifier,
-                            Project = project,
-                            FileName = diskInfo.FileName,
-                            Path = diskInfo.Path.ToLowerInvariant()
-
-                        };
-                        d = await _vhdDataService.AddNewVHD(d).ConfigureAwait(false);
-                        addedDisks.Add(d);
-                        return d;
-                    }).ConfigureAwait(false);
-
-                disk.SizeBytes = diskInfo.SizeBytes;
-                disk.UsedSizeBytes = diskInfo.UsedSizeBytes;
-                disk.Frozen = diskInfo.Frozen;
-                disk.LastSeen = timestamp;
-                disk.LastSeenAgent = hostMachine.Name;
-                await _vhdDataService.UpdateVhd(disk).ConfigureAwait(false);
-
-            }
-
-            //second loop to assign parents and to update state db
-            foreach (var diskInfo in diskInfos)
-            {
-                var project = await FindProject(diskInfo.ProjectName, diskInfo.ProjectId)
-                    .IfNoneAsync(() =>
-                        FindRequiredProject(EryphConstants.DefaultProjectName, Guid.Empty)).ConfigureAwait(false);
-
-                await LookupVirtualDisk(diskInfo, project, addedDisks).IfSomeAsync(async currentDisk =>
-                {
-                    if (diskInfo.Parent == null)
-                    {
-                        currentDisk.Parent = null;
-                        return;
-                    }
-
-                    await LookupVirtualDisk(diskInfo.Parent, project, addedDisks)
-                        .IfSomeAsync(parentDisk =>
-                        {
-                            currentDisk.Parent = parentDisk;
-
-                        }).ConfigureAwait(false);
-                    await _vhdDataService.UpdateVhd(currentDisk).ConfigureAwait(false);
-
-                }).ConfigureAwait(false);
-            }
-
+            
+            var addedDisks = await ResolveAndUpdateDisks(diskInfos, timestamp, hostMachine)
+                .ConfigureAwait(false);
 
             foreach (var vmInfo in vms)
             {
@@ -243,7 +165,96 @@ namespace Eryph.Modules.Controller.Inventory
                 });
         }
 
-        private async Task<Option<VirtualDisk>> LookupVirtualDisk(DiskInfo diskInfo, Project project,
+        private async Task<List<VirtualDisk>> ResolveAndUpdateDisks(
+            List<DiskInfo> diskInfos,
+            DateTimeOffset timestamp, 
+            CatletFarm hostMachine)
+        {
+            var allDisks = diskInfos
+                .ToSeq()
+                .Map(SelectAllParentDisks)
+                .Flatten()
+                .Distinct((x, y) => string.Equals(x.Path, y.Path, StringComparison.OrdinalIgnoreCase)
+                                    && string.Equals(x.FileName, y.FileName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var addedDisks = new List<VirtualDisk>();
+
+            foreach (var diskInfo in allDisks)
+            {
+                var project = await FindProject(diskInfo.ProjectName, diskInfo.ProjectId)
+                    .IfNoneAsync(() => FindRequiredProject(EryphConstants.DefaultProjectName, null))
+                    .ConfigureAwait(false);
+
+                var disk = await LookupVirtualDisk(diskInfo, project, addedDisks)
+                    .IfNoneAsync(async () =>
+                    {
+
+                        var d = new VirtualDisk
+                        {
+                            Id = diskInfo.Id,
+                            Name = diskInfo.Name,
+                            DiskIdentifier = diskInfo.DiskIdentifier,
+                            DataStore = diskInfo.DataStore,
+                            Environment = diskInfo.Environment,
+                            Geneset = diskInfo.Geneset,
+                            StorageIdentifier = diskInfo.StorageIdentifier,
+                            Project = project,
+                            FileName = diskInfo.FileName,
+                            Path = diskInfo.Path.ToLowerInvariant()
+
+                        };
+                        d = await _vhdDataService.AddNewVHD(d).ConfigureAwait(false);
+                        addedDisks.Add(d);
+                        return d;
+                    }).ConfigureAwait(false);
+
+                disk.SizeBytes = diskInfo.SizeBytes;
+                disk.UsedSizeBytes = diskInfo.UsedSizeBytes;
+                disk.Frozen = diskInfo.Frozen;
+                disk.LastSeen = timestamp;
+                disk.LastSeenAgent = hostMachine.Name;
+                await _vhdDataService.UpdateVhd(disk).ConfigureAwait(false);
+
+            }
+
+            //second loop to assign parents and to update state db
+            foreach (var diskInfo in diskInfos)
+            {
+                var project = await FindProject(diskInfo.ProjectName, diskInfo.ProjectId)
+                    .IfNoneAsync(() => FindRequiredProject(EryphConstants.DefaultProjectName, null))
+                    .ConfigureAwait(false);
+
+                await LookupVirtualDisk(diskInfo, project, addedDisks).IfSomeAsync(async currentDisk =>
+                {
+                    if (diskInfo.Parent == null)
+                    {
+                        currentDisk.Parent = null;
+                        return;
+                    }
+
+                    await LookupVirtualDisk(diskInfo.Parent, project, addedDisks)
+                        .IfSomeAsync(parentDisk =>
+                        {
+                            currentDisk.Parent = parentDisk;
+
+                        }).ConfigureAwait(false);
+                    await _vhdDataService.UpdateVhd(currentDisk).ConfigureAwait(false);
+
+                }).ConfigureAwait(false);
+            }
+
+            return addedDisks;
+        }
+
+        private static Seq<DiskInfo> SelectAllParentDisks(DiskInfo diskInfo) =>
+            diskInfo.Parent != null
+                ? diskInfo.Cons(SelectAllParentDisks(diskInfo.Parent))
+                : diskInfo.Cons();
+
+        private async Task<Option<VirtualDisk>> LookupVirtualDisk(
+            DiskInfo diskInfo,
+            Project project,
             IReadOnlyCollection<VirtualDisk> addedDisks)
         {
 

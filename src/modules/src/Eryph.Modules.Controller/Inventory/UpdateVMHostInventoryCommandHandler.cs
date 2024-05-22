@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Disks;
 using Eryph.Modules.Controller.DataServices;
@@ -34,7 +35,7 @@ namespace Eryph.Modules.Controller.Inventory
                     Id = Guid.NewGuid(),
                     Name = message.HostInventory.Name,
                     HardwareId = message.HostInventory.HardwareId,
-                    Project = await FindRequiredProject("default", null)
+                    Project = await FindRequiredProject(EryphConstants.DefaultProjectName, null)
                 });
 
             var existingMachine = await vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)

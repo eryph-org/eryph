@@ -54,10 +54,11 @@ namespace Eryph.VmManagement.Inventory
                     Firmware = firmwareData,
                     Frozen = vmStorageSettings.Map(x => x.Frozen).IfNone(true),
                     VMPath = vmStorageSettings.Map(x => x.VMPath).IfNone(""),
-                    StorageIdentifier = vmStorageSettings.Map(x=>x.StorageIdentifier.IfNone("")).IfNone(""),
-                    ProjectName = vmStorageSettings.Map(x => x.StorageNames.ProjectName.IfNone("")).IfNone(""),
-                    DataStore = vmStorageSettings.Map(x => x.StorageNames.DataStoreName.IfNone("")).IfNone(""),
-                    Environment = vmStorageSettings.Map(x => x.StorageNames.EnvironmentName.IfNone("")).IfNone(""),
+                    StorageIdentifier = vmStorageSettings.Bind(x => x.StorageIdentifier).IfNone(""),
+                    ProjectId = vmStorageSettings.Bind(x => x.StorageNames.ProjectId).Map(id => (Guid?)id).IfNoneUnsafe((Guid?)null),
+                    ProjectName = vmStorageSettings.Bind(x => x.StorageNames.ProjectName).IfNone(""),
+                    DataStore = vmStorageSettings.Bind(x => x.StorageNames.DataStoreName).IfNone(""),
+                    Environment = vmStorageSettings.Bind(x => x.StorageNames.EnvironmentName).IfNone(""),
                     Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x=>x.HardDrives)).ToArray(),
                     NetworkAdapters = vm.GetList(x=>x.NetworkAdapters).Map(a=>
                     {
