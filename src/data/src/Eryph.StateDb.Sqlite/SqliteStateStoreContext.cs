@@ -27,6 +27,6 @@ public class SqliteStateStoreContext(DbContextOptions<SqliteStateStoreContext> o
         // Converting to DateTime will be break concurrency tokens as the
         // conversion is lossy (the timezone information is lost).
         configurationBuilder.Properties<DateTimeOffset>()
-            .HaveConversion<DateTimeOffsetToStringConverter>();
+            .HaveConversion<DateTimeOffsetToDateTimeConverter, DateTimeOffsetUtcComparer>();
     }
 }
