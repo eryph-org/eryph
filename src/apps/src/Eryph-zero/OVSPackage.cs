@@ -5,15 +5,15 @@ using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using LanguageExt;
+using Microsoft.Extensions.Logging;
 using Serilog;
 
 namespace Eryph.Runtime.Zero;
 
 internal class OVSPackage
 {
-    public static string UnpackAndProvide(string? relativePackagePath = null)
+    public static string UnpackAndProvide(ILogger<OVSPackage> logger, string? relativePackagePath = null)
     {
-        var log = Log.ForContext<OVSPackage>();
         var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
         var parentDir = baseDir.Parent?.FullName ?? throw new IOException($"Invalid path {baseDir}");
 
@@ -38,7 +38,7 @@ internal class OVSPackage
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                 "eryph", "ovs");
 
-        log.Debug("OVS Package installation: Package root: {rootPath}, package file found: {ovsPackageExists}, backup file found: {ovsBackupExists}",
+        logger.LogDebug("OVS Package installation: Package root: {RootPath}, package file found: {OvsPackageExists}, backup file found: {OvsBackupExists}",
             parentDir, ovsPackageExists, ovsBackupExists);
 
         var ovsRootDir = new DirectoryInfo(ovsRootPath);
@@ -48,7 +48,7 @@ internal class OVSPackage
         var runDirNo = 0;
         foreach (var ovsFilesDir in ovsRootDir.GetDirectories("run_*"))
         {
-            log.Verbose("Checking path '{ovsFileDir}' for ovs files", ovsFilesDir.FullName);
+            logger.LogDebug("Checking path '{OvsFileDir}' for ovs files", ovsFilesDir.FullName);
             var hasOvs = ovsFilesDir.GetFiles("ovs-vswitchd.exe", SearchOption.AllDirectories).Any()
                 && ovsFilesDir.GetFiles("dbo_ovse.inf", SearchOption.AllDirectories).Any();
            
@@ -59,7 +59,7 @@ internal class OVSPackage
 
             if (dirNo > runDirNo)
             {
-                log.Verbose("Found ovs folder, run dir no increased to {runDirNo} ", runDirNo);
+                logger.LogDebug("Found ovs folder, run dir no increased to {RunDirNo} ", runDirNo);
                 runDirNo = dirNo;
             }
         }
@@ -73,7 +73,7 @@ internal class OVSPackage
 
             if (ovsBackupExists && relativePackagePath== null)
             {
-                log.Information("No OpenVSwitch Installation folder found. Trying to recreate from backup.");
+                logger.LogInformation("No OpenVSwitch Installation folder found. Trying to recreate from backup.");
                 File.Move(ovsPackageBackupFile, ovsPackageFile);
                 ovsPackageExists = true;
             }
@@ -81,7 +81,7 @@ internal class OVSPackage
 
         if (ovsPackageExists)
         {
-            log.Information("Installing Open VSwitch package");
+            logger.LogInformation("Installing Open VSwitch package");
             runDirNo = ovsRootDir.GetDirectories("run_*")
                 .Map(d => Prelude.parseInt(d.Name.Replace("run_", "")))
                 .Somes().Fold(0, Math.Max) + 1;
@@ -117,7 +117,7 @@ internal class OVSPackage
         if(!resolvedRunDir.GetFiles("ovs-vswitchd.exe", SearchOption.AllDirectories).Any())
             throw new IOException($"Could not find OpenVSwitch in directory {resolvedRunDir}");
 
-        log.Debug("Found OVS package in {ovsPackage}", resolvedRunDir.FullName);
+        logger.LogDebug("Found OVS package in {OvsPackage}", resolvedRunDir.FullName);
 
         return resolvedRunDir.FullName;
 

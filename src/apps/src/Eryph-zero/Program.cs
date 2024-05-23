@@ -52,9 +52,6 @@ using LanguageExt.Effects.Traits;
 using LanguageExt.Sys;
 using LanguageExt.Sys.IO;
 using LanguageExt.Sys.Traits;
-using Serilog.Templates;
-using Serilog.Templates.Themes;
-using Serilog.Events;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -201,51 +198,44 @@ internal static class Program
 
     private static async Task<int> Run(string[] args)
     {
-        var logFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "eryph", "zero", "logs", "debug.txt");
-        
-        await using var logger = new LoggerConfiguration()
-            .MinimumLevel.Verbose()
-            .Enrich.FromLogContext()
-            .WriteTo.Console(new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff} {@l:u3}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}", theme: TemplateTheme.Literate),
-                restrictedToMinimumLevel: LogEventLevel.Debug)
-            .WriteTo.File(
-                new ExpressionTemplate("[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} {@l:u3}] [{SourceContext}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}"),
-                logFilePath,
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 10,
-                retainedFileTimeLimit: TimeSpan.FromDays(30))
-            .CreateLogger();
-        Log.Logger = logger;
-
         return await AdminGuard.CommandIsElevated(async () =>
         {
+            ZeroStartupConfig startupConfig;
+            Serilog.Core.Logger logger;
+
+            try
+            {
+                startupConfig = StartupConfiguration(args, sp =>
+                {
+                    var configuration = sp.GetRequiredService<IConfiguration>();
+                    return new ZeroStartupConfig
+                    {
+                        Configuration = configuration,
+                        BasePath = configuration["basePath"],
+                        SslEndpointManager = sp.GetRequiredService<ISSLEndpointManager>(),
+                        CryptoIO = sp.GetRequiredService<ICryptoIOServices>(),
+                        CertificateGenerator = sp.GetRequiredService<ICertificateGenerator>(),
+                        OvsPackageDir = configuration["ovsPackagePath"]
+                    };
+                });
+                logger = ZeroLogging.CreateLogger(startupConfig.Configuration);
+            }
+            catch (Exception ex)
+            {
+                await Console.Error.WriteLineAsync(ex.ToString());
+                return -1;
+            }
+
             var returnCode = 0;
             var warmupMode = args.Contains("--warmup");
 
             try
             {
                 var fileVersion = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location);
-                logger.Information("Starting eryph-zero {version}", fileVersion.ProductVersion);
+                logger.Information("Starting eryph-zero {Version}", fileVersion.ProductVersion);
 
                 if (warmupMode)
                     logger.Information("Running in warmup mode. Process will be stopped after start is completed");
-                
-                var startupConfig = StartupConfiguration(args,
-                    sp =>
-                    {
-                        var configuration = sp.GetRequiredService<IConfiguration>();
-                        return new
-                        {
-                            BasePath = configuration["basePath"],
-                            SSLEndpointManager = sp.GetRequiredService<ISSLEndpointManager>(),
-                            CryptoIO = sp.GetRequiredService<ICryptoIOServices>(),
-                            CertificateGenerator = sp.GetRequiredService<ICertificateGenerator>(),
-                            OVSPackageDir = configuration["ovsPackagePath"]
-                        };
-                    });
-
 
                 await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
@@ -265,7 +255,7 @@ internal static class Program
                 await SystemClientGenerator.EnsureSystemClient(startupConfig.CertificateGenerator, startupConfig.CryptoIO,
                     new Uri(endpoints["identity"]));
 
-                using var _ = await startupConfig.SSLEndpointManager
+                using var _ = await startupConfig.SslEndpointManager
                     .EnableSslEndpoint(new SSLOptions(
                         "eryph-zero CA",
                         Network.FQDN,
@@ -306,9 +296,9 @@ internal static class Program
                     }
                 }
 
-                using var loggerFactory = new SerilogLoggerFactory(Log.Logger);
+                using var loggerFactory = new SerilogLoggerFactory(logger, dispose: false);
 
-                var ovsRunDir = OVSPackage.UnpackAndProvide(startupConfig.OVSPackageDir);
+                var ovsRunDir = OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>(), startupConfig.OvsPackageDir);
                 var ensureDriverResult = await DriverCommands.EnsureDriver(
                     ovsRunDir, !isWindowsService && !warmupMode, !isWindowsService && !warmupMode, loggerFactory);
                 if (ensureDriverResult.IsFail)
@@ -372,7 +362,8 @@ internal static class Program
                     .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
                         EventLogSettings, EventLogLoggerProvider>)
                     .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
-                    // The logger must not be disposed here as it is injected into multiple modules
+                    // The logger must not be disposed here as it is injected into multiple modules.
+                    // Serilog requires a single logger instance for synchronization.
                     .UseSerilog(logger: logger, dispose: false)
                     .Build();
 
@@ -385,7 +376,7 @@ internal static class Program
                     {
                         await host.StartAsync();
                         await Task.Delay(1000);
-                        Log.Logger.Information("Warmup completed. Stopping.");
+                        logger.Information("Warmup completed. Stopping.");
                         var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));    
                         await host.StopAsync(cancelSource.Token);
                         returnCode = 0;
@@ -406,23 +397,21 @@ internal static class Program
                 {
                     await host.RunAsync();
                 }
-
-                return returnCode;
             }
             catch (Exception ex)
             {
                 logger.Fatal(ex, "eryph-zero failure");
-                await Console.Error.WriteAsync(ex.Message);
-
-                return returnCode;
             }
+
+            await logger.DisposeAsync();
+            return returnCode;
         });
 
     }
 
-    private static Uri ConfigureUrl(string basePath)
+    private static Uri ConfigureUrl(string? basePath)
     {
-        var uriBuilder = new UriBuilder(basePath);
+        var uriBuilder = new UriBuilder(basePath ?? "https://localhost:0");
         if (uriBuilder.Port == 0)
             uriBuilder.Port = GetAvailablePort();
 
@@ -435,14 +424,8 @@ internal static class Program
             .ConfigureAppConfiguration((hostingContext, config) =>
             {
                 var env = hostingContext.HostingEnvironment;
-
-                config.AddInMemoryCollection(new Dictionary<string, string>
-                    {
-                        { "basePath", "https://localhost:0" },
-                    })
-                    // ReSharper disable once StringLiteralTypo
-                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-                    // ReSharper disable once StringLiteralTypo
+                
+                config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
                     .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: false);
 
                 config.AddEnvironmentVariables();
@@ -593,7 +576,8 @@ internal static class Program
                             dataBackupCreated = true;
                             return Unit.Default;
                         }).ToEither()
-                        from ovsRootPath in Prelude.Try(() => OVSPackage.UnpackAndProvide()).ToEitherAsync()
+                        from ovsRootPath in Prelude.Try(() => OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>()))
+                            .ToEitherAsync()
                         from _ in DriverCommands.EnsureDriver(ovsRootPath, true, true, loggerFactory).Map(r => r.ToEither()).ToAsync()
                         from uCopy in CopyService()
                         from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
@@ -1057,9 +1041,10 @@ internal static class Program
     private static async Task<int> ImportNetworkConfig(FileSystemInfo? inFile, bool nonInteractive,
         bool noCurrentConfigCheck)
     {
-        using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
-        var ovsRunDir = OVSPackage.UnpackAndProvide();
-        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), new NullLoggerFactory());
+        using var nullLoggerFactory = new NullLoggerFactory();
+        using var psEngine = new PowershellEngine(nullLoggerFactory.CreateLogger(""));
+        var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
+        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 
         return await RunAsAdmin(
             from configString in ReadInput(inFile)
@@ -1081,14 +1066,15 @@ internal static class Program
             from sync in syncNetworks()
             from m in writeLine("New Network configuration was imported.")
             select unit,
-            new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
+            new ConsoleRuntime(nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource()));
     }
 
     private static async Task<int> SyncNetworkConfig(bool nonInteractive)
     {
-        using var psEngine = new PowershellEngine(new NullLoggerFactory().CreateLogger(""));
-        var ovsRunDir = OVSPackage.UnpackAndProvide();
-        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), new NullLoggerFactory());
+        using var nullLoggerFactory = new NullLoggerFactory();
+        using var psEngine = new PowershellEngine(nullLoggerFactory.CreateLogger(""));
+        var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
+        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 
         return await RunAsAdmin(
             from _ in writeLine("Going to sync network state with the current configuration...")
@@ -1099,7 +1085,7 @@ internal static class Program
             from ___ in applyChangesInConsole(currentConfig, pendingChanges, nonInteractive, false)
             from ____ in syncNetworks()
             select unit,
-            new ConsoleRuntime(new NullLoggerFactory(), psEngine, sysEnv, new CancellationTokenSource()));
+            new ConsoleRuntime(nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource()));
     }
 
     private static Aff<string> ReadInput(FileSystemInfo? inFile) => AffMaybe(async () =>

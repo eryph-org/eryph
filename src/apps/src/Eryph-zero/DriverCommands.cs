@@ -40,7 +40,8 @@ internal static class DriverCommands
             $"The following driver packages are installed:",
             (acc, info) =>
                 $"{acc}{Environment.NewLine}\t{info.Driver} - {info.Version} {info.OriginalFileName}"))
-        from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide())
+        from ovsPackageLogger in default(DriverCommandsRuntime).Logger<OVSPackage>()
+        from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide(ovsPackageLogger))
         let packageInfFile = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
         from packageDriverVersion in getDriverVersionFromInfFile(
             packageInfFile)

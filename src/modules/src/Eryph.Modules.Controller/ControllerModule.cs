@@ -23,6 +23,7 @@ using IdGen;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
@@ -109,7 +110,7 @@ namespace Eryph.Modules.Controller
                     s.EnforceExclusiveAccess();
                 })
                 .Subscriptions(s => serviceProvider.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
-                .Logging(x => x.Serilog())
+                .Logging(x => x.MicrosoftExtensionsLogging(container.GetInstance<ILoggerFactory>()))
                 .Start());
         }
 
