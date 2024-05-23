@@ -189,7 +189,6 @@ namespace Eryph.Modules.Controller.Inventory
                 var disk = await LookupVirtualDisk(diskInfo, project, addedDisks)
                     .IfNoneAsync(async () =>
                     {
-
                         var d = new VirtualDisk
                         {
                             Id = diskInfo.Id,
@@ -202,7 +201,6 @@ namespace Eryph.Modules.Controller.Inventory
                             Project = project,
                             FileName = diskInfo.FileName,
                             Path = diskInfo.Path.ToLowerInvariant()
-
                         };
                         d = await _vhdDataService.AddNewVHD(d).ConfigureAwait(false);
                         addedDisks.Add(d);
@@ -257,7 +255,6 @@ namespace Eryph.Modules.Controller.Inventory
             Project project,
             IReadOnlyCollection<VirtualDisk> addedDisks)
         {
-
             return await _vhdDataService.FindVHDByLocation(
                     project.Id,
                     diskInfo.DataStore,
@@ -286,8 +283,8 @@ namespace Eryph.Modules.Controller.Inventory
             if (optionalProjectId.GetValueOrDefault() != Guid.Empty)
                 return await StateStore.For<Project>().GetByIdAsync(optionalProjectId.GetValueOrDefault()).ConfigureAwait(false);
 
-            if(string.IsNullOrWhiteSpace(projectName))
-                projectName = "default";
+            if (string.IsNullOrWhiteSpace(projectName))
+                projectName = EryphConstants.DefaultProjectName;
 
             return await StateStore.For<Project>()
                 .GetBySpecAsync(new ProjectSpecs.GetByName(
@@ -298,7 +295,7 @@ namespace Eryph.Modules.Controller.Inventory
             Guid? projectId)
         {
             if (string.IsNullOrWhiteSpace(projectName))
-                projectName = "default";
+                projectName = EryphConstants.DefaultProjectName;
 
             var foundProject = await FindProject(projectName, projectId).ConfigureAwait(false);
 
