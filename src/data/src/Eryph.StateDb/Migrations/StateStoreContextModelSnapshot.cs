@@ -757,7 +757,8 @@ namespace Eryph.StateDb.Migrations
                 {
                     b.HasOne("Eryph.StateDb.Model.VirtualDisk", "AttachedDisk")
                         .WithMany("AttachedDrives")
-                        .HasForeignKey("AttachedDiskId");
+                        .HasForeignKey("AttachedDiskId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Eryph.StateDb.Model.Catlet", "Catlet")
                         .WithMany("Drives")

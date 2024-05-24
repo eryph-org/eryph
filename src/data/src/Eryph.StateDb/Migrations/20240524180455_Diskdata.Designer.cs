@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Migrations
 {
     [DbContext(typeof(StateStoreContext))]
-    [Migration("20240428092729_diskdata3")]
-    partial class diskdata3
+    [Migration("20240524180455_Diskdata")]
+    partial class Diskdata
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -650,7 +650,7 @@ namespace Eryph.StateDb.Migrations
                     b.Property<string>("Geneset")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTimeOffset>("LastSeen")
+                    b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LastSeenAgent")
@@ -769,7 +769,8 @@ namespace Eryph.StateDb.Migrations
                 {
                     b.HasOne("Eryph.StateDb.Model.VirtualDisk", "AttachedDisk")
                         .WithMany("AttachedDrives")
-                        .HasForeignKey("AttachedDiskId");
+                        .HasForeignKey("AttachedDiskId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Eryph.StateDb.Model.Catlet", "Catlet")
                         .WithMany("Drives")
