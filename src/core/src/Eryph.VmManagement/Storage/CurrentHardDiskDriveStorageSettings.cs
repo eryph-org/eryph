@@ -39,19 +39,24 @@ namespace Eryph.VmManagement.Storage
             return Prelude.Cond<HardDiskDriveInfo>(h => !string.IsNullOrWhiteSpace(h.Path))(hdInfo).Map(hd =>
                 from vhdInfo in VhdQuery.GetVhdInfo(engine, hdInfo.Path).ToAsync().ToError()
                 from snapshotInfo in VhdQuery.GetSnapshotAndActualVhd(engine, vhdInfo).ToAsync().ToError()
-                let vhdPath = snapshotInfo.ActualVhd.Map(vhd => vhd.Value.Path).IfNone(hdInfo.Path)
+                let vhdPath = snapshotInfo.ActualVhd.Map(vhd => vhd.Value.Path)
                 let snapshotPath = snapshotInfo.SnapshotVhd.Map(vhd => vhd.Value.Path)
-                from diskSettings in DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, vhdPath)
+                // The actual VHD might not exist (e.g. if it was deleted in the filesystem)
+                from diskSettings in vhdPath
+                    .Map(p =>DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, p))
+                    .Sequence()
                 select
                     new CurrentHardDiskDriveStorageSettings
                     {
                         Type = CatletDriveType.VHD,
-                        AttachPath = snapshotPath.IsSome ? snapshotPath : vhdPath,
-                        Frozen = diskSettings.StorageIdentifier.IsNone || !diskSettings.StorageNames.IsValid || snapshotPath.IsSome,
+                        AttachPath = snapshotPath | vhdPath | hdInfo.Path,
+                        Frozen = diskSettings.Bind(d => d.StorageIdentifier).IsNone
+                                 || !diskSettings.Bind<bool>(d => d.StorageNames.IsValid).IfNone(false)
+                                 || snapshotPath.IsSome,
                         AttachedVMId = hdInfo.Id,
                         ControllerNumber = hdInfo.ControllerNumber,
                         ControllerLocation = hdInfo.ControllerLocation,
-                        DiskSettings = diskSettings
+                        DiskSettings = diskSettings.IfNoneUnsafe((DiskStorageSettings)null)
                     }).Sequence();
         }
     }

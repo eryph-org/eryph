@@ -159,7 +159,8 @@ namespace Eryph.VmManagement.Inventory
 
 
         private static IEnumerable<VirtualMachineDriveData> CreateHardDriveInfo(
-            Seq<CurrentHardDiskDriveStorageSettings> storageSettings, IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> hdDevices)
+            Seq<CurrentHardDiskDriveStorageSettings> storageSettings,
+            IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> hdDevices)
         {
             foreach (var device in hdDevices)
             {
@@ -176,7 +177,7 @@ namespace Eryph.VmManagement.Inventory
                     Type = storageSetting?.Type
                 };
 
-                if (storageSetting != null)
+                if (storageSetting?.DiskSettings != null)
                     drive.Disk = CreateDiskInfo(storageSetting.DiskSettings);
 
                 yield return drive;

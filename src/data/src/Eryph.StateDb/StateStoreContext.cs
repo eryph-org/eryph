@@ -274,8 +274,8 @@ namespace Eryph.StateDb
             modelBuilder.Entity<CatletDrive>()
                 .HasOne(x => x.AttachedDisk)
                 .WithMany(x => x.AttachedDrives)
-                .HasForeignKey(x => x.AttachedDiskId);
-
+                .HasForeignKey(x => x.AttachedDiskId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<VirtualDisk>()
                 .ToTable("CatletDisks");

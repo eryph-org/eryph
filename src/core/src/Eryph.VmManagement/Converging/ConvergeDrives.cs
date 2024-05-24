@@ -232,10 +232,10 @@ namespace Eryph.VmManagement.Converging
             HardDiskDriveStorageSettings driveSettings,
             TypedPsObject<VirtualMachineInfo> vmInfo,
             Seq<CurrentHardDiskDriveStorageSettings> currentStorageSettings) =>
-            from _ in RightAsync<Error, Unit>(unit)
+            from vhdPath in driveSettings.AttachPath.ToEitherAsync(Error.New(
+                $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
             let currentSettings = currentStorageSettings.Find(x =>
-                driveSettings.DiskSettings.Path.Equals(x.DiskSettings.Path, StringComparison.OrdinalIgnoreCase)
-                && driveSettings.DiskSettings.Name.Equals(x.DiskSettings.Name, StringComparison.OrdinalIgnoreCase))
+                string.Equals(vhdPath, x.AttachPath.IfNone(""), StringComparison.OrdinalIgnoreCase))
             let isFrozen = currentSettings.Map(s => s.Frozen).IfNone(false)
             from reloadedVmInfo in isFrozen switch
             {
@@ -244,8 +244,6 @@ namespace Eryph.VmManagement.Converging
                         $"Skipping HD Drive '{driveSettings.DiskSettings.Name}': storage management is disabled for this disk.")
                     select vmInfo,
                 false =>
-                    from vhdPath in driveSettings.AttachPath.ToEitherAsync(Error.New(
-                        $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
                     from testPathResult in Context.Engine.GetObjectsAsync<bool>(
                             new PsCommandBuilder().AddCommand("Test-Path").AddArgument(vhdPath))
                         .ToError().ToAsync()
