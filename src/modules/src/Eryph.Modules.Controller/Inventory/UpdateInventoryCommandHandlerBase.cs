@@ -364,9 +364,9 @@ namespace Eryph.Modules.Controller.Inventory
             };
         }
 
-        private static List<CatletFeature> MapFeatures(VirtualMachineData vmInfo)
+        private static ISet<CatletFeature> MapFeatures(VirtualMachineData vmInfo)
         {
-            var features = new List<CatletFeature>();
+            var features = new System.Collections.Generic.HashSet<CatletFeature>();
             
             if(vmInfo.Firmware?.SecureBoot ?? false)
                 features.Add(CatletFeature.SecureBoot);

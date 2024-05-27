@@ -11,15 +11,18 @@ namespace Eryph.StateDb;
 
 public static class ContainerExtensions
 {
-    public static SimpleInjectorAddOptions RegisterStateStore(this SimpleInjectorAddOptions options)
+    public static SimpleInjectorAddOptions RegisterStateStore(
+        this SimpleInjectorAddOptions options)
     {
-        options.Services.AddDbContext<StateStoreContext>(
-            (sp, dbOptions) => sp.GetRequiredService<Container>()
-                .GetInstance<IDbContextConfigurer<StateStoreContext>>()
-                .Configure(dbOptions));
+        options.Container.Register(
+            typeof(IReadonlyStateStoreRepository<>),
+            typeof(ReadOnlyStateStoreRepository<>),
+            Lifestyle.Scoped);
+        options.Container.Register(
+            typeof(IStateStoreRepository<>),
+            typeof(StateStoreRepository<>),
+            Lifestyle.Scoped);
 
-        options.Container.Register(typeof(IReadonlyStateStoreRepository<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
-        options.Container.Register(typeof(IStateStoreRepository<>), typeof(StateStoreRepository<>), Lifestyle.Scoped);
         options.Container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
 
         return options;

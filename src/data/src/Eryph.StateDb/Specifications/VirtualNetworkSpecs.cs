@@ -22,7 +22,7 @@ public static class VirtualNetworkSpecs
             Query.Where(x => x.ProjectId == projectId)
                 .Include(x => x.NetworkPorts)
                 .Include(x => x.Subnets)
-                .Include(x => x.RouterPort).ThenInclude(x => x.FloatingPort)
+                .Include(x => x.RouterPort).ThenInclude(x => x!.FloatingPort)
                 .Include(x => x.Subnets)
                 .ThenInclude(x => x.IpPools);
         }
@@ -43,7 +43,7 @@ public static class VirtualNetworkSpecs
                 .ThenInclude(a => a.Subnet)
                 .Include(x => x.Subnets)
                 .Include(x => x.RouterPort)
-                .ThenInclude(x => x.FloatingPort)
+                .ThenInclude(x => x!.FloatingPort)
                 .Include(x => x.Subnets)
                 .ThenInclude(x => x.IpPools);
         }

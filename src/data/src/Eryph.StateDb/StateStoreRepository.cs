@@ -23,6 +23,8 @@ namespace Eryph.StateDb
             _specificationEvaluator = new SpecificationEvaluator();
         }
 
+        public IRepositoryBaseIO<T> IO => new RepositoryBaseIO<T>(this);
+
         public async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default)
         {
             await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
@@ -57,33 +59,19 @@ namespace Eryph.StateDb
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task<T> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
+        public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
+            where TId : notnull
         {
             return await _dbContext.Set<T>().FindAsync(new object[] { id }, cancellationToken);
         }
 
-        public async Task<T> GetBySpecAsync<TSpec>(TSpec specification, 
+        public async Task<T?> GetBySpecAsync<TSpec>(TSpec specification, 
             CancellationToken cancellationToken = default) where TSpec : ISingleResultSpecification, ISpecification<T>
         {
             return (await ListAsync(specification, cancellationToken)).FirstOrDefault();
         }
 
-        public Task<TProperty> GetBySpecAsync<TProperty, TSpec>(T entry,
-            Expression<Func<T, IEnumerable<TProperty>>> propertyExpression,
-            TSpec specification,
-            CancellationToken cancellationToken)
-            where TProperty : class 
-            where TSpec : ISingleResultSpecification, ISpecification<TProperty>
-        {
-            return _specificationEvaluator.GetQuery(_dbContext.Entry(entry)
-                .Collection(propertyExpression)
-                .Query(), specification).FirstOrDefaultAsync(cancellationToken);
-
-        }
-
-        public IRepositoryBaseIO<T> IO => new RepositoryBaseIO<T>(this);
-
-        public async Task<TResult> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification,
+        public async Task<TResult?> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification,
             CancellationToken cancellationToken = default)
         {
             return (await ListAsync(specification, cancellationToken)).FirstOrDefault();

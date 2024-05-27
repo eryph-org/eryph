@@ -366,7 +366,7 @@ internal static class Program
                     .HostModule<VmHostAgentModule>()
                     .HostModule<NetworkModule>()
                     .AddControllerModule(container)
-                    .HostModule<ComputeApiModule>()
+                    .AddComputeApiModule()
                     .AddIdentityModule(container)
                     .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
                     .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<

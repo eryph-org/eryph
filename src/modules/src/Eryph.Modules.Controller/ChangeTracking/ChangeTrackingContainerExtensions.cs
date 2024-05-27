@@ -29,7 +29,7 @@ public static class ChangeTrackingContainerExtensions
             Lifestyle.Scoped);
 
         container.RegisterDecorator(
-            typeof(IDbContextConfigurer<StateStoreContext>),
+            typeof(IStateStoreContextConfigurer),
             typeof(ChangeTrackingDbConfigurer),
             Lifestyle.Scoped);
 

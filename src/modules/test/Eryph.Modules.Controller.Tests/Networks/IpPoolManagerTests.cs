@@ -14,12 +14,14 @@ using SimpleInjector.Integration.ServiceCollection;
 
 namespace Eryph.Modules.Controller.Tests.Networks;
 
-public class IpPoolManagerTests : StateDbTestBase
+public class IpPoolManagerTests : InMemoryStateDbTestBase
 {
     private static readonly Guid NetworkId = Guid.NewGuid();
     private static readonly Guid SubnetId = Guid.NewGuid();
     private static readonly Guid IpPoolId = Guid.NewGuid();
     private const string IpPoolName = "test-pool";
+    private static readonly Guid CatletMetadataId = Guid.NewGuid();
+    private static readonly Guid NetworkPortId = Guid.NewGuid();
 
     [Fact]
     public async Task AcquireIp_NextIpAvailable_ReturnsNextIp()
@@ -41,7 +43,7 @@ public class IpPoolManagerTests : StateDbTestBase
     {
         await WithScope(async (poolManager, stateStore) =>
         {
-            poolManager.AcquireIp(SubnetId, IpPoolName).Should().BeRight();
+            await AcquireIpAndAssign(poolManager);
             await stateStore.SaveChangesAsync();
         });
 
@@ -71,13 +73,11 @@ public class IpPoolManagerTests : StateDbTestBase
         Guid secondAssignmentId = default;
         await WithScope(async (poolManager, stateStore) =>
         {
-            firstAssignmentId = (await poolManager.AcquireIp(SubnetId, IpPoolName))
-                .Should().BeRight().Subject.Id;
-            secondAssignmentId = (await poolManager.AcquireIp(SubnetId, IpPoolName))
-                .Should().BeRight().Subject.Id;
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
+            firstAssignmentId = (await AcquireIpAndAssign(poolManager)).Id;
+            secondAssignmentId = (await AcquireIpAndAssign(poolManager)).Id;
+            await AcquireIpAndAssign(poolManager);
+            await AcquireIpAndAssign(poolManager);
+            await AcquireIpAndAssign(poolManager);
 
             await stateStore.SaveChangesAsync();
         });
@@ -112,12 +112,11 @@ public class IpPoolManagerTests : StateDbTestBase
         Guid assignmentId = default;
         await WithScope(async (poolManager, stateStore) =>
         {
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
-            assignmentId = (await poolManager.AcquireIp(SubnetId, IpPoolName))
-                .Should().BeRight().Subject.Id;
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
+            await AcquireIpAndAssign(poolManager);
+            await AcquireIpAndAssign(poolManager);
+            assignmentId = (await AcquireIpAndAssign(poolManager)).Id; 
+            await AcquireIpAndAssign(poolManager);
+            await AcquireIpAndAssign(poolManager);
 
             await stateStore.SaveChangesAsync();
         });
@@ -149,11 +148,11 @@ public class IpPoolManagerTests : StateDbTestBase
     {
         await WithScope(async (poolManager, stateStore) =>
         {
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
-            (await poolManager.AcquireIp(SubnetId, IpPoolName)).Should().BeRight();
+            await AcquireIpAndAssign(poolManager);
+            await AcquireIpAndAssign(poolManager);
+            await AcquireIpAndAssign(poolManager);
+            await AcquireIpAndAssign(poolManager);
+            await AcquireIpAndAssign(poolManager);
 
             await stateStore.SaveChangesAsync();
         });
@@ -176,6 +175,15 @@ public class IpPoolManagerTests : StateDbTestBase
         var poolManager = scope.GetInstance<IIpPoolManager>();
         var stateStore = scope.GetInstance<IStateStore>();
         await func(poolManager, stateStore);
+    }
+
+
+    private async Task<IpPoolAssignment> AcquireIpAndAssign(IIpPoolManager ipPoolManager)
+    {
+        var result = await ipPoolManager.AcquireIp(SubnetId, IpPoolName);
+        var ipAssignment = result.Should().BeRight().Subject;
+        ipAssignment.NetworkPortId = NetworkPortId;
+        return ipAssignment;
     }
 
     protected override void AddSimpleInjector(SimpleInjectorAddOptions options)
@@ -213,6 +221,20 @@ public class IpPoolManagerTests : StateDbTestBase
                         ]
                     },
                 ]
+            });
+
+        await stateStore.For<CatletMetadata>().AddAsync(
+            new CatletMetadata()
+            {
+                Id = CatletMetadataId,
+            });
+        
+        await stateStore.For<CatletNetworkPort>().AddAsync(
+            new CatletNetworkPort()
+           {
+               Id = NetworkPortId,
+               CatletMetadataId = CatletMetadataId,
+               NetworkId = NetworkId,
             });
     }
 }

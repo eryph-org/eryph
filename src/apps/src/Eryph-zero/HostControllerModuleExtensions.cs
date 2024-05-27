@@ -2,10 +2,10 @@
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Modules.Controller;
-using Eryph.StateDb;
-using Microsoft.EntityFrameworkCore;
+using Eryph.StateDb.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 
 namespace Eryph.Runtime.Zero
 {
@@ -13,21 +13,10 @@ namespace Eryph.Runtime.Zero
     {
         public static IModulesHostBuilder AddControllerModule(this IModulesHostBuilder builder, Container container)
         {
-            builder.HostModule<ControllerModule>(cfg =>
+            builder.HostModule<ControllerModule>();
+            builder.ConfigureFrameworkServices((_, services) =>
             {
-                cfg.Configure(app =>
-                {
-                    Task.Run(async () =>
-                    {
-                        await using var scope = app.Services.CreateAsyncScope();
-                        await scope.ServiceProvider.GetRequiredService<StateStoreContext>().Database.MigrateAsync();
-                    }).Wait();
-                });
-            });
-
-            builder.ConfigureFrameworkServices((ctx, services) =>
-            {
-                services.AddTransient<IConfigureContainerFilter<ControllerModule>, ControllerModuleFilters>();
+                services.AddTransient<IAddSimpleInjectorFilter<ControllerModule>, ControllerModuleFilters>();
             });
 
             container.Register<IPlacementCalculator, ZeroAgentLocator>();
@@ -36,19 +25,16 @@ namespace Eryph.Runtime.Zero
             return builder;
         }
 
-
-        private class ControllerModuleFilters :
-            IConfigureContainerFilter<ControllerModule>
+        private sealed class ControllerModuleFilters : IAddSimpleInjectorFilter<ControllerModule>
         {
-            public Action<IModuleContext<ControllerModule>, Container> Invoke(
-                Action<IModuleContext<ControllerModule>, Container> next)
+            public Action<IModulesHostBuilderContext<ControllerModule>, SimpleInjectorAddOptions> Invoke(
+                Action<IModulesHostBuilderContext<ControllerModule>, SimpleInjectorAddOptions> next)
             {
-                return (context, container) =>
+                return (context, options) =>
                 {
-                    next(context, container);
-
-                    container.Register(context.ModulesHostServices
-                        .GetRequiredService<IDbContextConfigurer<StateStoreContext>>, Lifestyle.Scoped);
+                    options.AddHostedService<DatabaseResetService>();
+                    options.RegisterSqliteStateStore();
+                    next(context, options);
                 };
             }
         }

@@ -1,20 +1,18 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using Eryph.Resources;
 
 namespace Eryph.StateDb.Model
 {
-    public class Resource
+    public abstract class Resource
     {
-        [Key] public Guid Id { get; set; }
+        public Guid Id { get; set; }
 
         public Guid ProjectId { get; set; }
 
-        public Project Project { get; set; }
+        public Project Project { get; set; } = null!;
 
         public ResourceType ResourceType { get; set; }
 
-        public string Name { get; set; }
-
+        public string? Name { get; set; }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Dbosoft.OVN;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
@@ -6,10 +7,13 @@ using Eryph.Core;
 using Eryph.ModuleCore.Networks;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Rebus;
+using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Security.Cryptography;
 using Eryph.StateDb;
+using Eryph.StateDb.Sqlite;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Storage;
 using Rebus.Sagas;
 using Rebus.Subscriptions;
@@ -22,9 +26,9 @@ namespace Eryph.Runtime.Zero
     {
         public static void Bootstrap(this Container container, string ovsRunDir)
         {
-            container
-                .UseInMemoryBus()
-                .UseSqlLite();
+            container.UseInMemoryBus();
+            
+            container.UseSqlLite();
 
             container.Register<IRSAProvider, RSAProvider>();
             container.Register<ICryptoIOServices, WindowsCryptoIOServices>();
@@ -62,9 +66,13 @@ namespace Eryph.Runtime.Zero
         public static Container UseSqlLite(this Container container)
         {
             container.RegisterInstance(new InMemoryDatabaseRoot());
-            container.Register<IDbContextConfigurer<StateStoreContext>, SqlLiteStateStoreContextConfigurer>();
+            var builder = new SqliteConnectionStringBuilder
+            {
+                DataSource = Path.Combine(ZeroConfig.GetPrivateConfigPath(), "state.db"),
+            };
+            container.RegisterInstance<IStateStoreContextConfigurer>(
+                new SqliteStateStoreContextConfigurer(builder.ToString()));
             return container;
         }
-
     }
 }

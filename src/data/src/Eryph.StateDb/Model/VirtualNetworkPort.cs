@@ -1,14 +1,14 @@
 ﻿using System;
 
-namespace Eryph.StateDb.Model
+namespace Eryph.StateDb.Model;
+
+public abstract class VirtualNetworkPort: NetworkPort
 {
-    public abstract class VirtualNetworkPort: NetworkPort
-    {
+    public Guid NetworkId { get; set; }
 
-        public Guid NetworkId { get; set; }
-        public virtual VirtualNetwork Network { get; set; }
+    public virtual VirtualNetwork Network { get; set; } = null!;
 
-        public FloatingNetworkPort FloatingPort { get; set; }
-        public Guid? FloatingPortId { get; set; }
-    }
+    public Guid? FloatingPortId { get; set; }
+
+    public FloatingNetworkPort? FloatingPort { get; set; }
 }

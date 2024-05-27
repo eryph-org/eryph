@@ -6,6 +6,7 @@ using Eryph.Modules.Controller.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
+using Eryph.StateDb.TestBase;
 using LanguageExt;
 using LanguageExt.Common;
 using Moq;
@@ -15,7 +16,16 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
-public class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBase
+[Trait("Category", "Docker")]
+[Collection(nameof(MySqlDatabaseCollection))]
+public class MySqlNetworkProvidersChangeTrackingTests(MySqlFixture databaseFixture)
+    : NetworkProvidersChangeTrackingTests(databaseFixture);
+
+[Collection(nameof(SqliteDatabaseCollection))]
+public class SqliteNetworkProvidersChangeTrackingTests(SqliteFixture databaseFixture)
+    : NetworkProvidersChangeTrackingTests(databaseFixture);
+
+public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBase
 {
     private static readonly Guid FloatingPortId = Guid.NewGuid();
     private static readonly Guid IpAssignmentId = Guid.NewGuid();
@@ -46,7 +56,7 @@ public class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBase
 
     private NetworkProvidersConfiguration? _savedProvidersConfig;
 
-    public NetworkProvidersChangeTrackingTests()
+    protected NetworkProvidersChangeTrackingTests(IDatabaseFixture databaseFixture) : base(databaseFixture)
     {
         MockNetworkProviderManager.Setup(m => m.GetCurrentConfiguration())
             .Returns(RightAsync<Error, NetworkProvidersConfiguration>(GetProvidersConfig()));

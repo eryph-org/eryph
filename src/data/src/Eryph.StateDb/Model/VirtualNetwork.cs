@@ -12,13 +12,15 @@ public class VirtualNetwork : Resource
         ResourceType = ResourceType.VirtualNetwork;
     }
 
-    public string NetworkProvider { get; set; }
+    public string? NetworkProvider { get; set; }
 
-    public string IpNetwork { get; set; }
+    public string? IpNetwork { get; set; }
     
-    public NetworkRouterPort RouterPort { get; set; }
-    public string Environment { get; set; }
+    public NetworkRouterPort? RouterPort { get; set; } = null!;
+    
+    public string? Environment { get; set; }
 
-    public virtual List<VirtualNetworkPort> NetworkPorts { get; set; }
-    public virtual List<VirtualNetworkSubnet> Subnets { get; set; }
+    public virtual List<VirtualNetworkPort> NetworkPorts { get; set; } = null!;
+    
+    public virtual List<VirtualNetworkSubnet> Subnets { get; set; } = null!;
 }

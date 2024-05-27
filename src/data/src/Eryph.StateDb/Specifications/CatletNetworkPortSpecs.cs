@@ -22,9 +22,9 @@ public sealed class CatletNetworkPortSpecs
                 .ThenInclude(x => x.IpPools);
             Query.Include(x => x.Network)
                 .ThenInclude(x => x.RouterPort)
-                .ThenInclude(x => x.IpAssignments);
+                .ThenInclude(x => x!.IpAssignments);
             Query.Include(x => x.FloatingPort)
-                .ThenInclude(x => x.IpAssignments)
+                .ThenInclude(x => x!.IpAssignments)
                 .ThenInclude(x => x.Subnet);
             Query.Include(x => x.IpAssignments)
                 .ThenInclude(x => ((IpPoolAssignment)x).Pool);

@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.MySql;
+using Eryph.StateDb.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,21 +19,21 @@ namespace Eryph.StateDb.TestBase;
 
 /// <summary>
 /// This base class can be used for tests which require a working
-/// state database. It uses an in-memory SQLite database.
+/// state database. It uses <see cref="IDatabaseFixture"/> to get
+/// a running database instance.
 /// </summary>
 public abstract class StateDbTestBase : IAsyncLifetime
 {
-    private readonly string _dbConnection = $"Data Source={Guid.NewGuid()};Mode=Memory;Cache=Shared";
-
-    private readonly SqliteConnection _connection;
+    private readonly IDatabaseFixture _databaseFixture;
+    private readonly string _dbConnection;
+    private SqliteConnection? _sqliteConnection;
     private readonly ServiceProvider _provider;
     private readonly Container _container;
 
-    protected StateDbTestBase()
+    protected StateDbTestBase(IDatabaseFixture databaseFixture)
     {
-        // This database connection is kept open for the duration of the test
-        // to make sure that the in-memory database is not disposed.
-        _connection = new SqliteConnection(_dbConnection);
+        _databaseFixture = databaseFixture;
+        _dbConnection = _databaseFixture.GetConnectionString($"test_{DateTime.UtcNow.Ticks}");
         _container = new Container();
         _container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
         var services = new ServiceCollection();
@@ -39,7 +41,7 @@ public abstract class StateDbTestBase : IAsyncLifetime
         {
             options.Services.AddLogging();
             ConfigureDatabase(options.Container);
-            options.RegisterStateStore();
+            RegisterStateStore(options);
             options.AddLogging();
             AddSimpleInjector(options);
         });
@@ -53,29 +55,27 @@ public abstract class StateDbTestBase : IAsyncLifetime
     /// </summary>
     protected virtual void AddSimpleInjector(SimpleInjectorAddOptions options) { }
 
-    private class TestDbContextConfigurer(string dbConnection)
-        : IDbContextConfigurer<StateStoreContext>
-    {
-        public void Configure(DbContextOptionsBuilder options)
-        {
-            options.UseSqlite(dbConnection);
-        }
-    }
-
     public virtual async Task InitializeAsync()
     {
-        await _connection.OpenAsync();
+        if (_databaseFixture is SqliteFixture)
+        {
+            // Sqlite is a special case as we use the in-memory database.
+            // We need to keep a connection open for the duration for the test
+            // to keep the database alive.
+            _sqliteConnection = new SqliteConnection(_dbConnection);
+            await _sqliteConnection.OpenAsync();
+        }
 
         await using var scope = AsyncScopedLifestyle.BeginScope(_container);
         
         var context = scope.GetInstance<StateStoreContext>();
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
         var stateStore = scope.GetInstance<IStateStore>();
         await SeedAsync(stateStore);
         await stateStore.SaveChangesAsync();
     }
 
-    protected Scope CreateScope() => AsyncScopedLifestyle.BeginScope(_container);
+    public Scope CreateScope() => AsyncScopedLifestyle.BeginScope(_container);
 
     /// <summary>
     /// This method can be implemented to execute seeding logic for
@@ -105,14 +105,39 @@ public abstract class StateDbTestBase : IAsyncLifetime
 
     protected void ConfigureDatabase(Container container)
     {
-        container.RegisterInstance<IDbContextConfigurer<StateStoreContext>>(
-            new TestDbContextConfigurer(_dbConnection));
+        container.RegisterInstance(GetConfigurer());
     }
 
-    public async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
         await _container.DisposeAsync();
         await _provider.DisposeAsync();
-        await _connection.DisposeAsync();
+        if (_sqliteConnection is not null)
+        {
+            await _sqliteConnection.DisposeAsync();
+        }
+    }
+
+    private IStateStoreContextConfigurer GetConfigurer() =>
+        _databaseFixture switch
+        {
+            MySqlFixture => new MySqlStateStoreContextConfigurer(_dbConnection),
+            SqliteFixture => new SqliteStateStoreContextConfigurer(_dbConnection),
+            _ => throw new NotSupportedException($"Database type '{_databaseFixture}' is not supported."),
+        };
+
+    private void RegisterStateStore(SimpleInjectorAddOptions options)
+    {
+        switch (_databaseFixture)
+        {
+            case MySqlFixture:
+                options.RegisterMySqlStateStore();
+                break;
+            case SqliteFixture:
+                options.RegisterSqliteStateStore();
+                break;
+            default:
+                throw new NotSupportedException($"Database type '{_databaseFixture}' is not supported.");
+        }
     }
 }
