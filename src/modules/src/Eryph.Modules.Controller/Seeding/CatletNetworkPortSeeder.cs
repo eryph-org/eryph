@@ -91,6 +91,7 @@ internal class CatletNetworkPortSeeder : SeederBase
             FloatingPort = floatingPort,
             Network = network,
             CatletMetadataId = portConfig.CatletMetadataId,
+            AddressName = portConfig.AddressName,
             IpAssignments = assignments.ToList(),
         };
 

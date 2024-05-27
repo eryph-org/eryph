@@ -12,4 +12,6 @@ public class Subnet
     public string IpNetwork { get; set; }
 
     public virtual List<IpPool> IpPools { get; set; }
+    public string DnsDomain { get; set; }
+
 }

@@ -19,7 +19,6 @@ namespace Eryph.Resources.Machines
 
         [CanBeNull] public CatletConfig ParentConfig { get; set; }
 
-        public string SocialName { get; set; }
         [CanBeNull] public FodderConfig[] Fodder { get; set; }
         public bool SecureDataHidden { get; set; }
     }

@@ -19,5 +19,7 @@ namespace Eryph.Configuration.Model
         public IpAssignmentConfigModel[] IpAssignments { get; set; }
 
         public Guid CatletMetadataId { get; set; }
+
+        public string AddressName { get; set; }
     }
 }

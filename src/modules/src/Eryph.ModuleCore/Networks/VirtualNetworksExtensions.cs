@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Net;
-using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Networks;
 using Eryph.StateDb.Model;
-using LanguageExt;
 
 namespace Eryph.ModuleCore.Networks
 {
@@ -40,9 +38,8 @@ namespace Eryph.ModuleCore.Networks
                             {
                                 Name = subnet.Name,
                                 Address = subnet.IpNetwork != network.IpNetwork ? subnet.IpNetwork : null,
-                                DnsServers = ipNetwork.AddressFamily == AddressFamily.InterNetwork
-                                    ? subnet.DnsServersV4?.Split(",", StringSplitOptions.RemoveEmptyEntries)
-                                    : null,
+                                DnsServers = GetDnsServers(ipNetwork, subnet),
+                                DnsDomain = GetDnsDomain(network, subnet),
                                 Mtu = subnet.MTU,
                                 IpPools = subnet.IpPools.Count > 0 ? subnet.IpPools.Select(ipPool => new IpPoolConfig
                                 {
@@ -76,6 +73,24 @@ namespace Eryph.ModuleCore.Networks
                     return networkConfig;
                 }).OrderBy(x=>x.Environment ?? "A").ThenBy(x=>x.Name).ToArray()
             };
+
+            string? GetDnsDomain(VirtualNetwork network, Subnet subnet)
+            {
+                // set to null in case it matches either the default or environment default
+                if (network.Environment is null or "default")
+                    return subnet.DnsDomain == "home.arpa" ? null : subnet.DnsDomain;
+
+                return subnet.DnsDomain == $"{network.Environment ?? "".ToLowerInvariant()}.home.arpa"
+                    ? null
+                    : subnet.DnsDomain;
+            }
+
+            string[]? GetDnsServers(IPNetwork2 ipNetwork, VirtualNetworkSubnet subnet)
+            {
+                return ipNetwork.AddressFamily == AddressFamily.InterNetwork
+                    ? subnet.DnsServersV4?.Split(",", StringSplitOptions.RemoveEmptyEntries)
+                    : null;
+            }
         }
     }
 }
