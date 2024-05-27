@@ -640,6 +640,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("DataStore")
                         .HasColumnType("longtext");
 
+                    b.Property<Guid>("DiskIdentifier")
+                        .HasColumnType("char(36)");
+
                     b.Property<int>("DiskType")
                         .HasColumnType("int");
 
@@ -652,6 +655,15 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<bool>("Frozen")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("Geneset")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset>("LastSeen")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("LastSeenAgent")
+                        .HasColumnType("longtext");
+
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("char(36)");
 
@@ -663,6 +675,9 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("longtext");
+
+                    b.Property<long?>("UsedSizeBytes")
+                        .HasColumnType("bigint");
 
                     b.HasIndex("ParentId");
 

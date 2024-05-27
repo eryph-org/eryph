@@ -228,13 +228,20 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     VirtualDisk_StorageIdentifier = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    DiskIdentifier = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    Geneset = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     VirtualDisk_Frozen = table.Column<bool>(type: "tinyint(1)", nullable: true),
                     VirtualDisk_Path = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     FileName = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     SizeBytes = table.Column<long>(type: "bigint", nullable: true),
+                    UsedSizeBytes = table.Column<long>(type: "bigint", nullable: true),
                     ParentId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: true),
+                    LastSeenAgent = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     VirtualDisk_DataStore = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     VirtualDisk_Environment = table.Column<string>(type: "longtext", nullable: true)

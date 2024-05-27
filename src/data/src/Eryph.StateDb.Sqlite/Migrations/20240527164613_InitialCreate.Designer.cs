@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20240527160420_InitialCreate")]
+    [Migration("20240527164613_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -638,6 +638,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("DataStore")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("DiskIdentifier")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("DiskType")
                         .HasColumnType("INTEGER");
 
@@ -650,6 +653,15 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<bool>("Frozen")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Geneset")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastSeen")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastSeenAgent")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("TEXT");
 
@@ -661,6 +673,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("TEXT");
+
+                    b.Property<long?>("UsedSizeBytes")
+                        .HasColumnType("INTEGER");
 
                     b.HasIndex("ParentId");
 
