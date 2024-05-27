@@ -3,6 +3,7 @@ using System;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Migrations
 {
     [DbContext(typeof(StateStoreContext))]
-    partial class StateStoreContextModelSnapshot : ModelSnapshot
+    [Migration("20240428084529_diskdata")]
+    partial class diskdata
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.4");
@@ -152,9 +155,6 @@ namespace Eryph.StateDb.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AddressName")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Discriminator")
@@ -447,9 +447,6 @@ namespace Eryph.StateDb.Migrations
                         .HasMaxLength(21)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("DnsDomain")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("IpNetwork")
                         .HasColumnType("TEXT");
 
@@ -635,6 +632,9 @@ namespace Eryph.StateDb.Migrations
                     b.Property<string>("DataStore")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("DiskIdentifier")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("DiskType")
                         .HasColumnType("INTEGER");
 
@@ -646,6 +646,12 @@ namespace Eryph.StateDb.Migrations
 
                     b.Property<bool>("Frozen")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Geneset")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("LastSeen")
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("TEXT");

@@ -6,15 +6,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Eryph.StateDb.Migrations
 {
     /// <inheritdoc />
-    public partial class Diskdata : Migration
+    public partial class diskdata : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_CatletDrives_CatletDisks_AttachedDiskId",
-                table: "CatletDrives");
-
             migrationBuilder.AlterColumn<DateTimeOffset>(
                 name: "LastUpdated",
                 table: "OperationTasks",
@@ -38,41 +34,17 @@ namespace Eryph.StateDb.Migrations
                 type: "TEXT",
                 nullable: true);
 
-            migrationBuilder.AddColumn<DateTime>(
+            migrationBuilder.AddColumn<DateTimeOffset>(
                 name: "LastSeen",
                 table: "CatletDisks",
                 type: "TEXT",
                 nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
-
-            migrationBuilder.AddColumn<string>(
-                name: "LastSeenAgent",
-                table: "CatletDisks",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<long>(
-                name: "UsedSizeBytes",
-                table: "CatletDisks",
-                type: "INTEGER",
-                nullable: true);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_CatletDrives_CatletDisks_AttachedDiskId",
-                table: "CatletDrives",
-                column: "AttachedDiskId",
-                principalTable: "CatletDisks",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.SetNull);
+                defaultValue: new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)));
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_CatletDrives_CatletDisks_AttachedDiskId",
-                table: "CatletDrives");
-
             migrationBuilder.DropColumn(
                 name: "DiskIdentifier",
                 table: "CatletDisks");
@@ -85,14 +57,6 @@ namespace Eryph.StateDb.Migrations
                 name: "LastSeen",
                 table: "CatletDisks");
 
-            migrationBuilder.DropColumn(
-                name: "LastSeenAgent",
-                table: "CatletDisks");
-
-            migrationBuilder.DropColumn(
-                name: "UsedSizeBytes",
-                table: "CatletDisks");
-
             migrationBuilder.AlterColumn<DateTimeOffset>(
                 name: "LastUpdated",
                 table: "OperationTasks",
@@ -100,13 +64,6 @@ namespace Eryph.StateDb.Migrations
                 nullable: true,
                 oldClrType: typeof(DateTimeOffset),
                 oldType: "TEXT");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_CatletDrives_CatletDisks_AttachedDiskId",
-                table: "CatletDrives",
-                column: "AttachedDiskId",
-                principalTable: "CatletDisks",
-                principalColumn: "Id");
         }
     }
 }
