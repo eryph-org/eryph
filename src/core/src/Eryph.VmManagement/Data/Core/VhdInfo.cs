@@ -1,4 +1,5 @@
-﻿using Eryph.ConfigModel;
+﻿using System;
+using Eryph.ConfigModel;
 
 namespace Eryph.VmManagement.Data.Core
 {
@@ -15,5 +16,6 @@ namespace Eryph.VmManagement.Data.Core
 
         [PrivateIdentifier]
         public string ParentPath { get; set; }
+        public Guid DiskIdentifier { get; set; }
     }
 }

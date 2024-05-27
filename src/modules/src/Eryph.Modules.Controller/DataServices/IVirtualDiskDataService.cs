@@ -11,7 +11,10 @@ public interface IVirtualDiskDataService
     Task<Option<VirtualDisk>> GetVHD(Guid id);
     Task<VirtualDisk> AddNewVHD(VirtualDisk virtualDisk);
 
-    Task<IEnumerable<VirtualDisk>> FindVHDByLocation(string dataStore, string project, string environment, string storageIdentifier, string name);
+    Task<IEnumerable<VirtualDisk>> FindVHDByLocation(
+        Guid projectId, string dataStore, string environment, string storageIdentifier, 
+        string name, Guid diskIdentifier);
+    Task<IEnumerable<VirtualDisk>> FindOutdated(DateTimeOffset lastSeenBefore, string agentName);
 
     Task<VirtualDisk> UpdateVhd(VirtualDisk virtualDisk);
     Task<Unit> DeleteVHD(Guid id);

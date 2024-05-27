@@ -67,7 +67,8 @@ internal class ImportCatletVMCommandHandler :
             select new ConvergeCatletResult
             {
                 Inventory = inventory,
-                MachineMetadata = metadata
+                MachineMetadata = metadata,
+                Timestamp = DateTimeOffset.UtcNow,
             };
     }
 

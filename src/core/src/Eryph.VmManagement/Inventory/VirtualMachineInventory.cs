@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
@@ -53,10 +54,11 @@ namespace Eryph.VmManagement.Inventory
                     Firmware = firmwareData,
                     Frozen = vmStorageSettings.Map(x => x.Frozen).IfNone(true),
                     VMPath = vmStorageSettings.Map(x => x.VMPath).IfNone(""),
-                    StorageIdentifier = vmStorageSettings.Map(x=>x.StorageIdentifier.IfNone("")).IfNone(""),
-                    ProjectName = vmStorageSettings.Map(x => x.StorageNames.ProjectName.IfNone("")).IfNone(""),
-                    DataStore = vmStorageSettings.Map(x => x.StorageNames.DataStoreName.IfNone("")).IfNone(""),
-                    Environment = vmStorageSettings.Map(x => x.StorageNames.EnvironmentName.IfNone("")).IfNone(""),
+                    StorageIdentifier = vmStorageSettings.Bind(x => x.StorageIdentifier).IfNone(""),
+                    ProjectId = vmStorageSettings.Bind(x => x.StorageNames.ProjectId).Map(id => (Guid?)id).IfNoneUnsafe((Guid?)null),
+                    ProjectName = vmStorageSettings.Bind(x => x.StorageNames.ProjectName).IfNone(""),
+                    DataStore = vmStorageSettings.Bind(x => x.StorageNames.DataStoreName).IfNone(""),
+                    Environment = vmStorageSettings.Bind(x => x.StorageNames.EnvironmentName).IfNone(""),
                     Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x=>x.HardDrives)).ToArray(),
                     NetworkAdapters = vm.GetList(x=>x.NetworkAdapters).Map(a=>
                     {
@@ -114,22 +116,24 @@ namespace Eryph.VmManagement.Inventory
 
         private static DiskInfo CreateDiskInfo(DiskStorageSettings storageSettings)
         {
-            var disk = new DiskInfo
+            return new DiskInfo
             {
                 Id = Guid.NewGuid(),
+                DiskIdentifier = storageSettings.DiskIdentifier,
                 Name = storageSettings.Name,
+                ProjectName = storageSettings.StorageNames.ProjectName.IfNone(EryphConstants.DefaultProjectName),
+                ProjectId = storageSettings.StorageNames.ProjectId.Map(i => (Guid?)i).IfNoneUnsafe((Guid?)null),
+                Environment = storageSettings.StorageNames.EnvironmentName.IfNone(EryphConstants.DefaultEnvironmentName),
+                DataStore = storageSettings.StorageNames.DataStoreName.IfNone(EryphConstants.DefaultDataStoreName),
+                StorageIdentifier = storageSettings.StorageIdentifier.IfNoneUnsafe((string)null),
+                Frozen = storageSettings.StorageIdentifier.Match(Some: _ => false, None: () => true),
+                Parent = storageSettings.ParentSettings.Map(CreateDiskInfo).IfNoneUnsafe((DiskInfo)null),
+                Geneset = storageSettings.Geneset.Map(s => s.Value).IfNoneUnsafe((string)null),
                 Path = storageSettings.Path,
                 FileName = storageSettings.FileName,
-                SizeBytes = storageSettings.SizeBytes
+                SizeBytes = storageSettings.SizeBytes,
+                UsedSizeBytes = storageSettings.UsedSizeBytes
             };
-
-            storageSettings.StorageIdentifier.IfSome(n => disk.StorageIdentifier = n);
-            storageSettings.StorageNames.DataStoreName.IfSome(n => disk.DataStore = n);
-            storageSettings.StorageNames.ProjectName.IfSome(n => disk.ProjectName = n);
-            storageSettings.StorageNames.EnvironmentName.IfSome(n => disk.Environment = n);
-            storageSettings.StorageIdentifier.IfNone(() => disk.Frozen = true);
-            storageSettings.ParentSettings.IfSome(parentSettings => disk.Parent = CreateDiskInfo(parentSettings));
-            return disk;
         }
 
         private static Guid GetMetadataId(TypedPsObject<VirtualMachineInfo> vmInfo)
@@ -155,7 +159,8 @@ namespace Eryph.VmManagement.Inventory
 
 
         private static IEnumerable<VirtualMachineDriveData> CreateHardDriveInfo(
-            Seq<CurrentHardDiskDriveStorageSettings> storageSettings, IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> hdDevices)
+            Seq<CurrentHardDiskDriveStorageSettings> storageSettings,
+            IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> hdDevices)
         {
             foreach (var device in hdDevices)
             {
@@ -172,7 +177,7 @@ namespace Eryph.VmManagement.Inventory
                     Type = storageSetting?.Type
                 };
 
-                if (storageSetting != null)
+                if (storageSetting?.DiskSettings != null)
                     drive.Disk = CreateDiskInfo(storageSetting.DiskSettings);
 
                 yield return drive;

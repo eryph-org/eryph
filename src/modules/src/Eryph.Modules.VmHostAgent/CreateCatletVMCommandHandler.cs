@@ -66,7 +66,8 @@ namespace Eryph.Modules.VmHostAgent
                 select new ConvergeCatletResult
                 {
                     Inventory = inventory,
-                    MachineMetadata = metadata
+                    MachineMetadata = metadata,
+                    Timestamp = DateTimeOffset.UtcNow,
                 };
         }
 

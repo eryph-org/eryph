@@ -246,7 +246,7 @@ namespace Eryph.Modules.Controller.Compute
                 {
                     AgentName = Data.AgentName,
                     Inventory = new List<VirtualMachineData> { r.Inventory },
-                    TenantId = Data.TenantId
+                    Timestamp = r.Timestamp,
                 });
 
                 await await _vmDataService.GetVM(Data.CatletId).Match(

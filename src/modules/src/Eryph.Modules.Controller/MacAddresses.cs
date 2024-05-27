@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO.Hashing;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -17,12 +18,11 @@ namespace Eryph.Modules.Controller
 
         public static string GenerateMacAddress(string valueSource)
         {
-            var crc = new Crc32();
 
             string? result = null;
 
             var arrayData = Encoding.ASCII.GetBytes(valueSource);
-            var arrayResult = crc.ComputeHash(arrayData);
+            var arrayResult = Crc32.Hash(arrayData);
             foreach (var t in arrayResult)
             {
                 var temp = Convert.ToString(t, 16);

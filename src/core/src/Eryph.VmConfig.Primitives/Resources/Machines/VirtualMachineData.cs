@@ -14,6 +14,7 @@ namespace Eryph.Resources.Machines
 
         public string DataStore { get; set; }
         public string ProjectName { get; set; }
+        public Guid? ProjectId { get; set; }
         public string Environment { get; set; }
 
         public bool Frozen { get; set; }

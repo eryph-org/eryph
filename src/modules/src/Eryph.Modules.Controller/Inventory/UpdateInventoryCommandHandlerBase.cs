@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Messages.Resources.Disks;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Rebus;
@@ -15,6 +16,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
+using Rebus.Messages;
 using Rebus.Pipeline;
 
 namespace Eryph.Modules.Controller.Inventory
@@ -43,119 +45,28 @@ namespace Eryph.Modules.Controller.Inventory
             _messageContext = messageContext;
         }
 
-        private static void SelectAllParentDisks(ref List<DiskInfo> parentDisks, DiskInfo disk)
+
+
+        protected async Task UpdateVMs(
+            DateTimeOffset timestamp,
+            IEnumerable<VirtualMachineData> vmList, CatletFarm hostMachine)
         {
-            if (disk.Parent != null)
-                SelectAllParentDisks(ref parentDisks, disk.Parent);
-
-            parentDisks.Add(disk);
-        }
-
-        protected async Task UpdateVMs(Guid tenantId, IEnumerable<VirtualMachineData> vmList, CatletFarm hostMachine)
-        {
-
             var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
-
             var diskInfos = vms.SelectMany(x => x.Drives.Select(d => d.Disk)).ToList();
-            var allDisks = new List<DiskInfo>();
-            foreach (var diskInfo in diskInfos) SelectAllParentDisks(ref allDisks, diskInfo);
-
-            diskInfos = allDisks.Distinct((x, y) =>
-                string.Equals(x.Path, y.Path, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(x.FileName, y.FileName, StringComparison.OrdinalIgnoreCase)).ToList();
-
-            var addedDisks = new List<VirtualDisk>();
-
-            async Task<Option<VirtualDisk>> LookupVirtualDisk(DiskInfo diskInfo)
-            {
-                var disksDataCandidates = await _vhdDataService.FindVHDByLocation(
-                        diskInfo.DataStore,
-                        diskInfo.ProjectName,
-                        diskInfo.Environment,
-                        diskInfo.StorageIdentifier,
-                        diskInfo.Name)
-                    .Map(l => addedDisks.Append(l))
-                    .Map(l => l.Filter(
-                        x => x.DataStore == diskInfo.DataStore &&
-                             x.Project.Name == diskInfo.ProjectName &&
-                             x.Environment == diskInfo.Environment &&
-                             x.StorageIdentifier == diskInfo.StorageIdentifier &&
-                             x.Name == diskInfo.Name))
-                    .Map(x => x.ToArray());
-
-                Option<VirtualDisk> disk;
-                if (disksDataCandidates.Length <= 1)
-                    disk = disksDataCandidates.FirstOrDefault() ?? Option<VirtualDisk>.None;
-                else
-                    disk = disksDataCandidates.FirstOrDefault(x =>
-                        string.Equals(x.Path, diskInfo.Path, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(x.FileName, diskInfo.FileName, StringComparison.OrdinalIgnoreCase))
-                           ?? Option<VirtualDisk>.None;
-
-                return disk;
-            }
-
-            foreach (var diskInfo in diskInfos)
-            {
-                var disk = await LookupVirtualDisk(diskInfo)
-                    .IfNoneAsync(async () =>
-                {
-
-                    var d = new VirtualDisk
-                    {
-                        Id = diskInfo.Id,
-                        Name = diskInfo.Name,
-                        DataStore = diskInfo.DataStore,
-                        Environment = diskInfo.Environment,
-                        Frozen = diskInfo.Frozen,
-                        StorageIdentifier = diskInfo.StorageIdentifier,
-                        Project = await FindRequiredProject(tenantId,diskInfo.ProjectName)
-                    };
-                    d = await _vhdDataService.AddNewVHD(d);
-                    addedDisks.Add(d);
-                    return d;
-                });
-
-                diskInfo.Id = disk.Id; // copy id of existing record
-                disk.FileName = diskInfo.FileName;
-                disk.Path = diskInfo.Path;
-                disk.SizeBytes = diskInfo.SizeBytes;
-                await _vhdDataService.UpdateVhd(disk);
-
-            }
-
-            //second loop to assign parents and to update state db
-            foreach (var diskInfo in diskInfos)
-            {
-                await LookupVirtualDisk(diskInfo).IfSomeAsync(async currentDisk =>
-               {
-                   if (diskInfo.Parent == null)
-                   {
-                       currentDisk.Parent = null;
-                       return;
-                   }
-
-                   await LookupVirtualDisk(diskInfo.Parent)
-                       .IfSomeAsync(parentDisk =>
-                       {
-                           currentDisk.Parent = parentDisk;
-
-                       });
-                   await _vhdDataService.UpdateVhd(currentDisk);
-
-               });
-            }
-
+            
+            var addedDisks = await ResolveAndUpdateDisks(diskInfos, timestamp, hostMachine)
+                .ConfigureAwait(false);
 
             foreach (var vmInfo in vms)
             {
                 //get known metadata for VM, if metadata is unknown skip this VM as it is not in Eryph management
-                var optionalMetadata = await MetadataService.GetMetadata(vmInfo.MetadataId);
+                var optionalMetadata = await MetadataService.GetMetadata(vmInfo.MetadataId).ConfigureAwait(false);
                 //TODO: add logging that entry has been skipped due to missing metadata
 
                 await optionalMetadata.IfSomeAsync(async metadata =>
                 {
-                    var optionalMachine = (await _vmDataService.GetVM(metadata.MachineId));
+                    var optionalMachine = (await _vmDataService.GetVM(metadata.MachineId).ConfigureAwait(false));
+                    var project = await FindRequiredProject(vmInfo.ProjectName, vmInfo.ProjectId).ConfigureAwait(false);
 
                     //machine not found or metadata is assigned to new VM - a new VM resource will be created)
                     if (optionalMachine.IsNone || metadata.VMId != vmInfo.VMId)
@@ -169,45 +80,43 @@ namespace Eryph.Modules.Controller.Inventory
                             metadata.VMId = vmInfo.VMId;
                             
                             await _dispatcher.StartNew(
-                                tenantId,
+                                project.TenantId,
                                 _messageContext.GetTraceId(),
                                 new UpdateCatletMetadataCommand
-                            {
-                                AgentName = hostMachine.Name,
-                                CurrentMetadataId = oldMetadataId,
-                                NewMetadataId = metadata.Id,
-                                CatletId = metadata.MachineId,
-                                VMId = vmInfo.VMId,
-                            });
+                                {
+                                    AgentName = hostMachine.Name,
+                                    CurrentMetadataId = oldMetadataId,
+                                    NewMetadataId = metadata.Id,
+                                    CatletId = metadata.MachineId,
+                                    VMId = vmInfo.VMId,
+                                }).ConfigureAwait(false);
                         }
 
                         if (metadata.MachineId == Guid.Empty)
                             metadata.MachineId = Guid.NewGuid();
 
-                        
-                        var project = await FindRequiredProject(tenantId,vmInfo.ProjectName);
 
-                        await _vmDataService.AddNewVM(
-                            VirtualMachineInfoToCatlet(vmInfo, hostMachine, metadata.MachineId, project),
-                            metadata);
-
+                        var catlet = await VirtualMachineInfoToCatlet(vmInfo, 
+                                hostMachine, metadata.MachineId, project, addedDisks)
+                            .ConfigureAwait(false);
+                        await _vmDataService.AddNewVM(catlet, metadata).ConfigureAwait(false);
 
                         return;
                     }
 
-                    optionalMachine.IfSome(existingMachine =>
+                    await optionalMachine.IfSomeAsync(async existingMachine =>
                     {
-                        StateStore.LoadProperty(existingMachine, x=> x.Project);
+                        await StateStore.LoadPropertyAsync(existingMachine, x=> x.Project).ConfigureAwait(false);
 
                         Debug.Assert(existingMachine.Project != null);
 
-                        StateStore.LoadCollection(existingMachine, x => x.ReportedNetworks);
-                        StateStore.LoadCollection(existingMachine, x => x.NetworkAdapters);
+                        await StateStore.LoadCollectionAsync(existingMachine, x => x.ReportedNetworks).ConfigureAwait(false);
+                        await StateStore.LoadCollectionAsync(existingMachine, x => x.NetworkAdapters).ConfigureAwait(false);
 
 
                         // update data for existing machine
-                        var newMachine = VirtualMachineInfoToCatlet(vmInfo,
-                            hostMachine, existingMachine.Id, existingMachine.Project);
+                        var newMachine = await VirtualMachineInfoToCatlet(vmInfo,
+                            hostMachine, existingMachine.Id, existingMachine.Project, addedDisks).ConfigureAwait(false);
                         existingMachine.Name = newMachine.Name;
                         existingMachine.Status = newMachine.Status;
                         existingMachine.Host = hostMachine;
@@ -226,45 +135,202 @@ namespace Eryph.Modules.Controller.Inventory
                         existingMachine.StartupMemory = newMachine.StartupMemory;
                         existingMachine.Features = newMachine.Features;
                         existingMachine.SecureBootTemplate = newMachine.SecureBootTemplate;
-                    });
-
-
-                });
+                    }).ConfigureAwait(false);
+                }).ConfigureAwait(false);
             }
+
+            
+            var outdatedDisks = (await _vhdDataService.FindOutdated(timestamp, hostMachine.Name)).ToArray();
+            if (outdatedDisks.Length == 0)
+                return;
+            await _dispatcher.StartNew(
+                EryphConstants.DefaultTenantId,
+                Guid.NewGuid().ToString(),
+                new CheckDisksExistsCommand
+                {
+                    AgentName = hostMachine.Name,
+                    Disks = outdatedDisks.Select(d => new DiskInfo
+                    {
+                        Id = d.Id,
+                        ProjectId = d.Project.Id,
+                        ProjectName = d.Project.Name,
+                        DataStore = d.DataStore,
+                        Environment = d.Environment,
+                        StorageIdentifier = d.StorageIdentifier,
+                        Name = d.Name,
+                        FileName = d.FileName,
+                        Path = d.Path,
+                        DiskIdentifier = d.DiskIdentifier
+                    }).ToArray()
+                });
         }
 
-        protected async Task<Option<Project>> FindProject(Guid tenantId, string projectIdentifier)
+        private async Task<List<VirtualDisk>> ResolveAndUpdateDisks(
+            List<DiskInfo> diskInfos,
+            DateTimeOffset timestamp, 
+            CatletFarm hostMachine)
         {
-            var isGuid = Guid.TryParse(projectIdentifier, out var projectId);
+            var allDisks = diskInfos
+                .ToSeq()
+                .Map(SelectAllParentDisks)
+                .Flatten()
+                .Distinct((x, y) => string.Equals(x.Path, y.Path, StringComparison.OrdinalIgnoreCase)
+                                    && string.Equals(x.FileName, y.FileName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-            if (isGuid)
-                return await StateStore.For<Project>().GetByIdAsync(projectId);
+            var addedDisks = new List<VirtualDisk>();
 
-            if(string.IsNullOrWhiteSpace(projectIdentifier))
-                projectIdentifier= "default";
+            foreach (var diskInfo in allDisks)
+            {
+                var project = await FindProject(diskInfo.ProjectName, diskInfo.ProjectId)
+                    .IfNoneAsync(() => FindRequiredProject(EryphConstants.DefaultProjectName, null))
+                    .ConfigureAwait(false);
+
+                var disk = await LookupVirtualDisk(diskInfo, project, addedDisks)
+                    .IfNoneAsync(async () =>
+                    {
+                        var d = new VirtualDisk
+                        {
+                            Id = diskInfo.Id,
+                            Name = diskInfo.Name,
+                            DiskIdentifier = diskInfo.DiskIdentifier,
+                            DataStore = diskInfo.DataStore,
+                            Environment = diskInfo.Environment,
+                            Geneset = diskInfo.Geneset,
+                            StorageIdentifier = diskInfo.StorageIdentifier,
+                            Project = project,
+                            FileName = diskInfo.FileName,
+                            Path = diskInfo.Path.ToLowerInvariant()
+                        };
+                        d = await _vhdDataService.AddNewVHD(d).ConfigureAwait(false);
+                        addedDisks.Add(d);
+                        return d;
+                    }).ConfigureAwait(false);
+
+                disk.SizeBytes = diskInfo.SizeBytes;
+                disk.UsedSizeBytes = diskInfo.UsedSizeBytes;
+                disk.Frozen = diskInfo.Frozen;
+                disk.LastSeen = timestamp;
+                disk.LastSeenAgent = hostMachine.Name;
+                await _vhdDataService.UpdateVhd(disk).ConfigureAwait(false);
+
+            }
+
+            //second loop to assign parents and to update state db
+            foreach (var diskInfo in diskInfos)
+            {
+                var project = await FindProject(diskInfo.ProjectName, diskInfo.ProjectId)
+                    .IfNoneAsync(() => FindRequiredProject(EryphConstants.DefaultProjectName, null))
+                    .ConfigureAwait(false);
+
+                await LookupVirtualDisk(diskInfo, project, addedDisks).IfSomeAsync(async currentDisk =>
+                {
+                    if (diskInfo.Parent == null)
+                    {
+                        currentDisk.Parent = null;
+                        return;
+                    }
+
+                    await LookupVirtualDisk(diskInfo.Parent, project, addedDisks)
+                        .IfSomeAsync(parentDisk =>
+                        {
+                            currentDisk.Parent = parentDisk;
+
+                        }).ConfigureAwait(false);
+                    await _vhdDataService.UpdateVhd(currentDisk).ConfigureAwait(false);
+
+                }).ConfigureAwait(false);
+            }
+
+            return addedDisks;
+        }
+
+        private static Seq<DiskInfo> SelectAllParentDisks(DiskInfo diskInfo) =>
+            diskInfo.Parent != null
+                ? diskInfo.Cons(SelectAllParentDisks(diskInfo.Parent))
+                : diskInfo.Cons();
+
+        private async Task<Option<VirtualDisk>> LookupVirtualDisk(
+            DiskInfo diskInfo,
+            Project project,
+            IReadOnlyCollection<VirtualDisk> addedDisks)
+        {
+            return await _vhdDataService.FindVHDByLocation(
+                    project.Id,
+                    diskInfo.DataStore,
+                    diskInfo.Environment,
+                    diskInfo.StorageIdentifier,
+                    diskInfo.Name,
+                    diskInfo.DiskIdentifier)
+                .Map(l => addedDisks.Append(l))
+                .Map(l => l.Filter(
+                    x => x.DataStore == diskInfo.DataStore &&
+                         x.Project.Name == diskInfo.ProjectName &&
+                         x.Environment == diskInfo.Environment &&
+                         x.StorageIdentifier == diskInfo.StorageIdentifier &&
+                         x.Name == diskInfo.Name))
+                .Map(x => x.ToArray())
+                .Map(candidates => candidates.Length <= 1
+                    ? candidates.HeadOrNone()
+                    : candidates.Find(x =>
+                        string.Equals(x.Path, diskInfo.Path, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(x.FileName, diskInfo.FileName, StringComparison.OrdinalIgnoreCase))).ConfigureAwait(false);
+        }
+
+        protected async Task<Option<Project>> FindProject(
+            string projectName, Guid? optionalProjectId)
+        {
+            if (optionalProjectId.GetValueOrDefault() != Guid.Empty)
+                return await StateStore.For<Project>().GetByIdAsync(optionalProjectId.GetValueOrDefault()).ConfigureAwait(false);
+
+            if (string.IsNullOrWhiteSpace(projectName))
+                projectName = EryphConstants.DefaultProjectName;
 
             return await StateStore.For<Project>()
-                .GetBySpecAsync(new ProjectSpecs.GetByName(tenantId, projectIdentifier));
+                .GetBySpecAsync(new ProjectSpecs.GetByName(
+                    EryphConstants.DefaultTenantId, projectName)).ConfigureAwait(false);
         }
 
-        protected async Task<Project> FindRequiredProject(Guid tenantId, string projectIdentifier)
+        protected async Task<Project> FindRequiredProject(string projectName,
+            Guid? projectId)
         {
-            if (string.IsNullOrWhiteSpace(projectIdentifier))
-                projectIdentifier = "default";
+            if (string.IsNullOrWhiteSpace(projectName))
+                projectName = EryphConstants.DefaultProjectName;
 
-            var foundProject = await FindProject(tenantId, projectIdentifier);
+            var foundProject = await FindProject(projectName, projectId).ConfigureAwait(false);
 
-            if(foundProject.IsNone)
-                throw new NotFoundException($"Project '{projectIdentifier}' not found.");
+            if(foundProject.IsNone && !projectId.HasValue)
+                throw new NotFoundException($"Project '{projectName}' not found.");
+
+            if (foundProject.IsNone && projectId.HasValue)
+                throw new NotFoundException($"Project '{projectId}' not found.");
 
             return foundProject.IfNone(new Project());
         }
 
-        private Catlet VirtualMachineInfoToCatlet(VirtualMachineData vmInfo, CatletFarm hostMachine,
-            Guid machineId, Project project)
+        private Task<Catlet> VirtualMachineInfoToCatlet(VirtualMachineData vmInfo, CatletFarm hostMachine,
+            Guid machineId, Project project, IReadOnlyCollection<VirtualDisk> addedDisks)
         {
-            return new Catlet
-            {
+            return
+                from drivesAndDisks in Task.FromResult(vmInfo.Drives)
+                    .MapAsync( drives=> drives.Map(d =>
+                        d.Disk != null
+                            ? LookupVirtualDisk(d.Disk, project, addedDisks)
+                                .Map(disk=>(Drive: d, Disk: disk ))
+                            : Task.FromResult( (Drive: d, Disk: Option<VirtualDisk>.None))
+                        ).TraverseSerial(l=>l))
+
+                 let drives = drivesAndDisks.Map(d => new CatletDrive
+                 {
+                     Id = d.Drive.Id,
+                     CatletId = machineId,
+                     Type = d.Drive.Type,
+                     AttachedDisk = d.Disk.IfNoneUnsafe(() => null)
+
+                }).ToList()
+                
+                select new Catlet
+                {
                 Id = machineId,
                 Project = project,
                 ProjectId = project.Id,
@@ -293,16 +359,7 @@ namespace Eryph.Modules.Controller.Inventory
                     Name = a.AdapterName,
                     SwitchName = a.VirtualSwitchName
                 }).ToList(),
-                Drives = vmInfo.Drives.Select(d => new CatletDrive
-                {
-                    Id = d.Id,
-                    CatletId = machineId,
-                    Type = d.Type,
-                    //TODO: this code may needs to be improved
-                    AttachedDisk = d.Disk != null
-                        ? _vhdDataService.GetVHD(d.Disk.Id).GetAwaiter().GetResult().IfNoneUnsafe(() => null) : null
-
-                }).ToList(),
+                Drives = drives,
                 ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(machineId) ?? Array.Empty<ReportedNetwork>()).ToList()
             };
         }

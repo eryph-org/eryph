@@ -12,6 +12,6 @@ namespace Eryph.Messages.Resources.Catlets.Commands
         public string AgentName { get; set; }
 
         public List<VirtualMachineData> Inventory { get; set; }
-        public Guid TenantId { get; set; }
+        public DateTimeOffset Timestamp { get; set; }
     }
 }

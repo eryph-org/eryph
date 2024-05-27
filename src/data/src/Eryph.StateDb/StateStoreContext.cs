@@ -274,8 +274,8 @@ namespace Eryph.StateDb
             modelBuilder.Entity<CatletDrive>()
                 .HasOne(x => x.AttachedDisk)
                 .WithMany(x => x.AttachedDrives)
-                .HasForeignKey(x => x.AttachedDiskId);
-
+                .HasForeignKey(x => x.AttachedDiskId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<VirtualDisk>()
                 .ToTable("CatletDisks");
@@ -297,7 +297,13 @@ namespace Eryph.StateDb
             //TODO: add to SQLLite Model builder extension like in https://github.com/dbosoft/SAPHub/blob/main/src/SAPHub.StateDb/SqlModelBuilder.cs
             modelBuilder.Entity<OperationLogEntry>().Property(e => e.Timestamp).HasConversion(
                 dateTimeOffset => dateTimeOffset.UtcDateTime,
-                dateTime => new DateTimeOffset(dateTime));
+                dateTime => new DateTimeOffset(dateTime, TimeSpan.Zero)
+                );
+
+            modelBuilder.Entity<VirtualDisk>().Property(e => e.LastSeen).HasConversion(
+                dateTimeOffset => dateTimeOffset.UtcDateTime,
+                dateTime => new DateTimeOffset(dateTime, TimeSpan.Zero));
+
         }
     }
 }

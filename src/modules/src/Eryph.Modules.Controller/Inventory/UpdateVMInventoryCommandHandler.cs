@@ -33,7 +33,7 @@ namespace Eryph.Modules.Controller.Inventory
         public Task Handle(UpdateInventoryCommand message)
         {
             return _vmHostDataService.GetVMHostByAgentName(message.AgentName)
-                .IfSomeAsync(hostMachine => UpdateVMs(message.TenantId, message.Inventory, hostMachine));
+                .IfSomeAsync(hostMachine => UpdateVMs(message.Timestamp, message.Inventory, hostMachine));
         }
     }
 }
