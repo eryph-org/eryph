@@ -7,13 +7,16 @@ using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.OVN;
 using Eryph.Core;
 using Eryph.Core.Network;
+using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.ModuleCore.Networks;
+using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
+using Rebus.Bus;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
@@ -84,24 +87,36 @@ internal class NetworkSyncService : INetworkSyncService
             var stateStore = scope.GetInstance<IStateStore>();
             var providerManager = scope.GetInstance<INetworkProviderManager>();
 
+            var bus = _container.GetInstance<IBus>();
+
             var config = await providerManager.GetCurrentConfiguration()
                 .IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());
 
             await configRealizer.RealizeConfigAsync(config, cancellationToken);
 
             var projects = await stateStore.For<Project>().ListAsync(cancellationToken);
+            
+            var updatedNetworkNeighbors = new List<NetworkNeighborRecord>();
             foreach (var project in projects)
             {
-                var res = await UpdateProjectNetworkPlan(project.Id);
-                res.IfLeft(l =>
+                var result = await UpdateProjectNetworkPlan(project.Id);
+                result.IfLeft(l =>
                 {
                     _log.LogError(l.ToException(),
                         "Failed to apply network plan for project {ProjectName}({ProjectId})",
                         project.Name, project.Id);
                 });
+                result.IfRight(updatedNetworkNeighbors.AddRange);
             }
 
             await stateStore.SaveChangesAsync(cancellationToken);
+
+            await bus.Advanced.Topics.Publish(
+                $"broadcast_{QueueNames.VMHostAgent}",
+                new NetworkNeighborsUpdateRequestedEvent
+                {
+                    UpdatedAddresses = updatedNetworkNeighbors.ToArray()
+                });
 
             return Unit.Default;
         }
@@ -110,20 +125,26 @@ internal class NetworkSyncService : INetworkSyncService
     }
 
 
-    private EitherAsync<Error, Unit> UpdateProjectNetworkPlan(Guid projectId)
+    private EitherAsync<Error, NetworkNeighborRecord[]> UpdateProjectNetworkPlan(Guid projectId)
     {
         var sysEnv = _container.GetInstance<ISysEnvironment>();
         var ovnSettings = _container.GetInstance<IOVNSettings>();
         var planBuilder = _container.GetInstance<IProjectNetworkPlanBuilder>();
         var logger = _container.GetInstance<ILogger>();
 
-        var networkplanRealizer =
-            new NetworkPlanRealizer(new OVNControlTool(sysEnv, ovnSettings.NorthDBConnection), logger);
-
+        var networkPlanRealizer = new NetworkPlanRealizer(
+            new OVNControlTool(sysEnv, ovnSettings.NorthDBConnection),
+            logger);
 
         return from networkPlan in planBuilder.GenerateNetworkPlan(projectId, CancellationToken.None)
-               from _ in networkplanRealizer.ApplyNetworkPlan(networkPlan)
-               select Unit.Default;
+               from appliedNetworkPlan in networkPlanRealizer.ApplyNetworkPlan(networkPlan)
+               let updatedNetworkNeighbors = appliedNetworkPlan.PlannedNATRules.Values
+                   .Map(port => new NetworkNeighborRecord
+                   {
+                       IpAddress = port.ExternalIP,
+                       MacAddress = port.ExternalMAC
+                   }).ToArray()
+               select updatedNetworkNeighbors;
     }
 
 

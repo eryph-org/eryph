@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.OVN;
 using Dbosoft.OVN.OSCommands.OVN;
 using Dbosoft.Rebus.Operations;
+using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.StateDb;
 using JetBrains.Annotations;
@@ -69,9 +71,16 @@ public class UpdateProjectNetworkPlanCommandHandler : IHandleMessages<OperationT
             new NetworkPlanRealizer(new OVNControlTool(_sysEnvironment, _ovnSettings.NorthDBConnection), _logger);
 
         await networkPlanRealizer.ApplyNetworkPlan(networkPlan, cancelSource.Token)
-            .Map(_ => new UpdateProjectNetworkPlanResponse
+            .Map(plan => new UpdateProjectNetworkPlanResponse
             {
-                ProjectId = message.Command.ProjectId
+                ProjectId = message.Command.ProjectId,
+                UpdatedAddresses = plan.PlannedNATRules
+                    .Values.Map(port => new NetworkNeighborRecord
+                    {
+                        IpAddress = port.ExternalIP,
+                        MacAddress = port.ExternalMAC
+                    })
+                    .ToArray()
             })
             .FailOrComplete(_messaging, message);
     }
