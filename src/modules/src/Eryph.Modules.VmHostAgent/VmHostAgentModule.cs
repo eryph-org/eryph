@@ -18,6 +18,7 @@ using Eryph.VmManagement.Tracing;
 using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Extensions.Http;
@@ -123,7 +124,8 @@ namespace Eryph.Modules.VmHostAgent
                     x.EnableSynchronousRequestReply();
                 })
                 .Subscriptions(s => serviceProvider.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
-                .Logging(x => x.Serilog()).Start());
+                .Logging(x => x.MicrosoftExtensionsLogging(container.GetInstance<ILoggerFactory>()))
+                .Start());
         }
 
         private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()

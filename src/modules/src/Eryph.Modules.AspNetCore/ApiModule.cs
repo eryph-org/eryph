@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
@@ -125,7 +126,8 @@ namespace Eryph.Modules.AspNetCore
                         x.RetryStrategy();
                         x.SetNumberOfWorkers(5);
                     })
-                    .Logging(x => x.Serilog()).Start();
+                    .Logging(x => x.MicrosoftExtensionsLogging(container.GetInstance<ILoggerFactory>()))
+                    .Start();
             });
         }
     }
