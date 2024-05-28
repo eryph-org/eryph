@@ -245,7 +245,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
         modelBuilder.Entity<VirtualDisk>()
             .HasOne(x => x.Parent)
-            .WithMany(x => x.Childs)
+            .WithMany(x => x.Children)
             .HasForeignKey(x => x.ParentId)
             .OnDelete(DeleteBehavior.Restrict);
 

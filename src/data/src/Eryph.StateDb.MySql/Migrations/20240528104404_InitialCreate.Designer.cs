@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20240528101136_InitialCreate")]
+    [Migration("20240528104404_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1026,7 +1026,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired();
 
                     b.HasOne("Eryph.StateDb.Model.VirtualDisk", "Parent")
-                        .WithMany("Childs")
+                        .WithMany("Children")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -1143,7 +1143,7 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     b.Navigation("AttachedDrives");
 
-                    b.Navigation("Childs");
+                    b.Navigation("Children");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>

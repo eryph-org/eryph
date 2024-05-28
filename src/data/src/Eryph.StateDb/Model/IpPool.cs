@@ -22,5 +22,5 @@ public class IpPool
 
     public Subnet Subnet { get; set; } = null!;
 
-    public virtual List<IpPoolAssignment> IpAssignments { get; set; } = null!;
+    public List<IpPoolAssignment> IpAssignments { get; set; } = null!;
 }

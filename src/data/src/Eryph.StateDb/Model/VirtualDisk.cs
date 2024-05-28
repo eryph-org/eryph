@@ -27,7 +27,7 @@ public class VirtualDisk : Disk
     
     public long? UsedSizeBytes { get; set; }
 
-    public virtual ICollection<VirtualDisk> Childs { get; set; } = null!;
+    public virtual ICollection<VirtualDisk> Children { get; set; } = null!;
 
     public virtual ICollection<CatletDrive> AttachedDrives { get; set; } = null!;
 

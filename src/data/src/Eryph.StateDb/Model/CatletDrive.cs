@@ -9,11 +9,11 @@ public class CatletDrive
 
     public Guid CatletId { get; set; }
 
-    public virtual Catlet Catlet { get; set; } = null!;
+    public Catlet Catlet { get; set; } = null!;
 
     public CatletDriveType Type { get; set; }
 
     public Guid? AttachedDiskId { get; set; }
 
-    public virtual VirtualDisk? AttachedDisk { get; set; }
+    public VirtualDisk? AttachedDisk { get; set; }
 }

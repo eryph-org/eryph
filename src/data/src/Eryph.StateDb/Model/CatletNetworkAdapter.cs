@@ -8,7 +8,7 @@ public class CatletNetworkAdapter
 
     public Guid CatletId { get; set; }
 
-    public virtual Catlet Catlet { get; set; } = null!;
+    public Catlet Catlet { get; set; } = null!;
     
     public required string Name { get; set; }
 

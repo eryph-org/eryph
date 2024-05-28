@@ -9,13 +9,13 @@ public class OperationModel
     
     public Guid TenantId { get; set; }
 
-    public virtual List<OperationLogEntry> LogEntries { get; set; } = null!;
+    public List<OperationLogEntry> LogEntries { get; set; } = null!;
     
-    public virtual List<OperationTaskModel> Tasks { get; set; } = null!;
+    public List<OperationTaskModel> Tasks { get; set; } = null!;
     
-    public virtual List<OperationResourceModel> Resources { get; set; } = null!;
+    public List<OperationResourceModel> Resources { get; set; } = null!;
 
-    public virtual List<OperationProjectModel> Projects { get; set; } = null!;
+    public List<OperationProjectModel> Projects { get; set; } = null!;
 
     public OperationStatus Status { get; set; }
 

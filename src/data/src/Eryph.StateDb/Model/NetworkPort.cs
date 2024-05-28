@@ -14,5 +14,5 @@ public abstract class NetworkPort
 
     public required string Name { get; set; }
 
-    public virtual List<IpAssignment> IpAssignments { get; set; } = null!;
+    public List<IpAssignment> IpAssignments { get; set; } = null!;
 }

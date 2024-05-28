@@ -13,7 +13,7 @@ public class Catlet : Resource
 
     public CatletType CatletType { get; set; }
 
-    public virtual ICollection<ReportedNetwork> ReportedNetworks { get; set; } = null!;
+    public ICollection<ReportedNetwork> ReportedNetworks { get; set; } = null!;
 
     public TimeSpan? UpTime { get; set; }
 
@@ -33,11 +33,11 @@ public class Catlet : Resource
 
     public Guid? HostId { get; set; }
 
-    public virtual CatletFarm? Host { get; set; }
+    public CatletFarm? Host { get; set; }
 
-    public virtual List<CatletNetworkAdapter> NetworkAdapters { get; set; } = null!;
+    public List<CatletNetworkAdapter> NetworkAdapters { get; set; } = null!;
 
-    public virtual List<CatletDrive> Drives { get; set; } = null!;
+    public List<CatletDrive> Drives { get; set; } = null!;
 
     public int CpuCount { get; set; }
 

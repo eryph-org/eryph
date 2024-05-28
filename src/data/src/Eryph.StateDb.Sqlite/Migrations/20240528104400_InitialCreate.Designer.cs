@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20240528101132_InitialCreate")]
+    [Migration("20240528104400_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -1021,7 +1021,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired();
 
                     b.HasOne("Eryph.StateDb.Model.VirtualDisk", "Parent")
-                        .WithMany("Childs")
+                        .WithMany("Children")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -1138,7 +1138,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     b.Navigation("AttachedDrives");
 
-                    b.Navigation("Childs");
+                    b.Navigation("Children");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>

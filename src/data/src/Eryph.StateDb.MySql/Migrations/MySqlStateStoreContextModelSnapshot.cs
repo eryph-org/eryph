@@ -1023,7 +1023,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired();
 
                     b.HasOne("Eryph.StateDb.Model.VirtualDisk", "Parent")
-                        .WithMany("Childs")
+                        .WithMany("Children")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -1140,7 +1140,7 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     b.Navigation("AttachedDrives");
 
-                    b.Navigation("Childs");
+                    b.Navigation("Children");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>

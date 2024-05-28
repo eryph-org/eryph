@@ -13,7 +13,7 @@ public class OperationTaskModel
 
     public Guid OperationId { get; set; }
         
-    public virtual OperationModel Operation { get; set; } = null!;
+    public OperationModel Operation { get; set; } = null!;
     
     public OperationTaskStatus Status { get; set; }
     
