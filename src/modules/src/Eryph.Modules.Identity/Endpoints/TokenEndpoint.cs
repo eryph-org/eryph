@@ -26,6 +26,7 @@ namespace Eryph.Modules.Identity.Endpoints
             _scopeManager = scopeManager;
         }
 
+        [ApiExplorerSettings(IgnoreApi = true)]
         [HttpPost("~/connect/token"), IgnoreAntiforgeryToken, Produces("application/json")]
         public async Task<IActionResult> Exchange(CancellationToken cancellationToken)
         {
