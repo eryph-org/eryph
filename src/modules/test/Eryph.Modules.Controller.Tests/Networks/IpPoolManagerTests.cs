@@ -231,10 +231,11 @@ public class IpPoolManagerTests : InMemoryStateDbTestBase
         
         await stateStore.For<CatletNetworkPort>().AddAsync(
             new CatletNetworkPort()
-           {
-               Id = NetworkPortId,
-               CatletMetadataId = CatletMetadataId,
-               NetworkId = NetworkId,
+            {
+                Id = NetworkPortId,
+                Name = "test-catlet-port",
+                CatletMetadataId = CatletMetadataId,
+                NetworkId = NetworkId,
             });
     }
 }

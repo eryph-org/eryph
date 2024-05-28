@@ -8,7 +8,7 @@ public class IpPool
 {
     public Guid Id { get; set; }
 
-    public string? Name { get; set; }
+    public required string Name { get; set; }
 
     public string? FirstIp { get; set; }
 

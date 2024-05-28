@@ -56,6 +56,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             var catletPort = new CatletNetworkPort
             {
                 Id = Guid.NewGuid(),
+                Name = "test-catlet-port",
                 CatletMetadataId = Guid.Parse(CatletMetadata),
             };
             var projectId = Guid.Parse(projectIdString);
@@ -116,6 +117,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             var catletPort = new CatletNetworkPort
             {
                 Id = Guid.NewGuid(),
+                Name = "test-catlet-port",
                 NetworkId = Guid.Parse(NetworkA_Default_Subnet),
                 CatletMetadataId = Guid.Parse(CatletMetadata),
                 IpAssignments = new List<IpAssignment>
@@ -168,6 +170,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             var catletPort = new CatletNetworkPort
             {
                 Id = Guid.NewGuid(),
+                Name = "test-catlet-port",
                 NetworkId = Guid.Parse(NetworkA_Default_Subnet),
                 CatletMetadataId = Guid.Parse(CatletMetadata),
                 IpAssignments = new List<IpAssignment>

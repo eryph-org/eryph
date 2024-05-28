@@ -7,7 +7,7 @@ public abstract class Subnet
 {
     public Guid Id { get; set; }
 
-    public string? Name { get; set; }
+    public required string Name { get; set; }
 
     public string? IpNetwork { get; set; }
 

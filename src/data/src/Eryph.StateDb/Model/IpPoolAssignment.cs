@@ -7,7 +7,7 @@ public class IpPoolAssignment : IpAssignment
 {
     public Guid PoolId { get; set; }
 
-    public virtual IpPool Pool { get; set; } = null!;
+    public IpPool Pool { get; set; } = null!;
 
     public int Number { get; set; }
 }

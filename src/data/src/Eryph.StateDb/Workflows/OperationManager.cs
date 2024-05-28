@@ -99,7 +99,7 @@ public class OperationManager : OperationManagerBase
                 Id = progressId,
                 OperationId = operation.Id,
                 TaskId = task.Id,
-                Message = message ?? "",
+                Message = message,
                 Timestamp = DateTimeOffset.UtcNow // event may be delayed, don't use timestamp from message
             };
         _log.LogTrace("Adding progress entry: {@progressEntry}", opLogEntry);

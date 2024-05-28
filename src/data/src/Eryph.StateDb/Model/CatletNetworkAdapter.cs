@@ -10,9 +10,9 @@ public class CatletNetworkAdapter
 
     public virtual Catlet Catlet { get; set; } = null!;
     
-    public string? Name { get; set; }
+    public required string Name { get; set; }
 
-    public string? SwitchName { get; set; }
+    public required string SwitchName { get; set; }
     
     public string? NetworkProviderName { get; set; }
 

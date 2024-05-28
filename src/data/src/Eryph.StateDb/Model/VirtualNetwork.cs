@@ -20,7 +20,7 @@ public class VirtualNetwork : Resource
     
     public string? Environment { get; set; }
 
-    public virtual List<VirtualNetworkPort> NetworkPorts { get; set; } = null!;
+    public List<VirtualNetworkPort> NetworkPorts { get; set; } = null!;
     
-    public virtual List<VirtualNetworkSubnet> Subnets { get; set; } = null!;
+    public List<VirtualNetworkSubnet> Subnets { get; set; } = null!;
 }

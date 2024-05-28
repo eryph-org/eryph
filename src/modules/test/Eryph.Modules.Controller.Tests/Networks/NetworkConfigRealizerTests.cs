@@ -114,6 +114,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
             var routerPort = new NetworkRouterPort()
             {
+                Name = "default",
                 IpAssignments = new List<IpAssignment>
                 {
                     new IpPoolAssignment
@@ -146,7 +147,12 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 RouterPort = routerPort,
                 NetworkPorts = new List<VirtualNetworkPort>
                 {
-                    new ProviderRouterPort(),
+                    new ProviderRouterPort()
+                    {
+                        Name = "test-provider-port",
+                        SubnetName = "test-provider-subnet",
+                        PoolName = "test-provider-pool",
+                    },
                     routerPort
                 }
             };
@@ -234,6 +240,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
             var routerPort = new NetworkRouterPort()
             {
+                Name = "default",
                 IpAssignments = new List<IpAssignment>
                 {
                     new IpPoolAssignment
@@ -266,13 +273,19 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 RouterPort = routerPort,
                 NetworkPorts = new List<VirtualNetworkPort>
                 {
-                    new ProviderRouterPort{IpAssignments = new List<IpAssignment>
+                    new ProviderRouterPort
                     {
-                        new IpPoolAssignment
-                        {
-                            IpAddress = "192.168.0.10"
-                        }
-                    }},
+                        Name = "test-provider-port",
+                        SubnetName = "test-provider-subnet",
+                        PoolName = "test-provider-pool",
+                        IpAssignments =
+                        [
+                            new IpPoolAssignment
+                            {
+                                IpAddress = "192.168.0.10"
+                            }
+                        ]
+                    },
                     routerPort
                 }
             };

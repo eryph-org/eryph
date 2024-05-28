@@ -12,7 +12,7 @@ public abstract class NetworkPort
 
     public string? AddressName { get; set; }
 
-    public string? Name { get; set; }
+    public required string Name { get; set; }
 
     public virtual List<IpAssignment> IpAssignments { get; set; } = null!;
 }

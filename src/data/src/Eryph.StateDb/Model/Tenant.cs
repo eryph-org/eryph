@@ -7,5 +7,5 @@ public class Tenant
 {
     public Guid Id { get; set; }
 
-    public virtual List<Project> Projects { get; set; } = null!;
+    public List<Project> Projects { get; set; } = null!;
 }

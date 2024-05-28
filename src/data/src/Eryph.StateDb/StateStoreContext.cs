@@ -111,6 +111,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasAlternateKey(x => new { x.ProjectId, x.IdentityId, x.RoleId });
 
         modelBuilder.Entity<Resource>()
+            .UseTptMappingStrategy()
             .HasKey(x => x.Id);
 
         modelBuilder.Entity<Catlet>()
@@ -195,7 +196,6 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasMany(x => x.IpPools)
             .WithOne(x => x.Subnet)
             .HasForeignKey(x => x.SubnetId)
-            .IsRequired()
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Subnet>()

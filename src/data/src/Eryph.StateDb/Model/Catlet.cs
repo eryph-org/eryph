@@ -49,5 +49,5 @@ public class Catlet : Resource
 
     public string? SecureBootTemplate { get; set; }
 
-    public ISet<CatletFeature> Features { get; set; } = null!;
+    public ISet<CatletFeature> Features { get; set; } = new HashSet<CatletFeature>();
 }

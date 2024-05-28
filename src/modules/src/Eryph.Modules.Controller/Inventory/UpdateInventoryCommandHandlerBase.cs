@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Disks;
@@ -299,13 +300,9 @@ namespace Eryph.Modules.Controller.Inventory
 
             var foundProject = await FindProject(projectName, projectId).ConfigureAwait(false);
 
-            if(foundProject.IsNone && !projectId.HasValue)
-                throw new NotFoundException($"Project '{projectName}' not found.");
-
-            if (foundProject.IsNone && projectId.HasValue)
-                throw new NotFoundException($"Project '{projectId}' not found.");
-
-            return foundProject.IfNone(new Project());
+            return foundProject.IfNone(
+                () => throw new NotFoundException(
+                    $"Project '{(projectId.HasValue ? projectId : projectName)}' not found."));
         }
 
         private Task<Catlet> VirtualMachineInfoToCatlet(VirtualMachineData vmInfo, CatletFarm hostMachine,
@@ -324,7 +321,7 @@ namespace Eryph.Modules.Controller.Inventory
                  {
                      Id = d.Drive.Id,
                      CatletId = machineId,
-                     Type = d.Drive.Type,
+                     Type = d.Drive.Type ?? CatletDriveType.VHD,
                      AttachedDisk = d.Disk.IfNoneUnsafe(() => null)
 
                 }).ToList()

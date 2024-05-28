@@ -11,5 +11,5 @@ public class OperationResourceModel
     
     public ResourceType ResourceType { get; set; }
 
-    public virtual OperationModel Operation { get; set; } = null!;
+    public OperationModel Operation { get; set; } = null!;
 }

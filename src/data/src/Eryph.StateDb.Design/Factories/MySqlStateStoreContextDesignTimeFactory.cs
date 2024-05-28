@@ -7,6 +7,7 @@ using Eryph.StateDb.MySql;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 
 namespace Eryph.StateDb.Design.Factories;
 
@@ -17,7 +18,7 @@ public class MySqlStateStoreContextDesignTimeFactory
     public MySqlStateStoreContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<MySqlStateStoreContext>();
-        optionsBuilder.UseMySql(new MariaDbServerVersion("10.3.8"));
+        optionsBuilder.UseMySql(ServerVersion.Create(10, 11, 0, ServerType.MariaDb));
 
         return new MySqlStateStoreContext(optionsBuilder.Options);
     }

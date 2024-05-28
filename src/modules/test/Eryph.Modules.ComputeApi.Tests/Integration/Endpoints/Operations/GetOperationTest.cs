@@ -28,6 +28,7 @@ public class GetOperationTest : IClassFixture<WebModuleFactory<ComputeApiModule>
     {
         Id = Guid.NewGuid(),
         TenantId = TenantId,
+        Name = "test-project",
         ProjectRoles = new List<ProjectRoleAssignment>
         {
             new()
@@ -64,7 +65,11 @@ public class GetOperationTest : IClassFixture<WebModuleFactory<ComputeApiModule>
             new OperationProjectModel
             {
                 Id = Guid.NewGuid(),
-                Project = new Project{Id = Guid.NewGuid()},
+                Project = new Project
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "other-test-project",
+                },
             }})
 
     };
@@ -77,8 +82,9 @@ public class GetOperationTest : IClassFixture<WebModuleFactory<ComputeApiModule>
             context.Operations.Add(CrossOperation);
             context.Projects.Add(new Project
             {
-                TenantId = ExistingOperation.TenantId,
                 Id = Guid.NewGuid(),
+                TenantId = ExistingOperation.TenantId,
+                Name = "test-project",
             });
         });
     }

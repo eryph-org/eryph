@@ -28,7 +28,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid>("CatletId")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("Type")
+                    b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
@@ -67,12 +67,14 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("NetworkProviderName")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SwitchName")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("CatletId", "Id");
@@ -129,6 +131,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("NextIp")
@@ -163,6 +166,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderName")
@@ -330,6 +334,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("TenantId")
@@ -413,12 +418,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Discriminator")
-                        .IsRequired()
-                        .HasMaxLength(21)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("ProjectId")
@@ -433,9 +434,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.ToTable("Resources");
 
-                    b.HasDiscriminator<string>("Discriminator").HasValue("Resource");
-
-                    b.UseTphMappingStrategy();
+                    b.UseTptMappingStrategy();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Subnet", b =>
@@ -456,6 +455,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -524,9 +524,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.HasBaseType("Eryph.StateDb.Model.NetworkPort");
 
                     b.Property<string>("PoolName")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SubnetName")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasDiscriminator().HasValue("FloatingNetworkPort");
@@ -614,7 +616,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("HostId");
 
-                    b.HasDiscriminator().HasValue("Catlet");
+                    b.ToTable("Catlets");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletFarm", b =>
@@ -625,7 +627,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasDiscriminator().HasValue("CatletFarm");
+                    b.ToTable("CatletFarms");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
@@ -676,25 +678,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasIndex("ParentId");
 
-                    b.ToTable("Resources", t =>
-                        {
-                            t.Property("DataStore")
-                                .HasColumnName("VirtualDisk_DataStore");
-
-                            t.Property("Environment")
-                                .HasColumnName("VirtualDisk_Environment");
-
-                            t.Property("Frozen")
-                                .HasColumnName("VirtualDisk_Frozen");
-
-                            t.Property("Path")
-                                .HasColumnName("VirtualDisk_Path");
-
-                            t.Property("StorageIdentifier")
-                                .HasColumnName("VirtualDisk_StorageIdentifier");
-                        });
-
-                    b.HasDiscriminator().HasValue("VirtualDisk");
+                    b.ToTable("VirtualDisks");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>
@@ -710,13 +694,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("NetworkProvider")
                         .HasColumnType("TEXT");
 
-                    b.ToTable("Resources", t =>
-                        {
-                            t.Property("Environment")
-                                .HasColumnName("VirtualNetwork_Environment");
-                        });
-
-                    b.HasDiscriminator().HasValue("VirtualNetwork");
+                    b.ToTable("VirtualNetworks");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.ProviderSubnet", b =>
@@ -781,9 +759,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.HasBaseType("Eryph.StateDb.Model.VirtualNetworkPort");
 
                     b.Property<string>("PoolName")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SubnetName")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.ToTable("NetworkPorts", t =>
@@ -1011,17 +991,47 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasForeignKey("HostId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Eryph.StateDb.Model.Resource", null)
+                        .WithOne()
+                        .HasForeignKey("Eryph.StateDb.Model.Catlet", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Host");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletFarm", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Resource", null)
+                        .WithOne()
+                        .HasForeignKey("Eryph.StateDb.Model.CatletFarm", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
                 {
+                    b.HasOne("Eryph.StateDb.Model.Resource", null)
+                        .WithOne()
+                        .HasForeignKey("Eryph.StateDb.Model.VirtualDisk", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Eryph.StateDb.Model.VirtualDisk", "Parent")
                         .WithMany("Childs")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.Resource", null)
+                        .WithOne()
+                        .HasForeignKey("Eryph.StateDb.Model.VirtualNetwork", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkSubnet", b =>

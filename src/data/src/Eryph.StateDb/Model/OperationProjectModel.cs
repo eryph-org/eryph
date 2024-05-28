@@ -10,5 +10,5 @@ public class OperationProjectModel
     
     public Project Project { get; set; } = null!;
 
-    public virtual OperationModel Operation { get; set; } = null!;
+    public OperationModel Operation { get; set; } = null!;
 }

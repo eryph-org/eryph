@@ -12,5 +12,5 @@ public class CatletFarm : Resource
 
     public virtual ICollection<Catlet> Catlets { get; set; } = null!;
 
-    public string HardwareId { get; set; } = "";
+    public required string HardwareId { get; set; }
 }

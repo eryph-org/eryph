@@ -11,7 +11,7 @@ public class CatletDrive
 
     public virtual Catlet Catlet { get; set; } = null!;
 
-    public CatletDriveType? Type { get; set; }
+    public CatletDriveType Type { get; set; }
 
     public Guid? AttachedDiskId { get; set; }
 

@@ -11,7 +11,7 @@ namespace Eryph.StateDb.TestBase;
 public class MySqlFixture : IDatabaseFixture
 {
     private readonly MariaDbContainer _container = new MariaDbBuilder()
-        .WithImage("mariadb")
+        .WithImage("mariadb:lts")
         .Build();
 
     public Task InitializeAsync() => _container.StartAsync();

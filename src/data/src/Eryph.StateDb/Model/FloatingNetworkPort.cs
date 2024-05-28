@@ -5,7 +5,7 @@ public class FloatingNetworkPort : NetworkPort
 {
     public VirtualNetworkPort? AssignedPort { get; set; }
 
-    public string? SubnetName { get; set; }
+    public required string SubnetName { get; set; }
 
-    public string? PoolName { get; set; }
+    public required string PoolName { get; set; }
 }

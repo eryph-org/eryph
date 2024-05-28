@@ -31,5 +31,5 @@ public class OperationTaskModel
 
     public DateTimeOffset LastUpdated { get; set; }
     
-    public virtual List<TaskProgressEntry> Progress { get; set; } = null!;
+    public List<TaskProgressEntry> Progress { get; set; } = null!;
 }
