@@ -10,7 +10,7 @@ public class CatletFarm : Resource
         ResourceType = ResourceType.CatletFarm;
     }
 
-    public virtual ICollection<Catlet> Catlets { get; set; } = null!;
+    public ICollection<Catlet> Catlets { get; set; } = null!;
 
     public required string HardwareId { get; set; }
 }

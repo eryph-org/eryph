@@ -27,13 +27,13 @@ public class VirtualDisk : Disk
     
     public long? UsedSizeBytes { get; set; }
 
-    public virtual ICollection<VirtualDisk> Children { get; set; } = null!;
+    public ICollection<VirtualDisk> Children { get; set; } = null!;
 
-    public virtual ICollection<CatletDrive> AttachedDrives { get; set; } = null!;
+    public ICollection<CatletDrive> AttachedDrives { get; set; } = null!;
 
     public Guid? ParentId { get; set; }
     
-    public virtual VirtualDisk? Parent { get; set; }
+    public VirtualDisk? Parent { get; set; }
     
     public DateTimeOffset LastSeen { get; set; }
     

@@ -13,7 +13,7 @@ public abstract class Subnet
 
     public string? DnsDomain { get; set; }
 
-    public virtual List<IpPool> IpPools { get; set; } = null!;
+    public List<IpPool> IpPools { get; set; } = null!;
 
-    public virtual List<IpAssignment> IpAssignments { get; set; } = null!;
+    public List<IpAssignment> IpAssignments { get; set; } = null!;
 }

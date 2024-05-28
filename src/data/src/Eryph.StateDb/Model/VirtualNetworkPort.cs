@@ -6,7 +6,7 @@ public abstract class VirtualNetworkPort: NetworkPort
 {
     public Guid NetworkId { get; set; }
 
-    public virtual VirtualNetwork Network { get; set; } = null!;
+    public VirtualNetwork Network { get; set; } = null!;
 
     public Guid? FloatingPortId { get; set; }
 

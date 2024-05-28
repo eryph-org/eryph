@@ -10,7 +10,7 @@ public class TaskProgressEntry
     
     public Guid TaskId { get; set; }
 
-    public virtual OperationTaskModel Task { get; set; } = null!;
+    public OperationTaskModel Task { get; set; } = null!;
     
     public DateTimeOffset Timestamp { get; set; }
     
