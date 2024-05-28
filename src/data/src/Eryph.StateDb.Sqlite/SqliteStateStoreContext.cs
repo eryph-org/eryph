@@ -16,14 +16,12 @@ public class SqliteStateStoreContext(DbContextOptions<SqliteStateStoreContext> o
     {
         base.ConfigureConventions(configurationBuilder);
 
-        // Store all DateTimeOffset values as strings in the database.
-        // This might be suboptimal for performance, but it is the only
-        // way to ensure that filtering, sorting and concurrency tokens
-        // work as expected.
-        // DateTimeOffsetToBinaryConverter has known issues with filtering
-        // and sorting.
-        // Converting to DateTime will be break concurrency tokens as the
-        // conversion is lossy (the timezone information is lost).
+        // Convert all DateTimeOffset values to DateTime values.
+        // Sqlite does not have native support for DateTimeOffset.
+        // The conversion is lossy as we convert to UTC but the
+        // custom comparer ignores the time zone information.
+        // This way, we can both sort by the datetime value
+        // and use it as a concurrency token.
         configurationBuilder.Properties<DateTimeOffset>()
             .HaveConversion<DateTimeOffsetToDateTimeConverter, DateTimeOffsetUtcComparer>();
     }

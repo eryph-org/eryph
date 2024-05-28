@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20240528104404_InitialCreate")]
+    [Migration("20240528110104_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

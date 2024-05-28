@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20240528104400_InitialCreate")]
+    [Migration("20240528110059_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
