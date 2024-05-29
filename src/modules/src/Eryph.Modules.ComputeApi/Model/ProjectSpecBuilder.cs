@@ -25,9 +25,7 @@ public class ProjectSpecBuilder :
         var authContext = _userRightsProvider.GetAuthContext();
         var sufficientRoles = _userRightsProvider.GetProjectRoles(accessRight);
 
-        return !Guid.TryParse(request.Id, out var projectId) 
-            ? null 
-            : new ProjectSpecs.GetById(projectId, authContext, sufficientRoles );
+        return new ProjectSpecs.GetById(request.Id, authContext, sufficientRoles);
     }
 
     public ISpecification<Project> GetEntitiesSpec(AllProjectsListRequest request)

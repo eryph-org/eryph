@@ -24,10 +24,7 @@ public class ProjectMemberSpecBuilder :
         var authContext = _userRightsProvider.GetAuthContext();
         var sufficientRoles = _userRightsProvider.GetProjectRoles(accessRight);
 
-        var id = Guid.Parse(request.Id ?? "");
-
-        return new ProjectRoleAssignmentSpecs.GetById(id, request.Project, authContext, sufficientRoles);
-
+        return new ProjectRoleAssignmentSpecs.GetById(request.Id, request.Project, authContext, sufficientRoles);
     }
 
     public ISpecification<ProjectRoleAssignment> GetEntitiesSpec(ProjectMembersListRequest request)

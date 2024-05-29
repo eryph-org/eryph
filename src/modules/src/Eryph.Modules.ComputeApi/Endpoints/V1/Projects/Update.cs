@@ -49,7 +49,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         {
             return new UpdateProjectCommand
             {
-                ProjectId = Guid.Parse(request.Id),
+                ProjectId = request.Id,
                 CorrelationId = request.Body.CorrelationId.GetValueOrDefault(Guid.NewGuid()),
                 Name = ProjectName.New(request.Body.Name).Value
             };
