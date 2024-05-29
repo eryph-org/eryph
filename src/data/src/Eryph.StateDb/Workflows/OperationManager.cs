@@ -37,8 +37,8 @@ public class OperationManager : OperationManagerBase
 
     public override async ValueTask<IOperation> GetOrCreateAsync(
         Guid operationId, object command, DateTimeOffset timestamp,
-        object additionalData, 
-        IDictionary<string,string> additionalHeaders)
+        object? additionalData, 
+        IDictionary<string,string>? additionalHeaders)
     {
         _log.LogTrace("Entering GetOrCreateAsync for operation {operationId}", operationId);
 
@@ -70,7 +70,7 @@ public class OperationManager : OperationManagerBase
 
     public override async ValueTask AddProgressAsync(Guid progressId, DateTimeOffset timestamp, IOperation operation,
         IOperationTask task,
-        object? data, IDictionary<string, string> messageHeaders)
+        object? data, IDictionary<string, string>? messageHeaders)
     {
         _log.LogTrace("Entering AddProgressAsync for operation {operationId} and task {taskId}",
             operation.Id, task.Id);
@@ -124,7 +124,7 @@ public class OperationManager : OperationManagerBase
     public override async ValueTask<bool> TryChangeStatusAsync(IOperation operation,
         Dbosoft.Rebus.Operations.OperationStatus newStatus,
         DateTimeOffset timestamp,
-        object? additionalData, IDictionary<string, string> messageHeaders)
+        object? additionalData, IDictionary<string, string>? messageHeaders)
     {
         _log.LogTrace("Entering TryChangeStatusAsync for operation {operationId}", operation.Id);
         if (operation is not Operation op) return false;

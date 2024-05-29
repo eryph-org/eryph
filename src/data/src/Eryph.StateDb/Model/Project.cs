@@ -8,15 +8,15 @@ public class Project
 {
     public Guid Id { get; set; }
 
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
     public Guid TenantId { get; set; }
 
-    public virtual Tenant Tenant { get; set; }
+    public Tenant Tenant { get; set; } = null!;
 
-    public virtual List<Resource> Resources { get; set; }
+    public List<Resource> Resources { get; set; } = null!;
 
-    public virtual List<ProjectRoleAssignment> ProjectRoles { get; set; }
+    public List<ProjectRoleAssignment> ProjectRoles { get; set; } = null!;
 
-    public virtual List<OperationTaskModel> ReferencedTasks { get; set; }
+    public List<OperationTaskModel> ReferencedTasks { get; set; } = null!;
 }

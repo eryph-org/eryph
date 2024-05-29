@@ -1,17 +1,16 @@
 ﻿using System.Collections.Generic;
 using Eryph.Resources;
 
-namespace Eryph.StateDb.Model
+namespace Eryph.StateDb.Model;
+
+public class CatletFarm : Resource
 {
-    public class CatletFarm : Resource
+    public CatletFarm()
     {
-        public CatletFarm()
-        {
-            ResourceType = ResourceType.CatletFarm;
-        }
-
-        public virtual ICollection<Catlet> Catlets { get; set; }
-
-        public string HardwareId { get; set; }
+        ResourceType = ResourceType.CatletFarm;
     }
+
+    public ICollection<Catlet> Catlets { get; set; } = null!;
+
+    public required string HardwareId { get; set; }
 }

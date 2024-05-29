@@ -3,6 +3,7 @@ using Eryph.Modules.Controller.Networks;
 using Eryph.Resources;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Sqlite;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using LanguageExt;
@@ -55,16 +56,17 @@ namespace Eryph.Modules.Controller.Tests.Networks
             var catletPort = new CatletNetworkPort
             {
                 Id = Guid.NewGuid(),
+                Name = "test-catlet-port",
                 CatletMetadataId = Guid.Parse(CatletMetadata),
             };
             var projectId = Guid.Parse(projectIdString);
             var subnetId = Guid.Parse(subnetIdString);
 
-            var contextOptions = new DbContextOptionsBuilder<StateStoreContext>()
+            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
                 .UseSqlite(_connection)
                 .Options;
 
-            await using var context = new StateStoreContext(contextOptions);
+            await using var context = new SqliteStateStoreContext(contextOptions);
             var stateStore = new StateStore(context);
             await context.Database.EnsureCreatedAsync();
 
@@ -115,6 +117,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             var catletPort = new CatletNetworkPort
             {
                 Id = Guid.NewGuid(),
+                Name = "test-catlet-port",
                 NetworkId = Guid.Parse(NetworkA_Default_Subnet),
                 CatletMetadataId = Guid.Parse(CatletMetadata),
                 IpAssignments = new List<IpAssignment>
@@ -131,11 +134,11 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 }
             };
 
-            var contextOptions = new DbContextOptionsBuilder<StateStoreContext>()
+            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
                 .UseSqlite(_connection)
                 .Options;
 
-            await using var context = new StateStoreContext(contextOptions);
+            await using var context = new SqliteStateStoreContext(contextOptions);
             var ipManager = await SetupPortTest(context, catletPort);
             var stateStore = new StateStore(context);
             var port = await stateStore.Read<CatletNetworkPort>()
@@ -167,6 +170,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             var catletPort = new CatletNetworkPort
             {
                 Id = Guid.NewGuid(),
+                Name = "test-catlet-port",
                 NetworkId = Guid.Parse(NetworkA_Default_Subnet),
                 CatletMetadataId = Guid.Parse(CatletMetadata),
                 IpAssignments = new List<IpAssignment>
@@ -184,11 +188,11 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 }
             };
 
-            var contextOptions = new DbContextOptionsBuilder<StateStoreContext>()
+            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
                 .UseSqlite(_connection)
                 .Options;
 
-            await using var context = new StateStoreContext(contextOptions);
+            await using var context = new SqliteStateStoreContext(contextOptions);
             var ipManager = await SetupPortTest(context, catletPort);
             var stateStore = new StateStore(context);
             var port = await stateStore.Read<CatletNetworkPort>()

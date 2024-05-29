@@ -12,6 +12,7 @@ using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore;
 using Eryph.Rebus;
 using Eryph.StateDb;
+using Eryph.StateDb.InMemory;
 using FluentAssertions.Common;
 using Microsoft.AspNetCore.Authorization;
 using LanguageExt;
@@ -29,6 +30,7 @@ using Rebus.Subscriptions;
 using Rebus.Timeouts;
 using Rebus.Transport.InMem;
 using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 using SimpleInjector.Lifestyles;
 using WebMotions.Fake.Authentication.JwtBearer;
 
@@ -90,7 +92,13 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration
                 container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
 
                 container.RegisterInstance(new InMemoryDatabaseRoot());
-                container.Register<IDbContextConfigurer<StateStoreContext>, InMemoryStateStoreContextConfigurer>();
+                container.Register<IStateStoreContextConfigurer, InMemoryStateStoreContextConfigurer>(
+                    Lifestyle.Singleton);
+
+                hostBuilder.ConfigureFrameworkServices((_, services) =>
+                {
+                    services.AddTransient<IAddSimpleInjectorFilter<ComputeApiModule>, ModuleFilters>();
+                });
 
 
             }).WithWebHostBuilder(webBuilder =>
@@ -146,6 +154,19 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration
                     workflowOptions.JsonSerializerOptions))
                 .OfType<T>()
                 .ToList();
+        }
+
+        private class ModuleFilters : IAddSimpleInjectorFilter<ComputeApiModule>
+        {
+            public Action<IModulesHostBuilderContext<ComputeApiModule>, SimpleInjectorAddOptions> Invoke(
+                Action<IModulesHostBuilderContext<ComputeApiModule>, SimpleInjectorAddOptions> next)
+            {
+                return (context, options) =>
+                {
+                    options.RegisterInMemoryStateStore();
+                    next(context, options);
+                };
+            }
         }
     }
 }

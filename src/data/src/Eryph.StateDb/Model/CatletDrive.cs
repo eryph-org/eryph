@@ -1,19 +1,19 @@
 ﻿using System;
 using Eryph.ConfigModel.Catlets;
 
-namespace Eryph.StateDb.Model
+namespace Eryph.StateDb.Model;
+
+public class CatletDrive
 {
-    public class CatletDrive
-    {
-        public string Id { get; set; }
+    public string Id { get; set; } = null!;
 
-        public Guid CatletId { get; set; }
-        public virtual Catlet Catlet { get; set; }
+    public Guid CatletId { get; set; }
 
-        public CatletDriveType? Type { get; set; }
+    public Catlet Catlet { get; set; } = null!;
 
-        public Guid? AttachedDiskId { get; set; }
+    public CatletDriveType Type { get; set; }
 
-        public virtual VirtualDisk AttachedDisk { get; set; }
-    }
+    public Guid? AttachedDiskId { get; set; }
+
+    public VirtualDisk? AttachedDisk { get; set; }
 }

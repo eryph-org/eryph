@@ -44,6 +44,15 @@ jobs:
       projects: '**/*.csproj'
       feedsToUse: 'config'
       nugetConfigPath: 'nuget.config'
+  
+  - task: DotNetCoreCLI@2
+    displayName: dotnet tool restore
+    inputs:
+      command: custom
+      custom: 'tool'
+      arguments: 'restore'
+      feedsToUse: 'config'
+      nugetConfigPath: 'nuget.config'
       
   - task: DotNetCoreCLI@2
     displayName: dotnet build
@@ -57,7 +66,7 @@ jobs:
     inputs:
       command: test
       projects: '**/test/**/*.csproj'
-      arguments: '--configuration $(buildConfiguration) --collect "Code coverage" --no-build'
+      arguments: '--configuration $(buildConfiguration) --collect "Code coverage" --no-build --filter "Category!=Docker"'
 
   - task: DotNetCoreCLI@2
     displayName: publish zero app
@@ -83,6 +92,14 @@ jobs:
       projects: '**/apps/**/*-uninstaller/*.csproj'
       arguments: '--configuration $(buildConfiguration) --no-build --output $(Build.ArtifactStagingDirectory)\zero_build\bin /p:SignHash=$(signHash)'
       zipAfterPublish: false
+
+  - task: PowerShell@2
+    displayName: Generate migration SQL
+    inputs:
+      filePath: $(Build.SourcesDirectory)\src\data\src\Eryph.StateDb.Design\Generate-MigrationSql.ps1
+      arguments: -Output $(Build.ArtifactStagingDirectory)\zero_build\migrations
+      workingDirectory: $(Build.SourcesDirectory)\src\data\src\Eryph.StateDb.Design\
+      pwsh: true
 
   - task: AzureCLI@2
     displayName: 'Sign executables'
@@ -116,3 +133,34 @@ jobs:
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)/apps/zero'
       ArtifactName: 'zero'
+
+- job: test
+  pool:
+    vmImage: ubuntu-22.04
+
+  variables:
+   - name: buildConfiguration
+     value: 'Release'
+
+  steps:
+  - task: DotNetCoreCLI@2
+    displayName: dotnet restore
+    inputs:
+      command: 'restore'
+      projects: '**/*.csproj'
+      feedsToUse: 'config'
+      nugetConfigPath: 'nuget.config'
+      
+  - task: DotNetCoreCLI@2
+    displayName: dotnet build
+    inputs:
+      command: build
+      projects: '**/*.csproj'
+      arguments: '--configuration $(buildConfiguration) --no-restore'
+
+  - task: DotNetCoreCLI@2
+    displayName: dotnet test
+    inputs:
+      command: test
+      projects: '**/test/**/*.csproj'
+      arguments: '--configuration $(buildConfiguration) --collect "Code coverage" --no-build --filter "Category=Docker"'

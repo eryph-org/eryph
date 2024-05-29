@@ -5,6 +5,7 @@ using Eryph.Core.Network;
 using Eryph.Modules.Controller.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Sqlite;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -105,7 +106,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
             messages.Should()
                 .Contain(
-                    "ip pool 'pool_network/default/pool2': Cannot delete a used ip pool (2 ip assignments found) .");
+                    "ip pool 'pool_network/default/pool2': Cannot delete a used ip pool (1 ip assignments found) .");
         }
 
         [Fact]
@@ -173,14 +174,14 @@ namespace Eryph.Modules.Controller.Tests.Networks
             _projectConfig.Networks.Find(x => x.Name == "pool_network")
                 .IfSome(n => n.Subnets.Find(subnet => subnet.Name == "default")
                     .IfSome(s => s.IpPools!.Find(p => p.Name == "pool2")
-                        .IfSome(pool => pool.NextIp = "192.168.15.104")));
+                        .IfSome(pool => pool.NextIp = "192.168.15.110")));
 
 
             var messages = await RunChangeValidator(_projectConfig);
 
             messages.Should()
                 .Contain(
-                    "ip pool 'pool_network/default/pool2': Cannot change next ip to '192.168.15.104' as this ip is already assigned.");
+                    "ip pool 'pool_network/default/pool2': Cannot change next ip to '192.168.15.110' as this ip is already assigned.");
         }
 
         [Fact]
@@ -483,11 +484,11 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
         private async Task<string[]> RunChangeValidator(ProjectNetworksConfig projectConfig)
         {
-            var contextOptions = new DbContextOptionsBuilder<StateStoreContext>()
+            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
                 .UseSqlite(_connection)
                 .Options;
 
-            await using var context = new StateStoreContext(contextOptions);
+            await using var context = new SqliteStateStoreContext(contextOptions);
             var stateStore = new StateStore(context);
             await context.Database.EnsureCreatedAsync();
             await SeedData(stateStore);
@@ -522,6 +523,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
         private async Task SeedData(IStateStore stateStore)
         {
             var networkRepo = stateStore.For<VirtualNetwork>();
+
             var project = new Project
             {
                 Id = _projectId,
@@ -563,16 +565,20 @@ namespace Eryph.Modules.Controller.Tests.Networks
                     {
                         new CatletNetworkPort()
                         {
+                            Name = "test-catlet-port",
                             CatletMetadataId = firstCatletMetadata.Id,
                         },
                         new ProviderRouterPort()
                         {
+                            Name = "provider",
                             ProviderName = "default",
                             PoolName = "default",
                             SubnetName = "default"
                         }
                     }.ToList()
                 });
+
+            var catletNetworkPortId = Guid.NewGuid();
 
             await networkRepo.AddAsync(
                 new VirtualNetwork
@@ -612,14 +618,10 @@ namespace Eryph.Modules.Controller.Tests.Networks
                                     {
                                         new IpPoolAssignment
                                         {
+                                            NetworkPortId = catletNetworkPortId,
                                             IpAddress = "192.168.15.110",
                                             Number = 11,
                                         },
-                                        new IpPoolAssignment
-                                        {
-                                            IpAddress = "192.168.15.104",
-                                            Number = 5,
-                                        }
                                     }.ToList()
                                 }
                             }.ToList()
@@ -629,10 +631,13 @@ namespace Eryph.Modules.Controller.Tests.Networks
                     {
                         new CatletNetworkPort()
                         {
+                            Id = catletNetworkPortId,
+                            Name = "test-catlet-port",
                             CatletMetadataId = secondCatletMetadata.Id,
                         },
                         new ProviderRouterPort()
                         {
+                            Name = "provider",
                             ProviderName = "default",
                             PoolName = "default",
                             SubnetName = "default"

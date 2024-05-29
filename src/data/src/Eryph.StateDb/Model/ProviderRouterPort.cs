@@ -2,7 +2,7 @@
 
 public class ProviderRouterPort : VirtualNetworkPort
 {
-    public string SubnetName { get; set; }
-    public string PoolName { get; set; }
+    public required string SubnetName { get; set; }
 
+    public required string PoolName { get; set; }
 }

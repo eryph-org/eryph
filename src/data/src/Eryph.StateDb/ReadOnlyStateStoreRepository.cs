@@ -23,7 +23,8 @@ namespace Eryph.StateDb
             _specificationEvaluator = new SpecificationEvaluator();
         }
 
-        public async Task<T> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
+        public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
+            where TId : notnull
         {
             var result = await _dbContext.Set<T>().FindAsync(new object[] { id }, cancellationToken);
             if (result != null)
@@ -31,13 +32,13 @@ namespace Eryph.StateDb
             return result;
         }
 
-        public async Task<T> GetBySpecAsync<TSpec>(TSpec specification,
+        public async Task<T?> GetBySpecAsync<TSpec>(TSpec specification,
             CancellationToken cancellationToken = default) where TSpec : ISingleResultSpecification, ISpecification<T>
         {
             return (await ListAsync(specification, cancellationToken)).FirstOrDefault();
         }
 
-        public async Task<TResult> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification,
+        public async Task<TResult?> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification,
             CancellationToken cancellationToken = default)
         {
             return (await ListAsync(specification, cancellationToken)).FirstOrDefault();

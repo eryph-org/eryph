@@ -11,10 +11,21 @@ using Eryph.Configuration.Model;
 using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.TestBase;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
-public class VirtualNetworkChangeTrackingTests : ChangeTrackingTestBase
+[Trait("Category", "Docker")]
+[Collection(nameof(MySqlDatabaseCollection))]
+public class MySqlVirtualNetworkChangeTrackingTests(MySqlFixture databaseFixture)
+    : VirtualNetworkChangeTrackingTests(databaseFixture);
+
+[Collection(nameof(SqliteDatabaseCollection))]
+public class SqliteVirtualNetworkChangeTrackingTests(SqliteFixture databaseFixture)
+    : VirtualNetworkChangeTrackingTests(databaseFixture);
+
+public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databaseFixture)
+    : ChangeTrackingTestBase(databaseFixture)
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid VirtualNetworkId = Guid.NewGuid();

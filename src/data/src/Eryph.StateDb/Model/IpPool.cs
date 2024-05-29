@@ -8,21 +8,19 @@ public class IpPool
 {
     public Guid Id { get; set; }
 
-    public string Name { get; set; }
+    public required string Name { get; set; }
 
-    public string FirstIp { get; set; }
+    public string? FirstIp { get; set; }
 
-    public string NextIp { get; set; }
+    public string? NextIp { get; set; }
     
-    public string LastIp { get; set; }
+    public string? LastIp { get; set; }
 
-    public string IpNetwork { get; set; }
-
-    public byte[] RowVersion { get; set; }
+    public string? IpNetwork { get; set; }
 
     public Guid SubnetId { get; set; }
 
-    public Subnet Subnet { get; set; }
+    public Subnet Subnet { get; set; } = null!;
 
-    public virtual List<IpPoolAssignment> IpAssignments { get; set; }
+    public List<IpPoolAssignment> IpAssignments { get; set; } = null!;
 }

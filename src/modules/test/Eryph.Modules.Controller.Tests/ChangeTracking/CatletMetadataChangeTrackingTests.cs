@@ -6,10 +6,21 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.TestBase;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
-public class CatletMetadataChangeTrackingTests : ChangeTrackingTestBase
+[Trait("Category", "Docker")]
+[Collection(nameof(MySqlDatabaseCollection))]
+public class MySqlCatletMetadataChangeTrackingTests(MySqlFixture databaseFixture)
+    : CatletMetadataChangeTrackingTests(databaseFixture);
+
+[Collection(nameof(SqliteDatabaseCollection))]
+public class SqliteCatletMetadataChangeTrackingTests(SqliteFixture databaseFixture)
+    : CatletMetadataChangeTrackingTests(databaseFixture);
+
+public abstract class CatletMetadataChangeTrackingTests(IDatabaseFixture databaseFixture)
+    : ChangeTrackingTestBase(databaseFixture)
 {
     private static readonly Guid MetadataId = Guid.NewGuid();
     private static readonly Guid VmId = Guid.NewGuid();
