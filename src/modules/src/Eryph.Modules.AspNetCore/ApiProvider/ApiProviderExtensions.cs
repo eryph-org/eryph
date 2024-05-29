@@ -71,7 +71,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
                     options.OperationFilter<SwaggerDefaultValues>();
                     options.OperationFilter<ProblemDetailsOperationFilter>();
                     //options.SchemaFilter<ApiErrorSchemaFilter>();
-                    options.SchemaFilter<OperationSchemaFilter>();
+                    //options.SchemaFilter<OperationSchemaFilter>();
                     options.OperationFilter<ListResponseOperationFilter>();
 
 
