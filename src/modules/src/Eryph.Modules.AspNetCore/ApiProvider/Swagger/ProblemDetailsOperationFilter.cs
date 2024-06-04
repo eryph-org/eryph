@@ -12,7 +12,6 @@ public class ProblemDetailsOperationFilter : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        //AddValidationProblemDetails(operation, context);
         AddProblemDetails(operation, context);
     }
 
@@ -26,7 +25,7 @@ public class ProblemDetailsOperationFilter : IOperationFilter
             Content = new Dictionary<string, OpenApiMediaType>
             {
                 {
-                    "application/json", new OpenApiMediaType
+                    "application/problem+json", new OpenApiMediaType
                     {
                         Schema = errorSchema
                     }

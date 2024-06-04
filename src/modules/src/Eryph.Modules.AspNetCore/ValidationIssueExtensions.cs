@@ -34,7 +34,6 @@ public static class ValidationIssueExtensions
                     modelState.AddModelError(error.Member, error.Message);
                 }
                 
-                
                 return modelState;
             });
 }

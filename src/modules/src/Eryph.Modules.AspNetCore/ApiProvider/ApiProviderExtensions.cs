@@ -36,7 +36,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
                 options.CustomizeProblemDetails = (context) =>
                 {
                     context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
-
                 };
             });
 
