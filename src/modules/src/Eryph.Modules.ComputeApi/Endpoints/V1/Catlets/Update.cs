@@ -63,7 +63,7 @@ public class Update(
         var validation = CatletConfigValidations.ValidateCatletConfig(
             config, nameof(NewCatletRequest.Configuration));
         if (validation.IsFail)
-            return ValidationProblem(validation.ToModelStateDictionary());
+            return BadRequest(validation.ToModelStateDictionary());
 
         return await base.HandleAsync(request, cancellationToken);
     }

@@ -77,7 +77,7 @@ public class Update(
 
         var validation = Validate(config, nameof(UpdateProjectNetworksRequest.Configuration));
         if(validation.IsFail)
-            return ValidationProblem(validation.ToModelStateDictionary());
+            return BadRequest(validation.ToModelStateDictionary());
             
         var projectName = Optional(config.Project).Filter(notEmpty).Match(
             Some: n => ProjectName.New(n),

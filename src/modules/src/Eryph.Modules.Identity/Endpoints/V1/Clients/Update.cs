@@ -37,11 +37,11 @@ public class Update(
         CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)
-            return ValidationProblem(ModelState);
+            return BadRequest(ModelState);
         
         await request.Client.ValidateScopes(scopeManager, ModelState, cancellationToken);
         if (!ModelState.IsValid)
-            return ValidationProblem(ModelState);
+            return BadRequest(ModelState);
 
         var tenantId = userInfoProvider.GetUserTenantId();
         var persistentDescriptor = await clientService.Get(request.Id, tenantId, cancellationToken);

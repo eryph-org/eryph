@@ -41,7 +41,7 @@ public class Create(
     {
         var validation = ValidateRequest(request);
         if(validation.IsFail)
-            return ValidationProblem(validation.ToModelStateDictionary());
+            return BadRequest(validation.ToModelStateDictionary());
 
         return await base.HandleAsync(request, cancellationToken);
     }

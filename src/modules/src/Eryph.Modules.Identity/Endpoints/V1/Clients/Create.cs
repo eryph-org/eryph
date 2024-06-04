@@ -42,14 +42,14 @@ public class Create(
         CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)
-            return ValidationProblem(ModelState);
+            return BadRequest(ModelState);
 
         client.Id = Guid.NewGuid().ToString();
         client.TenantId = userInfoProvider.GetUserTenantId();
 
         await client.ValidateScopes(scopeManager, ModelState, cancellationToken);
         if (!ModelState.IsValid)
-            return ValidationProblem(ModelState);
+            return BadRequest(ModelState);
 
         var descriptor = client.ToDescriptor();
         var privateKey = await descriptor.NewClientCertificate(certificateGenerator);

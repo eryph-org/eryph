@@ -46,7 +46,7 @@ public class Create(
         var authContext = userRightsProvider.GetAuthContext();
         var validation = ValidateRequest(request.Body, authContext);
         if (validation.IsFail)
-            return ValidationProblem(validation.ToModelStateDictionary());
+            return BadRequest(validation.ToModelStateDictionary());
 
         return await base.HandleAsync(request, cancellationToken);
     }

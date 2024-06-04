@@ -73,7 +73,7 @@ namespace Eryph.Modules.Identity.Models
                 if (await scopeManager.FindByNameAsync(scope, cancellationToken) == null)
                 {
                     modelState.AddModelError(
-                        nameof(Client.AllowedScopes),
+                        $"$.{nameof(Client.AllowedScopes)}",
                         $"The scope {scope} is invalid");
                 }
             }

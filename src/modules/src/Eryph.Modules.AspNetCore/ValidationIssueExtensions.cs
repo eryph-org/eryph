@@ -31,7 +31,7 @@ public static class ValidationIssueExtensions
                 
                 foreach (var error in errors)
                 {
-                    modelState.AddModelError(error.Member, error.Message);
+                    modelState.AddModelError($"$.{error.Member}", error.Message);
                 }
                 
                 return modelState;
