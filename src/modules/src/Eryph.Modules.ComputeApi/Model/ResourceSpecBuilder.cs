@@ -21,10 +21,11 @@ public class ResourceSpecBuilder<TResource> : ISingleEntitySpecBuilder<SingleEnt
 
     public ISingleResultSpecification<TResource> GetSingleEntitySpec(SingleEntityRequest request, AccessRight accessRight)
     {
-        return new ResourceSpecs<TResource>.GetById(request.Id,
-            _userRightsProvider.GetAuthContext(),
-            _userRightsProvider.GetResourceRoles<TResource>(accessRight),
-            CustomizeQuery);
+        return !Guid.TryParse(request.Id, out var resourceId) 
+            ? null : new ResourceSpecs<TResource>.GetById(resourceId,
+                _userRightsProvider.GetAuthContext(), 
+                _userRightsProvider.GetResourceRoles<TResource>(accessRight)
+                , CustomizeQuery);
     }
 
     public ISpecification<TResource> GetEntitiesSpec(ListRequest request)

@@ -19,10 +19,13 @@ namespace Eryph.Modules.ComputeApi.Model
 
         public ISingleResultSpecification<OperationModel> GetSingleEntitySpec(OperationRequest request, AccessRight accessRight)
         {
-            return new OperationSpecs.GetById(request.Id,
-                _userRightsProvider.GetAuthContext(), 
-                _userRightsProvider.GetProjectRoles(AccessRight.Read),
-                    request.Expand, request.LogTimestamp);
+
+            return !Guid.TryParse(request.Id, out var requestId) 
+                ? null
+                : new OperationSpecs.GetById(requestId,
+                    _userRightsProvider.GetAuthContext(), 
+                    _userRightsProvider.GetProjectRoles(AccessRight.Read),
+                        request.Expand, request.LogTimestamp);
         }
 
         public ISpecification<OperationModel> GetEntitiesSpec(OperationsListRequest request)

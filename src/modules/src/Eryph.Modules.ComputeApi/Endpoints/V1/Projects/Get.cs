@@ -33,6 +33,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ProjectModel))]
         public override async Task<ActionResult<ProjectModel>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
         {
+            if (!Guid.TryParse(request.Id, out _))
+                return BadRequest();
+
             return await base.HandleAsync(request, cancellationToken);
         }
 
