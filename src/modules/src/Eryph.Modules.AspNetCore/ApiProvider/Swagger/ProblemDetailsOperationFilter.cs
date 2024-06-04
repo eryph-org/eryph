@@ -12,7 +12,7 @@ public class ProblemDetailsOperationFilter : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        AddValidationProblemDetails(operation, context);
+        //AddValidationProblemDetails(operation, context);
         AddProblemDetails(operation, context);
     }
 
@@ -35,28 +35,5 @@ public class ProblemDetailsOperationFilter : IOperationFilter
         };
 
         operation.Responses.Add("default", response);
-    }
-
-    private void AddValidationProblemDetails(OpenApiOperation operation, OperationFilterContext context)
-    {
-        var errorSchema = context.EnsureSchemaPresentAndGetRef<ValidationProblemDetails>();
-
-        var response = new OpenApiResponse
-        {
-            Description = "Error response describing why the request is invalid",
-            Content = new Dictionary<string, OpenApiMediaType>
-            {
-                {
-                    "application/json", new OpenApiMediaType
-                    {
-                        Schema = errorSchema
-                    }
-                }
-            }
-        };
-
-        response.Extensions.Add("x-ms-error-response", new OpenApiBoolean(true));
-
-        operation.Responses.Add("400", response);
     }
 }

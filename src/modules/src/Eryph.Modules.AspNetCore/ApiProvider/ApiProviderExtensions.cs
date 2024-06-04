@@ -70,8 +70,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
                     // add a custom operation filter which sets default values
                     options.OperationFilter<SwaggerDefaultValues>();
                     options.OperationFilter<ProblemDetailsOperationFilter>();
-                    //options.SchemaFilter<ApiErrorSchemaFilter>();
-                    //options.SchemaFilter<OperationSchemaFilter>();
                     options.OperationFilter<ListResponseOperationFilter>();
 
 
