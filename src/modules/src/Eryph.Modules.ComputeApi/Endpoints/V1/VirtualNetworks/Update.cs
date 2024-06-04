@@ -79,7 +79,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks
 
             var validation = Validate(config, nameof(UpdateProjectNetworksRequest.Configuration));
             if(validation.IsFail)
-                return ValidationProblem(validation.ToProblemDetails());
+                return ValidationProblem(validation.ToModelStateDictionary());
             
             var projectName = Optional(config.Project).Filter(notEmpty).Match(
                 Some: n => ProjectName.New(n),

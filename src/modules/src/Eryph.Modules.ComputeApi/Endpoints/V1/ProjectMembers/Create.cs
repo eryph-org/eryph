@@ -48,7 +48,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
             var authContext = _userRightsProvider.GetAuthContext();
             var validation = ValidateRequest(request.Body, authContext);
             if (validation.IsFail)
-                return ValidationProblem(validation.ToProblemDetails());
+                return ValidationProblem(validation.ToModelStateDictionary());
 
             return await base.HandleAsync(request, cancellationToken);
         }

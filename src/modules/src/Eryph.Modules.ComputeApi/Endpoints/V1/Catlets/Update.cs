@@ -62,7 +62,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
             var validation = CatletConfigValidations.ValidateCatletConfig(
                 config, nameof(NewCatletRequest.Configuration));
             if (validation.IsFail)
-                return ValidationProblem(validation.ToProblemDetails());
+                return ValidationProblem(validation.ToModelStateDictionary());
 
             return await base.HandleAsync(request, cancellationToken);
         }

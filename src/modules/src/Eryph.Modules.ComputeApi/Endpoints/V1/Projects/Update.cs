@@ -40,7 +40,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
         {
             var validation = ValidateRequest(request.Body);
             if (validation.IsFail)
-                return ValidationProblem(validation.ToProblemDetails());
+                return ValidationProblem(validation.ToModelStateDictionary());
 
             return await base.HandleAsync(request, cancellationToken);
         }
