@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -10,32 +11,28 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Catlet = Eryph.StateDb.Model.Catlet;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
+
+public class GetConfig(
+    [NotNull] IGetRequestHandler<Catlet, CatletConfiguration> requestHandler,
+    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
+    : GetEntityEndpoint<SingleEntityRequest, CatletConfiguration, Catlet>(requestHandler, specBuilder)
 {
-    public class GetConfig : GetEntityEndpoint<SingleEntityRequest, CatletConfiguration, Catlet>
+    [HttpGet("catlets/{id}/config")]
+    [SwaggerOperation(
+        Summary = "Get catlet configuration",
+        Description = "Get the configuration of a catlet",
+        OperationId = "Catlets_GetConfig",
+        Tags = ["Catlets"])
+    ]
+    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(CatletConfiguration))]
+    public override async Task<ActionResult<CatletConfiguration>> HandleAsync(
+        [FromRoute] SingleEntityRequest request,
+        CancellationToken cancellationToken = default)
     {
+        if (!Guid.TryParse(request.Id, out _))
+            return NotFound();
 
-        public GetConfig([NotNull] IGetRequestHandler<Catlet, CatletConfiguration> requestHandler,
-            [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder) : base(requestHandler, specBuilder)
-        {
-        }
-
-        [HttpGet("catlets/{id}/config")]
-        [SwaggerOperation(
-            Summary = "Get catlet configuration",
-            Description = "Get the configuration of a catlet",
-            OperationId = "Catlets_GetConfig",
-            Tags = new[] { "Catlets" })
-        ]
-
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(CatletConfiguration))]
-
-        public override Task<ActionResult<CatletConfiguration>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
-        {
-            return base.HandleAsync(request, cancellationToken);
-        }
-
-
-
+        return await base.HandleAsync(request, cancellationToken);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -14,36 +15,34 @@ using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 using Resource = Eryph.Resources.Resource;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
+
+public class Stop(
+    [NotNull] IOperationRequestHandler<Catlet> operationHandler,
+    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
+    : ResourceOperationEndpoint<StopCatletRequest, Catlet>(operationHandler, specBuilder)
 {
-    public class Stop : ResourceOperationEndpoint<StopCatletRequest, Catlet>
+    protected override object CreateOperationMessage(Catlet model, StopCatletRequest request)
     {
+        return new StopCatletCommand{CatletId = model.Id, 
+            Graceful = (request.Body?.Graceful).GetValueOrDefault()};
+    }
 
+    [Authorize(Policy = "compute:catlets:control")]
+    [HttpPut("catlets/{id}/stop")]
+    [SwaggerOperation(
+        Summary = "Stops a catlet",
+        Description = "Stops a catlet",
+        OperationId = "Catlets_Stop",
+        Tags = ["Catlets"])
+    ]
+    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+        [FromRoute] StopCatletRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(request.Id, out _))
+            return NotFound();
 
-        public Stop([NotNull]IOperationRequestHandler<Catlet> operationHandler, 
-            [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder) : base(operationHandler, specBuilder)
-        {
-        }
-
-        protected override object CreateOperationMessage(Catlet model, StopCatletRequest request)
-        {
-            return new StopCatletCommand{CatletId = model.Id, 
-                Graceful = (request.Body?.Graceful).GetValueOrDefault()};
-        }
-
-        [Authorize(Policy = "compute:catlets:control")]
-        [HttpPut("catlets/{id}/stop")]
-        [SwaggerOperation(
-            Summary = "Stops a catlet",
-            Description = "Stops a catlet",
-            OperationId = "Catlets_Stop",
-            Tags = new[] { "Catlets" })
-        ]
-
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] StopCatletRequest request, CancellationToken cancellationToken = default)
-        {
-            return base.HandleAsync(request, cancellationToken);
-        }
-
+        return await base.HandleAsync(request, cancellationToken);
     }
 }

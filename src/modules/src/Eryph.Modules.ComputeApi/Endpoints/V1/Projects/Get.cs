@@ -12,32 +12,29 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using ProjectModel = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
+
+public class Get(
+    [NotNull] IGetRequestHandler<Project, ProjectModel> requestHandler,
+    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Project> specBuilder)
+    : GetEntityEndpoint<SingleEntityRequest, ProjectModel, Project>(requestHandler, specBuilder)
 {
-    public class Get : GetEntityEndpoint<SingleEntityRequest, ProjectModel, Project>
+    [Authorize(Policy = "compute:projects:read")]
+    [HttpGet("projects/{id}")]
+    [SwaggerOperation(
+        Summary = "Get a projects",
+        Description = "Get a projects",
+        OperationId = "Projects_Get",
+        Tags = ["Projects"])
+    ]
+    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ProjectModel))]
+    public override async Task<ActionResult<ProjectModel>> HandleAsync(
+        [FromRoute] SingleEntityRequest request,
+        CancellationToken cancellationToken = default)
     {
+        if (!Guid.TryParse(request.Id, out _))
+            return NotFound();
 
-        public Get([NotNull] IGetRequestHandler<Project, ProjectModel> requestHandler, 
-            [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Project> specBuilder) : base(requestHandler, specBuilder)
-        {
-        }
-
-        [Authorize(Policy = "compute:projects:read")]
-        [HttpGet("projects/{id}")]
-        [SwaggerOperation(
-            Summary = "Get a projects",
-            Description = "Get a projects",
-            OperationId = "Projects_Get",
-            Tags = new[] { "Projects" })
-        ]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ProjectModel))]
-        public override async Task<ActionResult<ProjectModel>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
-        {
-            if (!Guid.TryParse(request.Id, out _))
-                return BadRequest();
-
-            return await base.HandleAsync(request, cancellationToken);
-        }
-
+        return await base.HandleAsync(request, cancellationToken);
     }
 }

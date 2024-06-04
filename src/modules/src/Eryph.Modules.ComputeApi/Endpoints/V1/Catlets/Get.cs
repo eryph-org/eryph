@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -9,30 +10,28 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
+
+public class Get(
+    [NotNull] IGetRequestHandler<StateDb.Model.Catlet, Catlet> requestHandler,
+    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Catlet> specBuilder)
+    : GetEntityEndpoint<SingleEntityRequest, Catlet, StateDb.Model.Catlet>(requestHandler, specBuilder)
 {
-    public class Get : GetEntityEndpoint<SingleEntityRequest,Catlet, StateDb.Model.Catlet>
+    [HttpGet("catlets/{id}")]
+    [SwaggerOperation(
+        Summary = "Get a catlet",
+        Description = "Get a catlet",
+        OperationId = "Catlets_Get",
+        Tags = ["Catlets"])
+    ]
+    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(Catlet))]
+    public override async Task<ActionResult<Catlet>> HandleAsync(
+        [FromRoute] SingleEntityRequest request,
+        CancellationToken cancellationToken = default)
     {
+        if (!Guid.TryParse(request.Id, out _))
+            return NotFound();
 
-        public Get([NotNull] IGetRequestHandler<StateDb.Model.Catlet, Catlet> requestHandler, [NotNull] 
-            ISingleEntitySpecBuilder<SingleEntityRequest,StateDb.Model.Catlet> specBuilder) 
-            : base(requestHandler, specBuilder)
-        {
-        }
-
-        [HttpGet("catlets/{id}")]
-        [SwaggerOperation(
-            Summary = "Get a catlet",
-            Description = "Get a catlet",
-            OperationId = "Catlets_Get",
-            Tags = new[] { "Catlets" })
-        ]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(Catlet))]
-
-        public override Task<ActionResult<Catlet>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
-        {
-            return base.HandleAsync(request, cancellationToken);
-        }
-
+        return await base.HandleAsync(request, cancellationToken);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -8,27 +9,27 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations;
+
+public class Get(
+    [NotNull] IGetRequestHandler<StateDb.Model.OperationModel, Operation> requestHandler,
+    [NotNull] ISingleEntitySpecBuilder<OperationRequest, StateDb.Model.OperationModel> specBuilder)
+    : GetEntityEndpoint<OperationRequest, Operation, StateDb.Model.OperationModel>(requestHandler, specBuilder)
 {
-    public class Get : GetEntityEndpoint<OperationRequest, Operation, StateDb.Model.OperationModel>
+    [HttpGet("operations/{id}")]
+    [SwaggerOperation(
+        Summary = "Get a operation",
+        Description = "Get a operation",
+        OperationId = "Operations_Get",
+        Tags = ["Operations"])
+    ]
+    public override async Task<ActionResult<Operation>> HandleAsync(
+        [FromRoute] OperationRequest request,
+        CancellationToken cancellationToken = default)
     {
-        public Get([NotNull] IGetRequestHandler<StateDb.Model.OperationModel, Operation> requestHandler, 
-            [NotNull] ISingleEntitySpecBuilder<OperationRequest, StateDb.Model.OperationModel> specBuilder) : base(requestHandler, specBuilder)
-        {
-        }
+        if (!Guid.TryParse(request.Id, out _))
+            return NotFound();
 
-        [HttpGet("operations/{id}")]
-        [SwaggerOperation(
-            Summary = "Get a operation",
-            Description = "Get a operation",
-            OperationId = "Operations_Get",
-            Tags = new[] { "Operations" })
-        ]
-        public override Task<ActionResult<Operation>> HandleAsync([FromRoute] OperationRequest request, CancellationToken cancellationToken = default)
-        {
-            return base.HandleAsync(request, cancellationToken);
-        }
-
-
+        return await base.HandleAsync(request, cancellationToken);
     }
 }

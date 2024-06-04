@@ -12,31 +12,26 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
+
+public class List(
+    [NotNull] IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet> listRequestHandler,
+    [NotNull] IListEntitySpecBuilder<ListRequest, StateDb.Model.Catlet> specBuilder)
+    : ListEntityEndpoint<ListRequest, Catlet, StateDb.Model.Catlet>(listRequestHandler, specBuilder)
 {
-    public class List : ListEntityEndpoint<ListRequest, Catlet, StateDb.Model.Catlet>
+    [Authorize(Policy = "compute:catlets:read")]
+    [HttpGet("catlets")]
+    [SwaggerOperation(
+        Summary = "List all catlets",
+        Description = "List all catlets",
+        OperationId = "Catlets_List",
+        Tags = ["Catlets"])
+    ]
+    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Catlet>))]
+    public override Task<ActionResult<ListResponse<Catlet>>> HandleAsync(
+        [FromRoute] ListRequest request,
+        CancellationToken cancellationToken = default)
     {
-        public List(
-            [NotNull] IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet> listRequestHandler, 
-            [NotNull] IListEntitySpecBuilder<ListRequest,StateDb.Model.Catlet> specBuilder)
-            : base(listRequestHandler, specBuilder)
-        {
-        }
-
-        [Authorize(Policy = "compute:catlets:read")]
-        [HttpGet("catlets")]
-        [SwaggerOperation(
-            Summary = "List all catlets",
-            Description = "List all catlets",
-            OperationId = "Catlets_List",
-            Tags = new[] { "Catlets" })
-        ]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Catlet>))]
-        public override Task<ActionResult<ListResponse<Catlet>>> HandleAsync([FromRoute] ListRequest request, CancellationToken cancellationToken = default)
-        {
-            return base.HandleAsync(request, cancellationToken);
-        }
-
-
+        return base.HandleAsync(request, cancellationToken);
     }
 }

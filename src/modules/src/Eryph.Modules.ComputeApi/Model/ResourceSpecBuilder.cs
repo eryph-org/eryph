@@ -21,20 +21,23 @@ public class ResourceSpecBuilder<TResource> : ISingleEntitySpecBuilder<SingleEnt
 
     public ISingleResultSpecification<TResource> GetSingleEntitySpec(SingleEntityRequest request, AccessRight accessRight)
     {
-        return !Guid.TryParse(request.Id, out var resourceId) 
-            ? null : new ResourceSpecs<TResource>.GetById(resourceId,
-                _userRightsProvider.GetAuthContext(), 
-                _userRightsProvider.GetResourceRoles<TResource>(accessRight)
-                , CustomizeQuery);
+        if (!Guid.TryParse(request.Id, out var resourceId))
+            throw new ArgumentException("The ID is not a GUID.", nameof(request));
+        
+        return new ResourceSpecs<TResource>.GetById(
+            resourceId,
+            _userRightsProvider.GetAuthContext(),
+            _userRightsProvider.GetResourceRoles<TResource>(accessRight),
+            CustomizeQuery);
     }
 
     public ISpecification<TResource> GetEntitiesSpec(ListRequest request)
     {
-        return new ResourceSpecs<TResource>
-            .GetAll(
-                _userRightsProvider.GetAuthContext(),
-                _userRightsProvider.GetResourceRoles<TResource>(AccessRight.Read), 
-                request.ProjectId, CustomizeQuery);
+        return new ResourceSpecs<TResource>.GetAll(
+            _userRightsProvider.GetAuthContext(),
+            _userRightsProvider.GetResourceRoles<TResource>(AccessRight.Read),
+            request.ProjectId,
+            CustomizeQuery);
     }
 
     protected virtual void CustomizeQuery(ISpecificationBuilder<TResource> specification)

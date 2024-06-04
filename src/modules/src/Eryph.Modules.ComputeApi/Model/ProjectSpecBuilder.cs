@@ -22,22 +22,19 @@ public class ProjectSpecBuilder :
 
     public ISingleResultSpecification<Project> GetSingleEntitySpec(SingleEntityRequest request, AccessRight accessRight)
     {
-        var authContext = _userRightsProvider.GetAuthContext();
-        var sufficientRoles = _userRightsProvider.GetProjectRoles(accessRight);
+        if (!Guid.TryParse(request.Id, out var projectId))
+            throw new ArgumentException("The ID is not a GUID", nameof(request));
 
-        return !Guid.TryParse(request.Id, out var projectId) 
-            ? null 
-            : new ProjectSpecs.GetById(projectId, authContext, sufficientRoles );
+        return new ProjectSpecs.GetById(
+            projectId,
+            _userRightsProvider.GetAuthContext(),
+            _userRightsProvider.GetProjectRoles(accessRight));
     }
 
     public ISpecification<Project> GetEntitiesSpec(AllProjectsListRequest request)
     {
-
         return new ProjectSpecs.GetAll(
             _userRightsProvider.GetAuthContext(),
-            _userRightsProvider.GetProjectRoles(AccessRight.Read)
-            );
-
+            _userRightsProvider.GetProjectRoles(AccessRight.Read));
     }
-
 }

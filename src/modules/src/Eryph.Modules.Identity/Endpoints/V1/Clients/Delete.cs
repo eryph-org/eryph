@@ -10,44 +10,37 @@ using Swashbuckle.AspNetCore.Annotations;
 
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
+namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
-namespace Eryph.Modules.Identity.Endpoints.V1.Clients
-{
-    [Route("v{version:apiVersion}")]
-    public class Delete : EndpointBaseAsync
+[Route("v{version:apiVersion}")]
+public class Delete(
+    IClientService clientService,
+    IUserInfoProvider userInfoProvider)
+    : EndpointBaseAsync
         .WithRequest<DeleteClientRequest>
         .WithoutResult
+{
+    [Authorize(Policy = "identity:clients:write")]
+    [HttpDelete("clients/{id}")]
+    [SwaggerOperation(
+        Summary = "Deletes a client",
+        Description = "Deletes a client",
+        OperationId = "Clients_Delete",
+        Tags = ["Clients"])
+    ]
+    [ProducesResponseType(Status204NoContent)]
+    public override async Task<ActionResult> HandleAsync(
+        [FromRoute] DeleteClientRequest request,
+        CancellationToken cancellationToken = new CancellationToken())
     {
-        private readonly IClientService _clientService;
-        private readonly IUserInfoProvider _userInfoProvider;
+        var tenantId = userInfoProvider.GetUserTenantId();
 
-        public Delete(IClientService clientService, IUserInfoProvider userInfoProvider)
-        {
-            _clientService = clientService;
-            _userInfoProvider = userInfoProvider;
-        }
+        var client = await clientService.Get(request.Id, tenantId, cancellationToken);
+        if (client == null)
+            return NotFound($"client with id {request.Id} not found.");
 
+        await clientService.Delete(client.ClientId, tenantId, cancellationToken);
 
-        [Authorize(Policy = "identity:clients:write")]
-        [HttpDelete("clients/{id}")]
-        [SwaggerOperation(
-            Summary = "Deletes a client",
-            Description = "Deletes a client",
-            OperationId = "Clients_Delete",
-            Tags = new[] { "Clients" })
-        ]
-        [ProducesResponseType(Status200OK)]
-        public override async Task<ActionResult> HandleAsync([FromRoute] DeleteClientRequest request, CancellationToken cancellationToken = new CancellationToken())
-        {
-            var tenantId = _userInfoProvider.GetUserTenantId();
-
-            var client = await _clientService.Get(request.Id, tenantId, cancellationToken);
-            if (client == null)
-                return NotFound($"client with id {request.Id} not found.");
-
-            await _clientService.Delete(client.ClientId, tenantId, cancellationToken);
-
-            return Ok();
-        }
+        return NoContent();
     }
 }

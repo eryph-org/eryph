@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
+using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -17,55 +18,53 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
+
+public class Update(
+    [NotNull] IOperationRequestHandler<Catlet> operationHandler,
+    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
+    : ResourceOperationEndpoint<UpdateCatletRequest, Catlet>(operationHandler, specBuilder)
 {
-    public class Update : ResourceOperationEndpoint<UpdateCatletRequest, Catlet>
+    protected override object CreateOperationMessage(Catlet model, UpdateCatletRequest request )
     {
+        var jsonString = request.Body?.Configuration.GetValueOrDefault().ToString();
 
-        public Update([NotNull] IOperationRequestHandler<Catlet> operationHandler, 
-            [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder) : base(operationHandler, specBuilder)
+        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
+        var config = CatletConfigDictionaryConverter.Convert(configDictionary);
+
+        return new UpdateCatletCommand
         {
-        }
+            CatletId = model.Id,
+            CorrelationId = (request.Body?.CorrelationId).GetOrGenerate(),
+            Config = config
+        };
+    }
 
-        protected override object CreateOperationMessage(Catlet model, UpdateCatletRequest request )
-        {
+    [Authorize(Policy = "compute:catlets:write")]
+    [HttpPut("catlets/{id}")]
+    [SwaggerOperation(
+        Summary = "Updates a catlet",
+        Description = "Updates a catlet",
+        OperationId = "Catlets_Update",
+        Tags = ["Catlets"])
+    ]
+    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+        [FromRoute] UpdateCatletRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(request.Id, out _))
+            return NotFound();
 
-            var jsonString = request.Body?.Configuration.GetValueOrDefault().ToString();
+        var jsonString = request.Body?.Configuration.GetValueOrDefault().ToString();
 
+        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
+        var config = CatletConfigDictionaryConverter.Convert(configDictionary);
 
-            var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
-            var config = CatletConfigDictionaryConverter.Convert(configDictionary);
+        var validation = CatletConfigValidations.ValidateCatletConfig(
+            config, nameof(NewCatletRequest.Configuration));
+        if (validation.IsFail)
+            return ValidationProblem(validation.ToModelStateDictionary());
 
-            return new UpdateCatletCommand{CatletId = model.Id,
-                CorrelationId = request.Body.CorrelationId == Guid.Empty
-                    ? new Guid()
-                    : request.Body.CorrelationId,
-                Config = config
-            };
-        }
-
-        [Authorize(Policy = "compute:catlets:write")]
-        [HttpPut("catlets/{id}")]
-        [SwaggerOperation(
-            Summary = "Updates a catlet",
-            Description = "Updates a catlet",
-            OperationId = "Catlets_Update",
-            Tags = new[] { "Catlets" })
-        ]
-        public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] UpdateCatletRequest request, CancellationToken cancellationToken = default)
-        {
-            var jsonString = request.Body?.Configuration.GetValueOrDefault().ToString();
-
-            var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
-            var config = CatletConfigDictionaryConverter.Convert(configDictionary);
-
-            var validation = CatletConfigValidations.ValidateCatletConfig(
-                config, nameof(NewCatletRequest.Configuration));
-            if (validation.IsFail)
-                return ValidationProblem(validation.ToModelStateDictionary());
-
-            return await base.HandleAsync(request, cancellationToken);
-        }
-
+        return await base.HandleAsync(request, cancellationToken);
     }
 }

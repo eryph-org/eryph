@@ -15,43 +15,44 @@ using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
+
+public class Delete(
+    [NotNull] IOperationRequestHandler<ProjectRoleAssignment> operationHandler,
+    [NotNull] ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder,
+    IUserRightsProvider userRightsProvider)
+    : OperationRequestEndpoint<ProjectMemberRequest, ProjectRoleAssignment>(operationHandler, specBuilder)
 {
-    public class Delete : OperationRequestEndpoint<ProjectMemberRequest, ProjectRoleAssignment>
+    [Authorize(Policy = "compute:projects:write")]
+    [HttpDelete("projects/{projectId}/members/{id}")]
+    [SwaggerOperation(
+        Summary = "Remove a project member",
+        Description = "Removes a project member assignment",
+        OperationId = "ProjectMembers_Remove",
+        Tags = ["ProjectMembers"])
+    ]
+    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+        [FromRoute] ProjectMemberRequest request,
+        CancellationToken cancellationToken = default)
     {
-        private readonly IUserRightsProvider _userRightsProvider;
-        public Delete([NotNull] IOperationRequestHandler<ProjectRoleAssignment> operationHandler, 
-            [NotNull] ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder, IUserRightsProvider userRightsProvider) : base(operationHandler, specBuilder)
+        if (!Guid.TryParse(request.Id, out _))
+            return NotFound();
+
+        var hasAccess = await userRightsProvider.HasProjectAccess(request.Project, AccessRight.Admin);
+        if (!hasAccess)
+            return Forbid();
+
+        return await base.HandleAsync(request, cancellationToken);
+    }
+
+    protected override object CreateOperationMessage(ProjectRoleAssignment model, ProjectMemberRequest request)
+    {
+        return new RemoveProjectMemberCommand
         {
-            _userRightsProvider = userRightsProvider;
-        }
-
-        [Authorize(Policy = "compute:projects:write")]
-        [HttpDelete("projects/{projectId}/members/{id}")]
-        [SwaggerOperation(
-            Summary = "Remove a project member",
-            Description = "Removes a project member assignment",
-            OperationId = "ProjectMembers_Remove",
-            Tags = new[] { "ProjectMembers" })
-        ]
-        public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] ProjectMemberRequest request, CancellationToken cancellationToken = default)
-        {
-            var hasAccess = await _userRightsProvider.HasProjectAccess(request.Project, AccessRight.Admin);
-            if (!hasAccess)
-                return Forbid();
-
-            return await base.HandleAsync(request, cancellationToken);
-        }
-
-
-        protected override object CreateOperationMessage(ProjectRoleAssignment model, ProjectMemberRequest request)
-        {
-            return new RemoveProjectMemberCommand { CorrelationId =
-                Guid.NewGuid(), 
-                ProjectId = model.ProjectId,
-                AssignmentId = model.Id,
-                CurrentIdentityId = _userRightsProvider.GetUserId()
-            };
-        }
+            CorrelationId = Guid.NewGuid(), 
+            ProjectId = model.ProjectId,
+            AssignmentId = model.Id,
+            CurrentIdentityId = userRightsProvider.GetUserId()
+        };
     }
 }

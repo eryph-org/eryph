@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
@@ -14,36 +15,37 @@ using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 using Resource = Eryph.Resources.Resource;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
+
+
+public class Delete(
+    [NotNull] IOperationRequestHandler<Catlet> operationHandler,
+    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
+    : ResourceOperationEndpoint<SingleEntityRequest, Catlet>(operationHandler, specBuilder)
 {
-    public class Delete : ResourceOperationEndpoint<SingleEntityRequest, Catlet>
+    protected override object CreateOperationMessage(Catlet model, SingleEntityRequest request)
     {
-
-
-        public Delete([NotNull] IOperationRequestHandler<Catlet> operationHandler, 
-            [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder) : base(operationHandler, specBuilder)
+        return new DestroyCatletCommand
         {
-        }
+            CatletId = model.Id
+        };
+    }
 
-        protected override object CreateOperationMessage(Catlet model, SingleEntityRequest request)
-        {
-            return new DestroyCatletCommand{ CatletId = model.Id};
-        }
+    [Authorize(Policy = "compute:catlets:write")]
+    [HttpDelete("catlets/{id}")]
+    [SwaggerOperation(
+        Summary = "Deletes a catlet",
+        Description = "Deletes a catlet",
+        OperationId = "Catlets_Delete",
+        Tags = ["Catlets"])
+    ]
+    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+        [FromRoute] SingleEntityRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(request.Id, out _))
+            return NotFound();
 
-        [Authorize(Policy = "compute:catlets:write")]
-        [HttpDelete("catlets/{id}")]
-        [SwaggerOperation(
-            Summary = "Deletes a catlet",
-            Description = "Deletes a catlet",
-            OperationId = "Catlets_Delete",
-            Tags = new[] { "Catlets" })
-        ]
-
-        public override Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromRoute] SingleEntityRequest request, CancellationToken cancellationToken = default)
-        {
-            return base.HandleAsync(request, cancellationToken);
-        }
-
-
+        return await base.HandleAsync(request, cancellationToken);
     }
 }

@@ -11,42 +11,36 @@ using Swashbuckle.AspNetCore.Annotations;
 
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
+namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
-namespace Eryph.Modules.Identity.Endpoints.V1.Clients
-{
-    [Route("v{version:apiVersion}")]
-    public class Get : EndpointBaseAsync
+[Route("v{version:apiVersion}")]
+public class Get(
+    IClientService clientService,
+    IUserInfoProvider userInfoProvider)
+    : EndpointBaseAsync
         .WithRequest<GetClientRequest>
         .WithActionResult<Client>
+{
+    [Authorize(Policy = "identity:clients:read")]
+    [HttpGet("clients/{id}")]
+    [SwaggerOperation(
+        Summary = "Get a client",
+        Description = "Get a client",
+        OperationId = "Clients_Get",
+        Tags = ["Clients"])
+    ]
+    [SwaggerResponse(Status200OK, "Success", typeof(Client))]
+    public override async Task<ActionResult<Client>> HandleAsync(
+        [FromRoute] GetClientRequest request, 
+        CancellationToken cancellationToken = default)
     {
-        private readonly IClientService _clientService;
-        private readonly IUserInfoProvider _userInfoProvider;
-        public Get(IClientService clientService, IUserInfoProvider userInfoProvider)
-        {
-            _clientService = clientService;
-            _userInfoProvider = userInfoProvider;
-        }
+        var tenantId = userInfoProvider.GetUserTenantId();
+        var descriptor = await clientService.Get(request.Id, tenantId, cancellationToken);
 
-        [Authorize(Policy = "identity:clients:read")]
-        [HttpGet("clients/{id}")]
-        [SwaggerOperation(
-            Summary = "Get a client",
-            Description = "Get a client",
-            OperationId = "Clients_Get",
-            Tags = new[] { "Clients" })
-        ]
-        [SwaggerResponse(Status200OK, "Success", typeof(Client))]
+        if (descriptor == null)
+            return NotFound();
 
-        public override async Task<ActionResult<Client>> HandleAsync([FromRoute] GetClientRequest request, CancellationToken cancellationToken = new CancellationToken())
-        {
-            var tenantId = _userInfoProvider.GetUserTenantId();
-            var descriptor = await _clientService.Get(request.Id, tenantId, cancellationToken);
-
-            if (descriptor == null)
-                return NotFound($"client with id {request.Id} not found.");
-
-            var client = descriptor.ToClient<Client>();
-            return Ok(client);
-        }
+        var client = descriptor.ToClient<Client>();
+        return Ok(client);
     }
 }
