@@ -69,7 +69,10 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
 
 
             var command = createOperationFunc(model);
-            var operation = await _operationDispatcher.StartNew(_userRightsProvider.GetUserTenantId(), _httpContextAccessor.HttpContext?.TraceIdentifier ?? "", command);
+            var operation = await _operationDispatcher.StartNew(
+                _userRightsProvider.GetUserTenantId(),
+                _httpContextAccessor.HttpContext?.TraceIdentifier ?? "",
+                command);
             var operationModel = (operation as StateDb.Workflows.Operation)?.Model;
 
             if (operationModel == null)
