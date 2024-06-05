@@ -15,7 +15,9 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -31,9 +33,7 @@ public class Create(
 {
     protected override object CreateOperationMessage(NewCatletRequest request)
     {
-        var jsonString = request.Configuration.GetValueOrDefault().ToString();
-
-        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
+        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(request.Configuration);
         var config = CatletConfigDictionaryConverter.Convert(configDictionary);
 
         return new CreateCatletCommand
@@ -56,15 +56,15 @@ public class Create(
         [FromBody] NewCatletRequest request,
         CancellationToken cancellationToken = default)
     {
-        var jsonString = request.Configuration.GetValueOrDefault().ToString();
-
-        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
-        var config = CatletConfigDictionaryConverter.Convert(configDictionary);
-
-        var validation = CatletConfigValidations.ValidateCatletConfig(
-            config, nameof(NewCatletRequest.Configuration));
+        var validation = RequestValidations.ValidateCatletConfig(
+            request.Configuration,
+            nameof(NewCatletRequest.Configuration));
         if (validation.IsFail)
-            return BadRequest(validation.ToModelStateDictionary());
+            return ValidationProblem(
+                detail: "The catlet configuration is invalid.",
+                modelStateDictionary: validation.ToModelStateDictionary());
+
+        var config = validation.ToOption().ValueUnsafe();
 
         var tenantId = userRightsProvider.GetUserTenantId();
             
@@ -78,14 +78,18 @@ public class Create(
 
         var projectAccess = await userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
         if (!projectAccess)
-            return Forbid();
+            return Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                detail: "You do not have write access to the given project.");
 
         var existingCatlet = await repository.GetBySpecAsync(
             new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId, projectName.Value, environmentName.Value),
             cancellationToken);
 
         if (existingCatlet != null)
-            return Conflict();
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                detail: "A catlet with this name already exists");
             
         return await base.HandleAsync(request, cancellationToken);
     }

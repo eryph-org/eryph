@@ -9,16 +9,11 @@ using Resource = Eryph.StateDb.Model.Resource;
 
 namespace Eryph.Modules.ComputeApi.Model;
 
-public class ResourceSpecBuilder<TResource> : ISingleEntitySpecBuilder<SingleEntityRequest, TResource>,
-    IListEntitySpecBuilder<ListRequest, TResource> where TResource : Resource
+public class ResourceSpecBuilder<TResource>(IUserRightsProvider userRightsProvider)
+    : ISingleEntitySpecBuilder<SingleEntityRequest, TResource>,
+        IListEntitySpecBuilder<ListRequest, TResource>
+    where TResource : Resource
 {
-    private readonly IUserRightsProvider _userRightsProvider;
-
-    public ResourceSpecBuilder(IUserRightsProvider userRightsProvider)
-    {
-        _userRightsProvider = userRightsProvider;
-    }
-
     public ISingleResultSpecification<TResource> GetSingleEntitySpec(SingleEntityRequest request, AccessRight accessRight)
     {
         if (!Guid.TryParse(request.Id, out var resourceId))
@@ -26,22 +21,21 @@ public class ResourceSpecBuilder<TResource> : ISingleEntitySpecBuilder<SingleEnt
         
         return new ResourceSpecs<TResource>.GetById(
             resourceId,
-            _userRightsProvider.GetAuthContext(),
-            _userRightsProvider.GetResourceRoles<TResource>(accessRight),
+            userRightsProvider.GetAuthContext(),
+            userRightsProvider.GetResourceRoles<TResource>(accessRight),
             CustomizeQuery);
     }
 
     public ISpecification<TResource> GetEntitiesSpec(ListRequest request)
     {
         return new ResourceSpecs<TResource>.GetAll(
-            _userRightsProvider.GetAuthContext(),
-            _userRightsProvider.GetResourceRoles<TResource>(AccessRight.Read),
+            userRightsProvider.GetAuthContext(),
+            userRightsProvider.GetResourceRoles<TResource>(AccessRight.Read),
             request.ProjectId,
             CustomizeQuery);
     }
 
     protected virtual void CustomizeQuery(ISpecificationBuilder<TResource> specification)
     {
-
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Core;
@@ -27,7 +26,7 @@ public class Update(
 {
     protected override object CreateOperationMessage(Catlet model, UpdateCatletRequest request )
     {
-        var jsonString = request.Body?.Configuration.GetValueOrDefault().ToString();
+        var jsonString = request.Body.Configuration.GetRawText();
 
         var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
         var config = CatletConfigDictionaryConverter.Convert(configDictionary);
@@ -35,7 +34,7 @@ public class Update(
         return new UpdateCatletCommand
         {
             CatletId = model.Id,
-            CorrelationId = (request.Body?.CorrelationId).GetOrGenerate(),
+            CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
             Config = config
         };
     }
@@ -55,15 +54,13 @@ public class Update(
         if (!Guid.TryParse(request.Id, out _))
             return NotFound();
 
-        var jsonString = request.Body?.Configuration.GetValueOrDefault().ToString();
-
-        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
-        var config = CatletConfigDictionaryConverter.Convert(configDictionary);
-
-        var validation = CatletConfigValidations.ValidateCatletConfig(
-            config, nameof(NewCatletRequest.Configuration));
+        var validation = RequestValidations.ValidateCatletConfig(
+            request.Body.Configuration,
+            nameof(NewCatletRequest.Configuration));
         if (validation.IsFail)
-            return BadRequest(validation.ToModelStateDictionary());
+            return ValidationProblem(
+                detail:"The catlet configuration is invalid.",
+                modelStateDictionary: validation.ToModelStateDictionary());
 
         return await base.HandleAsync(request, cancellationToken);
     }

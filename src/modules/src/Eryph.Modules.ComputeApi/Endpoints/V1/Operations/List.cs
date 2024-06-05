@@ -12,8 +12,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations;
 
 public class List(
-    [NotNull]
-    IListRequestHandler<OperationsListRequest, Operation, StateDb.Model.OperationModel> listRequestHandler,
+    [NotNull] IListRequestHandler<OperationsListRequest, Operation, StateDb.Model.OperationModel> listRequestHandler,
     [NotNull] IListEntitySpecBuilder<OperationsListRequest, StateDb.Model.OperationModel> specBuilder)
     : ListEntityEndpoint<OperationsListRequest, Operation, StateDb.Model.OperationModel>(
         listRequestHandler, specBuilder)

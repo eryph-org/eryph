@@ -42,14 +42,14 @@ public class Create(
         CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)
-            return BadRequest(ModelState);
+            return ValidationProblem(ModelState);
 
         client.Id = Guid.NewGuid().ToString();
         client.TenantId = userInfoProvider.GetUserTenantId();
 
         await client.ValidateScopes(scopeManager, ModelState, cancellationToken);
         if (!ModelState.IsValid)
-            return BadRequest(ModelState);
+            return ValidationProblem(ModelState);
 
         var descriptor = client.ToDescriptor();
         var privateKey = await descriptor.NewClientCertificate(certificateGenerator);
@@ -60,6 +60,6 @@ public class Create(
         createdClient.Key = privateKey;
 
         var clientUri = new Uri(endpointResolver.GetEndpoint("identity") + $"/v1/clients/{client.Id}");
-        return Created(clientUri,createdClient);
+        return Created(clientUri, createdClient);
     }
 }

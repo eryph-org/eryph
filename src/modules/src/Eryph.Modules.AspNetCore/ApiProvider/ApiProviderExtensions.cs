@@ -31,9 +31,9 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             services.AddOptions<ApiProviderOptions>();
             services.Configure(options);
 
-            services.AddProblemDetails(options =>
+            services.AddProblemDetails(problemDetailsOptions =>
             {
-                options.CustomizeProblemDetails = (context) =>
+                problemDetailsOptions.CustomizeProblemDetails = context =>
                 {
                     context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
                 };

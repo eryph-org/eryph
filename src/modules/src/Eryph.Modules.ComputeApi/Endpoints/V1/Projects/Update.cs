@@ -44,7 +44,7 @@ public class Update(
 
         var validation = ValidateRequest(request.Body);
         if (validation.IsFail)
-            return BadRequest(validation.ToModelStateDictionary());
+            return ValidationProblem(validation.ToModelStateDictionary());
 
         return await base.HandleAsync(request, cancellationToken);
     }
@@ -53,7 +53,7 @@ public class Update(
     {
         return new UpdateProjectCommand
         {
-            ProjectId = Guid.Parse(request.Id!),
+            ProjectId = Guid.Parse(request.Id),
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
             Name = ProjectName.New(request.Body.Name).Value
         };

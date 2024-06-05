@@ -7,7 +7,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 
 public class NewProjectRequest : RequestBase
 {
-    [FromBody] public Guid? CorrelationId { get; set; }
+    [FromBody] public required Guid CorrelationId { get; set; }
 
-    [FromBody] [Required] public string Name { get; set; }
+    [FromBody]
+    [Required]
+    public required string Name { get; set; }
 }

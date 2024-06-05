@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 
@@ -7,7 +6,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class NewCatletRequest : RequestBase
 {
-    public Guid? CorrelationId { get; set; }
+    public required Guid CorrelationId { get; set; }
 
-    [Required] public JsonElement? Configuration { get; set; }
+    public required JsonElement Configuration { get; set; }
 }

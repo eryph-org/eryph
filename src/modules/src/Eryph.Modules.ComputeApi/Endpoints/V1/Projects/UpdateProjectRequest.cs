@@ -5,7 +5,5 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 
 public class UpdateProjectRequest : SingleEntityRequest
 {
-   
-    [FromBody] public UpdateProjectBody Body { get; set; }
-    
+    [FromBody] public required UpdateProjectBody Body { get; set; }
 }

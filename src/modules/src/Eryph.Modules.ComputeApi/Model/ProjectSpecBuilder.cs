@@ -9,17 +9,10 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.ComputeApi.Model;
 
-public class ProjectSpecBuilder : 
-    ISingleEntitySpecBuilder<SingleEntityRequest, Project>, 
+public class ProjectSpecBuilder(IUserRightsProvider userRightsProvider) :
+    ISingleEntitySpecBuilder<SingleEntityRequest, Project>,
     IListEntitySpecBuilder<AllProjectsListRequest, Project>
 {
-    private readonly IUserRightsProvider _userRightsProvider;
-
-    public ProjectSpecBuilder(IUserRightsProvider userRightsProvider)
-    {
-        _userRightsProvider = userRightsProvider;
-    }
-
     public ISingleResultSpecification<Project> GetSingleEntitySpec(SingleEntityRequest request, AccessRight accessRight)
     {
         if (!Guid.TryParse(request.Id, out var projectId))
@@ -27,14 +20,14 @@ public class ProjectSpecBuilder :
 
         return new ProjectSpecs.GetById(
             projectId,
-            _userRightsProvider.GetAuthContext(),
-            _userRightsProvider.GetProjectRoles(accessRight));
+            userRightsProvider.GetAuthContext(),
+            userRightsProvider.GetProjectRoles(accessRight));
     }
 
     public ISpecification<Project> GetEntitiesSpec(AllProjectsListRequest request)
     {
         return new ProjectSpecs.GetAll(
-            _userRightsProvider.GetAuthContext(),
-            _userRightsProvider.GetProjectRoles(AccessRight.Read));
+            userRightsProvider.GetAuthContext(),
+            userRightsProvider.GetProjectRoles(AccessRight.Read));
     }
 }

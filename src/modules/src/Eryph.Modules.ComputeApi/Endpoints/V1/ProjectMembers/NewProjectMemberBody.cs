@@ -6,7 +6,7 @@ public class NewProjectMemberBody
 {
     public Guid? CorrelationId { get; set; }
 
-    public string MemberId { get; set; }
+    public required string MemberId { get; set; }
 
-    public Guid RoleId { get; set; }
+    public required Guid RoleId { get; set; }
 }

@@ -1,12 +1,10 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Ardalis.Specification;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
-using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

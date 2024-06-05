@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
 using Eryph.Modules.AspNetCore;
-using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,13 +30,13 @@ public class Delete(
     [ProducesResponseType(Status204NoContent)]
     public override async Task<ActionResult> HandleAsync(
         [FromRoute] DeleteClientRequest request,
-        CancellationToken cancellationToken = new CancellationToken())
+        CancellationToken cancellationToken = default)
     {
         var tenantId = userInfoProvider.GetUserTenantId();
 
         var client = await clientService.Get(request.Id, tenantId, cancellationToken);
         if (client == null)
-            return NotFound($"client with id {request.Id} not found.");
+            return NotFound();
 
         await clientService.Delete(client.ClientId, tenantId, cancellationToken);
 

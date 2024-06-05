@@ -13,9 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
-
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
-
 
 public class Delete(
     [NotNull] IOperationRequestHandler<Project> operationHandler,
@@ -35,18 +33,17 @@ public class Delete(
         CancellationToken cancellationToken = default)
     {
         if (!Guid.TryParse(request.Id, out _))
-            return BadRequest();
+            return NotFound();
 
         return await base.HandleAsync(request, cancellationToken);
     }
-
 
     protected override object CreateOperationMessage(Project model, SingleEntityRequest request)
     {
         return new DestroyProjectCommand
         {
             CorrelationId = Guid.NewGuid(),
-            ProjectId = Guid.Parse(request.Id!)
+            ProjectId = Guid.Parse(request.Id)
         };
     }
 }

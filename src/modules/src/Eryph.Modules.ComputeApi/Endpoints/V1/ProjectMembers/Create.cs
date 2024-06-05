@@ -14,6 +14,7 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -39,14 +40,16 @@ public class Create(
         [FromRoute] NewProjectMemberRequest request,
         CancellationToken cancellationToken = default)
     {
-        var hasAccess = await userRightsProvider.HasProjectAccess(request.ProjectId.GetValueOrDefault(), AccessRight.Admin);
-        if(!hasAccess)
-            return Forbid();
+        var hasAccess = await userRightsProvider.HasProjectAccess(request.ProjectId, AccessRight.Admin);
+        if (!hasAccess)
+            return Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                detail: "You do not have admin access to the given project.");
 
         var authContext = userRightsProvider.GetAuthContext();
         var validation = ValidateRequest(request.Body, authContext);
         if (validation.IsFail)
-            return BadRequest(validation.ToModelStateDictionary());
+            return ValidationProblem(validation.ToModelStateDictionary());
 
         return await base.HandleAsync(request, cancellationToken);
     }
@@ -57,7 +60,7 @@ public class Create(
         {
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
             MemberId = request.Body.MemberId,
-            ProjectId = request.ProjectId.GetValueOrDefault(),
+            ProjectId = request.ProjectId,
             TenantId = userRightsProvider.GetUserTenantId(),
             RoleId = request.Body.RoleId
         };

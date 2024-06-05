@@ -29,7 +29,6 @@ public class GetVNetworksConfig(
             userRightsProvider.GetAuthContext(), sufficientRoles);
     }
 
-
     [Authorize(Policy = "compute:projects:read")]
     // ReSharper disable once StringLiteralTypo
     [HttpGet("projects/{projectId}/vnetworks/config")]

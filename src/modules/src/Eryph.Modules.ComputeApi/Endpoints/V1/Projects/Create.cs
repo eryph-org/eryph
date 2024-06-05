@@ -40,8 +40,8 @@ public class Create(
         CancellationToken cancellationToken = default)
     {
         var validation = ValidateRequest(request);
-        if(validation.IsFail)
-            return BadRequest(validation.ToModelStateDictionary());
+        if (validation.IsFail)
+            return ValidationProblem(validation.ToModelStateDictionary());
 
         return await base.HandleAsync(request, cancellationToken);
     }

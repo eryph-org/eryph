@@ -10,10 +10,10 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
-
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
@@ -40,7 +40,9 @@ public class Delete(
 
         var hasAccess = await userRightsProvider.HasProjectAccess(request.Project, AccessRight.Admin);
         if (!hasAccess)
-            return Forbid();
+            return Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                detail: "You do not have admin access to the given project.");
 
         return await base.HandleAsync(request, cancellationToken);
     }

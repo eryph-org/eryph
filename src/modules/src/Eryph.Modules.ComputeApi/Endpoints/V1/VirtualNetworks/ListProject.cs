@@ -28,7 +28,9 @@ public class ListProject(
         Tags = ["Virtual Networks"])
     ]
     [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualNetwork>))]
-    public override Task<ActionResult<ListResponse<VirtualNetwork>>> HandleAsync([FromRoute] ProjectListRequest request, CancellationToken cancellationToken = default)
+    public override Task<ActionResult<ListResponse<VirtualNetwork>>> HandleAsync(
+        [FromRoute] ProjectListRequest request,
+        CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(request, cancellationToken);
     }
