@@ -39,7 +39,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
                 };
             });
 
-            services.AddTransient<ICorrelationIdGenerator, CorrelationIdGenerator>();
             //mvcBuilder.AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
             services.AddApiVersioning(options =>
@@ -129,7 +128,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             //var modelBuilder = app.ApplicationServices.GetRequiredService<VersionedODataModelBuilder>();
             var provider = app.ApplicationServices.GetRequiredService<IApiVersionDescriptionProvider>();
 
-            app.UseMiddleware<CorrelationIdMiddleware>();
+            app.UseMiddleware<RequestIdMiddleware>();
 
             app.UseExceptionHandler();
             app.UseStatusCodePages();
