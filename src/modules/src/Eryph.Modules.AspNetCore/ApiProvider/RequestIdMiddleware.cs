@@ -6,7 +6,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider;
 
 public class RequestIdMiddleware(RequestDelegate next)
 {
-    private const string CorrelationIdHeader = "x-ms-client-request-id";
+    private const string RequestIdHeader = "x-ms-client-request-id";
 
     public async Task Invoke(HttpContext context)
     {
@@ -19,7 +19,7 @@ public class RequestIdMiddleware(RequestDelegate next)
 
     private static string GetRequestId(HttpContext context)
     {
-        var requestId = context.Request.Headers[CorrelationIdHeader].ToString();
+        var requestId = context.Request.Headers[RequestIdHeader].ToString();
         if (string.IsNullOrWhiteSpace(requestId))
             requestId = Guid.NewGuid().ToString();
 
@@ -29,7 +29,7 @@ public class RequestIdMiddleware(RequestDelegate next)
     private static void AddRequestIdHeaderToResponse(HttpContext context, string requestId)
         => context.Response.OnStarting(() =>
         {
-            context.Response.Headers[CorrelationIdHeader] = requestId;
+            context.Response.Headers[RequestIdHeader] = requestId;
             return Task.CompletedTask;
         });
 }

@@ -48,15 +48,15 @@ internal class EntityOperationRequestHandler<TEntity>(
             case Resource resource when !(await userRightsProvider.HasResourceAccess(resource.Id, AccessRight.Write)):
                 return Problem(
                     statusCode: StatusCodes.Status403Forbidden,
-                    detail: "You do not have have write access to the project.");
+                    detail: "You do not have write access to the project.");
             case Project project when !(await userRightsProvider.HasProjectAccess(project.Id, AccessRight.Admin)):
                 return Problem(
                     statusCode: StatusCodes.Status403Forbidden,
-                    detail: "You do not have have admin access to the project.");
+                    detail: "You do not have admin access to the project.");
             case ProjectRoleAssignment roleAssignment when !(await userRightsProvider.HasProjectAccess(roleAssignment.ProjectId, AccessRight.Admin)):
                 return Problem(
                     statusCode: StatusCodes.Status403Forbidden,
-                    detail: "You do not have have admin access to the project.");
+                    detail: "You do not have admin access to the project.");
         }
 
         var command = createOperationFunc(model);
