@@ -201,6 +201,7 @@ public class IpPoolManagerTests : InMemoryStateDbTestBase
                 Id = NetworkId,
                 Name = "test-network",
                 ProjectId = EryphConstants.DefaultProjectId,
+                Environment = EryphConstants.DefaultEnvironmentName,
                 Subnets =
                 [
                     new VirtualNetworkSubnet()

@@ -17,8 +17,6 @@ public class VirtualNetwork : Resource
     public string? IpNetwork { get; set; }
     
     public NetworkRouterPort? RouterPort { get; set; } = null!;
-    
-    public string? Environment { get; set; }
 
     public List<VirtualNetworkPort> NetworkPorts { get; set; } = null!;
     

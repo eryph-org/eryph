@@ -1,10 +1,8 @@
 ﻿namespace Eryph.StateDb.Model;
 
-public class Disk : Resource
+public abstract class Disk : Resource
 {
-    public string? DataStore { get; set; }
-        
-    public string? Environment { get; set; }
+    public required string DataStore { get; set; }
 
     public DiskType DiskType { get; set; }
 }
