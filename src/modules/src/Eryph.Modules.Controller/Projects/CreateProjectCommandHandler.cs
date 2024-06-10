@@ -48,7 +48,7 @@ namespace Eryph.Modules.Controller.Projects
             var validation = ProjectName.NewValidation(name);
             if (validation.IsFail)
             {
-                await _messaging.FailTask(message, validation);
+                await _messaging.FailTask(message, $"The project name '{name}' is invalid.", validation);
                 return;
             }
 
