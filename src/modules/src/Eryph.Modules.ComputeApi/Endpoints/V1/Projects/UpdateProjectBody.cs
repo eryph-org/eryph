@@ -1,11 +1,12 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 
 public class UpdateProjectBody
 {
-    public Guid? CorrelationId { get; set; }
+    public required Guid CorrelationId { get; set; }
 
-    public string Name { get; set; }
-
+    [Required]
+    public required string Name { get; set; }
 }

@@ -10,31 +10,27 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
+
+public class List(
+    [NotNull] IListRequestHandler<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment> listRequestHandler,
+    [NotNull] IListEntitySpecBuilder<ProjectMembersListRequest, StateDb.Model.ProjectRoleAssignment> specBuilder)
+    : ListEntityEndpoint<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment>(
+        listRequestHandler, specBuilder)
 {
-    public class List : ListEntityEndpoint<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment>
+    [Authorize(Policy = "compute:projects:read")]
+    [HttpGet("projects/{projectId}/members")]
+    [SwaggerOperation(
+        Summary = "List all project members",
+        Description = "List all project members",
+        OperationId = "ProjectMembers_List",
+        Tags = ["ProjectMembers"])
+    ]
+    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<ProjectMemberRole>))]
+    public override Task<ActionResult<ListResponse<ProjectMemberRole>>> HandleAsync(
+        [FromRoute] ProjectMembersListRequest request,
+        CancellationToken cancellationToken = default)
     {
-        public List(
-            [NotNull] IListRequestHandler<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment> listRequestHandler, 
-            [NotNull] IListEntitySpecBuilder<ProjectMembersListRequest, StateDb.Model.ProjectRoleAssignment> specBuilder)
-            : base(listRequestHandler, specBuilder)
-        {
-        }
-
-        [Authorize(Policy = "compute:projects:read")]
-        [HttpGet("projects/{projectId}/members")]
-        [SwaggerOperation(
-            Summary = "List all project members",
-            Description = "List all project members",
-            OperationId = "ProjectMembers_List",
-            Tags = new[] { "ProjectMembers" })
-        ]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<ProjectMemberRole>))]
-        public override Task<ActionResult<ListResponse<ProjectMemberRole>>> HandleAsync([FromRoute] ProjectMembersListRequest request, CancellationToken cancellationToken = default)
-        {
-            return base.HandleAsync(request, cancellationToken);
-        }
-
-
+        return base.HandleAsync(request, cancellationToken);
     }
 }

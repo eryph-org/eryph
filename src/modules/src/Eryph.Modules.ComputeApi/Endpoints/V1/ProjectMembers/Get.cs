@@ -10,29 +10,26 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
+
+public class Get(
+    [NotNull] IGetRequestHandler<ProjectRoleAssignment, ProjectMemberRole> requestHandler,
+    [NotNull] ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder)
+    : GetEntityEndpoint<ProjectMemberRequest, ProjectMemberRole, ProjectRoleAssignment>(requestHandler, specBuilder)
 {
-    public class Get : GetEntityEndpoint<ProjectMemberRequest, ProjectMemberRole, ProjectRoleAssignment>
+    [Authorize(Policy = "compute:projects:read")]
+    [HttpGet("projects/{projectId}/members/{id}")]
+    [SwaggerOperation(
+        Summary = "Get a project member",
+        Description = "Get a project member",
+        OperationId = "ProjectMembers_Get",
+        Tags = ["ProjectMembers"])
+    ]
+    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ProjectMemberRole))]
+    public override Task<ActionResult<ProjectMemberRole>> HandleAsync(
+        [FromRoute] ProjectMemberRequest request,
+        CancellationToken cancellationToken = default)
     {
-
-        public Get([NotNull] IGetRequestHandler<ProjectRoleAssignment, ProjectMemberRole> requestHandler, 
-            [NotNull] ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder) : base(requestHandler, specBuilder)
-        {
-        }
-
-        [Authorize(Policy = "compute:projects:read")]
-        [HttpGet("projects/{projectId}/members/{id}")]
-        [SwaggerOperation(
-            Summary = "Get a project member",
-            Description = "Get a project member",
-            OperationId = "ProjectMembers_Get",
-            Tags = new[] { "ProjectMembers" })
-        ]
-        [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ProjectMemberRole))]
-        public override Task<ActionResult<ProjectMemberRole>> HandleAsync([FromRoute] ProjectMemberRequest request, CancellationToken cancellationToken = default)
-        {
-            return base.HandleAsync(request, cancellationToken);
-        }
-
+        return base.HandleAsync(request, cancellationToken);
     }
 }

@@ -12,58 +12,50 @@ using Swashbuckle.AspNetCore.Annotations;
 
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
+namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
-namespace Eryph.Modules.Identity.Endpoints.V1.Clients
-{
-    [Route("v{version:apiVersion}")]
-
-    public class Update : EndpointBaseAsync
+[Route("v{version:apiVersion}")]
+public class Update(
+    IClientService clientService,
+    IOpenIddictScopeManager scopeManager,
+    IUserInfoProvider userInfoProvider)
+    : EndpointBaseAsync
         .WithRequest<UpdateClientRequest>
         .WithActionResult<Client>
+{
+    [Authorize(Policy = "identity:clients:write")]
+    [HttpPut("clients/{id}")]
+    [SwaggerOperation(
+        Summary = "Updates a client",
+        Description = "Updates a client",
+        OperationId = "Clients_Update",
+        Tags = new[] { "Clients" })
+    ]
+    [SwaggerResponse(Status200OK, "Success", typeof(Client))]
+    public override async Task<ActionResult<Client>> HandleAsync(
+        [FromRoute] UpdateClientRequest request,
+        CancellationToken cancellationToken = default)
     {
-        private readonly IClientService _clientService;
-        private readonly IUserInfoProvider _userInfoProvider;
-        private readonly IOpenIddictScopeManager _scopeManager;
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+        
+        await request.Client.ValidateScopes(scopeManager, ModelState, cancellationToken);
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
 
-        public Update(IClientService clientService, IOpenIddictScopeManager scopeManager, IUserInfoProvider userInfoProvider)
-        {
-            _clientService = clientService;
-            _scopeManager = scopeManager;
-            _userInfoProvider = userInfoProvider;
-        }
+        var tenantId = userInfoProvider.GetUserTenantId();
+        var persistentDescriptor = await clientService.Get(request.Id, tenantId, cancellationToken);
+        if (persistentDescriptor == null)
+            return NotFound();
 
+        persistentDescriptor.Scopes.Clear();
+        persistentDescriptor.Scopes.UnionWith(request.Client.AllowedScopes);
+        persistentDescriptor.DisplayName = request.Client.Name;
 
-        [Authorize(Policy = "identity:clients:write")]
-        [HttpPut("clients/{id}")]
-        [SwaggerOperation(
-            Summary = "Updates a client",
-            Description = "Updates a client",
-            OperationId = "Clients_Update",
-            Tags = new[] { "Clients" })
-        ]
-        [SwaggerResponse(Status200OK, "Success", typeof(Client))]
+        await clientService.Update(persistentDescriptor, cancellationToken);
 
-        public override async Task<ActionResult<Client>> HandleAsync([FromRoute] UpdateClientRequest request, CancellationToken cancellationToken = new CancellationToken())
-        {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var tenantId = _userInfoProvider.GetUserTenantId();
-            var (scopesValid, invalidScope) = await request.Client.ValidateScopes(_scopeManager, cancellationToken);
-            if (!scopesValid)
-                return BadRequest($"Invalid scope {invalidScope}.");
+        var updatedClient = persistentDescriptor.ToClient<Client>();
 
-            var persistentDescriptor = await _clientService.Get(request.Id, tenantId, cancellationToken);
-            if (persistentDescriptor == null)
-                return NotFound($"client with id {request.Id} not found.");
-
-            persistentDescriptor.Scopes.Clear();
-            persistentDescriptor.Scopes.UnionWith(request.Client.AllowedScopes);
-            persistentDescriptor.DisplayName = request.Client.Name;
-
-            await _clientService.Update(persistentDescriptor, cancellationToken);
-
-
-            return Ok(persistentDescriptor);
-
-        }
+        return Ok(updatedClient);
     }
 }

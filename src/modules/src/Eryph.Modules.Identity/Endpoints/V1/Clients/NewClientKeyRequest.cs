@@ -4,11 +4,10 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
 public class NewClientKeyRequest
 {
-    [FromRoute(Name = "id")] public string Id { get; set; }
+    [FromRoute(Name = "id")] public required string Id { get; set; }
 
     [FromBody] 
-    public NewClientKeyRequestBody Body { get; set; }
-
+    public required NewClientKeyRequestBody Body { get; set; }
 }
 
 public class NewClientKeyRequestBody

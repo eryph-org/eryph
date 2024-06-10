@@ -31,7 +31,14 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             services.AddOptions<ApiProviderOptions>();
             services.Configure(options);
 
-            services.AddTransient<ICorrelationIdGenerator, CorrelationIdGenerator>();
+            services.AddProblemDetails(problemDetailsOptions =>
+            {
+                problemDetailsOptions.CustomizeProblemDetails = context =>
+                {
+                    context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+                };
+            });
+
             //mvcBuilder.AddApplicationPart(typeof(VersionedMetadataController).Assembly);
 
             services.AddApiVersioning(options =>
@@ -60,9 +67,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
                 {
                     // add a custom operation filter which sets default values
                     options.OperationFilter<SwaggerDefaultValues>();
-                    options.OperationFilter<ApiErrorOperationFilter>();
-                    options.SchemaFilter<ApiErrorSchemaFilter>();
-                    options.SchemaFilter<OperationSchemaFilter>();
+                    options.OperationFilter<ProblemDetailsOperationFilter>();
                     options.OperationFilter<ListResponseOperationFilter>();
 
 
@@ -123,6 +128,11 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
             //var modelBuilder = app.ApplicationServices.GetRequiredService<VersionedODataModelBuilder>();
             var provider = app.ApplicationServices.GetRequiredService<IApiVersionDescriptionProvider>();
 
+            app.UseMiddleware<RequestIdMiddleware>();
+
+            app.UseExceptionHandler();
+            app.UseStatusCodePages();
+
             //var models = modelBuilder.GetEdmModels().ToArray();
             //routing is not supported currently
             //as versioned OData models are currently not supported with endpoint routing.
@@ -131,8 +141,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
 
             app.UseAuthentication();
             app.UseAuthorization();
-
-            app.UseMiddleware<CorrelationIdMiddleware>();
 
             //uncomment this when endpoint routing is working again
             app.UseEndpoints(endpoints =>
@@ -156,8 +164,10 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
                 c.SerializeAsV2 = false;
                 c.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
                 {
-                    swaggerDoc.Servers = new List<OpenApiServer>
-                        {new OpenApiServer {Url = module.Path}};
+                    swaggerDoc.Servers =
+                    [
+                        new OpenApiServer { Url = module.Path },
+                    ];
                 });
             });
             app.UseSwaggerUI(
@@ -170,30 +180,6 @@ namespace Eryph.Modules.AspNetCore.ApiProvider
                         options.SwaggerEndpoint($"{module.Path}/swagger/{description.GroupName}/swagger.json",
                             description.GroupName.ToUpperInvariant());
                 });
-
-
-            app.UseExceptionHandler(appBuilder =>
-            {
-                appBuilder.Use(async (context, next) =>
-                {
-                    var env = appBuilder.ApplicationServices.GetRequiredService<IHostEnvironment>();
-                    var error = context.Features[typeof(IExceptionHandlerFeature)] as IExceptionHandlerFeature;
-                    if (error?.Error != null)
-                    {
-                        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                        context.Response.ContentType = "application/json";
-                        var apiError = ApiError.FromException(error.Error, env.IsDevelopment());
-                       
-                        await context.Response.WriteAsync(JsonSerializer.Serialize(apiError));
-                    }
-
-                    // when no error, do next.
-                    else
-                    {
-                        await next();
-                    }
-                });
-            });
 
             return app;
         }

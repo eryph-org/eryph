@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
+using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
@@ -14,88 +15,82 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 using static LanguageExt.Prelude;
-using Project = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 
-namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets
+namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
+
+public class Create(
+    [NotNull] ICreateEntityRequestHandler<Catlet> operationHandler,
+    IReadonlyStateStoreRepository<Catlet> repository,
+    IUserRightsProvider userRightsProvider)
+    : NewOperationRequestEndpoint<NewCatletRequest, Catlet>(operationHandler)
 {
-    public class Create : NewOperationRequestEndpoint<NewCatletRequest, Catlet>
+    protected override object CreateOperationMessage(NewCatletRequest request)
     {
-        private readonly IReadonlyStateStoreRepository<Catlet> _repository;
-        private readonly IUserRightsProvider _userRightsProvider;
+        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(request.Configuration);
+        var config = CatletConfigDictionaryConverter.Convert(configDictionary);
 
-        public Create([NotNull] ICreateEntityRequestHandler<Catlet> operationHandler, IReadonlyStateStoreRepository<Catlet> repository, IUserRightsProvider userRightsProvider) : base(operationHandler)
-        {
-            _repository = repository;
-            _userRightsProvider = userRightsProvider;
-        }
+        return new CreateCatletCommand
+        { 
+            CorrelationId = request.CorrelationId.GetOrGenerate(),
+            TenantId = userRightsProvider.GetUserTenantId(),
+            Config = config,
+        };
+    }
 
-        protected override object CreateOperationMessage(NewCatletRequest request)
-        {
-            var jsonString = request.Configuration.GetValueOrDefault().ToString();
+    [Authorize(Policy = "compute:catlets:write")]
+    [HttpPost("catlets")]
+    [SwaggerOperation(
+        Summary = "Creates a new catlet",
+        Description = "Creates a catlet",
+        OperationId = "Catlets_Create",
+        Tags = ["Catlets"])
+    ]
+    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+        [FromBody] NewCatletRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var validation = RequestValidations.ValidateCatletConfig(
+            request.Configuration,
+            nameof(NewCatletRequest.Configuration));
+        if (validation.IsFail)
+            return ValidationProblem(
+                detail: "The catlet configuration is invalid.",
+                modelStateDictionary: validation.ToModelStateDictionary());
 
-            var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
-            var config = CatletConfigDictionaryConverter.Convert(configDictionary);
+        var config = validation.ToOption().ValueUnsafe();
 
-            return new CreateCatletCommand
-            { 
-                CorrelationId = request.CorrelationId == Guid.Empty
-                    ? new Guid()
-                    : request.CorrelationId,
-                TenantId = _userRightsProvider.GetUserTenantId(),
-                Config = config,
-            };
-        }
-
-        [Authorize(Policy = "compute:catlets:write")]
-        [HttpPost("catlets")]
-        [SwaggerOperation(
-            Summary = "Creates a new catlet",
-            Description = "Creates a catlet",
-            OperationId = "Catlets_Create",
-            Tags = new[] { "Catlets" })
-        ]
-
-        public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync([FromBody] NewCatletRequest request, CancellationToken cancellationToken = default)
-        {
-            var jsonString = request.Configuration.GetValueOrDefault().ToString();
-
-            var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
-            var config = CatletConfigDictionaryConverter.Convert(configDictionary);
-
-            var validation = CatletConfigValidations.ValidateCatletConfig(
-                config, nameof(NewCatletRequest.Configuration));
-            if (validation.IsFail)
-                return ValidationProblem(validation.ToProblemDetails());
-
-            var tenantId = _userRightsProvider.GetUserTenantId();
+        var tenantId = userRightsProvider.GetUserTenantId();
             
-            var projectName = Optional(config.Project).Filter(notEmpty).Match(
-                Some: n => ProjectName.New(n),
-                None: () => ProjectName.New("default"));
+        var projectName = Optional(config.Project).Filter(notEmpty).Match(
+            Some: n => ProjectName.New(n),
+            None: () => ProjectName.New("default"));
 
-            var environmentName = Optional(config.Environment).Filter(notEmpty).Match(
-                Some: n => EnvironmentName.New(n),
-                None: () => EnvironmentName.New("default"));
+        var environmentName = Optional(config.Environment).Filter(notEmpty).Match(
+            Some: n => EnvironmentName.New(n),
+            None: () => EnvironmentName.New("default"));
 
-            var projectAccess = await _userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
-            if (!projectAccess)
-                return Forbid();
+        var projectAccess = await userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Write);
+        if (!projectAccess)
+            return Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                detail: "You do not have write access to the given project.");
 
-            var existingCatlet = await _repository.GetBySpecAsync(
-                new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId, projectName.Value, environmentName.Value),
-                cancellationToken);
+        var existingCatlet = await repository.GetBySpecAsync(
+            new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId, projectName.Value, environmentName.Value),
+            cancellationToken);
 
-            if (existingCatlet != null)
-                return Conflict();
+        if (existingCatlet != null)
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                detail: "A catlet with this name already exists");
             
-            return await base.HandleAsync(request, cancellationToken);
-        }
-
-
+        return await base.HandleAsync(request, cancellationToken);
     }
 }

@@ -8,6 +8,7 @@ using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OpenIddict.Abstractions;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.OpenSsl;
@@ -60,18 +61,22 @@ namespace Eryph.Modules.Identity.Models
             };
         }
 
-        public static async ValueTask<(bool IsValid, string InvalidScope)> ValidateScopes<TClient>(this TClient client, 
-            IOpenIddictScopeManager scopeManager, CancellationToken cancellationToken )
+        public static async ValueTask ValidateScopes<TClient>(
+            this TClient client, 
+            IOpenIddictScopeManager scopeManager,
+            ModelStateDictionary modelState,
+            CancellationToken cancellationToken)
             where TClient : Client
         {
             foreach (var scope in client.AllowedScopes)
             {
-                if(await scopeManager.FindByNameAsync(scope, cancellationToken) == null)
-                    return (false, scope);
-                
+                if (await scopeManager.FindByNameAsync(scope, cancellationToken) == null)
+                {
+                    modelState.AddModelError(
+                        $"$.{nameof(Client.AllowedScopes)}",
+                        $"The scope {scope} is invalid");
+                }
             }
-
-            return (true, "");
         }
     }
 }

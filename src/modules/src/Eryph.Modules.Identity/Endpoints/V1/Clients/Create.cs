@@ -15,64 +15,51 @@ using Swashbuckle.AspNetCore.Annotations;
 
 using static Microsoft.AspNetCore.Http.StatusCodes;
 
+namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
-namespace Eryph.Modules.Identity.Endpoints.V1.Clients
-{
-    [Route("v{version:apiVersion}")]
-
-    public class Create : EndpointBaseAsync
+[Route("v{version:apiVersion}")]
+public class Create(
+    IClientService clientService,
+    IEndpointResolver endpointResolver,
+    ICertificateGenerator certificateGenerator,
+    IOpenIddictScopeManager scopeManager,
+    IUserInfoProvider userInfoProvider)
+    : EndpointBaseAsync
         .WithRequest<Client>
         .WithActionResult<ClientWithSecret>
+{
+    [Authorize(Policy = "identity:clients:write")]
+    [HttpPost("clients")]
+    [SwaggerOperation(
+        Summary = "Creates a new client",
+        Description = "Creates a client",
+        OperationId = "Clients_Create",
+        Tags = ["Clients"])
+    ]
+    [SwaggerResponse(Status201Created, "Success", typeof(ClientWithSecret))]
+    public override async Task<ActionResult<ClientWithSecret>> HandleAsync(
+        [FromBody] Client client,
+        CancellationToken cancellationToken = default)
     {
-        private readonly IClientService _clientService;
-        private readonly IEndpointResolver _endpointResolver;
-        private readonly ICertificateGenerator _certificateGenerator;
-        private readonly IOpenIddictScopeManager _scopeManager;
-        private readonly IUserInfoProvider _userInfoProvider;
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
 
-        public Create(IClientService clientService, IEndpointResolver endpointResolver, ICertificateGenerator certificateGenerator, IOpenIddictScopeManager scopeManager, IUserInfoProvider userInfoProvider)
-        {
-            _clientService = clientService;
-            _endpointResolver = endpointResolver;
-            _certificateGenerator = certificateGenerator;
-            _scopeManager = scopeManager;
-            _userInfoProvider = userInfoProvider;
-        }
+        client.Id = Guid.NewGuid().ToString();
+        client.TenantId = userInfoProvider.GetUserTenantId();
 
+        await client.ValidateScopes(scopeManager, ModelState, cancellationToken);
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
 
-        [Authorize(Policy = "identity:clients:write")]
-        [HttpPost("clients")]
-        [SwaggerOperation(
-            Summary = "Creates a new client",
-            Description = "Creates a client",
-            OperationId = "Clients_Create",
-            Tags = new[] { "Clients" })
-        ]
-        [SwaggerResponse(Status201Created, "Success", typeof(ClientWithSecret))]
+        var descriptor = client.ToDescriptor();
+        var privateKey = await descriptor.NewClientCertificate(certificateGenerator);
 
-        public override async Task<ActionResult<ClientWithSecret>> HandleAsync([FromBody] Client client, CancellationToken cancellationToken = new())
-        {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+        descriptor = await clientService.Add(descriptor, false, cancellationToken);
 
-            client.Id = Guid.NewGuid().ToString();
-            client.TenantId = _userInfoProvider.GetUserTenantId();
+        var createdClient = descriptor.ToClient<ClientWithSecret>();
+        createdClient.Key = privateKey;
 
-            var (scopesValid, invalidScope) = await client.ValidateScopes(_scopeManager, cancellationToken);
-            if (!scopesValid)
-                return BadRequest($"Invalid scope {invalidScope}.");
-
-            var descriptor = client.ToDescriptor();
-            var privateKey = await descriptor.NewClientCertificate(_certificateGenerator);
-
-            descriptor = await _clientService.Add(descriptor, false, cancellationToken);
-
-            var createdClient = descriptor.ToClient<ClientWithSecret>();
-            createdClient.Key = privateKey;
-
-            var clientUri = new Uri(_endpointResolver.GetEndpoint("identity") + $"/v1/clients/{client.Id}");
-            return Created(clientUri,createdClient);
-        }
+        var clientUri = new Uri(endpointResolver.GetEndpoint("identity") + $"/v1/clients/{client.Id}");
+        return Created(clientUri, createdClient);
     }
-
-
 }
