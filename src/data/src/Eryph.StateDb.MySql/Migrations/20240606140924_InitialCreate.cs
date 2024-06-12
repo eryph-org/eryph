@@ -100,6 +100,32 @@ namespace Eryph.StateDb.MySql.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "CatletFarms",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ResourceType = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Environment = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    HardwareId = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CatletFarms", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CatletFarms_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "OperationProjectModel",
                 columns: table => new
                 {
@@ -188,20 +214,129 @@ namespace Eryph.StateDb.MySql.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "Resources",
+                name: "VirtualDisks",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ResourceType = table.Column<int>(type: "int", nullable: false),
                     Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Environment = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    StorageIdentifier = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    DiskIdentifier = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Geneset = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    Path = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    FileName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    SizeBytes = table.Column<long>(type: "bigint", nullable: true),
+                    UsedSizeBytes = table.Column<long>(type: "bigint", nullable: true),
+                    ParentId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    LastSeenAgent = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    DataStore = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    DiskType = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VirtualDisks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_VirtualDisks_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_VirtualDisks_VirtualDisks_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "VirtualDisks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "VirtualNetworks",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ResourceType = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Environment = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    NetworkProvider = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IpNetwork = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Resources", x => x.Id);
+                    table.PrimaryKey("PK_VirtualNetworks", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Resources_Projects_ProjectId",
+                        name: "FK_VirtualNetworks_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "Projects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "Catlets",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ProjectId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ResourceType = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Environment = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    AgentName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    StatusTimestamp = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CatletType = table.Column<int>(type: "int", nullable: false),
+                    UpTime = table.Column<TimeSpan>(type: "time(6)", nullable: true),
+                    VMId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    MetadataId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Path = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    StorageIdentifier = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    DataStore = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    HostId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    CpuCount = table.Column<int>(type: "int", nullable: false),
+                    StartupMemory = table.Column<long>(type: "bigint", nullable: false),
+                    MinimumMemory = table.Column<long>(type: "bigint", nullable: false),
+                    MaximumMemory = table.Column<long>(type: "bigint", nullable: false),
+                    SecureBootTemplate = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Features = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Catlets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Catlets_CatletFarms_HostId",
+                        column: x => x.HostId,
+                        principalTable: "CatletFarms",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Catlets_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
                         principalColumn: "Id",
@@ -255,145 +390,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         name: "FK_TaskProgress_OperationTasks_TaskId",
                         column: x => x.TaskId,
                         principalTable: "OperationTasks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "CatletFarms",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    HardwareId = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CatletFarms", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_CatletFarms_Resources_Id",
-                        column: x => x.Id,
-                        principalTable: "Resources",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "VirtualDisks",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    StorageIdentifier = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    DiskIdentifier = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Geneset = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    Path = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    FileName = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    SizeBytes = table.Column<long>(type: "bigint", nullable: true),
-                    UsedSizeBytes = table.Column<long>(type: "bigint", nullable: true),
-                    ParentId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                    LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
-                    LastSeenAgent = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    DataStore = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Environment = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    DiskType = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_VirtualDisks", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_VirtualDisks_Resources_Id",
-                        column: x => x.Id,
-                        principalTable: "Resources",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_VirtualDisks_VirtualDisks_ParentId",
-                        column: x => x.ParentId,
-                        principalTable: "VirtualDisks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "VirtualNetworks",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    NetworkProvider = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    IpNetwork = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Environment = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_VirtualNetworks", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_VirtualNetworks_Resources_Id",
-                        column: x => x.Id,
-                        principalTable: "Resources",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "Catlets",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    AgentName = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Status = table.Column<int>(type: "int", nullable: false),
-                    StatusTimestamp = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    CatletType = table.Column<int>(type: "int", nullable: false),
-                    UpTime = table.Column<TimeSpan>(type: "time(6)", nullable: true),
-                    VMId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    MetadataId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Path = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    StorageIdentifier = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    DataStore = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Environment = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    HostId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                    CpuCount = table.Column<int>(type: "int", nullable: false),
-                    StartupMemory = table.Column<long>(type: "bigint", nullable: false),
-                    MinimumMemory = table.Column<long>(type: "bigint", nullable: false),
-                    MaximumMemory = table.Column<long>(type: "bigint", nullable: false),
-                    SecureBootTemplate = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Features = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Catlets", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Catlets_CatletFarms_HostId",
-                        column: x => x.HostId,
-                        principalTable: "CatletFarms",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Catlets_Resources_Id",
-                        column: x => x.Id,
-                        principalTable: "Resources",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 })
@@ -657,9 +653,19 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "CatletId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CatletFarms_ProjectId",
+                table: "CatletFarms",
+                column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Catlets_HostId",
                 table: "Catlets",
                 column: "HostId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Catlets_ProjectId",
+                table: "Catlets",
+                column: "ProjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_IpAssignment_NetworkPortId",
@@ -756,11 +762,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "CatletId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Resources_ProjectId",
-                table: "Resources",
-                column: "ProjectId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Subnet_NetworkId",
                 table: "Subnet",
                 column: "NetworkId");
@@ -774,6 +775,16 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_VirtualDisks_ParentId",
                 table: "VirtualDisks",
                 column: "ParentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VirtualDisks_ProjectId",
+                table: "VirtualDisks",
+                column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VirtualNetworks_ProjectId",
+                table: "VirtualNetworks",
+                column: "ProjectId");
         }
 
         /// <inheritdoc />
@@ -835,9 +846,6 @@ namespace Eryph.StateDb.MySql.Migrations
 
             migrationBuilder.DropTable(
                 name: "VirtualNetworks");
-
-            migrationBuilder.DropTable(
-                name: "Resources");
 
             migrationBuilder.DropTable(
                 name: "Projects");

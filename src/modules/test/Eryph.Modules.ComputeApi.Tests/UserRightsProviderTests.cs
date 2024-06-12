@@ -99,6 +99,8 @@ namespace Eryph.Modules.ComputeApi.Tests
                 Project = project,
                 ProjectId = project.Id,
                 Name = "test",
+                Environment = EryphConstants.DefaultEnvironmentName,
+                DataStore = EryphConstants.DefaultDataStoreName,
                 ResourceType = ResourceType.Catlet
             };
 

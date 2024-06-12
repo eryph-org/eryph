@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using Eryph.Resources;
 
 namespace Eryph.StateDb.Model;
@@ -14,4 +15,6 @@ public abstract class Resource
     public ResourceType ResourceType { get; set; }
 
     public required string Name { get; set; }
+
+    public required string Environment { get; set; }
 }

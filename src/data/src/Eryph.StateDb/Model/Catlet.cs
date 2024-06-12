@@ -25,9 +25,7 @@ public class Catlet : Resource
 
     public string? StorageIdentifier { get; set; }
 
-    public string? DataStore { get; set; }
-
-    public string? Environment { get; set; }
+    public required string DataStore { get; set; }
 
     public bool Frozen { get; set; }
 

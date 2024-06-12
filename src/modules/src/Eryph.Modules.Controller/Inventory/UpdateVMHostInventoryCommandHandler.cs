@@ -35,7 +35,8 @@ namespace Eryph.Modules.Controller.Inventory
                     Id = Guid.NewGuid(),
                     Name = message.HostInventory.Name,
                     HardwareId = message.HostInventory.HardwareId,
-                    Project = await FindRequiredProject(EryphConstants.DefaultProjectName, null)
+                    Project = await FindRequiredProject(EryphConstants.DefaultProjectName, null),
+                    Environment = EryphConstants.DefaultEnvironmentName,
                 });
 
             var existingMachine = await vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)

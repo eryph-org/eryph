@@ -111,7 +111,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasAlternateKey(x => new { x.ProjectId, x.IdentityId, x.RoleId });
 
         modelBuilder.Entity<Resource>()
-            .UseTptMappingStrategy()
+            .UseTpcMappingStrategy()
             .HasKey(x => x.Id);
 
         modelBuilder.Entity<Catlet>()

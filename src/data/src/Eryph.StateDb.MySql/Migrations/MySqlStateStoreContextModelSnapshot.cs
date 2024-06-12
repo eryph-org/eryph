@@ -423,6 +423,10 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("Environment")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -437,9 +441,9 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.HasIndex("ProjectId");
 
-                    b.ToTable("Resources");
+                    b.ToTable((string)null);
 
-                    b.UseTptMappingStrategy();
+                    b.UseTpcMappingStrategy();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.Subnet", b =>
@@ -571,9 +575,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("DataStore")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Environment")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("Features")
@@ -640,6 +642,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
 
                     b.Property<string>("DataStore")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<Guid>("DiskIdentifier")
@@ -647,9 +650,6 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<int>("DiskType")
                         .HasColumnType("int");
-
-                    b.Property<string>("Environment")
-                        .HasColumnType("longtext");
 
                     b.Property<string>("FileName")
                         .HasColumnType("longtext");
@@ -689,9 +689,6 @@ namespace Eryph.StateDb.MySql.Migrations
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
-
-                    b.Property<string>("Environment")
-                        .HasColumnType("longtext");
 
                     b.Property<string>("IpNetwork")
                         .HasColumnType("longtext");
@@ -996,47 +993,17 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasForeignKey("HostId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Eryph.StateDb.Model.Resource", null)
-                        .WithOne()
-                        .HasForeignKey("Eryph.StateDb.Model.Catlet", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Host");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.CatletFarm", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.Resource", null)
-                        .WithOne()
-                        .HasForeignKey("Eryph.StateDb.Model.CatletFarm", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
                 {
-                    b.HasOne("Eryph.StateDb.Model.Resource", null)
-                        .WithOne()
-                        .HasForeignKey("Eryph.StateDb.Model.VirtualDisk", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Eryph.StateDb.Model.VirtualDisk", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Parent");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetwork", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.Resource", null)
-                        .WithOne()
-                        .HasForeignKey("Eryph.StateDb.Model.VirtualNetwork", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualNetworkSubnet", b =>

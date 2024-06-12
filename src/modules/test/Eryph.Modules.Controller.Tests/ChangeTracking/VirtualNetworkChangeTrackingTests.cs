@@ -249,6 +249,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             {
                 Name = "new-network",
                 ProjectId = ProjectId,
+                Environment = EryphConstants.DefaultEnvironmentName,
                 IpNetwork = "10.1.0.0/20",
             };
             await stateStore.For<VirtualNetwork>().AddAsync(network);

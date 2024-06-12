@@ -53,6 +53,14 @@ namespace Eryph.Modules.Controller.Compute
                     Some: n => ProjectName.New(n),
                     None: () => ProjectName.New("default"));
 
+                var environmentName = Optional(Data.Config?.Environment).Filter(notEmpty).Match(
+                    Some: n => EnvironmentName.New(n),
+                    None: () => EnvironmentName.New("default"));
+
+                var datastoreName = Optional(Data.Config?.Store).Filter(notEmpty).Match(
+                    Some: n => DataStoreName.New(n),
+                    None: () => DataStoreName.New("default"));
+
                 var project = await _stateStore.For<Project>()
                     .GetBySpecAsync(new ProjectSpecs.GetByName(Data.TenantId, projectName.Value));
 
@@ -67,6 +75,8 @@ namespace Eryph.Modules.Controller.Compute
                     AgentName = Data.AgentName,
                     VMId = r.Inventory.VMId,
                     Name = r.Inventory.Name,
+                    Environment = environmentName.Value,
+                    DataStore = datastoreName.Value,
                 }, r.MachineMetadata);
 
                 await StartNewTask(new UpdateCatletCommand

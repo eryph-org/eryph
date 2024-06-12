@@ -1,5 +1,6 @@
 ﻿using Ardalis.Specification;
 using Eryph.ConfigModel.Networks;
+using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.Controller.Networks;
 using Eryph.StateDb;
@@ -128,6 +129,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             {
                 Id = new Guid(),
                 Name = "test",
+                Environment = EryphConstants.DefaultEnvironmentName,
                 Subnets = new List<VirtualNetworkSubnet>
                 {
                     new()
@@ -254,6 +256,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             {
                 Id = new Guid(),
                 Name = "test",
+                Environment = EryphConstants.DefaultEnvironmentName,
                 Subnets = new List<VirtualNetworkSubnet>
                 {
                     new()
