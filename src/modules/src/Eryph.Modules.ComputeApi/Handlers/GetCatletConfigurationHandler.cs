@@ -193,6 +193,15 @@ namespace Eryph.Modules.ComputeApi.Handlers
 
                         fodderConfig.Content = "#REDACTED";
 
+                        if (fodderConfig.Variables != null)
+                        {
+                            foreach (var variableConfig in fodderConfig.Variables)
+                            {
+                                if (!variableConfig.Secret.GetValueOrDefault()) continue;
+
+                                variableConfig.Value = "#REDACTED";
+                            }
+                        }
                     }
 
                     if (config.Fodder.Length == 0)
