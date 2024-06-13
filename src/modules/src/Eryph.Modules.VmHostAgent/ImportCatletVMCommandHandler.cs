@@ -103,6 +103,7 @@ internal class ImportCatletVMCommandHandler :
                 MachineId = machineId,
                 VMId = vmInfo.Value.Id,
                 Fodder = config.Fodder,
+                Variables = config.Variables,
                 ParentConfig = await optionalTemplate.MatchUnsafe(
                     None: () => null, Some: async t => await t.ToVmConfig(engine))!
             };

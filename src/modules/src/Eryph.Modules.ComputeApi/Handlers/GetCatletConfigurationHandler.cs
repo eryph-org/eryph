@@ -181,6 +181,7 @@ namespace Eryph.Modules.ComputeApi.Handlers
             if (metadata != null)
             {
                 config.Fodder = metadata.Fodder;
+                config.Variables = metadata.Variables;
                 if (config.Hostname == config.Name)
                     config.Hostname = null;
 
@@ -197,6 +198,19 @@ namespace Eryph.Modules.ComputeApi.Handlers
                     if (config.Fodder.Length == 0)
                         config.Fodder = null;
 
+                }
+
+                if (config.Variables != null)
+                {
+                    foreach (var variableConfig in config.Variables)
+                    {
+                        if (!variableConfig.Secret.GetValueOrDefault()) continue;
+
+                        variableConfig.Value = "#REDACTED";
+                    }
+
+                    if (config.Variables.Length == 0)
+                        config.Variables = null;
                 }
 
                 if (metadata.ParentConfig != null)

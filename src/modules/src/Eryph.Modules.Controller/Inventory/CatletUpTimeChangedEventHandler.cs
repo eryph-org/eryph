@@ -45,6 +45,8 @@ namespace Eryph.Modules.Controller.Inventory
 
                     var anySensitive = metaData.Fodder?.Any(x => x.Secret.GetValueOrDefault());
 
+                    // TODO handle variables?
+
                     if (!anySensitive.GetValueOrDefault())
                         return;
 

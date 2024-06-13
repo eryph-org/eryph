@@ -1,4 +1,5 @@
 ﻿using Dbosoft.Rebus.Operations;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
@@ -44,7 +45,8 @@ internal class UpdateConfigDriveCommandHandler :
         var fodderConfig = new CatletConfig
         {
             Name = command.CatletName,
-            Fodder = command.MachineMetadata.Fodder
+            Fodder = command.MachineMetadata.Fodder,
+            Variables = command.MachineMetadata.Variables,
         };
 
         var convergeConfigDrive = Prelude.fun(
@@ -65,7 +67,11 @@ internal class UpdateConfigDriveCommandHandler :
             
             let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
             from mergedConfig in fodderConfig.BreedAndFeed(genepoolReader, metadata.ParentConfig).ToAsync()
-            from vmInfoConverged in convergeConfigDrive(vmHostAgentConfig, vmInfo, currentStorageSettings, hostInfo, mergedConfig).WriteTrace().ToAsync()
+            from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(mergedConfig)
+                .ToEither()
+                .MapLeft(issues => Error.New("The substitution of variables failed", Error.Many(issues.Map(i => i.ToError()))))
+                .ToAsync()
+            from vmInfoConverged in convergeConfigDrive(vmHostAgentConfig, vmInfo, currentStorageSettings, hostInfo, substitutedConfig).WriteTrace().ToAsync()
 
             select Unit.Default;
 

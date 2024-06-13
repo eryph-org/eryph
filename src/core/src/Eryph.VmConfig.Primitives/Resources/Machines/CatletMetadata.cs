@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Variables;
 using JetBrains.Annotations;
 
 namespace Eryph.Resources.Machines
@@ -20,6 +21,9 @@ namespace Eryph.Resources.Machines
         [CanBeNull] public CatletConfig ParentConfig { get; set; }
 
         [CanBeNull] public FodderConfig[] Fodder { get; set; }
+
+        [CanBeNull] public VariableConfig[] Variables { get; set; }
+
         public bool SecureDataHidden { get; set; }
     }
 }

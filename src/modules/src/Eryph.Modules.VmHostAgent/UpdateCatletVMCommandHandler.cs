@@ -1,5 +1,6 @@
 ﻿using System;
 using Dbosoft.Rebus.Operations;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
@@ -63,8 +64,12 @@ namespace Eryph.Modules.VmHostAgent
                 from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
                 let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
                 from mergedConfig in config.BreedAndFeed(genepoolReader, metadata.ParentConfig).ToAsync()
+                from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(mergedConfig)
+                    .ToEither()
+                    .MapLeft(issues => Error.New("The substitution of variables failed", Error.Many(issues.Map(i => i.ToError()))))
+                    .ToAsync()
                 from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).WriteTrace()
-                from vmInfoConverged in convergeVM(vmHostAgentConfig, vmInfoConsistent, mergedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()
+                from vmInfoConverged in convergeVM(vmHostAgentConfig, vmInfoConsistent, substitutedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()
                 from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, vmInfoConverged, _hostInfoProvider).WriteTrace()
                 select new ConvergeCatletResult
                 {

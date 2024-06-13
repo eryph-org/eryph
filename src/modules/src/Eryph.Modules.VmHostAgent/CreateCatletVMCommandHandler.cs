@@ -106,6 +106,7 @@ namespace Eryph.Modules.VmHostAgent
                     MachineId = machineId,
                     VMId = vmInfo.Value.Id,
                     Fodder = config.Fodder,
+                    Variables = config.Variables,
                     Parent = config.Parent,
                     ParentConfig = optionalParentConfig.MatchUnsafe(
                         None: () => null, Some: c => c),
