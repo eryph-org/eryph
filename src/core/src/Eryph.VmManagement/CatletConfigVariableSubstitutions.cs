@@ -136,9 +136,11 @@ public static partial class CatletConfigVariableSubstitutions
     private static Validation<ValidationIssue, Unit> ValidateVariableInfo(
         VariableInfo variableInfo,
         string path) =>
-        VariableConfigValidations.ValidateVariableValue(variableInfo.Value, variableInfo.Type)
-            .Map(_ => unit)
-            .MapFail(e => new ValidationIssue(JoinPath(path, nameof(VariableConfig.Value)), e.Message))
+        Optional(variableInfo.Value).Filter(notEmpty).Match(
+            Some: v => VariableConfigValidations.ValidateVariableValue(v, variableInfo.Type)
+                .Map(_ => unit)
+                .MapFail(e => new ValidationIssue(JoinPath(path, nameof(VariableConfig.Value)), e.Message)),
+            None: () => unit)
         | guard(notEmpty(variableInfo.Value) || !variableInfo.Required,
                 new ValidationIssue(
                     JoinPath(path, nameof(VariableConfig.Value)),

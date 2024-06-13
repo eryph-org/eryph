@@ -428,4 +428,39 @@ public class CatletConfigVariableSubstitutionsTests
         resultConfig.Fodder.Should().SatisfyRespectively(
             fodder => fodder.Content.Should().Be($"Value is {value}!"));
     }
+
+    [Theory]
+    [InlineData(VariableType.Boolean, "false")]
+    [InlineData(VariableType.Number, "0")]
+    [InlineData(VariableType.String, "")]
+    public void SubstituteVariables_VariableWithoutValue_DefaultValueIsUsed(
+        VariableType variableType,
+        string expectedValue)
+    {
+        var config = new CatletConfig()
+        {
+            Variables =
+            [
+                new VariableConfig()
+                {
+                    Name = "testVariable",
+                    Type = variableType,
+                }
+            ],
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Content = "Value is {{ testVariable }}!",
+                }
+            ]
+        };
+
+        var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
+
+        var resultConfig = result.Should().BeSuccess().Subject;
+
+        resultConfig.Fodder.Should().SatisfyRespectively(
+            fodder => fodder.Content.Should().Be($"Value is {expectedValue}!"));
+    }
 }
