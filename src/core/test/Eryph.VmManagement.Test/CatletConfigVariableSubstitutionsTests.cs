@@ -14,7 +14,7 @@ namespace Eryph.VmManagement.Test;
 public class CatletConfigVariableSubstitutionsTests
 {
     [Fact]
-    public void SubstituteVariables()
+    public void SubstituteVariables_CatletVariableInFodderContent_CatletVariableIsUsed()
     {
         var config = new CatletConfig()
         {
@@ -22,15 +22,15 @@ public class CatletConfigVariableSubstitutionsTests
             [
                 new VariableConfig()
                 {
-                    Name = "nameOfAlice",
-                    Value = "Alice"
+                    Name = "testCatletVariable",
+                    Value = "test value"
                 }
             ],
             Fodder =
             [
                 new FodderConfig()
                 {
-                    Content = "Hello {{nameOfAlice}}!"
+                    Content = "Value is {{testCatletVariable}}!"
                 }
             ]
         };
@@ -40,7 +40,7 @@ public class CatletConfigVariableSubstitutionsTests
         var resultConfig = result.Should().BeSuccess().Subject;
 
         resultConfig.Fodder.Should().SatisfyRespectively(
-            fodder => fodder.Content.Should().Be("Hello Alice!"));
+            fodder => fodder.Content.Should().Be("Value is test value!"));
     }
 
     [Fact]
@@ -52,21 +52,21 @@ public class CatletConfigVariableSubstitutionsTests
             [
                 new VariableConfig()
                 {
-                    Name = "name",
-                    Value = "Alice"
+                    Name = "testVariable",
+                    Value = "catlet test value"
                 }
             ],
             Fodder =
             [
                 new FodderConfig()
                 {
-                    Content = "Hello {{name}}!",
+                    Content = "Value is {{testVariable}}!",
                     Variables =
                     [
                         new VariableConfig()
                         {
-                            Name = "name",
-                            Value = "Bob",
+                            Name = "testVariable",
+                            Value = "fodder test value",
                         }
                     ]
                 }
@@ -78,7 +78,123 @@ public class CatletConfigVariableSubstitutionsTests
         var resultConfig = result.Should().BeSuccess().Subject;
 
         resultConfig.Fodder.Should().SatisfyRespectively(
-            fodder => fodder.Content.Should().Be("Hello Bob!"));
+            fodder => fodder.Content.Should().Be("Value is fodder test value!"));
+    }
+
+    [Fact]
+    public void SubstituteVariables_InvalidCatletVariableValue_ReturnsError()
+    {
+        var config = new CatletConfig()
+        {
+            Variables =
+            [
+                new VariableConfig()
+                {
+                    Name = "testVariable",
+                    Type = VariableType.Boolean,
+                    Value = "invalid value",
+                }
+            ],
+        };
+
+        var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("Variables[Name=testVariable].Value");
+                issue.Message.Should().Contain("The value is not a valid boolean. Only 'true' and 'false' are allowed.");
+            });
+    }
+
+    [Fact]
+    public void SubstituteVariables_InvalidFodderVariableValue_ReturnsError()
+    {
+        var config = new CatletConfig()
+        {
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Name = "test-fodder",
+                    Variables =
+                    [
+                        new VariableConfig()
+                        {
+                            Name = "testVariable",
+                            Type = VariableType.Boolean,
+                            Value = "invalid value",
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("Fodder[Name=test-fodder].Variables[Name=testVariable].Value");
+                issue.Message.Should().Contain("The value is not a valid boolean. Only 'true' and 'false' are allowed.");
+            });
+    }
+
+    [Fact]
+    public void SubstituteVariables_MissingRequiredCatletVariableValue_ReturnsError()
+    {
+        var config = new CatletConfig()
+        {
+            Variables =
+            [
+                new VariableConfig()
+                {
+                    Name = "testVariable",
+                    Required = true,
+                }
+            ],
+        };
+
+        var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("Variables[Name=testVariable].Value");
+                issue.Message.Should().Contain("The value is required but missing.");
+            });
+    }
+
+    [Fact]
+    public void SubstituteVariables_MissingRequiredFodderVariableValue_ReturnsError()
+    {
+        var config = new CatletConfig()
+        {
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Name = "test-fodder",
+                    Variables =
+                    [
+                        new VariableConfig()
+                        {
+                            Name = "testVariable",
+                            Required = true,
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("Fodder[Name=test-fodder].Variables[Name=testVariable].Value");
+                issue.Message.Should().Contain("The value is required but missing.");
+            });
     }
 
     [Fact]
@@ -90,22 +206,23 @@ public class CatletConfigVariableSubstitutionsTests
             [
                 new VariableConfig()
                 {
-                    Name = "name",
-                    Value = "Alice"
+                    Name = "testCatletVariable",
+                    Value = "not a boolean"
                 }
             ],
             Fodder =
             [
                 new FodderConfig()
                 {
-                    Content = "Price is {{name}}!",
+                    Name = "test-fodder",
+                    Content = "Value is {{ testFodderVariable }}!",
                     Variables =
                     [
                         new VariableConfig()
                         {
-                            Name = "price",
-                            Type = VariableType.Number,
-                            Value = "{{name}}",
+                            Name = "testFodderVariable",
+                            Type = VariableType.Boolean,
+                            Value = "{{ testCatletVariable }}",
 
                         }
                     ]
@@ -115,13 +232,16 @@ public class CatletConfigVariableSubstitutionsTests
 
         var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
 
-        result.Should().BeFail();
-
-        //TODO Check error
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("Fodder[Name=test-fodder].Variables[Name=testFodderVariable].Value");
+                issue.Message.Should().Be("The value is not a valid boolean. Only 'true' and 'false' are allowed.");
+            });
     }
 
     [Fact]
-    public void SubstituteVariables_MissingVariable_SubstitutionFails()
+    public void SubstituteVariables_MissingVariableInFodderContent_ReturnsError()
     {
         var config = new CatletConfig()
         {
@@ -137,6 +257,7 @@ public class CatletConfigVariableSubstitutionsTests
             [
                 new FodderConfig()
                 {
+                    Name = "test-fodder",
                     Content = "Price is {{missingVariable}}!",
                     Variables =
                     [
@@ -153,14 +274,48 @@ public class CatletConfigVariableSubstitutionsTests
 
         var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
 
-        var error = result.Should().BeFail().Subject;
-
-        error.Should().NotBeEmpty();
-        //TODO Check error
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("Fodder[Name=test-fodder].Content");
+                issue.Message.Should().Contain("The referenced variable 'missingVariable' does not exist.");
+            });
     }
 
     [Fact]
-    public void SubstituteVariables2()
+    public void SubstituteVariables_MissingVariableInFodderVariableValue_ReturnsError()
+    {
+        var config = new CatletConfig()
+        {
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Name = "test-fodder",
+                    Variables =
+                    [
+                        new VariableConfig()
+                        {
+                            Name = "testVariable",
+                            Value = "{{missingVariable}}",
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("Fodder[Name=test-fodder].Variables[Name=testVariable].Value");
+                issue.Message.Should().Contain("The referenced variable 'missingVariable' does not exist.");
+            });
+    }
+
+    [Fact]
+    public void SubstituteVariables_CatletVariableIsSecret_FodderIsSecret()
     {
         var config = new CatletConfig()
         {
@@ -168,21 +323,98 @@ public class CatletConfigVariableSubstitutionsTests
             [
                 new VariableConfig()
                 {
-                    Name = "nameOfAlice",
-                    Value = "Alice"
+                    Name = "testCatletVariable",
+                    Value = "test value",
+                    Secret = true,
+                },
+            ],
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Content = "Value is {{ testCatletVariable }}!",
+                }
+            ]
+        };
+
+        var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
+
+        var resultConfig = result.Should().BeSuccess().Subject;
+
+        resultConfig.Fodder.Should().SatisfyRespectively(
+            fodder =>
+            {
+                fodder.Content.Should().Be("Value is test value!");
+                fodder.Secret.Should().BeTrue();
+            });
+    }
+
+    [Fact]
+    public void SubstituteVariables_FodderVariableIsSecret_FodderIsSecret()
+    {
+        var config = new CatletConfig()
+        {
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Content = "Value is {{ testFodderVariable }}!",
+                    Variables =
+                    [
+                        new VariableConfig()
+                        {
+                            Name = "testFodderVariable",
+                            Value = "test value",
+                            Secret = true,
+                        },
+                    ],
+                }
+            ]
+        };
+
+        var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
+
+        var resultConfig = result.Should().BeSuccess().Subject;
+
+        resultConfig.Fodder.Should().SatisfyRespectively(
+            fodder =>
+            {
+                fodder.Content.Should().Be("Value is test value!");
+                fodder.Secret.Should().BeTrue();
+            });
+    }
+
+
+    [Theory]
+    [InlineData(VariableType.Boolean, "true")]
+    [InlineData(VariableType.Number, "4.2")]
+    [InlineData(VariableType.String, "test value")]
+    public void SubstituteVariables_FodderVariableBoundToCatletVariable_CatletVariableValueIsUsed(
+        VariableType variableType,
+        string value)
+    {
+        var config = new CatletConfig()
+        {
+            Variables =
+            [
+                new VariableConfig()
+                {
+                    Name = "testCatletVariable",
+                    Value = value
                 }
             ],
             Fodder =
             [
                 new FodderConfig()
                 {
-                    Content = "Hello {{name}}!",
+                    Content = "Value is {{ testFodderVariable }}!",
                     Variables =
                     [
                         new VariableConfig()
                         {
-                            Name = "name",
-                            Value = "{{nameOfAlice}}"
+                            Name = "testFodderVariable",
+                            Type = variableType,
+                            Value = "{{ testCatletVariable }}"
                         }
                     ]
                 }
@@ -194,44 +426,6 @@ public class CatletConfigVariableSubstitutionsTests
         var resultConfig = result.Should().BeSuccess().Subject;
 
         resultConfig.Fodder.Should().SatisfyRespectively(
-            fodder => fodder.Content.Should().Be("Hello Alice!"));
-    }
-
-    [Fact]
-    public void SubstituteVariables3()
-    {
-        var config = new CatletConfig()
-        {
-            Variables =
-            [
-                new VariableConfig()
-                {
-                    Name = "nameOfAlice",
-                    Value = "Alice"
-                }
-            ],
-            Fodder =
-            [
-                new FodderConfig()
-                {
-                    Content = "Hello {{name}}!",
-                    Variables =
-                    [
-                        new VariableConfig()
-                        {
-                            Name = "name",
-                            Value = "Alice"
-                        }
-                    ]
-                }
-            ]
-        };
-
-        var result = CatletConfigVariableSubstitutions.SubstituteVariables(config);
-
-        var resultConfig = result.Should().BeSuccess().Subject;
-
-        resultConfig.Fodder.Should().SatisfyRespectively(
-            fodder => fodder.Content.Should().Be("Hello Alice!"));
+            fodder => fodder.Content.Should().Be($"Value is {value}!"));
     }
 }

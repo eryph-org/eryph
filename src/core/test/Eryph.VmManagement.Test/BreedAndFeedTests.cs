@@ -27,13 +27,13 @@ namespace Eryph.VmManagement.Test
             var parentConfig = new CatletConfig
             {
                 Name = "parent",
-                Drives = new[]
-                {
+                Drives =
+                [
                     new CatletDriveConfig
                     {
                         Source = $"gene:{geneset}:sda"
                     }
-                }
+                ]
             };
 
             var genepoolReader = new Mock<ILocalGenepoolReader>();
@@ -54,7 +54,6 @@ namespace Eryph.VmManagement.Test
             newConfig.Drives?.Should().ContainSingle(d => d.Source == "gene:dbosoft/utt/1.0:sda");
         }
 
-
         [Theory]
         [InlineData("dbosoft/utt/latest")]
         [InlineData("dbosoft/UTT/Latest")]
@@ -63,7 +62,7 @@ namespace Eryph.VmManagement.Test
         public void Child_eats_food_source_from_parent(string geneset)
         {
              var config = new CatletConfig
-                        {
+             {
                 Name = "test",
                 Parent = "parent",
             };
@@ -71,17 +70,16 @@ namespace Eryph.VmManagement.Test
             var parentConfig = new CatletConfig
             {
                 Name = "parent",
-                Fodder = new[]
-                {
+                Fodder =
+                [
                     new FodderConfig
                     {
                         Source = $"gene:{geneset}:gene1"
                     }
-                }
+                ]
             };
 
-            SetupAndVerify_With_Gene_Food(parentConfig, config, new[] { "food1", "food2" });
-
+            SetupAndVerify_With_Gene_Food(parentConfig, config, ["food1", "food2"]);
         }
 
         [Theory]
@@ -109,8 +107,7 @@ namespace Eryph.VmManagement.Test
                 Name = "parent"
             };
 
-            SetupAndVerify_With_Gene_Food(parentConfig, config, new [] {"food1", "food2"});
-
+            SetupAndVerify_With_Gene_Food(parentConfig, config, ["food1", "food2"]);
         }
 
         private static void SetupAndVerify_With_Gene_Food(CatletConfig parentConfig, CatletConfig childConfig, IEnumerable<string> food)
@@ -146,7 +143,6 @@ namespace Eryph.VmManagement.Test
             var foodList = food.ToArray();
             newConfig.Fodder.Should().HaveCount(foodList.Length);
             newConfig.Fodder?.Select(f => f.Name).Should().BeEquivalentTo(foodList);
-
         }
 
 
@@ -161,14 +157,14 @@ namespace Eryph.VmManagement.Test
             {
                 Name = "test",
                 Parent = "parent",
-                Fodder = new[]
-                {
+                Fodder =
+                [
                     new FodderConfig
                     {
                         Source = $"gene:{geneset}:gene1",
                         Name = "food2"
                     }
-                }
+                ]
             };
 
             var parentConfig = new CatletConfig
@@ -176,8 +172,7 @@ namespace Eryph.VmManagement.Test
                 Name = "parent"
             };
 
-            SetupAndVerify_With_Gene_Food(parentConfig, config, new[] { "food2" });
-
+            SetupAndVerify_With_Gene_Food(parentConfig, config, ["food2"]);
         }
 
         [Theory]
@@ -191,30 +186,29 @@ namespace Eryph.VmManagement.Test
             {
                 Name = "test",
                 Parent = "parent",
-                Fodder = new[]
-                {
+                Fodder =
+                [
                     new FodderConfig
                     {
                         Source = $"gene:{geneset}:gene1",
                         Name = "food1",
                         Remove = true
                     }
-                }
+                ]
             };
 
             var parentConfig = new CatletConfig
             {
-                Fodder = new[]
-                {
+                Fodder =
+                [
                     new FodderConfig
                     {
                         Source = $"gene:{geneset}:gene1"
                     }
-                }
+                ]
             };
 
-            SetupAndVerify_With_Gene_Food(parentConfig, config, new[] { "food2" });
-
+            SetupAndVerify_With_Gene_Food(parentConfig, config, ["food2"]);
         }
 
         [Theory]
@@ -228,8 +222,8 @@ namespace Eryph.VmManagement.Test
             {
                 Name = "test",
                 Parent = "parent",
-                Fodder = new[]
-                {
+                Fodder =
+                [
                     new FodderConfig
                     {
                         Source = $"gene:{geneset}:gene1",
@@ -239,22 +233,21 @@ namespace Eryph.VmManagement.Test
                     {
                         Name = "food3"
                     }
-                }
+                ]
             };
 
             var parentConfig = new CatletConfig
             {
-                Fodder = new[]
-                {
+                Fodder =
+                [
                     new FodderConfig
                     {
                         Source = "gene:dbosoft/utt/1.0:gene1"
                     }
-                }
+                ]
             };
 
-            SetupAndVerify_With_Gene_Food(parentConfig, config, new[] { "food3" });
-
+            SetupAndVerify_With_Gene_Food(parentConfig, config, ["food3"]);
         }
     }
 }
