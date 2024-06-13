@@ -41,5 +41,11 @@ namespace Eryph.Core
             public static readonly string Disabled = "disabled";
             public static readonly string Enabled = "enabled";
         }
+
+        public static class SystemVariables
+        {
+            public static readonly string CatletId = "catletId";
+            public static readonly string VmId = "vmId";
+        }
     }
 }

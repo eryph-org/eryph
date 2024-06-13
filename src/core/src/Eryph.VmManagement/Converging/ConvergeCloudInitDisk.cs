@@ -31,15 +31,6 @@ namespace Eryph.VmManagement.Converging
 
         }
 
-        private string ReplaceVariables(string userData)
-        {
-            var sb = new StringBuilder(userData);
-            sb.Replace("{{catletId}}", Context.Metadata.MachineId.ToString());
-            sb.Replace("{{vmId}}", Context.Metadata.VMId.ToString());
-
-            return sb.ToString();
-        }
-
         public async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> UpdateConfigDriveDisk(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
@@ -139,8 +130,8 @@ namespace Eryph.VmManagement.Converging
                             };
 
                             var userData = new UserData(contentType, 
-                                ReplaceVariables(cloudInitConfig.Content).TrimEnd('\0'),
-                                cloudInitConfig.FileName,
+                                (cloudInitConfig.Content ?? "").TrimEnd('\0'),
+                                cloudInitConfig.FileName!,
                                 Encoding.UTF8);
                             configDrive.AddUserData(userData);
                         }

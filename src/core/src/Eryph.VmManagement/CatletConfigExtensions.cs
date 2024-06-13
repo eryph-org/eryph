@@ -6,7 +6,9 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Variables;
+using Eryph.Core;
 using Eryph.GenePool.Model;
+using Eryph.Resources.Machines;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -16,6 +18,33 @@ namespace Eryph.VmManagement
 {
     public static class CatletConfigExtensions
     {
+        public static CatletConfig AppendSystemVariables(
+            this CatletConfig config,
+            CatletMetadata catletMetadata) =>
+            config.CloneWith(c =>
+            {
+                c.Variables =
+                [
+                    ..c.Variables ?? [],
+                    new VariableConfig
+                    {
+                        Name = EryphConstants.SystemVariables.CatletId,
+                        Type = VariableType.String,
+                        Value = catletMetadata.MachineId.ToString(),
+                        Required = false,
+                        Secret = false,
+                    },
+                    new VariableConfig
+                    {
+                        Name = EryphConstants.SystemVariables.VmId,
+                        Type = VariableType.String,
+                        Value = catletMetadata.MachineId.ToString(),
+                        Required = false,
+                        Secret = false,
+                    },
+                ];
+            });
+
         public static Either<Error,CatletConfig> BreedAndFeed(
             this CatletConfig machineConfig,
             ILocalGenepoolReader genepoolReader,
