@@ -124,6 +124,7 @@ namespace Eryph.VmManagement.Test
                 fodder =>
                 {
                     fodder.Name.Should().Be("food1");
+                    fodder.Source.Should().Be("gene:dbosoft/utt/1.0:gene1");
                     fodder.Variables.Should().SatisfyRespectively(
                         variable =>
                         {

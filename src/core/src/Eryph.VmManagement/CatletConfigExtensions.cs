@@ -121,9 +121,14 @@ namespace Eryph.VmManagement
                     c.Source = resolvedIdentifier.Value;
                     return c;
                 })
-                from expandedConfig in ExpandFodderConfigFromSource(genepoolReader, newConfig, 
+                from expandedConfig in ExpandFodderConfigFromSource(genepoolReader, newConfig,
                     toRemove.Filter(x => x.Source == geneIdentifier))
-                select expandedConfig.Filter(x=>!x.Remove.GetValueOrDefault());
+                select expandedConfig
+                    .Filter(x => !x.Remove.GetValueOrDefault())
+                    .Map(f => f.CloneWith(r =>
+                    {
+                        r.Source = fodder.Source;
+                    }));
         }
 
         private static Either<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
