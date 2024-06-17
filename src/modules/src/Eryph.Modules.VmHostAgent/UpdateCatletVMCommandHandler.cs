@@ -68,7 +68,7 @@ namespace Eryph.Modules.VmHostAgent
                     .ToAsync()
                 from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(mergedConfig)
                     .ToEither()
-                    .MapLeft(issues => Error.New("The substitution of variables failed", Error.Many(issues.Map(i => i.ToError()))))
+                    .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
                     .ToAsync()
                 from vmInfoConsistent in EnsureNameConsistent(vmInfo, config, Engine).WriteTrace()
                 from vmInfoConverged in convergeVM(vmHostAgentConfig, vmInfoConsistent, substitutedConfig, plannedStorageSettings, hostInfo).WriteTrace().ToAsync()

@@ -39,7 +39,7 @@ internal class CatletUpTimeChangedEventHandler(
                 if (!anySensitive)
                     return;
 
-                if (vm.UpTime.GetValueOrDefault().TotalMinutes >= 2)
+                if (vm.UpTime.GetValueOrDefault().TotalMinutes >= 5)
                 {
                     metaData.SecureDataHidden = true;
                     await metadataService.SaveMetadata(metaData);

@@ -189,37 +189,48 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 {
                     foreach (var fodderConfig in config.Fodder)
                     {
-                        if (!fodderConfig.Secret.GetValueOrDefault()) continue;
-
-                        fodderConfig.Content = "#REDACTED";
+                        if (fodderConfig.Secret.GetValueOrDefault())
+                        {
+                            fodderConfig.Content = "#REDACTED";
+                        }
 
                         if (fodderConfig.Variables != null)
                         {
                             foreach (var variableConfig in fodderConfig.Variables)
                             {
-                                if (!variableConfig.Secret.GetValueOrDefault()) continue;
+                                if (variableConfig.Secret.GetValueOrDefault())
+                                {
+                                    variableConfig.Value = "#REDACTED";
+                                }
+                            }
 
-                                variableConfig.Value = "#REDACTED";
+                            if (fodderConfig.Variables.Length == 0)
+                            {
+                                fodderConfig.Variables = null;
                             }
                         }
                     }
 
                     if (config.Fodder.Length == 0)
+                    {
                         config.Fodder = null;
-
+                    }
                 }
 
                 if (config.Variables != null)
                 {
                     foreach (var variableConfig in config.Variables)
                     {
-                        if (!variableConfig.Secret.GetValueOrDefault()) continue;
-
-                        variableConfig.Value = "#REDACTED";
+                        if (variableConfig.Secret.GetValueOrDefault())
+                        {
+                            variableConfig.Value = "#REDACTED";
+                        }
                     }
 
                     if (config.Variables.Length == 0)
+                    {
                         config.Variables = null;
+                    }
                 }
 
                 if (metadata.ParentConfig != null)

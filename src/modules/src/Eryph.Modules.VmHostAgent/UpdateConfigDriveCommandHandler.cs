@@ -70,7 +70,7 @@ internal class UpdateConfigDriveCommandHandler :
                 .ToAsync()
             from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(mergedConfig)
                 .ToEither()
-                .MapLeft(issues => Error.New("The substitution of variables failed", Error.Many(issues.Map(i => i.ToError()))))
+                .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
                 .ToAsync()
             from vmInfoConverged in convergeConfigDrive(vmHostAgentConfig, vmInfo, currentStorageSettings, hostInfo, substitutedConfig).WriteTrace().ToAsync()
 
