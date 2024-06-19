@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using JetBrains.Annotations;
+using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 
@@ -21,8 +23,7 @@ public class RemoveVirtualDiskCommandHandler(
     {
         try
         {
-            var fullPath = Path.Combine(message.Command.Path, message.Command.FileName);
-            DeleteDisk(fullPath);
+            DeleteDisk(message.Command.Path, message.Command.FileName);
 
             await messaging.CompleteTask(message);
         }
@@ -34,19 +35,16 @@ public class RemoveVirtualDiskCommandHandler(
         }
     }
 
-    private void DeleteDisk(string path)
+    private void DeleteDisk(string path, string fileName)
     {
-        if(!fileSystem.File.Exists(path))
+        var filePath = Path.Combine(path, fileName);
+        if(!fileSystem.File.Exists(filePath))
             return;
 
-        fileSystem.File.Delete(path);
+        fileSystem.File.Delete(filePath);
 
         var directoryInfo = fileSystem.DirectoryInfo.New(path);
-        if (!directoryInfo.Exists)
-            return;
-
-        // TODO should we actually delete the directory?
-        if (directoryInfo.GetFileSystemInfos().Length == 0)
+        if (directoryInfo.Exists && directoryInfo.GetFileSystemInfos().Length == 0)
             directoryInfo.Delete();
     }
 }
