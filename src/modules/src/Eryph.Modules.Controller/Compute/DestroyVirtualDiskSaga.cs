@@ -58,8 +58,8 @@ internal class DestroyVirtualDiskSaga(
             return;
         }
 
-        await stateStore.LoadCollectionAsync(virtualDisk, d => d.Childs);
-        if (virtualDisk.Childs.Count > 0)
+        await stateStore.LoadCollectionAsync(virtualDisk, d => d.Children);
+        if (virtualDisk.Children.Count > 0)
         {
             await Fail($"The disk {virtualDisk.Name} ({virtualDisk.Id}) has children");
             return;
