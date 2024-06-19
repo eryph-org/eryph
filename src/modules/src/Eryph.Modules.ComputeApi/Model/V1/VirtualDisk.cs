@@ -19,7 +19,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
 
         public long? SizeBytes { get; set; }
 
-        public Guid ParentId { get; set; }
+        public Guid? ParentId { get; set; }
 
 
         public IEnumerable<CatletDrive> AttachedDrives { get; set; }
