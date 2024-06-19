@@ -8,33 +8,24 @@ using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Bus;
 
-namespace Eryph.Modules.VmHostAgent
+namespace Eryph.Modules.VmHostAgent;
+
+[UsedImplicitly]
+internal abstract class VirtualMachineStateTransitionHandler<T>(
+    ITaskMessaging messaging,
+    IPowershellEngine engine)
+    : CatletOperationHandlerBase<T>(messaging, engine)
+    where T : class, IVMCommand, new()
 {
-    [UsedImplicitly]
-    internal abstract class VirtualMachineStateTransitionHandler<T> : CatletOperationHandlerBase<T>
-        where T : class, IVMCommand, new()
-    {
-        public VirtualMachineStateTransitionHandler(ITaskMessaging messaging, IPowershellEngine engine) : base(messaging, engine)
-        {
-        }
+    private readonly IPowershellEngine _engine = engine;
 
-        protected abstract string TransitionPowerShellCommand { get; }
+    protected override EitherAsync<Error, Unit> HandleCommand(
+        TypedPsObject<VirtualMachineInfo> vmInfo,
+        T command) =>
+        _engine.RunAsync(CreateTransitionCommand(vmInfo))
+            .ToError()
+            .ToAsync();
 
-        protected override async Task<Either<Error, Unit>> HandleCommand(
-            TypedPsObject<VirtualMachineInfo> vmInfo,
-            T command, IPowershellEngine engine)
-        {
-            var commandBuilder = new PsCommandBuilder().AddCommand(TransitionPowerShellCommand)
-                .AddParameter("VM", vmInfo.PsObject);
-
-            var result = await engine.RunAsync(commandBuilder).ConfigureAwait(false);
-
-            return result.ToError();
-        }
-
-        protected virtual void CreateCommand(PsCommandBuilder commandBuilder)
-        {
-            
-        }
-    }
+    protected abstract PsCommandBuilder CreateTransitionCommand(
+        TypedPsObject<VirtualMachineInfo> vmInfo);
 }

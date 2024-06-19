@@ -8,53 +8,39 @@ using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
 
-// ReSharper disable ArgumentsStyleAnonymousFunction
+namespace Eryph.Modules.VmHostAgent;
 
-namespace Eryph.Modules.VmHostAgent
+internal abstract class CatletOperationHandlerBase<T>(
+    ITaskMessaging messaging,
+    IPowershellEngine engine)
+    : IHandleMessages<OperationTask<T>>
+    where T : class, IVMCommand, new()
 {
-    internal abstract class CatletOperationHandlerBase<T> : IHandleMessages<OperationTask<T>>
-        where T : class, IVMCommand, new()
+    public Task Handle(OperationTask<T> message)
     {
-        private readonly ITaskMessaging _messaging;
-        private readonly IPowershellEngine _engine;
+        var command = message.Command;
 
-        protected CatletOperationHandlerBase(ITaskMessaging messaging, IPowershellEngine engine)
-        {
-            _messaging = messaging;
-            _engine = engine;
-        }
-
-        public Task Handle(OperationTask<T> message)
-        {
-            var command = message.Command;
-
-            return GetVmInfo(command.VMId, _engine).ToError()
-                .BindAsync(optVmInfo =>
-                {
-                    return optVmInfo.MatchAsync(
-                        Some: s => HandleCommand(s, command, _engine),
-                        None: () => Unit.Default);
-                })
-                .ToAsync()
-                .FailOrComplete(_messaging, message);
-
-        }
-
-        protected abstract Task<Either<Error, Unit>> HandleCommand(
-            TypedPsObject<VirtualMachineInfo> vmInfo, T command, IPowershellEngine engine);
-
-
-        private Task<Either<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>>> GetVmInfo(Guid vmId,
-            IPowershellEngine engine)
-        {
-            return engine.GetObjectsAsync<VirtualMachineInfo>(CreateGetVMCommand(vmId))
-                .MapAsync(seq => seq.HeadOrNone());
-        }
-
-        protected virtual PsCommandBuilder CreateGetVMCommand(Guid vmId)
-        {
-            return PsCommandBuilder.Create()
-                .AddCommand("get-vm").AddParameter("Id", vmId);
-        }
+        return GetVmInfo(command.VMId).ToError()
+            .Bind(optVmInfo =>
+            {
+                return optVmInfo.Match(
+                    Some: s => HandleCommand(s, command),
+                    None: () => Unit.Default);
+            })
+            .FailOrComplete(messaging, message);
     }
+
+    protected abstract EitherAsync<Error, Unit> HandleCommand(
+        TypedPsObject<VirtualMachineInfo> vmInfo,
+        T command);
+
+
+    private EitherAsync<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>> GetVmInfo(
+        Guid vmId) =>
+        engine.GetObjectsAsync<VirtualMachineInfo>(CreateGetVMCommand(vmId))
+            .ToAsync()
+            .Map(seq => seq.HeadOrNone());
+
+    protected virtual PsCommandBuilder CreateGetVMCommand(Guid vmId) =>
+        PsCommandBuilder.Create().AddCommand("Get-VM").AddParameter("Id", vmId);
 }
