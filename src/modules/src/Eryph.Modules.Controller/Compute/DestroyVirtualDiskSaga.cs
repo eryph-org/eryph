@@ -59,29 +59,21 @@ internal class DestroyVirtualDiskSaga(
             return;
         }
 
-        if (virtualDisk.StorageIdentifier?.StartsWith("gene:") == true)
-        {
-            await Fail($"The disk {virtualDisk.Name} ({virtualDisk.Id}) belongs to the gene pool and cannot be deleted.");
-            return;
-        }
-
-
+        await stateStore.LoadCollectionAsync(virtualDisk, d => d.AttachedDrives);
         await stateStore.LoadCollectionAsync(virtualDisk, d => d.Children);
-        if (virtualDisk.Children.Count > 0)
+
+        if (virtualDisk.StorageIdentifier?.StartsWith("gene:") == true
+            || virtualDisk.Children.Count > 0
+            || virtualDisk.AttachedDrives.Count > 0
+            || virtualDisk.Frozen)
         {
-            await Fail($"The disk {virtualDisk.Name} ({virtualDisk.Id}) has children");
+            await Complete(new DestroyResourcesResponse
+            {
+                DetachedResources = [new Resource(ResourceType.VirtualDisk, Data.DiskId)],
+            });
             return;
         }
         
-        await stateStore.LoadCollectionAsync(virtualDisk, d => d.AttachedDrives);
-        if (virtualDisk.AttachedDrives.Count > 0)
-        {
-            await Fail($"The disk {virtualDisk.Name} ({virtualDisk.Id}) is attached to a virtual machine");
-            return;
-        }
-
-        // TODO how to handle snapshots
-
         var agentName = agentLocator.FindAgentForDataStore(virtualDisk.DataStore, virtualDisk.Environment);
 
         await StartNewTask(new RemoveVirtualDiskCommand
