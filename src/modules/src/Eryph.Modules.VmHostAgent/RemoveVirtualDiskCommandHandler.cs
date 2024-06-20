@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -43,8 +44,7 @@ public class RemoveVirtualDiskCommandHandler(
 
         fileSystem.File.Delete(filePath);
 
-        var directoryInfo = fileSystem.DirectoryInfo.New(path);
-        if (directoryInfo.Exists && directoryInfo.GetFileSystemInfos().Length == 0)
-            directoryInfo.Delete();
+        if (fileSystem.Directory.Exists(path) && fileSystem.Directory.IsFolderTreeEmpty(path))
+            fileSystem.Directory.Delete(path, true);
     }
 }
