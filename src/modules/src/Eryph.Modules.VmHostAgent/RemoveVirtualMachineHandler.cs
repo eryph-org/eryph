@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -22,7 +23,8 @@ internal class RemoveVirtualMachineHandler(
     IPowershellEngine engine,
     IOVSPortManager ovsPortManager,
     IHostSettingsProvider hostSettingsProvider,
-    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
+    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
+    IFileSystem fileSystem)
     : CatletOperationHandlerBase<RemoveCatletVMCommand>(messaging, engine)
 {
     private readonly IPowershellEngine _engine = engine;
@@ -43,14 +45,25 @@ internal class RemoveVirtualMachineHandler(
         base.CreateGetVMCommand(vmId)
             .AddParameter("ErrorAction", "SilentlyContinue");
 
-    private static EitherAsync<Error, Unit> RemoveVMFiles(
+    private EitherAsync<Error, Unit> RemoveVMFiles(
         Option<VMStorageSettings> storageSettings) =>
         storageSettings
             .Filter(settings => !settings.Frozen)
-            .Filter(settings => Directory.Exists(settings.VMPath))
-            .Map(settings => Try(() =>
+            .Map(settings => settings.VMPath)
+            .Map(vmPath => Try(() =>
                 {
-                    Directory.Delete(settings.VMPath, true);
+                    if (!fileSystem.Directory.Exists(vmPath))
+                        return unit;
+
+                    // The VM files are removed by Hyper-V. We need to remove the
+                    // config drive which was created by us.
+                    var configDrivePath = Path.Combine(vmPath, "configdrive.iso");
+                    if (fileSystem.File.Exists(configDrivePath))
+                        fileSystem.File.Delete(configDrivePath);
+
+                    if (fileSystem.Directory.IsFolderTreeEmpty(vmPath))
+                        fileSystem.Directory.Delete(vmPath, true);
+
                     return unit;
                 })
                 .ToEither(ex => Error.New("Could not delete VM files", Error.New(ex)))

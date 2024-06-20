@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
 using Eryph.Modules.Controller.DataServices;
@@ -58,6 +59,13 @@ internal class DestroyVirtualDiskSaga(
             return;
         }
 
+        if (virtualDisk.StorageIdentifier?.StartsWith("gene:") == true)
+        {
+            await Fail($"The disk {virtualDisk.Name} ({virtualDisk.Id}) belongs to the gene pool and cannot be deleted.");
+            return;
+        }
+
+
         await stateStore.LoadCollectionAsync(virtualDisk, d => d.Children);
         if (virtualDisk.Children.Count > 0)
         {
@@ -73,9 +81,7 @@ internal class DestroyVirtualDiskSaga(
         }
 
         // TODO how to handle snapshots
-        // TODO handle genepool disks
 
-        // TODO Use LastSeenAgent as env and datastore are not useful to identify the agent 
         var agentName = agentLocator.FindAgentForDataStore(virtualDisk.DataStore, virtualDisk.Environment);
 
         await StartNewTask(new RemoveVirtualDiskCommand
