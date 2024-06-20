@@ -5,7 +5,10 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
+using Eryph.ConfigModel.Variables;
+using Eryph.Core;
 using Eryph.GenePool.Model;
+using Eryph.Resources.Machines;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -15,6 +18,33 @@ namespace Eryph.VmManagement
 {
     public static class CatletConfigExtensions
     {
+        public static CatletConfig AppendSystemVariables(
+            this CatletConfig config,
+            CatletMetadata catletMetadata) =>
+            config.CloneWith(c =>
+            {
+                c.Variables =
+                [
+                    ..c.Variables ?? [],
+                    new VariableConfig
+                    {
+                        Name = EryphConstants.SystemVariables.CatletId,
+                        Type = VariableType.String,
+                        Value = catletMetadata.MachineId.ToString(),
+                        Required = false,
+                        Secret = false,
+                    },
+                    new VariableConfig
+                    {
+                        Name = EryphConstants.SystemVariables.VmId,
+                        Type = VariableType.String,
+                        Value = catletMetadata.MachineId.ToString(),
+                        Required = false,
+                        Secret = false,
+                    },
+                ];
+            });
+
         public static Either<Error,CatletConfig> BreedAndFeed(
             this CatletConfig machineConfig,
             ILocalGenepoolReader genepoolReader,
@@ -91,9 +121,14 @@ namespace Eryph.VmManagement
                     c.Source = resolvedIdentifier.Value;
                     return c;
                 })
-                from expandedConfig in ExpandFodderConfigFromSource(genepoolReader, newConfig, 
+                from expandedConfig in ExpandFodderConfigFromSource(genepoolReader, newConfig,
                     toRemove.Filter(x => x.Source == geneIdentifier))
-                select expandedConfig.Filter(x=>!x.Remove.GetValueOrDefault());
+                select expandedConfig
+                    .Filter(x => !x.Remove.GetValueOrDefault())
+                    .Map(f => f.CloneWith(r =>
+                    {
+                        r.Source = fodder.Source;
+                    }));
         }
 
         private static Either<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
@@ -108,13 +143,13 @@ namespace Eryph.VmManagement
             return
                 from geneIdentifier in GeneIdentifier.NewEither(config.Source ?? throw new InvalidDataException())
                 from geneContent in genepoolReader.ReadGeneContent(GeneType.Fodder, geneIdentifier)
-                from childFodder in Try(() =>
+                from geneFodderConfig in Try(() =>
                 {
                     var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(geneContent);
-                    return FodderGeneConfigDictionaryConverter.Convert(configDictionary).Fodder;
+                    return FodderGeneConfigDictionaryConverter.Convert(configDictionary);
                     
                 }).ToEither(Error.New)
-                from childFodderWithMetadata in PrepareMetadata(childFodder.ToSeq())
+                from childFodderWithMetadata in PrepareMetadata(geneFodderConfig.Fodder.ToSeq())
                 from name in Optional(config.Name)
                     .Filter(notEmpty)
                     .Map(FodderName.NewEither)
@@ -124,8 +159,40 @@ namespace Eryph.VmManagement
                     None: () => childFodderWithMetadata)
                 let excludedFodder = childFodderWithMetadata
                     .Filter(f => toRemove.Any(r => r.Name == f.Name))
-                select includedFodder.Except(excludedFodder).Map(f => f.Config).ToSeq();
+                from boundVariables in BindVariables(config.Variables.ToSeq(), geneFodderConfig.Variables.ToSeq())
+                select includedFodder.Except(excludedFodder)
+                    .Map(f => f.Config.CloneWith(fc =>
+                    {
+                        fc.Variables = boundVariables.Map(vc => vc.Clone()).ToArray();
+                    }))
+                    .ToSeq();
         }
+
+        private static Either<Error, Seq<VariableConfig>> BindVariables(
+            Seq<VariableConfig> variables,
+            Seq<VariableConfig> geneVariables) =>
+            from variablesWithNames in variables
+                .Map(vc => from name in VariableName.NewEither(vc.Name)
+                           select (name, vc))
+                .Sequence()
+                .Map(s => s.ToHashMap())
+            from boundVariables in geneVariables
+                .Map(geneVc => BindVariable(geneVc, variablesWithNames))
+                .Sequence()
+            select boundVariables;
+
+        private static Either<Error, VariableConfig> BindVariable(
+            VariableConfig geneVariable,
+            HashMap<VariableName, VariableConfig> variables) =>
+            from name in VariableName.NewEither(geneVariable.Name)
+            select variables.Find(name).Match(
+                Some: v => geneVariable.CloneWith(r =>
+                {
+                    r.Value = v.Value ?? geneVariable.Value;
+                    r.Secret = v.Secret | geneVariable.Secret;
+                }),
+                None: geneVariable.Clone());
+
 
         private static Either<Error, Seq<FodderConfigWithMetadata>> PrepareMetadata(Seq<FodderConfig> fodders) =>
             fodders.Map(f =>

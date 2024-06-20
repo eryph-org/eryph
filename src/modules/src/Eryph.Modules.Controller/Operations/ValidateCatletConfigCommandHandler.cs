@@ -24,41 +24,33 @@ namespace Eryph.Modules.Controller.Operations
             return _taskMessaging.CompleteTask(message, message.Command);
         }
 
-        private static CatletConfig NormalizeCatletConfig(
-#pragma warning restore 1998
-            Guid machineId, CatletConfig config)
+        private static CatletConfig NormalizeCatletConfig(Guid machineId, CatletConfig config)
         {
             var machineConfig = config;
 
-
             if (string.IsNullOrWhiteSpace(machineConfig.Name) && machineId == Guid.Empty)
-                machineConfig.Name = $"catlet";
+                machineConfig.Name = "catlet";
 
-            if(machineConfig.Environment!= null)
+            if (machineConfig.Environment != null)
                 machineConfig.Environment = machineConfig.Environment.ToLowerInvariant();
 
-            if (machineConfig.Cpu == null)
-                machineConfig.Cpu = new CatletCpuConfig();
+            machineConfig.Cpu ??= new CatletCpuConfig();
+            machineConfig.Memory ??= new CatletMemoryConfig();
+            machineConfig.Drives ??= [];
+            machineConfig.NetworkAdapters ??= [];
+            machineConfig.Fodder ??= [];
+            machineConfig.Variables ??= [];
+            machineConfig.Networks ??=
+            [
+                new CatletNetworkConfig
+                {
+                    Name = "default"
+                }
+            ];
 
-            if (machineConfig.Memory == null)
-                machineConfig.Memory = new CatletMemoryConfig();
-
-            if (machineConfig.Drives == null)
-                machineConfig.Drives = Array.Empty<CatletDriveConfig>();
-
-            if (machineConfig.NetworkAdapters == null)
-                machineConfig.NetworkAdapters = Array.Empty<CatletNetworkAdapterConfig>();
-
-            if (machineConfig.Fodder == null)
-                machineConfig.Fodder = Array.Empty<FodderConfig>();
-
-            if (machineConfig.Networks == null)
+            foreach(var fodderConfig in machineConfig.Fodder)
             {
-                machineConfig.Networks =
-                    new []{ new CatletNetworkConfig
-                    {
-                        Name = "default"
-                    } };
+                fodderConfig.Variables ??= [];
             }
 
             for (var i = 0; i < machineConfig.Networks.Length; i++)
@@ -86,8 +78,7 @@ namespace Eryph.Modules.Controller.Operations
 
             foreach (var driveConfig in machineConfig.Drives)
             {
-                if (!driveConfig.Type.HasValue)
-                    driveConfig.Type = CatletDriveType.VHD;
+                driveConfig.Type ??= CatletDriveType.VHD;
 
                 if (driveConfig.Size == 0)
                     driveConfig.Size = null;
@@ -95,6 +86,5 @@ namespace Eryph.Modules.Controller.Operations
 
             return machineConfig;
         }
-
     }
 }

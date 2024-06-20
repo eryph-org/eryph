@@ -6,70 +6,53 @@ using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Rebus;
-using Eryph.Resources;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Pipeline;
 
-namespace Eryph.Modules.Controller.Inventory
+namespace Eryph.Modules.Controller.Inventory;
+
+[UsedImplicitly]
+internal class CatletUpTimeChangedEventHandler(
+    IOperationDispatcher opDispatcher,
+    IVirtualMachineMetadataService metadataService,
+    IVirtualMachineDataService vmDataService,
+    IMessageContext messageContext)
+    : IHandleMessages<CatletUpTimeChangedEvent>
 {
-    [UsedImplicitly]
-    internal class CatletUpTimeChangedEventHandler : IHandleMessages<CatletUpTimeChangedEvent>
+    public Task Handle(CatletUpTimeChangedEvent message)
     {
-        private readonly IOperationDispatcher _opDispatcher;
-        private readonly IVirtualMachineDataService _vmDataService;
-        private readonly IVirtualMachineMetadataService _metadataService;
-        private readonly IMessageContext _messageContext;
-
-        public CatletUpTimeChangedEventHandler(
-            IOperationDispatcher opDispatcher, 
-            IVirtualMachineMetadataService metadataService, 
-            IVirtualMachineDataService vmDataService, IMessageContext messageContext)
+        return vmDataService.GetByVMId(message.VmId).IfSomeAsync(vm =>
         {
-            _opDispatcher = opDispatcher;
-            _metadataService = metadataService;
-            _vmDataService = vmDataService;
-            _messageContext = messageContext;
-        }
+            vm.UpTime = message.UpTime;
 
-        public Task Handle(CatletUpTimeChangedEvent message)
-        {
-            return _vmDataService.GetByVMId(message.VmId).IfSomeAsync(vm =>
+            return metadataService.GetMetadata(vm.MetadataId).IfSomeAsync(async metaData =>
             {
-                vm.UpTime = message.UpTime;
+                if (metaData.SecureDataHidden)
+                    return;
 
-                return _metadataService.GetMetadata(vm.MetadataId).IfSomeAsync(async metaData =>
+                var anySensitive = metaData.Fodder.ToSeq().Exists(
+                                       f => f.Secret.GetValueOrDefault()
+                                            || f.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault()))
+                                   || metaData.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault());
+
+                if (!anySensitive)
+                    return;
+
+                if (vm.UpTime.GetValueOrDefault().TotalMinutes >= 5)
                 {
-                    if (metaData.SecureDataHidden)
-                        return;
+                    metaData.SecureDataHidden = true;
+                    await metadataService.SaveMetadata(metaData);
 
-                    var anySensitive = metaData.Fodder?.Any(x => x.Secret.GetValueOrDefault());
-
-                    if (!anySensitive.GetValueOrDefault())
-                        return;
-
-                    if (vm.UpTime.GetValueOrDefault().TotalMinutes >= 5)
-                    {
-                        metaData.SecureDataHidden = true;
-                        await _metadataService.SaveMetadata(metaData);
-
-                        await _opDispatcher.StartNew(
-                            vm.Project.Id,
-                            _messageContext.GetTraceId(),
-                            new UpdateConfigDriveCommand
-                            {
-                                CatletId = vm.Id
-                            });
-                            
-                    }
-
-                });
-
+                    await opDispatcher.StartNew(
+                        vm.Project.Id,
+                        messageContext.GetTraceId(),
+                        new UpdateConfigDriveCommand
+                        {
+                            CatletId = vm.Id
+                        });
+                }
             });
-
-
-
-        }
-
+        });
     }
 }

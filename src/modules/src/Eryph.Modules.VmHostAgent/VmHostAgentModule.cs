@@ -119,7 +119,7 @@ namespace Eryph.Modules.VmHostAgent
                         .Configure(t, localName))
                 .Options(x =>
                 {
-                    x.RetryStrategy(errorDetailsHeaderMaxLength:5);
+                    x.RetryStrategy(secondLevelRetriesEnabled: true, errorDetailsHeaderMaxLength:5);
                     x.SetNumberOfWorkers(5);
                     x.EnableSynchronousRequestReply();
                 })
