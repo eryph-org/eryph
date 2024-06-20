@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
+using Ardalis.Specification;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
@@ -15,8 +15,16 @@ public static class ContainerExtensions
         this SimpleInjectorAddOptions options)
     {
         options.Container.Register(
+            typeof(IReadRepositoryBase<>),
+            typeof(ReadOnlyStateStoreRepository<>),
+            Lifestyle.Scoped);
+        options.Container.Register(
             typeof(IReadonlyStateStoreRepository<>),
             typeof(ReadOnlyStateStoreRepository<>),
+            Lifestyle.Scoped);
+        options.Container.Register(
+            typeof(IRepositoryBase<>),
+            typeof(StateStoreRepository<>),
             Lifestyle.Scoped);
         options.Container.Register(
             typeof(IStateStoreRepository<>),

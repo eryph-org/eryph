@@ -97,10 +97,12 @@ namespace Eryph.Modules.AspNetCore
                 Lifestyle.Scoped,
                 c => !c.Handled);
 
-            container.Register(typeof(IOperationRequestHandler<>), typeof(EntityOperationRequestHandler<>), Lifestyle.Scoped);
+            container.RegisterConditional(
+                typeof(IOperationRequestHandler<>),
+                typeof(EntityOperationRequestHandler<>),
+                Lifestyle.Scoped,
+                c => !c.Handled);
             container.Register(typeof(ICreateEntityRequestHandler<>), typeof(CreateEntityRequestHandler<>), Lifestyle.Scoped);
-
-            container.Register(typeof(IReadRepositoryBase<>), typeof(ReadOnlyStateStoreRepository<>), Lifestyle.Scoped);
 
             // ReSharper disable once PossiblyMistakenUseOfParamsMethod
             container.Register(typeof(ISingleEntitySpecBuilder<,>), typeof(TModule).Assembly);
