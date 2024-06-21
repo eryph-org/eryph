@@ -17,7 +17,7 @@ public class List(
     [NotNull] IListEntitySpecBuilder<ListRequest, StateDb.Model.VirtualDisk> specBuilder)
     : ListEntityEndpoint<ListRequest, VirtualDisk, StateDb.Model.VirtualDisk>(listRequestHandler, specBuilder)
 {
-    [Authorize(Policy = "compute:catlets:list")]
+    [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("virtualdisks")]
     [SwaggerOperation(
         Summary = "Get list of Virtual Disks",

@@ -10,8 +10,6 @@ using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Commands;
 using Eryph.ModuleCore;
 using Eryph.Rebus;
-using Eryph.StateDb;
-using Eryph.StateDb.InMemory;
 using Eryph.StateDb.Sqlite;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -21,12 +19,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Rebus.Sagas;
 using Rebus.Timeouts;
 using Rebus.Transport.InMem;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
-using SimpleInjector.Lifestyles;
 using WebMotions.Fake.Authentication.JwtBearer;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration;
@@ -43,7 +41,7 @@ public static class ApiModuleFactoryExtensions
             container.Options.AllowOverridingRegistrations = true;
             hostBuilder.UseSimpleInjector(container);
 
-            container.RegisterInstance<ILoggerFactory>(new LoggerFactory());
+            container.RegisterInstance<ILoggerFactory>(new NullLoggerFactory());
             container.RegisterConditional(
                 typeof(ILogger),
                 c => typeof(Logger<>).MakeGenericType(c.Consumer!.ImplementationType),
