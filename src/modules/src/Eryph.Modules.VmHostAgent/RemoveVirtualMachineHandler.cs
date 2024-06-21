@@ -66,7 +66,7 @@ internal class RemoveVirtualMachineHandler(
 
                     return unit;
                 })
-                .ToEither(ex => Error.New("Could not delete VM files", Error.New(ex)))
+                .ToEither(ex => Error.New("Could not delete VM files.", Error.New(ex)))
                 .ToAsync())
             .IfNone(unit);
 }

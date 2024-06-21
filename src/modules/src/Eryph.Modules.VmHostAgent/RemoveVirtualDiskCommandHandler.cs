@@ -41,7 +41,7 @@ public class RemoveVirtualDiskCommandHandler(
             powershellEngine, vmHostAgentConfig, Path.Combine(path, fileName))
         from _ in storageSettings.StorageIdentifier.IsSome && storageSettings.StorageNames.IsValid
             ? Try(() => DeleteFiles(path, fileName))
-                .ToEither(ex => Error.New("Could not delete VM files", Error.New(ex)))
+                .ToEither(ex => Error.New("Could not delete disk files.", Error.New(ex)))
                 .ToAsync()
             : unit
         select unit;
