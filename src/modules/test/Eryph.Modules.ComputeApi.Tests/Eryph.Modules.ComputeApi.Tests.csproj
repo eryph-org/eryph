@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\data\src\Eryph.StateDb.InMemory\Eryph.StateDb.InMemory.csproj" />
+    <ProjectReference Include="..\..\..\data\test\Eryph.StateDb.TestBase\Eryph.StateDb.TestBase.csproj" />
     <ProjectReference Include="..\..\src\Eryph.Modules.ComputeApi\Eryph.Modules.ComputeApi.csproj" />
   </ItemGroup>
 </Project>

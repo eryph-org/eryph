@@ -8,19 +8,27 @@ using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Messages.Projects;
 using Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
+using Eryph.StateDb;
+using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Projects;
 
-public class CreateProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
+public class CreateProjectTests : InMemoryStateDbTestBase,
+    IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
     private static readonly Guid UserId = Guid.NewGuid();
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
     public CreateProjectTests(WebModuleFactory<ComputeApiModule> factory)
     {
-        _factory = factory.WithApiHost();
+        _factory = factory.WithApiHost(ConfigureDatabase);
+    }
+
+    protected override async Task SeedAsync(IStateStore stateStore)
+    {
+        await SeedDefaultTenantAndProject();
     }
 
     [Fact]

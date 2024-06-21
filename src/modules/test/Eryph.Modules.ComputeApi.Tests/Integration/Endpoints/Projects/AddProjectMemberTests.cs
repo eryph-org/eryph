@@ -9,64 +9,65 @@ using Eryph.Messages.Projects;
 using Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.TestBase;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using SimpleInjector;
-using SimpleInjector.Lifestyles;
 using Xunit;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Projects;
 
-public class AddProjectMemberTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
+public class AddProjectMemberTests : InMemoryStateDbTestBase,
+    IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
     private static readonly Guid UserId = Guid.NewGuid();
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
     public AddProjectMemberTests(WebModuleFactory<ComputeApiModule> factory)
     {
-        _factory = factory.WithApiHost().WithModuleConfiguration(o =>
-        {
-            o.Configure(sp =>
+        _factory = factory.WithApiHost(ConfigureDatabase);
+    }
+
+    protected override async Task SeedAsync(IStateStore stateStore)
+    {
+        await SeedDefaultTenantAndProject();
+        var otherTenantId = Guid.NewGuid();
+        await stateStore.For<Tenant>().AddAsync(
+            new Tenant
             {
-                var container = sp.Services.GetRequiredService<Container>();
-                using var scope = AsyncScopedLifestyle.BeginScope(container);
-
-                var stateStore = scope.GetInstance<StateStoreContext>();
-
-                stateStore.Projects.Add(
-                    new StateDb.Model.Project
-                    {
-                        Id = Guid.Parse("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}"),
-                        Name = "dtid_norole",
-                        TenantId = EryphConstants.DefaultTenantId
-                    });
-                stateStore.Projects.Add(
-                    new StateDb.Model.Project
-                    {
-                        Id = Guid.Parse("{D35830C0-3D25-406A-AE49-4E0E3B296D77}"),
-                        Name = "otid_norole",
-                        TenantId = new Guid()
-                    });
-
-                var project = new StateDb.Model.Project
-                {
-                    Id = Guid.Parse("{4A8A6FFC-48D6-4BD7-A6B1-14D5340C34EB}"),
-                    Name = "dtid_role",
-                    TenantId = EryphConstants.DefaultTenantId
-                };
-                stateStore.Projects.Add(project);
-                var identityId = UserId.ToString().ToLowerInvariant();
-                stateStore.ProjectRoles.Add(new ProjectRoleAssignment()
-                {
-                    Id = Guid.NewGuid(),
-                    Project = project,
-                    IdentityId = identityId,
-                    RoleId = EryphConstants.BuildInRoles.Owner
-                });
-
-                stateStore.SaveChanges();
+                Id = otherTenantId
             });
-        });
+
+        var projectRepo = stateStore.For<Project>();
+        await projectRepo.AddAsync(
+            new Project
+            {
+                Id = Guid.Parse("{E36835BB-04EB-42C8-BC36-BA75FDCBAEDD}"),
+                Name = "dtid_norole",
+                TenantId = EryphConstants.DefaultTenantId,
+            });
+        await projectRepo.AddAsync(
+            new Project
+            {
+                Id = Guid.Parse("{D35830C0-3D25-406A-AE49-4E0E3B296D77}"),
+                Name = "otid_norole",
+                TenantId = otherTenantId,
+            });
+
+        var project = new Project
+        {
+            Id = Guid.Parse("{4A8A6FFC-48D6-4BD7-A6B1-14D5340C34EB}"),
+            Name = "dtid_role",
+            TenantId = EryphConstants.DefaultTenantId,
+        };
+        await projectRepo.AddAsync(project);
+        var identityId = UserId.ToString().ToLowerInvariant();
+        await stateStore.For<ProjectRoleAssignment>().AddAsync(
+            new ProjectRoleAssignment()
+            {
+                Id = Guid.NewGuid(),
+                Project = project,
+                IdentityId = identityId,
+                RoleId = EryphConstants.BuildInRoles.Owner,
+            });
     }
 
     [Theory]
