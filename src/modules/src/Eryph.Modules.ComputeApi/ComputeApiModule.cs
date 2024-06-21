@@ -52,7 +52,7 @@ namespace Eryph.Modules.ComputeApi
             container.Register<IGetRequestHandler<StateDb.Model.Project, VirtualNetworkConfiguration>,
                 GetVirtualNetworksConfigurationHandler>();
             container.Register<IOperationRequestHandler<StateDb.Model.VirtualDisk>,
-                RemoveVirtualDiskHandler>();
+                DeleteVirtualDiskHandler>();
 
             base.ConfigureContainer(serviceProvider, container);
         }

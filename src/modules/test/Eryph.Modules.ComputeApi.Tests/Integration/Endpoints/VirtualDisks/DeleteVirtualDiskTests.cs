@@ -100,8 +100,7 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
         problemDetails.Should().NotBeNull();
-        problemDetails!.Detail.Should().Be(
-            $"The disk test-disk ({DiskId}) is attached to a virtual machine and cannot be deleted.");
+        problemDetails!.Detail.Should().Be("The disk is attached to a virtual machine and cannot be deleted.");
     }
 
     [Fact]
@@ -129,8 +128,7 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
         problemDetails.Should().NotBeNull();
-        problemDetails!.Detail.Should().Be(
-            $"The disk test-disk ({DiskId}) has children and cannot be deleted.");
+        problemDetails!.Detail.Should().Be("The disk has children and cannot be deleted.");
     }
 
     [Fact]
@@ -159,8 +157,7 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
         problemDetails.Should().NotBeNull();
-        problemDetails!.Detail.Should().Be(
-            $"The disk sda ({genePoolDiskId}) belongs to the gene pool and cannot be deleted.");
+        problemDetails!.Detail.Should().Be("The disk belongs to the gene pool and cannot be deleted.");
     }
 
     [Fact]
@@ -180,10 +177,8 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
         problemDetails.Should().NotBeNull();
-        problemDetails!.Detail.Should().Be(
-            $"The configuration of disk test-disk ({DiskId}) is frozen. The disk cannot be deleted.");
+        problemDetails!.Detail.Should().Be("The configuration of the disk is frozen. The disk cannot be deleted.");
     }
-    
 
     [Fact]
     public async Task Virtual_disk_is_deleted()

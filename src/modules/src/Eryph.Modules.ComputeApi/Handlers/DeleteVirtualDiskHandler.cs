@@ -39,22 +39,22 @@ internal class DeleteVirtualDiskHandler(
         if (model.StorageIdentifier?.StartsWith("gene:") == true)
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
-                detail: $"The disk {model.Name} ({model.Id}) belongs to the gene pool and cannot be deleted.");
+                detail: "The disk belongs to the gene pool and cannot be deleted.");
 
         if (model.Children.Count > 0)
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
-                detail: $"The disk {model.Name} ({model.Id}) has children and cannot be deleted.");
+                detail: "The disk has children and cannot be deleted.");
 
         if (model.AttachedDrives.Count > 0)
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
-                detail: $"The disk {model.Name} ({model.Id}) is attached to a virtual machine and cannot be deleted.");
+                detail: "The disk is attached to a virtual machine and cannot be deleted.");
 
         if (model.Frozen)
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
-                detail: $"The configuration of disk {model.Name} ({model.Id}) is frozen. The disk cannot be deleted.");
+                detail: "The configuration of the disk is frozen. The disk cannot be deleted.");
 
         return base.ValidateRequest(model);
     }
