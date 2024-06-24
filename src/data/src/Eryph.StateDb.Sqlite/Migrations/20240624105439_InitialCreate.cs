@@ -452,7 +452,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
-                    SwitchName = table.Column<string>(type: "TEXT", nullable: false),
+                    SwitchName = table.Column<string>(type: "TEXT", nullable: true),
                     NetworkProviderName = table.Column<string>(type: "TEXT", nullable: true),
                     MacAddress = table.Column<string>(type: "TEXT", nullable: true)
                 },

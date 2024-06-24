@@ -74,7 +74,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SwitchName")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("CatletId", "Id");

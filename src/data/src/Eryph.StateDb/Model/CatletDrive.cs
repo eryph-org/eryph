@@ -5,7 +5,7 @@ namespace Eryph.StateDb.Model;
 
 public class CatletDrive
 {
-    public string Id { get; set; } = null!;
+    public required string Id { get; set; }
 
     public Guid CatletId { get; set; }
 

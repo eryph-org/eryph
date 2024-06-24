@@ -79,7 +79,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("SwitchName")
-                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.HasKey("CatletId", "Id");
