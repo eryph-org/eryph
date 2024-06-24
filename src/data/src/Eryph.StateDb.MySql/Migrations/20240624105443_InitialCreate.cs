@@ -523,7 +523,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     CatletId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Name = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    SwitchName = table.Column<string>(type: "longtext", nullable: false)
+                    SwitchName = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     NetworkProviderName = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),

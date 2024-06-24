@@ -4,7 +4,7 @@ namespace Eryph.StateDb.Model;
 
 public class CatletNetworkAdapter
 {
-    public string Id { get; set; } = null!;
+    public required string Id { get; set; }
 
     public Guid CatletId { get; set; }
 
@@ -12,7 +12,7 @@ public class CatletNetworkAdapter
     
     public required string Name { get; set; }
 
-    public required string SwitchName { get; set; }
+    public required string? SwitchName { get; set; }
     
     public string? NetworkProviderName { get; set; }
 
