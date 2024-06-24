@@ -136,6 +136,99 @@ namespace Eryph.VmManagement.Test
         }
 
         [Theory]
+        [InlineData(null, "false")]
+        [InlineData(false, "false")]
+        [InlineData(true, "false")]
+        [InlineData(null, "true")]
+        [InlineData(false, "true")]
+        [InlineData(true, "true")]
+        public void Child_uses_fodder_variable_binding_for_parent_fodder(bool? catletSecret, string geneSecret)
+        {
+            var parentConfig = new CatletConfig
+            {
+                Name = "parent",
+                Fodder =
+                [
+                    new FodderConfig()
+                    {
+                        Source = "gene:dbosoft/utt/1.0:gene1",
+                    },
+                ],
+            };
+
+            var config = new CatletConfig
+            {
+                Name = "test",
+                Parent = "parent",
+                Fodder =
+                [
+                    new FodderConfig()
+                    {
+                        Source = "gene:dbosoft/utt/1.0:gene1",
+                        Variables =
+                        [
+                            new VariableConfig()
+                            {
+                                Name = "foodVariable",
+                                Value = "catlet value",
+                                Secret = catletSecret,
+
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            var genepoolReader = new Mock<ILocalGenepoolReader>();
+
+            genepoolReader.Setup(x => x.GetGenesetReference(It.IsAny<GeneSetIdentifier>()))
+                .Returns((GeneSetIdentifier id) => Option<GeneSetIdentifier>.None);
+            genepoolReader.Setup(x => x.ReadGeneContent(GeneType.Fodder,
+                    new GeneIdentifier(GeneSetIdentifier.New("dbosoft/utt/1.0"), GeneName.New("gene1"))))
+                .Returns(
+                    $$"""
+                    {
+                      "name": "gene1",
+                      "variables": [
+                        {
+                          "name": "foodVariable",
+                          "value": "gene value",
+                          "type": "String",
+                          "required": false,
+                          "secret": "{{geneSecret}}"
+                        }
+                      ],
+                      "fodder": [
+                        {
+                          "name": "food1",
+                          "content": "test1"
+                        }
+                      ]
+                    }
+                    """
+                );
+
+            var result = config.BreedAndFeed(genepoolReader.Object, parentConfig);
+
+            var newConfig = result.Should().BeRight().Subject;
+
+            newConfig.Fodder.Should().SatisfyRespectively(
+                fodder =>
+                {
+                    fodder.Name.Should().Be("food1");
+                    fodder.Source.Should().Be("gene:dbosoft/utt/1.0:gene1");
+                    fodder.Variables.Should().SatisfyRespectively(
+                        variable =>
+                        {
+                            variable.Name.Should().Be("foodVariable");
+                            variable.Value.Should().Be("catlet value");
+                            variable.Secret.Should().Be(catletSecret | bool.Parse(geneSecret));
+                        });
+                });
+        }
+
+
+        [Theory]
         [InlineData("dbosoft/utt/latest")]
         [InlineData("dbosoft/UTT/Latest")]
         [InlineData("dbosoft/utt/1.0")]
