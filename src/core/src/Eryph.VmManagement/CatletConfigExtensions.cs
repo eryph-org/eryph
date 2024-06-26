@@ -92,8 +92,16 @@ namespace Eryph.VmManagement
         private static Either<Error, FodderConfig[]> ExpandFodderConfigs(
             ILocalGenepoolReader genepoolReader,
             Seq<FodderConfig> fodder) =>
-            from toRemove in PrepareMetadata(
-                fodder.Filter(f => f.Remove.GetValueOrDefault() && !string.IsNullOrEmpty(f.Source)))
+            from toRemove in fodder.Filter(f => f.Remove.GetValueOrDefault() && notEmpty(f.Source))
+                .Map(f => from geneId in GeneIdentifier.NewEither(f.Source)
+                          from resolvedGeneId in ResolveGeneIdentifier(genepoolReader, geneId)
+                          let updatedFodder = f.CloneWith(c =>
+                          {
+                              c.Source = resolvedGeneId.Value;
+                          })
+                          from metadata in PrepareMetadata(updatedFodder)
+                          select metadata)
+                .Sequence()
             from expandedFodders in fodder
                 .Filter(f => !f.Remove.GetValueOrDefault())
                 .Map(f => ExpandFodderConfig(genepoolReader, f, toRemove))
@@ -103,33 +111,33 @@ namespace Eryph.VmManagement
         private static Either<Error, Seq<FodderConfig>> ExpandFodderConfig(
             ILocalGenepoolReader genepoolReader,
             FodderConfig fodder,
-            Seq<FodderConfigWithMetadata> toRemove)
-        {
-            if (string.IsNullOrEmpty(fodder.Source) || !fodder.Source.StartsWith("gene:"))
-            {
-                // fodder may be not a gene but may have to be requested to be removed as well
-                return fodder.Remove.GetValueOrDefault(false) 
-                    ? Seq<FodderConfig>() 
-                    : Seq1(fodder);
-            }
-
-            return
-                from geneIdentifier in GeneIdentifier.NewEither(fodder.Source)
-                from resolvedIdentifier in ResolveGeneIdentifier(genepoolReader, geneIdentifier)
-                let newConfig = fodder.Apply(c =>
-                {
-                    c.Source = resolvedIdentifier.Value;
-                    return c;
-                })
-                from expandedConfig in ExpandFodderConfigFromSource(genepoolReader, newConfig,
-                    toRemove.Filter(x => x.Source == geneIdentifier))
-                select expandedConfig
-                    .Filter(x => !x.Remove.GetValueOrDefault())
-                    .Map(f => f.CloneWith(r =>
+            Seq<FodderConfigWithMetadata> toRemove) =>
+            from geneIdentifier in Optional(fodder.Source)
+                .Filter(notEmpty)
+                .Filter(s => s.StartsWith("gene:"))
+                .Map(GeneIdentifier.NewEither)
+                .Sequence()
+                .FilterT(geneId => geneId.GeneName != GeneName.New("catlet"))
+            from result in geneIdentifier.Match(
+                Some: geneId =>
+                    from resolvedIdentifier in ResolveGeneIdentifier(genepoolReader, geneId)
+                    let newConfig = fodder.CloneWith(c =>
                     {
-                        r.Source = fodder.Source;
-                    }));
-        }
+                        c.Source = resolvedIdentifier.Value;
+                    })
+                    from expandedConfig in ExpandFodderConfigFromSource(genepoolReader, newConfig,
+                        toRemove.Filter(x => x.Source == resolvedIdentifier))
+                    select expandedConfig
+                        .Filter(x => !x.Remove.GetValueOrDefault())
+                        .Map(f => f.CloneWith(r =>
+                        {
+                            r.Source = fodder.Source;
+                        })),
+                // fodder may be not a gene but may have to be requested to be removed as well
+                None: () => fodder.Remove.GetValueOrDefault(false)
+                    ? Seq<FodderConfig>()
+                    : Seq1(fodder))
+            select result;
 
         private static Either<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
             ILocalGenepoolReader genepoolReader, 
@@ -138,6 +146,11 @@ namespace Eryph.VmManagement
         {
             // if fodder is flagged to be removed and has no name specified, we can skip lookup of content
             if (config.Remove.GetValueOrDefault(false) && string.IsNullOrWhiteSpace(config.Name))
+                return Seq<FodderConfig>();
+
+            // When a fodder source is removed without a name, all fodder from that source should be removed,
+            // and we can skip the lookup.
+            if (toRemove.Any(r => r.Name == None))
                 return Seq<FodderConfig>();
 
             return
@@ -149,7 +162,9 @@ namespace Eryph.VmManagement
                     return FodderGeneConfigDictionaryConverter.Convert(configDictionary);
                     
                 }).ToEither(Error.New)
-                from childFodderWithMetadata in PrepareMetadata(geneFodderConfig.Fodder.ToSeq())
+                from childFodderWithMetadata in geneFodderConfig.Fodder.ToSeq()
+                    .Map(PrepareMetadata)
+                    .Sequence()
                 from name in Optional(config.Name)
                     .Filter(notEmpty)
                     .Map(FodderName.NewEither)
@@ -194,19 +209,17 @@ namespace Eryph.VmManagement
                 None: geneVariable.Clone());
 
 
-        private static Either<Error, Seq<FodderConfigWithMetadata>> PrepareMetadata(Seq<FodderConfig> fodders) =>
-            fodders.Map(f =>
-                    from geneId in Optional(f.Source).Filter(notEmpty)
-                        .Map(GeneIdentifier.NewEither)
-                        .Sequence()
-                    from fodderName in Optional(f.Name).Filter(notEmpty)
-                        .Map(FodderName.NewEither)
-                        .Sequence()
-                    select new FodderConfigWithMetadata(geneId, fodderName, f))
-                .Sequence();
+        private static Either<Error, FodderConfigWithMetadata> PrepareMetadata(FodderConfig fodder) =>
+            from geneId in Optional(fodder.Source).Filter(notEmpty)
+                .Map(GeneIdentifier.NewEither)
+                .Sequence()
+            from fodderName in Optional(fodder.Name).Filter(notEmpty)
+                .Map(FodderName.NewEither)
+                .Sequence()
+            select new FodderConfigWithMetadata(geneId, fodderName, fodder);
         
 
-        private record FodderConfigWithMetadata(
+        private sealed record FodderConfigWithMetadata(
             Option<GeneIdentifier> Source,
             Option<FodderName> Name,
             FodderConfig Config);
