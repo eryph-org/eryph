@@ -117,28 +117,7 @@ namespace Eryph.Modules.Controller.Compute
                     .Map(parentConfig => parentConfig?.Breed(Data.Config, Data.Config.Parent) ?? Data.Config)
                     .IfNone(Data.Config);
 
-                var identifiers = append(
-                    breedConfig.Drives.ToSeq()
-                        .Map(c => Optional(c.Source).Filter(s => s.StartsWith("gene:")))
-                        .Somes()
-                        .Map(s => (GeneType: GeneType.Volume, Source: s)),
-                    breedConfig.Fodder.ToSeq()
-                        .Map(c => Optional(c.Source).Filter(notEmpty))
-                        .Somes()
-                        .Map(s => (GeneType: GeneType.Fodder, Source: s)));
-
-                var validation = identifiers.Map(t =>
-                        from id in GeneIdentifier.NewValidation(t.Source)
-                            .ToEither()
-                            .MapLeft(errors => Error.New($"The gene source '{t.Source}' is invalid.", Error.Many(errors)))
-                            .ToValidation() 
-                        select new PrepareGeneCommand()
-                        {
-                            AgentName = Data.AgentName,
-                            GeneType = t.GeneType,
-                            GeneName = id.Value,
-                        })
-                    .Sequence();
+                var validation = CreatePrepareGeneCommands(breedConfig, Data.AgentName);
 
                 if (validation.IsFail)
                 {
@@ -165,6 +144,35 @@ namespace Eryph.Modules.Controller.Compute
                 }
             });
         }
+
+        internal static Validation<Error, Seq<PrepareGeneCommand>> CreatePrepareGeneCommands(
+            CatletConfig config, string? agentName) =>
+            append(
+                config.Drives.ToSeq()
+                    .Map(c => Optional(c.Source).Filter(s => s.StartsWith("gene:")))
+                    .Somes()
+                    .Map(s => from geneId in ParseSource(s)
+                              select (GeneType: GeneType.Volume, Source: geneId)),
+                config.Fodder.ToSeq()
+                    .Map(c => Optional(c.Source).Filter(notEmpty))
+                    .Somes()
+                    .Map(s => from geneId in ParseSource(s)
+                              select (GeneType: GeneType.Fodder, Source: geneId))
+            ).Sequence()
+            .FilterT(t => t.Source.GeneName != GeneName.New("catlet"))
+            .MapT(t => new PrepareGeneCommand()
+            {
+                AgentName = agentName,
+                GeneType = t.GeneType,
+                GeneName = t.Source.Value,
+            });
+
+        private static Validation<Error, GeneIdentifier> ParseSource(string source) =>
+            GeneIdentifier.NewValidation(source)
+                .ToEither()
+                .MapLeft(errors => Error.New($"The gene source '{source}' is invalid.", Error.Many(errors)))
+                .ToValidation();
+
 
         public Task Handle(OperationTaskStatusEvent<PrepareGeneCommand> message)
         {
