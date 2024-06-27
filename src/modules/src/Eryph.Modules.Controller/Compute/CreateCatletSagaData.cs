@@ -8,6 +8,11 @@ namespace Eryph.Modules.Controller.Compute
     public class CreateCatletSagaData : TaskWorkflowSagaData
     {
         public CatletConfig? Config { get; set; }
+
+        public CatletConfig? ParentConfig { get; set; }
+
+        public CatletConfig? BredConfig { get; set; }
+
         public string? AgentName { get; set; }
 
         public CreateVMState State { get; set; }

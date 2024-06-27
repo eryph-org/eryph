@@ -117,7 +117,7 @@ namespace Eryph.Modules.Controller.Compute
                     .Map(parentConfig => parentConfig?.Breed(Data.Config, Data.Config.Parent) ?? Data.Config)
                     .IfNone(Data.Config);
 
-                var validation = CreatePrepareGeneCommands(breedConfig, Data.AgentName);
+                var validation = CreatePrepareGeneCommands(Data.BredConfig!, Data.AgentName);
 
                 if (validation.IsFail)
                 {

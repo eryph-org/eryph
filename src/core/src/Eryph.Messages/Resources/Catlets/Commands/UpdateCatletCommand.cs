@@ -2,6 +2,7 @@
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Resources;
+using JetBrains.Annotations;
 
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
@@ -9,6 +10,8 @@ namespace Eryph.Messages.Resources.Catlets.Commands
     public class UpdateCatletCommand : IHasCorrelationId, IHasResource
     {
         public CatletConfig Config { get; set; }
+
+        [CanBeNull] public CatletConfig BreedConfig { get; set; }
 
         [PrivateIdentifier]
         public string AgentName { get; set; }
