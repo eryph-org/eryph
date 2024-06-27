@@ -25,8 +25,7 @@ namespace Eryph.Modules.Controller.Compute
         IHandleMessages<OperationTaskStatusEvent<PlaceCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<PrepareParentGenomeCommand>>
-
+        IHandleMessages<OperationTaskStatusEvent<BreedCatletCommand>>
     {
         private readonly IIdGenerator<long> _idGenerator;
         private readonly IVirtualMachineDataService _vmDataService;
@@ -67,6 +66,7 @@ namespace Eryph.Modules.Controller.Compute
                 if (project == null)
                     throw new InvalidOperationException($"Project '{projectName}' not found.");
 
+                r.MachineMetadata.ParentConfig = Data.ParentConfig;
 
                 _ = await _vmDataService.AddNewVM(new Catlet
                 {
@@ -82,6 +82,7 @@ namespace Eryph.Modules.Controller.Compute
                 await StartNewTask(new UpdateCatletCommand
                 {
                     Config = Data.Config,
+                    BreedConfig = Data.BredConfig,
                     AgentName = Data.AgentName,
                     CatletId = Data.MachineId
                 });
@@ -100,6 +101,7 @@ namespace Eryph.Modules.Controller.Compute
                 Data.AgentName = r.AgentName;
 
 
+                // TODO Remove this? We always need to breed as it also resolve gene references
                 if (string.IsNullOrWhiteSpace(Data.Config?.Parent))
                 {
                     await CreateCatlet();
@@ -107,10 +109,10 @@ namespace Eryph.Modules.Controller.Compute
 
                 }
 
-                await StartNewTask(new PrepareParentGenomeCommand
+                await StartNewTask(new BreedCatletCommand()
                 {
-                    ParentName = Data.Config?.Parent,
-                    AgentName = r.AgentName
+                    AgentName = r.AgentName,
+                    Config = Data.Config,
                 });
 
                 //Data.GeneSetName = Data.Config?.Parent??"";
@@ -144,32 +146,6 @@ namespace Eryph.Modules.Controller.Compute
             });
         }
 
-        public Task Handle(OperationTaskStatusEvent<PrepareParentGenomeCommand> message)
-        {
-            if (Data.State >= CreateVMState.ImagePrepared)
-                return Task.CompletedTask;
-
-            return FailOrRun<PrepareParentGenomeCommand, PrepareParentGenomeResponse>(message, 
-                (response) =>
-            {
-                if (Data.Config == null || Data.Config.Parent != response.RequestedParent) return Task.CompletedTask;
-                Data.Config.Parent = response.ResolvedParent;
-                return CreateCatlet();
-                //if (Data.Config.Drives != null)
-                //    foreach (var catletDriveConfig in Data.Config.Drives)
-                //    {
-                //        if (catletDriveConfig.Source != null &&
-                //            catletDriveConfig.Source.StartsWith("gene:") &&
-                //            catletDriveConfig.Source.Contains(response.RequestedGeneSet))
-                //        {
-                //            catletDriveConfig.Source =
-                //                catletDriveConfig.Source.Replace(response.RequestedGeneSet, response.ResolvedGenSet);
-                //        }
-                //    }
-
-            });
-        }
-
         private Task CreateCatlet()
         {
             Data.State = CreateVMState.ImagePrepared;
@@ -178,6 +154,7 @@ namespace Eryph.Modules.Controller.Compute
             return StartNewTask(new CreateCatletVMCommand
             {
                 Config = Data.Config,
+                BreedConfig = Data.BredConfig,
                 NewMachineId = Data.MachineId,
                 AgentName = Data.AgentName,
                 StorageId = _idGenerator.CreateId()
@@ -218,15 +195,16 @@ namespace Eryph.Modules.Controller.Compute
         {
             base.CorrelateMessages(config);
 
-            config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.InitiatingTaskId,
-                d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<PlaceCatletCommand>>(m => m.InitiatingTaskId,
-                d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(m => m.InitiatingTaskId,
-                d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<PrepareParentGenomeCommand>>(m => m.InitiatingTaskId,
-                d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<UpdateCatletCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(
+                m => m.InitiatingTaskId, d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<PlaceCatletCommand>>(
+                m => m.InitiatingTaskId, d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(
+                m => m.InitiatingTaskId, d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<BreedCatletCommand>>(
+                m => m.InitiatingTaskId, d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<UpdateCatletCommand>>(
+                m => m.InitiatingTaskId, d => d.SagaTaskId);
         }
 
 
@@ -241,6 +219,21 @@ namespace Eryph.Modules.Controller.Compute
                     Config = message.Config
                 }
             ).AsTask();
+        }
+
+        public Task Handle(OperationTaskStatusEvent<BreedCatletCommand> message)
+        {
+            if (Data.State >= CreateVMState.ImagePrepared)
+                return Task.CompletedTask;
+
+            return FailOrRun<BreedCatletCommand, BreedCatletCommandResponse>(
+                message,
+                (response) =>
+                {
+                    Data.BredConfig = response.BreedConfig;
+                    Data.ParentConfig = response.ParentConfig;
+                    return CreateCatlet();
+                });
         }
     }
 }

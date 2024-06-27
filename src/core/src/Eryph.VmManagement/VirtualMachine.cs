@@ -131,6 +131,7 @@ namespace Eryph.VmManagement
             return vmInfo;
         }
 
+        // TODO remove me
         public static EitherAsync<Error, CatletConfig> TemplateFromParents(
             ILocalGenepoolReader genepoolReader,
             string parent)

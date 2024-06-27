@@ -18,7 +18,13 @@ public interface IGeneProvider
         Func<string, int, Task<Unit>> reportProgress,
         CancellationToken cancel);
 
+    EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
+        GeneSetIdentifier genesetIdentifier,
+        Func<string, int, Task<Unit>> reportProgress,
+        CancellationToken cancellationToken);
+
     EitherAsync<Error, Option<string>> GetGeneSetParent(
         GeneSetIdentifier genesetIdentifier,
-        Func<string, int, Task<Unit>> reportProgress,CancellationToken cancellationToken);
+        Func<string, int, Task<Unit>> reportProgress,
+        CancellationToken cancellationToken);
 }

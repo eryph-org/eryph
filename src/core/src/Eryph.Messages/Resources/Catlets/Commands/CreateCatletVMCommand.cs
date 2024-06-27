@@ -8,6 +8,9 @@ namespace Eryph.Messages.Resources.Catlets.Commands
     public class CreateCatletVMCommand : IHostAgentCommand
     {
         public CatletConfig Config { get; set; }
+
+        public CatletConfig BreedConfig { get; set; }
+
         public Guid NewMachineId { get; set; }
 
         [PrivateIdentifier]
