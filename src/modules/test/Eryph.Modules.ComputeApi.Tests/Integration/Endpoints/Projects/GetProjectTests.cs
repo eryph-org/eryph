@@ -7,65 +7,68 @@ using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.TestBase;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using SimpleInjector;
-using SimpleInjector.Lifestyles;
 using Xunit;
-using Project = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
+using ApiProject = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Projects;
 
-public class GetProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
+public class GetProjectTests : InMemoryStateDbTestBase,
+    IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
     private static readonly Guid UserId = Guid.NewGuid();
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
     public GetProjectTests(WebModuleFactory<ComputeApiModule> factory)
     {
-        _factory = factory.WithApiHost().WithModuleConfiguration(o =>
-        {
-            o.Configure(sp =>
+        _factory = factory.WithApiHost(ConfigureDatabase);
+    }
+
+    protected override async Task SeedAsync(IStateStore stateStore)
+    {
+        await SeedDefaultTenantAndProject();
+        
+        var otherTenantId = Guid.NewGuid();
+        await stateStore.For<Tenant>().AddAsync(
+            new Tenant()
             {
-                var container = sp.Services.GetRequiredService<Container>();
-                using var scope = AsyncScopedLifestyle.BeginScope(container);
-
-                var stateStore = scope.GetInstance<StateStoreContext>();
-
-                stateStore.Projects.Add(
-                    new StateDb.Model.Project
-                    {
-                        Id = Guid.Parse("{75715EAD-21E2-44DC-A3C4-1CDAAB387F45}"),
-                        Name = "dtid_norole",
-                        TenantId = EryphConstants.DefaultTenantId
-                    });
-                stateStore.Projects.Add(
-                    new StateDb.Model.Project
-                    {
-                        Id = Guid.Parse("{998CC7B4-AB19-4FBA-B287-5D2A70F1DB5D}"),
-                        Name = "otid_norole",
-                        TenantId = new Guid()
-                    });
-
-                var project = new StateDb.Model.Project
-                {
-                    Id = Guid.Parse("{645D0AAA-2E34-4238-B0ED-65D2D307773C}"),
-                    Name = "dtid_role",
-                    TenantId = EryphConstants.DefaultTenantId
-                };
-                stateStore.Projects.Add(project);
-                var identityId = UserId.ToString().ToLowerInvariant();
-                stateStore.ProjectRoles.Add(new ProjectRoleAssignment()
-                {
-                    Id = Guid.NewGuid(),
-                    Project = project,
-                    IdentityId = identityId,
-                    RoleId = EryphConstants.BuildInRoles.Reader
-                });
-
-                stateStore.SaveChanges();
+                Id = otherTenantId
             });
-        });
+
+        var projectRepo = stateStore.For<Project>();
+        await projectRepo.AddAsync(
+            new Project()
+            {
+                Id = Guid.Parse("{75715EAD-21E2-44DC-A3C4-1CDAAB387F45}"),
+                Name = "dtid_norole",
+                TenantId = EryphConstants.DefaultTenantId
+            });
+        await projectRepo.AddAsync(
+            new Project()
+            {
+                Id = Guid.Parse("{998CC7B4-AB19-4FBA-B287-5D2A70F1DB5D}"),
+                Name = "otid_norole",
+                TenantId = otherTenantId
+            });
+
+        var project = new Project()
+        {
+            Id = Guid.Parse("{645D0AAA-2E34-4238-B0ED-65D2D307773C}"),
+            Name = "dtid_role",
+            TenantId = EryphConstants.DefaultTenantId
+        };
+        await projectRepo.AddAsync(project);
+        
+        var identityId = UserId.ToString().ToLowerInvariant();
+        await stateStore.For<ProjectRoleAssignment>().AddAsync(
+            new ProjectRoleAssignment()
+            {
+                Id = Guid.NewGuid(),
+                Project = project,
+                IdentityId = identityId,
+                RoleId = EryphConstants.BuildInRoles.Reader
+            });
     }
 
     [Theory]
@@ -86,7 +89,7 @@ public class GetProjectTests : IClassFixture<WebModuleFactory<ComputeApiModule>>
         if (isAuthorized)
         {
             response!.StatusCode.Should().Be(HttpStatusCode.OK);
-            var project = await response.Content.ReadFromJsonAsync<Project>();
+            var project = await response.Content.ReadFromJsonAsync<ApiProject>();
             project.Id.Should().Be(projectId.ToString("D"));
             project.Id.Should().NotBeNullOrWhiteSpace();
 

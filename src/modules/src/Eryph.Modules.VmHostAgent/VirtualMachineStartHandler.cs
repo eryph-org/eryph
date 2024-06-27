@@ -1,18 +1,20 @@
 ﻿using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Data.Full;
 using JetBrains.Annotations;
-using Rebus.Bus;
 
-namespace Eryph.Modules.VmHostAgent
+namespace Eryph.Modules.VmHostAgent;
+
+[UsedImplicitly]
+internal class VirtualMachineStartHandler(
+    ITaskMessaging messaging,
+    IPowershellEngine engine)
+    : VirtualMachineStateTransitionHandler<StartCatletVMCommand>(messaging, engine)
 {
-    [UsedImplicitly]
-    internal class VirtualMachineStartHandler : VirtualMachineStateTransitionHandler<StartCatletVMCommand>
-    {
-        public VirtualMachineStartHandler(ITaskMessaging messaging, IPowershellEngine engine) : base(messaging, engine)
-        {
-        }
-
-        protected override string TransitionPowerShellCommand => "Start-VM";
-    }
+    protected override PsCommandBuilder CreateTransitionCommand(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        PsCommandBuilder.Create()
+            .AddCommand("Start-VM")
+            .AddParameter("VM", vmInfo.PsObject);
 }

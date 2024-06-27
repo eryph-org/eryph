@@ -14,6 +14,7 @@ namespace Eryph.Modules.ComputeApi.Model
         protected override void CustomizeQuery(ISpecificationBuilder<VirtualDisk> specification)
         {
             specification.Include(x => x.AttachedDrives);
+            specification.Include(x => x.Children);
         }
 
     }

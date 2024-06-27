@@ -7,6 +7,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -17,6 +18,7 @@ public class Get(
     [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.VirtualDisk> specBuilder)
     : GetEntityEndpoint<SingleEntityRequest, VirtualDisk, StateDb.Model.VirtualDisk>(requestHandler, specBuilder)
 {
+    [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("virtualdisks/{id}")]
     [SwaggerOperation(
         Summary = "Get a Virtual Disk",

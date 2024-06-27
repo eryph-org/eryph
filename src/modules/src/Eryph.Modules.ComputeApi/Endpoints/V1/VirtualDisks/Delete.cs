@@ -8,6 +8,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -27,6 +28,7 @@ public class Delete(
         };
     }
 
+    [Authorize(Policy = "compute:catlets:write")]
     [HttpDelete("virtualdisks/{id}")]
     [SwaggerOperation(
         Summary = "Deletes a virtual disk",

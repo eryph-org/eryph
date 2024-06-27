@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
@@ -12,69 +13,60 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.Modules.VmHostAgent
+using static LanguageExt.Prelude;
+
+namespace Eryph.Modules.VmHostAgent;
+
+[UsedImplicitly]
+internal class RemoveVirtualMachineHandler(
+    ITaskMessaging messaging,
+    IPowershellEngine engine,
+    IOVSPortManager ovsPortManager,
+    IHostSettingsProvider hostSettingsProvider,
+    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
+    IFileSystem fileSystem)
+    : CatletOperationHandlerBase<RemoveCatletVMCommand>(messaging, engine)
 {
-    [UsedImplicitly]
-    internal class RemoveVirtualMachineHandler : CatletOperationHandlerBase<RemoveCatletVMCommand>
-    {
-        IOVSPortManager _ovsPortManager;
-        private readonly IHostSettingsProvider _hostSettingsProvider;
-        private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
+    private readonly IPowershellEngine _engine = engine;
 
-        public RemoveVirtualMachineHandler(
-            ITaskMessaging messaging,
-            IPowershellEngine engine,
-            IOVSPortManager ovsPortManager,
-            IHostSettingsProvider hostSettingsProvider,
-            IVmHostAgentConfigurationManager vmHostAgentConfigurationManager) : base(messaging, engine)
-        {
-            _ovsPortManager = ovsPortManager;
-            _hostSettingsProvider = hostSettingsProvider;
-            _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
-        }
+    protected override EitherAsync<Error, Unit> HandleCommand(
+        TypedPsObject<VirtualMachineInfo> vmInfo,
+        RemoveCatletVMCommand command) =>
+        from hostSettings in hostSettingsProvider.GetHostSettings()
+        from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+        from storageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo)
+        from stoppedVM in vmInfo.StopIfRunning(_engine).ToAsync().ToError()
+        from uRemovePorts in ovsPortManager.SyncPorts(vmInfo, VMPortChange.Remove)
+        from _ in stoppedVM.Remove(_engine).ToAsync().ToError()
+        from __ in RemoveVMFiles(storageSettings)
+        select unit;
 
-        protected override Task<Either<Error, Unit>> HandleCommand(TypedPsObject<VirtualMachineInfo> vmInfo,
-            RemoveCatletVMCommand command, IPowershellEngine engine)
-        {
-            return (from hostSettings in _hostSettingsProvider.GetHostSettings()
-                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-                from storageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo)
-                from stoppedVM in vmInfo.StopIfRunning(engine).ToAsync().ToError()
-                from uRemovePorts in _ovsPortManager.SyncPorts(vmInfo, VMPortChange.Remove)
-                from _ in stoppedVM.Remove(engine).ToAsync().ToError()
-                let __ = RemoveVMFiles(storageSettings)
-                select Unit.Default)
-                .ToEither();
+    protected override PsCommandBuilder CreateGetVMCommand(Guid vmId) =>
+        base.CreateGetVMCommand(vmId)
+            .AddParameter("ErrorAction", "SilentlyContinue");
 
-        }
-
-        protected override PsCommandBuilder CreateGetVMCommand(Guid vmId)
-        {
-            return base.CreateGetVMCommand(vmId).AddParameter("ErrorAction", "SilentlyContinue");
-        }
-
-        private static Unit RemoveVMFiles(Option<VMStorageSettings> storageSettings)
-
-        {
-            return storageSettings.IfSome(settings =>
-            {
-                if (settings.Frozen)
+    private EitherAsync<Error, Unit> RemoveVMFiles(
+        Option<VMStorageSettings> storageSettings) =>
+        storageSettings
+            .Filter(settings => !settings.Frozen)
+            .Map(settings => settings.VMPath)
+            .Map(vmPath => Try(() =>
                 {
-                    return;
-                }
+                    if (!fileSystem.Directory.Exists(vmPath))
+                        return unit;
 
-                settings.StorageIdentifier.IfSome(storageId =>
-                {
+                    // The VM files are removed by Hyper-V. We need to remove the
+                    // config drive which was created by us.
+                    var configDrivePath = Path.Combine(vmPath, "configdrive.iso");
+                    if (fileSystem.File.Exists(configDrivePath))
+                        fileSystem.File.Delete(configDrivePath);
 
-                    var vmDataPath = Path.Combine(settings.VMPath, storageId);
+                    if (fileSystem.Directory.IsFolderTreeEmpty(vmPath))
+                        fileSystem.Directory.Delete(vmPath, true);
 
-                    if (Directory.Exists(vmDataPath))
-                    {
-                        Directory.Delete(vmDataPath, true);
-                    }
-                });
-
-            });
-        }
-    }
+                    return unit;
+                })
+                .ToEither(ex => Error.New("Could not delete VM files.", Error.New(ex)))
+                .ToAsync())
+            .IfNone(unit);
 }
