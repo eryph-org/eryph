@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.GenePool.Model;
 using Eryph.Modules.Controller.Compute;
@@ -35,19 +36,17 @@ public class UpdateCatletSagaTests
             ]
         };
 
-        var result = UpdateCatletSaga.CreatePrepareGeneCommands(config, AgentName);
+        var result = UpdateCatletSaga.CreatePrepareGeneCommands(config);
 
         result.Should().BeSuccess().Which.Should().SatisfyRespectively(
             command =>
             {
-                command.AgentName.Should().Be(AgentName);
-                command.GeneName.Should().Be("gene:dbosoft/test/1.0:sda");
+                command.GeneIdentifier.Should().Be(GeneIdentifier.New("gene:dbosoft/test/1.0:sda"));
                 command.GeneType.Should().Be(GeneType.Volume);
             },
             command =>
             {
-                command.AgentName.Should().Be(AgentName);
-                command.GeneName.Should().Be("gene:dbosoft/test/1.0:test-fodder");
+                command.GeneIdentifier.Should().Be(GeneIdentifier.New("gene:dbosoft/test/1.0:test-fodder"));
                 command.GeneType.Should().Be(GeneType.Fodder);
             });
     }
@@ -66,7 +65,7 @@ public class UpdateCatletSagaTests
             ]
         };
 
-        var result = UpdateCatletSaga.CreatePrepareGeneCommands(config, AgentName);
+        var result = UpdateCatletSaga.CreatePrepareGeneCommands(config);
 
         result.Should().BeSuccess().Which.Should().BeEmpty();
     }
@@ -92,7 +91,7 @@ public class UpdateCatletSagaTests
             ]
         };
 
-        var result = UpdateCatletSaga.CreatePrepareGeneCommands(config, AgentName);
+        var result = UpdateCatletSaga.CreatePrepareGeneCommands(config);
 
         result.Should().BeFail().Which.Should().SatisfyRespectively(
             error =>

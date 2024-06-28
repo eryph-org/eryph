@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel;
 using Eryph.GenePool.Model;
+using Eryph.Genetics;
 using Eryph.Messages.Resources.Genes.Commands;
 using LanguageExt;
 using LanguageExt.Common;
@@ -85,6 +86,11 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
             GeneSetIdentifier.New(genesetName));
     }
 
+    public async ValueTask NewResolveGeneSetTask(IOperationTaskMessage message, GeneSetIdentifier geneSetId)
+    {
+        await NewGenomeRequestTaskInternal(new GenomeContext(message, geneSetId.Value, Arr<string>.Empty), geneSetId);
+    }
+
     private async ValueTask NewGenomeRequestTaskInternal(GenomeContext context, GeneSetIdentifier geneSetId)
     {
         var geneIdentifier = new GeneIdentifier(geneSetId, GeneName.New("catlet"));
@@ -93,7 +99,7 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
             async (m, ctx, r) =>
             {
                 var innerContext = (GenomeContext)ctx;
-                return await r.Bind(prepareResponse => GeneIdentifier.NewEither(prepareResponse.ResolvedGene))
+                return await r.Map(prepareResponse => prepareResponse.ResolvedGene.GeneIdentifier)
                     .ToAsync()
                     .Bind(resolvedGene =>
                         
@@ -173,8 +179,6 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
         {
             await EndRequest(taskMessaging, geneIdWithType, Error.New(ex));
         }
-
-
     }
 
     private async Task<Unit> ReportProgress(ITaskMessaging taskMessaging, GeneIdentifierWithType geneIdWithType, string message, int progress)

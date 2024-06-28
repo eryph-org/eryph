@@ -40,15 +40,23 @@ internal class BreedCatletVMHostCommandHandler(
             .Map(GeneSetIdentifier.NewEither)
             .Sequence()
             .ToAsync()
-        from optionalParentConfig in optionalParentId
-            .Map(pId => CatletBreeding.Breed(pId, genepoolReader))
+        from resolvedOptionalParentId in optionalParentId
+            .Map(id => genepoolReader.GetGenesetReference(id).Map(r => r | optionalParentId))
             .Sequence()
             .ToAsync()
-        from breedConfig in CatletBreeding.Breed(optionalParentConfig, catletConfig, genepoolReader)
+        from optionalParentConfig in optionalParentId
+            .Map(pId => CatletBreeding.BreedRecursively(pId, genepoolReader))
+            .Sequence()
             .ToAsync()
+        from resolvedConfig in CatletBreeding.ResolveGenesetIdentifiers(catletConfig, genepoolReader)
+            .ToAsync()
+        let breedConfigResult = from pId in optionalParentId
+                                from pConfig in optionalParentConfig
+                                select CatletBreeding.Breed(pConfig, pId, catletConfig, genepoolReader)
+        from breedConfig in breedConfigResult.Sequence().ToAsync()
         select new BreedCatletVMHostCommandResponse()
         {
-            BreedConfig = breedConfig,
+            BreedConfig = breedConfig.IfNone(resolvedConfig),
             ParentConfig = optionalParentConfig.IfNoneUnsafe((CatletConfig)null),
         };
 }

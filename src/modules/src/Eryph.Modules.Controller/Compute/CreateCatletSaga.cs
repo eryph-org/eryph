@@ -83,7 +83,6 @@ namespace Eryph.Modules.Controller.Compute
                 {
                     Config = Data.Config,
                     BreedConfig = Data.BredConfig,
-                    AgentName = Data.AgentName,
                     CatletId = Data.MachineId
                 });
             });

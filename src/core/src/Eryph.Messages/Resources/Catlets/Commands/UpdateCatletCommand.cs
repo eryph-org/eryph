@@ -13,8 +13,6 @@ namespace Eryph.Messages.Resources.Catlets.Commands
 
         [CanBeNull] public CatletConfig BreedConfig { get; set; }
 
-        [PrivateIdentifier]
-        public string AgentName { get; set; }
         public Guid CorrelationId { get; set; }
 
         public Guid CatletId { get; set; }
