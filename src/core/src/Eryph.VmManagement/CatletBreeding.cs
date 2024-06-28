@@ -144,46 +144,54 @@ public static class CatletBreeding
         Option<CatletConfig> parentConfig,
         ILocalGenepoolReader genepoolReader) => throw new NotImplementedException();
 
-    public static Either<Error, CatletConfig> Breed(
+    public static Either<Error, CatletConfig> BreedRecursively(
         GeneSetIdentifier geneSetId,
         LocalGenepoolReader genepoolReader) =>
-        from resolvedGeneSetId in ResolveGeneSetIdentifier(geneSetId, genepoolReader)
-        from catletConfig in ReadCatletConfig(resolvedGeneSetId, genepoolReader)
-        from breedConfig in Breed(catletConfig, genepoolReader)
+        from catletConfig in ReadConfig(geneSetId, genepoolReader)
+        from breedConfig in BreedRecursively(catletConfig.Config, genepoolReader)
         select breedConfig;
 
-    public static Either<Error, CatletConfig> Breed(
+    public static Either<Error, CatletConfig> BreedRecursively(
         CatletConfig catletConfig,
         ILocalGenepoolReader genepoolReader) =>
-        from parentId in Optional(catletConfig.Parent)
+        from parentConfig in ReadConfig(catletConfig.Parent, genepoolReader)
+        from result in parentConfig.Match(
+            Some: pCfg => from bredPCfg in BreedRecursively(pCfg.Config, genepoolReader)
+                from bredCfg in Breed(bredPCfg, pCfg.Id, catletConfig, genepoolReader)
+                select bredCfg,
+            None: () => ResolveGenesetIdentifiers(catletConfig, genepoolReader)
+        )
+        select result;
+
+    private static Either<Error, Option<(GeneSetIdentifier Id, CatletConfig Config)>> ReadConfig(
+        string geneSetId,
+        ILocalGenepoolReader genepoolReader) =>
+        from validId in Optional(geneSetId)
             .Filter(notEmpty)
             .Map(GeneSetIdentifier.NewEither)
             .Sequence()
-        from resolvedParentId in parentId
-            .Map(p => ResolveGeneSetIdentifier(p, genepoolReader))
+        from result in validId.Map(id => ReadConfig(id, genepoolReader))
             .Sequence()
-        from parentConfig in resolvedParentId
-            .Map(p => ReadCatletConfig(p, genepoolReader))
-            .Sequence()
-        from bredConfig in Breed(parentConfig, catletConfig, genepoolReader)
-        select bredConfig;
+        select result;
+
+    private static Either<Error, (GeneSetIdentifier Id, CatletConfig Config)> ReadConfig(
+        GeneSetIdentifier geneSetId,
+        ILocalGenepoolReader genepoolReader) =>
+        from resolvedId in ResolveGeneSetIdentifier(geneSetId, genepoolReader)
+        from config in ReadCatletConfig(resolvedId, genepoolReader)
+        select (resolvedId, config);
 
     public static Either<Error, CatletConfig> Breed(
-        Option<CatletConfig> parentConfig,
+        CatletConfig parentConfig,
+        GeneSetIdentifier parentIdentifier,
         CatletConfig catletConfig,
         ILocalGenepoolReader genepoolReader) =>
         // TODO implement properly
-        from resolvedParentConfig in parentConfig
-            .Map(p => ResolveGenesetIdentifiers(p, genepoolReader))
-            .Sequence()
-            .MapLeft(errors => Error.New("Could not resolve", Error.Many(errors)))
+        from resolvedParentConfig in ResolveGenesetIdentifiers(parentConfig, genepoolReader)
+            .MapLeft(errors => Error.New("Could not resolve parent genes during breeding.", Error.Many(errors)))
         from resolvedCatletConfig in ResolveGenesetIdentifiers(catletConfig, genepoolReader)
-            .MapLeft(errors => Error.New("Could not resolve", Error.Many(errors)))
-        select resolvedParentConfig.Match(
-            Some: p => p.Breed(resolvedCatletConfig),
-            None: () => resolvedCatletConfig);
-        
-    
+            .MapLeft(errors => Error.New("Could not resolve child genes during breeding.", Error.Many(errors)))
+        select parentConfig.Breed(catletConfig, parentIdentifier.Value);
 
     public static Either<Error, CatletConfig> Feed(
         CatletConfig catletConfig,

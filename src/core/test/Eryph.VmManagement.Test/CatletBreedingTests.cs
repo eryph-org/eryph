@@ -53,7 +53,7 @@ public class CatletBreedingTests
 
         var result = CatletBreeding.ResolveGenesetIdentifiers(config, _genepoolReaderMock.Object);
 
-        var resultConfig = result.Should().BeSuccess().Subject;
+        var resultConfig = result.Should().BeRight().Subject;
         resultConfig.Drives.Should().SatisfyRespectively(
             drive => drive.Source.Should().Be("gene:acme/test-os/1.0:sda"));
         resultConfig.Fodder.Should().SatisfyRespectively(

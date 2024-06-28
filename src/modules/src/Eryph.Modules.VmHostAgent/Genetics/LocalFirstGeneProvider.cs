@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.GenePool.Model;
+using Eryph.Genetics;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Resources;
 using LanguageExt;
@@ -56,9 +57,8 @@ namespace Eryph.Modules.VmHostAgent.Genetics
                 from ensuredGene in EnsureGene(genesetInfo, newGeneIdentifier, geneHash, reportProgress, cancel)
                 select new PrepareGeneResponse
                 {
-                    GeneType = geneType,
-                    RequestedGene = geneIdentifier.Value,
-                    ResolvedGene = ensuredGene.Value
+                    RequestedGene = new GeneIdentifierWithType(geneType, geneIdentifier),
+                    ResolvedGene = new GeneIdentifierWithType(geneType, ensuredGene)
                 };
         }
 

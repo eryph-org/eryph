@@ -24,23 +24,55 @@ internal class BreedCatletSaga(IWorkflow workflowEngine)
         IHandleMessages<OperationTaskStatusEvent<PrepareParentGenomeCommand>>,
         IHandleMessages<OperationTaskStatusEvent<BreedCatletVMHostCommand>>
 {
+    protected override void CorrelateMessages(ICorrelationConfig<BreedCatletSagaData> config)
+    {
+        base.CorrelateMessages(config);
+
+        config.Correlate<OperationTaskStatusEvent<BreedCatletVMHostCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<PrepareParentGenomeCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<ResolveGeneSetsCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+    }
+
+    protected override Task Initiated(BreedCatletCommand message)
+    {
+        Data.AgentName = message.AgentName;
+        Data.CatletConfig = message.Config;
+
+        var parentId = Optional(Data.CatletConfig.Parent).Filter(notEmpty);
+        var command = parentId.Match<IHostAgentCommand>(
+            Some: pId => new PrepareParentGenomeCommand()
+            {
+                AgentName = Data.AgentName,
+                ParentName = pId,
+            },
+            None: () => new ResolveGeneSetsCommand()
+            {
+                AgentName = Data.AgentName,
+                Config = Data.CatletConfig,
+            });
+
+        return StartNewTask(command).AsTask();
+    }
+
     public Task Handle(OperationTaskStatusEvent<PrepareParentGenomeCommand> message)
     {
-        return FailOrRun<PrepareParentGenomeCommand, PrepareParentGenomeResponse>(message,
-            (response) =>
+        return FailOrRun(message, (PrepareParentGenomeResponse response) =>
+        {
+            // TODO Copied from CreateCatletSaga. Is Task.CompletedTask correct? Wouldn't this just cause the saga to never terminate?
+            if (Data.CatletConfig == null || Data.CatletConfig.Parent != response.RequestedParent)
+                return Task.CompletedTask;
+
+            Data.CatletConfig.Parent = response.ResolvedParent;
+
+            return StartNewTask(new ResolveGeneSetsCommand()
             {
-                // TODO Copied from CreateCatletSaga. Is Task.CompletedTask correct? Wouldn't this just cause the saga to never terminate?
-                if (Data.CatletConfig == null || Data.CatletConfig.Parent != response.RequestedParent)
-                    return Task.CompletedTask;
-
-                Data.CatletConfig.Parent = response.ResolvedParent;
-
-                return StartNewTask(new ResolveGeneSetsCommand()
-                {
-                    Config = Data.CatletConfig,
-                    AgentName = Data.AgentName,
-                }).AsTask();
-            });
+                Config = Data.CatletConfig,
+                AgentName = Data.AgentName,
+            }).AsTask();
+        });
     }
 
     public Task Handle(OperationTaskStatusEvent<ResolveGeneSetsCommand> message) =>
@@ -70,36 +102,5 @@ internal class BreedCatletSaga(IWorkflow workflowEngine)
     // TODO Breed parent config
     // TODO Breed child config
 
-    protected override void CorrelateMessages(ICorrelationConfig<BreedCatletSagaData> config)
-    {
-        base.CorrelateMessages(config);
 
-        config.Correlate<OperationTaskStatusEvent<BreedCatletVMHostCommand>>(
-            m => m.InitiatingTaskId, d => d.SagaTaskId);
-        config.Correlate<OperationTaskStatusEvent<PrepareParentGenomeCommand>>(
-            m => m.InitiatingTaskId, d => d.SagaTaskId);
-        config.Correlate<OperationTaskStatusEvent<ResolveGeneSetsCommand>>(
-            m => m.InitiatingTaskId, d => d.SagaTaskId);
-    }
-
-    protected override Task Initiated(BreedCatletCommand message)
-    {
-        Data.AgentName = message.AgentName;
-        Data.CatletConfig = message.Config;
-
-        var parentId = Optional(Data.CatletConfig.Parent).Filter(notEmpty);
-        var command =  parentId.Match<IHostAgentCommand>(
-            Some: pId => new PrepareParentGenomeCommand()
-            {
-                AgentName = Data.AgentName,
-                ParentName = pId,
-            },
-            None: () => new ResolveGeneSetsCommand()
-            {
-                AgentName = Data.AgentName,
-                Config = Data.CatletConfig,
-            });
-
-        return StartNewTask(command).AsTask();
-    }
 }
