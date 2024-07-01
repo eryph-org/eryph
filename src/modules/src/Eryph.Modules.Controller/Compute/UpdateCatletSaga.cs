@@ -134,7 +134,7 @@ namespace Eryph.Modules.Controller.Compute
 
             Data.State = UpdateVMState.ConfigBred;
 
-            var validation = CreatePrepareGeneCommands(Data.BredConfig!);
+            var validation = FindRequiredGenes(Data.BredConfig);
             if (validation.IsFail)
             {
                 await Fail(ErrorUtils.PrintError(Error.New(
@@ -143,8 +143,7 @@ namespace Eryph.Modules.Controller.Compute
                 return;
             }
 
-            var requiredGenes = validation.SuccessToSeq().Flatten()
-                .Filter(id => id.GeneIdentifier.GeneName != GeneName.New("catlet"));
+            var requiredGenes = validation.SuccessToSeq().Flatten();
             if (requiredGenes.IsEmpty)
             {
                 // no images required - go directly to catlet update
@@ -167,29 +166,10 @@ namespace Eryph.Modules.Controller.Compute
             }
         }
 
-        internal static Validation<Error, Seq<GeneIdentifierWithType>> CreatePrepareGeneCommands(
-            CatletConfig config) =>
-            append(
-                config.Drives.ToSeq()
-                    .Map(c => Optional(c.Source).Filter(s => s.StartsWith("gene:")))
-                    .Somes()
-                    .Map(s => from geneId in ParseSource(s)
-                              select new GeneIdentifierWithType(GeneType.Volume, geneId)),
-                config.Fodder.ToSeq()
-                    .Map(c => Optional(c.Source).Filter(notEmpty))
-                    .Somes()
-                    .Map(s => from geneId in ParseSource(s)
-                              select new GeneIdentifierWithType(GeneType.Fodder, geneId))
-            ).Sequence()
-            .Map(s => s.Distinct());
-
-
-        private static Validation<Error, GeneIdentifier> ParseSource(string source) =>
-            GeneIdentifier.NewValidation(source)
-                .ToEither()
-                .MapLeft(errors => Error.New($"The gene source '{source}' is invalid.", Error.Many(errors)))
-                .ToValidation();
-
+        internal static Validation<Error, Seq<GeneIdentifierWithType>> FindRequiredGenes(
+            CatletConfig catletConfig) =>
+            CatletGeneCollecting.CollectGenes(catletConfig)
+                .Map(l => l.Filter(c => c.GeneIdentifier.GeneName != GeneName.New("catlet")));
 
         public Task Handle(OperationTaskStatusEvent<PrepareGeneCommand> message)
         {
