@@ -64,7 +64,7 @@ namespace Eryph.Modules.VmHostAgent
                 from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
                 let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
                 from mergedConfig in config.BreedAndFeed(genepoolReader, metadata.ParentConfig)
-                    .Map(c => c.AppendSystemVariables(metadata))
+                    .Map(c => c.FeedSystemVariables(metadata))
                     .ToAsync()
                 from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(mergedConfig)
                     .ToEither()

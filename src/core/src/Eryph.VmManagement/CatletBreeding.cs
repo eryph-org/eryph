@@ -7,6 +7,7 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.GenePool.Model;
+using Eryph.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -33,28 +34,10 @@ public static class CatletBreeding
                 select parentGeneSets)
             .Sequence()
             .Map(r => r.ToSeq().Flatten())
-        from geneSets in CollectGeneSets(catletConfig, genepoolReader)
+        from geneSets in CatletGeneCollecting.CollectGenes(catletConfig)
+            .MapT(geneId => geneId.GeneIdentifier.GeneSet)
+            .Map(l => l.Distinct())
         select parentGeneSets.Append(geneSets);
-
-    public static Validation<Error, Seq<GeneSetIdentifier>> CollectGeneSets(
-        CatletConfig catletConfig,
-        ILocalGenepoolReader genepoolReader) =>
-        append(
-            catletConfig.Drives.ToSeq()
-                .Map(c => Optional(c.Source).Filter(s => s.StartsWith("gene:")))
-                .Somes()
-                .Map(s => ParseSource(s).Map(geneId => geneId.GeneSet)),
-            catletConfig.Fodder.ToSeq()
-                .Map(c => Optional(c.Source).Filter(notEmpty))
-                .Somes()
-                .Map(s => ParseSource(s).Map(geneId => geneId.GeneSet))
-        ).Sequence();
-    
-    private static Validation<Error, GeneIdentifier> ParseSource(string source) =>
-                    GeneIdentifier.NewValidation(source)
-                        .ToEither()
-                        .MapLeft(errors => Error.New($"The gene source '{source}' is invalid.", Error.Many(errors)))
-                        .ToValidation();
 
 
     public static Either<Error, CatletConfig> ResolveGenesetIdentifiers(
@@ -139,11 +122,6 @@ public static class CatletBreeding
         }).ToEither(ex => Error.New($"Could not deserialize catlet config {geneSetId}", Error.New(ex)))
         select config;
 
-    public static CatletConfig BreedAndResolve(
-        CatletConfig catletConfig,
-        Option<CatletConfig> parentConfig,
-        ILocalGenepoolReader genepoolReader) => throw new NotImplementedException();
-
     public static Either<Error, CatletConfig> BreedRecursively(
         GeneSetIdentifier geneSetId,
         LocalGenepoolReader genepoolReader) =>
@@ -192,10 +170,4 @@ public static class CatletBreeding
         from resolvedCatletConfig in ResolveGenesetIdentifiers(catletConfig, genepoolReader)
             .MapLeft(errors => Error.New("Could not resolve child genes during breeding.", Error.Many(errors)))
         select parentConfig.Breed(catletConfig, parentIdentifier.Value);
-
-    public static Either<Error, CatletConfig> Feed(
-        CatletConfig catletConfig,
-        ILocalGenepoolReader genepoolReader) =>
-        // TODO implement
-        throw new NotImplementedException();
 }

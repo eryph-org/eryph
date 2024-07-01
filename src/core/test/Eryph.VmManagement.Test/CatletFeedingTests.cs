@@ -12,10 +12,10 @@ using Xunit;
 
 namespace Eryph.VmManagement.Test;
 
-public class CatletConfigExtensionsTests
+public class CatletFeedingTests
 {
     [Fact]
-    public void AppendSystemVariables_SystemVariablesAreAppended()
+    public void FeedSystemVariables_SystemVariablesAreAppended()
     {
         var catletId = Guid.NewGuid();
         var vmId = Guid.NewGuid();
@@ -28,7 +28,7 @@ public class CatletConfigExtensionsTests
 
         var config = new CatletConfig();
 
-        var result = config.AppendSystemVariables(metadata);
+        var result = config.FeedSystemVariables(metadata);
 
         result.Variables.Should().SatisfyRespectively(
             variable =>
