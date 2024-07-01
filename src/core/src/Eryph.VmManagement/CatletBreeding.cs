@@ -43,6 +43,11 @@ public static class CatletBreeding
     public static Either<Error, CatletConfig> ResolveGenesetIdentifiers(
         CatletConfig catletConfig,
         ILocalGenepoolReader genepoolReader) =>
+        from resolvedParent in Optional(catletConfig.Parent)
+            .Filter(notEmpty)
+            .Map(GeneSetIdentifier.NewEither)
+            .BindT(geneSetId => ResolveGeneSetIdentifier(geneSetId, genepoolReader))
+            .Sequence()
         from resolvedDrives in catletConfig.Drives.ToSeq()
             .Map(driveConfig => ResolveGenesetIdentifiers(driveConfig, genepoolReader))
             .Sequence()
@@ -51,6 +56,7 @@ public static class CatletBreeding
             .Sequence()
         select catletConfig.CloneWith(c =>
         {
+            c.Parent = resolvedParent.Map(id => id.Value).IfNoneUnsafe((string)null);
             c.Drives = resolvedDrives.ToArray();
             c.Fodder = resolvedFodder.ToArray();
         });
@@ -110,7 +116,7 @@ public static class CatletBreeding
         )
         select result;
 
-    private static Either<Error, CatletConfig> ReadCatletConfig(
+    public static Either<Error, CatletConfig> ReadCatletConfig(
         GeneSetIdentifier geneSetId,
         ILocalGenepoolReader genepoolReader) =>
         from json in genepoolReader.ReadGeneContent(
@@ -170,4 +176,9 @@ public static class CatletBreeding
         from resolvedCatletConfig in ResolveGenesetIdentifiers(catletConfig, genepoolReader)
             .MapLeft(errors => Error.New("Could not resolve child genes during breeding.", Error.Many(errors)))
         select parentConfig.Breed(catletConfig, parentIdentifier.Value);
+
+    public static Either<Error, CatletConfig> Breed(
+        CatletConfig parentConfig,
+        CatletConfig catletConfig) =>
+        parentConfig.Breed(catletConfig, catletConfig.Parent);
 }
