@@ -19,10 +19,24 @@ public static class CatletGeneCollecting
 {
     public static Validation<Error, Seq<GeneIdentifierWithType>> CollectGenes(
         CatletConfig catletConfig) =>
-        append(catletConfig.Drives.ToSeq().Map(CollectGenes),
+        append(Optional(catletConfig.Parent).ToSeq().Map(CollectParent),
+                catletConfig.Drives.ToSeq().Map(CollectGenes),
                 catletConfig.Fodder.ToSeq().Map(CollectGenes))
             .Sequence()
             .Map(l => l.Somes().Distinct());
+
+    private static Validation<Error, Option<GeneIdentifierWithType>> CollectParent(
+        string parentId) =>
+        Optional(parentId)
+            .Filter(notEmpty)
+            .Map(id => GeneSetIdentifier.NewValidation(id)
+                .ToEither()
+                .MapLeft(errors => Error.New($"The parent source '{parentId}' is invalid.", Error.Many(errors)))
+                .ToValidation())
+            .MapT(geneSetId => new GeneIdentifierWithType(
+                GeneType.Catlet,
+                new GeneIdentifier(geneSetId, GeneName.New("catlet"))))
+            .Sequence();
 
     private static Validation<Error, Option<GeneIdentifierWithType>> CollectGenes(
         CatletDriveConfig driveConfig) =>
