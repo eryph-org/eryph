@@ -46,7 +46,7 @@ internal class ResolveGenesCommandHandler(
         from _ in geneSetIds.Map(geneSetId => geneProvider.ResolveGeneSet(
                 geneSetId, (_, _) => Task.FromResult(unit), default))
             .SequenceSerial()
-        from resolvedConfig in CatletBreeding.ResolveGenesetIdentifiers(catletConfig, genepoolReader)
+        from resolvedConfig in CatletGeneResolving.ResolveGenesetIdentifiers(catletConfig, genepoolReader)
             .ToAsync()
         select new ResolveGenesCommandResponse()
         {

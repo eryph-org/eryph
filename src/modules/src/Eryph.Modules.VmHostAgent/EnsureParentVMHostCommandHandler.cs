@@ -50,7 +50,7 @@ internal class EnsureParentVMHostCommandHandler(
             Error.New("The resolved gene is different. This code must only be called with resolved IDs. "
                 + $"Requested: {provideResult.RequestedGene}; Resolved: {provideResult.ResolvedGene}"))
         let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
-        from parentConfig in CatletBreeding.ReadCatletConfig(validParentId, genepoolReader)
+        from parentConfig in CatletGeneResolving.ReadCatletConfig(validParentId, genepoolReader)
             .ToAsync()
         select new EnsureParentVMHostCommandResponse()
         {

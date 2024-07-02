@@ -21,7 +21,7 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Test;
 
-public class CatletBreedingTests
+public class CatletGeneResolvingTests
 {
     private readonly Mock<ILocalGenepoolReader> _genepoolReaderMock = new();
 
@@ -51,7 +51,7 @@ public class CatletBreedingTests
         _genepoolReaderMock.SetupGenesetReference("acme/test-tools/latest", "acme/test-tools/1.0");
         _genepoolReaderMock.SetupGenesetReference("acme/test-tools/1.0", None);
 
-        var result = CatletBreeding.ResolveGenesetIdentifiers(config, _genepoolReaderMock.Object);
+        var result = CatletGeneResolving.ResolveGenesetIdentifiers(config, _genepoolReaderMock.Object);
 
         var resultConfig = result.Should().BeRight().Subject;
         resultConfig.Drives.Should().SatisfyRespectively(

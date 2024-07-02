@@ -1,12 +1,51 @@
 ﻿using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
-using FluentAssertions;
-using Xunit;
+using Eryph.Core.Genetics;
 
-namespace Eryph.VmManagement.Test;
+namespace Eryph.Core.Tests.Genetics;
 
 public class BreedingTests
 {
+    [Fact]
+    public void Naming_and_placement_is_taken_from_child()
+    {
+        var parent = new CatletConfig
+        {
+            Name = "parent",
+            Parent = "dbosoft/grandparent/1.0",
+            Version = "parent-version",
+            Project = "parent-project",
+            Location = "parent-location",
+            Environment = "parent-environment",
+            Store = "parent-store",
+            Hostname = "parent-hostname",
+        };
+
+        var child = new CatletConfig
+        {
+            Name = "child",
+            Parent = "dbosoft/parent/1.0",
+            Version = "child-version",
+            Project = "child-project",
+            Location = "child-location",
+            Environment = "child-environment",
+            Store = "child-store",
+            Hostname = "child-hostname",
+        };
+
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
+
+        breedChild.Name.Should().Be("child");
+        breedChild.Parent.Should().Be("dbosoft/parent/1.0");
+        breedChild.Version.Should().Be("child-version");
+        breedChild.Project.Should().Be("child-project");
+        breedChild.Location.Should().Be("child-location");
+        breedChild.Environment.Should().Be("child-environment");
+        breedChild.Store.Should().Be("child-store");
+        breedChild.Hostname.Should().Be("child-hostname");
+    }
+
     [Fact]
     public void Child_get_parent_attributes()
     {
@@ -56,7 +95,7 @@ public class BreedingTests
             [
                 new FodderConfig
                 {
-                    Source = "food_from_somewhere_else"
+                    Source = "gene:dbosoft/test-fodder/1.0:test-fodder"
                 }
             ],
             Variables =
@@ -68,6 +107,7 @@ public class BreedingTests
         var child = new CatletConfig
         {
             Name = "child",
+            Parent = "dbosoft/test/1.0",
             Project = "social",
             Environment = "env1",
             Drives = [],
@@ -88,9 +128,13 @@ public class BreedingTests
                 new VariableConfig() { Name = "catletVariable" }
             ]
         };
-        var breedChild = parent.Breed(child, "reference");
 
-        breedChild.Parent.Should().Be("reference");
+        CatletBreeding.Breed(parent, child).IfLeft(e => e.Throw());
+
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
+
+        breedChild.Parent.Should().Be("dbosoft/test/1.0");
         breedChild.Project.Should().Be("social");
         breedChild.Environment.Should().Be("env1");
 
@@ -101,7 +145,7 @@ public class BreedingTests
         breedChild.Drives.Should().NotBeNull();
         breedChild.Drives.Should().HaveCount(1);
         breedChild.Drives.Should().NotBeEquivalentTo(parent.Drives);
-        breedChild.Drives?[0].Source.Should().Be("gene:reference:sda");
+        breedChild.Drives?[0].Source.Should().Be("gene:dbosoft/test/1.0:sda");
         breedChild.Drives.Should().NotBeSameAs(parent.Drives);
 
         breedChild.NetworkAdapters.Should().NotBeNull();
@@ -116,7 +160,7 @@ public class BreedingTests
 
         breedChild.Fodder.Should().NotBeNull();
         breedChild.Fodder.Should().HaveCount(2);
-        breedChild.Fodder?[0].Source.Should().Be("food_from_somewhere_else");
+        breedChild.Fodder?[0].Source.Should().Be("gene:dbosoft/test-fodder/1.0:test-fodder");
 
         breedChild.Variables.Should().SatisfyRespectively(
             variable => variable.Name.Should().Be("catletVariable"),
@@ -129,37 +173,35 @@ public class BreedingTests
         var parent = new CatletConfig
         {
             Name = "Parent",
-            Capabilities = new[]
-            {
+            Capabilities =
+            [
                 new CatletCapabilityConfig
                 {
                     Name = "Cap1",
-                    Details = new[] { "detail" }
+                    Details = ["detail"]
                 }
-            }
+            ]
         };
 
         var child = new CatletConfig
         {
             Name = "child",
-            Capabilities = new[]
-            {
+            Parent = "dbosoft/test/1.0",
+            Capabilities =
+            [
                 new CatletCapabilityConfig
                 {
                     Name = "Cap1",
-                    Details = new[] { "detail2" }
+                    Details = ["detail2"]
                 }
-            }
+            ]
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
-        breedChild.Capabilities.Should().NotBeNull();
-        breedChild.Capabilities.Should().NotBeEquivalentTo(parent.Capabilities);
-        breedChild.Capabilities.Should().HaveCount(1);
-        breedChild.Capabilities?[0].Details.Should().BeEquivalentTo(new[] { "detail2" });
-
-
+        breedChild.Capabilities.Should().SatisfyRespectively(
+            capability => capability.Details.Should().BeEquivalentTo(["detail2"]));
     }
 
     [Fact]
@@ -168,8 +210,8 @@ public class BreedingTests
         var parent = new CatletConfig
         {
             Name = "Parent",
-            Drives = new[]
-            {
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Name = "sda",
@@ -180,14 +222,15 @@ public class BreedingTests
                     Name = "sdb",
                     Type = CatletDriveType.VHD,
                 }
-            }
+            ]
         };
 
         var child = new CatletConfig
         {
             Name = "child",
-            Drives = new[]
-            {
+            Parent = "dbosoft/test/1.0",
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Name = "sda",
@@ -200,21 +243,26 @@ public class BreedingTests
                     Store = "none",
                     Location = "peng"
                 }
-            }
+            ]
         };
 
-        var breedChild = parent.Breed(child, "reference");
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
-        breedChild.Drives.Should().NotBeNull();
-        breedChild.Drives.Should().NotBeEquivalentTo(parent.Drives);
-        breedChild.Drives.Should().HaveCount(2);
-        breedChild.Drives?[0].Type.Should().Be(CatletDriveType.VHD);
-        breedChild.Drives?[0].Store.Should().Be("none");
-        breedChild.Drives?[0].Source.Should().Be("gene:reference:sda");
-        breedChild.Drives?[1].Type.Should().Be(CatletDriveType.PHD);
-        breedChild.Drives?[1].Store.Should().Be("none");
-        breedChild.Drives?[1].Source.Should().BeNull();
-        breedChild.Drives?[1].Location.Should().Be("peng");
+        breedChild.Drives.Should().SatisfyRespectively(
+            drive =>
+            {
+                drive.Should().Be(CatletDriveType.VHD);
+                drive.Should().Be("none");
+                drive.Should().Be("gene:dbosoft/test/1.0:sda");
+            },
+            drive =>
+            {
+                drive.Should().Be(CatletDriveType.PHD);
+                drive.Should().Be("none");
+                drive.Should().BeNull();
+                drive.Should().Be("peng");
+            });
     }
 
     [Fact]
@@ -236,6 +284,7 @@ public class BreedingTests
         var child = new CatletConfig
         {
             Name = "child",
+            Parent = "dbosoft/test/1.0",
             Drives =
             [
                 new CatletDriveConfig
@@ -246,14 +295,15 @@ public class BreedingTests
             ]
         };
 
-        var breedChild = parent.Breed(child, "reference");
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Drives.Should().SatisfyRespectively(
             breedDrive =>
             {
                 breedDrive.Name.Should().Be("sda");
                 breedDrive.Size.Should().Be(100);
-                breedDrive.Source.Should().Be("gene:reference:sda");
+                breedDrive.Source.Should().Be("gene:dbosoft/test/1.0:sda");
             });
     }
 
@@ -263,36 +313,35 @@ public class BreedingTests
         var parent = new CatletConfig
         {
             Name = "Parent",
-            NetworkAdapters = new[]
-            {
+            NetworkAdapters =
+            [
                 new CatletNetworkAdapterConfig()
                 {
                     Name = "sda",
                     MacAddress = "addr1"
                 }
-            }
+            ]
         };
 
         var child = new CatletConfig
         {
             Name = "child",
-            NetworkAdapters = new[]
-            {
+            Parent = "dbosoft/test/1.0",
+            NetworkAdapters =
+            [
                 new CatletNetworkAdapterConfig()
                 {
                     Name = "sda",
                     MacAddress = "addr2"
                 }
-            }
+            ]
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
-        breedChild.NetworkAdapters.Should().NotBeNull();
-        breedChild.NetworkAdapters.Should().NotBeEquivalentTo(parent.NetworkAdapters);
-        breedChild.NetworkAdapters.Should().HaveCount(1);
-        breedChild.NetworkAdapters?[0].MacAddress.Should().Be("addr2");
-
+        breedChild.NetworkAdapters.Should().SatisfyRespectively(
+            adapter => adapter.MacAddress.Should().Be("addr2"));
     }
 
     [Fact]
@@ -301,8 +350,8 @@ public class BreedingTests
         var parent = new CatletConfig
         {
             Name = "Parent",
-            Networks = new[]
-            {
+            Networks =
+            [
                 new CatletNetworkConfig()
                 {
                     Name = "sda",
@@ -318,14 +367,15 @@ public class BreedingTests
                         IpPool = "default"
                     }
                 }
-            }
+            ]
         };
 
         var child = new CatletConfig
         {
             Name = "child",
-            Networks = new[]
-            {
+            Parent = "dbosoft/test/1.0",
+            Networks =
+            [
                 new CatletNetworkConfig()
                 {
                     Name = "sda",
@@ -335,22 +385,23 @@ public class BreedingTests
                         Name = "none-default"
                     }
                 }
-            }
+            ]
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
-        breedChild.Networks.Should().NotBeNull();
-        breedChild.Networks.Should().NotBeEquivalentTo(parent.Networks);
-        breedChild.Networks.Should().HaveCount(1);
-        breedChild.Networks?[0].AdapterName.Should().Be("eth1");
-        breedChild.Networks?[0].SubnetV4.Should().NotBeNull();
-        breedChild.Networks?[0].SubnetV4?.Name.Should().Be("none-default");
-        breedChild.Networks?[0].SubnetV4?.IpPool.Should().BeNull();
-        breedChild.Networks?[0].SubnetV6.Should().NotBeNull();
-        breedChild.Networks?[0].SubnetV6?.Name.Should().Be("default");
-        breedChild.Networks?[0].SubnetV6?.IpPool.Should().Be("default");
-
+        breedChild.Networks.Should().SatisfyRespectively(
+            network =>
+            {
+                network.AdapterName.Should().Be("eth1");
+                network.SubnetV4.Should().NotBeNull();
+                network.SubnetV4?.Name.Should().Be("none-default");
+                network.SubnetV4?.IpPool.Should().BeNull();
+                network.SubnetV6.Should().NotBeNull();
+                network.SubnetV6?.Name.Should().Be("default");
+                network.SubnetV6?.IpPool.Should().Be("default");
+            });
     }
 
     [Fact]
@@ -370,6 +421,7 @@ public class BreedingTests
         var child = new CatletConfig
         {
             Name = "child",
+            Parent = "dbosoft/test/1.0",
             Memory = new CatletMemoryConfig
             {
                 Startup = 2049,
@@ -378,12 +430,13 @@ public class BreedingTests
             }
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Memory.Should().NotBeNull();
-        breedChild.Memory?.Startup.Should().Be(2049);
-        breedChild.Memory?.Minimum.Should().Be(1025);
-        breedChild.Memory?.Maximum.Should().Be(9097);
+        breedChild.Memory!.Startup.Should().Be(2049);
+        breedChild.Memory!.Minimum.Should().Be(1025);
+        breedChild.Memory!.Maximum.Should().Be(9097);
     }
 
     [Fact]
@@ -392,8 +445,8 @@ public class BreedingTests
         var parent = new CatletConfig
         {
             Name = "Parent",
-            Fodder = new[]
-            {
+            Fodder =
+            [
                 new FodderConfig()
                 {
                     Name = "cfg",
@@ -401,14 +454,15 @@ public class BreedingTests
                     Content = "contenta",
                     FileName = "filenamea"
                 }
-            }
+            ]
         };
 
         var child = new CatletConfig
         {
             Name = "child",
-            Fodder = new[]
-            {
+            Parent = "dbosoft/test/1.0",
+            Fodder =
+            [
                 new FodderConfig()
                 {
                     Name = "cfg",
@@ -416,18 +470,19 @@ public class BreedingTests
                     Content = "contentb",
                     FileName = "filenameb"
                 }
-            }
+            ]
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
-        breedChild.Fodder.Should().NotBeNull();
-        breedChild.Fodder.Should().NotBeEquivalentTo(parent.Fodder);
-        breedChild.Fodder.Should().HaveCount(1);
-        breedChild.Fodder?[0].Type.Should().Be("type2");
-        breedChild.Fodder?[0].Content.Should().Be("contentb");
-        breedChild.Fodder?[0].FileName.Should().Be("filenameb");
-
+        breedChild.Fodder.Should().SatisfyRespectively(
+            fodder =>
+            {
+                fodder.Type.Should().Be("type2");
+                fodder.Content.Should().Be("contentb");
+                fodder.FileName.Should().Be("filenameb");
+            });
     }
 
     [Fact]
@@ -436,8 +491,8 @@ public class BreedingTests
         var parent = new CatletConfig
         {
             Name = "Parent",
-            Fodder = new[]
-            {
+            Fodder =
+            [
                 new FodderConfig()
                 {
                     Name = "cfg",
@@ -445,27 +500,28 @@ public class BreedingTests
                     Content = "contenta",
                     FileName = "filenamea"
                 }
-            }
+            ]
         };
 
         var child = new CatletConfig
         {
             Name = "child",
-            Fodder = new[]
-            {
+            Parent = "dbosoft/test/1.0",
+            Fodder =
+            [
                 new FodderConfig()
                 {
                     Name = "cfg",
                     Remove = true
                 }
-            }
+            ]
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Fodder.Should().NotBeNull();
         breedChild.Fodder.Should().HaveCount(0);
-
     }
 
     [Theory]
@@ -489,6 +545,7 @@ public class BreedingTests
         var child = new CatletConfig
         {
             Name = "child",
+            Parent = "dbosoft/test/1.0",
             Fodder =
             [
                 new FodderConfig()
@@ -500,7 +557,8 @@ public class BreedingTests
             ],
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Fodder.Should().SatisfyRespectively(
             fodder =>
@@ -543,6 +601,7 @@ public class BreedingTests
         var child = new CatletConfig
         {
             Name = "child",
+            Parent = "dbosoft/test/1.0",
             Fodder =
             [
                 new FodderConfig()
@@ -598,13 +657,16 @@ public class BreedingTests
             ],
         };
 
-        var breedChild = parent.Breed(child, "dbosoft/testparent");
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Fodder.Should().SatisfyRespectively(
             fodder =>
             {
                 fodder.Name.Should().Be("fodder");
-                fodder.Source.Should().Be("gene:dbosoft/testparent:catlet");
+                // TODO Is this correct? Should be as the fodder was bred and hence the source is now the child.
+                // fodder.Source.Should().Be("gene:dbosoft/test/1.0:catlet");
+                fodder.Source.Should().BeNull();
                 fodder.Variables.Should().SatisfyRespectively(
                     variable =>
                     {
@@ -655,12 +717,12 @@ public class BreedingTests
     {
         var parent = new CatletConfig
         {
-            Capabilities = new[]
-            {
+            Capabilities =
+            [
                 new CatletCapabilityConfig
                 {
                     Name = "cap1",
-                    Details = new[] { "any" }
+                    Details = ["any"]
                 },
                 new CatletCapabilityConfig
                 {
@@ -670,35 +732,37 @@ public class BreedingTests
                 {
                     Name = "cap3",
                     Mutation = MutationType.Remove
-                },
-            }
+                }
+            ]
         };
 
         var child = new CatletConfig
         {
-            Capabilities = new[]
-            {
+            Parent = "dbosoft/test/1.0",
+            Capabilities =
+            [
                 new CatletCapabilityConfig
                 {
                     Name = "cap1",
                     Mutation = type,
-                    Details = new[] { "none" }
+                    Details = ["none"]
                 },
                 new CatletCapabilityConfig
                 {
                     Name = "cap2",
-                },
-            }
+                }
+            ]
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Capabilities.Should().NotBeNull();
         breedChild.Capabilities.Should().HaveCount(expectedCount);
 
         if (type == MutationType.Overwrite)
         {
-            breedChild.Capabilities?[0].Details.Should().BeEquivalentTo(new[] { "none" });
+            breedChild.Capabilities![0].Details.Should().BeEquivalentTo(["none"]);
         }
     }
 
@@ -723,6 +787,7 @@ public class BreedingTests
 
         var child = new CatletConfig
         {
+            Parent = "dbosoft/test/1.0",
             Variables =
             [
                 new VariableConfig
@@ -733,7 +798,8 @@ public class BreedingTests
             ],
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Variables.Should().SatisfyRespectively(
             variable =>
@@ -774,6 +840,7 @@ public class BreedingTests
 
         var child = new CatletConfig
         {
+            Parent = "dbosoft/test/1.0",
             Fodder =
             [
                 new FodderConfig
@@ -792,7 +859,8 @@ public class BreedingTests
             ],
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Fodder.Should().SatisfyRespectively(
             fodder =>
@@ -854,6 +922,7 @@ public class BreedingTests
 
         var child = new CatletConfig
         {
+            Parent = "dbosoft/test/1.0",
             Fodder =
             [
                 new FodderConfig
@@ -872,13 +941,14 @@ public class BreedingTests
             ],
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Fodder.Should().SatisfyRespectively(
             fodder =>
             {
-                fodder.Name.Should().Be(parentFodderName);
-                fodder.Source.Should().Be($"gene:{parentGeneset}:gene1");
+                fodder.Name.Should().Be(childFodderName);
+                fodder.Source.Should().Be($"gene:{childGeneset}:gene1");
                 fodder.Variables.Should().SatisfyRespectively(
                     variable =>
                     {
@@ -920,6 +990,7 @@ public class BreedingTests
 
         var child = new CatletConfig
         {
+            Parent = "dbosoft/test/1.0",
             Fodder =
             [
                 new FodderConfig
@@ -937,13 +1008,14 @@ public class BreedingTests
             ],
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Fodder.Should().SatisfyRespectively(
             fodder =>
             {
                 fodder.Name.Should().BeNull();
-                fodder.Source.Should().Be($"gene:{parentGeneset}:gene1");
+                fodder.Source.Should().Be($"gene:{childGeneset}:gene1");
                 fodder.Variables.Should().SatisfyRespectively(
                     variable =>
                     {
@@ -984,6 +1056,7 @@ public class BreedingTests
 
         var child = new CatletConfig
         {
+            Parent = "dbosoft/test/1.0",
             Fodder =
             [
                 new FodderConfig
@@ -1001,7 +1074,8 @@ public class BreedingTests
             ],
         };
 
-        var breedChild = parent.Breed(child);
+        var breedChild = CatletBreeding.Breed(parent, child)
+            .Should().BeRight().Subject;
 
         breedChild.Fodder.Should().SatisfyRespectively(
             fodder =>

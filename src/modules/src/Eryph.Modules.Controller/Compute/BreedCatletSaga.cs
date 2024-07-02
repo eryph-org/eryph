@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
@@ -160,7 +161,8 @@ internal class BreedCatletSaga(IWorkflow workflowEngine)
             var bredParentConfig = BreedRecursively(parentConfig, resolvedParents)
                 .IfLeft(e => e.ToException().Rethrow<CatletConfig>());
 
-            var bredConfig = parentConfig.Breed(Data.ResolvedConfig, Data.ResolvedConfig.Parent);
+            var bredConfig = CatletBreeding.Breed(bredParentConfig, Data.ResolvedConfig)
+                .IfLeft(e => e.ToException().Rethrow<CatletConfig>());
 
             await Complete(new BreedCatletCommandResponse()
             {
