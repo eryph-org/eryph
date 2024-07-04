@@ -26,6 +26,7 @@ using Polly.Extensions.Http;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
+using Rebus.Serialization.Json;
 using Rebus.Subscriptions;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
@@ -117,6 +118,7 @@ namespace Eryph.Modules.VmHostAgent
 
             var localName = $"{QueueNames.VMHostAgent}.{Environment.MachineName}";
             container.ConfigureRebus(configurer => configurer
+                .Serialization(s => s.UseEryphSettings())
                 .Transport(t =>
                     serviceProvider.GetService<IRebusTransportConfigurer>()
                         .Configure(t, localName))

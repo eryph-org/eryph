@@ -94,6 +94,7 @@ namespace Eryph.Modules.Controller
             container.RegisterInstance(serviceProvider.GetRequiredService<ISysEnvironment>());
 
             container.ConfigureRebus(configurer => configurer
+                .Serialization(s => s.UseEryphSettings())
                 .Transport(t =>
                     serviceProvider.GetRequiredService<IRebusTransportConfigurer>()
                         .Configure(t, QueueNames.Controllers))

@@ -10,6 +10,7 @@ using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using Eryph.Rebus;
 using Eryph.StateDb;
 using Eryph.StateDb.Workflows;
 using JetBrains.Annotations;
@@ -119,6 +120,7 @@ namespace Eryph.Modules.AspNetCore
             container.ConfigureRebus(configurer =>
             {
                 return configurer
+                    .Serialization(s => s.UseEryphSettings())
                     .Transport(t =>
                         serviceProvider.GetRequiredService<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
                     .Options(x =>
