@@ -50,5 +50,10 @@ namespace Eryph.Core
             public static readonly string CatletId = "catletId";
             public static readonly string VmId = "vmId";
         }
+
+        public static class Limits
+        {
+            public static readonly int MaxCatletAncestors = 5;
+        }
     }
 }

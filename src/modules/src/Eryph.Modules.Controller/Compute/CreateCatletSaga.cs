@@ -3,7 +3,9 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Modules.Controller.DataServices;
@@ -12,6 +14,9 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using IdGen;
 using JetBrains.Annotations;
+using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
+using Microsoft.VisualBasic;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
@@ -25,7 +30,8 @@ namespace Eryph.Modules.Controller.Compute
         IHandleMessages<OperationTaskStatusEvent<PlaceCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<BreedCatletCommand>>
+        IHandleMessages<OperationTaskStatusEvent<BreedCatletCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<ResolveCatletConfigCommand>>
     {
         private readonly IIdGenerator<long> _idGenerator;
         private readonly IVirtualMachineDataService _vmDataService;
@@ -108,7 +114,7 @@ namespace Eryph.Modules.Controller.Compute
 
                 }
 
-                await StartNewTask(new BreedCatletCommand()
+                await StartNewTask(new ResolveCatletConfigCommand()
                 {
                     AgentName = r.AgentName,
                     Config = Data.Config,
@@ -142,6 +148,35 @@ namespace Eryph.Modules.Controller.Compute
                 //    });
                 //}
 
+            });
+        }
+
+        public Task Handle(OperationTaskStatusEvent<ResolveCatletConfigCommand> message)
+        {
+            if (Data.State >= CreateVMState.ImagePrepared)
+                return Task.CompletedTask;
+
+            return FailOrRun(message, async (ResolveCatletConfigCommandResponse response) =>
+            {
+                Data.State = CreateVMState.Resolved;
+                var breedingResult = CatletPedigree.Breed(
+                    Data.Config,
+                    response.ResolvedGeneSets.ToHashMap(),
+                    response.ParentConfigs.ToHashMap());
+
+                if (breedingResult.IsLeft)
+                {
+                    await Fail(ErrorUtils.PrintError(Error.New("Could not breed catlet.",
+                        Error.Many(breedingResult.LeftToSeq()))));
+                    return;
+                }
+
+                
+
+                Data.BredConfig = breedingResult.ValueUnsafe().Config;
+                Data.ParentConfig = breedingResult.ValueUnsafe().ParentConfig.IfNoneUnsafe((CatletConfig?)null);
+                
+                await CreateCatlet();
             });
         }
 
@@ -203,6 +238,8 @@ namespace Eryph.Modules.Controller.Compute
             config.Correlate<OperationTaskStatusEvent<BreedCatletCommand>>(
                 m => m.InitiatingTaskId, d => d.SagaTaskId);
             config.Correlate<OperationTaskStatusEvent<UpdateCatletCommand>>(
+                m => m.InitiatingTaskId, d => d.SagaTaskId);
+            config.Correlate<OperationTaskStatusEvent<ResolveCatletConfigCommand>>(
                 m => m.InitiatingTaskId, d => d.SagaTaskId);
         }
 
