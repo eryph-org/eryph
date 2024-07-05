@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
@@ -8,7 +7,7 @@ using LanguageExt;
 
 namespace Eryph.Modules.Controller.Compute;
 
-public class UpdateCatletSagaData : TaskWorkflowSagaData
+public class UpdateCatletSagaData
 {
     public UpdateVMState State { get; set; }
 

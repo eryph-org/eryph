@@ -81,37 +81,54 @@ public static class CatletBreeding
             });
 
     public static Either<Error, Seq<CatletDriveConfig>> BreedDrives(
-        Seq<CatletDriveConfig> parentDrives,
-        Seq<CatletDriveConfig> childDrives,
+        Seq<CatletDriveConfig> parentConfigs,
+        Seq<CatletDriveConfig> childConfigs,
         GeneSetIdentifier parentId) =>
-        BreedMutateable(parentDrives, childDrives,
+        BreedMutateable(parentConfigs, childConfigs,
             CatletDriveName.NewEither,
-            (parent, child) => new CatletDriveConfig()
-            {
-                Name = child.Name,
-                Mutation = child.Mutation,
+            (parent, child) =>
+                from _ in Right<Error, Unit>(unit)
+                let diskType = (Optional(child.Type) | Optional(parent.Type)).IfNone(CatletDriveType.VHD)
+                let source = Optional(child.Source) | Optional(parent.Source)
+                let size = Optional(child.Size).Filter(s => s != 0) | Optional(parent.Size)
+                let location = Optional(child.Location).Filter(notEmpty) | Optional(parent.Location)
+                let store = Optional(child.Store).Filter(notEmpty) | Optional(parent.Store)
+                from __ in guardnot(
+                        source.Bind(GeneIdentifier.NewOption).IsSome && diskType != CatletDriveType.VHD,
+                        Error.New("The disk source is a gene but the drive type is not a plain VHD."))
+                    .ToEither()
+                from adoptedSource in diskType is CatletDriveType.VHD && source.IsNone
+                    ? ConstructVolumeSource(child.Name, parentId).Map(id => id.Value)
+                    : Right<Error, string>(source.IfNoneUnsafe((string)null))
+                select new CatletDriveConfig()
+                {
+                    Name = child.Name,
+                    Mutation = child.Mutation,
 
-                Type = child.Type ?? parent.Type,
-                Location = child.Location ?? parent.Location,
-                Size = (child.Size ?? 0) != 0 ? child.Size : parent.Size,
-                Store = notEmpty(child.Store) ? child.Store : parent.Store,
-                Source = (Optional(child.Source).Filter(notEmpty) | Optional(parent.Source).Filter(notEmpty))
-                    .Filter(_ =>
-                        (Optional(child.Type) | Optional(parent.Type) | CatletDriveType.VHD) != CatletDriveType.VHD)
-                    .IfNoneUnsafe((string)null)
-            },
+                    Type = diskType,
+                    Location = location.IfNoneUnsafe((string)null),
+                    Size = size.Map(s => (int?)s).IfNoneUnsafe((int?)null),
+                    Store = store.IfNoneUnsafe((string)null),
+                    Source = adoptedSource,
+                },
             child =>
                 from adoptedSource in Optional(child.Source).Filter(notEmpty).Match(
                     Some: s => s,
-                    None: () =>
-                        from geneName in GeneName.NewEither(child.Name)
-                        select new GeneIdentifier(parentId, geneName).Value)
+                    None: () => ConstructVolumeSource(child.Name, parentId).Map(id => id.Value))
                 select child.CloneWith(c => c.Source = adoptedSource));
 
+    private static Either<Error, GeneIdentifier> ConstructVolumeSource(
+        string diskName,
+        GeneSetIdentifier parentId) =>
+        from geneName in GeneName.NewEither(diskName)
+            .MapLeft(e => Error.New(
+                $"Could not construct volume source for the disk name '{diskName}'.", e))
+        select new GeneIdentifier(parentId, geneName);
+
     public static Either<Error, Seq<CatletNetworkAdapterConfig>> BreedNetworkAdapters(
-        Seq<CatletNetworkAdapterConfig> parentDrives,
-        Seq<CatletNetworkAdapterConfig> childDrives) =>
-        BreedMutateable(parentDrives, childDrives,
+        Seq<CatletNetworkAdapterConfig> parentConfigs,
+        Seq<CatletNetworkAdapterConfig> childConfigs) =>
+        BreedMutateable(parentConfigs, childConfigs,
             CatletNetworkAdapterName.NewEither,
             (parent, child) => new CatletNetworkAdapterConfig()
             {
@@ -123,9 +140,9 @@ public static class CatletBreeding
             child => child.Clone());
 
     public static Either<Error, Seq<CatletNetworkConfig>> BreedNetworks(
-        Seq<CatletNetworkConfig> parentDrives,
-        Seq<CatletNetworkConfig> childDrives) =>
-        BreedMutateable(parentDrives, childDrives,
+        Seq<CatletNetworkConfig> parentConfigs,
+        Seq<CatletNetworkConfig> childConfigs) =>
+        BreedMutateable(parentConfigs, childConfigs,
             EryphNetworkName.NewEither,
             (parent, child) => new CatletNetworkConfig()
             {
@@ -265,9 +282,9 @@ public static class CatletBreeding
     };
 
     public static Either<Error, Seq<CatletCapabilityConfig>> BreedCapabilities(
-        Seq<CatletCapabilityConfig> parentDrives,
-        Seq<CatletCapabilityConfig> childDrives) =>
-        BreedMutateable(parentDrives, childDrives,
+        Seq<CatletCapabilityConfig> parentConfigs,
+        Seq<CatletCapabilityConfig> childConfigs) =>
+        BreedMutateable(parentConfigs, childConfigs,
             CatletCapabilityName.NewEither,
             (parent, child) => new CatletCapabilityConfig()
             {
@@ -301,8 +318,7 @@ public static class CatletBreeding
             .Sequence()
         from childrenWithName in childConfigs
             .Map(c => from name in parseName(c.Name)
-                      from adoptedConfig in adopt(c)
-                      select new ConfigWithName<TConfig, TName>(name, adoptedConfig))
+                      select new ConfigWithName<TConfig, TName>(name, c))
             .Sequence()
         // Validate that there are no duplicate names as it would break the breeding.
         // Normally, these cases should have been caught by the validation earlier.
@@ -316,15 +332,18 @@ public static class CatletBreeding
             .Filter(p => childrenMap.Find(p.Name).Filter(c => c.Mutation is MutationType.Remove).IsNone)
             .Map(p => childrenMap.Find(p.Name).Match(
                     Some: c => Optional(c.Mutation).Filter(m => m == MutationType.Overwrite).Match(
-                            Some: _ => c,
+                            Some: _ => adopt(c.Clone()),
                             None: () => merge(p.Config, c)),
                     None: () => p.Config.Clone())
                 .Map(c => new ConfigWithName<TConfig, TName>(p.Name, c)))
             .Sequence()
         let mergedMap = merged.Map(v => (v.Name, v.Config)).ToHashMap()
-        let additional = childrenWithName
+        from additional in childrenWithName
             .Filter(c => c.Config.Mutation != MutationType.Remove)
             .Filter(c => mergedMap.Find(c.Name).IsNone)
+            .Map(c => from adoptedConfig in adopt(c.Config.Clone())
+                      select new ConfigWithName<TConfig, TName>(c.Name, adoptedConfig))
+            .Sequence()
         select merged.Concat(additional).Map(c => c.Config);
 
 
