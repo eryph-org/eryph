@@ -4,31 +4,27 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using Dbosoft.Functional.DataTypes;
 using Eryph.ConfigModel;
-using LanguageExt;
-using LanguageExt.TypeClasses;
 
 namespace Eryph.Rebus;
 
 public class EryphNameJsonConverter : JsonConverterFactory
 {
-    public override bool CanConvert(Type typeToConvert)
-    {
-        return typeToConvert.BaseType is not null
-            && typeToConvert.BaseType.IsGenericType
-            && typeToConvert.BaseType.GetGenericTypeDefinition() == typeof(EryphName<>);
-    }
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The logic only supports direct subclasses of <see cref="EryphName{T}"/>.
+    /// Making the logic more generic is complicated as <see cref="LanguageExt.NewType{NEWTYPE,A}"/>
+    /// uses complex generics.
+    /// </remarks>>
+    public override bool CanConvert(Type typeToConvert) =>
+        typeToConvert.BaseType is not null
+           && typeToConvert.BaseType.IsGenericType
+           && typeToConvert.BaseType.GetGenericTypeDefinition() == typeof(EryphName<>);
 
-    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
-    {
-        if (!CanConvert(typeToConvert))
-            throw new ArgumentException("The given type is not supported", nameof(typeToConvert));
-
-        return (JsonConverter)Activator.CreateInstance(
+    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options) =>
+        (JsonConverter)Activator.CreateInstance(
             typeof(EryphNameJsonConverter<>).MakeGenericType(typeToConvert));
-    }
+    
 }
 
 public class EryphNameJsonConverter<T> : JsonConverter<T> where T : EryphName<T>
