@@ -69,12 +69,13 @@ public static class ApiModuleFactoryExtensions
                 });
             });
 
-            container.RegisterInstance(new WorkflowOptions
-            {
-                DispatchMode = WorkflowEventDispatchMode.Publish,
-                EventDestination = QueueNames.Controllers,
-                OperationsDestination = QueueNames.Controllers,
-            });
+                container.RegisterInstance(new WorkflowOptions
+                {
+                    DispatchMode = WorkflowEventDispatchMode.Publish,
+                    EventDestination = QueueNames.Controllers,
+                    OperationsDestination = QueueNames.Controllers,
+                    JsonSerializerOptions = EryphJsonSerializerOptions.Default,
+                });
 
             container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
