@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
-using Eryph.GenePool.Model;
-using Eryph.Genetics;
+using Eryph.Core.Genetics;
 using LanguageExt;
 
 namespace Eryph.Modules.Controller.Compute;

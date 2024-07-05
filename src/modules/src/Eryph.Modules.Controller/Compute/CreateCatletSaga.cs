@@ -159,6 +159,7 @@ namespace Eryph.Modules.Controller.Compute
             return FailOrRun(message, async (ResolveCatletConfigCommandResponse response) =>
             {
                 Data.State = CreateVMState.Resolved;
+
                 var breedingResult = CatletPedigree.Breed(
                     Data.Config,
                     response.ResolvedGeneSets.ToHashMap(),
@@ -170,8 +171,6 @@ namespace Eryph.Modules.Controller.Compute
                         Error.Many(breedingResult.LeftToSeq()))));
                     return;
                 }
-
-                
 
                 Data.BredConfig = breedingResult.ValueUnsafe().Config;
                 Data.ParentConfig = breedingResult.ValueUnsafe().ParentConfig.IfNoneUnsafe((CatletConfig?)null);

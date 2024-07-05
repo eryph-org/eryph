@@ -2,9 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
-using Eryph.GenePool.Model;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Genes.Commands;
-using Eryph.Resources;
 using LanguageExt;
 using LanguageExt.Common;
 

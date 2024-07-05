@@ -2,7 +2,7 @@
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
-using Eryph.GenePool.Model;
+using Eryph.Core.Genetics;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using LanguageExt;

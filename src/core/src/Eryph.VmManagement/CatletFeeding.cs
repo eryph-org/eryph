@@ -7,7 +7,7 @@ using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Variables;
 using Eryph.Core;
-using Eryph.GenePool.Model;
+using Eryph.Core.Genetics;
 using Eryph.Resources.Machines;
 using LanguageExt;
 using LanguageExt.Common;

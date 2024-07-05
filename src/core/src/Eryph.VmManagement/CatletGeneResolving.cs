@@ -7,13 +7,10 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Core.Genetics;
-using Eryph.GenePool.Model;
-using Eryph.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
-using static LanguageExt.Seq;
 
 namespace Eryph.VmManagement;
 

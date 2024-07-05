@@ -1,5 +1,5 @@
 ﻿using Eryph.ConfigModel;
-using Eryph.GenePool.Model;
+using Eryph.Core.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 

@@ -1,19 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
-using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
-
 using static LanguageExt.Prelude;
 using static LanguageExt.Seq;
 
-
-namespace Eryph.Genetics;
+namespace Eryph.Core.Genetics;
 
 public static class CatletGeneCollecting
 {

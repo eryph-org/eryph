@@ -5,10 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel;
-using Eryph.ConfigModel.Catlets;
-using Eryph.ConfigModel.Json;
 using Eryph.Core;
-using Eryph.GenePool.Model;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.VmManagement;
@@ -18,6 +16,7 @@ using LanguageExt.Common;
 using Rebus.Handlers;
 
 using static LanguageExt.Prelude;
+using CatletGeneResolving = Eryph.VmManagement.CatletGeneResolving;
 
 namespace Eryph.Modules.VmHostAgent;
 

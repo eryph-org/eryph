@@ -3,8 +3,8 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Eryph.ConfigModel;
+using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
-using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
 

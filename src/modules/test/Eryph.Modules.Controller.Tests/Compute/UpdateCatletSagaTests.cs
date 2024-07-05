@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
-using Eryph.GenePool.Model;
+using Eryph.Core.Genetics;
 using Eryph.Modules.Controller.Compute;
 
 namespace Eryph.Modules.Controller.Tests.Compute;
