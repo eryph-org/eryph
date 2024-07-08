@@ -113,8 +113,8 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
                         from uResponse in optionalParentId.MatchAsync(
                             Some: async p =>
                             {
-                                await NewGenomeRequestTaskInternal(context with {ResolvedGenSets = 
-                                    context.ResolvedGenSets.Add(resolvedGene.GeneSet.Value)}, p);
+                                await NewGenomeRequestTaskInternal(innerContext with {ResolvedGenSets =
+                                    innerContext.ResolvedGenSets.Add(resolvedGene.GeneSet.Value)}, p);
                                 return Prelude.Right<Error, Unit>(Unit.Default);
                             },
                             None: async () =>
@@ -144,7 +144,7 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
                                     ResolvedParent = resolvedParent
                                 };
 
-                                await m.CompleteTask(context.Message, result);
+                                await m.CompleteTask(innerContext.Message, result);
                                 return Prelude.Right<Error, Unit>(Unit.Default);
                             }).ToAsync()
                         select Unit.Default)
