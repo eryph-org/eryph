@@ -14,21 +14,17 @@ public static class CatletBreeding
 {
     /// <summary>
     /// Breeds the <paramref name="parentConfig"/> with the <paramref name="childConfig"/>.
-    /// The <see cref="CatletConfig.Parent"/> of the <paramref name="childConfig"/>
-    /// must be the properly resolved identifier for the <paramref name="parentConfig"/>.
     /// </summary>
     public static Either<Error, CatletConfig> Breed(
         CatletConfig parentConfig,
         CatletConfig childConfig) =>
-        from parentId in GeneSetIdentifier.NewEither(childConfig.Parent)
-            .MapLeft(e => Error.New("The child must contain a valid parent during breeding.", e))
         from cpu in BreedCpu(parentConfig.Cpu, childConfig.Cpu)
         from memory in BreedMemory(parentConfig.Memory, childConfig.Memory)
-        from drives in BreedDrives(Seq(parentConfig.Drives), Seq(childConfig.Drives), parentId)
+        from drives in BreedDrives(Seq(parentConfig.Drives), Seq(childConfig.Drives))
         from networkAdapters in BreedNetworkAdapters(Seq(parentConfig.NetworkAdapters), Seq(childConfig.NetworkAdapters))
         from networks in BreedNetworks(Seq(parentConfig.Networks), Seq(childConfig.Networks))
         from variables in BreedVariables(Seq(parentConfig.Variables), Seq(childConfig.Variables))
-        from fodder in BreedFodder(Seq(parentConfig.Fodder), Seq(childConfig.Fodder), parentId)
+        from fodder in BreedFodder(Seq(parentConfig.Fodder), Seq(childConfig.Fodder))
         from capabilities in BreedCapabilities(Seq(parentConfig.Capabilities), Seq(childConfig.Capabilities))
         select new CatletConfig()
         {
@@ -76,8 +72,7 @@ public static class CatletBreeding
 
     public static Either<Error, Seq<CatletDriveConfig>> BreedDrives(
         Seq<CatletDriveConfig> parentConfigs,
-        Seq<CatletDriveConfig> childConfigs,
-        GeneSetIdentifier parentId) =>
+        Seq<CatletDriveConfig> childConfigs) =>
         BreedMutateable(parentConfigs, childConfigs,
             CatletDriveName.NewEither,
             (parent, child) =>
@@ -156,16 +151,20 @@ public static class CatletBreeding
             .Map(c => c with { Config = c.Config.Clone() })
         select merged.Concat(additional).Map(c => c.Config);
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// </remarks>
     public static Either<Error, Seq<FodderConfig>> BreedFodder(
-        Seq<FodderConfig> parentDrives,
-        Seq<FodderConfig> childDrives, 
-        GeneSetIdentifier parentId) =>
+        Seq<FodderConfig> parentConfigs,
+        Seq<FodderConfig> childConfigs) =>
         // TODO check fodder configs are unique
         // TODO check genesets are unique (not multiple tags per geneset)
-        from parentsWithKeys in parentDrives
+        from parentsWithKeys in parentConfigs
             .Map(FodderWithKey.Create)
             .Sequence()
-        from childrenWithKeys in childDrives
+        from childrenWithKeys in childConfigs
             .Map(FodderWithKey.Create)
             .Sequence()
         let childrenMap = childrenWithKeys.Map(v => (v.Key, v.Config)).ToHashMap()

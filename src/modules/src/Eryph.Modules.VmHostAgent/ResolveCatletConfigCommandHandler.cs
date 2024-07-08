@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -112,7 +113,7 @@ public class ResolveCatletConfigCommandHandler(
         from a in guard(provideResult.RequestedGene == provideResult.ResolvedGene,
             Error.New("The resolved gene is different. This code must only be called with resolved IDs. "
                       + $"Requested: {provideResult.RequestedGene}; Resolved: {provideResult.ResolvedGene}"))
-        from parentConfig in Eryph.VmManagement.CatletGeneResolving.ReadCatletConfig(resolvedParentId, genepoolReader).ToAsync()
+        from parentConfig in ReadCatletConfig(resolvedParentId, genepoolReader).ToAsync()
         from result in ResolveGeneSets(parentConfig, resolvedGeneSets, geneProvider)
         select (result, new ConfigWithId(parentConfig, resolvedParentId));
 
@@ -145,6 +146,19 @@ public class ResolveCatletConfigCommandHandler(
         IGeneProvider geneProvider) =>
         from resolved in geneProvider.ResolveGeneSet(geneSetId, (_, _) => Task.FromResult(unit), default)
         select resolved;
+
+
+    public static Either<Error, CatletConfig> ReadCatletConfig(
+        GeneSetIdentifier geneSetId,
+        ILocalGenepoolReader genepoolReader) =>
+        from json in genepoolReader.ReadGeneContent(
+            GeneType.Catlet, new GeneIdentifier(geneSetId, GeneName.New("catlet")))
+        from config in Try(() =>
+        {
+            var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);
+            return CatletConfigDictionaryConverter.Convert(configDictionary);
+        }).ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'", Error.New(ex)))
+        select config;
 
     private static Error CreateError(
         Seq<AncestorInfo> visitedAncestors,

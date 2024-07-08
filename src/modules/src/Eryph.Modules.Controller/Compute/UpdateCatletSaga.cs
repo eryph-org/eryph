@@ -233,9 +233,9 @@ internal class UpdateCatletSaga(
 
             await StartNewTask(new UpdateCatletConfigDriveCommand
             {
+                Config = Data.Data.BredConfig,
                 VMId = r.Inventory.VMId,
                 CatletId = Data.Data.CatletId,
-                CatletName = catlet.ValueUnsafe().Name,
                 MachineMetadata = r.MachineMetadata,
             });
         });

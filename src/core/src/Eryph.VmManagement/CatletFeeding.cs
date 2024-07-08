@@ -19,7 +19,7 @@ namespace Eryph.VmManagement;
 public static class CatletFeeding
 {
     public static CatletConfig FeedSystemVariables(
-        this CatletConfig config,
+        CatletConfig config,
         CatletMetadata catletMetadata) =>
         config.CloneWith(c =>
         {
@@ -45,63 +45,24 @@ public static class CatletFeeding
             ];
         });
 
-    public static Either<Error,CatletConfig> BreedAndFeed(
-        this CatletConfig machineConfig,
-        ILocalGenepoolReader genepoolReader,
-        Option<CatletConfig> optionalParentConfig)
-    {
-        var breedConfig = optionalParentConfig.Match(
-            None: machineConfig,
-            Some: parent => parent.Breed(machineConfig, machineConfig.Parent));
-
-
-        return Feed(breedConfig, genepoolReader);
-    }
-
     public static Either<Error, CatletConfig> Feed(
-        this CatletConfig catletConfig,
+        CatletConfig catletConfig,
         ILocalGenepoolReader genepoolReader) =>
-        from drives in catletConfig.Drives.ToSeq()
-                .Map(drive => ExpandDriveConfig(genepoolReader, drive))
-                .Sequence()
-                .Map(l => l.Flatten())
         from expandedFodder in ExpandFodderConfigs(genepoolReader, catletConfig.Fodder.ToSeq())
         let fedConfig = catletConfig.CloneWith(c =>
         {
-            c.Drives = drives.ToArray();
             c.Fodder = expandedFodder.ToArray();
         })
         select fedConfig;
-
-    private static Either<Error, Seq<CatletDriveConfig>> ExpandDriveConfig(
-        ILocalGenepoolReader genepoolReader, 
-        CatletDriveConfig drive)
-    {
-        if (string.IsNullOrEmpty(drive.Source) || !drive.Source.StartsWith("gene:"))
-            return Seq1(drive);
-
-        return
-            from geneIdentifier in GeneIdentifier.NewEither(drive.Source)
-            from resolvedIdentifier in ResolveGeneIdentifier(genepoolReader, geneIdentifier)
-            let newConfig = drive.Apply(c =>
-            {
-                c.Source = resolvedIdentifier.Value;
-                return c;
-            })
-            select Seq1(newConfig);
-    }
 
     private static Either<Error, FodderConfig[]> ExpandFodderConfigs(
         ILocalGenepoolReader genepoolReader,
         Seq<FodderConfig> fodder) =>
         from toRemove in fodder.Filter(f => f.Remove.GetValueOrDefault() && notEmpty(f.Source))
-            .Map(f => from geneId in GeneIdentifier.NewEither(f.Source)
-                from resolvedGeneId in ResolveGeneIdentifier(genepoolReader, geneId)
-                let updatedFodder = f.CloneWith(c =>
-                {
-                    c.Source = resolvedGeneId.Value;
-                })
-                from metadata in PrepareMetadata(updatedFodder)
+            .Map(f =>
+                from geneId in GeneIdentifier.NewEither(f.Source)
+                from _ in ValidateIsResolved(geneId, genepoolReader)
+                from metadata in PrepareMetadata(f.Clone())
                 select metadata)
             .Sequence()
         from expandedFodders in fodder
@@ -122,13 +83,10 @@ public static class CatletFeeding
             .FilterT(geneId => geneId.GeneName != GeneName.New("catlet"))
         from result in geneIdentifier.Match(
             Some: geneId =>
-                from resolvedIdentifier in ResolveGeneIdentifier(genepoolReader, geneId)
-                let newConfig = fodder.CloneWith(c =>
-                {
-                    c.Source = resolvedIdentifier.Value;
-                })
-                from expandedConfig in ExpandFodderConfigFromSource(genepoolReader, newConfig,
-                    toRemove.Filter(x => x.Source == resolvedIdentifier))
+                from _ in ValidateIsResolved(geneId, genepoolReader)
+                from expandedConfig in ExpandFodderConfigFromSource(genepoolReader,
+                    fodder.Clone(),
+                    toRemove.Filter(x => x.Source == geneId))
                 select expandedConfig
                     .Filter(x => !x.Remove.GetValueOrDefault())
                     .Map(f => f.CloneWith(r =>
@@ -226,42 +184,12 @@ public static class CatletFeeding
         Option<FodderName> Name,
         FodderConfig Config);
 
-    private static Either<Error, GeneIdentifier> ResolveGeneIdentifier(
-        ILocalGenepoolReader genepoolReader,
-        GeneIdentifier identifier)
-    {
-
-        var processedReferences = new List<string>();
-        var startIdentifier = identifier;
-
-        do
-        {
-            var genesetName = identifier.GeneSet.Value;
-
-            if (processedReferences.Contains(genesetName))
-            {
-                var referenceStack = string.Join(" -> ", processedReferences);
-                throw new InvalidDataException(
-                    $"Circular reference detected in geneset '{startIdentifier.Value}': {referenceStack}.");
-            }
-
-            processedReferences.Add(genesetName);
-
-            // found no way to make it work functional, so we have to extract the value from the option
-            // to see if it is a reference or not
-            var res = genepoolReader.GetGenesetReference(identifier.GeneSet).Map(o => o.Map(s =>
-            {
-                identifier = new GeneIdentifier(s, identifier.GeneName);
-                return true;
-            }).IfNone(false));
-
-            if(res.IsLeft)
-                return res.Map(_ => identifier);
-
-            var isReference = res.RightAsEnumerable().FirstOrDefault();
-            if(isReference) continue;
-
-            return identifier;
-        } while (true);
-    }
+    private static Either<Error, Unit> ValidateIsResolved(
+        GeneIdentifier geneId,
+        ILocalGenepoolReader genepoolReader) =>
+        from resolvedId in genepoolReader.GetGenesetReference(geneId.GeneSet)
+            .MapLeft(e => Error.New($"Could not access gene '{geneId}' in local genepool.", e))
+        from __ in guard(resolvedId.IsNone,
+            Error.New($"The gene '{geneId}' is an unresolved reference. This should not happen."))
+        select unit;
 }
