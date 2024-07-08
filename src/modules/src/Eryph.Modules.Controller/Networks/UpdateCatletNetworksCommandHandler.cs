@@ -109,7 +109,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
         let fixedMacAddress =
             command.Config.NetworkAdapters.Find(x => x.Name == networkConfig.AdapterName)
-                .Map(x => x.MacAddress)
+                .Bind(x => Prelude.Optional(x.MacAddress))
                 .IfNone("")
         let _ = UpdatePort(networkPort, command.CatletId, networkConfig.AdapterName, fixedMacAddress)
 
