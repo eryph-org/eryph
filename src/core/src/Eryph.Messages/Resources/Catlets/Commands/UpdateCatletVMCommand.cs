@@ -15,17 +15,14 @@ namespace Eryph.Messages.Resources.Catlets.Commands
 
         public Guid CatletId { get; set; }
 
-
         public long NewStorageId { get; set; }
 
         public CatletMetadata MachineMetadata { get; set; }
 
         public MachineNetworkSettings[] MachineNetworkSettings { get; set; }
 
-
         [PrivateIdentifier]
         public string AgentName { get; set; }
-
 
         public Resource Resource => new(ResourceType.Catlet, CatletId);
     }

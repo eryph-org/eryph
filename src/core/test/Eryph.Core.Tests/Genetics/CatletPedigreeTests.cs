@@ -20,6 +20,67 @@ public class CatletPedigreeTests
     private readonly GeneSetIdentifier _grandParentRefId = new("acme/acme-grand-parent/1.0");
 
     [Fact]
+    public void Breed_ChildUsesDriveGeneFromParent_ResolvedDriveSourceIsIncluded()
+    {
+        var parentConfig = new CatletConfig
+        {
+            Name = "parent",
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Name = "sda",
+                }
+            ]
+        };
+
+        var config = new CatletConfig
+        {
+            Name = "child",
+            Parent = _parentId.Value,
+        };
+
+        var geneSetMap = HashMap((_parentId, _parentId));
+        var ancestors = HashMap((_parentId, parentConfig));
+
+        var result = CatletPedigree.Breed(config, geneSetMap, ancestors);
+
+        result.Should().BeRight().Which.Config.Drives.Should().SatisfyRespectively(
+            drive => drive.Source.Should().Be("gene:acme/acme-parent/1.0:sda"));
+    }
+
+    [Fact]
+    public void Breed_ChildUsesFodderFromParent_ResolvedFodderSourceIsIncluded()
+    {
+        var parentConfig = new CatletConfig
+        {
+            Name = "parent",
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Name = "parent-fodder",
+                    Content = "parent fodder content",
+                }
+            ]
+        };
+
+        var config = new CatletConfig
+        {
+            Name = "test",
+            Parent = _parentId.Value,
+        };
+
+        var geneSetMap = HashMap((_parentId, _parentId));
+        var ancestors = HashMap((_parentId, parentConfig));
+
+        var result = CatletPedigree.Breed(config, geneSetMap, ancestors);
+
+        result.Should().BeRight().Which.Config.Fodder.Should().SatisfyRespectively(
+            drive => drive.Source.Should().Be("gene:acme/acme-parent/1.0:catlet"));
+    }
+
+    [Fact]
     public void Breed_PedigreeContainsCircle_ReturnsFail()
     {
         var parentConfig = new CatletConfig

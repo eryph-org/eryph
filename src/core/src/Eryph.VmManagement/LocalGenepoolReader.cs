@@ -22,9 +22,9 @@ public class LocalGenepoolReader(VmHostAgentConfiguration agentConfiguration)
         {
             var genesetManifestPath = Path.Combine(GetGeneSetPath(geneSetId), "geneset-tag.json");
             var manifest = JsonSerializer.Deserialize<JsonNode>(File.ReadAllText(genesetManifestPath));
-            return manifest["ref"]?.GetValue<string>();
+            return Optional(manifest["ref"]?.GetValue<string>());
         }).ToEither(ex => Error.New($"Could not read manifest of geneset '{geneSetId}' from local genepool.", ex))
-        from reference in Optional(genesetManifestValue)
+        from reference in genesetManifestValue
             .Filter(notEmpty)
             .Map(GeneSetIdentifier.NewEither)
             .Sequence()

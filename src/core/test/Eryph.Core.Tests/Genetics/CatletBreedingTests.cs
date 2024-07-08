@@ -4,7 +4,7 @@ using Eryph.Core.Genetics;
 
 namespace Eryph.Core.Tests.Genetics;
 
-public class BreedingTests
+public class CatletBreedingTests
 {
     [Fact]
     public void Naming_and_placement_is_taken_from_child()
@@ -1092,4 +1092,6 @@ public class BreedingTests
                     });
             });
     }
+
+    // TODO test duplicate entries fodder, drives, etc.
 }
