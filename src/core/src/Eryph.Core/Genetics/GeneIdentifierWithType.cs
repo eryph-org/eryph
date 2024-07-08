@@ -1,20 +1,8 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 
 namespace Eryph.Core.Genetics;
 
-public record GeneIdentifierWithType
+public record GeneIdentifierWithType(GeneType GeneType, GeneIdentifier GeneIdentifier)
 {
-    [SetsRequiredMembers]
-    public GeneIdentifierWithType(GeneType geneType, GeneIdentifier geneIdentifier)
-    {
-        GeneType = geneType;
-        GeneIdentifier = geneIdentifier;
-    }
-
-    public GeneIdentifierWithType() { }
-
-    public required GeneType GeneType { get; init; }
-
-    public required GeneIdentifier GeneIdentifier { get; init; }
+    public override string ToString() => $"{GeneType} {GeneIdentifier}";
 }

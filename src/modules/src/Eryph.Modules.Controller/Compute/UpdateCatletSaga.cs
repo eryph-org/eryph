@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
@@ -14,7 +13,6 @@ using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
-using Eryph.Resources.Machines;
 using Eryph.StateDb.Model;
 using IdGen;
 using JetBrains.Annotations;
@@ -24,7 +22,6 @@ using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using static LanguageExt.Prelude;
 
 using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
@@ -152,21 +149,27 @@ internal class UpdateCatletSaga(
         if (Data.Data.State >= UpdateVMState.GenesPrepared)
             return Task.CompletedTask;
 
-        return FailOrRun(message, (PrepareGeneResponse response) =>
+        return FailOrRun(message, async (PrepareGeneResponse response) =>
         {
-            Data.Data.RemovePendingGene(response.RequestedGene);
+            Data.Data.PendingGenes = Data.Data.PendingGenes
+                .Except([response.RequestedGene])
+                .ToList();
 
-            return Data.Data.HasPendingGenes() ? Task.CompletedTask : UpdateCatlet();
+            if (Data.Data.PendingGenes.Count > 0)
+                return;
+
+            await StartUpdateCatlet();
+            return;
         });
     }
 
-    private async Task UpdateCatlet()
+    private async Task StartUpdateCatlet()
     {
         Data.Data.State = UpdateVMState.GenesPrepared;
         await StartNewTask(new UpdateCatletNetworksCommand
         {
             CatletId = Data.Data.CatletId,
-            Config = Data.Data.Config,
+            Config = Data.Data.BredConfig,
             ProjectId = Data.Data.ProjectId
         });
     }
@@ -193,7 +196,7 @@ internal class UpdateCatletSaga(
             {
                 CatletId = Data.Data.CatletId,
                 VMId = catlet.ValueUnsafe().VMId,
-                Config = Data.Data.Config,
+                Config = Data.Data.BredConfig,
                 AgentName = Data.Data.AgentName,
                 NewStorageId = idGenerator.CreateId(),
                 MachineMetadata = metadata.ValueUnsafe(),
@@ -301,11 +304,11 @@ internal class UpdateCatletSaga(
             // no images required - go directly to catlet update
             Data.Data.State = UpdateVMState.GenesPrepared;
             Data.Data.PendingGenes = [];
-            await UpdateCatlet();
+            await StartUpdateCatlet();
             return;
         }
 
-        Data.Data.SetPendingGenes(requiredGenes);
+        Data.Data.PendingGenes = requiredGenes.ToList();
         var commands = requiredGenes.Map(id => new PrepareGeneCommand
         {
             AgentName = Data.Data.AgentName,

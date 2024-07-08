@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Serialization;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -97,9 +91,6 @@ public static class CatletBreeding
                         source.Bind(GeneIdentifier.NewOption).IsSome && diskType != CatletDriveType.VHD,
                         Error.New("The disk source is a gene but the drive type is not a plain VHD."))
                     .ToEither()
-                from adoptedSource in diskType is CatletDriveType.VHD && source.IsNone
-                    ? ConstructVolumeSource(child.Name, parentId).Map(id => id.Value)
-                    : Right<Error, string>(source.IfNoneUnsafe((string)null))
                 select new CatletDriveConfig()
                 {
                     Name = child.Name,
@@ -109,21 +100,8 @@ public static class CatletBreeding
                     Location = location.IfNoneUnsafe((string)null),
                     Size = size.Map(s => (int?)s).IfNoneUnsafe((int?)null),
                     Store = store.IfNoneUnsafe((string)null),
-                    Source = adoptedSource,
-                },
-            child =>
-                from adoptedSource in Optional(child.Source).Filter(notEmpty).Match(
-                    Some: s => s,
-                    None: () => ConstructVolumeSource(child.Name, parentId).Map(id => id.Value))
-                select child.CloneWith(c => c.Source = adoptedSource));
-
-    private static Either<Error, GeneIdentifier> ConstructVolumeSource(
-        string diskName,
-        GeneSetIdentifier parentId) =>
-        from geneName in GeneName.NewEither(diskName)
-            .MapLeft(e => Error.New(
-                $"Could not construct volume source for the disk name '{diskName}'.", e))
-        select new GeneIdentifier(parentId, geneName);
+                    Source = source.IfNoneUnsafe((string)null),
+                });
 
     public static Either<Error, Seq<CatletNetworkAdapterConfig>> BreedNetworkAdapters(
         Seq<CatletNetworkAdapterConfig> parentConfigs,
@@ -136,8 +114,7 @@ public static class CatletBreeding
                 Mutation = child.Mutation,
 
                 MacAddress = child.MacAddress ?? parent.MacAddress,
-            },
-            child => child.Clone());
+            });
 
     public static Either<Error, Seq<CatletNetworkConfig>> BreedNetworks(
         Seq<CatletNetworkConfig> parentConfigs,
@@ -152,8 +129,7 @@ public static class CatletBreeding
                 AdapterName = child.AdapterName ?? parent.AdapterName,
                 SubnetV4 = child.SubnetV4?.Clone() ?? parent.SubnetV4?.Clone(),
                 SubnetV6 = child.SubnetV6?.Clone() ?? parent.SubnetV6?.Clone(),
-            },
-            child => child.Clone());
+            });
 
     public static Either<Error, Seq<VariableConfig>> BreedVariables(
         Seq<VariableConfig> parentDrives,
@@ -187,15 +163,9 @@ public static class CatletBreeding
         // TODO check fodder configs are unique
         // TODO check genesets are unique (not multiple tags per geneset)
         from parentsWithKeys in parentDrives
-            .Map(parent => parent.CloneWith(c =>
-            {
-                c.Source = Optional(c.Source).Filter(notEmpty)
-                    .IfNone(() => new GeneIdentifier(parentId, GeneName.New("catlet")).Value);
-            }))
             .Map(FodderWithKey.Create)
             .Sequence()
         from childrenWithKeys in childDrives
-            .Map(child => child.Clone())
             .Map(FodderWithKey.Create)
             .Sequence()
         let childrenMap = childrenWithKeys.Map(v => (v.Key, v.Config)).ToHashMap()
@@ -211,6 +181,7 @@ public static class CatletBreeding
         let additional = childrenWithKeys
             .Filter(c => IsFodderGene(c.Key) || c.Config.Remove != true)
             .Filter(c => mergedMap.Find(c.Key).IsNone)
+            .Map(c => new FodderWithKey(c.Key, c.Config.Clone()))
         select merged.Concat(additional).Map(c => c.Config);
 
     private static bool IsFodderGene(FodderKey fodderKey) =>
@@ -290,8 +261,7 @@ public static class CatletBreeding
             {
                 Name = child.Name,
                 Details = child.Details?.ToArray() ?? parent.Details?.ToArray(),
-            },
-            child => child.Clone());
+            });
 
     private static Either<Error, Option<TConfig>> BreedOptional<TConfig>(
         Option<TConfig> parentConfig,
@@ -308,8 +278,7 @@ public static class CatletBreeding
         Seq<TConfig> parentConfigs,
         Seq<TConfig> childConfigs,
         Func<string, Either<Error, TName>> parseName,
-        Func<TConfig, TConfig, Either<Error, TConfig>> merge,
-        Func<TConfig, Either<Error, TConfig>> adopt)
+        Func<TConfig, TConfig, Either<Error, TConfig>> merge)
         where TConfig : IMutateableConfig<TConfig>
         where TName : EryphName<TName> =>
         from parentsWithName in parentConfigs
@@ -332,18 +301,16 @@ public static class CatletBreeding
             .Filter(p => childrenMap.Find(p.Name).Filter(c => c.Mutation is MutationType.Remove).IsNone)
             .Map(p => childrenMap.Find(p.Name).Match(
                     Some: c => Optional(c.Mutation).Filter(m => m == MutationType.Overwrite).Match(
-                            Some: _ => adopt(c.Clone()),
+                            Some: _ => c.Clone(),
                             None: () => merge(p.Config, c)),
                     None: () => p.Config.Clone())
                 .Map(c => new ConfigWithName<TConfig, TName>(p.Name, c)))
             .Sequence()
         let mergedMap = merged.Map(v => (v.Name, v.Config)).ToHashMap()
-        from additional in childrenWithName
+        let additional = childrenWithName
             .Filter(c => c.Config.Mutation != MutationType.Remove)
             .Filter(c => mergedMap.Find(c.Name).IsNone)
-            .Map(c => from adoptedConfig in adopt(c.Config.Clone())
-                      select new ConfigWithName<TConfig, TName>(c.Name, adoptedConfig))
-            .Sequence()
+            .Map(c => new ConfigWithName<TConfig, TName>(c.Name, c.Config.Clone()))
         select merged.Concat(additional).Map(c => c.Config);
 
 
