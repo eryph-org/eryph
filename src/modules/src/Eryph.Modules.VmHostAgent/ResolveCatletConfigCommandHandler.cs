@@ -24,6 +24,26 @@ namespace Eryph.Modules.VmHostAgent;
 using GeneSetMap = HashMap<GeneSetIdentifier, GeneSetIdentifier>;
 using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 
+/// <summary>
+/// This command handler resolves the ancestors and referenced gene sets
+/// of the included <see cref="ResolveCatletConfigCommand.Config"/>.
+/// The handler returns a <see cref="ResolveCatletConfigCommandResponse"/>
+/// with the resolved <see cref="AncestorInfo"/>s as well as the
+/// <see cref="CatletConfig"/>s of all ancestors.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This command handler performs all necessary resolving at once.
+/// This way, we limit the number of messages which we need to exchange
+/// with the VM host agent.
+/// </para>
+/// <para>
+/// The handler ensures that each <see cref="GeneSetIdentifier"/> is resolved
+/// exactly once. This both limits the amount of requests to the gene pool and
+/// also ensures that a gene set reference is consistently resolved to the same
+/// gene set.
+/// </para>
+/// </remarks>
 [UsedImplicitly]
 public class ResolveCatletConfigCommandHandler(
     ITaskMessaging messaging,
@@ -144,7 +164,7 @@ public class ResolveCatletConfigCommandHandler(
     private static EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
         GeneSetIdentifier geneSetId,
         IGeneProvider geneProvider) =>
-        from resolved in geneProvider.ResolveGeneSet(geneSetId, (_, _) => Task.FromResult(unit), default)
+        from resolved in geneProvider.ResolveGeneSet(geneSetId, default)
         select resolved;
 
 

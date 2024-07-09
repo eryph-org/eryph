@@ -137,112 +137,91 @@ public static class CatletBreeding
             .Map(c => from validName in VariableName.NewEither(c.Name)
                 select new ConfigWithName<VariableConfig, VariableName>(validName, c))
             .Sequence()
+        // Validate that there are no duplicate variable names as it would break the breeding.
+        // Normally, these cases should have been caught by the validation earlier.
+        from _ in ValidateDistinct(parentsWithNames)
+            .MapLeft(e => Error.New("Some variable names in the parent config are not unique.", e)) 
+        from __ in ValidateDistinct(childrenWithNames)
+            .MapLeft(e => Error.New("Some variable names in the child config are not unique.", e))
         let childrenMap = childrenWithNames.Map(v => (v.Name, v.Config)).ToHashMap()
         let merged = parentsWithNames
             .Map(p => childrenMap.Find(p.Name).Match(
                 // Merging a variable config is potentially problematic, e.g. the merge could
                 // remove the secret flag without the user realizing the variable's value is
                 // sensitive. Hence, a child variable always completely replaces the parent variable.
-                Some: c => new ConfigWithName<VariableConfig, VariableName>(p.Name, c.Clone()),
-                None: () => new ConfigWithName<VariableConfig, VariableName>(p.Name, p.Config.Clone())))
+                Some: c => p with { Config = c.Clone() },
+                None: () => p with { Config = p.Config.Clone() }))
         let mergedMap = merged.Map(v => (v.Name, v.Config)).ToHashMap()
         let additional = childrenWithNames
             .Filter(c => mergedMap.Find(c.Name).IsNone)
             .Map(c => c with { Config = c.Config.Clone() })
         select merged.Concat(additional).Map(c => c.Config);
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <remarks>
-    /// </remarks>
-    public static Either<Error, Seq<FodderConfig>> BreedFodder(
+    private static Either<Error, Seq<FodderConfig>> BreedFodder(
         Seq<FodderConfig> parentConfigs,
         Seq<FodderConfig> childConfigs) =>
-        // TODO check fodder configs are unique
-        // TODO check genesets are unique (not multiple tags per geneset)
         from parentsWithKeys in parentConfigs
             .Map(FodderWithKey.Create)
             .Sequence()
         from childrenWithKeys in childConfigs
             .Map(FodderWithKey.Create)
             .Sequence()
+        // Validate that there is no duplicate fodder as it would break the breeding.
+        // Normally, these cases should have been caught by the validation earlier.
+        from _ in ValidateDistinct(parentsWithKeys)
+            .MapLeft(e => Error.New("Some fodder in the parent config is not unique.", e))
+        from __ in ValidateDistinct(childrenWithKeys)
+            .MapLeft(e => Error.New("Some fodder in the child config is not unique.", e))
+        from ___ in FodderConfigValidations.ValidateNoMultipleTagsForGeneSet(
+            parentsWithKeys.Append(childrenWithKeys).Map(fwk => fwk.Key.Source).Somes())
+            .ToEither()
+            .MapLeft(errors => Error.New(
+                "The parent and child config use one or more gene sets with multiple tags.",
+                Error.Many(errors)))
         let childrenMap = childrenWithKeys.Map(v => (v.Key, v.Config)).ToHashMap()
-        from merged in parentsWithKeys
-            .Filter(p => IsFodderGene(p.Key) || p.Config.Remove != true)
-            .Filter(p => IsFodderGene(p.Key) || childrenMap.Find(p.Key).Filter(c => c.Remove == true).IsNone)
-            .Map(p => childrenMap.Find(p.Key).Match(
+        let merged = parentsWithKeys
+            .Filter(p => p.Key.Source.IsSome || !p.Config.Remove.GetValueOrDefault())
+            .Filter(p => p.Key.Source.IsSome || childrenMap.Find(p.Key).Filter(c => c.Remove.GetValueOrDefault()).IsNone)
+            .Map(p => p with
+            {
+                Config = childrenMap.Find(p.Key).Match(
                     Some: c => MergeFodder(p.Config, c),
                     None: () => p.Config.Clone())
-                .Map(cfg => new FodderWithKey(p.Key, cfg)))
-            .Sequence()
+            })
         let mergedMap = merged.Map(v => (v.Key, v.Config)).ToHashMap()
         let additional = childrenWithKeys
-            .Filter(c => IsFodderGene(c.Key) || c.Config.Remove != true)
+            .Filter(c => c.Key.Source.IsSome || !c.Config.Remove.GetValueOrDefault())
             .Filter(c => mergedMap.Find(c.Key).IsNone)
-            .Map(c => new FodderWithKey(c.Key, c.Config.Clone()))
+            .Map(c => c with { Config = c.Config.Clone() })
         select merged.Concat(additional).Map(c => c.Config);
 
-    private static bool IsFodderGene(FodderKey fodderKey) =>
-        fodderKey.Source.Filter(s => s.GeneName != GeneName.New("catlet")).IsSome;
-
-    private static Either<Error, FodderConfig> MergeFodder(FodderConfig parent, FodderConfig child) =>
-        new FodderConfig()
-        {
-            // Name and source should be the same for parent and child.
-            // Otherwise, we would not merge
-            Name = child.Name,
-            Source = child.Source,
-
-            Content = child.Content ?? parent.Content,
-            FileName = child.FileName ?? parent.FileName,
-            Remove = child.Remove ?? parent.Remove,
-            Secret = child.Secret ?? parent.Secret,
-            Type = child.Type ?? parent.Type,
-
-            // A parameterized fodder content is only useful with its corresponding
-            // variables. Hence, we take the variables from the fodder config which
-            // provides the content or the source.
-            Variables = child.Content is not null || child.Source is not null
-                ? child.Variables?.Select(x => x.Clone()).ToArray()
-                : parent.Variables?.Select(x => x.Clone()).ToArray(),
-        };
-
-    /// <summary>
-    /// This record is used to identify a fodder (reference) for
-    /// deduplication. It makes use of <see cref="FodderName"/>
-    /// and <see cref="GeneIdentifier"/> which handle the respective
-    /// normalization.
-    /// </summary>
-    private sealed record FodderKey
+    private static FodderConfig MergeFodder(FodderConfig parent, FodderConfig child) => new()
     {
-        private FodderKey() { }
-        
-        public Option<FodderName> Name { get; private init; }
+        // Name and source should be the same for parent and child.
+        // Otherwise, we would not merge
+        Name = child.Name,
+        Source = child.Source,
 
-        public Option<GeneIdentifier> Source { get; private init; }
+        Content = child.Content ?? parent.Content,
+        FileName = child.FileName ?? parent.FileName,
+        Remove = child.Remove ?? parent.Remove,
+        Secret = child.Secret ?? parent.Secret,
+        Type = child.Type ?? parent.Type,
 
-        public static Either<Error, FodderKey> Create(Option<string> name, Option<string> source) =>
-            from validName in name.Filter(notEmpty)
-                .Map(FodderName.NewEither)
-                .Sequence()
-            from validSource in source.Filter(notEmpty)
-                .Map(GeneIdentifier.NewEither)
-                .Sequence()
-            from _ in guardnot(validName.IsNone && validSource.IsNone,
-                Error.New("Found invalid fodder which neither name nor source."))
-            let fodderKey = new FodderKey
-            {
-                Name = validName,
-                Source = validSource,
-            }
-            // The breeding injects informational sources for fodder taken from
-            // the parent (which uses the gene name 'catlet'). These sources must
-            // be ignored during deduplication.
-            from __ in guardnot(!IsFodderGene(fodderKey) && validName.IsNone,
-                Error.New($"Found catlet fodder without name ({validSource.Map(s => s.Value).IfNone("")})"))
-            select IsFodderGene(fodderKey) ? fodderKey : new FodderKey { Name = fodderKey.Name };
-    }
+        // A parameterized fodder content is only useful with its corresponding
+        // variables. Hence, we take the variables from the fodder config which
+        // provides the content or the source.
+        Variables = child.Content is not null || child.Source is not null
+            ? child.Variables?.Select(x => x.Clone()).ToArray()
+            : parent.Variables?.Select(x => x.Clone()).ToArray(),
+    };
+
+    private static Either<Error, Unit> ValidateDistinct(
+        Seq<FodderWithKey> fodderWithKeys) =>
+        Validations.ValidateDistinct<FodderWithKey, FodderKey>(
+                fodderWithKeys, fwk => fwk.Key, "fodder")
+            .ToEither()
+            .MapLeft(Error.Many);
 
     private sealed record FodderWithKey(FodderKey Key, FodderConfig Config)
     {
@@ -280,22 +259,22 @@ public static class CatletBreeding
         Func<TConfig, TConfig, Either<Error, TConfig>> merge)
         where TConfig : IMutateableConfig<TConfig>
         where TName : EryphName<TName> =>
-        from parentsWithName in parentConfigs
+        from parentsWithNames in parentConfigs
             .Map(c => from name in parseName(c.Name)
                       select new ConfigWithName<TConfig, TName>(name, c))
             .Sequence()
-        from childrenWithName in childConfigs
+        from childrenWithNames in childConfigs
             .Map(c => from name in parseName(c.Name)
                       select new ConfigWithName<TConfig, TName>(name, c))
             .Sequence()
         // Validate that there are no duplicate names as it would break the breeding.
         // Normally, these cases should have been caught by the validation earlier.
-        from _ in ValidateDistinct(parentsWithName)
-            .MapLeft(e => Error.New("Some names in the parent config are not unique.", e))
-        from __ in ValidateDistinct(childrenWithName)
+        from _ in ValidateDistinct(parentsWithNames)
+            .MapLeft(e => Error.New("Some names in the parent config are not unique.", e)) 
+        from __ in ValidateDistinct(childrenWithNames)
             .MapLeft(e => Error.New("Some names in the child config are not unique.", e))
-        let childrenMap = childrenWithName.Map(v => (v.Name, v.Config)).ToHashMap()
-        from merged in parentsWithName
+        let childrenMap = childrenWithNames.Map(v => (v.Name, v.Config)).ToHashMap()
+        from merged in parentsWithNames
             .Filter(p => p.Config.Mutation != MutationType.Remove)
             .Filter(p => childrenMap.Find(p.Name).Filter(c => c.Mutation is MutationType.Remove).IsNone)
             .Map(p => childrenMap.Find(p.Name).Match(
@@ -303,15 +282,14 @@ public static class CatletBreeding
                             Some: _ => c.Clone(),
                             None: () => merge(p.Config, c)),
                     None: () => p.Config.Clone())
-                .Map(c => new ConfigWithName<TConfig, TName>(p.Name, c)))
+                .Map(c => p with { Config = c }))
             .Sequence()
         let mergedMap = merged.Map(v => (v.Name, v.Config)).ToHashMap()
-        let additional = childrenWithName
+        let additional = childrenWithNames
             .Filter(c => c.Config.Mutation != MutationType.Remove)
             .Filter(c => mergedMap.Find(c.Name).IsNone)
-            .Map(c => new ConfigWithName<TConfig, TName>(c.Name, c.Config.Clone()))
+            .Map(c => c with { Config = c.Config.Clone() })
         select merged.Concat(additional).Map(c => c.Config);
-
 
     private sealed record ConfigWithName<TConfig, TName>(TName Name, TConfig Config)
         where TName : EryphName<TName>;

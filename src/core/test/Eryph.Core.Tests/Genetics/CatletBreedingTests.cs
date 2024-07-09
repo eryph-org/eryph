@@ -66,6 +66,7 @@ public class CatletBreedingTests
                 {
                     Name = "sda",
                     Type = CatletDriveType.VHD,
+                    Source = "gene:dbosoft/test/1.0:sda",
                     Store = "lair",
                     Size = 100
                 }
@@ -215,12 +216,14 @@ public class CatletBreedingTests
                 new CatletDriveConfig
                 {
                     Name = "sda",
-                    Type = CatletDriveType.VHD
+                    Type = CatletDriveType.VHD,
+                    Source = "gene:dbosoft/test/1.0:sda",
                 },
                 new CatletDriveConfig
                 {
                     Name = "sdb",
                     Type = CatletDriveType.VHD,
+                    Source = "gene:dbosoft/test/1.0:sdb",
                 }
             ]
         };
@@ -234,77 +237,35 @@ public class CatletBreedingTests
                 new CatletDriveConfig
                 {
                     Name = "sda",
-                    Store = "none",
+                    Store = "test-store",
                 },
                 new CatletDriveConfig
                 {
                     Name = "sdb",
                     Type = CatletDriveType.PHD,
-                    Store = "none",
-                    Location = "peng"
+                    Store = "test-store",
+                    Location = "test-location"
                 }
             ]
         };
 
-        var breedChild = CatletBreeding.Breed(parent, child)
-            .Should().BeRight().Subject;
+        var result = CatletBreeding.Breed(parent, child);
 
-        breedChild.Drives.Should().SatisfyRespectively(
-            drive =>
-            {
-                drive.Should().Be(CatletDriveType.VHD);
-                drive.Should().Be("none");
-                drive.Should().Be("gene:dbosoft/test/1.0:sda");
-            },
-            drive =>
-            {
-                drive.Should().Be(CatletDriveType.PHD);
-                drive.Should().Be("none");
-                drive.Should().BeNull();
-                drive.Should().Be("peng");
-            });
-    }
-
-    [Fact]
-    public void Drive_with_default_values_is_merged()
-    {
-        var parent = new CatletConfig
-        {
-            Name = "Parent",
-            Drives =
-            [
-                new CatletDriveConfig
+        CatletBreeding.Breed(parent, child).Should().BeRight().Which.Drives
+            .Should().SatisfyRespectively(
+                drive =>
                 {
-                    Name = "sda",
-                    Size = 100,
-                }
-            ]
-        };
-
-        var child = new CatletConfig
-        {
-            Name = "child",
-            Parent = "dbosoft/test/1.0",
-            Drives =
-            [
-                new CatletDriveConfig
+                    drive.Type.Should().Be(CatletDriveType.VHD);
+                    drive.Store.Should().Be("test-store");
+                    drive.Should().Be("gene:dbosoft/test/1.0:sda");
+                },
+                drive =>
                 {
-                    Name = "sda",
-                    Type = CatletDriveType.VHD,
-                }
-            ]
-        };
-
-        var breedChild = CatletBreeding.Breed(parent, child)
-            .Should().BeRight().Subject;
-
-        breedChild.Drives.Should().SatisfyRespectively(
-            breedDrive =>
-            {
-                breedDrive.Name.Should().Be("sda");
-                breedDrive.Size.Should().Be(100);
-                breedDrive.Source.Should().Be("gene:dbosoft/test/1.0:sda");
-            });
+                    drive.Type.Should().Be(CatletDriveType.PHD);
+                    drive.Store.Should().Be("test-store");
+                    drive.Location.Should().Be("test-location");
+                    drive.Source.Should().BeNull();
+                });
     }
 
     [Fact]

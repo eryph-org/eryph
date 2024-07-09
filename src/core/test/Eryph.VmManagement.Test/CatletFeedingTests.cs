@@ -33,7 +33,7 @@ public class CatletFeedingTests
             [
                 new FodderConfig()
                 {
-                    Source = $"gene:acme/acme-tools/1.0:test-fodder",
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
                 },
                 new FodderConfig()
                 {
@@ -195,6 +195,107 @@ public class CatletFeedingTests
                 fodder.Content.Should().Be("catlet food content");
                 fodder.Source.Should().BeNull();
             });
+    }
+
+    [Fact]
+    public void Feed_RemoveAndReAddFood_LastFoodIsUsed()
+    {
+        var config = new CatletConfig
+        {
+            Name = "test",
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
+                    Variables =
+                    [
+                        new VariableConfig()
+                        {
+                            Name = "foodVariable",
+                            Value = "first value",
+                        }
+                    ]
+                },
+                new FodderConfig()
+                {
+                    Name = "food1",
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
+                    Remove = true,
+                },
+                new FodderConfig()
+                {
+                    Name = "food1",
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
+                    Variables =
+                    [
+                        new VariableConfig()
+                        {
+                            Name = "foodVariable",
+                            Value = "second value",
+                        }
+                    ]
+                },
+            ],
+        };
+
+        ArrangeFood();
+
+        var result = CatletFeeding.Feed(config, _genepoolReaderMock.Object);
+
+        result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(
+            fodder =>
+            {
+                fodder.Name.Should().Be("food2");
+                fodder.Content.Should().Be("food 2 content");
+                fodder.Source.Should().Be("gene:acme/acme-tools/1.0:test-fodder");
+                fodder.Variables.Should().SatisfyRespectively(
+                    variable =>
+                    {
+                        variable.Name.Should().Be("foodVariable");
+                        variable.Value.Should().Be("second value");
+                    });
+            },
+            fodder =>
+            {
+                fodder.Name.Should().Be("food1");
+                fodder.Content.Should().Be("food 1 content");
+                fodder.Source.Should().BeNull();
+                fodder.Variables.Should().SatisfyRespectively(
+                    variable =>
+                    {
+                        variable.Name.Should().Be("foodVariable");
+                        variable.Value.Should().Be("first value");
+                    });
+            });
+    }
+
+    [Fact]
+    public void Feed_DuplicateFoodAfterFeeding_ReturnError()
+    {
+        var config = new CatletConfig
+        {
+            Name = "test",
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
+                },
+                new FodderConfig()
+                {
+                    Name = "food1",
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
+                },
+            ],
+        };
+
+        ArrangeFood();
+
+        var result = CatletFeeding.Feed(config, _genepoolReaderMock.Object);
+
+        var error = result.Should().BeLeft().Subject;
+        error.Message.Should().Be("Found duplicate fodder after feeding");
     }
 
     private void ArrangeFood()
@@ -376,10 +477,8 @@ public class CatletFeedingTests
             ],
         };
 
-        _genepoolReaderMock.SetupGenesetReferences(new Dictionary<string, string>
-        {
-            ["acme/acme-tools/latest"] = "acme/acme-tools/1.0",
-        });
+        _genepoolReaderMock.SetupGenesetReferences(
+            ("acme/acme-tools/latest", "acme/acme-tools/1.0"));
 
         var result = CatletFeeding.Feed(config, _genepoolReaderMock.Object);
 
@@ -402,7 +501,7 @@ public class CatletFeedingTests
             ],
         };
 
-        _genepoolReaderMock.SetupGenesetReferences([]);
+        _genepoolReaderMock.SetupGenesetReferences();
         _genepoolReaderMock.Setup(m => m.ReadGeneContent(
             GeneType.Fodder, GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder")))
             .Returns(Error.New("Gene 'gene:acme/acme-tools/1.0:test-fodder' does not exist in local genepool."));

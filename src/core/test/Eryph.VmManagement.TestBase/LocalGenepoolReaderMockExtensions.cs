@@ -1,4 +1,5 @@
 ﻿using Eryph.ConfigModel;
+using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.FodderGenes;
 using Eryph.ConfigModel.Json;
 using Eryph.Core.Genetics;
@@ -14,16 +15,28 @@ public static class LocalGenepoolReaderMockExtensions
 {
     public static void SetupGenesetReferences(
         this Mock<ILocalGenepoolReader> mock,
-        Dictionary<string, string> references)
+        params (string Source, string Target)[] references)
     {
-        var parsedReferences = references
-            .ToDictionary(kv => GeneSetIdentifier.New(kv.Key), kv => GeneSetIdentifier.New(kv.Value));
+        var map = references.ToSeq()
+            .Map(r => (GeneSetIdentifier.New(r.Source), GeneSetIdentifier.New(r.Target)))
+            .ToHashMap();
 
         mock.Setup(m => m.GetGenesetReference(It.IsAny<GeneSetIdentifier>()))
             .Returns((GeneSetIdentifier source) =>
-                parsedReferences.TryGetValue(source, out var target)
-                    ? Right<Error, Option<GeneSetIdentifier>>(target)
-                    : Right<Error, Option<GeneSetIdentifier>>(None));
+                Right<Error, Option<GeneSetIdentifier>>(map.Find(source)));
+    }
+
+    public static void SetupCatletGene(
+        this Mock<ILocalGenepoolReader> mock,
+        string geneSetIdentifier,
+        CatletConfig catletConfig)
+    {
+        var validGeneSetId = GeneSetIdentifier.New(geneSetIdentifier);
+        var validGeneId = new GeneIdentifier(validGeneSetId, GeneName.New("catlet"));
+        var json = ConfigModelJsonSerializer.Serialize(catletConfig);
+
+        mock.Setup(m => m.ReadGeneContent(GeneType.Catlet, validGeneId))
+            .Returns(Right<Error, string>(json));
     }
 
     public static void SetupFodderGene(
