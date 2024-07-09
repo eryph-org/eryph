@@ -43,7 +43,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
             return from hostSettings in _hostSettingsProvider.GetHostSettings()
                 from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
                 let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
-                from genesetInfo in ProvideGeneSet(genePoolPath, geneIdentifier.GeneSet, reportProgress, Array.Empty<string>(), cancel)
+                from genesetInfo in ProvideGeneSet(genePoolPath, geneIdentifier.GeneSet, Array.Empty<string>(), cancel)
                     .Map(i =>
                     {
                         if (i.Id != geneIdentifier.GeneSet)
@@ -62,28 +62,13 @@ namespace Eryph.Modules.VmHostAgent.Genetics
 
         public EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
             GeneSetIdentifier genesetIdentifier,
-            Func<string, int, Task<Unit>> reportProgress,
             CancellationToken cancellationToken) =>
             from hostSettings in _hostSettingsProvider.GetHostSettings()
             from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
             let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
-            from genesetInfo in ProvideGeneSet(genePoolPath, genesetIdentifier, reportProgress, Array.Empty<string>(),
+            from genesetInfo in ProvideGeneSet(genePoolPath, genesetIdentifier, Array.Empty<string>(),
                 cancellationToken)
             select genesetInfo.Id;
-
-        public EitherAsync<Error, Option<string>> GetGeneSetParent(
-            GeneSetIdentifier genesetIdentifier,
-            Func<string, int, Task<Unit>> reportProgress,
-            CancellationToken cancellationToken)
-        {
-            return from hostSettings in _hostSettingsProvider.GetHostSettings()
-                   from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-                   let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
-                   from genesetInfo in ProvideGeneSet(genePoolPath, genesetIdentifier, reportProgress,Array.Empty<string>(), cancellationToken)
-                   select string.IsNullOrWhiteSpace(genesetInfo.MetaData.Parent) 
-                       ? Option<string>.None 
-                       : Option<string>.Some(genesetInfo.MetaData.Parent);
-        }
 
         private static EitherAsync<Error, string> GetGeneHash(GeneSetInfo genesetInfo, GeneType geneType, GeneIdentifier geneId)
         {
@@ -106,7 +91,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
 
 
         private EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier geneSetIdentifier,
-            Func<string, int, Task<Unit>> reportProgress, IEnumerable<string> previousRefs, CancellationToken cancel)
+            IEnumerable<string> previousRefs, CancellationToken cancel)
         {
 
             var geneSetRefs = previousRefs as string[] ?? previousRefs.ToArray();
@@ -148,7 +133,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
 
                 //resolve geneset reference
                 return await GeneSetIdentifier.NewEither(geneSetInfo.MetaData.Reference)
-                    .BindAsync(aliasId => ProvideGeneSet(path, aliasId, reportProgress,
+                    .BindAsync(aliasId => ProvideGeneSet(path, aliasId,
                         geneSetRefs.Append(new[] { geneSetIdentifier.Value }), cancel).ToEither());
 
             }
