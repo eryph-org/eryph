@@ -111,19 +111,23 @@ public static class ApiModuleFactoryExtensions
 
         var workflowOptions = container.GetInstance<WorkflowOptions>();
 
-        return transportMessages
-            .Map(m => m.ToTransportMessage())
-            // Unfortunately, we cannot get the ISerializer of Rebus.
-            // Luckily, deserializing the JSON with default settings just works.
-            .Map(m => JsonSerializer.Deserialize(m.Body, Type.GetType(m.Headers["rbs2-msg-type"])!))
-            .OfType<CreateOperationCommand>()
-            .Map(c => JsonSerializer.Deserialize(
-                c.TaskMessage!.CommandData!,
-                Type.GetType(c.TaskMessage.CommandType!)!,
-                workflowOptions.JsonSerializerOptions))
-            .OfType<T>()
-            .ToList();
-    }
+            return transportMessages
+                .Map(m => m.ToTransportMessage())
+                // Unfortunately, we cannot get the ISerializer of Rebus.
+                // Luckily, we can just use the JSON serializer with the same
+                // settings which we passed to Rebus.
+                .Map(m => JsonSerializer.Deserialize(
+                    m.Body,
+                    Type.GetType(m.Headers["rbs2-msg-type"])!,
+                    EryphJsonSerializerOptions.Default))
+                .OfType<CreateOperationCommand>()
+                .Map(c => JsonSerializer.Deserialize(
+                    c.TaskMessage!.CommandData!,
+                    Type.GetType(c.TaskMessage.CommandType!)!,
+                    workflowOptions.JsonSerializerOptions))
+                .OfType<T>()
+                .ToList();
+        }
 
     private class ModuleFilters : IAddSimpleInjectorFilter<ComputeApiModule>
     {
