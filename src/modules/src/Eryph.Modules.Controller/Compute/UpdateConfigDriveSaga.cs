@@ -49,13 +49,14 @@ namespace Eryph.Modules.Controller.Compute
                 return;
             }
 
-            // This saga only updates the config drive which is attached to catlet without
+            // This saga only updates the config drive which is attached to the catlet without
             // updating the catlet itself. We breed a fake catlet config which can be passed
             // to the UpdateCatletConfigDriveCommand to update the config drive.
+            // We provide neither Name nor Hostname as the config is only used to update
+            // the config drive after the first startup and the hostname should not
+            // be changed by cloud-init.
             var config = new CatletConfig()
             {
-                Name = machineInfo.Name,
-                // TODO what about hostname?
                 Fodder = metadata.Fodder,
                 Variables = metadata.Variables,
             };

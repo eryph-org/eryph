@@ -12,6 +12,7 @@ using LanguageExt.Common;
 using Moq;
 
 using static LanguageExt.Prelude;
+using Array = System.Array;
 
 namespace Eryph.Modules.VmHostAgent.Test;
 
@@ -21,19 +22,21 @@ public static class GenePoolMockExtensions
         this Mock<IGeneProvider> geneProviderMock,
         params (GeneType GeneType, GeneIdentifier GeneId)[] genes)
     {
-        foreach (var gene in genes.ToSeq())
-        {
-            geneProviderMock.Setup(m => m.ProvideGene(
-                    gene.GeneType,
-                    gene.GeneId,
-                    It.IsAny<Func<string, int, Task<Unit>>>(),
-                    It.IsAny<CancellationToken>()))
-                .Returns(RightAsync<Error, PrepareGeneResponse>(new PrepareGeneResponse()
-                {
-                    RequestedGene = new GeneIdentifierWithType(gene.GeneType, gene.GeneId),
-                    ResolvedGene = new GeneIdentifierWithType(gene.GeneType, gene.GeneId),
-                }));
-        }
+        var map = genes.ToHashSet();
+        
+        geneProviderMock.Setup(m => m.ProvideGene(
+                It.IsAny<GeneType>(),
+                It.IsAny<GeneIdentifier>(),
+                It.IsAny<Func<string, int, Task<Unit>>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns((GeneType geneType, GeneIdentifier geneId, Func<string, int, Task<Unit>>_, CancellationToken _) => 
+                map.Contains((geneType, geneId))
+                    ? RightAsync<Error, PrepareGeneResponse>(new PrepareGeneResponse()
+                    {
+                        RequestedGene = new GeneIdentifierWithType(geneType, geneId),
+                        ResolvedGene = new GeneIdentifierWithType(geneType, geneId),
+                    })
+                    : LeftAsync<Error, PrepareGeneResponse>(Error.New("The gene was not found.")));
     }
 
     public static void SetupGenes(
@@ -47,17 +50,23 @@ public static class GenePoolMockExtensions
         geneProviderMock.SetupGenes(mapped);
     }
 
+    public static void SetupGenes(
+        this Mock<IGeneProvider> geneProviderMock)
+    {
+        geneProviderMock.SetupGenes(Array.Empty<(GeneType, GeneIdentifier)>());
+    }
+
     public static void SetupGeneSets(
         this Mock<IGeneProvider> geneProviderMock,
         params (GeneSetIdentifier Source, GeneSetIdentifier Target)[] geneSets)
     {
-        foreach (var mappedGeneSet in geneSets.ToSeq())
-        {
+        var map = geneSets.ToHashMap();
+
             geneProviderMock.Setup(m => m.ResolveGeneSet(
-                    mappedGeneSet.Source,
+                    It.IsAny<GeneSetIdentifier>(),
                     It.IsAny<CancellationToken>()))
-                .Returns(RightAsync<Error, GeneSetIdentifier>(mappedGeneSet.Target));
-        }
+                .Returns((GeneSetIdentifier geneSetId, CancellationToken _) =>
+                    map.Find(geneSetId).ToEither(Error.New("The gene set was not found.")).ToAsync());
     }
 
     public static void SetupGeneSets(
@@ -69,5 +78,11 @@ public static class GenePoolMockExtensions
             .ToArray();
 
         geneProviderMock.SetupGeneSets(mapped);
+    }
+
+    public static void SetupGeneSets(
+        this Mock<IGeneProvider> geneProviderMock)
+    {
+        geneProviderMock.SetupGeneSets(Array.Empty<(GeneSetIdentifier, GeneSetIdentifier)>());
     }
 }

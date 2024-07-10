@@ -19,12 +19,11 @@ public class ResolveCatletConfigCommandHandlerTests
 {
     private readonly Mock<ILocalGenepoolReader> _genepoolReaderMock = new();
     private readonly Mock<IGeneProvider> _geneProviderMock = new();
+    private readonly CancellationToken _cancelToken = new();
 
     [Fact]
-    public async Task Handle_ComplexConfig_ReturnsResolvedData()
+    public async Task Handle_ConfigWithGeneSetReferences_ReturnsResolvedData()
     {
-        var cancelToken = new CancellationToken();
-
         var config = new CatletConfig
         {
             Parent = "acme/acme-os/starter",
@@ -73,47 +72,282 @@ public class ResolveCatletConfigCommandHandlerTests
             ("acme/acme-tools/latest", "acme/acme-tools/1.0"));
 
         _geneProviderMock.SetupGenes(
-            (GeneType.Catlet, "acme/acme-os/starter-1.0"),
-            (GeneType.Catlet, "acme/acme-os/1.0"));
+            (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet"),
+            (GeneType.Catlet, "gene:acme/acme-os/1.0:catlet"));
 
         var result = await ResolveCatletConfigCommandHandler.Handle(
             new ResolveCatletConfigCommand { Config = config },
             _geneProviderMock.Object,
-            _genepoolReaderMock.Object);
+            _genepoolReaderMock.Object,
+            _cancelToken);
 
         var commandResponse = result.Should().BeRight().Subject;
         commandResponse.ResolvedGeneSets.Should().BeEquivalentTo([
+            (GeneSetIdentifier.New("acme/acme-os/starter"), GeneSetIdentifier.New("acme/acme-os/starter-1.0")),
             (GeneSetIdentifier.New("acme/acme-os/latest"), GeneSetIdentifier.New("acme/acme-os/1.0")),
-            (GeneSetIdentifier.New("acme/acme-os/1.0"), GeneSetIdentifier.New("acme/acme-os/1.0")),
             (GeneSetIdentifier.New("acme/acme-images/latest"), GeneSetIdentifier.New("acme/acme-images/1.0")),
-            (GeneSetIdentifier.New("acme/acme-images/1.0"), GeneSetIdentifier.New("acme/acme-images/1.0")),
             (GeneSetIdentifier.New("acme/acme-tools/latest"), GeneSetIdentifier.New("acme/acme-tools/1.0")),
+        ]);
+        commandResponse.ParentConfigs.Should().SatisfyRespectively(
+            ancestor =>
+            {
+                ancestor.Id.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
+                ancestor.Config.Name.Should().Be("acme-os-base");
+            },
+            ancestor =>
+            {
+                ancestor.Id.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
+                ancestor.Config.Name.Should().Be("acme-os-starter");
+            });
+
+        // Gene sets should only be resolved exactly once.
+        _geneProviderMock.Verify(
+            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-os/starter"), _cancelToken),
+            Times.Once);
+        _geneProviderMock.Verify(
+            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-os/latest"), _cancelToken),
+            Times.Once);
+        _geneProviderMock.Verify(
+            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-images/latest"), _cancelToken),
+            Times.Once);
+        _geneProviderMock.Verify(
+            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-tools/latest"), _cancelToken),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ConfigWithResolvedGeneSets_ReturnsResolvedData()
+    {
+        var config = new CatletConfig
+        {
+            Parent = "acme/acme-os/starter-1.0",
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Source = "gene:acme/acme-images/1.0:first-image",
+                }
+            ],
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
+                }
+            ],
+        };
+
+        _genepoolReaderMock.SetupCatletGene(
+            "acme/acme-os/starter-1.0",
+            new CatletConfig()
+            {
+                Name = "acme-os-starter",
+                Parent = "acme/acme-os/1.0",
+                Fodder =
+                [
+                    new FodderConfig()
+                    {
+                        Source = "gene:acme/acme-tools/1.0:other-test-fodder",
+                    }
+                ]
+            });
+
+        _genepoolReaderMock.SetupCatletGene(
+            "acme/acme-os/1.0",
+            new CatletConfig()
+            {
+                Name = "acme-os-base",
+            });
+
+        _geneProviderMock.SetupGeneSets(
+            ("acme/acme-os/starter-1.0", "acme/acme-os/starter-1.0"),
+            ("acme/acme-os/1.0", "acme/acme-os/1.0"),
+            ("acme/acme-images/1.0", "acme/acme-images/1.0"),
+            ("acme/acme-tools/1.0", "acme/acme-tools/1.0"));
+
+        _geneProviderMock.SetupGenes(
+            (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet"),
+            (GeneType.Catlet, "gene:acme/acme-os/1.0:catlet"));
+
+        var result = await ResolveCatletConfigCommandHandler.Handle(
+            new ResolveCatletConfigCommand { Config = config },
+            _geneProviderMock.Object,
+            _genepoolReaderMock.Object,
+            _cancelToken);
+
+        var commandResponse = result.Should().BeRight().Subject;
+        commandResponse.ResolvedGeneSets.Should().BeEquivalentTo([
+            (GeneSetIdentifier.New("acme/acme-os/starter-1.0"), GeneSetIdentifier.New("acme/acme-os/starter-1.0")),
+            (GeneSetIdentifier.New("acme/acme-os/1.0"), GeneSetIdentifier.New("acme/acme-os/1.0")),
+            (GeneSetIdentifier.New("acme/acme-images/1.0"), GeneSetIdentifier.New("acme/acme-images/1.0")),
             (GeneSetIdentifier.New("acme/acme-tools/1.0"), GeneSetIdentifier.New("acme/acme-tools/1.0"))
         ]);
         commandResponse.ParentConfigs.Should().SatisfyRespectively(
             ancestor =>
             {
-                ancestor.Id.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
-                ancestor.Config.Name.Should().Be("acme-os-starter");
+                ancestor.Id.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
+                ancestor.Config.Name.Should().Be("acme-os-base");
             },
             ancestor =>
             {
-                ancestor.Id.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
-                ancestor.Config.Name.Should().Be("acme-os-base");
+                ancestor.Id.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
+                ancestor.Config.Name.Should().Be("acme-os-starter");
             });
 
         // Gene sets should only be resolved exactly once.
         _geneProviderMock.Verify(
-            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-os/starter"), cancelToken),
+            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-os/1.0"), _cancelToken),
             Times.Once);
         _geneProviderMock.Verify(
-            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-os/latest"), cancelToken),
+            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-os/1.0"), _cancelToken),
             Times.Once);
         _geneProviderMock.Verify(
-            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-images/latest"), cancelToken),
+            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-images/1.0"), _cancelToken),
             Times.Once);
         _geneProviderMock.Verify(
-            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-tools/latest"), cancelToken),
+            m => m.ResolveGeneSet(GeneSetIdentifier.New("acme/acme-tools/1.0"), _cancelToken),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_MissingGrandParent_ReturnsError()
+    {
+        var config = new CatletConfig
+        {
+            Parent = "acme/acme-os/starter-1.0",
+        };
+
+        _genepoolReaderMock.SetupCatletGene(
+            "acme/acme-os/starter-1.0",
+            new CatletConfig()
+            {
+                Name = "acme-os-starter",
+                Parent = "acme/acme-os/1.0",
+            });
+
+        _geneProviderMock.SetupGeneSets(
+            ("acme/acme-os/starter-1.0", "acme/acme-os/starter-1.0"));
+
+        _geneProviderMock.SetupGenes(
+            (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet"));
+
+        var result = await ResolveCatletConfigCommandHandler.Handle(
+            new ResolveCatletConfigCommand { Config = config },
+            _geneProviderMock.Object,
+            _genepoolReaderMock.Object,
+            _cancelToken);
+
+        var error = result.Should().BeLeft().Subject;
+        error.Message.Should().Be("Could not resolve genes in the ancestor catlet -> acme/acme-os/starter-1.0.");
+        error.Inner.Should().BeSome().Which.Message.Should().Be(
+            "Could not resolve the gene set tag 'acme/acme-os/1.0'.");
+    }
+
+    [Fact]
+    public async Task Handle_MissingDriveSource_ReturnsError()
+    {
+        var config = new CatletConfig
+        {
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Source = "gene:acme/acme-images/1.0:first-image",
+                }
+            ],
+        };
+
+        _geneProviderMock.SetupGeneSets();
+
+        _geneProviderMock.SetupGenes();
+
+        var result = await ResolveCatletConfigCommandHandler.Handle(
+            new ResolveCatletConfigCommand { Config = config },
+            _geneProviderMock.Object,
+            _genepoolReaderMock.Object,
+            _cancelToken);
+
+        var error = result.Should().BeLeft().Subject;
+        error.Message.Should().Be("Could not resolve genes in the catlet config.");
+        error.Inner.Should().BeSome().Which.Message.Should().Be(
+            "Could not resolve the gene set tag 'acme/acme-images/1.0'.");
+    }
+
+    [Fact]
+    public async Task Handle_MissingFodderSource_ReturnsError()
+    {
+        var config = new CatletConfig
+        {
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
+                }
+            ],
+        };
+
+        _geneProviderMock.SetupGeneSets();
+
+        _geneProviderMock.SetupGenes();
+
+        var result = await ResolveCatletConfigCommandHandler.Handle(
+            new ResolveCatletConfigCommand { Config = config },
+            _geneProviderMock.Object,
+            _genepoolReaderMock.Object,
+            _cancelToken);
+
+        var error = result.Should().BeLeft().Subject;
+        error.Message.Should().Be("Could not resolve genes in the catlet config.");
+        error.Inner.Should().BeSome().Which.Message.Should().Be(
+            "Could not resolve the gene set tag 'acme/acme-tools/1.0'.");
+    }
+
+    [Fact]
+    public async Task Handle_AncestorsHaveCircle_ReturnsError()
+    {
+        var config = new CatletConfig
+        {
+            Parent = "acme/acme-os/first",
+        };
+
+        _genepoolReaderMock.SetupCatletGene(
+            "acme/acme-os/first-1.0",
+            new CatletConfig()
+            {
+                Name = "acme-os-first-1.0",
+                Parent = "acme/acme-os/second",
+            });
+
+        _genepoolReaderMock.SetupCatletGene(
+            "acme/acme-os/second-1.0",
+            new CatletConfig()
+            {
+                Name = "acme-os-second-1.0",
+                Parent = "acme/acme-os/first",
+            });
+
+        _geneProviderMock.SetupGeneSets(
+            ("acme/acme-os/first", "acme/acme-os/first-1.0"),
+            ("acme/acme-os/second", "acme/acme-os/second-1.0"));
+
+        _geneProviderMock.SetupGenes(
+            (GeneType.Catlet, "gene:acme/acme-os/first-1.0:catlet"),
+            (GeneType.Catlet, "gene:acme/acme-os/second-1.0:catlet"));
+
+        var result = await ResolveCatletConfigCommandHandler.Handle(
+            new ResolveCatletConfigCommand { Config = config },
+            _geneProviderMock.Object,
+            _genepoolReaderMock.Object,
+            _cancelToken);
+
+        var error = result.Should().BeLeft().Subject;
+        error.Message.Should().Be(
+            "Could not resolve genes in the ancestor catlet "
+            + "-> (acme/acme-os/first -> acme/acme-os/first-1.0) "
+            + "-> (acme/acme-os/second -> acme/acme-os/second-1.0) "
+            + "-> (acme/acme-os/first -> acme/acme-os/first-1.0).");
+        error.Inner.Should().BeSome().Which.Message.Should().Be(
+            "The pedigree contains a circle.");
     }
 }

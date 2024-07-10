@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel;
@@ -15,8 +16,9 @@ using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
+using Rebus.Extensions;
 using Rebus.Handlers;
-
+using Rebus.Pipeline;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent;
@@ -46,6 +48,7 @@ using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 /// </remarks>
 [UsedImplicitly]
 public class ResolveCatletConfigCommandHandler(
+    IMessageContext messageContext,
     ITaskMessaging messaging,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigManager,
@@ -53,120 +56,121 @@ public class ResolveCatletConfigCommandHandler(
     : IHandleMessages<OperationTask<ResolveCatletConfigCommand>>
 {
     public Task Handle(OperationTask<ResolveCatletConfigCommand> message) =>
-        Handle(message.Command).FailOrComplete(messaging, message);
+        Handle(message.Command, messageContext.GetCancellationToken())
+            .FailOrComplete(messaging, message);
 
     private EitherAsync<Error, ResolveCatletConfigCommandResponse> Handle(
-        ResolveCatletConfigCommand command) =>
+        ResolveCatletConfigCommand command,
+        CancellationToken cancellationToken) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
         let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
-        from result in Handle(command, geneProvider, genepoolReader)
+        from result in Handle(command, geneProvider, genepoolReader, cancellationToken)
         select result;
 
     public static EitherAsync<Error, ResolveCatletConfigCommandResponse> Handle(
         ResolveCatletConfigCommand command,
         IGeneProvider geneProvider,
-        ILocalGenepoolReader genepoolReader) =>
-        from genesetsFromConfig in ResolveGeneSets(command.Config, GeneSetMap.Empty, geneProvider)
-        from result in ResolveParents(command.Config, genesetsFromConfig, Seq<AncestorInfo>(), geneProvider,
-            genepoolReader)
+        ILocalGenepoolReader genepoolReader,
+        CancellationToken cancellationToken) =>
+        from genesetsFromConfig in ResolveGeneSets(command.Config, GeneSetMap.Empty,
+                geneProvider, cancellationToken)
+            .MapLeft(e => Error.New("Could not resolve genes in the catlet config.", e))
+        from result in ResolveParent(command.Config.Parent, genesetsFromConfig, new CatletMap(),
+            Seq<AncestorInfo>(), geneProvider, genepoolReader, cancellationToken)
         select new ResolveCatletConfigCommandResponse()
         {
-            ParentConfigs = result.resolvedCatlets.ToList(),
-            ResolvedGeneSets = result.resolvedGeneSets.ToList(),
+            ParentConfigs = result.ResolvedCatlets.ToList(),
+            ResolvedGeneSets = result.ResolvedGeneSets.ToList(),
         };
 
-    private static EitherAsync<Error, (GeneSetMap resolvedGeneSets, CatletMap resolvedCatlets)> ResolveParents(
-        CatletConfig catletConfig,
-        GeneSetMap resolvedGeneSets,
-        Seq<AncestorInfo> visitedAncestors,
-        IGeneProvider geneProvider,
-        ILocalGenepoolReader genepoolReader) =>
-        from resolved in ResolveParent(catletConfig.Parent, resolvedGeneSets, visitedAncestors, geneProvider, genepoolReader)
-            .MapLeft(e => CreateError(visitedAncestors, e))
-        from result in resolved.ResolvedConfig.Match<EitherAsync<Error, (GeneSetMap resolvedGeneSets, CatletMap resolvedCatlets)>>(
-                Some: cwi =>
-                    from parents in ResolveParents(cwi.Config, resolved.ResolvedGeneSets,
-                        visitedAncestors.Add(new AncestorInfo(cwi.Id, cwi.Id)),
-                        geneProvider, genepoolReader)
-                    select (parents.resolvedGeneSets, parents.resolvedCatlets.Add(cwi.Id, cwi.Config)),
-                None: () => (resolved.ResolvedGeneSets, new CatletMap()))
-        select result;
-
-    private static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, Option<ConfigWithId> ResolvedConfig)> ResolveParent(
+    private static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveParent(
         Option<string> parentId,
         GeneSetMap resolvedGeneSets,
+        CatletMap resolvedCatlets,
         Seq<AncestorInfo> visitedAncestors,
         IGeneProvider geneProvider,
-        ILocalGenepoolReader genepoolReader) =>
+        ILocalGenepoolReader genepoolReader,
+        CancellationToken cancellationToken) =>
         from validParentId in parentId.Filter(notEmpty)
             .Map(GeneSetIdentifier.NewEither)
             .Sequence()
             .MapLeft(e => Error.New("The parent ID is invalid.", e))
             .MapLeft(e => CreateError(visitedAncestors, e))
             .ToAsync()
-        from result in validParentId.Match<EitherAsync<Error, (GeneSetMap ResolvedGeneSets, Option<ConfigWithId> ResolvedConfig)>>(
+        from result in validParentId.Match<EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedConfig)>>(
             Some: id =>
-                from resolvedParent in ResolveParent(id, resolvedGeneSets, visitedAncestors, geneProvider, genepoolReader)
-                select (resolvedParent.ResolvedGeneSets, Some(resolvedParent.ResolvedConfig)),
-            None: () => (resolvedGeneSets, Option<ConfigWithId>.None))
+                from resolvedParent in ResolveParent(id, resolvedGeneSets, resolvedCatlets,
+                    visitedAncestors, geneProvider, genepoolReader, cancellationToken)
+                select (resolvedParent.ResolvedGeneSets, resolvedParent.ResolvedCatlets),
+            None: () => (resolvedGeneSets, resolvedCatlets))
         select result;
 
-    private static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, ConfigWithId ResolvedConfig)> ResolveParent(
-        GeneSetIdentifier parentId,
+    private static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveParent(
+        GeneSetIdentifier id,
         GeneSetMap resolvedGeneSets,
+        CatletMap resolvedCatlets,
         Seq<AncestorInfo> visitedAncestors,
         IGeneProvider geneProvider,
-        ILocalGenepoolReader genepoolReader) =>
-        from resolvedParentId in resolvedGeneSets.Find(parentId)
-            .ToEitherAsync(Error.New($"Could not resolve parent ID '{parentId}'."))
+        ILocalGenepoolReader genepoolReader,
+        CancellationToken cancellationToken) =>
+        from resolvedId in resolvedGeneSets.Find(id)
+            .ToEitherAsync(Error.New($"Could not resolve parent ID '{id}'."))
             .MapLeft(e => CreateError(visitedAncestors, e))
-        let updatedVisitedAncestors = visitedAncestors.Add(new AncestorInfo(parentId, resolvedParentId))
+        let updatedVisitedAncestors = visitedAncestors.Add(new AncestorInfo(id, resolvedId))
         from _ in CatletPedigree.ValidateAncestorChain(updatedVisitedAncestors)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
             .ToAsync()
         from provideResult in geneProvider.ProvideGene(
             GeneType.Catlet,
-            new GeneIdentifier(resolvedParentId, GeneName.New("catlet")),
+            new GeneIdentifier(resolvedId, GeneName.New("catlet")),
             (s1, i) => Task.FromResult(unit),
             default)
+            .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from a in guard(provideResult.RequestedGene == provideResult.ResolvedGene,
             Error.New("The resolved gene is different. This code must only be called with resolved IDs. "
                       + $"Requested: {provideResult.RequestedGene}; Resolved: {provideResult.ResolvedGene}"))
-        from parentConfig in ReadCatletConfig(resolvedParentId, genepoolReader).ToAsync()
-        from result in ResolveGeneSets(parentConfig, resolvedGeneSets, geneProvider)
-        select (result, new ConfigWithId(parentConfig, resolvedParentId));
-
-    private readonly record struct ConfigWithId(CatletConfig Config, GeneSetIdentifier Id);
+        from config in ReadCatletConfig(resolvedId, genepoolReader).ToAsync()
+        from resolveResult in ResolveGeneSets(config, resolvedGeneSets, geneProvider, cancellationToken)
+            .MapLeft(e => CreateError(updatedVisitedAncestors, e))
+        from parentsResult in ResolveParent(config.Parent, resolveResult, resolvedCatlets,
+            updatedVisitedAncestors, geneProvider, genepoolReader, cancellationToken)
+        select (
+            parentsResult.ResolvedGeneSets,
+            parentsResult.ResolvedCatlets.Add(resolvedId, config));
 
     private static EitherAsync<Error, GeneSetMap> ResolveGeneSets(
         CatletConfig catletConfig,
         GeneSetMap resolvedGeneSets,
-        IGeneProvider geneProvider) =>
+        IGeneProvider geneProvider,
+        CancellationToken cancellationToken) =>
         from geneIds in CatletGeneCollecting.CollectGenes(catletConfig)
             .ToEither().ToAsync()
             .MapLeft(Error.Many)
         let geneSetIds = geneIds.Map(iwt => iwt.GeneIdentifier.GeneSet).Distinct()
         from resolved in geneSetIds.Fold<EitherAsync<Error, GeneSetMap>>(
-            resolvedGeneSets, (state, geneSetId) => state.Bind(m => ResolveGeneSet(geneSetId, m, geneProvider)))
+            resolvedGeneSets,
+            (state, geneSetId) => state.Bind(m => ResolveGeneSet(geneSetId, m, geneProvider, cancellationToken)))
         select resolved;
 
     private static EitherAsync<Error, GeneSetMap> ResolveGeneSet(
         GeneSetIdentifier geneSetId,
         GeneSetMap resolvedGeneSets,
-        IGeneProvider geneProvider) =>
+        IGeneProvider geneProvider,
+        CancellationToken cancellationToken) =>
         resolvedGeneSets.Find(geneSetId).Match(
             Some: _ => resolvedGeneSets,
             None: () =>
-                from resolvedGeneSet in ResolveGeneSet(geneSetId, geneProvider)
+                from resolvedGeneSet in ResolveGeneSet(geneSetId, geneProvider, cancellationToken)
                 select resolvedGeneSets.Add(geneSetId, resolvedGeneSet));
 
     private static EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
         GeneSetIdentifier geneSetId,
-        IGeneProvider geneProvider) =>
-        from resolved in geneProvider.ResolveGeneSet(geneSetId, default)
+        IGeneProvider geneProvider,
+        CancellationToken cancellationToken) =>
+        from resolved in geneProvider.ResolveGeneSet(geneSetId, cancellationToken)
+            .MapLeft(e => Error.New($"Could not resolve the gene set tag '{geneSetId}'.", e))
         select resolved;
-
 
     public static Either<Error, CatletConfig> ReadCatletConfig(
         GeneSetIdentifier geneSetId,
@@ -184,7 +188,11 @@ public class ResolveCatletConfigCommandHandler(
         Seq<AncestorInfo> visitedAncestors,
         Error innerError) =>
         Error.New(
-            "Could not resolve ancestor in the pedigree "
-            + string.Join(" -> ", "catlet".Cons(visitedAncestors.Map(a => a.ToString()))),
+            visitedAncestors.Match(
+                    Empty: () => "Could not resolve genes in the catlet config.",
+                    Seq: ancestors =>
+                        "Could not resolve genes in the ancestor "
+                        + string.Join(" -> ", "catlet".Cons(ancestors.Map(a => a.ToString())))
+                        + "."),
             innerError);
 }
