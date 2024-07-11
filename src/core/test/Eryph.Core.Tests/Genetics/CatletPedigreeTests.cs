@@ -103,6 +103,10 @@ public class CatletPedigreeTests
 
         var result = CatletPedigree.Breed(config, geneSetMap, ancestors);
 
-        result.Should().BeLeft().Which.Message.Should().Be("Circle detected");
+        var error = result.Should().BeLeft().Subject;
+        error.Message.Should().Be(
+            "Could not breed ancestor in the pedigree catlet -> acme/acme-parent/1.0 -> acme/acme-parent/1.0.");
+        error.Inner.Should().BeSome().Which.Message
+            .Should().Be("The pedigree contains a circle.");
     }
 }

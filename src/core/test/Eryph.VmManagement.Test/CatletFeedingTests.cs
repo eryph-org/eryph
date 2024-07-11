@@ -271,7 +271,7 @@ public class CatletFeedingTests
     }
 
     [Fact]
-    public void Feed_DuplicateFoodAfterFeeding_ReturnError()
+    public void Feed_FoodExistsMultipleTimes_FoodIsMerged()
     {
         var config = new CatletConfig
         {
@@ -281,11 +281,27 @@ public class CatletFeedingTests
                 new FodderConfig()
                 {
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
+                    Variables = 
+                    [
+                        new VariableConfig()
+                        {
+                            Name = "variableA",
+                            Value = "first value",
+                        },
+                    ],
                 },
                 new FodderConfig()
                 {
                     Name = "food1",
                     Source = "gene:acme/acme-tools/1.0:test-fodder",
+                    Variables =
+                    [
+                        new VariableConfig()
+                        {
+                            Name = "variableA",
+                            Value = "second value",
+                        },
+                    ],
                 },
             ],
         };
@@ -294,8 +310,9 @@ public class CatletFeedingTests
 
         var result = CatletFeeding.Feed(config, _genepoolReaderMock.Object);
 
-        var error = result.Should().BeLeft().Subject;
-        error.Message.Should().Be("Found duplicate fodder after feeding");
+        var fedConfig = result.Should().BeRight().Subject;
+
+        fedConfig.Fodder.Should().HaveCount(2);
     }
 
     private void ArrangeFood()
@@ -540,7 +557,7 @@ public class CatletFeedingTests
             variable =>
             {
                 variable.Name.Should().Be(EryphConstants.SystemVariables.VmId);
-                variable.Value.Should().Be(catletId.ToString());
+                variable.Value.Should().Be(vmId.ToString());
                 variable.Type.Should().Be(VariableType.String);
                 variable.Required.Should().BeFalse();
                 variable.Secret.Should().BeFalse();

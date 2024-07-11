@@ -56,7 +56,8 @@ public class CatletBreedingTests
             [
                 new CatletCapabilityConfig
                 {
-                    Name = "Cap1"
+                    Name = "parent_cap",
+                    Details = ["parent-detail"]
                 }
             ],
             Cpu = new CatletCpuConfig { Count = 2 },
@@ -66,8 +67,8 @@ public class CatletBreedingTests
                 {
                     Name = "sda",
                     Type = CatletDriveType.VHD,
-                    Source = "gene:dbosoft/test/1.0:sda",
-                    Store = "lair",
+                    Source = "gene:acme/acme-images/1.0:sda",
+                    Store = "parent-lair",
                     Size = 100
                 }
             ],
@@ -83,12 +84,12 @@ public class CatletBreedingTests
             [
                 new CatletNetworkConfig
                 {
-                    Name = "default",
+                    Name = "parent-network",
                     AdapterName = "eth0",
                     SubnetV4 = new CatletSubnetConfig
                     {
-                        Name = "sub1",
-                        IpPool = "pool1"
+                        Name = "parent-subnet",
+                        IpPool = "parent-pool"
                     }
                 }
             ],
@@ -96,12 +97,13 @@ public class CatletBreedingTests
             [
                 new FodderConfig
                 {
-                    Source = "gene:dbosoft/test-fodder/1.0:test-fodder"
+                    Name = "parent-food",
+                    Content = "parent food content",
                 }
             ],
             Variables =
             [
-                new VariableConfig() { Name = "parentCatletVariable" }
+                new VariableConfig() { Name = "parentVariable" }
             ],
         };
 
@@ -111,26 +113,53 @@ public class CatletBreedingTests
             Parent = "dbosoft/test/1.0",
             Project = "social",
             Environment = "env1",
-            Drives = [],
+            Capabilities =
+            [
+                new CatletCapabilityConfig
+                {
+                    Name = "child_cap",
+                    Details = ["child-detail"]
+                }
+            ],
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Name = "sdb",
+                    Type = CatletDriveType.VHD,
+                    Source = "gene:acme/acme-images/1.0:sdb",
+                    Store = "child-lair",
+                    Size = 200
+                }
+            ],
+            NetworkAdapters =
+            [
+                new CatletNetworkAdapterConfig
+                {
+                    Name = "eth1"
+                }
+            ],
             Networks =
             [
                 new CatletNetworkConfig
                 {
-                    Name = "default",
-                    AdapterName = "eth0"
+                    Name = "child-network",
+                    AdapterName = "eth1"
                 }
             ],
             Fodder =
             [
-                new FodderConfig { Name = "food" }
+                new FodderConfig
+                {
+                    Name = "child-food",
+                    Content = "child food content",
+                }
             ],
             Variables =
             [
-                new VariableConfig() { Name = "catletVariable" }
+                new VariableConfig() { Name = "childVariable" }
             ]
         };
-
-        CatletBreeding.Breed(parent, child).IfLeft(e => e.Throw());
 
         var breedChild = CatletBreeding.Breed(parent, child)
             .Should().BeRight().Subject;
@@ -139,33 +168,45 @@ public class CatletBreedingTests
         breedChild.Project.Should().Be("social");
         breedChild.Environment.Should().Be("env1");
 
-        breedChild.Capabilities.Should().NotBeNull();
-        breedChild.Capabilities.Should().BeEquivalentTo(parent.Capabilities);
-        breedChild.Capabilities.Should().NotBeSameAs(parent.Capabilities);
+        breedChild.Capabilities.Should().SatisfyRespectively(
+            capability => capability.Should().BeEquivalentTo(parent.Capabilities[0])
+                .And.NotBeSameAs(parent.Capabilities[0]), 
+            capability => capability.Should().BeEquivalentTo(child.Capabilities[0])
+                .And.NotBeSameAs(child.Capabilities[0]));
 
-        breedChild.Drives.Should().NotBeNull();
-        breedChild.Drives.Should().HaveCount(1);
-        breedChild.Drives.Should().NotBeEquivalentTo(parent.Drives);
-        breedChild.Drives?[0].Source.Should().Be("gene:dbosoft/test/1.0:sda");
-        breedChild.Drives.Should().NotBeSameAs(parent.Drives);
+        breedChild.Cpu.Should().BeEquivalentTo(parent.Cpu).And.NotBeSameAs(parent.Cpu);
 
-        breedChild.NetworkAdapters.Should().NotBeNull();
-        breedChild.NetworkAdapters.Should().HaveCount(1);
-        breedChild.NetworkAdapters.Should().BeEquivalentTo(parent.NetworkAdapters);
-        breedChild.NetworkAdapters.Should().NotBeSameAs(parent.NetworkAdapters);
+        breedChild.Drives.Should().SatisfyRespectively(
+            drive => drive.Should().BeEquivalentTo(parent.Drives[0])
+                .And.NotBeSameAs(parent.Drives[0]),
+            drive => drive.Should().BeEquivalentTo(child.Drives[0])
+                .And.NotBeSameAs(child.Drives[0]));
 
-        breedChild.Networks.Should().NotBeNull();
-        breedChild.Networks.Should().HaveCount(1);
-        breedChild.Networks.Should().BeEquivalentTo(parent.Networks);
-        breedChild.Networks.Should().NotBeSameAs(parent.Networks);
+        breedChild.Memory.Should().BeEquivalentTo(parent.Memory).And.NotBeSameAs(parent.Memory);
 
-        breedChild.Fodder.Should().NotBeNull();
-        breedChild.Fodder.Should().HaveCount(2);
-        breedChild.Fodder?[0].Source.Should().Be("gene:dbosoft/test-fodder/1.0:test-fodder");
+        breedChild.NetworkAdapters.Should().SatisfyRespectively(
+            adapter => adapter.Should().BeEquivalentTo(parent.NetworkAdapters[0])
+                .And.NotBeSameAs(parent.NetworkAdapters[0]),
+            adapter => adapter.Should().BeEquivalentTo(child.NetworkAdapters[0])
+                .And.NotBeSameAs(child.NetworkAdapters[0]));
+
+        breedChild.Networks.Should().SatisfyRespectively(
+            network => network.Should().BeEquivalentTo(parent.Networks[0])
+                .And.NotBeSameAs(parent.Networks[0]),
+            network => network.Should().BeEquivalentTo(child.Networks[0])
+                .And.NotBeSameAs(child.Networks[0]));
+
+        breedChild.Fodder.Should().SatisfyRespectively(
+            network => network.Should().BeEquivalentTo(parent.Fodder[0])
+                .And.NotBeSameAs(parent.Fodder[0]),
+            network => network.Should().BeEquivalentTo(child.Fodder[0])
+                .And.NotBeSameAs(child.Fodder[0]));
 
         breedChild.Variables.Should().SatisfyRespectively(
-            variable => variable.Name.Should().Be("catletVariable"),
-            variable => variable.Name.Should().Be("parentCatletVariable"));
+            variable => variable.Should().BeEquivalentTo(parent.Variables[0])
+                .And.NotBeSameAs(parent.Variables[0]),
+            variable => variable.Should().BeEquivalentTo(child.Variables[0])
+                .And.NotBeSameAs(child.Variables[0]));
     }
 
     [Fact]
@@ -219,12 +260,6 @@ public class CatletBreedingTests
                     Type = CatletDriveType.VHD,
                     Source = "gene:dbosoft/test/1.0:sda",
                 },
-                new CatletDriveConfig
-                {
-                    Name = "sdb",
-                    Type = CatletDriveType.VHD,
-                    Source = "gene:dbosoft/test/1.0:sdb",
-                }
             ]
         };
 
@@ -238,18 +273,10 @@ public class CatletBreedingTests
                 {
                     Name = "sda",
                     Store = "test-store",
-                },
-                new CatletDriveConfig
-                {
-                    Name = "sdb",
-                    Type = CatletDriveType.PHD,
-                    Store = "test-store",
                     Location = "test-location"
-                }
+                },
             ]
         };
-
-        var result = CatletBreeding.Breed(parent, child);
 
         CatletBreeding.Breed(parent, child).Should().BeRight().Which.Drives
             .Should().SatisfyRespectively(
@@ -257,8 +284,47 @@ public class CatletBreedingTests
                 {
                     drive.Type.Should().Be(CatletDriveType.VHD);
                     drive.Store.Should().Be("test-store");
-                    drive.Should().Be("gene:dbosoft/test/1.0:sda");
+                    drive.Location.Should().Be("test-location");
+                    drive.Source.Should().Be("gene:dbosoft/test/1.0:sda");
+                });
+    }
+
+    [Fact]
+    public void Drives_are_overwritten()
+    {
+        var parent = new CatletConfig
+        {
+            Name = "Parent",
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Name = "sda",
+                    Type = CatletDriveType.VHD,
+                    Source = "gene:dbosoft/test/1.0:sda",
                 },
+            ]
+        };
+
+        var child = new CatletConfig
+        {
+            Name = "child",
+            Parent = "dbosoft/test/1.0",
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Mutation = MutationType.Overwrite,
+                    Name = "sda",
+                    Type = CatletDriveType.PHD,
+                    Store = "test-store",
+                    Location = "test-location"
+                },
+            ]
+        };
+
+        CatletBreeding.Breed(parent, child).Should().BeRight().Which.Drives
+            .Should().SatisfyRespectively(
                 drive =>
                 {
                     drive.Type.Should().Be(CatletDriveType.PHD);
@@ -266,6 +332,43 @@ public class CatletBreedingTests
                     drive.Location.Should().Be("test-location");
                     drive.Source.Should().BeNull();
                 });
+    }
+
+    [Fact]
+    public void Fails_with_gene_source_when_not_plain_vhd()
+    {
+        var parent = new CatletConfig
+        {
+            Name = "Parent",
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Name = "sda",
+                    Type = CatletDriveType.VHD,
+                    Source = "gene:dbosoft/test/1.0:sda",
+                }
+            ]
+        };
+
+        var child = new CatletConfig
+        {
+            Name = "child",
+            Parent = "dbosoft/test/1.0",
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Name = "sda",
+                    Type = CatletDriveType.PHD,
+                    Store = "test-store",
+                    Location = "test-location"
+                }
+            ]
+        };
+
+        CatletBreeding.Breed(parent, child).Should().BeLeft().Which.Message
+            .Should().Be("The drive must be a plain VHD when using a gene pool source.");
     }
 
     [Fact]

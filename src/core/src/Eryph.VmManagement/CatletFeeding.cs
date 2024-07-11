@@ -38,7 +38,7 @@ public static class CatletFeeding
                 {
                     Name = EryphConstants.SystemVariables.VmId,
                     Type = VariableType.String,
-                    Value = catletMetadata.MachineId.ToString(),
+                    Value = catletMetadata.VMId.ToString(),
                     Required = false,
                     Secret = false,
                 },
