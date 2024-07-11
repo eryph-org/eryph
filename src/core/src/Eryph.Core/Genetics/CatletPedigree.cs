@@ -55,21 +55,22 @@ public static class CatletPedigree
             .ToEither(Error.New($"Could not resolve the parent ID {id}"))
             .MapLeft(e => CreateError(visitedAncestors, e))
         let updatedVisitedAncestors = visitedAncestors.Add(new AncestorInfo(id, resolvedId))
-        from _ in ValidateAncestorChain(visitedAncestors)
+        from _ in ValidateAncestorChain(updatedVisitedAncestors)
+            .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from config in ancestors.Find(resolvedId)
             .ToEither(Error.New($"Could not find the parent config for {resolvedId}"))
-            .MapLeft(e => CreateError(visitedAncestors, e))
+            .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from parentConfig in BreedRecursively(config.Parent, geneSets, ancestors, updatedVisitedAncestors)
         from normalizedConfig in NormalizeGenepoolSources(id, config)
             .MapLeft(e => Error.New("Could not normalize genepool sources.", e))
-            .MapLeft(e => CreateError(visitedAncestors, e))
+            .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from resolvedConfig in CatletGeneResolving.ResolveGenesetIdentifiers(normalizedConfig, geneSets)
             .MapLeft(e => Error.New($"Could not resolve genes in '{id}'."))
-            .MapLeft(e => CreateError(visitedAncestors, e))
+            .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from bredConfig in parentConfig.Match(
             Some: pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
                 .MapLeft(e => Error.New($"Could not breed '{id} with its parent.", e))
-                .MapLeft(e => CreateError(visitedAncestors, e)),
+                .MapLeft(e => CreateError(updatedVisitedAncestors, e)),
             None: () => resolvedConfig)
         select bredConfig;
 
@@ -127,7 +128,11 @@ public static class CatletPedigree
         Seq<AncestorInfo> visitedAncestors,
         Error innerError) =>
         Error.New(
-                "Could not breed ancestor in the pedigree "
-                + string.Join(" -> ", "catlet".Cons(visitedAncestors.Map(a => a.ToString()))),
+            visitedAncestors.Match(
+                Empty: () => "Could not breed the catlet config.",
+                Seq: ancestors =>
+                    "Could not breed ancestor in the pedigree "
+                    + string.Join(" -> ", "catlet".Cons(ancestors.Map(a => a.ToString())))
+                    + "."),
             innerError);
 }

@@ -82,23 +82,20 @@ public class ResolveCatletConfigCommandHandlerTests
             _cancelToken);
 
         var commandResponse = result.Should().BeRight().Subject;
-        commandResponse.ResolvedGeneSets.Should().BeEquivalentTo([
-            (GeneSetIdentifier.New("acme/acme-os/starter"), GeneSetIdentifier.New("acme/acme-os/starter-1.0")),
-            (GeneSetIdentifier.New("acme/acme-os/latest"), GeneSetIdentifier.New("acme/acme-os/1.0")),
-            (GeneSetIdentifier.New("acme/acme-images/latest"), GeneSetIdentifier.New("acme/acme-images/1.0")),
-            (GeneSetIdentifier.New("acme/acme-tools/latest"), GeneSetIdentifier.New("acme/acme-tools/1.0")),
-        ]);
-        commandResponse.ParentConfigs.Should().SatisfyRespectively(
-            ancestor =>
-            {
-                ancestor.Id.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
-                ancestor.Config.Name.Should().Be("acme-os-base");
-            },
-            ancestor =>
-            {
-                ancestor.Id.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
-                ancestor.Config.Name.Should().Be("acme-os-starter");
-            });
+
+        commandResponse.ResolvedGeneSets.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/starter"))
+            .WhoseValue.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
+        commandResponse.ResolvedGeneSets.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/latest"))
+            .WhoseValue.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
+        commandResponse.ResolvedGeneSets.Should().ContainKey(GeneSetIdentifier.New("acme/acme-images/latest"))
+            .WhoseValue.Should().Be(GeneSetIdentifier.New("acme/acme-images/1.0"));
+        commandResponse.ResolvedGeneSets.Should().ContainKey(GeneSetIdentifier.New("acme/acme-tools/latest"))
+            .WhoseValue.Should().Be(GeneSetIdentifier.New("acme/acme-tools/1.0"));
+        
+        commandResponse.ParentConfigs.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/1.0"))
+            .WhoseValue.Name.Should().Be("acme-os-base");
+        commandResponse.ParentConfigs.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/starter-1.0"))
+            .WhoseValue.Name.Should().Be("acme-os-starter");
 
         // Gene sets should only be resolved exactly once.
         _geneProviderMock.Verify(
@@ -176,23 +173,20 @@ public class ResolveCatletConfigCommandHandlerTests
             _cancelToken);
 
         var commandResponse = result.Should().BeRight().Subject;
-        commandResponse.ResolvedGeneSets.Should().BeEquivalentTo([
-            (GeneSetIdentifier.New("acme/acme-os/starter-1.0"), GeneSetIdentifier.New("acme/acme-os/starter-1.0")),
-            (GeneSetIdentifier.New("acme/acme-os/1.0"), GeneSetIdentifier.New("acme/acme-os/1.0")),
-            (GeneSetIdentifier.New("acme/acme-images/1.0"), GeneSetIdentifier.New("acme/acme-images/1.0")),
-            (GeneSetIdentifier.New("acme/acme-tools/1.0"), GeneSetIdentifier.New("acme/acme-tools/1.0"))
-        ]);
-        commandResponse.ParentConfigs.Should().SatisfyRespectively(
-            ancestor =>
-            {
-                ancestor.Id.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
-                ancestor.Config.Name.Should().Be("acme-os-base");
-            },
-            ancestor =>
-            {
-                ancestor.Id.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
-                ancestor.Config.Name.Should().Be("acme-os-starter");
-            });
+
+        commandResponse.ResolvedGeneSets.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/starter-1.0"))
+            .WhoseValue.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
+        commandResponse.ResolvedGeneSets.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/1.0"))
+            .WhoseValue.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
+        commandResponse.ResolvedGeneSets.Should().ContainKey(GeneSetIdentifier.New("acme/acme-images/1.0"))
+            .WhoseValue.Should().Be(GeneSetIdentifier.New("acme/acme-images/1.0"));
+        commandResponse.ResolvedGeneSets.Should().ContainKey(GeneSetIdentifier.New("acme/acme-tools/1.0"))
+            .WhoseValue.Should().Be(GeneSetIdentifier.New("acme/acme-tools/1.0"));
+
+        commandResponse.ParentConfigs.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/1.0"))
+            .WhoseValue.Name.Should().Be("acme-os-base");
+        commandResponse.ParentConfigs.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/starter-1.0"))
+            .WhoseValue.Name.Should().Be("acme-os-starter");
 
         // Gene sets should only be resolved exactly once.
         _geneProviderMock.Verify(

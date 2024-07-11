@@ -34,8 +34,18 @@ public class EryphNameJsonConverter<T> : JsonConverter<T> where T : EryphName<T>
         return (T)Activator.CreateInstance(typeToConvert, reader.GetString());
     }
 
+    public override T ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return (T)Activator.CreateInstance(typeToConvert, reader.GetString());
+    }
+
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
     {
         writer.WriteStringValue(value.Value);
+    }
+
+    public override void WriteAsPropertyName(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+    {
+        writer.WritePropertyName(value.Value);
     }
 }

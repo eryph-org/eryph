@@ -80,8 +80,8 @@ public class ResolveCatletConfigCommandHandler(
             Seq<AncestorInfo>(), geneProvider, genepoolReader, cancellationToken)
         select new ResolveCatletConfigCommandResponse()
         {
-            ParentConfigs = result.ResolvedCatlets.ToList(),
-            ResolvedGeneSets = result.ResolvedGeneSets.ToList(),
+            ParentConfigs = result.ResolvedCatlets.ToDictionary(),
+            ResolvedGeneSets = result.ResolvedGeneSets.ToDictionary(),
         };
 
     private static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveParent(

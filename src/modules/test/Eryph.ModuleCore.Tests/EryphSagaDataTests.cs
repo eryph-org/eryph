@@ -41,6 +41,11 @@ public class EryphSagaDataTests
             new GeneIdentifierWithType(GeneType.Volume,
                 GeneIdentifier.New("gene:acme/acme-parent/1.0:sda")),
         ];
+        sagaData.Data.GeneSetMap = new Dictionary<GeneSetIdentifier, GeneSetIdentifier>
+        {
+            [GeneSetIdentifier.New("acme/acme-parent/latest")] = GeneSetIdentifier.New("acme/acme-parent/1.0"),
+            [GeneSetIdentifier.New("acme/acme-grand-parent/latest")] = GeneSetIdentifier.New("acme/acme-grand-parent/1.0"),
+        };
 
         // The Rebus saga store uses a hardcoded Newtonsoft.Json serializer.
         // Hence, we test the roundtrip with the actual InMemorySagaStorage.
@@ -74,5 +79,7 @@ public class EryphSagaDataTests
         public List<AncestorInfo> Ancestors { get; set; }
 
         public List<GeneIdentifierWithType> GeneIdsWithTypes { get; set; }
+
+        public IReadOnlyDictionary<GeneSetIdentifier, GeneSetIdentifier> GeneSetMap { get; set; }
     }
 }

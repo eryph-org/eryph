@@ -10,7 +10,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 
 public class ResolveCatletConfigCommandResponse
 {
-    public IList<(GeneSetIdentifier Source, GeneSetIdentifier Target)> ResolvedGeneSets { get; set; }
+    public IReadOnlyDictionary<GeneSetIdentifier, GeneSetIdentifier> ResolvedGeneSets { get; set; }
 
-    public IList<(GeneSetIdentifier Id, CatletConfig Config)> ParentConfigs { get; set; }
+    public IReadOnlyDictionary<GeneSetIdentifier, CatletConfig> ParentConfigs { get; set; }
 }

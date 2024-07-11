@@ -33,6 +33,11 @@ public class SerializationTests
                 new GeneIdentifierWithType(GeneType.Volume,
                     GeneIdentifier.New("gene:acme/acme-parent/1.0:sda")),
             ],
+            GeneSetMap = new Dictionary<GeneSetIdentifier, GeneSetIdentifier>
+            {
+                [GeneSetIdentifier.New("acme/acme-parent/latest")] = GeneSetIdentifier.New("acme/acme-parent/1.0"),
+                [GeneSetIdentifier.New("acme/acme-grand-parent/latest")] = GeneSetIdentifier.New("acme/acme-grand-parent/1.0"),
+            }
         };
 
         var json = JsonSerializer.Serialize(data, EryphJsonSerializerOptions.Default);
@@ -49,5 +54,7 @@ public class SerializationTests
         public required List<AncestorInfo> Ancestors { get; init; }
 
         public required List<GeneIdentifierWithType> GeneIdsWithTypes { get; init; }
+
+        public required IReadOnlyDictionary<GeneSetIdentifier, GeneSetIdentifier> GeneSetMap { get; init; }
     }
 }

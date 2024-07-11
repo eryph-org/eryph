@@ -84,7 +84,7 @@ public static class CatletBreeding
                 let store = Optional(child.Store).Filter(notEmpty) | Optional(parent.Store)
                 from __ in guardnot(
                         source.Bind(GeneIdentifier.NewOption).IsSome && diskType != CatletDriveType.VHD,
-                        Error.New("The disk source is a gene but the drive type is not a plain VHD."))
+                        Error.New("The drive must be a plain VHD when using a gene pool source."))
                     .ToEither()
                 select new CatletDriveConfig()
                 {
