@@ -23,7 +23,7 @@ public static class CatletPedigree
         GeneSetMap geneSetMap,
         CatletMap ancestors) =>
         from parentConfig in BreedRecursively(config.Parent, geneSetMap, ancestors, [])
-        from resolvedConfig in CatletGeneResolving.ResolveGenesetIdentifiers(config, geneSetMap)
+        from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(config, geneSetMap)
             .MapLeft(e => Error.New("Could not resolve genes of the catlet.", e))
         from bredConfig in parentConfig.Match(
             Some: pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
@@ -64,7 +64,7 @@ public static class CatletPedigree
         from normalizedConfig in NormalizeGenepoolSources(id, config)
             .MapLeft(e => Error.New("Could not normalize genepool sources.", e))
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
-        from resolvedConfig in CatletGeneResolving.ResolveGenesetIdentifiers(normalizedConfig, geneSets)
+        from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(normalizedConfig, geneSets)
             .MapLeft(e => Error.New($"Could not resolve genes in '{id}'."))
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from bredConfig in parentConfig.Match(

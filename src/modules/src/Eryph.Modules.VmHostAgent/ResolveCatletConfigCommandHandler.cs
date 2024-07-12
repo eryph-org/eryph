@@ -30,7 +30,7 @@ using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 /// This command handler resolves the ancestors and referenced gene sets
 /// of the included <see cref="ResolveCatletConfigCommand.Config"/>.
 /// The handler returns a <see cref="ResolveCatletConfigCommandResponse"/>
-/// with the resolved <see cref="AncestorInfo"/>s as well as the
+/// with the resolved <see cref="GeneSetIdentifier"/>s as well as the
 /// <see cref="CatletConfig"/>s of all ancestors.
 /// </summary>
 /// <remarks>
@@ -42,8 +42,8 @@ using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 /// <para>
 /// The handler ensures that each <see cref="GeneSetIdentifier"/> is resolved
 /// exactly once. This both limits the amount of requests to the gene pool and
-/// also ensures that a gene set reference is consistently resolved to the same
-/// gene set.
+/// also ensures that a gene set tag reference is consistently resolved to the
+/// same gene set tag.
 /// </para>
 /// </remarks>
 [UsedImplicitly]
@@ -98,11 +98,9 @@ public class ResolveCatletConfigCommandHandler(
             .MapLeft(e => Error.New("The parent ID is invalid.", e))
             .MapLeft(e => CreateError(visitedAncestors, e))
             .ToAsync()
-        from result in validParentId.Match<EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedConfig)>>(
-            Some: id =>
-                from resolvedParent in ResolveParent(id, resolvedGeneSets, resolvedCatlets,
-                    visitedAncestors, geneProvider, genepoolReader, cancellationToken)
-                select (resolvedParent.ResolvedGeneSets, resolvedParent.ResolvedCatlets),
+        from result in validParentId.Match(
+            Some: id => ResolveParent(id, resolvedGeneSets, resolvedCatlets,
+                    visitedAncestors, geneProvider, genepoolReader, cancellationToken),
             None: () => (resolvedGeneSets, resolvedCatlets))
         select result;
 
@@ -122,10 +120,10 @@ public class ResolveCatletConfigCommandHandler(
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
             .ToAsync()
         from provideResult in geneProvider.ProvideGene(
-            GeneType.Catlet,
-            new GeneIdentifier(resolvedId, GeneName.New("catlet")),
-            (s1, i) => Task.FromResult(unit),
-            default)
+                GeneType.Catlet,
+                new GeneIdentifier(resolvedId, GeneName.New("catlet")),
+                (_, _) => Task.FromResult(unit),
+                default)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from a in guard(provideResult.RequestedGene == provideResult.ResolvedGene,
             Error.New("The resolved gene is different. This code must only be called with resolved IDs. "

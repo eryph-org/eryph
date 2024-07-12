@@ -226,7 +226,7 @@ public class CatletFeedingTests
                     [
                         new VariableConfig()
                         {
-                            Name = "variableA",
+                            Name = "geneVariable",
                             Value = "first value",
                         },
                     ],
@@ -239,7 +239,7 @@ public class CatletFeedingTests
                     [
                         new VariableConfig()
                         {
-                            Name = "variableA",
+                            Name = "geneVariable",
                             Value = "second value",
                         },
                     ],
@@ -250,10 +250,31 @@ public class CatletFeedingTests
         ArrangeFood();
 
         var result = CatletFeeding.Feed(config, _genepoolReaderMock.Object);
-
-        var fedConfig = result.Should().BeRight().Subject;
-
-        fedConfig.Fodder.Should().HaveCount(2);
+        result.Should().BeRight().Which.Fodder.Should().SatisfyRespectively(
+            fodder =>
+            {
+                fodder.Name.Should().Be("food1");
+                fodder.Content.Should().Be("food 1 content");
+                fodder.Source.Should().Be("gene:acme/acme-tools/1.0:test-fodder");
+                fodder.Variables.Should().SatisfyRespectively(
+                    variable =>
+                    {
+                        variable.Name.Should().Be("geneVariable");
+                        variable.Value.Should().Be("second value");
+                    });
+            },
+            fodder =>
+            {
+                fodder.Name.Should().Be("food2");
+                fodder.Content.Should().Be("food 2 content");
+                fodder.Source.Should().Be("gene:acme/acme-tools/1.0:test-fodder");
+                fodder.Variables.Should().SatisfyRespectively(
+                    variable =>
+                    {
+                        variable.Name.Should().Be("geneVariable");
+                        variable.Value.Should().Be("first value");
+                    });
+            });
     }
 
     private void ArrangeFood()
@@ -265,6 +286,13 @@ public class CatletFeedingTests
             new FodderGeneConfig()
             {
                 Name = "test-fodder",
+                Variables =
+                [
+                    new VariableConfig()
+                    {
+                        Name = "geneVariable",
+                    }
+                ],
                 Fodder = 
                 [
                     new FodderConfig()
@@ -307,7 +335,7 @@ public class CatletFeedingTests
             ],
         };
 
-        _genepoolReaderMock.SetupGenesetReferences([]);
+        _genepoolReaderMock.SetupGenesetReferences();
         _genepoolReaderMock.SetupFodderGene(
             "gene:acme/acme-tools/1.0:test-fodder",
             new FodderGeneConfig
@@ -370,7 +398,7 @@ public class CatletFeedingTests
             ],
         };
 
-        _genepoolReaderMock.SetupGenesetReferences([]);
+        _genepoolReaderMock.SetupGenesetReferences();
 
         var result = CatletFeeding.Feed(config, _genepoolReaderMock.Object);
 

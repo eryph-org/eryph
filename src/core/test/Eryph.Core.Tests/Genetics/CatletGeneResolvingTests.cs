@@ -14,7 +14,7 @@ namespace Eryph.Core.Tests.Genetics;
 public class CatletGeneResolvingTests
 {
     [Theory, PairwiseData]
-    public void ResolveGenesetIdentifiers_ValidIdentifiers_ResolvesAllIdentifiers(
+    public void ResolveGeneSetIdentifiers_ValidIdentifiers_ResolvesAllIdentifiers(
         [CombinatorialValues("acme/acme-os", "acme/acme-os/latest", "acme/acme-os/1.0")]
         string parentGeneSet,
         [CombinatorialValues("acme/acme-images", "acme/acme-images/latest", "acme/acme-images/1.0")]
@@ -50,7 +50,7 @@ public class CatletGeneResolvingTests
             (GeneSetIdentifier.New("acme/acme-tools/1.0"), GeneSetIdentifier.New("acme/acme-tools/1.0")));
 
 
-        var result = CatletGeneResolving.ResolveGenesetIdentifiers(config, geneSetMap);
+        var result = CatletGeneResolving.ResolveGeneSetIdentifiers(config, geneSetMap);
 
         var resultConfig = result.Should().BeRight().Subject;
         resultConfig.Parent.Should().Be("acme/acme-os/1.0");
@@ -61,21 +61,21 @@ public class CatletGeneResolvingTests
     }
 
     [Fact]
-    public void ResolveGenesetIdentifiers_UnresolvedParent_ReturnsError()
+    public void ResolveGeneSetIdentifiers_UnresolvedParent_ReturnsError()
     {
         var config = new CatletConfig
         {
             Parent = "acme/acme-os/latest",
         };
 
-        var result = CatletGeneResolving.ResolveGenesetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
+        var result = CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
 
         result.Should().BeLeft().Which.Message
             .Should().Be("The gene set 'acme/acme-os/latest' could not be resolved.");
     }
 
     [Fact]
-    public void ResolveGenesetIdentifiers_UnresolvedDriveSource_ReturnsError()
+    public void ResolveGeneSetIdentifiers_UnresolvedDriveSource_ReturnsError()
     {
         var config = new CatletConfig
         {
@@ -88,14 +88,14 @@ public class CatletGeneResolvingTests
             ],
         };
 
-        var result = CatletGeneResolving.ResolveGenesetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
+        var result = CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
 
         result.Should().BeLeft().Which.Message
             .Should().Be("The gene set 'acme/acme-images/latest' could not be resolved.");
     }
 
     [Fact]
-    public void ResolveGenesetIdentifiers_UnresolvedFodderSource_ReturnsError()
+    public void ResolveGeneSetIdentifiers_UnresolvedFodderSource_ReturnsError()
     {
         var config = new CatletConfig
         {
@@ -108,7 +108,7 @@ public class CatletGeneResolvingTests
             ],
         };
 
-        var result = CatletGeneResolving.ResolveGenesetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
+        var result = CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
 
         result.Should().BeLeft().Which.Message
             .Should().Be("The gene set 'acme/acme-tools/latest' could not be resolved.");

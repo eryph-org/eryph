@@ -33,19 +33,19 @@ namespace Eryph.Modules.Controller.Compute
 
         protected override async Task Initiated(UpdateConfigDriveCommand message)
         {
-            var machineInfo = await _vmDataService.GetVM(message.CatletId)
+            var catlet = await _vmDataService.GetVM(message.CatletId)
                 .Map(m => m.IfNoneUnsafe((Catlet?)null));
-            if (machineInfo is null)
+            if (catlet is null)
             {
                 await Fail($"Catlet config drive cannot be updated because the catlet {message.CatletId} does not exist.");
                 return;
             }
 
-            var metadata = await _metadataService.GetMetadata(machineInfo.MetadataId)
+            var metadata = await _metadataService.GetMetadata(catlet.MetadataId)
                 .Map(m => m.IfNoneUnsafe((CatletMetadata?)null));
             if (metadata is null)
             {
-                await Fail($"Catlet config drive cannot be updated because the metadata for catlet {message.CatletId} does not exist.");
+                await Fail($"Catlet config drive cannot be updated because the metadata for catlet '{catlet.Name}' ({catlet.Id}) does not exist.");
                 return;
             }
 
@@ -64,7 +64,7 @@ namespace Eryph.Modules.Controller.Compute
             var breedingResult = CatletBreeding.Breed(metadata.ParentConfig, config);
             if (breedingResult.IsLeft)
             {
-                await Fail(ErrorUtils.PrintError(Error.New($"Could not breed config for catlet {message.CatletId}.",
+                await Fail(ErrorUtils.PrintError(Error.New($"Could not breed config for catlet '{catlet.Name}' ({catlet.Id}).",
                     Error.Many(breedingResult.LeftToSeq()))));
                 return;
             }
@@ -72,8 +72,8 @@ namespace Eryph.Modules.Controller.Compute
             await StartNewTask(new UpdateCatletConfigDriveCommand
             {
                 Config = breedingResult.ValueUnsafe(),
-                VMId = machineInfo.VMId,
-                CatletId = machineInfo.Id,
+                VMId = catlet.VMId,
+                CatletId = catlet.Id,
                 MachineMetadata = metadata
             });
         }

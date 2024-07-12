@@ -36,17 +36,16 @@ internal class CreateCatletSaga(
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<ResolveCatletConfigCommand>>
 {
-    protected override Task Initiated(CreateCatletCommand message)
+    protected override async Task Initiated(CreateCatletCommand message)
     {
         Data.Data.Config = message.Config;
         Data.Data.State = CreateVMState.Initiated;
         Data.Data.TenantId = message.TenantId;
-        return StartNewTask(new ValidateCatletConfigCommand
-            {
-                MachineId = Guid.Empty,
-                Config = message.Config
-            }
-        ).AsTask();
+        await StartNewTask(new ValidateCatletConfigCommand
+        {
+            MachineId = Guid.Empty,
+            Config = message.Config
+        });
     }
 
     public Task Handle(OperationTaskStatusEvent<ValidateCatletConfigCommand> message)
@@ -93,7 +92,7 @@ internal class CreateCatletSaga(
         {
             Data.Data.State = CreateVMState.Resolved;
 
-            var resolveResult = CatletGeneResolving.ResolveGenesetIdentifiers(
+            var resolveResult = CatletGeneResolving.ResolveGeneSetIdentifiers(
                 Data.Data.Config,
                 response.ResolvedGeneSets.ToHashMap());
             if (resolveResult.IsLeft)
@@ -173,7 +172,7 @@ internal class CreateCatletSaga(
             await StartNewTask(new UpdateCatletCommand
             {
                 Config = Data.Data.Config,
-                BreedConfig = Data.Data.BredConfig,
+                BredConfig = Data.Data.BredConfig,
                 CatletId = Data.Data.MachineId
             });
         });

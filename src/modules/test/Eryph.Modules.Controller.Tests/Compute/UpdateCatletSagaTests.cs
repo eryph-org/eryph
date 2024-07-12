@@ -13,7 +13,7 @@ namespace Eryph.Modules.Controller.Tests.Compute;
 public class UpdateCatletSagaTests
 {
     [Fact]
-    public void FindRequiredGenes_InformationalParentSource_ReturnsGenesWithInformationalParents()
+    public void FindRequiredGenes_InformationalParentSource_ReturnsGenesWithoutInformationalParents()
     {
         var config = new CatletConfig()
         {

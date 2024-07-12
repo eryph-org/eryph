@@ -22,7 +22,7 @@ public class ResolveCatletConfigCommandHandlerTests
     private readonly CancellationToken _cancelToken = new();
 
     [Fact]
-    public async Task Handle_ConfigWithGeneSetReferences_ReturnsResolvedData()
+    public async Task Handle_ConfigWithGeneSetTagReferences_ReturnsResolvedData()
     {
         var config = new CatletConfig
         {
@@ -113,7 +113,7 @@ public class ResolveCatletConfigCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ConfigWithResolvedGeneSets_ReturnsResolvedData()
+    public async Task Handle_ConfigWithResolvedGeneSetTags_ReturnsResolvedData()
     {
         var config = new CatletConfig
         {

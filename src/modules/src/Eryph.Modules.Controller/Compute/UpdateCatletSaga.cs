@@ -46,7 +46,7 @@ internal class UpdateCatletSaga(
     protected override async Task Initiated(UpdateCatletCommand message)
     {
         Data.Data.State = UpdateVMState.Initiated;
-        Data.Data.BredConfig = message.BreedConfig;
+        Data.Data.BredConfig = message.BredConfig;
         Data.Data.Config = message.Config;
         Data.Data.CatletId = message.Resource.Id;
 
@@ -124,7 +124,7 @@ internal class UpdateCatletSaga(
                 return;
             }
 
-            var resolveResult = CatletGeneResolving.ResolveGenesetIdentifiers(
+            var resolveResult = CatletGeneResolving.ResolveGeneSetIdentifiers(
                 Data.Data.Config,
                 response.ResolvedGeneSets.ToHashMap());
             if (resolveResult.IsLeft)

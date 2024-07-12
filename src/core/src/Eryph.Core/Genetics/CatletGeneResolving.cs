@@ -16,7 +16,7 @@ using GeneSetMap = HashMap<GeneSetIdentifier, GeneSetIdentifier>;
 
 public static class CatletGeneResolving
 {
-    public static Either<Error, CatletConfig> ResolveGenesetIdentifiers(
+    public static Either<Error, CatletConfig> ResolveGeneSetIdentifiers(
     CatletConfig catletConfig,
     GeneSetMap resolvedGeneSets) =>
         from resolvedParent in Optional(catletConfig.Parent)
@@ -25,10 +25,10 @@ public static class CatletGeneResolving
             .BindT(geneSetId => ResolveGeneSetIdentifier(geneSetId, resolvedGeneSets))
             .Sequence()
         from resolvedDrives in catletConfig.Drives.ToSeq()
-            .Map(driveConfig => ResolveGenesetIdentifiers(driveConfig, resolvedGeneSets))
+            .Map(driveConfig => ResolveGeneSetIdentifiers(driveConfig, resolvedGeneSets))
             .Sequence()
         from resolvedFodder in catletConfig.Fodder.ToSeq()
-            .Map(fodderConfig => ResolveGenesetIdentifiers(fodderConfig, resolvedGeneSets))
+            .Map(fodderConfig => ResolveGeneSetIdentifiers(fodderConfig, resolvedGeneSets))
             .Sequence()
         select catletConfig.CloneWith(c =>
         {
@@ -37,27 +37,27 @@ public static class CatletGeneResolving
             c.Fodder = resolvedFodder.ToArray();
         });
 
-    private static Either<Error, FodderConfig> ResolveGenesetIdentifiers(
+    private static Either<Error, FodderConfig> ResolveGeneSetIdentifiers(
         FodderConfig fodderConfig,
         GeneSetMap resolvedGeneSets) =>
-        from resolvedGeneIdentifier in ResolveGenesetIdentifiers(fodderConfig.Source, resolvedGeneSets)
+        from resolvedGeneIdentifier in ResolveGeneSetIdentifiers(fodderConfig.Source, resolvedGeneSets)
         select fodderConfig.CloneWith(c =>
         {
             c.Source = resolvedGeneIdentifier.Map(id => id.Value)
                 .IfNoneUnsafe((string)null);
         });
 
-    private static Either<Error, CatletDriveConfig> ResolveGenesetIdentifiers(
+    private static Either<Error, CatletDriveConfig> ResolveGeneSetIdentifiers(
         CatletDriveConfig driveConfig,
         GeneSetMap resolvedGeneSets) =>
-        from resolvedGeneIdentifier in ResolveGenesetIdentifiers(driveConfig.Source, resolvedGeneSets)
+        from resolvedGeneIdentifier in ResolveGeneSetIdentifiers(driveConfig.Source, resolvedGeneSets)
         select driveConfig.CloneWith(c =>
         {
             c.Source = resolvedGeneIdentifier.Map(id => id.Value)
                 .IfNoneUnsafe((string)null);
         });
 
-    private static Either<Error, Option<GeneIdentifier>> ResolveGenesetIdentifiers(
+    private static Either<Error, Option<GeneIdentifier>> ResolveGeneSetIdentifiers(
         Option<string> geneIdentifier,
         GeneSetMap resolvedGeneSets) =>
         from validGeneId in geneIdentifier

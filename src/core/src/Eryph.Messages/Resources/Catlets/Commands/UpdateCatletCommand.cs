@@ -11,7 +11,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands
     {
         public CatletConfig Config { get; set; }
 
-        [CanBeNull] public CatletConfig BreedConfig { get; set; }
+        [CanBeNull] public CatletConfig BredConfig { get; set; }
 
         public Guid CorrelationId { get; set; }
 

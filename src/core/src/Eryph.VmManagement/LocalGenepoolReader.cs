@@ -38,7 +38,7 @@ public class LocalGenepoolReader(VmHostAgentConfiguration agentConfiguration)
             GeneType.Catlet => Right<Error, string>("."),
             GeneType.Volume => "volumes",
             GeneType.Fodder => "fodder",
-            _ => Error.New($"Could not read gene {geneId} from local genepool. The gene type '{geneType}' is not supported.")
+            _ => Error.New($"Could not read gene '{geneId}' from local genepool. The gene type '{geneType}' is not supported.")
         }
         let genePath = Path.Combine(GetGeneSetPath(geneId.GeneSet), geneFolder,
             $"{geneId.GeneName}.json")

@@ -50,19 +50,4 @@ public static class LocalGenepoolReaderMockExtensions
         mock.Setup(m => m.ReadGeneContent(GeneType.Fodder, validGeneId))
             .Returns(Right<Error, string>(json));
     }
-
-    public static void SetupGenesetReference(
-        this Mock<ILocalGenepoolReader> mock,
-        GeneSetIdentifier source,
-        GeneSetIdentifier target) =>
-        mock.Setup(m => m.GetGenesetReference(source))
-            .Returns(Right<Error, Option<GeneSetIdentifier>>(target));
-
-    public static void SetupGenesetReference(
-        this Mock<ILocalGenepoolReader> mock,
-        string source,
-        Option<string> target) =>
-        mock.Setup(m => m.GetGenesetReference(GeneSetIdentifier.New(source)))
-            .Returns(Right<Error, Option<GeneSetIdentifier>>(
-                target.Map(t => GeneSetIdentifier.New(t))));
 }
