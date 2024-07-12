@@ -50,7 +50,7 @@ namespace Eryph.Runtime.Zero
                 EventDestination = QueueNames.Controllers,
                 OperationsDestination = QueueNames.Controllers,
                 DeferCompletion = TimeSpan.FromMinutes(1),
-                JsonSerializerOptions = EryphJsonSerializerOptions.Default,
+                JsonSerializerOptions = EryphJsonSerializerOptions.Options,
             });
         }
 

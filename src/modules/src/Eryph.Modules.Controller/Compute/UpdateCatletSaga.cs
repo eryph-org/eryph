@@ -124,11 +124,20 @@ internal class UpdateCatletSaga(
                 return;
             }
 
+            var resolveResult = CatletGeneResolving.ResolveGenesetIdentifiers(
+                Data.Data.Config,
+                response.ResolvedGeneSets.ToHashMap());
+            if (resolveResult.IsLeft)
+            {
+                await Fail(ErrorUtils.PrintError(Error.New("Could not resolve genes in catlet.",
+                    Error.Many(resolveResult.LeftToSeq()))));
+                return;
+            }
+
             var breedingResult = CatletPedigree.Breed(
                 Data.Data.Config,
                 response.ResolvedGeneSets.ToHashMap(),
                 response.ParentConfigs.ToHashMap());
-
             if (breedingResult.IsLeft)
             {
                 await Fail(ErrorUtils.PrintError(Error.New("Could not breed catlet.",
@@ -137,7 +146,7 @@ internal class UpdateCatletSaga(
             }
 
             // TODO properly handle updates: fail on changed existing drive or fodder. Only apply other settings.
-
+            Data.Data.Config = resolveResult.ValueUnsafe();
             Data.Data.BredConfig = breedingResult.ValueUnsafe().Config;
 
             await StartPrepareGenes();
@@ -159,7 +168,6 @@ internal class UpdateCatletSaga(
                 return;
 
             await StartUpdateCatlet();
-            return;
         });
     }
 
@@ -210,18 +218,18 @@ internal class UpdateCatletSaga(
         if (Data.Data.State >= UpdateVMState.VMUpdated)
             return Task.CompletedTask;
 
-        return FailOrRun<UpdateCatletVMCommand, ConvergeCatletResult>(message, async r =>
+        return FailOrRun(message, async (ConvergeCatletResult response) =>
         {
             Data.Data.State = UpdateVMState.VMUpdated;
 
-            await metadataService.SaveMetadata(r.MachineMetadata);
+            await metadataService.SaveMetadata(response.MachineMetadata);
 
             //TODO: replace this with operation call
             await bus.SendLocal(new UpdateInventoryCommand
             {
                 AgentName = Data.Data.AgentName,
-                Inventory = [r.Inventory],
-                Timestamp = r.Timestamp,
+                Inventory = [response.Inventory],
+                Timestamp = response.Timestamp,
             });
 
             var catlet = await vmDataService.GetVM(Data.Data.CatletId);
@@ -234,9 +242,9 @@ internal class UpdateCatletSaga(
             await StartNewTask(new UpdateCatletConfigDriveCommand
             {
                 Config = Data.Data.BredConfig,
-                VMId = r.Inventory.VMId,
+                VMId = response.Inventory.VMId,
                 CatletId = Data.Data.CatletId,
-                MachineMetadata = r.MachineMetadata,
+                MachineMetadata = response.MachineMetadata,
             });
         });
     }

@@ -43,34 +43,30 @@ namespace Eryph.Modules.VmHostAgent
             _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
-        protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(CreateCatletVMCommand command)
-        {
-            var config = command.Config;
-
-            return
-                from hostSettings in _hostSettingsProvider.GetHostSettings()
-                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-                from plannedStorageSettings in VMStorageSettings.Plan(
-                    vmHostAgentConfig, LongToString(command.StorageId), config, None)
-                from createdVM in CreateVM(plannedStorageSettings, Engine, command.BreedConfig)
-                let metadata = new CatletMetadata
-                {
-                    Id = Guid.NewGuid(),
-                    MachineId = command.NewMachineId,
-                    VMId = createdVM.Value.Id,
-                    Fodder = config.Fodder,
-                    Variables = config.Variables,
-                    Parent = config.Parent,
-                }
-                from _ in SetMetadataId(createdVM, metadata.Id)
-                from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, createdVM, _hostInfoProvider)
-                select new ConvergeCatletResult
-                {
-                    Inventory = inventory,
-                    MachineMetadata = metadata,
-                    Timestamp = DateTimeOffset.UtcNow,
-                };
-        }
+        protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(
+            CreateCatletVMCommand command) =>
+            from hostSettings in _hostSettingsProvider.GetHostSettings()
+            from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+            from plannedStorageSettings in VMStorageSettings.Plan(
+                vmHostAgentConfig, LongToString(command.StorageId), command.Config, None)
+            from createdVM in CreateVM(plannedStorageSettings, Engine, command.BredConfig)
+            let metadata = new CatletMetadata
+            {
+                Id = Guid.NewGuid(),
+                MachineId = command.NewMachineId,
+                VMId = createdVM.Value.Id,
+                Fodder = command.Config.Fodder,
+                Variables = command.Config.Variables,
+                Parent = command.Config.Parent,
+            }
+            from _ in SetMetadataId(createdVM, metadata.Id)
+            from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, createdVM, _hostInfoProvider)
+            select new ConvergeCatletResult
+            {
+                Inventory = inventory,
+                MachineMetadata = metadata,
+                Timestamp = DateTimeOffset.UtcNow,
+            };
 
         private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(
             VMStorageSettings storageSettings,

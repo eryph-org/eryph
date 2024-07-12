@@ -230,11 +230,13 @@ namespace Eryph.VmManagement
             TypedPsObject<VirtualMachineInfo> vmInfo,
             CatletConfig machineConfig,
             CatletMetadata metadata,
-            MachineNetworkSettings[] networkSettings,
             VMStorageSettings storageSettings)
         {
-            var convergeContext =
-                new ConvergeContext(vmHostAgentConfig, engine, reportProgress, machineConfig, metadata, storageSettings, networkSettings, hostInfo);
+            // Pass empty MachineNetworkSettings as converging the cloud init disk
+            // does not require them.
+            var convergeContext = new ConvergeContext(
+                vmHostAgentConfig, engine, reportProgress, machineConfig,
+                metadata, storageSettings, [], hostInfo);
 
             var convergeTasks = new ConvergeTaskBase[]
             {

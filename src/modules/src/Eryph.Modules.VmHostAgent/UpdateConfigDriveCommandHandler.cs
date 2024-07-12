@@ -51,7 +51,7 @@ internal class UpdateConfigDriveCommandHandler(
             .ToAsync()
         from vmInfoConverged in VirtualMachine.ConvergeConfigDrive(
                 vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfo,
-                substitutedConfig, metadata, command.MachineNetworkSettings, currentStorageSettings)
+                substitutedConfig, metadata, currentStorageSettings)
             .WriteTrace().ToAsync()
         select Unit.Default;
 }

@@ -74,7 +74,7 @@ public static class ApiModuleFactoryExtensions
                     DispatchMode = WorkflowEventDispatchMode.Publish,
                     EventDestination = QueueNames.Controllers,
                     OperationsDestination = QueueNames.Controllers,
-                    JsonSerializerOptions = EryphJsonSerializerOptions.Default,
+                    JsonSerializerOptions = EryphJsonSerializerOptions.Options,
                 });
 
             container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
@@ -119,7 +119,7 @@ public static class ApiModuleFactoryExtensions
                 .Map(m => JsonSerializer.Deserialize(
                     m.Body,
                     Type.GetType(m.Headers["rbs2-msg-type"])!,
-                    EryphJsonSerializerOptions.Default))
+                    EryphJsonSerializerOptions.Options))
                 .OfType<CreateOperationCommand>()
                 .Map(c => JsonSerializer.Deserialize(
                     c.TaskMessage!.CommandData!,

@@ -40,8 +40,8 @@ public class SerializationTests
             }
         };
 
-        var json = JsonSerializer.Serialize(data, EryphJsonSerializerOptions.Default);
-        var result = JsonSerializer.Deserialize<TestData>(json, EryphJsonSerializerOptions.Default);
+        var json = JsonSerializer.Serialize(data, EryphJsonSerializerOptions.Options);
+        var result = JsonSerializer.Deserialize<TestData>(json, EryphJsonSerializerOptions.Options);
 
         result.Should().BeEquivalentTo(data);
     }

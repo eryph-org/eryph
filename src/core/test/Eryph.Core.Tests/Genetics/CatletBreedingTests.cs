@@ -728,8 +728,6 @@ public class CatletBreedingTests
             fodder =>
             {
                 fodder.Name.Should().Be("fodder");
-                // TODO Is this correct? Should be as the fodder was bred and hence the source is now the child.
-                // fodder.Source.Should().Be("gene:dbosoft/test/1.0:catlet");
                 fodder.Source.Should().BeNull();
                 fodder.Variables.Should().SatisfyRespectively(
                     variable =>
@@ -1156,6 +1154,4 @@ public class CatletBreedingTests
                     });
             });
     }
-
-    // TODO test duplicate entries fodder, drives, etc.
 }

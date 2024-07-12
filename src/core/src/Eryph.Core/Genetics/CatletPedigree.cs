@@ -27,7 +27,7 @@ public static class CatletPedigree
             .MapLeft(e => Error.New("Could not resolve genes of the catlet.", e))
         from bredConfig in parentConfig.Match(
             Some: pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
-                .MapLeft(e => Error.New("Could not breed the catlet with its parent", e)),
+                .MapLeft(e => Error.New("Could not breed the catlet with its parent.", e)),
             None: () => resolvedConfig)
         select (bredConfig, parentConfig);
 

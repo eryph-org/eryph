@@ -14,6 +14,6 @@ public static class RebusConfigurationExtensions
 {
     public static void UseEryphSettings(this StandardConfigurer<ISerializer> serializer)
     {
-        serializer.UseSystemTextJson(EryphJsonSerializerOptions.Default);
+        serializer.UseSystemTextJson(EryphJsonSerializerOptions.Options);
     }
 }

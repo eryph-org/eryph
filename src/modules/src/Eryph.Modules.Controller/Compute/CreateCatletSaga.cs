@@ -93,11 +93,20 @@ internal class CreateCatletSaga(
         {
             Data.Data.State = CreateVMState.Resolved;
 
+            var resolveResult = CatletGeneResolving.ResolveGenesetIdentifiers(
+                Data.Data.Config,
+                response.ResolvedGeneSets.ToHashMap());
+            if (resolveResult.IsLeft)
+            {
+                await Fail(ErrorUtils.PrintError(Error.New("Could not resolve genes in catlet.",
+                    Error.Many(resolveResult.LeftToSeq()))));
+                return;
+            }
+
             var breedingResult = CatletPedigree.Breed(
                 Data.Data.Config,
                 response.ResolvedGeneSets.ToHashMap(),
                 response.ParentConfigs.ToHashMap());
-
             if (breedingResult.IsLeft)
             {
                 await Fail(ErrorUtils.PrintError(Error.New("Could not breed catlet.",
@@ -105,6 +114,7 @@ internal class CreateCatletSaga(
                 return;
             }
 
+            Data.Data.Config = resolveResult.ValueUnsafe();
             Data.Data.BredConfig = breedingResult.ValueUnsafe().Config;
             Data.Data.ParentConfig = breedingResult.ValueUnsafe().ParentConfig.IfNoneUnsafe((CatletConfig?)null);
             Data.Data.MachineId = Guid.NewGuid();
@@ -112,7 +122,7 @@ internal class CreateCatletSaga(
             await StartNewTask(new CreateCatletVMCommand
             {
                 Config = Data.Data.Config,
-                BreedConfig = Data.Data.BredConfig,
+                BredConfig = Data.Data.BredConfig,
                 NewMachineId = Data.Data.MachineId,
                 AgentName = Data.Data.AgentName,
                 StorageId = idGenerator.CreateId()
@@ -125,7 +135,7 @@ internal class CreateCatletSaga(
         if (Data.Data.State >= CreateVMState.Created)
             return Task.CompletedTask;
 
-        return FailOrRun<CreateCatletVMCommand, ConvergeCatletResult>(message, async r =>
+        return FailOrRun(message, async (ConvergeCatletResult response) =>
         {
             Data.Data.State = CreateVMState.Created;
 
@@ -147,18 +157,18 @@ internal class CreateCatletSaga(
             if (project == null)
                 throw new InvalidOperationException($"Project '{projectName}' not found.");
 
-            r.MachineMetadata.ParentConfig = Data.Data.ParentConfig;
+            response.MachineMetadata.ParentConfig = Data.Data.ParentConfig;
 
             _ = await vmDataService.AddNewVM(new Catlet
             {
                 ProjectId = project.Id,
                 Id = Data.Data.MachineId,
                 AgentName = Data.Data.AgentName,
-                VMId = r.Inventory.VMId,
-                Name = r.Inventory.Name,
+                VMId = response.Inventory.VMId,
+                Name = response.Inventory.Name,
                 Environment = environmentName.Value,
                 DataStore = datastoreName.Value,
-            }, r.MachineMetadata);
+            }, response.MachineMetadata);
 
             await StartNewTask(new UpdateCatletCommand
             {

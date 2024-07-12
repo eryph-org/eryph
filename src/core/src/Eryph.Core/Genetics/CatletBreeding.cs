@@ -50,7 +50,7 @@ public static class CatletBreeding
             Variables = variables.ToArray(),
         };
 
-    public static Either<Error, Option<CatletCpuConfig>> BreedCpu(
+    private static Either<Error, Option<CatletCpuConfig>> BreedCpu(
         Option<CatletCpuConfig> parentConfig,
         Option<CatletCpuConfig> childConfig) =>
         BreedOptional(parentConfig, childConfig,
@@ -59,7 +59,7 @@ public static class CatletBreeding
                 Count = child.Count ?? parent.Count
             });
 
-    public static Either<Error, Option<CatletMemoryConfig>> BreedMemory(
+    private static Either<Error, Option<CatletMemoryConfig>> BreedMemory(
         Option<CatletMemoryConfig> parentConfig,
         Option<CatletMemoryConfig> childConfig) =>
         BreedOptional(parentConfig, childConfig,
@@ -70,7 +70,7 @@ public static class CatletBreeding
                 Startup = child.Startup ?? parent.Startup,
             });
 
-    public static Either<Error, Seq<CatletDriveConfig>> BreedDrives(
+    private static Either<Error, Seq<CatletDriveConfig>> BreedDrives(
         Seq<CatletDriveConfig> parentConfigs,
         Seq<CatletDriveConfig> childConfigs) =>
         BreedMutateable(parentConfigs, childConfigs,
@@ -98,7 +98,7 @@ public static class CatletBreeding
                     Source = source.IfNoneUnsafe((string)null),
                 });
 
-    public static Either<Error, Seq<CatletNetworkAdapterConfig>> BreedNetworkAdapters(
+    private static Either<Error, Seq<CatletNetworkAdapterConfig>> BreedNetworkAdapters(
         Seq<CatletNetworkAdapterConfig> parentConfigs,
         Seq<CatletNetworkAdapterConfig> childConfigs) =>
         BreedMutateable(parentConfigs, childConfigs,
@@ -111,7 +111,7 @@ public static class CatletBreeding
                 MacAddress = child.MacAddress ?? parent.MacAddress,
             });
 
-    public static Either<Error, Seq<CatletNetworkConfig>> BreedNetworks(
+    private static Either<Error, Seq<CatletNetworkConfig>> BreedNetworks(
         Seq<CatletNetworkConfig> parentConfigs,
         Seq<CatletNetworkConfig> childConfigs) =>
         BreedMutateable(parentConfigs, childConfigs,
@@ -126,7 +126,7 @@ public static class CatletBreeding
                 SubnetV6 = child.SubnetV6?.Clone() ?? parent.SubnetV6?.Clone(),
             });
 
-    public static Either<Error, Seq<VariableConfig>> BreedVariables(
+    private static Either<Error, Seq<VariableConfig>> BreedVariables(
         Seq<VariableConfig> parentDrives,
         Seq<VariableConfig> childDrives) =>
         from parentsWithNames in parentDrives
@@ -216,14 +216,7 @@ public static class CatletBreeding
             : parent.Variables?.Select(x => x.Clone()).ToArray(),
     };
 
-    private static Either<Error, Unit> ValidateDistinct(
-        Seq<FodderWithKey> fodderWithKeys) =>
-        Validations.ValidateDistinct<FodderWithKey, FodderKey>(
-                fodderWithKeys, fwk => fwk.Key, "fodder")
-            .ToEither()
-            .MapLeft(Error.Many);
-
-    public static Either<Error, Seq<CatletCapabilityConfig>> BreedCapabilities(
+    private static Either<Error, Seq<CatletCapabilityConfig>> BreedCapabilities(
         Seq<CatletCapabilityConfig> parentConfigs,
         Seq<CatletCapabilityConfig> childConfigs) =>
         BreedMutateable(parentConfigs, childConfigs,
@@ -286,6 +279,13 @@ public static class CatletBreeding
 
     private sealed record ConfigWithName<TConfig, TName>(TName Name, TConfig Config)
         where TName : EryphName<TName>;
+
+    private static Either<Error, Unit> ValidateDistinct(
+        Seq<FodderWithKey> fodderWithKeys) =>
+        Validations.ValidateDistinct<FodderWithKey, FodderKey>(
+                fodderWithKeys, fwk => fwk.Key, "fodder")
+            .ToEither()
+            .MapLeft(Error.Many);
 
     private static Either<Error, Unit> ValidateDistinct<TConfig, TName>(
         Seq<ConfigWithName<TConfig, TName>> configsWithNames)

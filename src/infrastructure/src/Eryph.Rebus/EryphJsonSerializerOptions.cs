@@ -8,9 +8,9 @@ using Eryph.ConfigModel;
 
 namespace Eryph.Rebus;
 
-public class EryphJsonSerializerOptions
+public static class EryphJsonSerializerOptions
 {
-    public static JsonSerializerOptions Default => new(JsonSerializerDefaults.Web)
+    public static JsonSerializerOptions Options => new(JsonSerializerDefaults.Web)
     {
         Converters = { new EryphNameJsonConverter() },
         

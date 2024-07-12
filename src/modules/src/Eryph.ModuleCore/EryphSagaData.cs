@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.IO;
+using System.Text.Json;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Rebus;
 
@@ -12,7 +14,8 @@ public class EryphSagaData<TData> : TaskWorkflowSagaData
 
     public string DataJson
     {
-        get => JsonSerializer.Serialize(Data, EryphJsonSerializerOptions.Default);
-        set => Data = JsonSerializer.Deserialize<TData>(value, EryphJsonSerializerOptions.Default)!;
+        get => JsonSerializer.Serialize(Data, EryphJsonSerializerOptions.Options);
+        set => Data = JsonSerializer.Deserialize<TData>(value, EryphJsonSerializerOptions.Options)
+            ?? throw new InvalidDataException("Could not deserialize the embedded saga data.");
     }
 }

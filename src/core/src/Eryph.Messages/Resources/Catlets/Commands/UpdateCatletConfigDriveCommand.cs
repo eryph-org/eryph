@@ -15,9 +15,6 @@ public class UpdateCatletConfigDriveCommand : IVMCommand, IHasResource
     public Guid VMId { get; set; }
 
     public CatletMetadata MachineMetadata { get; set; }
-    
-    // TODO is this used?
-    public MachineNetworkSettings[] MachineNetworkSettings { get; set; }
 
     public Resource Resource => new(ResourceType.Catlet, CatletId);
 }
