@@ -48,100 +48,90 @@ public static class CatletFeeding
     public static Either<Error, CatletConfig> Feed(
         CatletConfig catletConfig,
         ILocalGenepoolReader genepoolReader) =>
-        from expandedFodder in ExpandFodderConfigs(genepoolReader, catletConfig.Fodder.ToSeq())
+        from allRemovedFodderKeys in catletConfig.Fodder.ToSeq()
+            .Filter(f => f.Remove.GetValueOrDefault())
+            .Map(f => FodderKey.Create(f.Name, f.Source))
+            .Sequence()
+        from _ in allRemovedFodderKeys
+            .Map(k => k.Source)
+            .Somes()
+            .Map(s => ValidateIsResolved(s, genepoolReader))
+            .Sequence()
+        let removedSources = allRemovedFodderKeys
+            .Filter(k => k.Name.IsNone)
+            .Map(k => k.Source)
+            .ToHashSet()
+        let removedFodderKeys = allRemovedFodderKeys
+            .Filter(k => k.Name.IsSome)
+            .ToHashSet()
+        let fodder = catletConfig.Fodder.ToSeq()
+            .Filter(f => !f.Remove.GetValueOrDefault())
+        from expandedFodder in fodder
+            .Map(f => ExpandFodderConfig(f, genepoolReader))
+            .Sequence()
+            .Map(l => l.Flatten())
+        from expandedFodderWithKeys in expandedFodder
+            .Map(FodderWithKey.Create)
+            .Sequence()
+        let filteredFodder = expandedFodderWithKeys
+            .Filter(fwk => !fwk.Key.Source.Map(s => removedSources.Contains(s)).IfNone(false))
+            .Filter(fwk => !removedFodderKeys.Contains(fwk.Key))
+        let mergedFodder = filteredFodder
+            .ToLookup(fwk => fwk.Key, fwk => fwk.Config)
+            .Map(g => g.Aggregate(CatletBreeding.MergeFodder))
         let fedConfig = catletConfig.CloneWith(c =>
         {
-            c.Fodder = expandedFodder.ToArray();
+            c.Fodder = mergedFodder.ToArray();
         })
         select fedConfig;
 
-    private static Either<Error, FodderConfig[]> ExpandFodderConfigs(
-        ILocalGenepoolReader genepoolReader,
-        Seq<FodderConfig> fodder) =>
-        from toRemove in fodder.Filter(f => f.Remove.GetValueOrDefault() && notEmpty(f.Source))
-            .Map(f =>
-                from geneId in GeneIdentifier.NewEither(f.Source)
-                from _ in ValidateIsResolved(geneId, genepoolReader)
-                from metadata in PrepareMetadata(f.Clone())
-                select metadata)
-            .Sequence()
-        from expandedFodders in fodder
-            .Filter(f => !f.Remove.GetValueOrDefault())
-            .Map(f => ExpandFodderConfig(genepoolReader, f, toRemove))
-            .Sequence()
-        select expandedFodders.Flatten().ToArray();
-
-    private static Either<Error, Seq<FodderConfig>> ExpandFodderConfig(
-        ILocalGenepoolReader genepoolReader,
-        FodderConfig fodder,
-        Seq<FodderConfigWithMetadata> toRemove) =>
-        from geneIdentifier in Optional(fodder.Source)
+    public static Either<Error, Seq<FodderConfig>> ExpandFodderConfig(
+        FodderConfig fodderConfig,
+        ILocalGenepoolReader genepoolReader) =>
+        from geneId in Optional(fodderConfig.Source)
             .Filter(notEmpty)
             .Filter(s => s.StartsWith("gene:"))
             .Map(GeneIdentifier.NewEither)
             .Sequence()
-            .FilterT(geneId => geneId.GeneName != GeneName.New("catlet"))
-        from result in geneIdentifier.Match(
-            Some: geneId =>
-                from _ in ValidateIsResolved(geneId, genepoolReader)
-                from expandedConfig in ExpandFodderConfigFromSource(genepoolReader,
-                    fodder.Clone(),
-                    toRemove.Filter(x => x.Source == geneId))
-                select expandedConfig
-                    .Filter(x => !x.Remove.GetValueOrDefault())
-                    .Map(f => f.CloneWith(r =>
-                    {
-                        r.Source = fodder.Source;
-                    })),
-            // fodder may be not a gene but may have to be requested to be removed as well
-            None: () => fodder.Remove.GetValueOrDefault(false)
-                ? Seq<FodderConfig>()
-                : Seq1(fodder))
-        select result;
+            .FilterT(id => id.GeneName != GeneName.New("catlet"))
+        from expanded in geneId.Match(
+            Some: id => ExpandFodderConfigFromSource(fodderConfig, genepoolReader)
+                .MapLeft(e => Error.New($"Could not expand the fodder gene '{id}'.", e)),
+            None: () => Seq([fodderConfig]))
+        select expanded;
 
-    private static Either<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
-        ILocalGenepoolReader genepoolReader, 
-        FodderConfig config, 
-        Seq<FodderConfigWithMetadata> toRemove)
-    {
-        // if fodder is flagged to be removed and has no name specified, we can skip lookup of content
-        if (config.Remove.GetValueOrDefault(false) && string.IsNullOrWhiteSpace(config.Name))
-            return Seq<FodderConfig>();
+    public static Either<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
+        FodderConfig fodderConfig,
+        ILocalGenepoolReader genepoolReader) =>
+        from geneId in GeneIdentifier.NewEither(fodderConfig.Source)
+        from _ in ValidateIsResolved(geneId, genepoolReader)
+        from name in Optional(fodderConfig.Name)
+            .Filter(notEmpty)
+            .Map(FodderName.NewEither)
+            .Sequence()
+        from geneContent in genepoolReader.ReadGeneContent(GeneType.Fodder, geneId)
+        from geneFodderConfig in Try(() =>
+        {
+            var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(geneContent);
+            return FodderGeneConfigDictionaryConverter.Convert(configDictionary);
 
-        // When a fodder source is removed without a name, all fodder from that source should be removed,
-        // and we can skip the lookup.
-        if (toRemove.Any(r => r.Name == None))
-            return Seq<FodderConfig>();
-
-        return
-            from geneIdentifier in GeneIdentifier.NewEither(config.Source ?? throw new InvalidDataException())
-            from geneContent in genepoolReader.ReadGeneContent(GeneType.Fodder, geneIdentifier)
-            from geneFodderConfig in Try(() =>
+        }).ToEither(Error.New)
+        from geneFodderWithName in geneFodderConfig.Fodder.ToSeq()
+            .Map(f => from n in FodderName.NewEither(f.Name)
+                      select (Name: n, Config: f))
+            .Sequence()
+        let filteredGeneFodder = geneFodderWithName
+            .Filter(fwn => name.IsNone || fwn.Name == name)
+            .Map(fwn => fwn.Config)
+        from boundVariables in BindVariables(fodderConfig.Variables.ToSeq(), geneFodderConfig.Variables.ToSeq())
+        let boundFodder = filteredGeneFodder
+            .Map(f => f.CloneWith(c =>
             {
-                var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(geneContent);
-                return FodderGeneConfigDictionaryConverter.Convert(configDictionary);
-                    
-            }).ToEither(Error.New)
-            from childFodderWithMetadata in geneFodderConfig.Fodder.ToSeq()
-                .Map(PrepareMetadata)
-                .Sequence()
-            from name in Optional(config.Name)
-                .Filter(notEmpty)
-                .Map(FodderName.NewEither)
-                .Sequence()
-            let includedFodder = name.Match(
-                Some: n => childFodderWithMetadata.Filter(f => f.Name == n),
-                None: () => childFodderWithMetadata)
-            let excludedFodder = childFodderWithMetadata
-                .Filter(f => toRemove.Any(r => r.Name == f.Name))
-            from boundVariables in BindVariables(config.Variables.ToSeq(), geneFodderConfig.Variables.ToSeq())
-            select includedFodder.Except(excludedFodder)
-                .Map(f => f.Config.CloneWith(fc =>
-                {
-                    fc.Variables = boundVariables.Map(vc => vc.Clone()).ToArray();
-                }))
-                .ToSeq();
-    }
+                c.Source = geneId.Value;
+                c.Variables = boundVariables.Map(vc => vc.Clone()).ToArray();
+            }))
+            .ToSeq()
+        select boundFodder;
 
     private static Either<Error, Seq<VariableConfig>> BindVariables(
         Seq<VariableConfig> variables,
@@ -168,27 +158,11 @@ public static class CatletFeeding
             }),
             None: geneVariable.Clone());
 
-
-    private static Either<Error, FodderConfigWithMetadata> PrepareMetadata(FodderConfig fodder) =>
-        from geneId in Optional(fodder.Source).Filter(notEmpty)
-            .Map(GeneIdentifier.NewEither)
-            .Sequence()
-        from fodderName in Optional(fodder.Name).Filter(notEmpty)
-            .Map(FodderName.NewEither)
-            .Sequence()
-        select new FodderConfigWithMetadata(geneId, fodderName, fodder);
-        
-
-    private sealed record FodderConfigWithMetadata(
-        Option<GeneIdentifier> Source,
-        Option<FodderName> Name,
-        FodderConfig Config);
-
     private static Either<Error, Unit> ValidateIsResolved(
         GeneIdentifier geneId,
         ILocalGenepoolReader genepoolReader) =>
         from resolvedId in genepoolReader.GetGenesetReference(geneId.GeneSet)
-            .MapLeft(e => Error.New($"Could not access gene '{geneId}' in local genepool.", e))
+            .MapLeft(e => Error.New($"Could not access gene '{geneId}' in the local genepool.", e))
         from __ in guard(resolvedId.IsNone,
             Error.New($"The gene '{geneId}' is an unresolved reference. This should not happen."))
         select unit;

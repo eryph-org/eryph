@@ -195,7 +195,7 @@ public static class CatletBreeding
             .Map(c => c with { Config = c.Config.Clone() })
         select merged.Concat(additional).Map(c => c.Config);
 
-    private static FodderConfig MergeFodder(FodderConfig parent, FodderConfig child) => new()
+    public static FodderConfig MergeFodder(FodderConfig parent, FodderConfig child) => new()
     {
         // Name and source should be the same for parent and child.
         // Otherwise, we would not merge
@@ -222,13 +222,6 @@ public static class CatletBreeding
                 fodderWithKeys, fwk => fwk.Key, "fodder")
             .ToEither()
             .MapLeft(Error.Many);
-
-    private sealed record FodderWithKey(FodderKey Key, FodderConfig Config)
-    {
-        public static Either<Error, FodderWithKey> Create(FodderConfig config) =>
-            from fodderKey in FodderKey.Create(config.Name, config.Source)
-            select new FodderWithKey(fodderKey, config);
-    };
 
     public static Either<Error, Seq<CatletCapabilityConfig>> BreedCapabilities(
         Seq<CatletCapabilityConfig> parentConfigs,
