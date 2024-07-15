@@ -23,6 +23,8 @@ using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
+using static LanguageExt.Prelude;
+
 using CatletMetadata = Eryph.Resources.Machines.CatletMetadata;
 
 namespace Eryph.Modules.Controller.Compute;
@@ -115,6 +117,9 @@ internal class UpdateCatletSaga(
 
         return FailOrRun(message, async (ResolveCatletConfigCommandResponse response) =>
         {
+            if (Data.Data.Config is null)
+                throw new InvalidOperationException("Config is missing.");
+
             Data.Data.State = UpdateVMState.Resolved;
 
             var metadata = await GetCatletMetadata(Data.Data.CatletId);
@@ -124,30 +129,19 @@ internal class UpdateCatletSaga(
                 return;
             }
 
-            var resolveResult = CatletGeneResolving.ResolveGeneSetIdentifiers(
+            var result = PrepareConfigs(
                 Data.Data.Config,
-                response.ResolvedGeneSets.ToHashMap());
-            if (resolveResult.IsLeft)
-            {
-                await Fail(ErrorUtils.PrintError(Error.New("Could not resolve genes in catlet.",
-                    Error.Many(resolveResult.LeftToSeq()))));
-                return;
-            }
-
-            var breedingResult = CatletPedigree.Breed(
-                Data.Data.Config,
+                metadata.ValueUnsafe().Metadata,
                 response.ResolvedGeneSets.ToHashMap(),
                 response.ParentConfigs.ToHashMap());
-            if (breedingResult.IsLeft)
+            if (result.IsLeft)
             {
-                await Fail(ErrorUtils.PrintError(Error.New("Could not breed catlet.",
-                    Error.Many(breedingResult.LeftToSeq()))));
+                await Fail(ErrorUtils.PrintError(Error.Many(result.LeftToSeq())));
                 return;
             }
 
-            // TODO properly handle updates: fail on changed existing drive or fodder. Only apply other settings.
-            Data.Data.Config = resolveResult.ValueUnsafe();
-            Data.Data.BredConfig = breedingResult.ValueUnsafe().Config;
+            Data.Data.Config = result.ValueUnsafe().Config;
+            Data.Data.BredConfig = result.ValueUnsafe().BredConfig;
 
             await StartPrepareGenes();
         });
@@ -290,10 +284,54 @@ internal class UpdateCatletSaga(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 
+    internal static Validation<Error, Seq<GeneIdentifierWithType>> FindRequiredGenes(
+        CatletConfig catletConfig) =>
+        CatletGeneCollecting.CollectGenes(catletConfig)
+            .Map(l => l.Filter(c => c.GeneIdentifier.GeneName != GeneName.New("catlet")));
+
+    internal static Either<Error, (CatletConfig Config, CatletConfig BredConfig)> PrepareConfigs(
+    CatletConfig config,
+    CatletMetadata metadata,
+    HashMap<GeneSetIdentifier, GeneSetIdentifier> resolvedGeneSets,
+    HashMap<GeneSetIdentifier, CatletConfig> parentConfigs) =>
+    from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(
+            config, resolvedGeneSets)
+        .MapLeft(e => Error.New("Could not resolve genes in catlet config.", e))
+    from breedingResult in CatletPedigree.Breed(
+            config, resolvedGeneSets, parentConfigs)
+        .MapLeft(e => Error.New("Could not breed the catlet.", e))
+    // After the catlet was created, the fodder and variables can longer be changed.
+    // They are used by cloud-init and are only applied on the first startup.
+    // To avoid any unexpected behavior, we reuse the fodder and variables from
+    // the catlet metadata.
+    // In the future, we could consider to diff the fodder and variables and then
+    // display a warning to the user in case there were changes.
+    let fixedConfig = resolvedConfig.CloneWith(c =>
+    {
+        c.Fodder = metadata.Fodder.ToSeq().Map(fc => fc.Clone()).ToArray();
+        c.Variables = metadata.Variables.ToSeq().Map(vc => vc.Clone()).ToArray();
+    })
+    let fixedParentConfig = breedingResult.ParentConfig
+        .IfNone(new CatletConfig())
+        .CloneWith(c =>
+        {
+            c.Fodder = Optional(metadata.ParentConfig)
+                .Map(c => c.Fodder.ToSeq().Map(fc => fc.Clone()))
+                .IfNone([])
+                .ToArray();
+            c.Variables = Optional(metadata.ParentConfig)
+                .Map(c => c.Variables.ToSeq().Map(vc => vc.Clone()))
+                .IfNone([])
+                .ToArray();
+        })
+    from bredUpdateConfig in CatletBreeding.Breed(fixedParentConfig, fixedConfig)
+        .MapLeft(e => Error.New("Could not breed the catlet.", e))
+    select (fixedConfig, bredUpdateConfig);
+
     private async Task StartPrepareGenes()
     {
         if (Data.Data.BredConfig is null)
-            throw new InvalidOperationException("Breed config is missing.");
+            throw new InvalidOperationException("Bred config is missing.");
 
         Data.Data.State = UpdateVMState.Resolved;
 
@@ -328,11 +366,6 @@ internal class UpdateCatletSaga(
             await StartNewTask(command);
         }
     }
-
-    internal static Validation<Error, Seq<GeneIdentifierWithType>> FindRequiredGenes(
-        CatletConfig catletConfig) =>
-        CatletGeneCollecting.CollectGenes(catletConfig)
-            .Map(l => l.Filter(c => c.GeneIdentifier.GeneName != GeneName.New("catlet")));
 
     private Task<Option<(Catlet Catlet, CatletMetadata Metadata)>> GetCatletMetadata(Guid catletId) =>
         from catlet in vmDataService.GetVM(catletId)

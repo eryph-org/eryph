@@ -14,13 +14,19 @@ namespace Eryph.Core.Tests.Genetics;
 
 public class CatletPedigreeTests
 {
-    private readonly GeneSetIdentifier _parentId = new("acme/acme-parent/1.0");
-    private readonly GeneSetIdentifier _parentRefId = new("acme/acme-parent/latest");
-    private readonly GeneSetIdentifier _grandParentId = new("acme/acme-grand-parent/1.0");
-    private readonly GeneSetIdentifier _grandParentRefId = new("acme/acme-grand-parent/1.0");
+    private static readonly GeneSetIdentifier ParentId = new("acme/acme-parent/1.0");
+    private static readonly GeneSetIdentifier ParentRefId = new("acme/acme-parent/latest");
+    private static readonly GeneSetIdentifier GrandParentId = new("acme/acme-grand-parent/1.0");
+    private static readonly GeneSetIdentifier GrandParentRefId = new("acme/acme-grand-parent/latest");
 
-    [Fact]
-    public void Breed_ChildUsesDriveGeneFromParent_ResolvedDriveSourceIsIncluded()
+    public static readonly IEnumerable<GeneSetIdentifier> ParentSources =
+    [
+        ParentId, ParentRefId,
+    ];
+
+    [Theory, CombinatorialData]
+    public void Breed_ChildUsesDriveGeneFromParent_ResolvedDriveSourceIsIncluded(
+        [CombinatorialMemberData(nameof(ParentSources))] GeneSetIdentifier parentId)
     {
         var parentConfig = new CatletConfig
         {
@@ -37,11 +43,11 @@ public class CatletPedigreeTests
         var config = new CatletConfig
         {
             Name = "child",
-            Parent = _parentId.Value,
+            Parent = parentId.Value,
         };
 
-        var geneSetMap = HashMap((_parentId, _parentId));
-        var ancestors = HashMap((_parentId, parentConfig));
+        var geneSetMap = HashMap((parentId, ParentId));
+        var ancestors = HashMap((ParentId, parentConfig));
 
         var result = CatletPedigree.Breed(config, geneSetMap, ancestors);
 
@@ -49,8 +55,9 @@ public class CatletPedigreeTests
             drive => drive.Source.Should().Be("gene:acme/acme-parent/1.0:sda"));
     }
 
-    [Fact]
-    public void Breed_ChildUsesFodderFromParent_ResolvedFodderSourceIsIncluded()
+    [Theory, CombinatorialData]
+    public void Breed_ChildUsesFodderFromParent_ResolvedFodderSourceIsIncluded(
+        [CombinatorialMemberData(nameof(ParentSources))] GeneSetIdentifier parentId)
     {
         var parentConfig = new CatletConfig
         {
@@ -68,11 +75,11 @@ public class CatletPedigreeTests
         var config = new CatletConfig
         {
             Name = "test",
-            Parent = _parentId.Value,
+            Parent = parentId.Value,
         };
 
-        var geneSetMap = HashMap((_parentId, _parentId));
-        var ancestors = HashMap((_parentId, parentConfig));
+        var geneSetMap = HashMap((parentId, ParentId));
+        var ancestors = HashMap((ParentId, parentConfig));
 
         var result = CatletPedigree.Breed(config, geneSetMap, ancestors);
 
@@ -85,27 +92,63 @@ public class CatletPedigreeTests
     {
         var parentConfig = new CatletConfig
         {
-            Parent = _parentId.Value,
+            Parent = GrandParentId.Value,
         };
 
         var grandParentConfig = new CatletConfig
         {
-            Parent = _grandParentId.Value,
+            Parent = ParentId.Value,
         };
 
-        var geneSetMap = HashMap((_parentId, _parentId), (_grandParentId, _grandParentId));
-        var ancestors = HashMap((_parentId, parentConfig), (_grandParentId, grandParentConfig));
+        var geneSetMap = HashMap((ParentId, ParentId), (GrandParentId, GrandParentId));
+        var ancestors = HashMap((ParentId, parentConfig), (GrandParentId, grandParentConfig));
 
         var config = new CatletConfig
         {
-            Parent = _parentId.Value,
+            Parent = ParentId.Value,
         };
 
         var result = CatletPedigree.Breed(config, geneSetMap, ancestors);
 
         var error = result.Should().BeLeft().Subject;
         error.Message.Should().Be(
-            "Could not breed ancestor in the pedigree catlet -> acme/acme-parent/1.0 -> acme/acme-parent/1.0.");
+            "Could not breed ancestor in the pedigree catlet "
+            + "-> acme/acme-parent/1.0 "
+            + "-> acme/acme-grand-parent/1.0 "
+            + "-> acme/acme-parent/1.0.");
+        error.Inner.Should().BeSome().Which.Message
+            .Should().Be("The pedigree contains a circle.");
+    }
+
+    [Fact]
+    public void Breed_PedigreeContainsCircleWithReferences_ReturnsFail()
+    {
+        var parentConfig = new CatletConfig
+        {
+            Parent = GrandParentRefId.Value,
+        };
+
+        var grandParentConfig = new CatletConfig
+        {
+            Parent = ParentRefId.Value,
+        };
+
+        var geneSetMap = HashMap((ParentRefId, ParentId), (GrandParentRefId, GrandParentId));
+        var ancestors = HashMap((ParentId, parentConfig), (GrandParentId, grandParentConfig));
+
+        var config = new CatletConfig
+        {
+            Parent = ParentRefId.Value,
+        };
+
+        var result = CatletPedigree.Breed(config, geneSetMap, ancestors);
+
+        var error = result.Should().BeLeft().Subject;
+        error.Message.Should().Be(
+            "Could not breed ancestor in the pedigree catlet "
+            + "-> (acme/acme-parent/latest -> acme/acme-parent/1.0) "
+            + "-> (acme/acme-grand-parent/latest -> acme/acme-grand-parent/1.0) "
+            + "-> (acme/acme-parent/latest -> acme/acme-parent/1.0).");
         error.Inner.Should().BeSome().Which.Message
             .Should().Be("The pedigree contains a circle.");
     }

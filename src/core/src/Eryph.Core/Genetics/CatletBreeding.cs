@@ -127,13 +127,13 @@ public static class CatletBreeding
             });
 
     private static Either<Error, Seq<VariableConfig>> BreedVariables(
-        Seq<VariableConfig> parentDrives,
-        Seq<VariableConfig> childDrives) =>
-        from parentsWithNames in parentDrives
+        Seq<VariableConfig> parentConfigs,
+        Seq<VariableConfig> childConfigs) =>
+        from parentsWithNames in parentConfigs
             .Map(c => from validName in VariableName.NewEither(c.Name)
                 select new ConfigWithName<VariableConfig, VariableName>(validName, c))
             .Sequence()
-        from childrenWithNames in childDrives
+        from childrenWithNames in childConfigs
             .Map(c => from validName in VariableName.NewEither(c.Name)
                 select new ConfigWithName<VariableConfig, VariableName>(validName, c))
             .Sequence()
@@ -151,9 +151,9 @@ public static class CatletBreeding
                 // sensitive. Hence, a child variable always completely replaces the parent variable.
                 Some: c => p with { Config = c.Clone() },
                 None: () => p with { Config = p.Config.Clone() }))
-        let mergedMap = merged.Map(v => (v.Name, v.Config)).ToHashMap()
+        let mergedNames = merged.Map(v => v.Name).ToHashSet()
         let additional = childrenWithNames
-            .Filter(c => mergedMap.Find(c.Name).IsNone)
+            .Filter(c => !mergedNames.Contains(c.Name))
             .Map(c => c with { Config = c.Config.Clone() })
         select merged.Concat(additional).Map(c => c.Config);
 
@@ -188,17 +188,15 @@ public static class CatletBreeding
                     Some: c => MergeFodder(p.Config, c),
                     None: () => p.Config.Clone())
             })
-        let mergedMap = merged.Map(v => (v.Key, v.Config)).ToHashMap()
+        let mergedFodderKeys = merged.Map(v => v.Key).ToHashSet()
         let additional = childrenWithKeys
             .Filter(c => c.Key.Source.IsSome || !c.Config.Remove.GetValueOrDefault())
-            .Filter(c => mergedMap.Find(c.Key).IsNone)
+            .Filter(c => !mergedFodderKeys.Contains(c.Key))
             .Map(c => c with { Config = c.Config.Clone() })
         select merged.Concat(additional).Map(c => c.Config);
 
     public static FodderConfig MergeFodder(FodderConfig parent, FodderConfig child) => new()
     {
-        // Name and source should be the same for parent and child.
-        // Otherwise, we would not merge
         Name = child.Name,
         Source = child.Source,
 
@@ -270,10 +268,10 @@ public static class CatletBreeding
                     None: () => p.Config.Clone())
                 .Map(c => p with { Config = c }))
             .Sequence()
-        let mergedMap = merged.Map(v => (v.Name, v.Config)).ToHashMap()
+        let mergedNames = merged.Map(v => v.Name).ToHashSet()
         let additional = childrenWithNames
             .Filter(c => c.Config.Mutation != MutationType.Remove)
-            .Filter(c => mergedMap.Find(c.Name).IsNone)
+            .Filter(c => !mergedNames.Contains(c.Name))
             .Map(c => c with { Config = c.Config.Clone() })
         select merged.Concat(additional).Map(c => c.Config);
 

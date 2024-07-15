@@ -8,7 +8,7 @@ namespace Eryph.Core.Tests.Genetics;
 public class CatletGeneCollectingTests
 {
     [Fact]
-    public void CreatePrepareGeneCommands_ValidSources_ReturnsCommands()
+    public void CollectGenes_ValidSources_ReturnsGeneIdentifiers()
     {
         var config = new CatletConfig()
         {
@@ -57,7 +57,7 @@ public class CatletGeneCollectingTests
     }
 
     [Fact]
-    public void CreatePrepareGeneCommands_InvalidSources_ReturnsFail()
+    public void CollectGenes_InvalidSources_ReturnsFail()
     {
         var config = new CatletConfig()
         {

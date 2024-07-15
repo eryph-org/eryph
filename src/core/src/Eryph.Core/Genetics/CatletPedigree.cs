@@ -37,9 +37,9 @@ public static class CatletPedigree
         CatletMap ancestors,
         Seq<AncestorInfo> visitedAncestors) =>
         from validId in id.Filter(notEmpty)
-            .Map(GeneSetIdentifier.NewEither)
+            .Map(id => GeneSetIdentifier.NewEither(id)
+                .MapLeft(e => Error.New($"The parent source '{id}' is invalid.", e)))
             .Sequence()
-            .MapLeft(e => Error.New("The parent ID is invalid.", e))
             .MapLeft(e => CreateError(visitedAncestors, e))
         from bredConfig in validId
             .Map(i => BreedRecursively(i, geneSets, ancestors, visitedAncestors))
@@ -52,26 +52,26 @@ public static class CatletPedigree
         CatletMap ancestors,
         Seq<AncestorInfo> visitedAncestors) =>
         from resolvedId in geneSets.Find(id)
-            .ToEither(Error.New($"Could not resolve the parent ID {id}"))
+            .ToEither(Error.New($"Could not resolve the parent source '{id}'."))
             .MapLeft(e => CreateError(visitedAncestors, e))
         let updatedVisitedAncestors = visitedAncestors.Add(new AncestorInfo(id, resolvedId))
         from _ in ValidateAncestorChain(updatedVisitedAncestors)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from config in ancestors.Find(resolvedId)
-            .ToEither(Error.New($"Could not find the parent config for {resolvedId}"))
+            .ToEither(Error.New($"Could not find the config for '{resolvedId}'."))
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from parentConfig in BreedRecursively(config.Parent, geneSets, ancestors, updatedVisitedAncestors)
-        from normalizedConfig in NormalizeGenepoolSources(id, config)
+        from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(config, geneSets)
+            .MapLeft(e => Error.New($"Could not resolve genes in catlet '{resolvedId}'.", e))
+            .MapLeft(e => CreateError(updatedVisitedAncestors, e))
+        from normalizedConfig in NormalizeGenePoolSources(resolvedId, resolvedConfig)
             .MapLeft(e => Error.New("Could not normalize genepool sources.", e))
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
-        from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(normalizedConfig, geneSets)
-            .MapLeft(e => Error.New($"Could not resolve genes in '{id}'."))
-            .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from bredConfig in parentConfig.Match(
-            Some: pCfg => CatletBreeding.Breed(pCfg, resolvedConfig)
-                .MapLeft(e => Error.New($"Could not breed '{id} with its parent.", e))
+            Some: pCfg => CatletBreeding.Breed(pCfg, normalizedConfig)
+                .MapLeft(e => Error.New($"Could not breed catlet '{resolvedId}' with its parent.", e))
                 .MapLeft(e => CreateError(updatedVisitedAncestors, e)),
-            None: () => resolvedConfig)
+            None: () => normalizedConfig)
         select bredConfig;
 
     public static Either<Error, Unit> ValidateAncestorChain(
@@ -86,7 +86,7 @@ public static class CatletPedigree
             Error.New($"The pedigree has too many ancestors (up to {maxAncestors} are allowed)."))
         select unit;
 
-    private static Either<Error, CatletConfig> NormalizeGenepoolSources(
+    private static Either<Error, CatletConfig> NormalizeGenePoolSources(
         GeneSetIdentifier id,
         CatletConfig config) =>
         from disks in config.Drives.ToSeq()
@@ -114,15 +114,14 @@ public static class CatletPedigree
         CatletDriveConfig config) =>
         (config.Type ?? CatletDriveType.VHD) == CatletDriveType.VHD && !notEmpty(config.Source)
             ? from geneName in GeneName.NewEither(config.Name)
-                .MapLeft(e => Error.New(
-                    $"Could not construct volume source for the disk name '{config.Name}'.", e))
-                let source = new GeneIdentifier(id, geneName)
+                  .MapLeft(e => Error.New(
+                      $"Could not construct volume source for the disk name '{config.Name}'.", e))
+              let source = new GeneIdentifier(id, geneName)
               select config.CloneWith(c =>
-            {
-                c.Source = source.Value;
-            })
-        : config;
-
+              {
+                  c.Source = source.Value;
+              })
+            : config;
 
     private static Error CreateError(
         Seq<AncestorInfo> visitedAncestors,

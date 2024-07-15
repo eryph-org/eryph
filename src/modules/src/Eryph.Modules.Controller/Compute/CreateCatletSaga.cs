@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
@@ -14,6 +15,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using IdGen;
 using JetBrains.Annotations;
+using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
@@ -90,32 +92,24 @@ internal class CreateCatletSaga(
 
         return FailOrRun(message, async (ResolveCatletConfigCommandResponse response) =>
         {
+            if (Data.Data.Config is null)
+                throw new InvalidOperationException("Config is missing.");
+
             Data.Data.State = CreateVMState.Resolved;
 
-            var resolveResult = CatletGeneResolving.ResolveGeneSetIdentifiers(
-                Data.Data.Config,
-                response.ResolvedGeneSets.ToHashMap());
-            if (resolveResult.IsLeft)
-            {
-                await Fail(ErrorUtils.PrintError(Error.New("Could not resolve genes in catlet.",
-                    Error.Many(resolveResult.LeftToSeq()))));
-                return;
-            }
-
-            var breedingResult = CatletPedigree.Breed(
+            var result = PrepareConfigs(
                 Data.Data.Config,
                 response.ResolvedGeneSets.ToHashMap(),
                 response.ParentConfigs.ToHashMap());
-            if (breedingResult.IsLeft)
+            if (result.IsLeft)
             {
-                await Fail(ErrorUtils.PrintError(Error.New("Could not breed catlet.",
-                    Error.Many(breedingResult.LeftToSeq()))));
+                await Fail(ErrorUtils.PrintError(Error.Many(result.LeftToSeq())));
                 return;
             }
 
-            Data.Data.Config = resolveResult.ValueUnsafe();
-            Data.Data.BredConfig = breedingResult.ValueUnsafe().Config;
-            Data.Data.ParentConfig = breedingResult.ValueUnsafe().ParentConfig.IfNoneUnsafe((CatletConfig?)null);
+            Data.Data.Config = result.ValueUnsafe().Config;
+            Data.Data.BredConfig = result.ValueUnsafe().BredConfig;
+            Data.Data.ParentConfig = result.ValueUnsafe().ParentConfig.IfNoneUnsafe((CatletConfig?)null);
             Data.Data.MachineId = Guid.NewGuid();
 
             await StartNewTask(new CreateCatletVMCommand
@@ -205,4 +199,17 @@ internal class CreateCatletSaga(
         config.Correlate<OperationTaskStatusEvent<UpdateCatletCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
+
+    private static Either<
+        Error,
+        (CatletConfig Config, CatletConfig BredConfig, Option<CatletConfig> ParentConfig)>
+        PrepareConfigs(
+        CatletConfig config,
+        HashMap<GeneSetIdentifier, GeneSetIdentifier> resolvedGeneSets,
+        HashMap<GeneSetIdentifier, CatletConfig> parentConfigs) =>
+        from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(config, resolvedGeneSets)
+            .MapLeft(e => Error.New("Could not resolve genes in the catlet config.", e))
+        from breedingResult in CatletPedigree.Breed(resolvedConfig, resolvedGeneSets, parentConfigs)
+            .MapLeft(e => Error.New("Could not breed the catlet.", e))
+        select (resolvedConfig, breedingResult.Config, breedingResult.ParentConfig);
 }

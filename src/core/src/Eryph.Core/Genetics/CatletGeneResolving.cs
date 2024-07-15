@@ -21,7 +21,8 @@ public static class CatletGeneResolving
     GeneSetMap resolvedGeneSets) =>
         from resolvedParent in Optional(catletConfig.Parent)
             .Filter(notEmpty)
-            .Map(GeneSetIdentifier.NewEither)
+            .Map(p => GeneSetIdentifier.NewEither(p)
+                .MapLeft(e => Error.New($"The parent source '{catletConfig.Parent}' is invalid.", e)))
             .BindT(geneSetId => ResolveGeneSetIdentifier(geneSetId, resolvedGeneSets))
             .Sequence()
         from resolvedDrives in catletConfig.Drives.ToSeq()
@@ -40,7 +41,7 @@ public static class CatletGeneResolving
     private static Either<Error, FodderConfig> ResolveGeneSetIdentifiers(
         FodderConfig fodderConfig,
         GeneSetMap resolvedGeneSets) =>
-        from resolvedGeneIdentifier in ResolveGeneSetIdentifiers(fodderConfig.Source, resolvedGeneSets)
+        from resolvedGeneIdentifier in ResolveGeneSetIdentifier(fodderConfig.Source, resolvedGeneSets)
         select fodderConfig.CloneWith(c =>
         {
             c.Source = resolvedGeneIdentifier.Map(id => id.Value)
@@ -50,14 +51,14 @@ public static class CatletGeneResolving
     private static Either<Error, CatletDriveConfig> ResolveGeneSetIdentifiers(
         CatletDriveConfig driveConfig,
         GeneSetMap resolvedGeneSets) =>
-        from resolvedGeneIdentifier in ResolveGeneSetIdentifiers(driveConfig.Source, resolvedGeneSets)
+        from resolvedGeneIdentifier in ResolveGeneSetIdentifier(driveConfig.Source, resolvedGeneSets)
         select driveConfig.CloneWith(c =>
         {
             c.Source = resolvedGeneIdentifier.Map(id => id.Value)
                 .IfNoneUnsafe((string)null);
         });
 
-    private static Either<Error, Option<GeneIdentifier>> ResolveGeneSetIdentifiers(
+    private static Either<Error, Option<GeneIdentifier>> ResolveGeneSetIdentifier(
         Option<string> geneIdentifier,
         GeneSetMap resolvedGeneSets) =>
         from validGeneId in geneIdentifier
