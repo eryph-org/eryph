@@ -169,10 +169,10 @@ public class CatletBreedingTests
         breedChild.Environment.Should().Be("env1");
 
         breedChild.Capabilities.Should().SatisfyRespectively(
-            capability => capability.Should().BeEquivalentTo(parent.Capabilities[0])
-                .And.NotBeSameAs(parent.Capabilities[0]), 
             capability => capability.Should().BeEquivalentTo(child.Capabilities[0])
-                .And.NotBeSameAs(child.Capabilities[0]));
+                .And.NotBeSameAs(child.Capabilities[0]), 
+            capability => capability.Should().BeEquivalentTo(parent.Capabilities[0])
+                .And.NotBeSameAs(parent.Capabilities[0]));
 
         breedChild.Cpu.Should().BeEquivalentTo(parent.Cpu).And.NotBeSameAs(parent.Cpu);
 
@@ -191,10 +191,10 @@ public class CatletBreedingTests
                 .And.NotBeSameAs(child.NetworkAdapters[0]));
 
         breedChild.Networks.Should().SatisfyRespectively(
-            network => network.Should().BeEquivalentTo(parent.Networks[0])
-                .And.NotBeSameAs(parent.Networks[0]),
             network => network.Should().BeEquivalentTo(child.Networks[0])
-                .And.NotBeSameAs(child.Networks[0]));
+                .And.NotBeSameAs(child.Networks[0]),
+            network => network.Should().BeEquivalentTo(parent.Networks[0])
+                .And.NotBeSameAs(parent.Networks[0]));
 
         breedChild.Fodder.Should().SatisfyRespectively(
             network => network.Should().BeEquivalentTo(parent.Fodder[0])
@@ -203,10 +203,10 @@ public class CatletBreedingTests
                 .And.NotBeSameAs(child.Fodder[0]));
 
         breedChild.Variables.Should().SatisfyRespectively(
-            variable => variable.Should().BeEquivalentTo(parent.Variables[0])
-                .And.NotBeSameAs(parent.Variables[0]),
             variable => variable.Should().BeEquivalentTo(child.Variables[0])
-                .And.NotBeSameAs(child.Variables[0]));
+                .And.NotBeSameAs(child.Variables[0]),
+            variable => variable.Should().BeEquivalentTo(parent.Variables[0])
+                .And.NotBeSameAs(parent.Variables[0]));
     }
 
     [Fact]

@@ -155,7 +155,10 @@ public static class CatletBreeding
         let additional = childrenWithNames
             .Filter(c => !mergedNames.Contains(c.Name))
             .Map(c => c with { Config = c.Config.Clone() })
-        select merged.Concat(additional).Map(c => c.Config);
+        select merged.Concat(additional)
+            .OrderBy(c => c.Name)
+            .ToSeq()
+            .Map(c => c.Config);
 
     private static Either<Error, Seq<FodderConfig>> BreedFodder(
         Seq<FodderConfig> parentConfigs,
@@ -273,7 +276,10 @@ public static class CatletBreeding
             .Filter(c => c.Config.Mutation != MutationType.Remove)
             .Filter(c => !mergedNames.Contains(c.Name))
             .Map(c => c with { Config = c.Config.Clone() })
-        select merged.Concat(additional).Map(c => c.Config);
+        select merged.Concat(additional)
+            .OrderBy(c => c.Name)
+            .ToSeq()
+            .Map(c => c.Config);
 
     private sealed record ConfigWithName<TConfig, TName>(TName Name, TConfig Config)
         where TName : EryphName<TName>;
