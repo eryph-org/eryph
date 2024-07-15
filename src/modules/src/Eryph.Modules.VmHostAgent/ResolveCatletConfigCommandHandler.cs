@@ -179,7 +179,7 @@ public class ResolveCatletConfigCommandHandler(
         {
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);
             return CatletConfigDictionaryConverter.Convert(configDictionary);
-        }).ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'", Error.New(ex)))
+        }).ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'.", Error.New(ex)))
         select config;
 
     private static Error CreateError(

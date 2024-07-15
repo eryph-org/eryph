@@ -300,7 +300,7 @@ internal class UpdateCatletSaga(
     from breedingResult in CatletPedigree.Breed(
             config, resolvedGeneSets, parentConfigs)
         .MapLeft(e => Error.New("Could not breed the catlet.", e))
-    // After the catlet was created, the fodder and variables can longer be changed.
+    // After the catlet was created, the fodder and variables can no longer be changed.
     // They are used by cloud-init and are only applied on the first startup.
     // To avoid any unexpected behavior, we reuse the fodder and variables from
     // the catlet metadata.
