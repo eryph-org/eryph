@@ -37,8 +37,8 @@ public static class CatletPedigree
         CatletMap ancestors,
         Seq<AncestorInfo> visitedAncestors) =>
         from validId in id.Filter(notEmpty)
-            .Map(id => GeneSetIdentifier.NewEither(id)
-                .MapLeft(e => Error.New($"The parent source '{id}' is invalid.", e)))
+            .Map(vId => GeneSetIdentifier.NewEither(vId)
+                .MapLeft(e => Error.New($"The parent source '{vId}' is invalid.", e)))
             .Sequence()
             .MapLeft(e => CreateError(visitedAncestors, e))
         from bredConfig in validId
