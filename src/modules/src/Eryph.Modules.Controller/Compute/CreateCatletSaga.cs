@@ -209,7 +209,7 @@ internal class CreateCatletSaga(
         HashMap<GeneSetIdentifier, CatletConfig> parentConfigs) =>
         from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(config, resolvedGeneSets)
             .MapLeft(e => Error.New("Could not resolve genes in the catlet config.", e))
-        from breedingResult in CatletPedigree.Breed(resolvedConfig, resolvedGeneSets, parentConfigs)
+        from breedingResult in CatletPedigree.Breed(config, resolvedGeneSets, parentConfigs)
             .MapLeft(e => Error.New("Could not breed the catlet.", e))
         select (resolvedConfig, breedingResult.Config, breedingResult.ParentConfig);
 }
