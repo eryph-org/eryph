@@ -65,12 +65,13 @@ public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
         let command5 = changedMaxMemory.Match(
             Some: b => command4.AddParameter("MaximumBytes", b),
             None: () => command4)
-        let message = "Updating VM memory settings: "
-            + string.Join("; ",
-                changedStartupMemory.Map(b => $"Startup memory {ToMiB(b)} MiB").IfNone(""),
-                changedUseDynamicMemory.Map(d => $"Dynamic memory {(d ? "enabled" : "disabled")}").IfNone(""),
-                changedMinMemory.Map(b => $"Minimum memory {ToMiB(b)} MiB").IfNone(""),
-                changedMaxMemory.Map(b => $"Maximum memory {ToMiB(b)} MiB").IfNone(""))
+        let message = "Updating catlet memory settings: "
+            + string.Join("; ", Seq(
+                    changedStartupMemory.Map(b => $"Startup memory {ToMiB(b)} MiB"),
+                    changedUseDynamicMemory.Map(d => $"Dynamic memory {(d ? "enabled" : "disabled")}"),
+                    changedMinMemory.Map(b => $"Minimum memory {ToMiB(b)} MiB"),
+                    changedMaxMemory.Map(b => $"Maximum memory {ToMiB(b)} MiB"))
+                .Somes())
             + "."
         from result in changedUseDynamicMemory.IsSome
                        || changedStartupMemory.IsSome
