@@ -89,6 +89,12 @@ public class AssertCommand
         return new AssertCommand(_position + 1, _chain);
     }
 
+    public void ShouldBeComplete()
+    {
+        _chain.Should().HaveCount(_position,
+            "the chain should have ended with the previous parameter or command");
+    }
+
     public override string ToString()
     {
         var sb = new StringBuilder();
