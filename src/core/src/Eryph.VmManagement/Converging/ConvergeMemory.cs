@@ -1,7 +1,10 @@
 ﻿using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging;
 
@@ -11,87 +14,66 @@ public class ConvergeMemory : ConvergeTaskBase
     {
     }
 
-    public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo)
-    {
-        var dynamicMemoryOn = (Context.Config.Memory?.Maximum).GetValueOrDefault() != 0 || (Context.Config.Memory?.Minimum).GetValueOrDefault() != 0;
+        => Converge2(vmInfo).ToEither();
 
-        if (vmInfo.Value.DynamicMemoryEnabled != dynamicMemoryOn)
-        {
-            var onOffString = dynamicMemoryOn ? "Enabling" : "Disabling";
-            await Context.ReportProgress($"{onOffString} dynamic memory").ConfigureAwait(false);
+    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Converge2(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let configuredStartupMemory = Optional(Context.Config.Memory?.Startup)
+            .Filter(b => b > 0)
+        let configuredMinMemory = Optional(Context.Config.Memory?.Minimum)
+            .Filter(x => x > 0)
+        let configuredMaxMemory = Optional(Context.Config.Memory?.Maximum)
+            .Filter(x => x > 0)
+        let useDynamicMemory = configuredMinMemory.IsSome || configuredMaxMemory.IsSome
+        let startupMemory = configuredStartupMemory.IfNone(EryphConstants.DefaultCatletMemoryMb)
+        let minMemory = configuredMinMemory.IfNone(startupMemory)
+        // Apply the Hyper-V default of 1 TiB when max memory is not configured
+        let maxMemory = configuredMaxMemory.IfNone(1 * 1024 * 1024)
+        let changedUseDynamicMemory = Optional(useDynamicMemory)
+            .Filter(d => d != vmInfo.Value.DynamicMemoryEnabled)
+        let changedStartupMemory = Optional(startupMemory)
+            .Filter(mb => ToBytes(mb) != vmInfo.Value.MemoryStartup)
+        let changedMinMemory = useDynamicMemory
+            ? Optional(minMemory).Filter(mb => ToBytes(mb) != vmInfo.Value.MemoryMinimum)
+            : None
+        let changedMaxMemory = useDynamicMemory 
+            ? Optional(maxMemory).Filter(mb => ToBytes(mb) != vmInfo.Value.MemoryMinimum)
+            : None
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Set-VMMemory")
+            .AddParameter("VM", vmInfo.PsObject)
+        let command2 = changedUseDynamicMemory.Match(
+            Some: d => command.AddParameter("DynamicMemoryEnabled", d),
+            None: () => command) 
+        let command3 = changedStartupMemory.Match(
+            Some: mb => command2.AddParameter("StartupBytes", ToBytes(mb)),
+            None: () => command2)
+        let command4 = changedMinMemory.Match(
+            Some: mb => command3.AddParameter("MinimumBytes", ToBytes(mb)),
+            None: () => command3)
+        let command5 = changedMaxMemory.Match(
+            Some: mb => command4.AddParameter("MaximumBytes", ToBytes(mb)),
+            None: () => command4)
+        let message = "Updating VM memory settings: "
+            + string.Join("; ",
+                changedStartupMemory.Map(mb => $"Startup memory {mb} MiB").IfNone(""),
+                changedUseDynamicMemory.Map(d => $"Dynamic memory {(d ? "enabled" : "disabled")}").IfNone(""),
+                changedMinMemory.Map(mb => $"Minimum memory {mb} MiB").IfNone(""),
+                changedMaxMemory.Map(mb => $"Maximum memory {mb} MiB").IfNone(""))
+            + "."
+        from result in changedUseDynamicMemory.IsSome
+                       || changedStartupMemory.IsSome
+                       || changedMinMemory.IsSome
+                       || changedMaxMemory.IsSome
+            ? from _ in TryAsync(() => Context.ReportProgress(message)).ToEither()
+              from __ in Context.Engine.RunAsync(command5).ToError().ToAsync()
+              from reloadedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+              select reloadedVmInfo
+            : vmInfo
+        select vmInfo;
 
-            var result = await Context.Engine.RunAsync(PsCommandBuilder.Create()
-                .AddCommand("Set-VMMemory")
-                .AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("DynamicMemoryEnabled", dynamicMemoryOn)).ConfigureAwait(false);
-
-            if (result.IsLeft)
-                return result.Map(_ => vmInfo).ToError();
-
-            if (dynamicMemoryOn)
-            {
-                if ((Context.Config.Memory?.Maximum).HasValue)
-                {
-                    var maxMemoryBytes = Context.Config.Memory?.Maximum.GetValueOrDefault() * 1024L * 1024;
-                    if (vmInfo.Value.MemoryMaximum != maxMemoryBytes)
-                    {
-                        await Context
-                            .ReportProgress(
-                                $"Setting maximum memory to {Context.Config.Memory?.Maximum.GetValueOrDefault()} MB")
-                            .ConfigureAwait(false);
-
-                        result = await Context.Engine.RunAsync(PsCommandBuilder.Create()
-                            .AddCommand("Set-VMMemory")
-                            .AddParameter("VM", vmInfo.PsObject)
-                            .AddParameter("MaximumBytes", maxMemoryBytes)).ConfigureAwait(false);
-
-                        if (result.IsLeft)
-                            return result.Map(_ => vmInfo).ToError();
-
-                    }
-                }
-
-                if ((Context.Config.Memory?.Minimum).HasValue)
-                {
-                    var minMemoryBytes = Context.Config.Memory?.Minimum.GetValueOrDefault(Context.Config.Memory.Startup.GetValueOrDefault()) * 1024L * 1024;
-
-                    if (vmInfo.Value.MemoryMinimum != minMemoryBytes)
-                    {
-                        await Context
-                            .ReportProgress(
-                                $"Setting minimum memory to {Context.Config.Memory?.Minimum.GetValueOrDefault()} MB")
-                            .ConfigureAwait(false);
-
-                        result = await Context.Engine.RunAsync(PsCommandBuilder.Create()
-                            .AddCommand("Set-VMMemory")
-                            .AddParameter("VM", vmInfo.PsObject)
-                            .AddParameter("MinimumBytes", minMemoryBytes)).ConfigureAwait(false);
-
-                        if (result.IsLeft)
-                            return result.Map(_ => vmInfo).ToError();
-
-                    }
-                }
-            }
-        }
-
-        var memoryStartupBytes = Context.Config.Memory?.Startup.GetValueOrDefault(1024) * 1024L * 1024;
-        if (memoryStartupBytes != vmInfo.Value.MemoryStartup)
-        {
-            await Context.ReportProgress($"Setting startup memory to {Context.Config.Memory?.Startup.GetValueOrDefault(1024)} MB").ConfigureAwait(false);
-                
-            var result = await Context.Engine.RunAsync(PsCommandBuilder.Create()
-                .AddCommand("Set-VMMemory")
-                .AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("StartupBytes", memoryStartupBytes)).ConfigureAwait(false);
-
-            if (result.IsLeft)
-                return result.Map(_ => vmInfo).ToError();
-
-        }
-
-
-        return await vmInfo.RecreateOrReload(Context.Engine).ToEither().ConfigureAwait(false);
-    }
+    private static long ToBytes (int megaBytes) => megaBytes * 1024L * 1024;
 }
