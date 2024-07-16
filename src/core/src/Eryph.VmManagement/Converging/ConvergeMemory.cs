@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
@@ -8,39 +10,45 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging;
 
-public class ConvergeMemory : ConvergeTaskBase
+public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
 {
-    public ConvergeMemory(ConvergeContext context) : base(context)
-    {
-    }
-
     public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
-        TypedPsObject<VirtualMachineInfo> vmInfo)
-        => Converge2(vmInfo).ToEither();
-
-    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Converge2(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
-        from _ in RightAsync<Error, Unit>(unit)
-        let configuredStartupMemory = Optional(Context.Config.Memory?.Startup)
-            .Filter(b => b > 0)
-        let configuredMinMemory = Optional(Context.Config.Memory?.Minimum)
-            .Filter(x => x > 0)
-        let configuredMaxMemory = Optional(Context.Config.Memory?.Maximum)
-            .Filter(x => x > 0)
-        let useDynamicMemory = configuredMinMemory.IsSome || configuredMaxMemory.IsSome
-        let startupMemory = configuredStartupMemory.IfNone(EryphConstants.DefaultCatletMemoryMb)
-        let minMemory = configuredMinMemory.IfNone(startupMemory)
-        // Apply the Hyper-V default of 1 TiB when max memory is not configured
-        let maxMemory = configuredMaxMemory.IfNone(1 * 1024 * 1024)
+        Converge(Context.Config, vmInfo, Context.Engine, Context.ReportProgress)
+            .ToEither();
+
+    private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Converge(
+        CatletConfig config,
+        TypedPsObject<VirtualMachineInfo> vmInfo,
+        IPowershellEngine powershellEngine,
+        Func<string, Task> reportProgress) =>
+        from configuredMemory in ValidateMemoryConfig(config.Memory)
+            .ToAsync()
+        let useDynamicMemory = CatletCapabilities.IsDynamicMemoryEnabled(
+            config.Capabilities.ToSeq())
+        // When startup, minimum and maximum are not all configured, we ensure
+        // that the missing value are consistent with the configured ones.
+        let minMemory = configuredMemory.Minimum
+                        | configuredMemory.Startup.Map(s => Math.Min(s, vmInfo.Value.MemoryMinimum))
+                        | configuredMemory.Maximum.Map(max => Math.Min(max, vmInfo.Value.MemoryMinimum))
+        let maxMemory = configuredMemory.Maximum
+                        | configuredMemory.Startup.Map(s => Math.Max(s, vmInfo.Value.MemoryMaximum))
+                        | configuredMemory.Minimum.Map(min => Math.Max(min, vmInfo.Value.MemoryMaximum))
+        let startupMemory = configuredMemory.Startup
+                            | configuredMemory.Minimum.Map(min => Math.Max(min, vmInfo.Value.MemoryStartup))
+                            | configuredMemory.Maximum.Map(max => Math.Min(max, vmInfo.Value.MemoryStartup))
+        // We now identify the values which must actually be changed
+        // compared to the current state of the VM. Then, we create
+        // the PowerShell command to apply the changes.
         let changedUseDynamicMemory = Optional(useDynamicMemory)
             .Filter(d => d != vmInfo.Value.DynamicMemoryEnabled)
-        let changedStartupMemory = Optional(startupMemory)
-            .Filter(mb => ToBytes(mb) != vmInfo.Value.MemoryStartup)
+        let changedStartupMemory = startupMemory
+            .Filter(b => b != vmInfo.Value.MemoryStartup)
         let changedMinMemory = useDynamicMemory
-            ? Optional(minMemory).Filter(mb => ToBytes(mb) != vmInfo.Value.MemoryMinimum)
+            ? minMemory.Filter(b => b != vmInfo.Value.MemoryMinimum)
             : None
         let changedMaxMemory = useDynamicMemory 
-            ? Optional(maxMemory).Filter(mb => ToBytes(mb) != vmInfo.Value.MemoryMinimum)
+            ? maxMemory.Filter(b => b != vmInfo.Value.MemoryMaximum)
             : None
         let command = PsCommandBuilder.Create()
             .AddCommand("Set-VMMemory")
@@ -49,31 +57,65 @@ public class ConvergeMemory : ConvergeTaskBase
             Some: d => command.AddParameter("DynamicMemoryEnabled", d),
             None: () => command) 
         let command3 = changedStartupMemory.Match(
-            Some: mb => command2.AddParameter("StartupBytes", ToBytes(mb)),
+            Some: b => command2.AddParameter("StartupBytes", b),
             None: () => command2)
         let command4 = changedMinMemory.Match(
-            Some: mb => command3.AddParameter("MinimumBytes", ToBytes(mb)),
+            Some: b => command3.AddParameter("MinimumBytes", b),
             None: () => command3)
         let command5 = changedMaxMemory.Match(
-            Some: mb => command4.AddParameter("MaximumBytes", ToBytes(mb)),
+            Some: b => command4.AddParameter("MaximumBytes", b),
             None: () => command4)
         let message = "Updating VM memory settings: "
             + string.Join("; ",
-                changedStartupMemory.Map(mb => $"Startup memory {mb} MiB").IfNone(""),
+                changedStartupMemory.Map(b => $"Startup memory {ToMiB(b)} MiB").IfNone(""),
                 changedUseDynamicMemory.Map(d => $"Dynamic memory {(d ? "enabled" : "disabled")}").IfNone(""),
-                changedMinMemory.Map(mb => $"Minimum memory {mb} MiB").IfNone(""),
-                changedMaxMemory.Map(mb => $"Maximum memory {mb} MiB").IfNone(""))
+                changedMinMemory.Map(b => $"Minimum memory {ToMiB(b)} MiB").IfNone(""),
+                changedMaxMemory.Map(b => $"Maximum memory {ToMiB(b)} MiB").IfNone(""))
             + "."
         from result in changedUseDynamicMemory.IsSome
                        || changedStartupMemory.IsSome
                        || changedMinMemory.IsSome
                        || changedMaxMemory.IsSome
-            ? from _ in TryAsync(() => Context.ReportProgress(message)).ToEither()
-              from __ in Context.Engine.RunAsync(command5).ToError().ToAsync()
-              from reloadedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+            ? from _ in TryAsync(async () =>
+              {
+                  await reportProgress(message);
+                  return unit;
+              }).ToEither()
+              from __ in powershellEngine.RunAsync(command5).ToError().ToAsync()
+              from reloadedVmInfo in vmInfo.RecreateOrReload(powershellEngine)
               select reloadedVmInfo
             : vmInfo
         select vmInfo;
 
+    private static Either<
+            Error,
+            (Option<long> Startup, Option<long> Minimum, Option<long> Maximum)>
+        ValidateMemoryConfig(Option<CatletMemoryConfig> config) =>
+        from _ in Right<Error, Unit>(unit)
+        let startupMemory = config.Bind(c => Optional(c.Startup))
+            .Filter(mb => mb > 0)
+            .Map(ToBytes)
+        let minimumMemory = config.Bind(c => Optional(c.Minimum))
+            .Filter(mb => mb > 0)
+            .Map(ToBytes)
+        let maximumMemory = config.Bind(c => Optional(c.Maximum))
+            .Filter(mb => mb > 0)
+            .Map(ToBytes)
+        let minimumError =
+            from startup in startupMemory
+            from min in minimumMemory
+            where startup < min
+            select Error.New($"Startup memory ({ToMiB(startup)} MiB) cannot be less than minimum memory ({ToMiB(min)} MiB).")
+        from __ in minimumError.Match<Either<Error, Unit>>(Some: e => e, None: unit)
+        let maximumError =
+            from startup in startupMemory
+            from max in maximumMemory
+            where startup > max
+            select Error.New($"Startup memory ({ToMiB(startup)} MiB) cannot be more than maximum memory ({ToMiB(max)} MiB).")
+        from ___ in maximumError.Match<Either<Error, Unit>>(Some: e => e, None: unit)
+        select (startupMemory, minimumMemory, maximumMemory);
+    
     private static long ToBytes (int megaBytes) => megaBytes * 1024L * 1024;
+
+    private static decimal ToMiB(long bytes) => bytes / (1024m * 1024L);
 }

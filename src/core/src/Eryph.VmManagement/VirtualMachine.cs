@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
+using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.GenePool.Model;
 using Eryph.Resources.Disks;
@@ -33,7 +34,7 @@ namespace Eryph.VmManagement
             string vmPath,
             int? startupMemory)
         {
-            var memoryStartupBytes = startupMemory.GetValueOrDefault(1024) * 1024L * 1024;
+            var memoryStartupBytes = startupMemory.GetValueOrDefault(EryphConstants.DefaultCatletMemoryMb) * 1024L * 1024;
 
             return engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
                     .AddCommand("New-VM")

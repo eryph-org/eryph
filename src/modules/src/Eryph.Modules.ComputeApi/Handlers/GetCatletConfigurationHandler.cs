@@ -320,6 +320,22 @@ namespace Eryph.Modules.ComputeApi.Handlers
                 capabilities.Add(secureBootCap);
             }
 
+            if (catlet.Features.Any(x => 
+                    x == CatletFeature.DynamicMemory
+                    || parentCaps.Any(c => c.Name == EryphConstants.Capabilities.DynamicMemory)))
+            {
+                var featureOff = catlet.Features.All(x => x != CatletFeature.DynamicMemory);
+
+                var dynamicMemoryCap = new CatletCapabilityConfig
+                {
+                    Name = EryphConstants.Capabilities.DynamicMemory,
+                    Details = featureOff
+                        ? [EryphConstants.CapabilityDetails.Disabled]
+                        : null
+                };
+                capabilities.Add(dynamicMemoryCap);
+            }
+
             // reduce capabilities to only those that are not set same on parent
             foreach (var capabilityConfig in capabilities.ToArray())
             {

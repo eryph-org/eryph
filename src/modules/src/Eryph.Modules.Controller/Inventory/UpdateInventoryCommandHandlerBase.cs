@@ -365,11 +365,12 @@ namespace Eryph.Modules.Controller.Inventory
         {
             var features = new System.Collections.Generic.HashSet<CatletFeature>();
             
-            if(vmInfo.Firmware?.SecureBoot ?? false)
+            if (vmInfo.Firmware?.SecureBoot ?? false)
                 features.Add(CatletFeature.SecureBoot);
             if (vmInfo.Cpu?.ExposeVirtualizationExtensions ?? false)
                 features.Add(CatletFeature.NestedVirtualization);
-
+            if (vmInfo.Memory?.DynamicMemoryEnabled ?? false)
+                features.Add(CatletFeature.DynamicMemory);
 
             return features;
         }
