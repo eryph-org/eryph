@@ -70,13 +70,6 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
-        var targetDir =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "eryph", "zero");
-        RegisterUninstaller(targetDir);
-
-        return 0;
-
         IdentityModelEventSource.ShowPII = true; 
 
         var rootCommand = new RootCommand();
@@ -1195,6 +1188,8 @@ internal static class Program
         }
     }
 
+    private const string RegistryKeyName = "Eryph Zero";
+
     private static void RegisterUninstaller(string installDirectory)
     {
         var fileVersion = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location);
@@ -1205,8 +1200,8 @@ internal static class Program
                 writable: true)
             ?? throw new InvalidOperationException("Could not open the uninstall registry.");
 
-        uninstallKey.DeleteSubKeyTree("Eryph Zero", throwOnMissingSubKey: false);
-        var eryphKey = uninstallKey.CreateSubKey("Eryph Zero")
+        uninstallKey.DeleteSubKeyTree(RegistryKeyName, throwOnMissingSubKey: false);
+        var eryphKey = uninstallKey.CreateSubKey(RegistryKeyName)
             ?? throw new InvalidOperationException("Could not create registry key for registering the uninstaller.");
 
         eryphKey.SetValue("DisplayName", "Eryph Zero");
@@ -1226,6 +1221,6 @@ internal static class Program
                 writable: true)
             ?? throw new InvalidOperationException("Could not open the uninstall registry.");
 
-        uninstallKey.DeleteSubKeyTree("Eryph Zero");
+        uninstallKey.DeleteSubKeyTree(RegistryKeyName);
     }
 }
