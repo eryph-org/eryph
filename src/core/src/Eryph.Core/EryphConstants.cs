@@ -22,6 +22,8 @@ namespace Eryph.Core
         public static readonly string SystemClientId = "system-client";
         public static readonly Guid SuperAdminRole = Guid.Parse("{E5E83176-7543-4D01-BAEA-08A00EA064A6}");
 
+        public static readonly int DefaultCatletMemoryMb = 1024;
+
         public static class BuildInRoles
         {
             public static readonly Guid Owner = Guid.Parse("{918D2C23-8E9A-41AE-8F0E-ADACA3BECBC4}");
@@ -34,6 +36,7 @@ namespace Eryph.Core
         {
             public static readonly string SecureBoot = "secure_boot";
             public static readonly string NestedVirtualization = "nested_virtualization";
+            public static readonly string DynamicMemory = "dynamic_memory";
         }
 
         public static class CapabilityDetails
