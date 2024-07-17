@@ -46,7 +46,8 @@ namespace Eryph.StateDb.Specifications
                 Query.Where(x => x.Id == catletId)
                     .Include(x => x.Project)
                     .Include(x => x.Drives)
-                    .ThenInclude(x => x.AttachedDisk);
+                    .ThenInclude(x => x.AttachedDisk)
+                    .ThenInclude(x => x!.Parent);
             }
         }
     }

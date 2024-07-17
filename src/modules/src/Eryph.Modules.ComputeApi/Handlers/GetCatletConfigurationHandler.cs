@@ -76,9 +76,21 @@ namespace Eryph.Modules.ComputeApi.Handlers
 
                 if (drive.AttachedDisk != null)
                 {
-                    driveConfig.Name = Path.GetFileNameWithoutExtension(drive.AttachedDisk.FileName);
-                    driveConfig.Size = (int)
-                        Math.Ceiling(drive.AttachedDisk.SizeBytes.GetValueOrDefault() / 1024d / 1024 / 1024);
+                    driveConfig.Name = drive.AttachedDisk.Name;
+
+                    driveConfig.Size = (int)Math.Ceiling(
+                        drive.AttachedDisk.SizeBytes.GetValueOrDefault() / 1024d / 1024 / 1024);
+
+                    // When the drive's parent is a gene disk and their sizes are equal,
+                    // this means the drive size has not been changed and should be omitted.
+                    // This check handles the case when the catlet gene in the gene pool has no
+                    // disk sizes specified in the config.
+                    if (drive.AttachedDisk.Parent is not null
+                        && drive.AttachedDisk.Parent.StorageIdentifier?.StartsWith("gene:") == true
+                        && drive.AttachedDisk.Parent.SizeBytes == drive.AttachedDisk.SizeBytes)
+                    {
+                        driveConfig.Size = null;
+                    }
                 }
 
                 driveConfig.Type = drive.Type != CatletDriveType.VHD ?  drive.Type : null;
@@ -254,7 +266,7 @@ namespace Eryph.Modules.ComputeApi.Handlers
                     var driveConfigReduced = new List<CatletDriveConfig>();
                     foreach (var driveConfig in config.Drives)
                     {
-                        var parentConfig = metadata.ParentConfig.Drives.FirstOrDefault(x=>x.Name == driveConfig.Name);
+                        var parentConfig = metadata.ParentConfig.Drives?.FirstOrDefault(x=>x.Name == driveConfig.Name);
 
                         if (parentConfig != null)
                         {
