@@ -58,6 +58,7 @@ using Serilog.Sinks.SystemConsole.Themes;
 using Microsoft.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 using Microsoft.IdentityModel.Logging;
+using Microsoft.Win32;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -69,6 +70,13 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        var targetDir =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "eryph", "zero");
+        RegisterUninstaller(targetDir);
+
+        return 0;
+
         IdentityModelEventSource.ShowPII = true; 
 
         var rootCommand = new RootCommand();
@@ -579,7 +587,9 @@ internal static class Program
                         from ovsRootPath in Prelude.Try(() => OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>()))
                             .ToEitherAsync()
                         from _ in DriverCommands.EnsureDriver(ovsRootPath, true, true, loggerFactory).Map(r => r.ToEither()).ToAsync()
-                        from uCopy in CopyService()
+                        from uCopy in CopyService() 
+                        from __ in Try(() => { RegisterUninstaller(targetDir); return unit; })
+                            .ToEitherAsync()
                         from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
                         let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                         from uInstalled in serviceExists
@@ -897,6 +907,8 @@ internal static class Program
                         Directory.Delete(dataDir, true);
                     }
 
+                    UnregisterUninstaller();
+
                     Log.Logger.Information("Uninstallation completed");
 
                     return 0;
@@ -1181,5 +1193,39 @@ internal static class Program
             var newDestinationDir = Path.Combine(destinationDir, subDir.Name);
             CopyDirectory(subDir.FullName, newDestinationDir);
         }
+    }
+
+    private static void RegisterUninstaller(string installDirectory)
+    {
+        var fileVersion = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location);
+        var uninstallerPath = Path.Combine(installDirectory, "bin", "eryph-uninstaller.exe");
+
+        var uninstallKey = Registry.LocalMachine.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Uninstall",
+                writable: true)
+            ?? throw new InvalidOperationException("Could not open the uninstall registry.");
+
+        uninstallKey.DeleteSubKeyTree("Eryph Zero", throwOnMissingSubKey: false);
+        var eryphKey = uninstallKey.CreateSubKey("Eryph Zero")
+            ?? throw new InvalidOperationException("Could not create registry key for registering the uninstaller.");
+
+        eryphKey.SetValue("DisplayName", "Eryph Zero");
+        eryphKey.SetValue("UninstallString", uninstallerPath);
+        eryphKey.SetValue("DisplayVersion", fileVersion.ProductVersion ?? "");
+        eryphKey.SetValue("Publisher", "dbosoft GmbH");
+        eryphKey.SetValue("InstallLocation", installDirectory);
+        eryphKey.SetValue("VersionMajor", fileVersion.ProductMajorPart);
+        eryphKey.SetValue("VersionMinor", fileVersion.ProductMinorPart);
+        eryphKey.SetValue("URLInfoAbout ", "https://www.eryph.io");
+    }
+
+    private static void UnregisterUninstaller()
+    {
+        var uninstallKey = Registry.LocalMachine.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Uninstall",
+                writable: true)
+            ?? throw new InvalidOperationException("Could not open the uninstall registry.");
+
+        uninstallKey.DeleteSubKeyTree("Eryph Zero");
     }
 }
