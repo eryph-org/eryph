@@ -59,6 +59,7 @@ using Microsoft.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.Win32;
+using Polly;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -276,25 +277,39 @@ internal static class Program
                         }
                     });
 
-                bool isWindowsService = WindowsServiceHelpers.IsWindowsService();
-                // do not check in service mode - during startup some features may be unavailable
-                if (!isWindowsService)
-                {
-                    var provider = new HostSettingsProvider();
-                    var result = await provider.GetHostSettings()
-                        .Match(
-                            Right: _ => Prelude.None,
-                            Left: e => e.Exception.Map(ex =>
-                                ex is ManagementException { ErrorCode: ManagementStatus.InvalidNamespace }
-                                    ? Prelude.Some(e)
-                                    : Prelude.None));
+                var isWindowsService = WindowsServiceHelpers.IsWindowsService();
 
-                    if (result.IsSome)
+                // Check that Hyper-V can be queried properly. This ensures that Hyper-V is
+                // installed and the management service (VMMS) is running. When we are running
+                // as a service, we retry the check a few times. Even when our service depends
+                // on VMMS, VMMS or WMI might not be responsive yet when our service is started.
+                var provider = new HostSettingsProvider();
+                var hyperVResult = await Policy
+                    .HandleResult<Either<Error, HostSettings>>(result => result.IsLeft)
+                    .WaitAndRetryAsync(
+                        isWindowsService ? 20 : 0,
+                        attempt => TimeSpan.FromSeconds(Math.Min(Math.Pow(attempt, 2), 10)),
+                        (_, _, _, _) => logger.Information("Hyper-V (VMMS) is not responding yet. Waiting..."))
+                    .ExecuteAsync(async () => await provider.GetHostSettings());
+
+                var hyperVError = hyperVResult.LeftToSeq().FirstOrDefault();
+                if (hyperVError != null)
+                {
+                    var isInvalidNamespaceError = hyperVError.Exception
+                        .Map(ex => ex is ManagementException { ErrorCode: ManagementStatus.InvalidNamespace })
+                        .IfNone(false);
+                    if (!isWindowsService && isInvalidNamespaceError)
                     {
                         await Console.Error.WriteAsync(
                             "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
-                        return -10;
                     }
+                    else
+                    {
+                        logger.Fatal(hyperVError,
+                            "Could not query Hyper-V. Make sure it is installed and the management service (VMMS) is running.");
+                    }
+
+                    return -10;
                 }
 
                 using var loggerFactory = new SerilogLoggerFactory(logger, dispose: false);
