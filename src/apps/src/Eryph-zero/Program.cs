@@ -281,13 +281,14 @@ internal static class Program
 
                 // Check that Hyper-V can be queried properly. This ensures that Hyper-V is
                 // installed and the management service (VMMS) is running. When we are running
-                // as a service, we retry the check a few times. Even when our service depends
-                // on VMMS, VMMS or WMI might not be responsive yet when our service is started.
+                // as a service, we retry the check a few times (up to 84 seconds). Even when
+                // our service depends on VMMS, VMMS or WMI might not be responsive yet when
+                // our service is started.
                 var provider = new HostSettingsProvider();
                 var hyperVResult = await Policy
                     .HandleResult<Either<Error, HostSettings>>(result => result.IsLeft)
                     .WaitAndRetryAsync(
-                        isWindowsService ? 20 : 0,
+                        isWindowsService ? 10 : 0,
                         attempt => TimeSpan.FromSeconds(Math.Min(Math.Pow(attempt, 2), 10)),
                         (_, _, _, _) => logger.Information("Hyper-V (VMMS) is not responding yet. Waiting..."))
                     .ExecuteAsync(async () => await provider.GetHostSettings());
@@ -601,12 +602,19 @@ internal static class Program
                         from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
                         let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                         from uInstalled in serviceExists
-                            ? LogProgress("Updating service...").Bind(_ =>
-                                serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
+                            ? LogProgress("Updating service...")
+                                .Bind(_ => serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
                             : LogProgress("Installing service...").Bind(_ => serviceManager.CreateService("eryph-zero",
                                 $"{zeroExe} run",
                                 // vmms is the Hyper-V Virtual Machine Management service
-                                new[] { "vmms" }.ToSeq(),
+                                 ["vmms"],
+                                cancelSource2.Token))
+                        from __ in LogProgress("Setting service recovery options...")
+                            .Bind(_ => serviceManager.SetRecoveryOptions(
+                                TimeSpan.FromMinutes(1),
+                                TimeSpan.FromMinutes(10),
+                                None,
+                                None,
                                 cancelSource2.Token))
                         let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
 
