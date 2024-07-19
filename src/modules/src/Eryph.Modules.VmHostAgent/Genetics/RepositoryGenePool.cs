@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.GenePool.Client;
+using Eryph.GenePool.Client.Credentials;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
 using LanguageExt;
@@ -19,32 +20,25 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;
 
-internal class RepositoryGenePool : GenePoolBase, IGenePool
+internal class RepositoryGenePool(
+    IHttpClientFactory httpClientFactory,
+    ILogger log,
+    IFileSystemService fileSystem,
+    IGenePoolApiKeyStore keyStore,
+    string poolName)
+    : GenePoolBase, IGenePool
 {
+    private static readonly Uri GenePoolUri = new("https://eryphgenepoolapistaging.azurewebsites.net/api/");
 
-    public string? PoolName { get; set; }
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger _log;
-    private readonly IFileSystemService _fileSystem;
+    public string? PoolName => poolName;
 
-    public RepositoryGenePool(IHttpClientFactory httpClientFactory, ILogger log, IFileSystemService fileSystem)
-    {
-        _httpClientFactory = httpClientFactory;
-        _log = log;
-        _fileSystem = fileSystem;
-    }
-
-    private static EitherAsync<Error, GenePoolClient> CreateClient()
-    {
-        return Prelude.TryAsync(async () =>
-        {
-            var genePoolUri = new Uri("https://eryphgenepoolapistaging.azurewebsites.net/api/");
-
-            // todo: add support for authentication
-            var client = new GenePoolClient(genePoolUri);
-            return client;
-        }).ToEither();
-    }
+    private EitherAsync<Error, GenePoolClient> CreateClient() =>
+        from apiKey in keyStore.GetApiKey(PoolName!)
+        from client in Prelude.Try(() => apiKey.Match(
+                Some: key => new GenePoolClient(GenePoolUri, new ApiKeyCredential(key.Secret)),
+                None: () => new GenePoolClient(GenePoolUri)))
+            .ToEither(ex => Error.New("Could not create the gene pool API client.", ex)).ToAsync()
+        select client;
 
     public EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier genesetIdentifier,
         CancellationToken cancel)
@@ -59,7 +53,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
                 return new GeneSetInfo(genesetIdentifier, "", response.Manifest, response.Genes);
             }).ToEither(ex =>
             {
-                _log.LogDebug(ex, "Failed to provide geneset {geneset} from gene pool {genepool}", genesetIdentifier,
+                log.LogDebug(ex, "Failed to provide geneset {geneset} from gene pool {genepool}", genesetIdentifier,
                     PoolName);
                 return Error.New(ex);
             })
@@ -96,7 +90,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
 
             }).ToEither(ex =>
             {
-                _log.LogDebug(ex, "Failed to provide gene '{gene}' from gene pool {source}", geneIdentifier, PoolName);
+                log.LogDebug(ex, "Failed to provide gene '{gene}' from gene pool {source}", geneIdentifier, PoolName);
                 return Error.New(ex);
             })
             select geneInfo;
@@ -142,10 +136,10 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
                 var (hashAlgName, partHash) = parsedPartId;
                 var messageName = $"{geneInfo}/{partHash[..12]}";
 
-                _log.LogTrace("gene {gene}, part {genePart} url: {url}", geneInfo,
+                log.LogTrace("gene {gene}, part {genePart} url: {url}", geneInfo,
                     genePart, genePartUrl);
 
-                using var httpClient = _httpClientFactory.CreateClient();
+                using var httpClient = httpClientFactory.CreateClient();
                 var response = await httpClient.GetAsync(genePartUrl, HttpCompletionOption.ResponseHeadersRead, cancel);
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
@@ -158,7 +152,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
                 }
 
                 var contentLength = response.Content.Headers.ContentLength.GetValueOrDefault(0);
-                _log.LogTrace("gene part {gene}/{part} content length: {contentLength}", geneInfo, partHash,
+                log.LogTrace("gene part {gene}/{part} content length: {contentLength}", geneInfo, partHash,
                     contentLength);
 
                 if (contentLength == 0)
@@ -169,7 +163,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
                 await using var responseStream = await response.Content.ReadAsStreamAsync(cancel);
                 using var hashAlg = CreateHashAlgorithm(hashAlgName);
                 // ReSharper disable once ConvertToUsingDeclaration
-                await using (var tempFileStream = _fileSystem.OpenWrite(partFile))
+                await using (var tempFileStream = fileSystem.OpenWrite(partFile))
                 {
                     await using var cryptoStream = new CryptoStream(responseStream, hashAlg, CryptoStreamMode.Read);
                     await CopyToAsync(cryptoStream, tempFileStream, reportProgress,
@@ -179,19 +173,19 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
                 }
 
                 var hashString = GetHashString(hashAlg.Hash);
-                _log.LogTrace("gene part {part} hash: {hashString}", messageName, hashString);
+                log.LogTrace("gene part {part} hash: {hashString}", messageName, hashString);
 
                 if (hashString != partHash)
                 {
-                    _log.LogInformation("gene part '{part}' hash mismatch. Actual hash: {hashString}",
+                    log.LogInformation("gene part '{part}' hash mismatch. Actual hash: {hashString}",
                         messageName,
                         hashString);
 
-                    _fileSystem.FileDelete(partFile);
+                    fileSystem.FileDelete(partFile);
                     throw new HashVerificationException($"Failed to verify hash of gene part '{messageName}'");
                 }
 
-                return _fileSystem.GetFileSize(partFile);
+                return fileSystem.GetFileSize(partFile);
 
             }).ToEither()
             select fileSize;
@@ -227,7 +221,7 @@ internal class RepositoryGenePool : GenePoolBase, IGenePool
                 var percent = totalReadMb / totalMb;
                 var percentInt = Convert.ToInt32(Math.Round(percent * 100, 0));
 
-                _log.LogTrace("Pulling {geneIdentifier} ({totalReadMb} MB / {totalMb} MB) => {percent} completed",
+                log.LogTrace("Pulling {geneIdentifier} ({totalReadMb} MB / {totalMb} MB) => {percent} completed",
                     geneIdentifier, totalReadMb, totalMb, percent);
                 await reportProgress(
                     $"Pulling {geneIdentifier} ({totalReadMb:F} MB / {totalMb:F} MB) => {percent:P0} completed",

@@ -17,5 +17,5 @@ internal interface IGenePool
 
     EitherAsync<Error, long> RetrieveGenePart(GeneInfo geneInfo, string genePartHash, long availableSize, long totalSize, Func<string, int, Task<Unit>> reportProgress, Stopwatch stopwatch, CancellationToken cancel);
 
-    public string PoolName { get; set; }
+    public string PoolName { get; }
 }

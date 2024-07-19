@@ -18,6 +18,7 @@ using Eryph.ModuleCore;
 using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Configuration;
+using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
@@ -138,6 +139,16 @@ internal static class Program
             nonInteractiveOption, noCurrentConfigCheckOption);
         agentSettingsCommand.AddCommand(importAgentSettingsCommand);
 
+        var genePoolCommand = new Command("genepool");
+        agentSettingsCommand.AddCommand(genePoolCommand);
+
+        var genePoolCreateApiKeyCommand = new Command("login");
+        genePoolCommand.AddCommand(genePoolCreateApiKeyCommand);
+        genePoolCreateApiKeyCommand.SetHandler(CreateGenePoolApiKey);
+
+        var genePoolGeneApiKeyStatusCommand = new Command("status");
+        genePoolCommand.AddCommand(genePoolGeneApiKeyStatusCommand);
+        genePoolGeneApiKeyStatusCommand.SetHandler(GetGenePoolApiKeyStatus);
 
         var networksCommand = new Command("networks");
         rootCommand.AddCommand(networksCommand);
@@ -1036,6 +1047,22 @@ internal static class Program
                 hostSettings)
             select unit,
             AgentSettingsRuntime.New());
+
+    private static Task<int> CreateGenePoolApiKey() =>
+        RunAsAdmin(
+            from _ in SuccessAff(unit)
+            let genePoolApiStore = new ZeroGenePoolApiKeyStore()
+            from __ in GenePoolCli<LanguageExt.Sys.Live.Runtime>.createApiKey(genePoolApiStore)
+            select unit,
+            LanguageExt.Sys.Live.Runtime.New());
+
+    private static Task<int> GetGenePoolApiKeyStatus() =>
+        RunAsAdmin(
+            from _ in SuccessAff(unit)
+            let genePoolApiStore = new ZeroGenePoolApiKeyStore()
+            from __ in GenePoolCli<LanguageExt.Sys.Live.Runtime>.getApiKeyStatus(genePoolApiStore)
+            select unit,
+            LanguageExt.Sys.Live.Runtime.New());
 
     private static async Task<int> GetDriverStatus()
     {

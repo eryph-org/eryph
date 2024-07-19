@@ -55,6 +55,22 @@
         "DOTNET_ENVIRONMENT": "Development"
       },
       "remoteDebugEnabled": false
+    },
+    "agentsettings genepool login": {
+      "commandName": "Project",
+      "commandLineArgs": "agentsettings genepool login",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
+    },
+    "agentsettings genepool status": {
+      "commandName": "Project",
+      "commandLineArgs": "agentsettings genepool status",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
     }
   }
 }

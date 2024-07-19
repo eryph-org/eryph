@@ -6,6 +6,7 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.ModuleCore.Networks;
 using Eryph.Modules.VmHostAgent;
+using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Rebus;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
@@ -42,6 +43,7 @@ namespace Eryph.Runtime.Zero
             container.RegisterSingleton<IAgentControlService, AgentControlService>();
 
             container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
+            container.RegisterSingleton<IGenePoolApiKeyStore, ZeroGenePoolApiKeyStore>();
             container.Register<IHostSettingsProvider, HostSettingsProvider>();
 
             container.RegisterInstance(new WorkflowOptions

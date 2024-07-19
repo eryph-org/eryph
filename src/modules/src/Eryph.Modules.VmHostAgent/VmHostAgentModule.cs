@@ -94,6 +94,7 @@ namespace Eryph.Modules.VmHostAgent
 
             container.Register<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>(Lifestyle.Scoped);
             container.RegisterInstance(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>());
+            container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolApiKeyStore>());
             container.RegisterInstance(serviceProvider.GetRequiredService<IHostSettingsProvider>());
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
             container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
