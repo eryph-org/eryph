@@ -31,7 +31,7 @@ public static class GenePoolCli<RT> where RT : struct,
 
     public static Aff<RT, Unit> createApiKey(
         IGenePoolApiKeyStore apiKeyStore) =>
-        from _1 in Console<RT>.writeLine("Authenticating with the gene pool. Please check your browser.")
+        from _1 in Console<RT>.writeLine("Gene pool authentication")
         from _2 in Console<RT>.write("Enter your organization: ")
         from orgName in Console<RT>.readLine
         from validOrgName in OrganizationName.NewEither(orgName).ToAff()
@@ -75,11 +75,9 @@ public static class GenePoolCli<RT> where RT : struct,
             };
 
             var credential = new B2CInteractiveBrowserCredential(credentialOptions);
-            var authRecord = await credential.AuthenticateAsync(new TokenRequestContext());
+            await credential.AuthenticateAsync(new TokenRequestContext());
 
-            credentialOptions.AuthenticationRecord = authRecord;
-
-            return new GenePoolClient(GenePoolUri, new B2CInteractiveBrowserCredential(credentialOptions));
+            return new GenePoolClient(GenePoolUri, credential);
         })
         select result;
 
