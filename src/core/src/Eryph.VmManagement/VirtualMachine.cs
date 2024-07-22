@@ -131,82 +131,6 @@ namespace Eryph.VmManagement
             return vmInfo;
         }
 
-        public static EitherAsync<Error, CatletConfig> TemplateFromParents(
-            ILocalGenepoolReader genepoolReader,
-            string parent)
-        {
-            if(string.IsNullOrEmpty(parent))
-                return LeftAsync<Error, CatletConfig>(
-                        Error.New("Cannot create template from parent - parent name is missing."));
-
-
-            var loadedConfig = new Dictionary<string,CatletConfig>();
-
-
-            do
-            {
-                if (loadedConfig.ContainsKey(parent))
-                {
-                    parent = null;
-                    continue;
-                }
-
-                var eitherParentRef = 
-                    from parentIdentifier in GeneSetIdentifier.NewEither(parent)
-                    from optionalRef in genepoolReader.GetGenesetReference(parentIdentifier)
-                    select optionalRef;
-
-                if (eitherParentRef.IsLeft)
-                    return eitherParentRef.Map(_ => new CatletConfig()).ToAsync();
-
-                // we have to break out from functional here, control the loop from
-                // reference returned
-                var reference = eitherParentRef
-                    .RightAsEnumerable()
-                    .Map(o => o.AsEnumerable()).Flatten().HeadOrNone()
-                    .Map(o => o.Value)
-                    .IfNone("");
-
-                if (!string.IsNullOrWhiteSpace(reference))
-                {
-                    parent = reference;
-                    continue;
-                }
-                
-                // read catlet config of parent
-                var eitherConfig = from parentIdentifier in GeneSetIdentifier.NewEither(parent)
-                    let geneIdentifier = new GeneIdentifier(parentIdentifier, GeneName.New("catlet"))
-                    from catletGene in genepoolReader.ReadGeneContent(GeneType.Catlet, geneIdentifier)
-                    from config in Try(() =>
-                    {
-                        var configDictionary =
-                            ConfigModelJsonSerializer.DeserializeToDictionary(catletGene);
-                        return CatletConfigDictionaryConverter.Convert(configDictionary);
-                    }).ToEither(Error.New)
-                    select config;
-
-                if(eitherConfig.IsLeft)
-                    return eitherConfig.ToAsync();
-
-                //config has to be there at this point, so we can safely use First
-                var newConfig = eitherConfig.RightAsEnumerable().First();
-                newConfig.Name = parent;
-                loadedConfig.Add(parent, newConfig);
-                parent = newConfig.Parent;
-
-
-            } while (parent != null);
-
-            var ancestors = loadedConfig.Values.Reverse().ToArray();
-
-            var breedConfig = ancestors.Fold(new CatletConfig(),
-                (p, child) => p.Breed(child, p.Name));
-
-            return breedConfig;
-        }
-
-
-
         public static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> RemoveAllPlannedDrives(
             IPowershellEngine engine,
             TypedPsObject<PlannedVirtualMachineInfo> vmInfo)
@@ -306,11 +230,13 @@ namespace Eryph.VmManagement
             TypedPsObject<VirtualMachineInfo> vmInfo,
             CatletConfig machineConfig,
             CatletMetadata metadata,
-            MachineNetworkSettings[] networkSettings,
             VMStorageSettings storageSettings)
         {
-            var convergeContext =
-                new ConvergeContext(vmHostAgentConfig, engine, reportProgress, machineConfig, metadata, storageSettings, networkSettings, hostInfo);
+            // Pass empty MachineNetworkSettings as converging the cloud init disk
+            // does not require them.
+            var convergeContext = new ConvergeContext(
+                vmHostAgentConfig, engine, reportProgress, machineConfig,
+                metadata, storageSettings, [], hostInfo);
 
             var convergeTasks = new ConvergeTaskBase[]
             {

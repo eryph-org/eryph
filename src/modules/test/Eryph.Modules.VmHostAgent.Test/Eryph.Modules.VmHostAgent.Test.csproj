@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\apps\src\Eryph-zero\eryph-zero.csproj" />
+    <ProjectReference Include="..\..\..\core\test\Eryph.VmManagement.TestBase\Eryph.VmManagement.TestBase.csproj" />
     <ProjectReference Include="..\..\src\Eryph.Modules.VmHostAgent\Eryph.Modules.VmHostAgent.csproj" />
   </ItemGroup>
 </Project>

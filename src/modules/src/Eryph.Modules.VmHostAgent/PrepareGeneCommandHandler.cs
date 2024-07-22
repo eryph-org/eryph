@@ -27,23 +27,12 @@ public class PrepareGeneCommandHandler : IHandleMessages<
 
     public async Task Handle(OperationTask<PrepareGeneCommand> message)
     {
-
         try
         {
-            if (message.Command.GeneName == null)
-            {
-                await _messaging.CompleteTask(message, new PrepareGeneResponse()
-                { 
-                    GeneType = message.Command.GeneType,
-                    RequestedGene = "",
-                    ResolvedGene = ""
-                });
-                return;
-            }
-
-            await _imageRequestDispatcher.NewGeneRequestTask(message, message.Command.GeneType, message.Command.GeneName);
-
-
+            await _imageRequestDispatcher.NewGeneRequestTask(
+                message,
+                message.Command.GeneIdentifier.GeneType,
+                message.Command.GeneIdentifier.GeneIdentifier.Value);
         }
         catch (Exception ex)
         {

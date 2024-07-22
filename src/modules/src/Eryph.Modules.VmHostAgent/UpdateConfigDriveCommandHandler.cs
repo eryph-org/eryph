@@ -15,67 +15,43 @@ using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.VmHostAgent;
 
 [UsedImplicitly]
-internal class UpdateConfigDriveCommandHandler : 
-    CatletConfigCommandHandler<UpdateCatletConfigDriveCommand, Unit>
+internal class UpdateConfigDriveCommandHandler(
+    IPowershellEngine engine,
+    ITaskMessaging messaging,
+    ILogger log,
+    IHostInfoProvider hostInfoProvider,
+    IHostSettingsProvider hostSettingsProvider,
+    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
+    : CatletConfigCommandHandler<UpdateCatletConfigDriveCommand, Unit>(engine, messaging, log)
 {
-    private readonly IHostInfoProvider _hostInfoProvider;
-    private readonly IHostSettingsProvider _hostSettingsProvider;
-    private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
-
-    public UpdateConfigDriveCommandHandler(
-        IPowershellEngine engine,
-        ITaskMessaging messaging,
-        ILogger log,
-        IHostInfoProvider hostInfoProvider,
-        IHostSettingsProvider hostSettingsProvider,
-        IVmHostAgentConfigurationManager vmHostAgentConfigurationManager) : base(engine, messaging, log)
-    {
-        _hostInfoProvider = hostInfoProvider;
-        _hostSettingsProvider = hostSettingsProvider;
-        _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
-    }
-
-    protected override EitherAsync<Error, Unit> HandleCommand(UpdateCatletConfigDriveCommand command)
-    {
-        var vmId = command.VMId;
-
-        var fodderConfig = new CatletConfig
-        {
-            Name = command.CatletName,
-            Fodder = command.MachineMetadata.Fodder,
-            Variables = command.MachineMetadata.Variables,
-        };
-
-        var convergeConfigDrive = Prelude.fun(
-            (VmHostAgentConfiguration vmHostAgentConfig, TypedPsObject<VirtualMachineInfo> vmInfo, VMStorageSettings storageSettings, VMHostMachineData hostInfo, CatletConfig config) =>
-                VirtualMachine.ConvergeConfigDrive(vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfo, config,
-                    command.MachineMetadata, command.MachineNetworkSettings, storageSettings));
-
-
-        return
-            from hostSettings in _hostSettingsProvider.GetHostSettings()
-            from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-            from hostInfo in _hostInfoProvider.GetHostInfoAsync().WriteTrace()
-            from vmList in GetVmInfo(vmId, Engine)
-            from vmInfo in EnsureSingleEntry(vmList, vmId)
-            from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
-            from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
-                .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
-            let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
-            from mergedConfig in fodderConfig.BreedAndFeed(genepoolReader, metadata.ParentConfig)
-                .Map(c => c.AppendSystemVariables(metadata))
-                .ToAsync()
-            from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(mergedConfig)
-                .ToEither()
-                .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
-                .ToAsync()
-            from vmInfoConverged in convergeConfigDrive(vmHostAgentConfig, vmInfo, currentStorageSettings, hostInfo, substitutedConfig).WriteTrace().ToAsync()
-
-            select Unit.Default;
-
-    }
-
+    protected override EitherAsync<Error, Unit> HandleCommand(
+        UpdateCatletConfigDriveCommand command) =>
+        from hostSettings in hostSettingsProvider.GetHostSettings()
+        from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+        from hostInfo in hostInfoProvider.GetHostInfoAsync().WriteTrace()
+        let vmId = command.VMId
+        from vmList in GetVmInfo(vmId, Engine)
+        from vmInfo in EnsureSingleEntry(vmList, vmId)
+        from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
+        from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
+            .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
+        let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
+        from fedConfig in CatletFeeding.Feed(
+            CatletFeeding.FeedSystemVariables(command.Config, metadata),
+            genepoolReader)
+        .ToAsync()
+        from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
+            .ToEither()
+            .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
+            .ToAsync()
+        from vmInfoConverged in VirtualMachine.ConvergeConfigDrive(
+                vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfo,
+                substitutedConfig, metadata, currentStorageSettings)
+            .WriteTrace().ToAsync()
+        select Unit.Default;
 }

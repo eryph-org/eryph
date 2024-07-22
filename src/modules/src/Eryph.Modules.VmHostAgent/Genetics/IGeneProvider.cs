@@ -2,9 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
-using Eryph.GenePool.Model;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Genes.Commands;
-using Eryph.Resources;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -18,7 +17,7 @@ public interface IGeneProvider
         Func<string, int, Task<Unit>> reportProgress,
         CancellationToken cancel);
 
-    EitherAsync<Error, Option<string>> GetGeneSetParent(
+    EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
         GeneSetIdentifier genesetIdentifier,
-        Func<string, int, Task<Unit>> reportProgress,CancellationToken cancellationToken);
+        CancellationToken cancellationToken);
 }

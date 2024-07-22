@@ -1,13 +1,13 @@
-﻿using Eryph.GenePool.Model;
+﻿using Eryph.ConfigModel;
+using Eryph.Core.Genetics;
+using Eryph.GenePool.Model;
 using Eryph.Resources;
 
 namespace Eryph.Messages.Resources.Genes.Commands;
 
 public class PrepareGeneResponse
 {
-    public GeneType GeneType { get; set; }
-    public string RequestedGene { get; set; }
+    public GeneIdentifierWithType RequestedGene { get; set; }
 
-    public string ResolvedGene { get; set; }
-
+    public GeneIdentifierWithType ResolvedGene { get; set; }
 }

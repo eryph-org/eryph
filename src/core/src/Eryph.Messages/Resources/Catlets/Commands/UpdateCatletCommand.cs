@@ -2,6 +2,7 @@
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Resources;
+using JetBrains.Annotations;
 
 namespace Eryph.Messages.Resources.Catlets.Commands
 {
@@ -10,8 +11,8 @@ namespace Eryph.Messages.Resources.Catlets.Commands
     {
         public CatletConfig Config { get; set; }
 
-        [PrivateIdentifier]
-        public string AgentName { get; set; }
+        [CanBeNull] public CatletConfig BredConfig { get; set; }
+
         public Guid CorrelationId { get; set; }
 
         public Guid CatletId { get; set; }

@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel;
-using Eryph.GenePool.Model;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Genes.Commands;
 using LanguageExt;
 using LanguageExt.Common;
@@ -78,84 +78,6 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
         }
     }
 
-    public async ValueTask NewGenomeRequestTask(IOperationTaskMessage message, string genesetName)
-    {
-        await NewGenomeRequestTaskInternal(
-            new GenomeContext(message, genesetName, Arr<string>.Empty),
-            GeneSetIdentifier.New(genesetName));
-    }
-
-    private async ValueTask NewGenomeRequestTaskInternal(GenomeContext context, GeneSetIdentifier geneSetId)
-    {
-        var geneIdentifier = new GeneIdentifier(geneSetId, GeneName.New("catlet"));
-
-        await NewGeneRequestTaskInternal(GeneType.Catlet, geneIdentifier, context,
-            async (m, ctx, r) =>
-            {
-                var innerContext = (GenomeContext)ctx;
-                return await r.Bind(prepareResponse => GeneIdentifier.NewEither(prepareResponse.ResolvedGene))
-                    .ToAsync()
-                    .Bind(resolvedGene =>
-                        
-                        from optionalParent in _geneProvider.GetGeneSetParent(resolvedGene.GeneSet,
-                            async (message, progress) =>
-                            {
-                                await m.ProgressMessage(innerContext.Message,new { message , progress});
-                                return Unit.Default;
-                            }, CancellationToken.None  )
-                        from optionalParentId in optionalParent.Map(GeneSetIdentifier.NewEither)
-                            .Sequence().ToAsync()
-                        from uResponse in optionalParentId.MatchAsync(
-                            Some: async p =>
-                            {
-                                await NewGenomeRequestTaskInternal(context with {ResolvedGenSets = 
-                                    context.ResolvedGenSets.Add(resolvedGene.GeneSet.Value)}, p);
-                                return Prelude.Right<Error, Unit>(Unit.Default);
-                            },
-                            None: async () =>
-                            {
-                                var ancestorsString = string.Join(" => ", innerContext.ResolvedGenSets);
-                                if (innerContext.ResolvedGenSets.Length > 0 && ancestorsString != innerContext.OriginalRequest)
-                                {
-                                    await m.ProgressMessage(innerContext.Message,
-                                        $"Resolved ancestors of catlet {innerContext.OriginalRequest}: {ancestorsString}");
-                                }
-                                else
-                                {
-                                    await m.ProgressMessage(innerContext.Message,
-                                        $"Resolved catlet {innerContext.OriginalRequest}");
-                                }
-
-                                // requested parent may have been a ref that has been resolved - than take this
-                                // as starting point -> otherwise use resolved genesets is it contains 
-                                // parent hierarchy
-                                var resolvedParent = innerContext.ResolvedGenSets.Length > 0
-                                    ? innerContext.ResolvedGenSets.FirstOrDefault()
-                                    : resolvedGene.GeneSet.Value;
-
-                                var result = new PrepareParentGenomeResponse
-                                {
-                                    RequestedParent = innerContext.OriginalRequest,
-                                    ResolvedParent = resolvedParent
-                                };
-
-                                await m.CompleteTask(context.Message, result);
-                                return Prelude.Right<Error, Unit>(Unit.Default);
-                            }).ToAsync()
-                        select Unit.Default)
-
-                    .Match(Task.FromResult,
-                        async l =>
-                        {
-                            await m.FailTask(innerContext.Message, l);
-                            return Unit.Default;
-                        }
-                    ).Flatten();
-
-            },
-            ctx => ((GenomeContext)ctx).Message);
-    }
-
     private async ValueTask ProvideGene(GeneIdentifierWithType geneIdWithType, CancellationToken cancel)
     {
         await using var scope = AsyncScopedLifestyle.BeginScope(_container);
@@ -173,8 +95,6 @@ internal class GeneRequestRegistry : IGeneRequestDispatcher
         {
             await EndRequest(taskMessaging, geneIdWithType, Error.New(ex));
         }
-
-
     }
 
     private async Task<Unit> ReportProgress(ITaskMessaging taskMessaging, GeneIdentifierWithType geneIdWithType, string message, int progress)

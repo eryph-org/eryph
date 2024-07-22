@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageReference Include="Moq" Version="4.16.1" />
     <PackageReference Include="xunit" Version="2.7.1" />
+    <PackageReference Include="Xunit.Combinatorial" Version="1.6.24" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.5.8">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -22,5 +23,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Eryph.VmManagement\Eryph.VmManagement.csproj" />
+    <ProjectReference Include="..\Eryph.VmManagement.TestBase\Eryph.VmManagement.TestBase.csproj" />
   </ItemGroup>
 </Project>

@@ -49,7 +49,8 @@ namespace Eryph.Runtime.Zero
                 DispatchMode = WorkflowEventDispatchMode.Publish, 
                 EventDestination = QueueNames.Controllers,
                 OperationsDestination = QueueNames.Controllers,
-                DeferCompletion = TimeSpan.FromMinutes(1)
+                DeferCompletion = TimeSpan.FromMinutes(1),
+                JsonSerializerOptions = EryphJsonSerializerOptions.Options,
             });
         }
 

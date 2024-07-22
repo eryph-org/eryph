@@ -247,7 +247,7 @@ namespace Eryph.Modules.ComputeApi.Handlers
 
                 if (metadata.ParentConfig != null)
                 {
-                    config.Parent = metadata.ParentConfig.Parent;
+                    config.Parent = metadata.Parent;
 
                     if (config.Cpu?.Count.GetValueOrDefault() == 0 || config.Cpu?.Count == metadata.ParentConfig.Cpu?.Count)
                         config.Cpu.Count = null;

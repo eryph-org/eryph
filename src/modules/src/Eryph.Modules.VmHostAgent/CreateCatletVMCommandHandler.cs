@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection.PortableExecutable;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
@@ -6,12 +7,15 @@ using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Storage;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
+
+using static LanguageExt.Prelude;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
@@ -39,81 +43,41 @@ namespace Eryph.Modules.VmHostAgent
             _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
         }
 
-        protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(CreateCatletVMCommand command)
-        {
-            var config = command.Config;
+        protected override EitherAsync<Error, ConvergeCatletResult> HandleCommand(
+            CreateCatletVMCommand command) =>
+            from hostSettings in _hostSettingsProvider.GetHostSettings()
+            from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+            from plannedStorageSettings in VMStorageSettings.Plan(
+                vmHostAgentConfig, LongToString(command.StorageId), command.Config, None)
+            from createdVM in CreateVM(plannedStorageSettings, Engine, command.BredConfig)
+            let metadata = new CatletMetadata
+            {
+                Id = Guid.NewGuid(),
+                MachineId = command.NewMachineId,
+                VMId = createdVM.Value.Id,
+                Fodder = command.Config.Fodder,
+                Variables = command.Config.Variables,
+                Parent = command.Config.Parent,
+            }
+            from _ in SetMetadataId(createdVM, metadata.Id)
+            from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, createdVM, _hostInfoProvider)
+            select new ConvergeCatletResult
+            {
+                Inventory = inventory,
+                MachineMetadata = metadata,
+                Timestamp = DateTimeOffset.UtcNow,
+            };
 
-            var getParentConfig = Prelude.fun((VmHostAgentConfiguration vmHostAgentConfig) =>
-                GetTemplate(new LocalGenepoolReader(vmHostAgentConfig), config.Parent));
-
-            var createVM = Prelude.fun((VMStorageSettings settings, 
-                    Option<CatletConfig> parentConfig) =>
-                CreateVM(settings, Engine, config, parentConfig));
-
-            var createMetadata = Prelude.fun(
-                (TypedPsObject<VirtualMachineInfo> vmInfo, Option<CatletConfig> parentConfig) =>
-                    CreateMetadata(parentConfig, vmInfo, config, command.NewMachineId));
-
-            return
-                from hostSettings in _hostSettingsProvider.GetHostSettings()
-                from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-                from plannedStorageSettings in VMStorageSettings.Plan(vmHostAgentConfig, LongToString(command.StorageId), config,
-                    Option<VMStorageSettings>.None)
-                from parentConfig in getParentConfig(vmHostAgentConfig)
-                from createdVM in createVM(plannedStorageSettings, parentConfig)
-                from metadata in createMetadata(createdVM, parentConfig)
-                from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, createdVM, _hostInfoProvider)
-                select new ConvergeCatletResult
-                {
-                    Inventory = inventory,
-                    MachineMetadata = metadata,
-                    Timestamp = DateTimeOffset.UtcNow,
-                };
-        }
-
-        private static EitherAsync<Error, Option<CatletConfig>> GetTemplate(
-            ILocalGenepoolReader genepoolReader,
-            string? parent)
-        {
-            if (string.IsNullOrWhiteSpace(parent))
-                return Prelude.RightAsync<Error, Option<CatletConfig>> (
-                    Option<CatletConfig>.None);
-
-            return VirtualMachine.TemplateFromParents(genepoolReader, parent).Map(Prelude.Some);
-        }
-
-        private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(VMStorageSettings storageSettings, IPowershellEngine engine,
-            CatletConfig config, Option<CatletConfig> parentConfig)
-        {
-            return (from storageIdentifier in storageSettings.StorageIdentifier.ToEitherAsync(Error.New(
-                    "Unknown storage identifier, cannot create new virtual catlet"))
-                let memoryConfig = config.Memory?.Startup
-                                    ?? parentConfig.Map(x => x.Memory?.Startup ?? 1024).IfNone(1024)
-
-                    from vm in VirtualMachine.Create(engine, config.Name, storageIdentifier,
-                    storageSettings.VMPath, memoryConfig)
-                select vm);
-        }
-
-        private EitherAsync<Error, CatletMetadata> CreateMetadata(
-            Option<CatletConfig> optionalParentConfig,
-            TypedPsObject<VirtualMachineInfo> vmInfo, CatletConfig config, Guid machineId)
-        {
-            return Prelude.RightAsync<Error, CatletMetadata>(
-                    new CatletMetadata
-                {
-                    Id = Guid.NewGuid(),
-                    MachineId = machineId,
-                    VMId = vmInfo.Value.Id,
-                    Fodder = config.Fodder,
-                    Variables = config.Variables,
-                    Parent = config.Parent,
-                    ParentConfig = optionalParentConfig.MatchUnsafe(
-                        None: () => null, Some: c => c),
-
-                    })
-                .Bind(metadata => SetMetadataId(vmInfo, metadata.Id).Map(_ => metadata));
-
-        }
+        private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(
+            VMStorageSettings storageSettings,
+            IPowershellEngine engine,
+            CatletConfig config) =>
+            from storageIdentifier in storageSettings.StorageIdentifier
+                .ToEitherAsync(Error.New(
+                    "Cannot create catlet. The storage identifier is missing."))
+            let startupMemory = config.Memory?.Startup ?? 1024
+            from vm in VirtualMachine.Create(engine, config.Name, storageIdentifier,
+                storageSettings.VMPath, startupMemory)
+            select vm;
     }
 }

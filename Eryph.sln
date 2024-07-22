@@ -97,6 +97,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.StateDb.MySql", "src\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.StateDb.Tests", "src\data\test\Eryph.StateDb.Tests\Eryph.StateDb.Tests.csproj", "{D48A7981-456D-4E15-B63D-7042F6A53834}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.ModuleCore.Tests", "src\modules\test\Eryph.ModuleCore.Tests\Eryph.ModuleCore.Tests.csproj", "{C85F3B0A-FD64-4E07-A52E-D3BD7FE0D5D1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.TestBase", "src\core\test\Eryph.VmManagement.TestBase\Eryph.VmManagement.TestBase.csproj", "{07EA56EB-0B74-485B-8008-268C0B9A43AC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Rebus.Tests", "src\infrastructure\test\Eryph.Rebus.Tests\Eryph.Rebus.Tests.csproj", "{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -255,6 +261,18 @@ Global
 		{D48A7981-456D-4E15-B63D-7042F6A53834}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D48A7981-456D-4E15-B63D-7042F6A53834}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D48A7981-456D-4E15-B63D-7042F6A53834}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C85F3B0A-FD64-4E07-A52E-D3BD7FE0D5D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C85F3B0A-FD64-4E07-A52E-D3BD7FE0D5D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C85F3B0A-FD64-4E07-A52E-D3BD7FE0D5D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C85F3B0A-FD64-4E07-A52E-D3BD7FE0D5D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{07EA56EB-0B74-485B-8008-268C0B9A43AC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07EA56EB-0B74-485B-8008-268C0B9A43AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07EA56EB-0B74-485B-8008-268C0B9A43AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07EA56EB-0B74-485B-8008-268C0B9A43AC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -298,6 +316,9 @@ Global
 		{37F1FBF3-839C-4FCE-97DC-D8CD78B3EE5D} = {7F64364D-A6A2-441C-9F30-3702BF35A02F}
 		{2D1AC366-22FE-4CA6-A852-B76D56CB1C01} = {7F64364D-A6A2-441C-9F30-3702BF35A02F}
 		{D48A7981-456D-4E15-B63D-7042F6A53834} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{C85F3B0A-FD64-4E07-A52E-D3BD7FE0D5D1} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{07EA56EB-0B74-485B-8008-268C0B9A43AC} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{03B7CC02-557A-4F29-BD61-E3C6899EF9FF} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

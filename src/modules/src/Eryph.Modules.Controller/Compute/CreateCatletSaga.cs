@@ -1,246 +1,215 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
+using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using IdGen;
 using JetBrains.Annotations;
+using LanguageExt;
+using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Controller.Compute
-{
-    [UsedImplicitly]
-    internal class CreateCatletSaga : OperationTaskWorkflowSaga<CreateCatletCommand, CreateCatletSagaData>,
+namespace Eryph.Modules.Controller.Compute;
+
+[UsedImplicitly]
+internal class CreateCatletSaga(
+    IWorkflow workflow,
+    IIdGenerator<long> idGenerator,
+    IVirtualMachineDataService vmDataService,
+    IStateStore stateStore)
+    : OperationTaskWorkflowSaga<CreateCatletCommand, EryphSagaData<CreateCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<ValidateCatletConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PlaceCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<PrepareParentGenomeCommand>>
-
+        IHandleMessages<OperationTaskStatusEvent<ResolveCatletConfigCommand>>
+{
+    protected override async Task Initiated(CreateCatletCommand message)
     {
-        private readonly IIdGenerator<long> _idGenerator;
-        private readonly IVirtualMachineDataService _vmDataService;
-        private readonly IStateStore _stateStore;
-
-        public CreateCatletSaga(IWorkflow workflow, IIdGenerator<long> idGenerator,
-            IVirtualMachineDataService vmDataService, IStateStore stateStore) : base(workflow)
+        Data.Data.Config = message.Config;
+        Data.Data.State = CreateVMState.Initiated;
+        Data.Data.TenantId = message.TenantId;
+        await StartNewTask(new ValidateCatletConfigCommand
         {
-            _idGenerator = idGenerator;
-            _vmDataService = vmDataService;
-            _stateStore = stateStore;
-        }
-
-        public Task Handle(OperationTaskStatusEvent<CreateCatletVMCommand> message)
-        {
-            if (Data.State >= CreateVMState.Created)
-                return Task.CompletedTask;
-
-            return FailOrRun<CreateCatletVMCommand, ConvergeCatletResult>(message, async r =>
-            {
-                Data.State = CreateVMState.Created;
-
-                var projectName = Optional(Data.Config?.Project).Filter(notEmpty).Match(
-                    Some: n => ProjectName.New(n),
-                    None: () => ProjectName.New("default"));
-
-                var environmentName = Optional(Data.Config?.Environment).Filter(notEmpty).Match(
-                    Some: n => EnvironmentName.New(n),
-                    None: () => EnvironmentName.New("default"));
-
-                var datastoreName = Optional(Data.Config?.Store).Filter(notEmpty).Match(
-                    Some: n => DataStoreName.New(n),
-                    None: () => DataStoreName.New("default"));
-
-                var project = await _stateStore.For<Project>()
-                    .GetBySpecAsync(new ProjectSpecs.GetByName(Data.TenantId, projectName.Value));
-
-                if (project == null)
-                    throw new InvalidOperationException($"Project '{projectName}' not found.");
-
-
-                _ = await _vmDataService.AddNewVM(new Catlet
-                {
-                    ProjectId = project.Id,
-                    Id = Data.MachineId,
-                    AgentName = Data.AgentName,
-                    VMId = r.Inventory.VMId,
-                    Name = r.Inventory.Name,
-                    Environment = environmentName.Value,
-                    DataStore = datastoreName.Value,
-                }, r.MachineMetadata);
-
-                await StartNewTask(new UpdateCatletCommand
-                {
-                    Config = Data.Config,
-                    AgentName = Data.AgentName,
-                    CatletId = Data.MachineId
-                });
-            });
-        }
-
-        public Task Handle(OperationTaskStatusEvent<PlaceCatletCommand> message)
-        {
-            if (Data.State >= CreateVMState.Placed)
-                return Task.CompletedTask;
-
-            return FailOrRun<PlaceCatletCommand, PlaceCatletResult>(message,
-                async r =>
-            {
-                Data.State = CreateVMState.Placed;
-                Data.AgentName = r.AgentName;
-
-
-                if (string.IsNullOrWhiteSpace(Data.Config?.Parent))
-                {
-                    await CreateCatlet();
-                    return;
-
-                }
-
-                await StartNewTask(new PrepareParentGenomeCommand
-                {
-                    ParentName = Data.Config?.Parent,
-                    AgentName = r.AgentName
-                });
-
-                //Data.GeneSetName = Data.Config?.Parent??"";
-
-                //Data.GeneNames.AddRange( (Data.Config?.Drives?
-                //    .Select(x => x.Source)
-                //    .Where(t => t!=null && t.StartsWith("gene:") && t.Split(':').Length>=2) ?? Array.Empty<string>()));
-
-                //// no genesets required - go directly to create
-                //if (Data.GeneNames.Count == 0 && string.IsNullOrWhiteSpace(Data.GeneSetName))
-                //{
-
-                //}
-
-                //if (!string.IsNullOrWhiteSpace(Data.GeneSetName))
-                //{
-
-                //}
-
-                //Data.GeneNames = Data.GeneNames.Distinct().ToList();
-
-                //foreach (var geneName in Data.GeneNames)
-                //{
-                //    await StartNewTask(new PrepareGeneSetCommand
-                //    {
-                //        GeneName = geneName,
-                //        AgentName = r.AgentName
-                //    });
-                //}
-
-            });
-        }
-
-        public Task Handle(OperationTaskStatusEvent<PrepareParentGenomeCommand> message)
-        {
-            if (Data.State >= CreateVMState.ImagePrepared)
-                return Task.CompletedTask;
-
-            return FailOrRun<PrepareParentGenomeCommand, PrepareParentGenomeResponse>(message, 
-                (response) =>
-            {
-                if (Data.Config == null || Data.Config.Parent != response.RequestedParent) return Task.CompletedTask;
-                Data.Config.Parent = response.ResolvedParent;
-                return CreateCatlet();
-                //if (Data.Config.Drives != null)
-                //    foreach (var catletDriveConfig in Data.Config.Drives)
-                //    {
-                //        if (catletDriveConfig.Source != null &&
-                //            catletDriveConfig.Source.StartsWith("gene:") &&
-                //            catletDriveConfig.Source.Contains(response.RequestedGeneSet))
-                //        {
-                //            catletDriveConfig.Source =
-                //                catletDriveConfig.Source.Replace(response.RequestedGeneSet, response.ResolvedGenSet);
-                //        }
-                //    }
-
-            });
-        }
-
-        private Task CreateCatlet()
-        {
-            Data.State = CreateVMState.ImagePrepared;
-            Data.MachineId = Guid.NewGuid();
-
-            return StartNewTask(new CreateCatletVMCommand
-            {
-                Config = Data.Config,
-                NewMachineId = Data.MachineId,
-                AgentName = Data.AgentName,
-                StorageId = _idGenerator.CreateId()
-            }).AsTask();
-        }
-
-        public Task Handle(OperationTaskStatusEvent<UpdateCatletCommand> message)
-        {
-            if (Data.State >= CreateVMState.Updated)
-                return Task.CompletedTask;
-
-            return FailOrRun(message, () =>
-            {
-                Data.State = CreateVMState.Updated;
-                return Complete();
-            });
-        }
-
-        public Task Handle(OperationTaskStatusEvent<ValidateCatletConfigCommand> message)
-        {
-            if (Data.State >= CreateVMState.ConfigValidated)
-                return Task.CompletedTask;
-
-            return FailOrRun<ValidateCatletConfigCommand, ValidateCatletConfigCommand>(message, r =>
-            {
-                Data.Config = r.Config;
-                Data.State = CreateVMState.ConfigValidated;
-
-
-                return StartNewTask(new PlaceCatletCommand
-                    {
-                        Config = Data.Config
-                    }).AsTask();
-            });
-        }
-
-        protected override void CorrelateMessages(ICorrelationConfig<CreateCatletSagaData> config)
-        {
-            base.CorrelateMessages(config);
-
-            config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(m => m.InitiatingTaskId,
-                d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<PlaceCatletCommand>>(m => m.InitiatingTaskId,
-                d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(m => m.InitiatingTaskId,
-                d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<PrepareParentGenomeCommand>>(m => m.InitiatingTaskId,
-                d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<UpdateCatletCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
-        }
-
-
-        protected override Task Initiated(CreateCatletCommand message)
-        {
-            Data.Config = message.Config;
-            Data.State = CreateVMState.Initiated;
-            Data.TenantId = message.TenantId;
-            return StartNewTask(new ValidateCatletConfigCommand
-                {
-                    MachineId = Guid.Empty,
-                    Config = message.Config
-                }
-            ).AsTask();
-        }
+            MachineId = Guid.Empty,
+            Config = message.Config
+        });
     }
+
+    public Task Handle(OperationTaskStatusEvent<ValidateCatletConfigCommand> message)
+    {
+        if (Data.Data.State >= CreateVMState.ConfigValidated)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async (ValidateCatletConfigCommand response) =>
+        {
+            Data.Data.Config = response.Config;
+            Data.Data.State = CreateVMState.ConfigValidated;
+
+            await StartNewTask(new PlaceCatletCommand
+            {
+                Config = Data.Data.Config
+            });
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<PlaceCatletCommand> message)
+    {
+        if (Data.Data.State >= CreateVMState.Placed)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async (PlaceCatletResult response) =>
+        {
+            Data.Data.State = CreateVMState.Placed;
+            Data.Data.AgentName = response.AgentName;
+
+            await StartNewTask(new ResolveCatletConfigCommand()
+            {
+                AgentName = response.AgentName,
+                Config = Data.Data.Config,
+            });
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<ResolveCatletConfigCommand> message)
+    {
+        if (Data.Data.State >= CreateVMState.Resolved)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async (ResolveCatletConfigCommandResponse response) =>
+        {
+            if (Data.Data.Config is null)
+                throw new InvalidOperationException("Config is missing.");
+
+            Data.Data.State = CreateVMState.Resolved;
+
+            var result = PrepareConfigs(
+                Data.Data.Config,
+                response.ResolvedGeneSets.ToHashMap(),
+                response.ParentConfigs.ToHashMap());
+            if (result.IsLeft)
+            {
+                await Fail(ErrorUtils.PrintError(Error.Many(result.LeftToSeq())));
+                return;
+            }
+
+            Data.Data.Config = result.ValueUnsafe().Config;
+            Data.Data.BredConfig = result.ValueUnsafe().BredConfig;
+            Data.Data.ParentConfig = result.ValueUnsafe().ParentConfig.IfNoneUnsafe((CatletConfig?)null);
+            Data.Data.MachineId = Guid.NewGuid();
+
+            await StartNewTask(new CreateCatletVMCommand
+            {
+                Config = Data.Data.Config,
+                BredConfig = Data.Data.BredConfig,
+                NewMachineId = Data.Data.MachineId,
+                AgentName = Data.Data.AgentName,
+                StorageId = idGenerator.CreateId()
+            });
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<CreateCatletVMCommand> message)
+    {
+        if (Data.Data.State >= CreateVMState.Created)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async (ConvergeCatletResult response) =>
+        {
+            Data.Data.State = CreateVMState.Created;
+
+            var projectName = Optional(Data.Data.Config?.Project).Filter(notEmpty).Match(
+                Some: n => ProjectName.New(n),
+                None: () => ProjectName.New("default"));
+
+            var environmentName = Optional(Data.Data.Config?.Environment).Filter(notEmpty).Match(
+                Some: n => EnvironmentName.New(n),
+                None: () => EnvironmentName.New("default"));
+
+            var datastoreName = Optional(Data.Data.Config?.Store).Filter(notEmpty).Match(
+                Some: n => DataStoreName.New(n),
+                None: () => DataStoreName.New("default"));
+
+            var project = await stateStore.For<Project>()
+                .GetBySpecAsync(new ProjectSpecs.GetByName(Data.Data.TenantId, projectName.Value));
+
+            if (project == null)
+                throw new InvalidOperationException($"Project '{projectName}' not found.");
+
+            response.MachineMetadata.ParentConfig = Data.Data.ParentConfig;
+
+            _ = await vmDataService.AddNewVM(new Catlet
+            {
+                ProjectId = project.Id,
+                Id = Data.Data.MachineId,
+                AgentName = Data.Data.AgentName,
+                VMId = response.Inventory.VMId,
+                Name = response.Inventory.Name,
+                Environment = environmentName.Value,
+                DataStore = datastoreName.Value,
+            }, response.MachineMetadata);
+
+            await StartNewTask(new UpdateCatletCommand
+            {
+                Config = Data.Data.Config,
+                BredConfig = Data.Data.BredConfig,
+                CatletId = Data.Data.MachineId
+            });
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<UpdateCatletCommand> message)
+    {
+        if (Data.Data.State >= CreateVMState.Updated)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, () =>
+        {
+            Data.Data.State = CreateVMState.Updated;
+            return Complete();
+        });
+    }
+
+    protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<CreateCatletSagaData>> config)
+    {
+        base.CorrelateMessages(config);
+
+        config.Correlate<OperationTaskStatusEvent<ValidateCatletConfigCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<PlaceCatletCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<ResolveCatletConfigCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<UpdateCatletCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+    }
+
+    private static Either<
+        Error,
+        (CatletConfig Config, CatletConfig BredConfig, Option<CatletConfig> ParentConfig)>
+        PrepareConfigs(
+        CatletConfig config,
+        HashMap<GeneSetIdentifier, GeneSetIdentifier> resolvedGeneSets,
+        HashMap<GeneSetIdentifier, CatletConfig> parentConfigs) =>
+        from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(config, resolvedGeneSets)
+            .MapLeft(e => Error.New("Could not resolve genes in the catlet config.", e))
+        from breedingResult in CatletPedigree.Breed(config, resolvedGeneSets, parentConfigs)
+            .MapLeft(e => Error.New("Could not breed the catlet.", e))
+        select (resolvedConfig, breedingResult.Config, breedingResult.ParentConfig);
 }
