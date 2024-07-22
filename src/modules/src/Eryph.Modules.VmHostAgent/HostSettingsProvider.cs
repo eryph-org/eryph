@@ -1,44 +1,42 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Management;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent
+namespace Eryph.Modules.VmHostAgent;
+
+public interface IHostSettingsProvider
 {
-    public interface IHostSettingsProvider
-    {
-        EitherAsync<Error, HostSettings> GetHostSettings();
-    }
+    EitherAsync<Error, HostSettings> GetHostSettings();
+}
 
-    public class HostSettingsProvider : IHostSettingsProvider
-    {
-        public EitherAsync<Error, HostSettings> GetHostSettings() =>
-            from queryResult in Try(() =>
-            {
-                var scope = new ManagementScope(@"\\.\root\virtualization\v2");
-                var query = new ObjectQuery(
-                    "select DefaultExternalDataRoot,DefaultVirtualHardDiskPath from Msvm_VirtualSystemManagementServiceSettingData");
+public class HostSettingsProvider : IHostSettingsProvider
+{
+    public EitherAsync<Error, HostSettings> GetHostSettings() =>
+        from hostSettings in HostSettingsProvider<WmiRuntime>.getHostSettings()
+            .Run(WmiRuntime.New())
+            .ToEitherAsync()
+        select hostSettings;
+}
 
-                using var searcher = new ManagementObjectSearcher(scope, query);
-                using var settingsCollection = searcher.Get();
-
-                return settingsCollection.Cast<ManagementObject>().ToList();
-            }).ToEitherAsync()
-            from settings in queryResult.HeadOrNone().ToEitherAsync(Error.New("failed to query for hyper-v host settings"))
-            from defaultDataPath in Optional(settings.GetPropertyValue("DefaultExternalDataRoot") as string)
-                .ToEitherAsync(Error.New("Failed to lookup the Hyper-V setting DefaultExternalDataRoot"))
-            from defaultVirtualHardDiskPath in Optional(
-                    settings.GetPropertyValue("DefaultVirtualHardDiskPath") as string)
-                .ToEitherAsync(Error.New("Failed to lookup the Hyper-V setting DefaultVirtualHardDiskPath"))
-            select new HostSettings
-            {
-                DefaultDataPath = Path.Combine(defaultDataPath, "Eryph"),
-                DefaultVirtualHardDiskPath = Path.Combine(defaultVirtualHardDiskPath, "Eryph"),
-                DefaultNetwork = "nat"
-            };
-    }
+public static class HostSettingsProvider<RT> where RT : struct, HasWmi<RT>
+{
+    public static Eff<RT, HostSettings> getHostSettings() =>
+        from queryResult in WmiQueries<RT>.getHyperVDefaultPaths()
+        from dataPath in Try(() => Path.Combine(queryResult.DataRootPath, "Eryph"))
+            .ToEff()
+            .MapFail(e => Error.New("Could not construct the path for Eryph VMs.", e))
+        from vhdPath in Try(() => Path.Combine(queryResult.VhdPath, "Eryph"))
+            .ToEff()
+            .MapFail(e => Error.New("Could not construct the path for Eryph VHDs.", e))
+        select new HostSettings
+        {
+            DefaultDataPath = dataPath,
+            DefaultVirtualHardDiskPath = vhdPath,
+            DefaultNetwork = "nat"
+        };
 }

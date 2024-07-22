@@ -6,7 +6,6 @@ using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Management;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -16,14 +15,12 @@ using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Eryph.App;
 using Eryph.ModuleCore;
-using Eryph.Modules.ComputeApi;
 using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Configuration;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
-using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
@@ -59,7 +56,6 @@ using Microsoft.Extensions.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.Win32;
-using Polly;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -278,51 +274,40 @@ internal static class Program
                     });
 
                 var isWindowsService = WindowsServiceHelpers.IsWindowsService();
+                using var loggerFactory = new SerilogLoggerFactory(logger, dispose: false);
 
-                // Check that Hyper-V can be queried properly. This ensures that Hyper-V is
-                // installed and the management service (VMMS) is running. When we are running
-                // as a service, we retry the check a few times (up to 84 seconds). Even when
-                // our service depends on VMMS, VMMS or WMI might not be responsive yet when
-                // our service is started.
-                var provider = new HostSettingsProvider();
-                var hyperVResult = await Policy
-                    .HandleResult<Either<Error, HostSettings>>(result => result.IsLeft)
-                    .WaitAndRetryAsync(
-                        isWindowsService ? 10 : 0,
-                        attempt => TimeSpan.FromSeconds(Math.Min(Math.Pow(attempt, 2), 10)),
-                        (_, _, _, _) => logger.Information("Hyper-V (VMMS) is not responding yet. Waiting..."))
-                    .ExecuteAsync(async () => await provider.GetHostSettings());
+                var result = await DriverCommands.Run(
+                    from _1 in SystemRequirementsChecker<DriverCommandsRuntime>.ensureHyperV(isWindowsService)
+                        .MapFail(e => Error.New(
+                            -10,
+                            "Hyper-V is not available. Make sure it is installed and the management service (VMMS) is running.",
+                            e))
+                    from ovsLogger in default(DriverCommandsRuntime).Logger<OVSPackage>()
+                    from runDir in Eff(() => OVSPackage.UnpackAndProvide(
+                        ovsLogger,
+                        startupConfig.OvsPackageDir))
+                        .ToAff()
+                        .MapFail(e => Error.New(-12, "Could not extract the included OVS/OVN distribution.", e))
+                    from _2 in OvsDriverProvider<DriverCommandsRuntime>.ensureDriver(
+                            runDir, !isWindowsService && !warmupMode, !isWindowsService && !warmupMode)
+                        .MapFail(e => Error.New(-11, "The Hyper-V switch extension for OVS is not available.", e))
+                    select runDir,
+                    loggerFactory);
 
-                var hyperVError = hyperVResult.LeftToSeq().FirstOrDefault();
-                if (hyperVError != null)
+                if (result.Case is Error error)
                 {
-                    var isInvalidNamespaceError = hyperVError.Exception
-                        .Map(ex => ex is ManagementException { ErrorCode: ManagementStatus.InvalidNamespace })
-                        .IfNone(false);
-                    if (!isWindowsService && isInvalidNamespaceError)
+                    if (isWindowsService)
                     {
-                        await Console.Error.WriteAsync(
-                            "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
+                        logger.Fatal(error, "The service startup failed.");
                     }
                     else
                     {
-                        logger.Fatal(hyperVError,
-                            "Could not query Hyper-V. Make sure it is installed and the management service (VMMS) is running.");
+                        WriteError(error);
                     }
-
-                    return -10;
+                    return error.Code;
                 }
 
-                using var loggerFactory = new SerilogLoggerFactory(logger, dispose: false);
-
-                var ovsRunDir = OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>(), startupConfig.OvsPackageDir);
-                var ensureDriverResult = await DriverCommands.EnsureDriver(
-                    ovsRunDir, !isWindowsService && !warmupMode, !isWindowsService && !warmupMode, loggerFactory);
-                if (ensureDriverResult.IsFail)
-                {
-                    ensureDriverResult.IfFail(e => Console.Error.WriteLine((e.ToString())));
-                    return -11;
-                }
+                var ovsRunDir = result.ToOption().ValueUnsafe();
 
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
@@ -609,7 +594,7 @@ internal static class Program
                                 // vmms is the Hyper-V Virtual Machine Management service
                                  ["vmms"],
                                 cancelSource2.Token))
-                        from __ in LogProgress("Setting service recovery options...")
+                        from ___ in LogProgress("Setting service recovery options...")
                             .Bind(_ => serviceManager.SetRecoveryOptions(
                                 TimeSpan.FromMinutes(1),
                                 TimeSpan.FromMinutes(10),
@@ -1027,13 +1012,13 @@ internal static class Program
 
     private static Task<int> GetAgentSettings(FileSystemInfo? outFile) =>
         RunAsAdmin(
-            from hostSettings in new HostSettingsProvider().GetHostSettings().ToAff(e => e)
-            from yaml in VmHostAgentConfiguration<LanguageExt.Sys.Live.Runtime>.getConfigYaml(
+            from hostSettings in HostSettingsProvider<AgentSettingsRuntime>.getHostSettings()
+            from yaml in VmHostAgentConfiguration<AgentSettingsRuntime>.getConfigYaml(
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
-            from _ in WriteOutput<LanguageExt.Sys.Live.Runtime>(outFile, yaml)
+            from _ in WriteOutput<AgentSettingsRuntime>(outFile, yaml)
             select unit,
-            LanguageExt.Sys.Live.Runtime.New());
+            AgentSettingsRuntime.New());
 
     private static Task<int> ImportAgentSettings(
         FileSystemInfo? inFile,
@@ -1041,13 +1026,13 @@ internal static class Program
         bool noCurrentConfigCheck) =>
         RunAsAdmin(
             from configString in ReadInput(inFile)
-            from hostSettings in new HostSettingsProvider().GetHostSettings().ToAff(e => e)
-            from _ in VmHostAgentConfigurationUpdate<LanguageExt.Sys.Live.Runtime>.updateConfig(
+            from hostSettings in HostSettingsProvider<AgentSettingsRuntime>.getHostSettings()
+            from _ in VmHostAgentConfigurationUpdate<AgentSettingsRuntime>.updateConfig(
                 configString,
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
             select unit,
-            LanguageExt.Sys.Live.Runtime.New());
+            AgentSettingsRuntime.New());
 
     private static async Task<int> GetDriverStatus()
     {

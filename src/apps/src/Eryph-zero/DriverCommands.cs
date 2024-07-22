@@ -79,7 +79,8 @@ internal static class DriverCommands
             loggerFactory);
     }
 
-    private static async Task<Fin<Unit>> Run(Aff<DriverCommandsRuntime, Unit> logic,
+    public static async Task<Fin<T>> Run<T>(
+        Aff<DriverCommandsRuntime, T> logic,
         ILoggerFactory loggerFactory)
     {
         using var psEngine = new PowershellEngine(loggerFactory.CreateLogger<PowershellEngine>());
