@@ -26,12 +26,11 @@ public static class SystemRequirementsChecker<RT> where RT : struct,
         // Even with our service depending on the Hyper-V management service (VMMS),
         // the Hyper-V WMI namespace is sometimes not responding during system startup.
         // Hence, we try a couple of times to query it.
-        from _2 in retryWhile(
+        from _2 in retry(
             ComputeSchedule(isService),
             from __1 in logInformation("Checking if Hyper-V is available...")
             from __2 in WmiQueries<RT>.getHyperVDefaultPaths().ToAff()
-            select unit,
-            e => e.IsExceptional)
+            select unit)
         select unit;
 
     private static Aff<RT, Unit> ensureHyperVFeatures() =>
