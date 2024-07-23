@@ -14,7 +14,7 @@ namespace Eryph.Runtime.Zero;
 /// <summary>
 /// This <see cref="ILogEventEnricher"/> enriches the log event with
 /// the details of an <see cref="Error"/> when an <see cref="ErrorException"/>
-/// is logged. Without this enricher only the top-level error message would
+/// is logged. Without this enricher, only the top-level error message would
 /// be included in the log.
 /// </summary>
 public class ErrorEnricher : ILogEventEnricher

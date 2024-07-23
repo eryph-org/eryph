@@ -404,8 +404,11 @@ internal static class Program
             {
                 logger.Fatal(ex, "eryph-zero failure");
             }
+            finally
+            {
+                await logger.DisposeAsync();
+            }
 
-            await logger.DisposeAsync();
             return returnCode;
         });
 

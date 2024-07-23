@@ -111,7 +111,7 @@ public class SystemRequirementsCheckerTests
     }
 
     [Fact]
-    public async Task EnsureHyperV_QueriesReturnsNothingWhenRunningAsService_QueriesAreRetried()
+    public async Task EnsureHyperV_QueriesReturnNothingWhenRunningAsService_QueriesAreRetried()
     {
         _wmiMock.SetupSequence(wmi => wmi.ExecuteQuery(
                 @"\Root\CIMv2",

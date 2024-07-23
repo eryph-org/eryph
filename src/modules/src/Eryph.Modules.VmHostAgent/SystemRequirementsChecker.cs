@@ -25,10 +25,10 @@ public static class SystemRequirementsChecker<RT> where RT : struct,
         from _1 in guard(features.IsPlatformInstalled,
             Error.New("Hyper-V platform (Microsoft-Hyper-V) is not installed."))
         from _2 in guard(features.IsPowershellInstalled,
-            Error.New("Hyper-V platform (Microsoft-Hyper-V) is not installed."))
-            // Even with our service depending on the Hyper-V management service (VMMS),
-            // the Hyper-V WMI namespace is sometimes not responding during system startup.
-            // Hence, we try a couple of times to query it.
+            Error.New("Hyper-V powershell module (Microsoft-Hyper-V-Management-PowerShell) is not installed."))
+        // Even with our service depending on the Hyper-V management service (VMMS),
+        // the Hyper-V WMI namespace is sometimes not responding during system startup.
+        // Hence, we try a couple of times to query it.
         from _3 in retry(
             ComputeSchedule(isService),
             from __1 in logInformation("Checking if Hyper-V is available...")
