@@ -37,9 +37,9 @@ public static class SystemRequirementsChecker<RT> where RT : struct,
     private static Aff<RT, Unit> ensureHyperVFeatures() =>
         from features in WmiQueries<RT>.getFeatures()
         from _ in features
-            .Find(f => f.Name == "Microsoft-Hyper-V-Services")
-            .Filter(f => !f.IsInstalled)
-            .ToEff(Error.New("Hyper-V service (Microsoft-Hyper-V-Services) is not installed."))
+            .Find(f => f.Name == "Microsoft-Hyper-V")
+            .Filter(f => f.IsInstalled)
+            .ToEff(Error.New("Hyper-V platform (Microsoft-Hyper-V) is not installed."))
         from __ in features
             .Find(f => f.Name == "Microsoft-Hyper-V-Management-PowerShell")
             .Filter(f => f.IsInstalled)
