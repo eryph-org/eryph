@@ -595,7 +595,7 @@ internal static class Program
                             : LogProgress("Installing service...").Bind(_ => serviceManager.CreateService("eryph-zero",
                                 $"{zeroExe} run",
                                 // vmms is the Hyper-V Virtual Machine Management service
-                                 ["vmms"],
+                                Seq1("vmms"),
                                 cancelSource2.Token))
                         from ___ in LogProgress("Setting service recovery options...")
                             .Bind(_ => serviceManager.SetRecoveryOptions(
