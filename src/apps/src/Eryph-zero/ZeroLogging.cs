@@ -19,14 +19,15 @@ internal static class ZeroLogging
             "eryph", "zero", "logs");
 
         var consoleTemplate = new ExpressionTemplate(
-            "[{@t:yyyy-MM-dd HH:mm:ss.fff} {@l:u3}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}",
+            "[{@t:yyyy-MM-dd HH:mm:ss.fff} {@l:u3}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}{InnerError}",
             theme: TemplateTheme.Literate);
         var fileTemplate = new ExpressionTemplate(
-            "[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} {@l:u3}] [{SourceContext}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}");
+            "[{@t:yyyy-MM-dd HH:mm:ss.fff zzz} {@l:u3}] [{SourceContext}] {#if ovsLogLevel is not null}[OVS:{controlFile}:{ovsSender}:{ovsLogLevel}] {#end}{@m}\n{@x}{InnerError}");
 
         var loggerConfiguration = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
             .Enrich.FromLogContext()
+            .Enrich.With<ErrorEnricher>()
             .WriteTo.Logger(c => c
                 .MinimumLevel.Debug()
                 .WriteTo.Console(consoleTemplate))
