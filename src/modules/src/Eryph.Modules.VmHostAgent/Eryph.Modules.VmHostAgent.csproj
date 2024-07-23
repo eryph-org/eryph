@@ -7,7 +7,7 @@
     <None Include="..\..\..\..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Dbosoft.OVN.Hosting" Version="1.0.0-PullRequest0029.4" />
+    <PackageReference Include="Dbosoft.OVN.Hosting" Version="1.0.0-rc.5" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.6.0" />
     <PackageReference Include="Eryph.GenePool.Client" Version="0.1.1-ci.3" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
