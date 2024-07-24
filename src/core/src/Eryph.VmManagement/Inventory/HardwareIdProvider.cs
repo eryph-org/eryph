@@ -5,6 +5,7 @@ using System.Linq;
 using System.Management;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core.Sys;
 using LanguageExt;
@@ -17,11 +18,25 @@ namespace Eryph.VmManagement.Inventory;
 
 public interface IHardwareIdProvider
 {
-    string GetHardwareId();
+    Guid HardwareId { get; }
+
+    string HashedHardwareId { get; }
 }
 
-public class HardwareIdProvider
+public class HardwareIdProvider : IHardwareIdProvider
 {
+    private readonly Guid _hardwareId;
+    private readonly string _hashedHardwareId;
+
+    public HardwareIdProvider()
+    {
+        _hardwareId = Guid.NewGuid();
+        _hashedHardwareId = HardwareIdHasher.HashHardwareId(_hardwareId);
+    }
+
+    public Guid HardwareId => _hardwareId;
+
+    public string HashedHardwareId => _hashedHardwareId;
 }
 
 public static class HardwareIdProvider<RT> where RT : struct,
@@ -31,6 +46,13 @@ public static class HardwareIdProvider<RT> where RT : struct,
     public static Aff<RT, Option<Guid>> ReadHardwareId() =>
         from _ in SuccessAff(unit)
         select Option<Guid>.None;
+
+    public static Aff<RT, Guid> EnsureHardwareId() =>
+        // TODO Add catch for logging
+        from guid in ReadSmBiosUuid()
+                     | ReadCryptographyGuid()
+                     | ReadFallbackGuid()
+        select guid;
 
     public static Aff<RT, Guid> ReadSmBiosUuid() =>
         from wmiValue in Eff(() =>
@@ -46,35 +68,35 @@ public static class HardwareIdProvider<RT> where RT : struct,
         select guid;
 
     public static Aff<RT, Guid> ReadCryptographyGuid() =>
-        // TODO HKLM
-        from registryValue in Registry<RT>.getRegistryValue(
-            @"SOFTWARE\Microsoft\Cryptography", "MachineGuid").ToAff()
-        let guid = from v in registryValue
-            from s in Optional(v as string)
-            from g in parseGuid(s)
-            select g
+        from value in Registry<RT>.getRegistryValue(
+            @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography", "MachineGuid").ToAff()
+        from validValue in value.ToAff(Error.New("Could not read the Machine GUID from the registry."))
+        let guid = from s in Optional(validValue as string)
+                   from g in parseGuid(s)
+                   select g
         from validGuid in guid.ToAff(Error.New("The Machine GUID is not a valid GUID."))
         select validGuid;
 
     public static Aff<RT, Guid> ReadFallbackGuid() =>
-        // TODO HKLM
-        from registryValue in Registry<RT>.getRegistryValue(
-            @"SOFTWARE\dbosoft\Eryph", "HardwareId").ToAff()
-        let guid = from v in registryValue
-            from s in Optional(v as string)
-            from g in parseGuid(s)
-            select g
+        from value in Registry<RT>.getRegistryValue(
+            @"HKEY_LOCAL_MACHINE\SOFTWARE\dbosoft\Eryph", "HardwareId").ToAff()
+        from validValue in value.ToAff(Error.New("Could not read the Eryph Hardware ID from the registry."))
+        let guid = from s in Optional(validValue as string)
+                   from g in parseGuid(s)
+                   select g
         from validGuid in guid.ToAff(Error.New("The Eryph Hardware ID is not a valid GUID."))
-        from _ in SuccessAff(unit)
-        select Guid.Empty;
+        select validGuid;
 
     public static Aff<RT, Guid> EnsureFallbackGuid() =>
         from _ in SuccessAff(unit)
         select Guid.Empty;
+}
 
-    public static string HashGuid(Guid guid)
+public static class HardwareIdHasher
+{
+    public static string HashHardwareId(Guid hardwareId)
     {
-        var hashBytes = SHA256.HashData(guid.ToByteArray());
+        var hashBytes = SHA256.HashData(hardwareId.ToByteArray());
         return Convert.ToHexString(hashBytes[..16]);
     }
 }
