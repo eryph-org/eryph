@@ -10,16 +10,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.VmManagement;
 
-public class HostInfoProvider : IHostInfoProvider
+public class HostInfoProvider(
+    ILogger log, 
+    INetworkProviderManager networkProviderManager,
+    IHardwareIdProvider hardwareIdProvider)
+    : IHostInfoProvider
 {
     [CanBeNull] private VMHostMachineData _cachedData = null;
-    private readonly HostInventory _hostInventory;
+    private readonly HostInventory _hostInventory = new(log, networkProviderManager, hardwareIdProvider);
     private readonly SemaphoreSlim _lock = new(1, 1);
-
-    public HostInfoProvider(ILogger log, INetworkProviderManager networkProviderManager)
-    {
-        _hostInventory = new HostInventory(log, networkProviderManager);
-    }
 
     public EitherAsync<Error, VMHostMachineData> GetHostInfoAsync(bool refresh = false)
     {
