@@ -13,7 +13,9 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
+using Eryph.AnsiConsole;
 using Eryph.App;
+using Eryph.AnsiConsole.Sys;
 using Eryph.ModuleCore;
 using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
@@ -140,15 +142,19 @@ internal static class Program
         agentSettingsCommand.AddCommand(importAgentSettingsCommand);
 
         var genePoolCommand = new Command("genepool");
-        agentSettingsCommand.AddCommand(genePoolCommand);
+        rootCommand.AddCommand(genePoolCommand);
 
-        var genePoolCreateApiKeyCommand = new Command("login");
-        genePoolCommand.AddCommand(genePoolCreateApiKeyCommand);
-        genePoolCreateApiKeyCommand.SetHandler(CreateGenePoolApiKey);
+        var genePoolLoginCommand = new Command("login");
+        genePoolCommand.AddCommand(genePoolLoginCommand);
+        genePoolLoginCommand.SetHandler(LoginGenePool);
 
-        var genePoolGeneApiKeyStatusCommand = new Command("status");
-        genePoolCommand.AddCommand(genePoolGeneApiKeyStatusCommand);
-        genePoolGeneApiKeyStatusCommand.SetHandler(GetGenePoolApiKeyStatus);
+        var genePoolStatusCommand = new Command("status");
+        genePoolCommand.AddCommand(genePoolStatusCommand);
+        genePoolStatusCommand.SetHandler(GetGenePoolStatus);
+
+        var genePoolLogoutCommand = new Command("logout");
+        genePoolCommand.AddCommand(genePoolLogoutCommand);
+        genePoolLogoutCommand.SetHandler(GetGenePoolStatus);
 
         var networksCommand = new Command("networks");
         rootCommand.AddCommand(networksCommand);
@@ -1048,21 +1054,21 @@ internal static class Program
             select unit,
             AgentSettingsRuntime.New());
 
-    private static Task<int> CreateGenePoolApiKey() =>
+    private static Task<int> LoginGenePool() =>
         RunAsAdmin(
             from _ in SuccessAff(unit)
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
-            from __ in GenePoolCli<LanguageExt.Sys.Live.Runtime>.createApiKey(genePoolApiStore)
+            from __ in GenePoolCli<SimpleConsoleRuntime>.createApiKey(genePoolApiStore)
             select unit,
-            LanguageExt.Sys.Live.Runtime.New());
+            SimpleConsoleRuntime.New());
 
-    private static Task<int> GetGenePoolApiKeyStatus() =>
+    private static Task<int> GetGenePoolStatus() =>
         RunAsAdmin(
             from _ in SuccessAff(unit)
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
-            from __ in GenePoolCli<LanguageExt.Sys.Live.Runtime>.getApiKeyStatus(genePoolApiStore)
+            from __ in GenePoolCli<SimpleConsoleRuntime>.getApiKeyStatus(genePoolApiStore)
             select unit,
-            LanguageExt.Sys.Live.Runtime.New());
+            SimpleConsoleRuntime.New());
 
     private static async Task<int> GetDriverStatus()
     {
@@ -1077,9 +1083,9 @@ internal static class Program
     private static Task<int> GetNetworks(FileSystemInfo? outFile) =>
         Run(
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
-            from _ in  WriteOutput<LanguageExt.Sys.Live.Runtime>(outFile, yaml)
+            from _ in  WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
-            LanguageExt.Sys.Live.Runtime.New());
+            SimpleConsoleRuntime.New());
 
     private static async Task<int> ImportNetworkConfig(FileSystemInfo? inFile, bool nonInteractive,
         bool noCurrentConfigCheck)
@@ -1149,50 +1155,29 @@ internal static class Program
     });
 
     private static Aff<RT, Unit> WriteOutput<RT>(FileSystemInfo? outFile, string content)
-        where RT : struct, HasConsole<RT>, HasFile<RT> =>
+        where RT : struct, HasAnsiConsole<RT>, HasFile<RT> =>
         from _ in Optional(outFile).Match(
             Some: fsi => File<RT>.writeAllText(fsi.FullName, content),
-            None: () => Console<RT>.writeLine(content))
+            None: () => AnsiConsole<RT>.writeLine(content))
         select unit;
 
     private static Task<int> Run<RT>(Aff<RT, Unit> action, RT runtime)
-        where RT : struct, HasCancel<RT> =>
-        action.Run(runtime).AsTask().Map(r => r.Match(
-            Succ: _ => 0,
-            Fail: error =>
-            {
-                WriteError(error);
-                return -1;
-            }));
+        where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
+        action.Catch(e =>
+                from _ in AnsiConsole<RT>.write(new Rows(
+                    new Markup("[red]The command failed with the following error(s):[/]"),
+                    ErrorRenderable.toRenderable(e)))
+                from __ in FailAff<RT>(e)
+                select unit)
+            .Run(runtime)
+            .AsTask()
+            .Map(r => r.Match(
+                Succ: _ => 0,
+                Fail: error => error.Code != 0 ? error.Code : -1));
 
     private static Task<int> RunAsAdmin<RT>(Aff<RT, Unit> action, RT runtime)
-        where RT : struct, HasCancel<RT> =>
+        where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
         AdminGuard.CommandIsElevated(() => Run(action, runtime));
-
-    private static void WriteError(Error error)
-    {
-        Grid createGrid() => new Grid()
-            .AddColumn(new GridColumn() { Width = 2 })
-            .AddColumn();
-
-        Grid addRow(Grid grid, IRenderable renderable) =>
-            grid.AddRow(new Markup(""), renderable);
-
-        Grid addToGrid(Grid grid, Error error) => error switch
-        {
-            ManyErrors me => me.Errors.Fold(grid, addToGrid),
-            Exceptional ee => addRow(grid, ee.ToException().GetRenderable()),
-            _ => addRow(grid, new Text(error.Message))
-                    .Apply(g => error.Inner.Match(
-                        Some: ie => addRow(g, addToGrid(createGrid(), ie)),
-                        None: () => g)),
-        };
-
-        AnsiConsole.Write(new Rows(
-            new Markup("[red]The command failed with the following error(s):[/]"),
-            addToGrid(createGrid(), error)));
-        AnsiConsole.WriteLine();
-    }
 
     private static void CopyDirectory(string sourceDir, string destinationDir, params string[] ignoredFiles)
     {

@@ -14,6 +14,7 @@ using Eryph.GenePool.Client;
 using Eryph.GenePool.Client.Credentials;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
+using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -25,6 +26,7 @@ internal class RepositoryGenePool(
     ILogger log,
     IFileSystemService fileSystem,
     IGenePoolApiKeyStore keyStore,
+    IHardwareIdProvider hardwareIdProvider,
     string poolName)
     : GenePoolBase, IGenePool
 {
@@ -34,9 +36,13 @@ internal class RepositoryGenePool(
 
     private EitherAsync<Error, GenePoolClient> CreateClient() =>
         from apiKey in keyStore.GetApiKey(PoolName!)
+        let clientOptions = new GenePoolClientOptions()
+        {
+            HardwareId = hardwareIdProvider.HashedHardwareId,
+        }
         from client in Prelude.Try(() => apiKey.Match(
-                Some: key => new GenePoolClient(GenePoolUri, new ApiKeyCredential(key.Secret)),
-                None: () => new GenePoolClient(GenePoolUri)))
+                Some: key => new GenePoolClient(GenePoolUri, new ApiKeyCredential(key.Secret), clientOptions),
+                None: () => new GenePoolClient(GenePoolUri, clientOptions)))
             .ToEither(ex => Error.New("Could not create the gene pool API client.", ex)).ToAsync()
         select client;
 

@@ -56,17 +56,25 @@
       },
       "remoteDebugEnabled": false
     },
-    "agentsettings genepool login": {
+    "genepool login": {
       "commandName": "Project",
-      "commandLineArgs": "agentsettings genepool login",
+      "commandLineArgs": "genepool login",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },
       "remoteDebugEnabled": false
     },
-    "agentsettings genepool status": {
+    "genepool status": {
       "commandName": "Project",
-      "commandLineArgs": "agentsettings genepool status",
+      "commandLineArgs": "genepool status",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
+    },
+    "genepool logout": {
+      "commandName": "Project",
+      "commandLineArgs": "genepool logout",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },

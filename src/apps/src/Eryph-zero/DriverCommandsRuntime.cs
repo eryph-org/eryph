@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Eryph.AnsiConsole.Sys;
 using Eryph.Core.Sys;
 using Eryph.VmManagement.Sys;
 using static LanguageExt.Prelude;
@@ -16,6 +17,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Runtime.Zero;
 
 internal readonly struct DriverCommandsRuntime :
+    HasAnsiConsole<DriverCommandsRuntime>,
     HasConsole<DriverCommandsRuntime>,
     HasDism<DriverCommandsRuntime>,
     HasFile<DriverCommandsRuntime>,
@@ -37,6 +39,8 @@ internal readonly struct DriverCommandsRuntime :
         new CancellationTokenSource(),
         Env.LoggerFactory,
         Env.PowershellEngine));
+
+    public Eff<DriverCommandsRuntime, AnsiConsoleIO> AnsiConsoleEff => SuccessEff(LiveAnsiConsoleIO.Default);
 
     public CancellationToken CancellationToken => Env.CancellationTokenSource.Token;
 

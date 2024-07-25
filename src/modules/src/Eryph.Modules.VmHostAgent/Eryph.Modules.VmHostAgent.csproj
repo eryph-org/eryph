@@ -9,8 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Hosting" Version="1.0.0-rc.5" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.6.0" />
-    <PackageReference Include="Eryph.GenePool.Client" Version="0.2.0" />
-    <PackageReference Include="Eryph.GenePool.Client.Authentication" Version="0.2.0" />
+    <PackageReference Include="Eryph.GenePool.Client" Version="0.2.1-PullRequest0016.3" />
+    <PackageReference Include="Eryph.GenePool.Client.Authentication" Version="0.2.1-PullRequest0016.3" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -22,6 +22,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
+    <ProjectReference Include="..\Eryph.AnsiConsole\Eryph.AnsiConsole.csproj" />
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
     <ProjectReference Include="..\..\..\core\src\Eryph.VmManagement\Eryph.VmManagement.csproj" />

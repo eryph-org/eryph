@@ -15,6 +15,7 @@ using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Rebus;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Tracing;
 using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
@@ -98,6 +99,7 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterInstance(serviceProvider.GetRequiredService<IHostSettingsProvider>());
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
             container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
+            container.RegisterSingleton<IHardwareIdProvider, HardwareIdProvider>();
 
             container.Register<IOVSPortManager, OVSPortManager>(Lifestyle.Scoped);
 
