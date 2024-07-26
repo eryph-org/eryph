@@ -62,7 +62,7 @@ using Microsoft.Win32;
 using Spectre.Console;
 
 using static LanguageExt.Prelude;
-using Prelude = Eryph.AnsiConsole.Prelude;
+using static Eryph.AnsiConsole.Prelude;
 
 namespace Eryph.Runtime.Zero;
 
@@ -321,7 +321,7 @@ internal static class Program
                     {
                         Spectre.Console.AnsiConsole.Write(new Rows(
                             new Markup("[red]The command failed with the following error(s):[/]"),
-                            Prelude.Renderable(error)));
+                            Renderable(error)));
                     }
                     return error.Code;
                 }
@@ -1176,7 +1176,7 @@ internal static class Program
         action.Catch(e =>
                 from _ in AnsiConsole<RT>.write(new Rows(
                     new Markup("[red]The command failed with the following error(s):[/]"),
-                    Prelude.Renderable(e)))
+                    Renderable(e)))
                 from __ in FailAff<RT>(e)
                 select unit)
             .Run(runtime)

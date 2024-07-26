@@ -9,9 +9,6 @@ namespace Eryph.AnsiConsole.Sys;
 
 public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
 {
-    public static Aff<RT, bool> confirm(string prompt) =>
-        confirm(prompt, true);
-
     public static Aff<RT, bool> confirm(string prompt, bool defaultValue) =>
         from cancelToken in cancelToken<RT>()
         let consolePrompt = new ConfirmationPrompt(prompt)
