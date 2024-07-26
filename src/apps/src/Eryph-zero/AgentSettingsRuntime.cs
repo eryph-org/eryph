@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.AnsiConsole.Sys;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Sys.Traits;
@@ -13,6 +14,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Runtime.Zero;
 
 internal readonly struct AgentSettingsRuntime :
+    HasAnsiConsole<AgentSettingsRuntime>,
     HasConsole<AgentSettingsRuntime>,
     HasDirectory<AgentSettingsRuntime>,
     HasFile<AgentSettingsRuntime>,
@@ -37,6 +39,8 @@ internal readonly struct AgentSettingsRuntime :
     public CancellationTokenSource CancellationTokenSource => _env.CancellationTokenSource;
     
     public Encoding Encoding => Encoding.UTF8;
+
+    public Eff<AgentSettingsRuntime, AnsiConsoleIO> AnsiConsoleEff => SuccessEff(LiveAnsiConsoleIO.Default);
 
     public Eff<AgentSettingsRuntime, ConsoleIO> ConsoleEff => SuccessEff(LanguageExt.Sys.Live.ConsoleIO.Default);
 

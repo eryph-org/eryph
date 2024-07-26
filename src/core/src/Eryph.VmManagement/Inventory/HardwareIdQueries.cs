@@ -6,6 +6,7 @@ using System.Management;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -13,17 +14,18 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Inventory;
 
-public static class HardwareIdQueries<RT> where RT : struct, HasRegistry<RT>
+public static class HardwareIdQueries<RT> where RT : struct, HasRegistry<RT>, HasWmi<RT>
 {
     public static Eff<RT, Guid> ReadSmBiosUuid() =>
-        from wmiValue in Eff(() =>
-        {
-            // TODO use WMI runtime
-            using var uuidSearcher = new ManagementObjectSearcher("SELECT UUId FROM Win32_ComputerSystemProduct");
-            var result = uuidSearcher.Get().Cast<ManagementBaseObject>().HeadOrNone();
-            return result.Bind(r => Optional(r["UUId"] as string));
-        })
-        from guid in wmiValue.Bind(parseGuid)
+        from queryResult in Wmi<RT>.executeQuery(
+            @"\root\CIMv2",
+            "SELECT UUID FROM Win32_ComputerSystemProduct")
+        from product in queryResult.HeadOrNone()
+            .ToEff(Error.New("Failed to query Win32_ComputerSystemProduct."))
+        from guid in product.Find("UUID")
+            .Flatten()
+            .Bind(v => Optional(v as string))
+            .Bind(parseGuid)
             // According to SMBIOS specification, both all 0s and all 1s (0xFF)
             // indicate that the UUID is not set.
             .Filter(g => g != Guid.Empty && g != Guid.Parse("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"))

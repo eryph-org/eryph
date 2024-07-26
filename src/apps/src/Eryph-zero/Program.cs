@@ -24,6 +24,7 @@ using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
+using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
@@ -49,7 +50,6 @@ using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
-using LanguageExt.Sys;
 using LanguageExt.Sys.IO;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Hosting.WindowsServices;
@@ -60,7 +60,6 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.Win32;
 using Spectre.Console;
-using Spectre.Console.Rendering;
 
 using static LanguageExt.Prelude;
 
@@ -154,7 +153,7 @@ internal static class Program
 
         var genePoolLogoutCommand = new Command("logout");
         genePoolCommand.AddCommand(genePoolLogoutCommand);
-        genePoolLogoutCommand.SetHandler(GetGenePoolStatus);
+        genePoolLogoutCommand.SetHandler(LogoutGenePool);
 
         var networksCommand = new Command("networks");
         rootCommand.AddCommand(networksCommand);
@@ -319,7 +318,9 @@ internal static class Program
                     }
                     else
                     {
-                        WriteError(error);
+                        Spectre.Console.AnsiConsole.Write(new Rows(
+                            new Markup("[red]The command failed with the following error(s):[/]"),
+                            ErrorRenderable.toRenderable(error)));
                     }
                     return error.Code;
                 }
@@ -1058,7 +1059,7 @@ internal static class Program
         RunAsAdmin(
             from _ in SuccessAff(unit)
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
-            from __ in GenePoolCli<SimpleConsoleRuntime>.createApiKey(genePoolApiStore)
+            from __ in GenePoolCli<SimpleConsoleRuntime>.login(genePoolApiStore)
             select unit,
             SimpleConsoleRuntime.New());
 
@@ -1067,6 +1068,14 @@ internal static class Program
             from _ in SuccessAff(unit)
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
             from __ in GenePoolCli<SimpleConsoleRuntime>.getApiKeyStatus(genePoolApiStore)
+            select unit,
+            SimpleConsoleRuntime.New());
+
+    private static Task<int> LogoutGenePool() =>
+        RunAsAdmin(
+            from _ in SuccessAff(unit)
+            let genePoolApiStore = new ZeroGenePoolApiKeyStore()
+            from __ in GenePoolCli<SimpleConsoleRuntime>.logout(genePoolApiStore)
             select unit,
             SimpleConsoleRuntime.New());
 

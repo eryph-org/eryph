@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.Core;
+using Eryph.AnsiConsole;
 using Eryph.AnsiConsole.Sys;
 using Eryph.ConfigModel;
 using Eryph.Core.Sys;
@@ -19,7 +20,8 @@ using LanguageExt.Effects.Traits;
 using LanguageExt.Pipes;
 using LanguageExt.Sys;
 using LanguageExt.Sys.Traits;
-
+using Spectre.Console;
+using Spectre.Console.Rendering;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;
@@ -35,36 +37,74 @@ public static class GenePoolCli<RT> where RT : struct,
     private static readonly string AuthorityUri =
         "https://dbosoftb2cstaging.b2clogin.com/tfp/dbosoftb2cstaging.onmicrosoft.com/B2C_1A_SIGNUP_SIGNIN/v2.0";
 
-    public static Aff<RT, Unit> createApiKey(
-        IGenePoolApiKeyStore apiKeyStore) =>
-        from _1 in AnsiConsole<RT>.writeLine("Gene pool login")
+    public static Aff<RT, Unit> login(IGenePoolApiKeyStore apiKeyStore) =>
+        from _1 in AnsiConsole<RT>.write(new Rows(
+            new Text("We will create a dedicated API key for this machine which grants read-only access to the genepool."),
+            new Text("You will need to authenticate with your personal credentials."),
+            Text.Empty))
         from existingApiKey in apiKeyStore.GetApiKey(GenePoolNames.EryphGenePool)
             .ToAff(identity)
         from shouldContinue in existingApiKey.Match(
             Some: apiKey =>
-                from _ in AnsiConsole<RT>.writeLine("An API key has already been created. "
-                    + " When you continue, the existing API will be overwritten. The existing API key will not be invalidated.")
+                from _ in AnsiConsole<RT>.markupLine(
+                    "[yellow]A gene pool API key is already configured. "
+                    + " When you continue, the existing API key will be overwritten.[/]")
                 from shouldOverwrite in AnsiConsole<RT>.confirm("Overwrite API key?", false)
                 select shouldOverwrite,
             None: () => SuccessAff<RT, bool>(true))
-        from _2 in shouldContinue
-            ? from orgName in AnsiConsole<RT>.prompt(
+        from _2 in shouldContinue ? createApiKey(apiKeyStore) : unitEff
+        select unit;
+
+    public static Aff<RT, Unit> getApiKeyStatus(IGenePoolApiKeyStore genePoolApiStore) =>
+        from apiKeys in genePoolApiStore.GetApiKeys().ToAff(identity)
+        let apiKey = apiKeys.Find(GenePoolNames.EryphGenePool)
+        from _ in apiKey.Match(
+            Some: key =>
+                from _1 in AnsiConsole<RT>.writeLine("The following gene pool API key is configured:")
+                from _2 in AnsiConsole<RT>.write(printApiKey(key))
+                from _3 in validateApiKey(key)
+                select unit,
+            None: () => AnsiConsole<RT>.writeLine("No API key is configured."))
+        select unit;
+
+    public static Aff<RT, Unit> logout(IGenePoolApiKeyStore keyStore) =>
+        from apiKeys in keyStore.GetApiKeys().ToAff(identity)
+        let apiKey = apiKeys.Find(GenePoolNames.EryphGenePool)
+        from _ in apiKey.Match(
+            Some: key =>
+                from _1 in AnsiConsole<RT>.writeLine("The following gene pool API key is configured:")
+                from _2 in AnsiConsole<RT>.write(printApiKey(key))
+                from shouldRemove in AnsiConsole<RT>.confirm("Remove API key?", false)
+                from _3 in shouldRemove
+                    ? removeApiKey(keyStore, GenePoolNames.EryphGenePool, key)
+                    : unitEff
+                select unit,
+            None: () => AnsiConsole<RT>.writeLine("No API key is configured."))
+        select unit;
+
+    private static Aff<RT, Unit> createApiKey(
+        IGenePoolApiKeyStore apiKeyStore) =>
+        from orgName in AnsiConsole<RT>.prompt(
             "Enter your organization:",
             OrganizationName.NewValidation)
-        from _3 in AnsiConsole<RT>.writeLine("Authenticating with the gene pool. Please check your browser.")
-        from client in createGenePoolClient()
-        from cancelToken in cancelToken<RT>()
         from hostname in Environment<RT>.machineName
-        let apiKeyName = $"eryph-zero-{hostname}"
+        from apiKeyName in AnsiConsole<RT>.prompt(
+            "Enter a name for the API key:",
+            // TODO Add validation for the API key name
+            Success<Error, string>,
+            $"eryph-zero-{hostname}")
+        from cancelToken in cancelToken<RT>()
+        from client in createGenePoolClient()
         from stopSpinner in AnsiConsole<RT>.startSpinner("Creating API key...")
         from result in Aff(async () =>
         {
             var response = await client.GetOrganizationClient(orgName)
-                .CreateApiKeyAsync(apiKeyName, ["Geneset.Read"], cancelToken);
+                // TODO Remove Org.Read permission when the /me endpoint is available
+                .CreateApiKeyAsync(apiKeyName, ["Geneset.Read", "Org.Read"], cancelToken);
             return Optional(response);
-        })
-        from _4 in stopSpinner
-        from validResult in result.ToAff(Error.New("The API was not created"))
+        }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, Option<ApiKeySecretResponse>>(e)))
+        from _1 in stopSpinner
+        from validResult in result.ToAff(Error.New("The API key was not created"))
         let apiKey = new GenePoolApiKey()
         {
             Id = validResult.KeyId,
@@ -72,10 +112,79 @@ public static class GenePoolCli<RT> where RT : struct,
             Organization = validResult.Organization,
             Secret = validResult.Secret,
         }
-        from _5 in apiKeyStore.SaveApiKey(GenePoolNames.EryphGenePool, apiKey).ToAff(identity)
-        from _6 in AnsiConsole<RT>.writeLine("API key was successfully created.")
-              select unit
+        from _2 in apiKeyStore.SaveApiKey(GenePoolNames.EryphGenePool, apiKey).ToAff(identity)
+        from _3 in AnsiConsole<RT>.writeLine("API key was successfully created.")
+        select unit;
+
+    private static Aff<RT, Unit> validateApiKey(GenePoolApiKey apiKey) =>
+        from keyResponse in getApiKeyFromPool(apiKey).Map(Optional)
+                            | @catch(ex => ex is ErrorResponseException { Response.StatusCode: HttpStatusCode.Unauthorized },
+                                Option<ApiKeyResponse>.None)
+                            | @catch(_ => true, e => Error.New("´Could not validate the API key.", e))
+        from _ in keyResponse.Match(
+            Some: response =>
+                from _ in AnsiConsole<RT>.write(new Rows(
+                    new Markup("The API key is valid. The following information was returned by the gene pool:"),
+                    new Grid()
+                        .AddColumn()
+                        .AddColumn()
+                        .AddRow(new Text("Key ID:"), new Text(response.KeyId))
+                        .AddRow(new Text("Key Name:"), new Text(response.Name))
+                        .AddRow(new Text("Organisation:"), new Text(response.Organization.Name))))
+                select unit,
+            None: () =>
+                from _ in AnsiConsole<RT>.writeLine("The API key is invalid.")
+                select unit)
+        select unit;
+
+    private static Aff<RT, ApiKeyResponse> getApiKeyFromPool(GenePoolApiKey apiKey) =>
+        from cancelToken in cancelToken<RT>()
+        from stopSpinner in AnsiConsole<RT>.startSpinner("Validating API key...")
+        from response in Aff(async () =>
+        {
+            var client = new GenePoolClient(GenePoolUri, new ApiKeyCredential(apiKey.Secret));
+            var response = await client.GetApiKeyClient(apiKey.Organization, apiKey.Id)
+                .GetAsync(cancelToken);
+
+            return response;
+        }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, ApiKeyResponse>(e)))
+        from _ in stopSpinner
+        select response;
+
+    private static Aff<RT, Unit> removeApiKey(
+        IGenePoolApiKeyStore apiKeyStore,
+        string genePoolName,
+        GenePoolApiKey apiKey) =>
+        from _1 in AnsiConsole<RT>.writeLine(
+            "Do you want to delete the API key from the remote gene pool? "
+            + "You will need to authenticate with the gene pool.")
+        from shouldDelete in AnsiConsole<RT>.confirm("Delete API key from gene pool?", false)
+        from shouldContinue in shouldDelete
+            ? deleteApiKeyFromPool(apiKey).Map(_ => true)
+              | @catch(e =>
+                  from _1 in AnsiConsole<RT>.write(new Rows(
+                      new Markup("[red]Could not delete the API key from the remote gene pool.[/]"),
+                      ErrorRenderable.toRenderable(e)))
+                  from shouldContinue in AnsiConsole<RT>.confirm("Remove the API key from the local store?", false)
+                  select shouldContinue)
+            : SuccessAff<RT, bool>(true)
+        from _2 in shouldContinue
+            ? apiKeyStore.RemoveApiKey(genePoolName).ToAff(identity)
             : unitEff
+        from _5 in AnsiConsole<RT>.writeLine("API key was successfully removed.")
+        select unit;
+
+    private static Aff<RT, Unit> deleteApiKeyFromPool(GenePoolApiKey apiKey) =>
+        from client in createGenePoolClient()
+        from cancelToken in cancelToken<RT>()
+        from stopSpinner in AnsiConsole<RT>.startSpinner("Deleting API key...")
+        from _1 in Aff(async () =>
+        {
+            await client.GetApiKeyClient(apiKey.Organization, apiKey.Id)
+                .DeleteAsync(cancelToken);
+            return unit;
+        }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, Unit>(e)))
+        from _2 in stopSpinner
         select unit;
 
     private static Aff<RT, GenePoolClient> createGenePoolClient() =>
@@ -92,40 +201,21 @@ public static class GenePoolCli<RT> where RT : struct,
                     UseEmbeddedWebView = false,
                 }
             };
-
+            
             var credential = new B2CInteractiveBrowserCredential(credentialOptions);
             await credential.AuthenticateAsync(new TokenRequestContext());
-
+            
             return new GenePoolClient(GenePoolUri, credential);
-        })
+        }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, GenePoolClient>(e)))
         from _ in stopSpinner
         from __ in AnsiConsole<RT>.writeLine("Successfully authenticated with the gene pool.")
         select result;
 
-    public static Aff<RT, Unit> getApiKeyStatus(IGenePoolApiKeyStore genePoolApiStore) =>
-        from _1 in AnsiConsole<RT>.writeLine("The following gene pool API keys are configured:")
-        from apiKeys in genePoolApiStore.GetApiKeys().ToAff(identity)
-        from _2 in apiKeys.ToSeq()
-            .Map(t => getApiKeyStatus(t.Key, t.Value))
-            .SequenceSerial()
-        select unit;
-
-    private static Aff<RT, Unit> getApiKeyStatus(string poolName, GenePoolApiKey apiKey) =>
-        from _1 in AnsiConsole<RT>.writeLine($"Gene pool:    {poolName}")
-        from _2 in AnsiConsole<RT>.writeLine($"Key ID:       {apiKey.Id}")
-        from _3 in AnsiConsole<RT>.writeLine($"Key Name:     {apiKey.Name}")
-        from _4 in AnsiConsole<RT>.writeLine($"Organisation: {apiKey.Organization}")
-        from cancelToken in cancelToken<RT>()
-        from isValid in Aff(async () =>
-        {
-            var client = new GenePoolClient(GenePoolUri, new ApiKeyCredential(apiKey.Secret));
-            await client.GetApiKeyClient(apiKey.Organization, apiKey.Id)
-                .GetAsync(cancelToken);
-
-            return true;
-        })
-        | @catch(ex => ex is ErrorResponseException { Response.StatusCode: HttpStatusCode.Unauthorized }, false)
-        | @catch(_ => true, e => Error.New("´Could not check if the API is valid.", e))
-        from _5 in AnsiConsole<RT>.writeLine($"Valid:        {isValid}")
-        select unit;
+    private static IRenderable printApiKey(GenePoolApiKey apiKey) =>
+        new Grid()
+            .AddColumn()
+            .AddColumn()
+            .AddRow(new Text("Key ID:"), new Text(apiKey.Id))
+            .AddRow(new Text("Key Name:"), new Text(apiKey.Name))
+            .AddRow(new Text("Organisation:"), new Text(apiKey.Organization));
 }

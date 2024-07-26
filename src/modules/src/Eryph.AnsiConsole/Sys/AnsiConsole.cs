@@ -24,9 +24,11 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
 
     public static Aff<RT, T> prompt<T>(
         string prompt,
-        Func<string, Validation<Error, T>> validate) =>
+        Func<string, Validation<Error, T>> validate,
+        string? defaultValue = null) =>
         from cancelToken in cancelToken<RT>()
         let consolePrompt = new TextPrompt<string>(prompt)
+            .DefaultValue(defaultValue)
             .Validate(v => validate(v).Match(
                 Succ: _ => ValidationResult.Success(),
                 Fail: errors => ValidationResult.Error(
@@ -40,18 +42,14 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
             .ToAff(errors => Error.New("Final validation of the user input failed.", Error.Many(errors)))
         select validResult;
 
-    public static Eff<RT, Unit> writeLine(string text) =>
-        default(RT).AnsiConsoleEff.Map(ac =>
-        {
-            ac.AnsiConsole.WriteLine(text);
-            return unit;
-        });
+    public static Eff<RT, Unit> markupLine(string text) =>
+        default(RT).AnsiConsoleEff.Map(fun((AnsiConsoleIO io) => io.AnsiConsole.MarkupLine(text)));
 
-    public static Eff<RT, Unit> markupLine(FormattableString text) =>
-        default(RT).AnsiConsoleEff.Map(fun((AnsiConsoleIO c) => c.AnsiConsole.MarkupLineInterpolated(text)));
+    public static Eff<RT, Unit> writeLine(string text) =>
+        default(RT).AnsiConsoleEff.Map(fun((AnsiConsoleIO io) => io.AnsiConsole.WriteLine(text)));
 
     public static Eff<RT, Unit> write(IRenderable renderable) =>
-        default(RT).AnsiConsoleEff.Map(fun((AnsiConsoleIO c) => c.AnsiConsole.Write(renderable)));
+        default(RT).AnsiConsoleEff.Map(fun((AnsiConsoleIO io) => io.AnsiConsole.Write(renderable)));
 
     public static Eff<RT, Eff<Unit>> startSpinner(string text) =>
         from _ in SuccessEff(unit)
@@ -62,11 +60,7 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
             from _ in default(RT).AnsiConsoleEff.MapAsync(
                 async ac => await ac.AnsiConsole.Status().StartAsync(text, async _ =>
                 {
-                    try
-                    {
-                        await task.WaitAsync(ct);
-                    }
-                    catch(TaskCanceledException) {}
+                    await task.WaitAsync(ct);
                     return unit;
                 }))
             select unit)

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Eryph.Core.Sys;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.VmManagement.Inventory;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 
@@ -35,7 +36,10 @@ internal class HardwareIdProvider : IHardwareIdProvider
     public string HashedHardwareId => _hashedHardwareId;
 }
 
-internal static class HardwareIdProvider<RT> where RT : struct, HasLogger<RT>, HasRegistry<RT>
+internal static class HardwareIdProvider<RT> where RT : struct,
+    HasLogger<RT>,
+    HasRegistry<RT>,
+    HasWmi<RT>
 {
     public static Eff<RT, Option<Guid>> ReadHardwareId() =>
         from _ in SuccessEff(unit)
