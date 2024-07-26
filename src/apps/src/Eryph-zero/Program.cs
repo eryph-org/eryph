@@ -542,7 +542,7 @@ internal static class Program
 
                     EitherAsync<Error, Unit> CopyService()
                     {
-                        return LanguageExt.Prelude.TryAsync(async () =>
+                        return TryAsync(async () =>
                         {
                             Log.Logger.Information("Copy new files...");
                             if (Directory.Exists(targetDir))
@@ -589,7 +589,7 @@ internal static class Program
                             LogProgress("Stopping running service...").Bind(_ =>
                                 serviceManager.EnsureServiceStopped(cancelSource1.Token))
                             : Unit.Default
-                        from uDBackup in LanguageExt.Prelude.TryAsync(async () =>
+                        from uDBackup in TryAsync(async () =>
                         {
                             if (!Directory.Exists(dataDir)) return Unit.Default;
 
@@ -600,7 +600,7 @@ internal static class Program
                             dataBackupCreated = true;
                             return Unit.Default;
                         }).ToEither()
-                        from ovsRootPath in LanguageExt.Prelude.Try(() => OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>()))
+                        from ovsRootPath in Try(() => OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>()))
                             .ToEitherAsync()
                         from _ in DriverCommands.EnsureDriver(ovsRootPath, true, true, loggerFactory).Map(r => r.ToEither()).ToAsync()
                         from uCopy in CopyService() 
@@ -674,7 +674,7 @@ internal static class Program
                             from uStopped in serviceExists
                                 ? serviceManager.EnsureServiceStopped(cancelSourceStop.Token)
                                 : Unit.Default
-                            from uCopy in LanguageExt.Prelude.TryAsync (async () =>
+                            from uCopy in TryAsync (async () =>
                             {
                                 if (backupCreated)
                                 {
@@ -745,7 +745,7 @@ internal static class Program
         EitherAsync<Error, Unit> RunWarmup(string eryphBinPath)
         {
             var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-            return LanguageExt.Prelude.TryAsync(async () =>
+            return TryAsync(async () =>
                         {
                 var process = new Process
                 {
@@ -969,7 +969,7 @@ internal static class Program
         EitherAsync<Error, Unit> RunWarmup(string eryphBinPath)
         {
             var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-            return LanguageExt.Prelude.TryAsync(async () =>
+            return TryAsync(async () =>
             {
                 var process = new Process
                 {

@@ -66,7 +66,7 @@ public static class GenePoolCli<RT> where RT : struct,
                 from _2 in AnsiConsole<RT>.write(printApiKey(key))
                 from _3 in validateApiKey(key)
                 select unit,
-            None: () => AnsiConsole<RT>.writeLine("No API key is configured."))
+            None: () => AnsiConsole<RT>.writeLine("No gene pool API key is configured."))
         select unit;
 
     public static Aff<RT, Unit> logout(IGenePoolApiKeyStore keyStore) =>
@@ -81,7 +81,7 @@ public static class GenePoolCli<RT> where RT : struct,
                     ? removeApiKey(keyStore, GenePoolNames.EryphGenePool, key)
                     : unitEff
                 select unit,
-            None: () => AnsiConsole<RT>.writeLine("No API key is configured."))
+            None: () => AnsiConsole<RT>.writeLine("No gene pool API key is configured."))
         select unit;
 
     private static Aff<RT, Unit> createApiKey(
@@ -105,7 +105,7 @@ public static class GenePoolCli<RT> where RT : struct,
             return Optional(response);
         }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, Option<ApiKeySecretResponse>>(e)))
         from _1 in stopSpinner
-        from validResult in result.ToAff(Error.New("The API key was not created"))
+        from validResult in result.ToAff(Error.New("The gene pool API key was not created."))
         let apiKey = new GenePoolApiKey()
         {
             Id = validResult.KeyId,
@@ -114,18 +114,18 @@ public static class GenePoolCli<RT> where RT : struct,
             Secret = validResult.Secret,
         }
         from _2 in apiKeyStore.SaveApiKey(GenePoolNames.EryphGenePool, apiKey).ToAff(identity)
-        from _3 in AnsiConsole<RT>.writeLine("API key was successfully created.")
+        from _3 in AnsiConsole<RT>.writeLine("The gene pool API key was successfully created.")
         select unit;
 
     private static Aff<RT, Unit> validateApiKey(GenePoolApiKey apiKey) =>
         from keyResponse in getApiKeyFromPool(apiKey).Map(Optional)
                             | @catch(ex => ex is ErrorResponseException { Response.StatusCode: HttpStatusCode.Unauthorized },
                                 Option<ApiKeyResponse>.None)
-                            | @catch(_ => true, e => Error.New("´Could not validate the API key.", e))
+                            | @catch(_ => true, e => Error.New("Could not validate the gene pool API key.", e))
         from _ in keyResponse.Match(
             Some: response =>
                 from _ in AnsiConsole<RT>.write(new Rows(
-                    new Markup("The API key is valid. The following information was returned by the gene pool:"),
+                    new Markup("The gene pool API key is valid. The following information was returned by the gene pool:"),
                     new Grid()
                         .AddColumn()
                         .AddColumn()
@@ -134,7 +134,7 @@ public static class GenePoolCli<RT> where RT : struct,
                         .AddRow(new Text("Organisation:"), new Text(response.Organization.Name))))
                 select unit,
             None: () =>
-                from _ in AnsiConsole<RT>.writeLine("The API key is invalid.")
+                from _ in AnsiConsole<RT>.writeLine("The gene pool API key is invalid.")
                 select unit)
         select unit;
 
@@ -159,20 +159,20 @@ public static class GenePoolCli<RT> where RT : struct,
         from _1 in AnsiConsole<RT>.writeLine(
             "Do you want to delete the API key from the remote gene pool? "
             + "You will need to authenticate with the gene pool.")
-        from shouldDelete in AnsiConsole<RT>.confirm("Delete API key from gene pool?", false)
+        from shouldDelete in AnsiConsole<RT>.confirm("Delete gene pool API key from gene pool?", false)
         from shouldContinue in shouldDelete
             ? deleteApiKeyFromPool(apiKey).Map(_ => true)
               | @catch(e =>
                   from _1 in AnsiConsole<RT>.write(new Rows(
                       new Markup("[red]Could not delete the API key from the remote gene pool.[/]"),
                       Prelude.Renderable(e)))
-                  from shouldContinue in AnsiConsole<RT>.confirm("Remove the API key from the local store?", false)
+                  from shouldContinue in AnsiConsole<RT>.confirm("Remove the gene pool API key from this machine?", false)
                   select shouldContinue)
             : SuccessAff<RT, bool>(true)
         from _2 in shouldContinue
             ? apiKeyStore.RemoveApiKey(genePoolName).ToAff(identity)
             : unitEff
-        from _5 in AnsiConsole<RT>.writeLine("API key was successfully removed.")
+        from _5 in AnsiConsole<RT>.writeLine("The gene pool API key was successfully removed.")
         select unit;
 
     private static Aff<RT, Unit> deleteApiKeyFromPool(GenePoolApiKey apiKey) =>
