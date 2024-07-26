@@ -10,9 +10,9 @@ using Spectre.Console.Rendering;
 
 namespace Eryph.AnsiConsole;
 
-public class ErrorRenderable
+public static class Prelude
 {
-    public static IRenderable toRenderable(Error error) =>
+    public static IRenderable Renderable(Error error) =>
         addToGrid(createGrid(), error);
 
     private static Grid addRow(Grid grid, IRenderable renderable) =>

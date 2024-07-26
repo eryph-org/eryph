@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.AnsiConsole.Sys;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Sys.Traits;
 using Spectre.Console;
@@ -17,7 +18,8 @@ public readonly struct SimpleConsoleRuntime :
     HasAnsiConsole<SimpleConsoleRuntime>,
     HasDirectory<SimpleConsoleRuntime>,
     HasEnvironment<SimpleConsoleRuntime>,
-    HasFile<SimpleConsoleRuntime>
+    HasFile<SimpleConsoleRuntime>,
+    HasWmi<SimpleConsoleRuntime>
 {
     private readonly SimpleConsoleRuntimeEnv _env;
 
@@ -44,6 +46,8 @@ public readonly struct SimpleConsoleRuntime :
     public Eff<SimpleConsoleRuntime, EnvironmentIO> EnvironmentEff => SuccessEff(LanguageExt.Sys.Live.EnvironmentIO.Default);
 
     public Eff<SimpleConsoleRuntime, FileIO> FileEff => SuccessEff(LanguageExt.Sys.Live.FileIO.Default);
+
+    public Eff<SimpleConsoleRuntime, WmiIO> WmiEff => SuccessEff(LiveWmiIO.Default);
 }
 
 public class SimpleConsoleRuntimeEnv(CancellationTokenSource cancellationTokenSource)

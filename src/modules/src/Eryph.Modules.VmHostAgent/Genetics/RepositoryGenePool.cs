@@ -32,10 +32,10 @@ internal class RepositoryGenePool(
 {
     private static readonly Uri GenePoolUri = new("https://eryphgenepoolapistaging.azurewebsites.net/api/");
 
-    public string? PoolName => poolName;
+    public string PoolName => poolName;
 
     private EitherAsync<Error, GenePoolClient> CreateClient() =>
-        from apiKey in keyStore.GetApiKey(PoolName!)
+        from apiKey in keyStore.GetApiKey(PoolName)
         let clientOptions = new GenePoolClientOptions()
         {
             HardwareId = hardwareIdProvider.HashedHardwareId,

@@ -1,6 +1,5 @@
 ﻿using LanguageExt;
 using LanguageExt.Effects.Traits;
-using Spectre.Console;
 
 namespace Eryph.AnsiConsole.Sys;
 

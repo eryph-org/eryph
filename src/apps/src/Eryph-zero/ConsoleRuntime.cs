@@ -86,5 +86,6 @@ public readonly struct ConsoleRuntime :
     public Eff<ConsoleRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
 
     public Eff<ConsoleRuntime, DismIO> DismEff => SuccessEff(LiveDismIO.Default);
+
     public Eff<ConsoleRuntime, AnsiConsoleIO> AnsiConsoleEff => SuccessEff(LiveAnsiConsoleIO.Default);
 }

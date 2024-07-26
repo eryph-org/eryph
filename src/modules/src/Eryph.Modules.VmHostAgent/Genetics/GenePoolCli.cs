@@ -12,6 +12,7 @@ using Eryph.ConfigModel;
 using Eryph.Core.Sys;
 using Eryph.GenePool.Client;
 using Eryph.GenePool.Client.Credentials;
+using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Requests;
 using Eryph.GenePool.Model.Responses;
 using LanguageExt;
@@ -23,6 +24,7 @@ using LanguageExt.Sys.Traits;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 using static LanguageExt.Prelude;
+using Prelude = Eryph.AnsiConsole.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;
 
@@ -90,8 +92,7 @@ public static class GenePoolCli<RT> where RT : struct,
         from hostname in Environment<RT>.machineName
         from apiKeyName in AnsiConsole<RT>.prompt(
             "Enter a name for the API key:",
-            // TODO Add validation for the API key name
-            Success<Error, string>,
+            ApiKeyName.NewValidation,
             $"eryph-zero-{hostname}")
         from cancelToken in cancelToken<RT>()
         from client in createGenePoolClient()
@@ -108,7 +109,7 @@ public static class GenePoolCli<RT> where RT : struct,
         let apiKey = new GenePoolApiKey()
         {
             Id = validResult.KeyId,
-            Name = apiKeyName,
+            Name = apiKeyName.Value,
             Organization = validResult.Organization,
             Secret = validResult.Secret,
         }
@@ -164,7 +165,7 @@ public static class GenePoolCli<RT> where RT : struct,
               | @catch(e =>
                   from _1 in AnsiConsole<RT>.write(new Rows(
                       new Markup("[red]Could not delete the API key from the remote gene pool.[/]"),
-                      ErrorRenderable.toRenderable(e)))
+                      Prelude.Renderable(e)))
                   from shouldContinue in AnsiConsole<RT>.confirm("Remove the API key from the local store?", false)
                   select shouldContinue)
             : SuccessAff<RT, bool>(true)

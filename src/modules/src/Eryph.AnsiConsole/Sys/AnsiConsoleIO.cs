@@ -7,7 +7,7 @@ public interface AnsiConsoleIO
     public IAnsiConsole AnsiConsole { get; }
 }
 
-public class LiveAnsiConsoleIO : AnsiConsoleIO
+public readonly struct LiveAnsiConsoleIO : AnsiConsoleIO
 {
     public static readonly AnsiConsoleIO Default = new LiveAnsiConsoleIO();
 

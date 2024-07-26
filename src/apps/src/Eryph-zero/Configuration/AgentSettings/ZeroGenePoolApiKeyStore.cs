@@ -44,16 +44,16 @@ internal class ZeroGenePoolApiKeyStore : IGenePoolApiKeyStore
 
             var json = await File.ReadAllTextAsync(path);
             return json;
-        }).ToEither(ex => Error.New("Could not access gene pool API key store.", ex))
+        }).ToEither(ex => Error.New("Could not access the gene pool API key store.", ex))
         from apiKeys in json.Map(Deserialize).Sequence().ToAsync()
         select apiKeys.IfNone(HashMap<string, GenePoolApiKey>());
 
     private static Either<Error, HashMap<string, GenePoolApiKey>> Deserialize(string json) =>
         from optionalDictionary in Try(() =>
             Optional(JsonSerializer.Deserialize<IReadOnlyDictionary<string, GenePoolApiKey>>(json)))
-            .ToEither(ex => Error.New("Could not deserialize contents of the gene pool key store", ex))
+            .ToEither(ex => Error.New("Could not deserialize the contents of the gene pool key store.", ex))
         from dictionary in optionalDictionary.ToEither(
-            Error.New("Could not deserialize contents of the gene pool key store"))
+            Error.New("Could not deserialize the contents of the gene pool key store."))
         select dictionary.ToHashMap();
 
     private static string Serialize(HashMap<string, GenePoolApiKey> apiKeys) =>
@@ -67,6 +67,6 @@ internal class ZeroGenePoolApiKeyStore : IGenePoolApiKeyStore
             var path = Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "genepool-keys.json");
             await File.WriteAllTextAsync(path, json);
             return unit;
-        }).ToEither(ex => Error.New("Could not write to gene pool API key store.", ex))
+        }).ToEither(ex => Error.New("Could not write to the gene pool API key store.", ex))
         select unit;
 }

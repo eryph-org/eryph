@@ -134,7 +134,6 @@ internal class LocalGenePoolSource(
                 return Error.New($"Failed to verify hash of gene part '{messageName}'");
             }
 
-            // TODO fix me FS access without try
             return await Prelude.RightAsync<Error, long>(fileSystem.GetFileSize(cachedGenePartFile));
         }).ToAsync();
     }

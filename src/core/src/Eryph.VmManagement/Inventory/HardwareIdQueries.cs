@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Management;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core.Sys;
@@ -30,7 +28,6 @@ public static class HardwareIdQueries<RT> where RT : struct, HasRegistry<RT>, Ha
             // indicate that the UUID is not set.
             .Filter(g => g != Guid.Empty && g != Guid.Parse("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"))
             .ToEff(Error.New("The found SMBIOS UUID is not a valid GUID."))
-        from _ in FailEff<Unit>(Error.New("buu"))
         select guid;
 
     public static Eff<RT, Guid> readCryptographyGuid() =>
@@ -41,7 +38,6 @@ public static class HardwareIdQueries<RT> where RT : struct, HasRegistry<RT>, Ha
             from g in parseGuid(s)
             select g
         from validGuid in guid.ToEff(Error.New("The Machine GUID is not a valid GUID."))
-        from _ in FailEff<Unit>(Error.New("buu"))
         select validGuid;
 
     public static Eff<RT, Guid> ensureFallbackGuid() =>
@@ -59,19 +55,4 @@ public static class HardwareIdQueries<RT> where RT : struct, HasRegistry<RT>, Ha
                       newGuid.ToString())
                   select newGuid)
         select guid;
-
-    public static string HashHardwareId(Guid hardwareId)
-    {
-        var hashBytes = SHA256.HashData(hardwareId.ToByteArray());
-        return Convert.ToHexString(hashBytes[..16]);
-    }
-}
-
-public static class HardwareIdHasher
-{
-    public static string HashHardwareId(Guid hardwareId)
-    {
-        var hashBytes = SHA256.HashData(hardwareId.ToByteArray());
-        return Convert.ToHexString(hashBytes[..16]);
-    }
 }
