@@ -6,7 +6,6 @@ using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Management;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -16,14 +15,12 @@ using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Eryph.App;
 using Eryph.ModuleCore;
-using Eryph.Modules.ComputeApi;
 using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Configuration;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
-using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
@@ -276,37 +273,41 @@ internal static class Program
                         }
                     });
 
-                bool isWindowsService = WindowsServiceHelpers.IsWindowsService();
-                // do not check in service mode - during startup some features may be unavailable
-                if (!isWindowsService)
-                {
-                    var provider = new HostSettingsProvider();
-                    var result = await provider.GetHostSettings()
-                        .Match(
-                            Right: _ => Prelude.None,
-                            Left: e => e.Exception.Map(ex =>
-                                ex is ManagementException { ErrorCode: ManagementStatus.InvalidNamespace }
-                                    ? Prelude.Some(e)
-                                    : Prelude.None));
-
-                    if (result.IsSome)
-                    {
-                        await Console.Error.WriteAsync(
-                            "Hyper-V ist not installed. Install Hyper-V feature and then try again.");
-                        return -10;
-                    }
-                }
-
+                var isWindowsService = WindowsServiceHelpers.IsWindowsService();
                 using var loggerFactory = new SerilogLoggerFactory(logger, dispose: false);
 
-                var ovsRunDir = OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>(), startupConfig.OvsPackageDir);
-                var ensureDriverResult = await DriverCommands.EnsureDriver(
-                    ovsRunDir, !isWindowsService && !warmupMode, !isWindowsService && !warmupMode, loggerFactory);
-                if (ensureDriverResult.IsFail)
+                var result = await DriverCommands.Run(
+                    from _1 in SystemRequirementsChecker<DriverCommandsRuntime>.ensureHyperV(isWindowsService)
+                        .MapFail(e => Error.New(
+                            -10,
+                            "Hyper-V is not available. Make sure it is installed and the management service (VMMS) is running.",
+                            e))
+                    from ovsLogger in default(DriverCommandsRuntime).Logger<OVSPackage>()
+                    from runDir in Eff(() => OVSPackage.UnpackAndProvide(
+                        ovsLogger,
+                        startupConfig.OvsPackageDir))
+                        .ToAff()
+                        .MapFail(e => Error.New(-12, "Could not extract the included OVS/OVN distribution.", e))
+                    from _2 in OvsDriverProvider<DriverCommandsRuntime>.ensureDriver(
+                            runDir, !isWindowsService && !warmupMode, !isWindowsService && !warmupMode)
+                        .MapFail(e => Error.New(-11, "The Hyper-V switch extension for OVS is not available.", e))
+                    select runDir,
+                    loggerFactory);
+
+                if (result.Case is Error error)
                 {
-                    ensureDriverResult.IfFail(e => Console.Error.WriteLine((e.ToString())));
-                    return -11;
+                    if (isWindowsService)
+                    {
+                        logger.Fatal(error, "The service startup failed.");
+                    }
+                    else
+                    {
+                        WriteError(error);
+                    }
+                    return error.Code;
                 }
+
+                var ovsRunDir = result.ToOption().ValueUnsafe();
 
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
@@ -403,8 +404,11 @@ internal static class Program
             {
                 logger.Fatal(ex, "eryph-zero failure");
             }
+            finally
+            {
+                await logger.DisposeAsync();
+            }
 
-            await logger.DisposeAsync();
             return returnCode;
         });
 
@@ -586,12 +590,19 @@ internal static class Program
                         from uWarmup in LogProgress("Migrate and warmup... (this could take a while)").Bind(_ => RunWarmup(zeroExe))
                         let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                         from uInstalled in serviceExists
-                            ? LogProgress("Updating service...").Bind(_ =>
-                                serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
+                            ? LogProgress("Updating service...")
+                                .Bind(_ => serviceManager.UpdateService($"{zeroExe} run", cancelSource2.Token))
                             : LogProgress("Installing service...").Bind(_ => serviceManager.CreateService("eryph-zero",
                                 $"{zeroExe} run",
                                 // vmms is the Hyper-V Virtual Machine Management service
-                                new[] { "vmms" }.ToSeq(),
+                                Seq1("vmms"),
+                                cancelSource2.Token))
+                        from ___ in LogProgress("Setting service recovery options...")
+                            .Bind(_ => serviceManager.SetRecoveryOptions(
+                                TimeSpan.FromMinutes(1),
+                                TimeSpan.FromMinutes(10),
+                                None,
+                                None,
                                 cancelSource2.Token))
                         let cancelSource3 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
 
@@ -1004,13 +1015,13 @@ internal static class Program
 
     private static Task<int> GetAgentSettings(FileSystemInfo? outFile) =>
         RunAsAdmin(
-            from hostSettings in new HostSettingsProvider().GetHostSettings().ToAff(e => e)
-            from yaml in VmHostAgentConfiguration<LanguageExt.Sys.Live.Runtime>.getConfigYaml(
+            from hostSettings in HostSettingsProvider<AgentSettingsRuntime>.getHostSettings()
+            from yaml in VmHostAgentConfiguration<AgentSettingsRuntime>.getConfigYaml(
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
-            from _ in WriteOutput<LanguageExt.Sys.Live.Runtime>(outFile, yaml)
+            from _ in WriteOutput<AgentSettingsRuntime>(outFile, yaml)
             select unit,
-            LanguageExt.Sys.Live.Runtime.New());
+            AgentSettingsRuntime.New());
 
     private static Task<int> ImportAgentSettings(
         FileSystemInfo? inFile,
@@ -1018,13 +1029,13 @@ internal static class Program
         bool noCurrentConfigCheck) =>
         RunAsAdmin(
             from configString in ReadInput(inFile)
-            from hostSettings in new HostSettingsProvider().GetHostSettings().ToAff(e => e)
-            from _ in VmHostAgentConfigurationUpdate<LanguageExt.Sys.Live.Runtime>.updateConfig(
+            from hostSettings in HostSettingsProvider<AgentSettingsRuntime>.getHostSettings()
+            from _ in VmHostAgentConfigurationUpdate<AgentSettingsRuntime>.updateConfig(
                 configString,
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
             select unit,
-            LanguageExt.Sys.Live.Runtime.New());
+            AgentSettingsRuntime.New());
 
     private static async Task<int> GetDriverStatus()
     {

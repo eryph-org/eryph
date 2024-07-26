@@ -23,7 +23,8 @@ internal readonly struct DriverCommandsRuntime :
     HasLogger<DriverCommandsRuntime>,
     HasProcessRunner<DriverCommandsRuntime>,
     HasPowershell<DriverCommandsRuntime>,
-    HasRegistry<DriverCommandsRuntime>
+    HasRegistry<DriverCommandsRuntime>,
+    HasWmi<DriverCommandsRuntime>
 {
     public DriverCommandsRuntime(DriverCommandsRuntimeEnv env)
     {
@@ -64,6 +65,8 @@ internal readonly struct DriverCommandsRuntime :
         Eff<DriverCommandsRuntime, IHostNetworkCommands<DriverCommandsRuntime>>(rt => rt.Env.HostNetworkCommands);
 
     public Eff<DriverCommandsRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
+
+    public Eff<DriverCommandsRuntime, WmiIO> WmiEff => SuccessEff(LiveWmiIO.Default);
 }
 
 internal class DriverCommandsRuntimeEnv
