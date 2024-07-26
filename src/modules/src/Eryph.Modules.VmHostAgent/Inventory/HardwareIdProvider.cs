@@ -8,7 +8,6 @@ using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
-using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
@@ -16,10 +15,8 @@ namespace Eryph.Modules.VmHostAgent.Inventory;
 
 internal class HardwareIdProvider : IHardwareIdProvider
 {
-    private readonly Guid _hardwareId;
-    private readonly string _hashedHardwareId;
-
-    public HardwareIdProvider(ILoggerFactory loggerFactory)
+    public HardwareIdProvider(
+        Microsoft.Extensions.Logging.ILoggerFactory loggerFactory)
     {
         var result = HardwareIdProvider<SimpleAgentRuntime>
             .EnsureHardwareId()
@@ -27,28 +24,29 @@ internal class HardwareIdProvider : IHardwareIdProvider
         
         // We cache the hardware ID as it should obviously not change
         // and the lookup requires WMI and registry queries.
-        _hardwareId = result.ThrowIfFail();
-        _hashedHardwareId = HardwareIdHasher.HashHardwareId(_hardwareId);
+        HardwareId = result.ThrowIfFail();
+        HashedHardwareId = HardwareIdHasher.HashHardwareId(HardwareId);
     }
 
-    public Guid HardwareId => _hardwareId;
+    public Guid HardwareId { get; }
 
-    public string HashedHardwareId => _hashedHardwareId;
+    public string HashedHardwareId { get; }
 }
 
-internal static class HardwareIdProvider<RT> where RT : struct,
+internal class HardwareIdProvider<RT> where RT : struct,
     HasLogger<RT>,
     HasRegistry<RT>,
     HasWmi<RT>
 {
-    public static Eff<RT, Option<Guid>> ReadHardwareId() =>
-        from _ in SuccessEff(unit)
-        select Option<Guid>.None;
-
     public static Eff<RT, Guid> EnsureHardwareId() =>
-        // TODO Add catch for logging
-        from guid in HardwareIdQueries<RT>.ReadSmBiosUuid()
-                     | HardwareIdQueries<RT>.ReadCryptographyGuid()
-                     | HardwareIdQueries<RT>.ReadFallbackGuid()
+        from guid in HardwareIdQueries<RT>.readSmBiosUuid()
+                     | logAndContinue("Could not read the SMBIOS UUID")
+                     | HardwareIdQueries<RT>.readCryptographyGuid()
+                     | logAndContinue("Could not read the Cryptography GUID")
+                     | HardwareIdQueries<RT>.ensureFallbackGuid()
         select guid;
+
+    private static EffCatch<RT, Guid> logAndContinue(string message) =>
+        @catch(ex => Logger<RT>.logWarning<HardwareIdProvider<RT>>(ex, message)
+            .Bind(_ => FailEff<Guid>(ex)));
 }
