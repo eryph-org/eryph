@@ -246,8 +246,7 @@ internal static class Program
 
             try
             {
-                var fileVersion = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location);
-                logger.Information("Starting eryph-zero {Version}", fileVersion.ProductVersion);
+                logger.Information("Starting eryph-zero {Version}", new ZeroApplicationInfoProvider().ProductVersion);
 
                 if (warmupMode)
                     logger.Information("Running in warmup mode. Process will be stopped after start is completed");
