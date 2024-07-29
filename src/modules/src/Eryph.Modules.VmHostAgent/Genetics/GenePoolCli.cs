@@ -1,24 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Azure.Core;
-using Eryph.AnsiConsole;
 using Eryph.AnsiConsole.Sys;
 using Eryph.ConfigModel;
 using Eryph.Core.Sys;
 using Eryph.GenePool.Client;
 using Eryph.GenePool.Client.Credentials;
 using Eryph.GenePool.Model;
-using Eryph.GenePool.Model.Requests;
 using Eryph.GenePool.Model.Responses;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
-using LanguageExt.Pipes;
 using LanguageExt.Sys;
 using LanguageExt.Sys.Traits;
 using Spectre.Console;
@@ -30,9 +29,11 @@ namespace Eryph.Modules.VmHostAgent.Genetics;
 
 public static class GenePoolCli<RT> where RT : struct,
     HasAnsiConsole<RT>,
+    HasApplicationInfo<RT>,
     HasCancel<RT>,
+    HasEnvironment<RT>,
     HasFile<RT>,
-    HasEnvironment<RT>
+    HasHardwareId<RT>
 {
     private static readonly Uri GenePoolUri = new("https://eryphgenepoolapistaging.azurewebsites.net/api/");
 
@@ -93,7 +94,7 @@ public static class GenePoolCli<RT> where RT : struct,
         from apiKeyName in AnsiConsole<RT>.prompt(
             "Enter a name for the API key:",
             ApiKeyName.NewValidation,
-            $"eryph-zero-{hostname}")
+            $"eryph-zero-{hostname.ToLowerInvariant()}")
         from cancelToken in cancelToken<RT>()
         from client in createGenePoolClient()
         from stopSpinner in AnsiConsole<RT>.startSpinner("Creating API key...")
@@ -140,10 +141,22 @@ public static class GenePoolCli<RT> where RT : struct,
 
     private static Aff<RT, ApiKeyResponse> getApiKeyFromPool(GenePoolApiKey apiKey) =>
         from cancelToken in cancelToken<RT>()
+        from applicationId in ApplicationInfo<RT>.applicationId()
+        from hardwareId in HardwareId<RT>.hashedHardwareId()
         from stopSpinner in AnsiConsole<RT>.startSpinner("Validating API key...")
         from response in Aff(async () =>
         {
-            var client = new GenePoolClient(GenePoolUri, new ApiKeyCredential(apiKey.Secret));
+            var client = new GenePoolClient(
+                GenePoolUri,
+                new ApiKeyCredential(apiKey.Secret),
+                new GenePoolClientOptions()
+                {
+                    Diagnostics =
+                    {
+                        ApplicationId = applicationId,
+                    },
+                    HardwareId = hardwareId,
+                });
             var response = await client.GetApiKeyClient(apiKey.Organization, apiKey.Id)
                 .GetAsync(cancelToken);
 
@@ -190,7 +203,17 @@ public static class GenePoolCli<RT> where RT : struct,
 
     private static Aff<RT, GenePoolClient> createGenePoolClient() =>
         from cancelToken in cancelToken<RT>()
+        from applicationId in ApplicationInfo<RT>.applicationId()
+        from hardwareId in HardwareId<RT>.hashedHardwareId()
         from stopSpinner in AnsiConsole<RT>.startSpinner("Authenticating with the gene pool. Please check your browser.")
+        let options = new GenePoolClientOptions()
+        {
+            Diagnostics =
+            {
+                ApplicationId = applicationId
+            },
+            HardwareId = hardwareId,
+        }
         from result in Aff(async () =>
         {
             var credentialOptions = new B2CInteractiveBrowserCredentialOptions
@@ -206,7 +229,7 @@ public static class GenePoolCli<RT> where RT : struct,
             var credential = new B2CInteractiveBrowserCredential(credentialOptions);
             await credential.AuthenticateAsync(new TokenRequestContext());
             
-            return new GenePoolClient(GenePoolUri, credential);
+            return new GenePoolClient(GenePoolUri, credential, options);
         }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, GenePoolClient>(e)))
         from _ in stopSpinner
         from __ in AnsiConsole<RT>.writeLine("Successfully authenticated with the gene pool.")

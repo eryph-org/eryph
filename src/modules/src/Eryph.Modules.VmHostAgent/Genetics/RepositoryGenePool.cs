@@ -26,6 +26,7 @@ internal class RepositoryGenePool(
     ILogger log,
     IFileSystemService fileSystem,
     IGenePoolApiKeyStore keyStore,
+    IApplicationInfoProvider applicationInfo,
     IHardwareIdProvider hardwareIdProvider,
     string poolName)
     : GenePoolBase, IGenePool
@@ -38,6 +39,10 @@ internal class RepositoryGenePool(
         from apiKey in keyStore.GetApiKey(PoolName)
         let clientOptions = new GenePoolClientOptions()
         {
+            Diagnostics =
+            {
+                ApplicationId = applicationInfo.ApplicationId,
+            },
             HardwareId = hardwareIdProvider.HashedHardwareId,
         }
         from client in Prelude.Try(() => apiKey.Match(

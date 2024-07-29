@@ -22,16 +22,22 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
     public static Aff<RT, T> prompt<T>(
         string prompt,
         Func<string, Validation<Error, T>> validate,
-        string? defaultValue = null) =>
+        Option<string> defaultValue = default) =>
         from cancelToken in cancelToken<RT>()
+        // The default value is ignored in case it does not pass validation.
+        let validDefaultValue = from v in defaultValue
+                                from _ in validate(v).ToOption()
+                                select v
         let consolePrompt = new TextPrompt<string>(prompt)
-            .DefaultValue(defaultValue)
             .Validate(v => validate(v).Match(
                 Succ: _ => ValidationResult.Success(),
                 Fail: errors => ValidationResult.Error(
                     $"[red]{Markup.Escape(ErrorUtils.PrintError(Error.Many(errors)))}[/]")))
+        let consolePromptWithDefault = validDefaultValue.Match(
+            Some: consolePrompt.DefaultValue,
+            None: () => consolePrompt)
         from result in default(RT).AnsiConsoleEff.MapAsync(
-            async ac => await consolePrompt.ShowAsync(ac.AnsiConsole, cancelToken))
+            async ac => await consolePromptWithDefault.ShowAsync(ac.AnsiConsole, cancelToken))
         // We validate again as the validate function also performs the parsing.
         // The validation should always be successful. Otherwise, the prompt would
         // not have succeeded.

@@ -14,7 +14,7 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Inventory;
 
-internal class HardwareIdProvider : IHardwareIdProvider
+public class HardwareIdProvider : IHardwareIdProvider
 {
     public HardwareIdProvider(
         Microsoft.Extensions.Logging.ILoggerFactory loggerFactory)
@@ -36,7 +36,7 @@ internal class HardwareIdProvider : IHardwareIdProvider
     private static string HashHardwareId(Guid hardwareId)
     {
         var hashBytes = SHA256.HashData(hardwareId.ToByteArray());
-        return Convert.ToHexString(hashBytes[..16]);
+        return Convert.ToHexString(hashBytes[..16]).ToLowerInvariant();
     }
 }
 
