@@ -45,6 +45,7 @@ namespace Eryph.Runtime.Zero
             container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
             container.RegisterSingleton<IGenePoolApiKeyStore, ZeroGenePoolApiKeyStore>();
             container.Register<IHostSettingsProvider, HostSettingsProvider>();
+            container.RegisterSingleton<IApplicationInfoProvider, ZeroApplicationInfoProvider>();
 
             container.RegisterInstance(new WorkflowOptions
             {

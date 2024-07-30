@@ -47,9 +47,9 @@ namespace Eryph.Modules.VmHostAgent
                 opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 
 
-            services.AddHttpClient(GenePoolNames.EryphGenePool, cfg =>
+            services.AddHttpClient(GenePoolConstants.EryphGenePool.Name, cfg =>
             {
-                cfg.BaseAddress = new Uri("https://eryph-staging-b2.b-cdn.net");
+                cfg.BaseAddress = GenePoolConstants.EryphGenePool.CdnEndpoint;
             })
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
                 .AddPolicyHandler(GetRetryPolicy());
@@ -95,6 +95,7 @@ namespace Eryph.Modules.VmHostAgent
 
             container.Register<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>(Lifestyle.Scoped);
             container.RegisterInstance(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>());
+            container.RegisterInstance(serviceProvider.GetRequiredService<IApplicationInfoProvider>());
             container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolApiKeyStore>());
             container.RegisterInstance(serviceProvider.GetRequiredService<IHostSettingsProvider>());
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
@@ -106,8 +107,8 @@ namespace Eryph.Modules.VmHostAgent
 
             var genePoolFactory = new GenePoolFactory(container);
        
-            genePoolFactory.Register<LocalGenePoolSource>(GenePoolNames.Local);
-            genePoolFactory.Register<RepositoryGenePool>(GenePoolNames.EryphGenePool);
+            genePoolFactory.Register<LocalGenePoolSource>(GenePoolConstants.Local.Name);
+            genePoolFactory.Register<RepositoryGenePool>(GenePoolConstants.EryphGenePool.Name);
             container.RegisterInstance<IGenePoolFactory>(genePoolFactory);
             container.RegisterSingleton<IGeneProvider, LocalFirstGeneProvider>();
             container.RegisterSingleton<IGeneRequestDispatcher, GeneRequestRegistry>();

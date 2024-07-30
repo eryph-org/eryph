@@ -35,17 +35,12 @@ public static class GenePoolCli<RT> where RT : struct,
     HasFile<RT>,
     HasHardwareId<RT>
 {
-    private static readonly Uri GenePoolUri = new("https://eryphgenepoolapistaging.azurewebsites.net/api/");
-
-    private static readonly string AuthorityUri =
-        "https://dbosoftb2cstaging.b2clogin.com/tfp/dbosoftb2cstaging.onmicrosoft.com/B2C_1A_SIGNUP_SIGNIN/v2.0";
-
     public static Aff<RT, Unit> login(IGenePoolApiKeyStore apiKeyStore) =>
         from _1 in AnsiConsole<RT>.write(new Rows(
             new Text("We will create a dedicated API key for this machine which grants read-only access to the genepool."),
             new Text("You will need to authenticate with your personal credentials."),
             Text.Empty))
-        from existingApiKey in apiKeyStore.GetApiKey(GenePoolNames.EryphGenePool)
+        from existingApiKey in apiKeyStore.GetApiKey(GenePoolConstants.EryphGenePool.Name)
             .ToAff(identity)
         from shouldContinue in existingApiKey.Match(
             Some: apiKey =>
@@ -60,7 +55,7 @@ public static class GenePoolCli<RT> where RT : struct,
 
     public static Aff<RT, Unit> getApiKeyStatus(IGenePoolApiKeyStore genePoolApiStore) =>
         from apiKeys in genePoolApiStore.GetApiKeys().ToAff(identity)
-        let apiKey = apiKeys.Find(GenePoolNames.EryphGenePool)
+        let apiKey = apiKeys.Find(GenePoolConstants.EryphGenePool.Name)
         from _ in apiKey.Match(
             Some: key =>
                 from _1 in AnsiConsole<RT>.writeLine("The following gene pool API key is configured:")
@@ -72,14 +67,14 @@ public static class GenePoolCli<RT> where RT : struct,
 
     public static Aff<RT, Unit> logout(IGenePoolApiKeyStore keyStore) =>
         from apiKeys in keyStore.GetApiKeys().ToAff(identity)
-        let apiKey = apiKeys.Find(GenePoolNames.EryphGenePool)
+        let apiKey = apiKeys.Find(GenePoolConstants.EryphGenePool.Name)
         from _ in apiKey.Match(
             Some: key =>
                 from _1 in AnsiConsole<RT>.writeLine("The following gene pool API key is configured:")
                 from _2 in AnsiConsole<RT>.write(printApiKey(key))
                 from shouldRemove in AnsiConsole<RT>.confirm("Remove API key?", false)
                 from _3 in shouldRemove
-                    ? removeApiKey(keyStore, GenePoolNames.EryphGenePool, key)
+                    ? removeApiKey(keyStore, GenePoolConstants.EryphGenePool.Name, key)
                     : unitEff
                 select unit,
             None: () => AnsiConsole<RT>.writeLine("No gene pool API key is configured."))
@@ -114,7 +109,7 @@ public static class GenePoolCli<RT> where RT : struct,
             Organization = validResult.Organization,
             Secret = validResult.Secret,
         }
-        from _2 in apiKeyStore.SaveApiKey(GenePoolNames.EryphGenePool, apiKey).ToAff(identity)
+        from _2 in apiKeyStore.SaveApiKey(GenePoolConstants.EryphGenePool.Name, apiKey).ToAff(identity)
         from _3 in AnsiConsole<RT>.writeLine("The gene pool API key was successfully created.")
         select unit;
 
@@ -147,7 +142,7 @@ public static class GenePoolCli<RT> where RT : struct,
         from response in Aff(async () =>
         {
             var client = new GenePoolClient(
-                GenePoolUri,
+                GenePoolConstants.EryphGenePool.ApiEndpoint,
                 new ApiKeyCredential(apiKey.Secret),
                 new GenePoolClientOptions()
                 {
@@ -218,8 +213,8 @@ public static class GenePoolCli<RT> where RT : struct,
         {
             var credentialOptions = new B2CInteractiveBrowserCredentialOptions
             {
-                ClientId = "56136c3f-d46e-4644-a66c-b88304d09da8",
-                AuthorityUri = AuthorityUri,
+                ClientId = GenePoolConstants.EryphGenePool.AuthClientId,
+                AuthorityUri = GenePoolConstants.EryphGenePool.AuthEndpoint.AbsoluteUri,
                 BrowserCustomization = new BrowserCustomizationOptions
                 {
                     UseEmbeddedWebView = false,
@@ -229,7 +224,7 @@ public static class GenePoolCli<RT> where RT : struct,
             var credential = new B2CInteractiveBrowserCredential(credentialOptions);
             await credential.AuthenticateAsync(new TokenRequestContext());
             
-            return new GenePoolClient(GenePoolUri, credential, options);
+            return new GenePoolClient(GenePoolConstants.EryphGenePool.ApiEndpoint, credential, options);
         }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, GenePoolClient>(e)))
         from _ in stopSpinner
         from __ in AnsiConsole<RT>.writeLine("Successfully authenticated with the gene pool.")

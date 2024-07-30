@@ -11,7 +11,8 @@ internal class GenePoolFactory(Container container) : IGenePoolFactory
     private readonly Dictionary<string, InstanceProducer<IGenePool>> _producers =
         new(StringComparer.OrdinalIgnoreCase);
 
-    public IEnumerable<string> RemotePools => _producers.Keys.Where(x=> x != GenePoolNames.Local);
+    public IEnumerable<string> RemotePools => _producers.Keys
+        .Where(x=> x != GenePoolConstants.Local.Name);
 
     IGenePool IGenePoolFactory.CreateNew(string name)
     {
@@ -20,7 +21,7 @@ internal class GenePoolFactory(Container container) : IGenePoolFactory
     }
 
     ILocalGenePool IGenePoolFactory.CreateLocal() =>
-        (ILocalGenePool) _producers[GenePoolNames.Local].GetInstance();
+        (ILocalGenePool) _producers[GenePoolConstants.Local.Name].GetInstance();
 
     public void Register<TImplementation>(string name)
         where TImplementation : class, IGenePool

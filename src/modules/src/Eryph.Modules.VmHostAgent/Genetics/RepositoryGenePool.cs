@@ -31,8 +31,6 @@ internal class RepositoryGenePool(
     string poolName)
     : GenePoolBase, IGenePool
 {
-    private static readonly Uri GenePoolUri = new("https://eryphgenepoolapistaging.azurewebsites.net/api/");
-
     public string PoolName => poolName;
 
     private EitherAsync<Error, GenePoolClient> CreateClient() =>
@@ -46,8 +44,13 @@ internal class RepositoryGenePool(
             HardwareId = hardwareIdProvider.HashedHardwareId,
         }
         from client in Prelude.Try(() => apiKey.Match(
-                Some: key => new GenePoolClient(GenePoolUri, new ApiKeyCredential(key.Secret), clientOptions),
-                None: () => new GenePoolClient(GenePoolUri, clientOptions)))
+                Some: key => new GenePoolClient(
+                    GenePoolConstants.EryphGenePool.ApiEndpoint,
+                    new ApiKeyCredential(key.Secret),
+                    clientOptions),
+                None: () => new GenePoolClient(
+                    GenePoolConstants.EryphGenePool.ApiEndpoint,
+                    clientOptions)))
             .ToEither(ex => Error.New("Could not create the gene pool API client.", ex)).ToAsync()
         select client;
 

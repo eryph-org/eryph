@@ -191,45 +191,29 @@ internal class LocalGenePoolSource(
 
     }
 
-    public EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier genesetIdentifier, CancellationToken cancel)
-    {
-        return ProvideGeneSet(path, genesetIdentifier, false, cancel);
-    }
+    public EitherAsync<Error, GeneSetInfo> ProvideGeneSet(
+        string path,
+        GeneSetIdentifier genesetIdentifier,
+        CancellationToken cancel) =>
+        Prelude.TryAsync(async () =>
+        {
+            var genesetPath = BuildGeneSetPath(genesetIdentifier, path);
+            if (!File.Exists(Path.Combine(genesetPath, "geneset-tag.json")))
+                return await Prelude.LeftAsync<Error, GeneSetInfo>(Error.New(
+                    $"Geneset '{genesetIdentifier.Value}' not found in local gene pool.")).ToEither();
 
+            await using var manifestStream = File.OpenRead(Path.Combine(genesetPath, "geneset-tag.json"));
+            var manifest =
+                await JsonSerializer.DeserializeAsync<GenesetTagManifestData>(manifestStream,
+                    cancellationToken: cancel);
 
-    public EitherAsync<Error, GeneSetInfo> ProvideFallbackGeneSet(string path, GeneSetIdentifier genesetIdentifier, CancellationToken cancel)
-    {
-        return ProvideGeneSet(path, genesetIdentifier, true, cancel);
-    }
+            return await Prelude
+                .RightAsync<Error, GeneSetInfo>(new GeneSetInfo(genesetIdentifier, genesetPath, manifest, Array.Empty<GetGeneDownloadResponse>()))
+                .ToEither();
 
-
-    private EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier genesetIdentifier,
-        bool fallbackMode, CancellationToken cancel)
-    {
-        if (!fallbackMode && genesetIdentifier.Tag.Value == "latest")
-            return Error.New("latest geneset version will be look up first on remote sources.");
-
-        return Prelude.TryAsync(async () =>
-            {
-                var genesetPath = BuildGeneSetPath(genesetIdentifier, path);
-                if (!File.Exists(Path.Combine(genesetPath, "geneset-tag.json")))
-                    return await Prelude.LeftAsync<Error, GeneSetInfo>(Error.New(
-                        $"Geneset '{genesetIdentifier.Value}' not found in local gene pool.")).ToEither();
-
-                await using var manifestStream = File.OpenRead(Path.Combine(genesetPath, "geneset-tag.json"));
-                var manifest =
-                    await JsonSerializer.DeserializeAsync<GenesetTagManifestData>(manifestStream,
-                        cancellationToken: cancel);
-
-                return await Prelude
-                    .RightAsync<Error, GeneSetInfo>(new GeneSetInfo(genesetIdentifier, genesetPath, manifest, Array.Empty<GetGeneDownloadResponse>()))
-                    .ToEither();
-
-            })
-            .ToEither(ex => Error.New(ex))
-            .Bind(e => e.ToAsync());
-
-    }
+        })
+        .ToEither(ex => Error.New(ex))
+        .Bind(e => e.ToAsync());
 
     public EitherAsync<Error, GeneSetInfo> CacheGeneSet(string path, GeneSetInfo genesetInfo, CancellationToken cancel)
     {
