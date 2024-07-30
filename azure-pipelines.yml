@@ -162,5 +162,6 @@ jobs:
     displayName: dotnet test
     inputs:
       command: test
-      projects: '**/test/**/*.csproj'
+      # We exclude projects which require Windows to avoid build errors
+      projects: '**/test/**/*!(VmHostAgent|VmManagement).csproj'
       arguments: '--configuration $(buildConfiguration) --collect "Code coverage" --no-build --filter "Category=Docker"'
