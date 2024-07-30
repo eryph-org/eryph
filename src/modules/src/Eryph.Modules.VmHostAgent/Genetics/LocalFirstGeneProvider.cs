@@ -96,10 +96,11 @@ internal class LocalFirstGeneProvider(
                 {
                     if (string.IsNullOrWhiteSpace(i.MetaData.Reference))
                         return i;
-                    
-                    log.LogDebug("Geneset {GeneSet} is a reference and will resolved remotely",
-                        geneSetIdentifier);
 
+                    // We always attempt resolve gene set references remotely as they
+                    // can be updated, and we want to use the latest version.
+                    log.LogDebug("Geneset {GeneSet} is a reference and will be resolved remotely",
+                        geneSetIdentifier);
                     return ProvideGeneSetFromRemote(path, geneSetIdentifier, cancel);
                 },
                 Left: e =>

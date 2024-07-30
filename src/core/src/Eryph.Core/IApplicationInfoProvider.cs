@@ -22,5 +22,5 @@ public interface IApplicationInfoProvider
     /// The application ID which can be used with AutoRest
     /// clients. It is limited to 24 characters.
     /// </summary>
-    public string ApplicationId { get; set; }
+    public string ApplicationId { get; }
 }
