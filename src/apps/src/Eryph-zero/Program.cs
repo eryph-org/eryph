@@ -141,20 +141,20 @@ internal static class Program
             nonInteractiveOption, noCurrentConfigCheckOption);
         agentSettingsCommand.AddCommand(importAgentSettingsCommand);
 
+        var loginCommand = new Command("login");
+        rootCommand.AddCommand(loginCommand);
+        loginCommand.SetHandler(Login);
+
+        var logoutCommand = new Command("logout");
+        rootCommand.AddCommand(logoutCommand);
+        logoutCommand.SetHandler(Logout);
+
         var genePoolCommand = new Command("genepool");
         rootCommand.AddCommand(genePoolCommand);
 
-        var genePoolLoginCommand = new Command("login");
-        genePoolCommand.AddCommand(genePoolLoginCommand);
-        genePoolLoginCommand.SetHandler(LoginGenePool);
-
-        var genePoolStatusCommand = new Command("status");
-        genePoolCommand.AddCommand(genePoolStatusCommand);
-        genePoolStatusCommand.SetHandler(GetGenePoolStatus);
-
-        var genePoolLogoutCommand = new Command("logout");
-        genePoolCommand.AddCommand(genePoolLogoutCommand);
-        genePoolLogoutCommand.SetHandler(LogoutGenePool);
+        var genePoolInfoCommand = new Command("info");
+        genePoolCommand.AddCommand(genePoolInfoCommand);
+        genePoolInfoCommand.SetHandler(GetGenePoolInfo);
 
         var networksCommand = new Command("networks");
         rootCommand.AddCommand(networksCommand);
@@ -1055,7 +1055,7 @@ internal static class Program
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static Task<int> LoginGenePool() =>
+    private static Task<int> Login() =>
         RunAsAdmin(
             from _ in unitEff
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
@@ -1063,7 +1063,7 @@ internal static class Program
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static Task<int> GetGenePoolStatus() =>
+    private static Task<int> GetGenePoolInfo() =>
         RunAsAdmin(
             from _ in unitEff
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
@@ -1071,7 +1071,7 @@ internal static class Program
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static Task<int> LogoutGenePool() =>
+    private static Task<int> Logout() =>
         RunAsAdmin(
             from _ in unitEff
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
