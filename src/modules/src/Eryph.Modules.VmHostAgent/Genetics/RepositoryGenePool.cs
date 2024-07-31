@@ -54,20 +54,20 @@ internal class RepositoryGenePool(
             .ToEither(ex => Error.New("Could not create the gene pool API client.", ex)).ToAsync()
         select client;
 
-    public EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier genesetIdentifier,
+    public EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier geneSetIdentifier,
         CancellationToken cancel)
     {
         return from genePoolClient in CreateClient()
             from geneSetInfo in Prelude.TryAsync(async () =>
             {
-                var genesetTagClient = genePoolClient.GetGenesetTagClient(genesetIdentifier);
+                var genesetTagClient = genePoolClient.GetGenesetTagClient(geneSetIdentifier);
                 var response = await genesetTagClient.GetForDownloadAsync(cancel)
                                ?? throw new InvalidDataException("empty response from geneset api");
 
-                return new GeneSetInfo(genesetIdentifier, "", response.Manifest, response.Genes);
+                return new GeneSetInfo(geneSetIdentifier, "", response.Manifest, response.Genes);
             }).ToEither(ex =>
             {
-                log.LogDebug(ex, "Failed to provide geneset {geneset} from gene pool {genepool}", genesetIdentifier,
+                log.LogDebug(ex, "Failed to provide geneset {geneset} from gene pool {genepool}", geneSetIdentifier,
                     PoolName);
                 return Error.New(ex);
             })
@@ -76,14 +76,14 @@ internal class RepositoryGenePool(
 
     }
 
-    public EitherAsync<Error, GeneInfo> RetrieveGene(GeneSetInfo genesetInfo, GeneIdentifier geneIdentifier,
+    public EitherAsync<Error, GeneInfo> RetrieveGene(GeneSetInfo geneSetInfo, GeneIdentifier geneIdentifier,
         string geneHash, CancellationToken cancel)
     {
         return from parsedGeneId in ParseGeneHash(geneHash).ToAsync()
             from genePoolClient in CreateClient()
             from geneInfo in Prelude.TryAsync(async () =>
             {
-                var downloadEntry = genesetInfo.GeneDownloadInfo.FirstOrDefault(x =>
+                var downloadEntry = geneSetInfo.GeneDownloadInfo.FirstOrDefault(x =>
                     x.Gene == parsedGeneId.Hash);
 
                 if (downloadEntry == null)

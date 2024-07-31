@@ -13,7 +13,7 @@ internal interface IGenePool
 {
     EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier genesetIdentifier, CancellationToken cancel);
 
-    EitherAsync<Error, GeneInfo> RetrieveGene(GeneSetInfo imageInfo, GeneIdentifier geneIdentifier, string geneHash, CancellationToken cancel);
+    EitherAsync<Error, GeneInfo> RetrieveGene(GeneSetInfo geneSetInfo, GeneIdentifier geneIdentifier, string geneHash, CancellationToken cancel);
 
     EitherAsync<Error, long> RetrieveGenePart(GeneInfo geneInfo, string genePartHash, long availableSize, long totalSize, Func<string, int, Task<Unit>> reportProgress, Stopwatch stopwatch, CancellationToken cancel);
 
