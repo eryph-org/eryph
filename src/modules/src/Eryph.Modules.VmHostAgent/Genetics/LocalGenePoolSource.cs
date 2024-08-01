@@ -113,7 +113,7 @@ internal class LocalGenePoolSource(
             await hashAlg.ComputeHashAsync(dataStream, cancel);
             var hashString = GetHashString(hashAlg.Hash);
 
-            return hashString != parsedHash.Hash;
+            return hashString == parsedHash.Hash;
         }).ToEither()
         from _3 in guard(isHashValid,
             Error.New($"Failed to verify the hash of the gene part '{geneInfo}/{parsedHash.Hash[..12]}'."))

@@ -174,7 +174,7 @@ internal class RepositoryGenePool(
             if (contentLength == 0)
                 throw new InvalidDataException($"Could not find gene part '{messageName}' on {PoolName}.");
 
-            var partFile = Path.Combine(geneInfo.LocalPath, $"{partHash}.part");
+            var partFile = Path.Combine(geneInfo.LocalPath!, $"{partHash}.part");
 
             await using var responseStream = await response.Content.ReadAsStreamAsync(cancel);
             using var hashAlg = CreateHashAlgorithm(hashAlgName);
@@ -219,12 +219,12 @@ internal class RepositoryGenePool(
                 // connection is lost. Hence, we explicitly define a reasonable timeout.
                 // See https://github.com/dotnet/runtime/issues/36822.
                 using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancel, timeoutCts.Token);
-                var bytesRead = await source.ReadAsync(new Memory<byte>(buffer), cts.Token);
+                using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancel, timeoutCts.Token);
+                var bytesRead = await source.ReadAsync(new Memory<byte>(buffer), combinedCts.Token);
+                combinedCts.Token.ThrowIfCancellationRequested();
+                
                 if (bytesRead <= 0)
                     return;
-
-                cancel.ThrowIfCancellationRequested();
 
                 await destination.WriteAsync(new ReadOnlyMemory<byte>(buffer, 0, bytesRead), cancel);
                 totalRead += bytesRead;
