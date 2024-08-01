@@ -55,6 +55,30 @@
         "DOTNET_ENVIRONMENT": "Development"
       },
       "remoteDebugEnabled": false
+    },
+    "login": {
+      "commandName": "Project",
+      "commandLineArgs": "login",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
+    },
+    "logout": {
+      "commandName": "Project",
+      "commandLineArgs": "logout",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
+    },
+    "genepool info": {
+      "commandName": "Project",
+      "commandLineArgs": "genepool info",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "remoteDebugEnabled": false
     }
   }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
-
+using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent;
@@ -14,13 +14,13 @@ public interface IHostSettingsProvider
     EitherAsync<Error, HostSettings> GetHostSettings();
 }
 
-public class HostSettingsProvider : IHostSettingsProvider
+public class HostSettingsProvider(ILoggerFactory loggerFactory)
+    : IHostSettingsProvider
 {
     public EitherAsync<Error, HostSettings> GetHostSettings() =>
-        from hostSettings in HostSettingsProvider<WmiRuntime>.getHostSettings()
-            .Run(WmiRuntime.New())
-            .ToEitherAsync()
-        select hostSettings;
+        HostSettingsProvider<SimpleAgentRuntime>.getHostSettings()
+            .Run(SimpleAgentRuntime.New(loggerFactory))
+            .ToEitherAsync();
 }
 
 public static class HostSettingsProvider<RT> where RT : struct, HasWmi<RT>

@@ -13,14 +13,18 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
+using Eryph.AnsiConsole;
 using Eryph.App;
+using Eryph.AnsiConsole.Sys;
 using Eryph.ModuleCore;
 using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Configuration;
+using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
+using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
@@ -46,7 +50,6 @@ using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
-using LanguageExt.Sys;
 using LanguageExt.Sys.IO;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Hosting.WindowsServices;
@@ -57,9 +60,9 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.Win32;
 using Spectre.Console;
-using Spectre.Console.Rendering;
 
 using static LanguageExt.Prelude;
+using static Eryph.AnsiConsole.Prelude;
 
 namespace Eryph.Runtime.Zero;
 
@@ -138,6 +141,20 @@ internal static class Program
             nonInteractiveOption, noCurrentConfigCheckOption);
         agentSettingsCommand.AddCommand(importAgentSettingsCommand);
 
+        var loginCommand = new Command("login");
+        rootCommand.AddCommand(loginCommand);
+        loginCommand.SetHandler(Login);
+
+        var logoutCommand = new Command("logout");
+        rootCommand.AddCommand(logoutCommand);
+        logoutCommand.SetHandler(Logout);
+
+        var genePoolCommand = new Command("genepool");
+        rootCommand.AddCommand(genePoolCommand);
+
+        var genePoolInfoCommand = new Command("info");
+        genePoolCommand.AddCommand(genePoolInfoCommand);
+        genePoolInfoCommand.SetHandler(GetGenePoolInfo);
 
         var networksCommand = new Command("networks");
         rootCommand.AddCommand(networksCommand);
@@ -229,8 +246,7 @@ internal static class Program
 
             try
             {
-                var fileVersion = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location);
-                logger.Information("Starting eryph-zero {Version}", fileVersion.ProductVersion);
+                logger.Information("Starting eryph-zero {Version}", new ZeroApplicationInfoProvider().ProductVersion);
 
                 if (warmupMode)
                     logger.Information("Running in warmup mode. Process will be stopped after start is completed");
@@ -302,7 +318,9 @@ internal static class Program
                     }
                     else
                     {
-                        WriteError(error);
+                        Spectre.Console.AnsiConsole.Write(new Rows(
+                            new Markup("[red]The command failed with the following error(s):[/]"),
+                            Renderable(error)));
                     }
                     return error.Code;
                 }
@@ -523,7 +541,7 @@ internal static class Program
 
                     EitherAsync<Error, Unit> CopyService()
                     {
-                        return Prelude.TryAsync(async () =>
+                        return TryAsync(async () =>
                         {
                             Log.Logger.Information("Copy new files...");
                             if (Directory.Exists(targetDir))
@@ -570,7 +588,7 @@ internal static class Program
                             LogProgress("Stopping running service...").Bind(_ =>
                                 serviceManager.EnsureServiceStopped(cancelSource1.Token))
                             : Unit.Default
-                        from uDBackup in Prelude.TryAsync(async () =>
+                        from uDBackup in TryAsync(async () =>
                         {
                             if (!Directory.Exists(dataDir)) return Unit.Default;
 
@@ -581,7 +599,7 @@ internal static class Program
                             dataBackupCreated = true;
                             return Unit.Default;
                         }).ToEither()
-                        from ovsRootPath in Prelude.Try(() => OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>()))
+                        from ovsRootPath in Try(() => OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>()))
                             .ToEitherAsync()
                         from _ in DriverCommands.EnsureDriver(ovsRootPath, true, true, loggerFactory).Map(r => r.ToEither()).ToAsync()
                         from uCopy in CopyService() 
@@ -655,7 +673,7 @@ internal static class Program
                             from uStopped in serviceExists
                                 ? serviceManager.EnsureServiceStopped(cancelSourceStop.Token)
                                 : Unit.Default
-                            from uCopy in Prelude.TryAsync (async () =>
+                            from uCopy in TryAsync (async () =>
                             {
                                 if (backupCreated)
                                 {
@@ -726,7 +744,7 @@ internal static class Program
         EitherAsync<Error, Unit> RunWarmup(string eryphBinPath)
         {
             var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-            return Prelude.TryAsync(async () =>
+            return TryAsync(async () =>
                         {
                 var process = new Process
                 {
@@ -950,7 +968,7 @@ internal static class Program
         EitherAsync<Error, Unit> RunWarmup(string eryphBinPath)
         {
             var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-            return Prelude.TryAsync(async () =>
+            return TryAsync(async () =>
             {
                 var process = new Process
                 {
@@ -1015,13 +1033,13 @@ internal static class Program
 
     private static Task<int> GetAgentSettings(FileSystemInfo? outFile) =>
         RunAsAdmin(
-            from hostSettings in HostSettingsProvider<AgentSettingsRuntime>.getHostSettings()
-            from yaml in VmHostAgentConfiguration<AgentSettingsRuntime>.getConfigYaml(
+            from hostSettings in HostSettingsProvider<SimpleConsoleRuntime>.getHostSettings()
+            from yaml in VmHostAgentConfiguration<SimpleConsoleRuntime>.getConfigYaml(
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
-            from _ in WriteOutput<AgentSettingsRuntime>(outFile, yaml)
+            from _ in WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
-            AgentSettingsRuntime.New());
+            SimpleConsoleRuntime.New());
 
     private static Task<int> ImportAgentSettings(
         FileSystemInfo? inFile,
@@ -1029,13 +1047,37 @@ internal static class Program
         bool noCurrentConfigCheck) =>
         RunAsAdmin(
             from configString in ReadInput(inFile)
-            from hostSettings in HostSettingsProvider<AgentSettingsRuntime>.getHostSettings()
-            from _ in VmHostAgentConfigurationUpdate<AgentSettingsRuntime>.updateConfig(
+            from hostSettings in HostSettingsProvider<SimpleConsoleRuntime>.getHostSettings()
+            from _ in VmHostAgentConfigurationUpdate<SimpleConsoleRuntime>.updateConfig(
                 configString,
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
             select unit,
-            AgentSettingsRuntime.New());
+            SimpleConsoleRuntime.New());
+
+    private static Task<int> Login() =>
+        RunAsAdmin(
+            from _ in unitEff
+            let genePoolApiStore = new ZeroGenePoolApiKeyStore()
+            from __ in GenePoolCli<SimpleConsoleRuntime>.login(genePoolApiStore)
+            select unit,
+            SimpleConsoleRuntime.New());
+
+    private static Task<int> GetGenePoolInfo() =>
+        RunAsAdmin(
+            from _ in unitEff
+            let genePoolApiStore = new ZeroGenePoolApiKeyStore()
+            from __ in GenePoolCli<SimpleConsoleRuntime>.getApiKeyStatus(genePoolApiStore)
+            select unit,
+            SimpleConsoleRuntime.New());
+
+    private static Task<int> Logout() =>
+        RunAsAdmin(
+            from _ in unitEff
+            let genePoolApiStore = new ZeroGenePoolApiKeyStore()
+            from __ in GenePoolCli<SimpleConsoleRuntime>.logout(genePoolApiStore)
+            select unit,
+            SimpleConsoleRuntime.New());
 
     private static async Task<int> GetDriverStatus()
     {
@@ -1050,9 +1092,9 @@ internal static class Program
     private static Task<int> GetNetworks(FileSystemInfo? outFile) =>
         Run(
             from yaml in new NetworkProviderManager().GetCurrentConfigurationYaml().ToAff(e => e)
-            from _ in  WriteOutput<LanguageExt.Sys.Live.Runtime>(outFile, yaml)
+            from _ in  WriteOutput<SimpleConsoleRuntime>(outFile, yaml)
             select unit,
-            LanguageExt.Sys.Live.Runtime.New());
+            SimpleConsoleRuntime.New());
 
     private static async Task<int> ImportNetworkConfig(FileSystemInfo? inFile, bool nonInteractive,
         bool noCurrentConfigCheck)
@@ -1122,50 +1164,29 @@ internal static class Program
     });
 
     private static Aff<RT, Unit> WriteOutput<RT>(FileSystemInfo? outFile, string content)
-        where RT : struct, HasConsole<RT>, HasFile<RT> =>
+        where RT : struct, HasAnsiConsole<RT>, HasFile<RT> =>
         from _ in Optional(outFile).Match(
             Some: fsi => File<RT>.writeAllText(fsi.FullName, content),
-            None: () => Console<RT>.writeLine(content))
+            None: () => AnsiConsole<RT>.writeLine(content))
         select unit;
 
     private static Task<int> Run<RT>(Aff<RT, Unit> action, RT runtime)
-        where RT : struct, HasCancel<RT> =>
-        action.Run(runtime).AsTask().Map(r => r.Match(
-            Succ: _ => 0,
-            Fail: error =>
-            {
-                WriteError(error);
-                return -1;
-            }));
+        where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
+        action.Catch(e =>
+                from _ in AnsiConsole<RT>.write(new Rows(
+                    new Markup("[red]The command failed with the following error(s):[/]"),
+                    Renderable(e)))
+                from __ in FailAff<RT>(e)
+                select unit)
+            .Run(runtime)
+            .AsTask()
+            .Map(r => r.Match(
+                Succ: _ => 0,
+                Fail: error => error.Code != 0 ? error.Code : -1));
 
     private static Task<int> RunAsAdmin<RT>(Aff<RT, Unit> action, RT runtime)
-        where RT : struct, HasCancel<RT> =>
+        where RT : struct, HasAnsiConsole<RT>, HasCancel<RT> =>
         AdminGuard.CommandIsElevated(() => Run(action, runtime));
-
-    private static void WriteError(Error error)
-    {
-        Grid createGrid() => new Grid()
-            .AddColumn(new GridColumn() { Width = 2 })
-            .AddColumn();
-
-        Grid addRow(Grid grid, IRenderable renderable) =>
-            grid.AddRow(new Markup(""), renderable);
-
-        Grid addToGrid(Grid grid, Error error) => error switch
-        {
-            ManyErrors me => me.Errors.Fold(grid, addToGrid),
-            Exceptional ee => addRow(grid, ee.ToException().GetRenderable()),
-            _ => addRow(grid, new Text(error.Message))
-                    .Apply(g => error.Inner.Match(
-                        Some: ie => addRow(g, addToGrid(createGrid(), ie)),
-                        None: () => g)),
-        };
-
-        AnsiConsole.Write(new Rows(
-            new Markup("[red]The command failed with the following error(s):[/]"),
-            addToGrid(createGrid(), error)));
-        AnsiConsole.WriteLine();
-    }
 
     private static void CopyDirectory(string sourceDir, string destinationDir, params string[] ignoredFiles)
     {

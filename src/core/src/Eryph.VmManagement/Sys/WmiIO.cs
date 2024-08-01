@@ -15,7 +15,7 @@ public interface WmiIO
     public Seq<HashMap<string, Option<object>>> ExecuteQuery(string path, string query);
 }
 
-public class LiveWmiIO : WmiIO
+public readonly struct LiveWmiIO : WmiIO
 {
     public static readonly WmiIO Default = new LiveWmiIO();
 

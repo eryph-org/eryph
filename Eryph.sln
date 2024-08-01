@@ -103,6 +103,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.TestBase
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Rebus.Tests", "src\infrastructure\test\Eryph.Rebus.Tests\Eryph.Rebus.Tests.csproj", "{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.AnsiConsole", "src\modules\src\Eryph.AnsiConsole\Eryph.AnsiConsole.csproj", "{B6753304-4FF6-474C-8DCF-6CC028EFB199}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -273,6 +275,10 @@ Global
 		{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6753304-4FF6-474C-8DCF-6CC028EFB199}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6753304-4FF6-474C-8DCF-6CC028EFB199}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6753304-4FF6-474C-8DCF-6CC028EFB199}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6753304-4FF6-474C-8DCF-6CC028EFB199}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -319,6 +325,7 @@ Global
 		{C85F3B0A-FD64-4E07-A52E-D3BD7FE0D5D1} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{07EA56EB-0B74-485B-8008-268C0B9A43AC} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{03B7CC02-557A-4F29-BD61-E3C6899EF9FF} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{B6753304-4FF6-474C-8DCF-6CC028EFB199} = {E889B549-C333-46DC-B71F-9608CBA1FBAA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

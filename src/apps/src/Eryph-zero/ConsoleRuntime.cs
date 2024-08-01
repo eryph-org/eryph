@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Threading;
 using Dbosoft.OVN;
+using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
 using Eryph.Core.Sys;
 using Eryph.Modules.VmHostAgent;
@@ -17,7 +18,8 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero;
 
-public readonly struct ConsoleRuntime : 
+public readonly struct ConsoleRuntime :
+    HasAnsiConsole<ConsoleRuntime>,
     HasPowershell<ConsoleRuntime>,
     HasOVSControl<ConsoleRuntime>,
     HasAgentSyncClient<ConsoleRuntime>,
@@ -84,4 +86,6 @@ public readonly struct ConsoleRuntime :
     public Eff<ConsoleRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
 
     public Eff<ConsoleRuntime, DismIO> DismEff => SuccessEff(LiveDismIO.Default);
+
+    public Eff<ConsoleRuntime, AnsiConsoleIO> AnsiConsoleEff => SuccessEff(LiveAnsiConsoleIO.Default);
 }
