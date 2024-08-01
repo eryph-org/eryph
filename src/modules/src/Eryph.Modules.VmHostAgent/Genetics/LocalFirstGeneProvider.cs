@@ -34,20 +34,15 @@ internal class LocalFirstGeneProvider(
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
-        from genesetInfo in ProvideGeneSet(genePoolPath, geneIdentifier.GeneSet, [], cancel)
-            .Map(i =>
-            {
-                if (i.Id != geneIdentifier.GeneSet)
-                    reportProgress($"Resolved geneset '{geneIdentifier.GeneSet}' as '{i.Id}'", 0);
-                return i;
-            })
-        let newGeneIdentifier = new GeneIdentifier(genesetInfo.Id, geneIdentifier.GeneName)
-        from geneHash in GetGeneHash(genesetInfo, geneType, newGeneIdentifier)
-        from ensuredGene in EnsureGene(genesetInfo, newGeneIdentifier, geneHash, reportProgress, cancel)
+        from geneSetInfo in ProvideGeneSet(genePoolPath, geneIdentifier.GeneSet, [], cancel)
+        from _1 in guard(geneSetInfo.Id == geneIdentifier.GeneSet,
+            Error.New($"The gene '{geneIdentifier}' resolved to the gene set '{geneSetInfo.Id}'. "
+                + "This code must only be called with resolved IDs."))
+        from geneHash in GetGeneHash(geneSetInfo, geneType, geneIdentifier)
+        from _2 in EnsureGene(geneSetInfo, geneIdentifier, geneHash, reportProgress, cancel)
         select new PrepareGeneResponse
         {
             RequestedGene = new GeneIdentifierWithType(geneType, geneIdentifier),
-            ResolvedGene = new GeneIdentifierWithType(geneType, ensuredGene)
         };
 
     public EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
@@ -183,7 +178,7 @@ internal class LocalFirstGeneProvider(
         }
     }
 
-    private EitherAsync<Error, GeneIdentifier> EnsureGene(
+    private EitherAsync<Error, Unit> EnsureGene(
         GeneSetInfo genesetInfo,
         GeneIdentifier geneId,
         string geneHash,
@@ -224,7 +219,7 @@ internal class LocalFirstGeneProvider(
                 log.LogInformation(e, "Failed to merge parts of gene {GeneId}", geneId);
                 return e;
             })
-        select geneId;
+        select unit;
 
     private EitherAsync<Error, GeneInfo> EnsureGeneParts(GeneInfo geneInfo, Func<string, int, Task<Unit>> reportProgress, CancellationToken cancel)
     {

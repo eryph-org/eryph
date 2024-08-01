@@ -125,9 +125,6 @@ public class ResolveCatletConfigCommandHandler(
                 (_, _) => Task.FromResult(unit),
                 default)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
-        from a in guard(provideResult.RequestedGene == provideResult.ResolvedGene,
-            Error.New("The resolved gene is different. This code must only be called with resolved IDs. "
-                      + $"Requested: {provideResult.RequestedGene}; Resolved: {provideResult.ResolvedGene}"))
         from config in ReadCatletConfig(resolvedId, genepoolReader).ToAsync()
         from resolveResult in ResolveGeneSets(config, resolvedGeneSets, geneProvider, cancellationToken)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))

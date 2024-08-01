@@ -30,9 +30,7 @@ public class PrepareGeneCommandHandler : IHandleMessages<
         try
         {
             await _imageRequestDispatcher.NewGeneRequestTask(
-                message,
-                message.Command.GeneIdentifier.GeneType,
-                message.Command.GeneIdentifier.GeneIdentifier.Value);
+                message, message.Command.GeneIdentifier);
         }
         catch (Exception ex)
         {

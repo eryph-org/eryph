@@ -12,12 +12,13 @@ using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.GenePool.Client;
 using Eryph.GenePool.Client.Credentials;
-using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
 using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;
 
@@ -31,6 +32,8 @@ internal class RepositoryGenePool(
     string poolName)
     : GenePoolBase, IGenePool
 {
+    private const int BufferSize = 65536;
+
     public string PoolName => poolName;
 
     private EitherAsync<Error, GenePoolClient> CreateClient() =>
@@ -43,7 +46,7 @@ internal class RepositoryGenePool(
             },
             HardwareId = hardwareIdProvider.HashedHardwareId,
         }
-        from client in Prelude.Try(() => apiKey.Match(
+        from client in Try(() => apiKey.Match(
                 Some: key => new GenePoolClient(
                     GenePoolConstants.EryphGenePool.ApiEndpoint,
                     new ApiKeyCredential(key.Secret),
@@ -54,176 +57,174 @@ internal class RepositoryGenePool(
             .ToEither(ex => Error.New("Could not create the gene pool API client.", ex)).ToAsync()
         select client;
 
-    public EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier genesetIdentifier,
-        CancellationToken cancel)
-    {
-        return from genePoolClient in CreateClient()
-            from geneSetInfo in Prelude.TryAsync(async () =>
+    public EitherAsync<Error, GeneSetInfo> ProvideGeneSet(
+        string path,
+        GeneSetIdentifier geneSetIdentifier,
+        CancellationToken cancel) =>
+        from genePoolClient in CreateClient()
+        from geneSetInfo in TryAsync(async () =>
+        {
+            var genesetTagClient = genePoolClient.GetGenesetTagClient(geneSetIdentifier);
+            var response = await genesetTagClient.GetForDownloadAsync(cancel)
+                           ?? throw new InvalidDataException("empty response from geneset api");
+
+            return new GeneSetInfo(geneSetIdentifier, "", response.Manifest, response.Genes);
+        }).ToEither(ex =>
+        {
+            log.LogDebug(ex, "Failed to provide geneset {geneset} from gene pool {genepool}", geneSetIdentifier,
+                PoolName);
+            return Error.New(ex);
+        })
+        select geneSetInfo;
+
+    public EitherAsync<Error, GeneInfo> RetrieveGene(
+        GeneSetInfo geneSetInfo,
+        GeneIdentifier geneIdentifier,
+        string geneHash,
+        CancellationToken cancel) =>
+        from parsedGeneId in ParseGeneHash(geneHash).ToAsync()
+        from genePoolClient in CreateClient()
+        from geneInfo in TryAsync(async () =>
+        {
+            var downloadEntry = geneSetInfo.GeneDownloadInfo.FirstOrDefault(x =>
+                x.Gene == parsedGeneId.Hash);
+
+            if (downloadEntry == null)
             {
-                var genesetTagClient = genePoolClient.GetGenesetTagClient(genesetIdentifier);
-                var response = await genesetTagClient.GetForDownloadAsync(cancel)
-                               ?? throw new InvalidDataException("empty response from geneset api");
+                var geneClient = genePoolClient.GetGeneClient(geneIdentifier.GeneSet.Value, parsedGeneId.Hash);
 
-                return new GeneSetInfo(genesetIdentifier, "", response.Manifest, response.Genes);
-            }).ToEither(ex =>
-            {
-                log.LogDebug(ex, "Failed to provide geneset {geneset} from gene pool {genepool}", genesetIdentifier,
-                    PoolName);
-                return Error.New(ex);
-            })
-            select geneSetInfo;
-
-
-    }
-
-    public EitherAsync<Error, GeneInfo> RetrieveGene(GeneSetInfo genesetInfo, GeneIdentifier geneIdentifier,
-        string geneHash, CancellationToken cancel)
-    {
-        return from parsedGeneId in ParseGeneHash(geneHash).ToAsync()
-            from genePoolClient in CreateClient()
-            from geneInfo in Prelude.TryAsync(async () =>
-            {
-                var downloadEntry = genesetInfo.GeneDownloadInfo.FirstOrDefault(x =>
-                    x.Gene == parsedGeneId.Hash);
-
-                if (downloadEntry == null)
-                {
-                    var geneClient = genePoolClient.GetGeneClient(geneIdentifier.GeneSet.Value, parsedGeneId.Hash);
-
-                    var response = await geneClient.GetAsync(cancel)
-                                   ?? throw new InvalidDataException("empty response from gene api");
-
-                    downloadEntry = new GetGeneDownloadResponse(parsedGeneId.Hash, response.Manifest,
-                        response.DownloadUris, response.DownloadExpires.GetValueOrDefault());
-                }
-
-                return new GeneInfo(geneIdentifier, parsedGeneId.Hash,
-                    parsedGeneId.HashAlg, downloadEntry.Manifest,
-                    downloadEntry.DownloadUris, downloadEntry.DownloadExpires,
-                    null, false);
-
-            }).ToEither(ex =>
-            {
-                log.LogDebug(ex, "Failed to provide gene '{gene}' from gene pool {source}", geneIdentifier, PoolName);
-                return Error.New(ex);
-            })
-            select geneInfo;
-
-    }
-
-    public EitherAsync<Error, long> RetrieveGenePart(GeneInfo geneInfo, string genePart,
-        long availableSize, long totalSize, Func<string, int, Task<Unit>> reportProgress, Stopwatch stopwatch,
-        CancellationToken cancel)
-    {
-        if (string.IsNullOrWhiteSpace(geneInfo.LocalPath))
-            throw new ArgumentException("local path of gene is not set.", nameof(geneInfo));
-
-        return from parsedPartId in ParseGenePartHash(genePart).ToAsync()
-            from genePoolClient in CreateClient()
-            from genePartUrl in Prelude.TryAsync(async () =>
-            {
-                var urlEntry = (geneInfo.DownloadUris ?? Array.Empty<GenePartDownloadUri>())
-                    .FirstOrDefault(x => x.Part == genePart);
-
-                if (urlEntry != null)
-                {
-                    var expiresLocal = DateTimeOffset.UtcNow.AddMinutes(5);
-                    if (geneInfo.DownloadExpires > expiresLocal)
-                        return urlEntry.DownloadUri;
-                }
-
-                var gene = genePoolClient.GetGeneClient(geneInfo.GeneId.GeneSet.Value, geneInfo.Hash);
-                var response = await gene.GetAsync(cancel)
+                var response = await geneClient.GetAsync(cancel)
                                ?? throw new InvalidDataException("empty response from gene api");
-                urlEntry = (response.DownloadUris ?? Array.Empty<GenePartDownloadUri>())
-                    .FirstOrDefault(x => x.Part == genePart);
 
-                if (urlEntry == null)
-                    throw new InvalidDataException(
-                        $"Could not find gene part '{geneInfo.GeneId}/{parsedPartId.Hash}' on {PoolName}.");
+                downloadEntry = new GetGeneDownloadResponse(parsedGeneId.Hash, response.Manifest,
+                    response.DownloadUris, response.DownloadExpires.GetValueOrDefault());
+            }
 
-                return urlEntry.DownloadUri;
+            return new GeneInfo(geneIdentifier, parsedGeneId.Hash,
+                parsedGeneId.HashAlg, downloadEntry.Manifest,
+                downloadEntry.DownloadUris, downloadEntry.DownloadExpires,
+                null, false);
 
-            }).ToEither()
-            from fileSize in Prelude.TryAsync(async () =>
+        }).ToEither(ex =>
+        {
+            log.LogDebug(ex, "Failed to provide gene '{gene}' from gene pool {source}", geneIdentifier, PoolName);
+            return Error.New(ex);
+        })
+        select geneInfo;
+
+    public EitherAsync<Error, long> RetrieveGenePart(
+        GeneInfo geneInfo,
+        string genePartHash,
+        long availableSize,
+        long totalSize,
+        Func<string, int, Task<Unit>> reportProgress,
+        Stopwatch stopwatch,
+        CancellationToken cancel) =>
+        from parsedPartId in ParseGenePartHash(genePartHash).ToAsync()
+        from _ in guard(notEmpty(geneInfo.LocalPath),
+            Error.New("The local path was not provided with the gene.")).ToEitherAsync()
+        from genePoolClient in CreateClient()
+        from genePartUrl in TryAsync(async () =>
+        {
+            var urlEntry = geneInfo.DownloadUris?.FirstOrDefault(x => x.Part == genePartHash);
+
+            if (urlEntry != null)
             {
-                var (hashAlgName, partHash) = parsedPartId;
-                var messageName = $"{geneInfo}/{partHash[..12]}";
+                var expiresLocal = DateTimeOffset.UtcNow.AddMinutes(5);
+                if (geneInfo.DownloadExpires > expiresLocal)
+                    return urlEntry.DownloadUri;
+            }
 
-                log.LogTrace("gene {gene}, part {genePart} url: {url}", geneInfo,
-                    genePart, genePartUrl);
+            var gene = genePoolClient.GetGeneClient(geneInfo.GeneId.GeneSet.Value, geneInfo.Hash);
+            var response = await gene.GetAsync(cancel)
+                           ?? throw new InvalidDataException("empty response from gene api");
+            urlEntry = response.DownloadUris?.FirstOrDefault(x => x.Part == genePartHash);
 
-                using var httpClient = httpClientFactory.CreateClient();
-                var response = await httpClient.GetAsync(genePartUrl, HttpCompletionOption.ResponseHeadersRead, cancel);
+            if (urlEntry == null)
+                throw new InvalidDataException(
+                    $"Could not find gene part '{geneInfo.GeneId}/{parsedPartId.Hash}' on {PoolName}.");
 
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                    throw new InvalidDataException($"Could not find gene part {messageName} on {PoolName}.");
+            return urlEntry.DownloadUri;
 
-                if (response.StatusCode != HttpStatusCode.OK)
-                {
-                    throw new InvalidDataException(
-                        $"Failed to connect to gene pool. Received a {response.StatusCode} HTTP response.");
-                }
+        }).ToEither()
+        from fileSize in TryAsync(async () =>
+        {
+            var (hashAlgName, partHash) = parsedPartId;
+            var messageName = $"{geneInfo}/{partHash[..12]}";
 
-                var contentLength = response.Content.Headers.ContentLength.GetValueOrDefault(0);
-                log.LogTrace("gene part {gene}/{part} content length: {contentLength}", geneInfo, partHash,
-                    contentLength);
+            log.LogTrace("gene {Gene}, part {GenePart} url: {Url}",
+                geneInfo, genePartHash, genePartUrl);
 
-                if (contentLength == 0)
-                    throw new InvalidDataException($"Could not find gene part '{messageName}' on {PoolName}.");
+            using var httpClient = httpClientFactory.CreateClient();
+            var response = await httpClient.GetAsync(genePartUrl, HttpCompletionOption.ResponseHeadersRead, cancel);
 
-                var partFile = Path.Combine(geneInfo.LocalPath, $"{partHash}.part");
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                throw new InvalidDataException($"Could not find gene part {messageName} on {PoolName}.");
 
-                await using var responseStream = await response.Content.ReadAsStreamAsync(cancel);
-                using var hashAlg = CreateHashAlgorithm(hashAlgName);
-                // ReSharper disable once ConvertToUsingDeclaration
-                await using (var tempFileStream = fileSystem.OpenWrite(partFile))
-                {
-                    await using var cryptoStream = new CryptoStream(responseStream, hashAlg, CryptoStreamMode.Read);
-                    await CopyToAsync(cryptoStream, tempFileStream, reportProgress,
-                        geneInfo.GeneId,
-                        availableSize, totalSize, stopwatch, cancel: cancel);
+            if (response.StatusCode != HttpStatusCode.OK)
+            {
+                throw new InvalidDataException(
+                    $"Failed to connect to gene pool. Received a {response.StatusCode} HTTP response.");
+            }
 
-                }
+            var contentLength = response.Content.Headers.ContentLength.GetValueOrDefault(0);
+            log.LogTrace("gene part {Gene}/{Part} content length: {ContentLength}",
+                geneInfo, partHash, contentLength);
 
-                var hashString = GetHashString(hashAlg.Hash);
-                log.LogTrace("gene part {part} hash: {hashString}", messageName, hashString);
+            if (contentLength == 0)
+                throw new InvalidDataException($"Could not find gene part '{messageName}' on {PoolName}.");
 
-                if (hashString != partHash)
-                {
-                    log.LogInformation("gene part '{part}' hash mismatch. Actual hash: {hashString}",
-                        messageName,
-                        hashString);
+            var partFile = Path.Combine(geneInfo.LocalPath!, $"{partHash}.part");
 
-                    fileSystem.FileDelete(partFile);
-                    throw new HashVerificationException($"Failed to verify hash of gene part '{messageName}'");
-                }
+            await using var responseStream = await response.Content.ReadAsStreamAsync(cancel);
+            using var hashAlg = CreateHashAlgorithm(hashAlgName);
+            // ReSharper disable once ConvertToUsingDeclaration
+            await using (var tempFileStream = fileSystem.OpenWrite(partFile))
+            {
+                await using var cryptoStream = new CryptoStream(responseStream, hashAlg, CryptoStreamMode.Read);
+                await CopyToAsync(cryptoStream, tempFileStream, reportProgress,
+                    geneInfo.GeneId,
+                    availableSize, totalSize, stopwatch, cancel: cancel);
+            }
 
+            var hashString = GetHashString(hashAlg.Hash);
+            log.LogTrace("gene part {Part} hash: {HashString}", messageName, hashString);
+
+            if (hashString == partHash)
                 return fileSystem.GetFileSize(partFile);
+            
+            log.LogInformation("gene part '{Part}' hash mismatch. Actual hash: {HashString}",
+                messageName, hashString);
 
-            }).ToEither()
-            select fileSize;
-
-    }
-
-
+            fileSystem.FileDelete(partFile);
+            throw new HashVerificationException($"Failed to verify hash of gene part '{messageName}'");
+        }).ToEither()
+        select fileSize;
 
     private async Task CopyToAsync(Stream source, Stream destination, Func<string, int, Task<Unit>> reportProgress,
         GeneIdentifier geneIdentifier, long availableSize, long totalSize,
-        Stopwatch stopwatch, int bufferSize = 65536, CancellationToken cancel = default)
+        Stopwatch stopwatch, CancellationToken cancel = default)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+        var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
 
         try
         {
-
-            int bytesRead;
             long totalRead = 0;
             var totalMb = totalSize / 1024d / 1024d;
 
-            while ((bytesRead = await source.ReadAsync(new Memory<byte>(buffer), cancel)) > 0)
+            while (true)
             {
-                cancel.ThrowIfCancellationRequested();
+                // We are (indirectly) reading from a stream provided by the HTTP client.
+                // In this case, the read operation might block indefinitely if the network
+                // connection is lost. Hence, we explicitly define a reasonable timeout.
+                // See https://github.com/dotnet/runtime/issues/36822.
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+                using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cancel, timeoutCts.Token);
+                var bytesRead = await source.ReadAsync(new Memory<byte>(buffer), combinedCts.Token);
+                combinedCts.Token.ThrowIfCancellationRequested();
+                
+                if (bytesRead <= 0)
+                    return;
 
                 await destination.WriteAsync(new ReadOnlyMemory<byte>(buffer, 0, bytesRead), cancel);
                 totalRead += bytesRead;
@@ -235,19 +236,18 @@ internal class RepositoryGenePool(
                 var percent = totalReadMb / totalMb;
                 var percentInt = Convert.ToInt32(Math.Round(percent * 100, 0));
 
-                log.LogTrace("Pulling {geneIdentifier} ({totalReadMb} MB / {totalMb} MB) => {percent} completed",
+                log.LogTrace("Pulling {GeneIdentifier} ({TotalReadMb} MB / {TotalMb} MB) => {Percent} completed",
                     geneIdentifier, totalReadMb, totalMb, percent);
                 await reportProgress(
                     $"Pulling {geneIdentifier} ({totalReadMb:F} MB / {totalMb:F} MB) => {percent:P0} completed",
                     percentInt);
-                stopwatch.Restart();
 
+                stopwatch.Restart();
             }
         }
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
         }
-
     }
 }

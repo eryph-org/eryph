@@ -34,7 +34,6 @@ public static class GenePoolMockExtensions
                     ? RightAsync<Error, PrepareGeneResponse>(new PrepareGeneResponse()
                     {
                         RequestedGene = new GeneIdentifierWithType(geneType, geneId),
-                        ResolvedGene = new GeneIdentifierWithType(geneType, geneId),
                     })
                     : LeftAsync<Error, PrepareGeneResponse>(Error.New("The gene was not found.")));
     }
