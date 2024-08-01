@@ -89,22 +89,22 @@ internal class LocalGenePoolSource(
         select geneInfo;
 
     public EitherAsync<Error, long> RetrieveGenePart(
-        GeneInfo gene,
-        string genePart,
+        GeneInfo geneInfo,
+        string genePartHash,
         long availableSize,
         long totalSize,
         Func<string, int, Task<Unit>> reportProgress,
         Stopwatch stopwatch,
         CancellationToken cancel) =>
-        from parsedHash in ParseGenePartHash(genePart).ToAsync()
-        from _1 in guard(notEmpty(gene.LocalPath),
+        from parsedHash in ParseGenePartHash(genePartHash).ToAsync()
+        from _1 in guard(notEmpty(geneInfo.LocalPath),
                 Error.New("The local path was not provided with the gene."))
             .ToEitherAsync()
-        let cachedGenePartFile = Path.Combine(gene.LocalPath, $"{parsedHash.Hash}.part")
+        let cachedGenePartFile = Path.Combine(geneInfo.LocalPath!, $"{parsedHash.Hash}.part")
         from partExists in Try(() => fileSystem.FileExists(cachedGenePartFile))
             .ToEitherAsync()
         from _2 in guard(partExists,
-            Error.New($"The gene part '{gene}/{parsedHash.Hash[..12]}' is not available on the local gene pool."))
+            Error.New($"The gene part '{geneInfo}/{parsedHash.Hash[..12]}' is not available on the local gene pool."))
         from isHashValid in TryAsync(async () =>
         {
             using var hashAlg = CreateHashAlgorithm(parsedHash.HashAlg);
@@ -116,7 +116,7 @@ internal class LocalGenePoolSource(
             return hashString != parsedHash.Hash;
         }).ToEither()
         from _3 in guard(isHashValid,
-            Error.New($"Failed to verify the hash of the gene part '{gene}/{parsedHash.Hash[..12]}'."))
+            Error.New($"Failed to verify the hash of the gene part '{geneInfo}/{parsedHash.Hash[..12]}'."))
         from partSize in Try(() => fileSystem.GetFileSize(cachedGenePartFile))
             .ToEitherAsync()
         select partSize;
@@ -207,8 +207,6 @@ internal class LocalGenePoolSource(
                 geneSetInfo.GeneDownloadInfo);
 
         }).ToEither();
-
-
     }
 
     public EitherAsync<Error, GeneInfo> CacheGene(GeneInfo geneInfo, GeneSetInfo geneSetInfo, CancellationToken cancel)

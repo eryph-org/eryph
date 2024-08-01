@@ -11,7 +11,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics;
 
 internal interface IGenePool
 {
-    EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier genesetIdentifier, CancellationToken cancel);
+    EitherAsync<Error, GeneSetInfo> ProvideGeneSet(string path, GeneSetIdentifier geneSetIdentifier, CancellationToken cancel);
 
     EitherAsync<Error, GeneInfo> RetrieveGene(GeneSetInfo geneSetInfo, GeneIdentifier geneIdentifier, string geneHash, CancellationToken cancel);
 
