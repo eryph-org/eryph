@@ -25,7 +25,7 @@ public class Stop(
         return new StopCatletCommand
         {
             CatletId = model.Id, 
-            Graceful = request.Body.Graceful.GetValueOrDefault()
+            Mode = request.Body.Mode,
         };
     }
 

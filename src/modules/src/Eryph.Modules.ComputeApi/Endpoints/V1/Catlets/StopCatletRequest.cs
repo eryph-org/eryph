@@ -1,4 +1,5 @@
 ﻿using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Resources.Machines;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
@@ -9,8 +10,7 @@ public class StopCatletRequest : SingleEntityRequest
     public required StopCatletRequestBody Body { get; set; }
 }
 
-
 public class StopCatletRequestBody
 {
-   public bool? Graceful { get; set; }
+    public CatletStopMode Mode { get; set; }
 }
