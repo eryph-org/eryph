@@ -12,5 +12,5 @@ public class StopCatletRequest : SingleEntityRequest
 
 public class StopCatletRequestBody
 {
-    public CatletStopMode Mode { get; set; }
+    public required CatletStopMode Mode { get; set; }
 }
