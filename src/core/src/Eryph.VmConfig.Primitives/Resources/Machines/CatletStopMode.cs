@@ -20,8 +20,7 @@ public enum CatletStopMode
     /// </summary>
     Hard = 1,
 
-    /// <summary>
-    /// This mode is not yet implemented.
-    /// </summary>
-    Kill = 2,
+    // The kill mode will be implemented in the future and will
+    // terminate the underlying process of the Hyper-V VM.
+    // Kill = 2,
 }
