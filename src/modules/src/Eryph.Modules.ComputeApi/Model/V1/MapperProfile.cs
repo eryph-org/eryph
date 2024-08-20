@@ -76,6 +76,9 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             memberMap.ForMember(x => x.ProjectName, o => o.MapFrom(s => s.Project.Name));
             memberMap.ForMember(x => x.RoleName,
                 o => o.MapFrom((src,m) => RoleNames.GetRoleName(src.RoleId)));
+
+            CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>()
+                .ForMember(x => x.Project, o => o.MapFrom(s => s.Project.Name));
         }
     }
 }
