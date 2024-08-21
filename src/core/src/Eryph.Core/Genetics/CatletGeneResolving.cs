@@ -41,7 +41,10 @@ public static class CatletGeneResolving
     private static Either<Error, FodderConfig> ResolveGeneSetIdentifiers(
         FodderConfig fodderConfig,
         GeneSetMap resolvedGeneSets) =>
-        from resolvedGeneIdentifier in ResolveGeneSetIdentifier(fodderConfig.Source, resolvedGeneSets)
+        from resolvedGeneIdentifier in Optional(fodderConfig.Source)
+            .Filter(notEmpty)
+            .Map(s => ResolveGeneSetIdentifier(s, resolvedGeneSets))
+            .Sequence()
         select fodderConfig.CloneWith(c =>
         {
             c.Source = resolvedGeneIdentifier.Map(id => id.Value)
@@ -51,28 +54,23 @@ public static class CatletGeneResolving
     private static Either<Error, CatletDriveConfig> ResolveGeneSetIdentifiers(
         CatletDriveConfig driveConfig,
         GeneSetMap resolvedGeneSets) =>
-        from resolvedGeneIdentifier in ResolveGeneSetIdentifier(driveConfig.Source, resolvedGeneSets)
+        from resolvedSource in Optional(driveConfig.Source)
+            .Filter(s => s.StartsWith("gene:"))
+            .Map(s => ResolveGeneSetIdentifier(s, resolvedGeneSets))
+            .MapT(geneId => geneId.Value)
+            .Sequence()
         select driveConfig.CloneWith(c =>
         {
-            c.Source = resolvedGeneIdentifier.Map(id => id.Value)
-                .IfNoneUnsafe((string)null);
+            c.Source = resolvedSource.IfNoneUnsafe(driveConfig.Source);
         });
 
-    private static Either<Error, Option<GeneIdentifier>> ResolveGeneSetIdentifier(
-        Option<string> geneIdentifier,
+    private static Either<Error, GeneIdentifier> ResolveGeneSetIdentifier(
+        string geneIdentifier,
         GeneSetMap resolvedGeneSets) =>
-        from validGeneId in geneIdentifier
-            .Filter(notEmpty)
-            .Map(GeneIdentifier.NewEither)
-            .Sequence()
+        from validGeneId in GeneIdentifier.NewEither(geneIdentifier)
             .MapLeft(e => Error.New($"The gene ID '{geneIdentifier}' is invalid.", e))
-        from resolvedGeneSetId in validGeneId
-            .Map(geneId => geneId.GeneSet)
-            .Map(geneSetId => ResolveGeneSetIdentifier(geneSetId, resolvedGeneSets))
-            .Sequence()
-        select from geneSetId in resolvedGeneSetId
-               from geneId in validGeneId
-               select new GeneIdentifier(geneSetId, geneId.GeneName);
+        from resolvedGeneSetId in ResolveGeneSetIdentifier(validGeneId.GeneSet, resolvedGeneSets)
+        select new GeneIdentifier(resolvedGeneSetId, validGeneId.GeneName);
 
     private static Either<Error, GeneSetIdentifier> ResolveGeneSetIdentifier(
         GeneSetIdentifier geneSetId,
