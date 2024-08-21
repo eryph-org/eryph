@@ -57,7 +57,7 @@ internal class LocalGenePoolSource(
         CancellationToken cancel) =>
         from parsedHash in ParseGeneHash(geneHash).ToAsync()
         from genesInfo in Try(() => ReadGenesInfo(geneSetInfo)).ToEitherAsync()
-        from geneInfo in genesInfo.MergedGenes.ToSeq().Find(h => h == parsedHash.Hash).Match(
+        from geneInfo in genesInfo.MergedGenes.ToSeq().Find(h => h == geneHash).Match(
             Some: h => new GeneInfo(geneIdentifier, h, parsedHash.HashAlg, null,
                 [], DateTimeOffset.MinValue, null, true),
             None: () =>
