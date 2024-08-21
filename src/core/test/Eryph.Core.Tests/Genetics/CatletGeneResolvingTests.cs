@@ -115,9 +115,9 @@ public class CatletGeneResolvingTests
     }
 
     [Fact]
-    public void ResolveGeneSetIdentifiers_DriveSourceIsNotGene_ReturnsOriginalSource()
+    public void ResolveGeneSetIdentifiers_DriveSourceIsAPath_ReturnsOriginalSource()
     {
-        const string source = @"Z:\test-folder\test-disk.vhdx";
+        const string source = @"Z:\test-folder\test.vhdx";
 
         var config = new CatletConfig
         {
