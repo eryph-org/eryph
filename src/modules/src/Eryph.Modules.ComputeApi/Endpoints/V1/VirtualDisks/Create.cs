@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Messages.Resources.Disks;
@@ -12,14 +13,16 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
-using Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using LanguageExt;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+
+using static Dbosoft.Functional.Validations.ComplexValidations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 
@@ -56,7 +59,9 @@ public class Create(
         [FromBody] NewVirtualDiskRequest request,
         CancellationToken cancellationToken = default)
     {
-        // TODO validation
+        var validation = ValidateRequest(request);
+        if (validation.IsFail)
+            return ValidationProblem(validation.ToModelStateDictionary());
 
         var projectAccess = await userRightsProvider.HasProjectAccess(request.ProjectId, AccessRight.Write);
         if (!projectAccess)
@@ -69,4 +74,12 @@ public class Create(
 
         return await base.HandleAsync(request, cancellationToken);
     }
+
+    private static Validation<ValidationIssue, Unit> ValidateRequest(
+        NewVirtualDiskRequest request) =>
+        ValidateProperty(request, r => r.Name, CatletDriveName.NewValidation, required: true)
+        | ValidateProperty(request, r => r.Location, StorageIdentifier.NewValidation, required: true)
+        | ValidateProperty(request, r => r.Size, CatletConfigValidations.ValidateCatletDriveSize, required: true)
+        | ValidateProperty(request, r => r.Environment, EnvironmentName.NewValidation)
+        | ValidateProperty(request, r => r.Store, DataStoreName.NewValidation);
 }
