@@ -3,6 +3,8 @@ using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Resources.Machines;
+using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Handlers;
@@ -28,10 +30,22 @@ internal class StopCatletSaga :
     protected override Task Initiated(StopCatletCommand message)
     {
         return _vmDataService.GetVM(message.Resource.Id).MatchAsync(
-            None: () => Fail().ToUnit(),
-            Some: s =>  StartNewTask( message.Graceful ?
-                new ShutdownVMCommand { CatletId = message.Resource.Id, VMId = s.VMId }:
-                new StopVMCommand { CatletId = message.Resource.Id, VMId = s.VMId }).AsTask().ToUnit());
+            None: () => Fail($"The catlet {message.Resource.Id} does not exist.").ToUnit(),
+            Some: s => message.Mode switch
+            {
+                CatletStopMode.Shutdown => 
+                    StartNewTask(new ShutdownVMCommand
+                    {
+                        CatletId = message.Resource.Id, VMId = s.VMId
+                    }).AsTask().ToUnit(),
+                CatletStopMode.Hard =>
+                    StartNewTask(new StopVMCommand
+                    {
+                        CatletId = message.Resource.Id,
+                        VMId = s.VMId
+                    }).AsTask().ToUnit(),
+                _ => Fail($"The stop mode {message.Mode} is not supported").ToUnit(),
+            });
     }
 
     protected override void CorrelateMessages(ICorrelationConfig<StopCatletSagaData> config)
@@ -41,7 +55,6 @@ internal class StopCatletSaga :
         config.Correlate<OperationTaskStatusEvent<StopVMCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<ShutdownVMCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
     }
-
 
     public Task Handle(OperationTaskStatusEvent<StopVMCommand> message)
     {
