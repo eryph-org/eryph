@@ -26,8 +26,6 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.Catlet, Catlet>();
             CreateMap<StateDb.Model.CatletDrive, CatletDrive>();
             CreateMap<StateDb.Model.CatletNetworkAdapter, CatletNetworkAdapter>();
-            CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>().ForMember(x => x.Path,
-                o => { o.MapFrom(s => userRole == "Admin" ? s.Path : null); });
 
             CreateMap<(StateDb.Model.Catlet Catlet, CatletNetworkPort Port), CatletNetwork>()
                 .ConvertUsing((src, target) =>
@@ -78,7 +76,9 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                 o => o.MapFrom((src,m) => RoleNames.GetRoleName(src.RoleId)));
 
             CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>()
-                .ForMember(x => x.Project, o => o.MapFrom(s => s.Project.Name));
+                .ForMember(d => d.Project, o => o.MapFrom(s => s.Project.Name))
+                .ForMember(x => x.Path, o => { o.MapFrom(s => userRole == "Admin" ? s.Path : null); })
+                .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier));
         }
     }
 }
