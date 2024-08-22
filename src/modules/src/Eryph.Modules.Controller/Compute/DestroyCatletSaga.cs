@@ -1,103 +1,117 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
+using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Resources;
+using Eryph.StateDb;
+using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
+using Resource = Eryph.Resources.Resource;
 
-namespace Eryph.Modules.Controller.Compute
+using static LanguageExt.Prelude;
+
+namespace Eryph.Modules.Controller.Compute;
+
+[UsedImplicitly]
+internal class DestroyCatletSaga(
+    IWorkflow workflow,
+    IStateStoreRepository<Catlet> catletRepository,
+    IVirtualMachineDataService vmDataService) :
+    OperationTaskWorkflowSaga<DestroyCatletCommand, EryphSagaData<DestroyCatletSagaData>>(workflow),
+    IHandleMessages<OperationTaskStatusEvent<RemoveCatletVMCommand>>,
+    IHandleMessages<OperationTaskStatusEvent<DestroyResourcesCommand>>
 {
-    [UsedImplicitly]
-    internal class DestroyCatletSaga : OperationTaskWorkflowSaga<DestroyCatletCommand, DestroyCatletSagaData>,
-        IHandleMessages<OperationTaskStatusEvent<RemoveCatletVMCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<DestroyResourcesCommand>>
+    protected override async Task Initiated(DestroyCatletCommand message)
     {
-        private readonly IVirtualMachineDataService _vmDataService;
-
-        public DestroyCatletSaga(IWorkflow workflow,
-            IVirtualMachineDataService vmDataService) : base(workflow)
+        Data.Data.MachineId = message.Resource.Id;
+        Data.Data.DestroyedResources = [new Resource(ResourceType.Catlet, message.Resource.Id)];
+        var catletResult = await vmDataService.GetVM(Data.Data.MachineId);
+        if (catletResult.IsNone)
         {
-            _vmDataService = vmDataService;
+            await Complete();
+            return;
         }
 
-        public Task Handle(OperationTaskStatusEvent<RemoveCatletVMCommand> message)
+        var catlet = catletResult.ValueUnsafe();
+
+        await StartNewTask(new RemoveCatletVMCommand
         {
-            return FailOrRun(message, async () =>
+            CatletId = Data.Data.MachineId,
+            VMId = catlet.VMId
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<RemoveCatletVMCommand> message) =>
+        FailOrRun(message, async () =>
+        {
+            var catlet = await catletRepository.GetBySpecAsync(
+                new CatletSpecs.GetForDelete(Data.Data.MachineId));
+            if (catlet is null)
             {
-                var detachedDisks = new List<Guid>();
-                await _vmDataService.GetVM(Data.MachineId).IfSomeAsync(vm =>
-                {
-                    foreach (var virtualMachineDrive in vm.Drives
-                                 .Where(virtualMachineDrive => virtualMachineDrive.AttachedDiskId != null
-                                                               || virtualMachineDrive.AttachedDiskId != Guid.Empty))
-                    {
-                        detachedDisks.Add(virtualMachineDrive.AttachedDiskId.GetValueOrDefault());
-                    }
-                });
-
-                await _vmDataService.RemoveVM(Data.MachineId);
-
-                await StartNewTask<DestroyResourcesCommand>(detachedDisks.Select(g => new Resource(ResourceType.VirtualDisk, g)).ToArray());
-
-            });
-        }
-
-        protected override void CorrelateMessages(ICorrelationConfig<DestroyCatletSagaData> config)
-        {
-            base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<RemoveCatletVMCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<DestroyResourcesCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
-        }
-
-
-        protected override async Task Initiated(DestroyCatletCommand message)
-        {
-            Data.MachineId = message.Resource.Id;
-            var res = await _vmDataService.GetVM(Data.MachineId);
-            var data = res.ValueUnsafe();
-
-            if (data == null || data.VMId == Guid.Empty)
-            {
-                await Complete(Enumerable.Empty<Resource>(), Enumerable.Empty<Resource>());
+                await Complete();
                 return;
             }
 
-            await StartNewTask(new RemoveCatletVMCommand
+            var attachedDisks = catlet.Drives
+                .Map(d => Optional(d.AttachedDisk))
+                .Somes()
+                .ToSeq();
+            var disksToDelete = attachedDisks
+                .Filter(d => d.StorageIdentifier == catlet.StorageIdentifier)
+                .Map(d => new Resource(ResourceType.VirtualDisk, d.Id));
+            var disksToDetach = attachedDisks
+                .Filter(d => d.StorageIdentifier != catlet.StorageIdentifier)
+                .Map(d => new Resource(ResourceType.VirtualDisk, d.Id));
+
+            Data.Data.DetachedResources = Data.Data.DetachedResources.ToSeq()
+                .Append(disksToDetach)
+                .ToList();
+
+            await vmDataService.RemoveVM(Data.Data.MachineId);
+
+            await StartNewTask(new DestroyResourcesCommand
             {
-                CatletId = Data.MachineId,
-                VMId = data.VMId
+                Resources = disksToDelete.ToArray(),
             });
-        }
+        });
 
-        public Task Handle(OperationTaskStatusEvent<DestroyResourcesCommand> message)
+    public Task Handle(OperationTaskStatusEvent<DestroyResourcesCommand> message) =>
+        FailOrRun(message, async (DestroyResourcesResponse response) =>
         {
-            return FailOrRun<DestroyResourcesCommand, DestroyResourcesResponse>(message,
-                (response) => Complete(response.DestroyedResources, response.DetachedResources));
-        }
+            Data.Data.DestroyedResources = Data.Data.DestroyedResources
+                .Append(response.DestroyedResources)
+                .ToList();
+            Data.Data.DetachedResources = Data.Data.DetachedResources
+                .Append(response.DetachedResources)
+                .ToList();
 
-        private Task DeleteCatletFromDb()
+            await Complete();
+        });
+
+    protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<DestroyCatletSagaData>> config)
+    {
+        base.CorrelateMessages(config);
+        config.Correlate<OperationTaskStatusEvent<RemoveCatletVMCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<DestroyResourcesCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
+    }
+
+    private async Task Complete()
+    {
+        await Complete(new DestroyResourcesResponse()
         {
-            return _vmDataService.RemoveVM(Data.MachineId);
-        }
-
-        private async Task Complete(IEnumerable<Resource>? additionalDestroyed, IEnumerable<Resource>? detached)
-        {
-            additionalDestroyed ??= Array.Empty<Resource>();
-            await DeleteCatletFromDb();
-
-            await Complete(new DestroyResourcesResponse
-            {
-                DestroyedResources = additionalDestroyed.Concat(new[] { new Resource(ResourceType.Catlet, Data.MachineId) }).ToArray(),
-                DetachedResources = detached == null ? Array.Empty<Resource>() : detached.ToArray()
-            });
-        }
+            DestroyedResources = Data.Data.DestroyedResources.ToArray(),
+            DetachedResources = Data.Data.DetachedResources.ToArray(),
+        });
     }
 }
