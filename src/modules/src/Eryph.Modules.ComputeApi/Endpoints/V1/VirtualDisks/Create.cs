@@ -15,6 +15,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
+using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt;
 using Microsoft.AspNetCore.Authorization;
@@ -50,7 +51,7 @@ public class Create(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("virtualdisks")]
     [SwaggerOperation(
-        Summary = "Creates a new virtual disk",
+        Summary = "Creates a virtual disk",
         Description = "Creates a virtual disk",
         OperationId = "VirtualDisks_Create",
         Tags = ["Virtual Disks"])
@@ -69,8 +70,18 @@ public class Create(
                 statusCode: StatusCodes.Status403Forbidden,
                 detail: "You do not have write access to the given project.");
 
-
-        // TODO check if the disk already exists
+        var diskExists = await repository.AnyAsync(
+            new VirtualDiskSpecs.GetByName(
+                request.ProjectId,
+                DataStoreName.New(request.Store).Value,
+                EnvironmentName.New(request.Environment).Value,
+                StorageIdentifier.New(request.Location).Value,
+                CatletDriveName.New(request.Name).Value),
+            cancellationToken);
+        if (diskExists)
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                detail: "A disk with this name already exists.");
 
         return await base.HandleAsync(request, cancellationToken);
     }
