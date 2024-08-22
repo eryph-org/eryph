@@ -2,7 +2,7 @@
 using System.Linq;
 using AutoMapper;
 using Eryph.Core;
-using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
 

@@ -85,7 +85,6 @@ internal class CreateVirtualDiskSaga(
                 StorageIdentifier = response.DiskInfo.StorageIdentifier,
             });
 
-            // TODO Might need separate message
             await Complete();
         });
     }

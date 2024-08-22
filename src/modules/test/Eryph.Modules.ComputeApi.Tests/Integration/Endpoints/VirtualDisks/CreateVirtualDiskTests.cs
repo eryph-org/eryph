@@ -65,9 +65,9 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
                 ProjectId = EryphConstants.DefaultProjectId,
-                Name = "test-disk",
-                Size = 5,
-                Location = "test-location",
+                Name = DiskName,
+                Size = DiskSize,
+                Location = LocationName,
             });
 
         response.StatusCode.Should().Be(expectedStatusCode);

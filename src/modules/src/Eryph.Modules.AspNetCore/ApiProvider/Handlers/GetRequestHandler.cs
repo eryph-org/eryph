@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using AutoMapper;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;

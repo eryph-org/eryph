@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using Eryph.Core;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+namespace Eryph.Modules.AspNetCore.ApiProvider.Model;
 
 public static class MapperExtensions
 {

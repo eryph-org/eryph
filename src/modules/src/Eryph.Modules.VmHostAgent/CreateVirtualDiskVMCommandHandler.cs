@@ -10,6 +10,7 @@ using Eryph.Core;
 using Eryph.Messages.Resources.Disks;
 using Eryph.Resources.Disks;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Storage;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -55,22 +56,6 @@ internal class CreateVirtualDiskVMCommandHandler(
         from storageSettings in DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, vhdPath)
         select new CreateVirtualDiskVMCommandResponse
         {
-            DiskInfo = new DiskInfo()
-            {
-                Id = command.DiskId,
-                DiskIdentifier = storageSettings.DiskIdentifier,
-                Name = storageSettings.Name,
-                ProjectName = storageSettings.StorageNames.ProjectName.IfNone(EryphConstants.DefaultProjectName),
-                ProjectId = storageSettings.StorageNames.ProjectId.Map(i => (Guid?)i).IfNoneUnsafe((Guid?)null),
-                Environment = storageSettings.StorageNames.EnvironmentName.IfNone(EryphConstants.DefaultEnvironmentName),
-                DataStore = storageSettings.StorageNames.DataStoreName.IfNone(EryphConstants.DefaultDataStoreName),
-                StorageIdentifier = storageSettings.StorageIdentifier.IfNoneUnsafe((string)null),
-                Frozen = storageSettings.StorageIdentifier.Match(Some: _ => false, None: () => true),
-                Geneset = storageSettings.Geneset.Map(s => s.Value).IfNoneUnsafe((string)null),
-                Path = storageSettings.Path,
-                FileName = storageSettings.FileName,
-                SizeBytes = storageSettings.SizeBytes,
-                UsedSizeBytes = storageSettings.UsedSizeBytes
-            }
+            DiskInfo = storageSettings.CreateDiskInfo(command.DiskId),
         };
 }
