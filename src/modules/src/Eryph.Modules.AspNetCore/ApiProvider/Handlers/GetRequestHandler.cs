@@ -5,31 +5,26 @@ using Ardalis.Specification;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
+namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+
+internal class GetRequestHandler<TEntity, TResponse>(
+    IMapper mapper,
+    IReadRepositoryBase<TEntity> repository,
+    IUserRightsProvider userRightsProvider)
+    : IGetRequestHandler<TEntity, TResponse> where TEntity : class
 {
-    internal class GetRequestHandler<TEntity, TResponse> : 
-        IGetRequestHandler<TEntity, TResponse> where TEntity : class
+    public async Task<ActionResult<TResponse>> HandleGetRequest(
+        Func<ISingleResultSpecification<TEntity>> specificationFunc,
+        CancellationToken cancellationToken)
     {
-        private readonly IMapper _mapper;
-        private readonly IReadRepositoryBase<TEntity> _repository;
+        var result = await repository.GetBySpecAsync(specificationFunc(), cancellationToken);
 
-        public GetRequestHandler(IMapper mapper, IReadRepositoryBase<TEntity> repository)
-        {
-            _mapper = mapper;
-            _repository = repository;
-        }
+        if (result == null)
+            return new NotFoundResult();
 
-        public async Task<ActionResult<TResponse>> HandleGetRequest(
-            Func<ISingleResultSpecification<TEntity>> specificationFunc, CancellationToken cancellationToken)
-        {
-            var result = await _repository.GetBySpecAsync(specificationFunc(), cancellationToken);
-
-            if (result == null)
-                return new NotFoundResult();
-
-            var mappedResult = _mapper.Map<TResponse>(result);
-            return new JsonResult(mappedResult);
-        }
-
+        var authContext = userRightsProvider.GetAuthContext();
+        var mappedResult = mapper.Map<TResponse>(result, o => o.SetAuthContext(authContext));
+            
+        return new JsonResult(mappedResult);
     }
 }

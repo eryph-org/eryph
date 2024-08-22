@@ -2,6 +2,7 @@
 using System.Linq;
 using AutoMapper;
 using Eryph.Core;
+using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
 
@@ -77,7 +78,12 @@ namespace Eryph.Modules.ComputeApi.Model.V1
 
             CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>()
                 .ForMember(d => d.Project, o => o.MapFrom(s => s.Project.Name))
-                .ForMember(x => x.Path, o => { o.MapFrom(s => userRole == "Admin" ? s.Path : null); })
+                .ForMember(x => x.Path, o => o.MapFrom((s, _, _, context) =>
+                {
+                    var authContext = context.GetAuthContext();
+                    var isSuperAdmin = authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole);
+                    return isSuperAdmin ? s.Path : null;
+                }))
                 .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier));
         }
     }
