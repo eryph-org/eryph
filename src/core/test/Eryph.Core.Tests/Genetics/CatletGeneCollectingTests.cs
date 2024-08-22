@@ -57,6 +57,25 @@ public class CatletGeneCollectingTests
     }
 
     [Fact]
+    public void CollectGenes_DriveSourceIsAPath_IgnoresDriveSource()
+    {
+        var config = new CatletConfig()
+        {
+            Drives =
+            [
+                new CatletDriveConfig()
+                {
+                    Source = @"Z:\test\test.vhdx"
+                },
+            ],
+        };
+
+        var result = CatletGeneCollecting.CollectGenes(config);
+
+        result.Should().BeSuccess().Which.Should().BeEmpty();
+    }
+
+    [Fact]
     public void CollectGenes_InvalidSources_ReturnsFail()
     {
         var config = new CatletConfig()

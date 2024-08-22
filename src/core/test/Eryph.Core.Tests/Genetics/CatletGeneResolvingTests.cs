@@ -113,4 +113,26 @@ public class CatletGeneResolvingTests
         result.Should().BeLeft().Which.Message
             .Should().Be("The gene set 'acme/acme-tools/latest' could not be resolved.");
     }
+
+    [Fact]
+    public void ResolveGeneSetIdentifiers_DriveSourceIsAPath_ReturnsOriginalSource()
+    {
+        const string source = @"Z:\test-folder\test.vhdx";
+
+        var config = new CatletConfig
+        {
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Source = source,
+                }
+            ],
+        };
+
+        var result = CatletGeneResolving.ResolveGeneSetIdentifiers(config, HashMap<GeneSetIdentifier, GeneSetIdentifier>());
+
+        result.Should().BeRight().Which.Drives.Should().SatisfyRespectively(
+            drive => drive.Source.Should().Be(source));
+    }
 }

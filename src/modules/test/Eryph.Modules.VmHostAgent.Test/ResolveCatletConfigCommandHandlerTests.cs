@@ -204,6 +204,34 @@ public class ResolveCatletConfigCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_DriveSourceIsAPath_IgnoresDriveSource()
+    {
+        var config = new CatletConfig
+        {
+            Drives =
+            [
+                new CatletDriveConfig
+                {
+                    Source = @"Z:\test\test.vhdx",
+                }
+            ],
+        };
+
+        _geneProviderMock.SetupGeneSets();
+        _geneProviderMock.SetupGenes();
+
+        var result = await ResolveCatletConfigCommandHandler.Handle(
+            new ResolveCatletConfigCommand { Config = config },
+            _geneProviderMock.Object,
+            _genepoolReaderMock.Object,
+            _cancelToken);
+
+        var commandResponse = result.Should().BeRight().Subject;
+        commandResponse.ParentConfigs.Should().BeEmpty();
+        commandResponse.ResolvedGeneSets.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Handle_MissingGrandParent_ReturnsError()
     {
         var config = new CatletConfig
