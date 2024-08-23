@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 using static Dbosoft.Functional.Validations.ComplexValidations;
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 
@@ -73,8 +74,14 @@ public class Create(
         var diskExists = await repository.AnyAsync(
             new VirtualDiskSpecs.GetByName(
                 request.ProjectId,
-                DataStoreName.New(request.Store).Value,
-                EnvironmentName.New(request.Environment).Value,
+                Optional(request.Store).Filter(notEmpty)
+                    .Map(ds => DataStoreName.New(ds))
+                    .IfNone(DataStoreName.New(EryphConstants.DefaultDataStoreName))
+                    .Value,
+                Optional(request.Environment).Filter(notEmpty)
+                    .Map(e => EnvironmentName.New(e))
+                    .IfNone(EnvironmentName.New(EryphConstants.DefaultEnvironmentName))
+                    .Value,
                 StorageIdentifier.New(request.Location).Value,
                 CatletDriveName.New(request.Name).Value),
             cancellationToken);

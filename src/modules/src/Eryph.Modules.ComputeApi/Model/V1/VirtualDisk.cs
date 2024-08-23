@@ -6,21 +6,21 @@ namespace Eryph.Modules.ComputeApi.Model.V1
 {
     public class VirtualDisk
     {
-        [Key] public string Id { get; set; }
+        [Key] public required string Id { get; set; }
 
-        public string Name { get; set; }
+        public required string Name { get; set; }
         
-        public string Location { get; set; }
+        public required string Location { get; set; }
         
-        public string DataStore { get; set; }
+        public required string DataStore { get; set; }
         
-        public string Project { get; set; }
+        public required string Project { get; set; }
         
-        public string Environment { get; set; }
+        public required string Environment { get; set; }
 
         public string Path { get; set; }
 
-        public long? SizeBytes { get; set; }
+        public long SizeBytes { get; set; }
 
         public string ParentId { get; set; }
 
