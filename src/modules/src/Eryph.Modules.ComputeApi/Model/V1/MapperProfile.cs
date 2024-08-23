@@ -13,8 +13,6 @@ namespace Eryph.Modules.ComputeApi.Model.V1
 
         public MapperProfile()
         {
-            string userRole = null;
-
             CreateMap<StateDb.Model.ReportedNetwork, CatletNetwork>();
 
             CreateMap<StateDb.Model.VirtualNetwork, VirtualNetwork>()

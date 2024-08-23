@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
-using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Disks;
 using Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 using Eryph.StateDb;
@@ -21,7 +20,6 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;
 public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
     private readonly WebModuleFactory<ComputeApiModule> _factory;
-    private static readonly Guid DiskId = Guid.NewGuid();
 
     private const string DiskName = "test-disk";
     private const int DiskSize = 5;
@@ -97,7 +95,7 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
                 ProjectId = EryphConstants.DefaultProjectId,
                 Name = DiskName,
                 Location = LocationName,
-                Size = 5,
+                Size = DiskSize,
                 Environment = EnvironmentName,
                 Store = StoreName,
             });
