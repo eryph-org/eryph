@@ -104,6 +104,36 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
     }
 
     [Fact]
+    public async Task Virtual_disk_with_default_values_is_not_created_when_disk_already_exists()
+    {
+        await WithScope(async stateStore =>
+        {
+            await stateStore.For<VirtualDisk>().AddAsync(
+                new VirtualDisk()
+                {
+                    ProjectId = EryphConstants.DefaultProjectId,
+                    Name = DiskName,
+                    Environment = EryphConstants.DefaultEnvironmentName,
+                    DataStore = EryphConstants.DefaultDataStoreName,
+                    StorageIdentifier = LocationName,
+                });
+            await stateStore.SaveChangesAsync();
+        });
+
+        var response = await _factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
+            .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
+            {
+                ProjectId = EryphConstants.DefaultProjectId,
+                Name = DiskName,
+                Location = LocationName,
+                Size = DiskSize,
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
     public async Task Virtual_disk_is_created()
     {
         var response = await _factory.CreateDefaultClient()
@@ -130,6 +160,34 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
                 m.StorageIdentifier.Should().Be(LocationName);
                 m.Environment.Should().Be(EnvironmentName);
                 m.DataStore.Should().Be(StoreName);
+            });
+    }
+
+    [Fact]
+    public async Task Virtual_disk_is_created_with_default_values()
+    {
+        var response = await _factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
+            .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
+            {
+                ProjectId = EryphConstants.DefaultProjectId,
+                Name = DiskName,
+                Location = LocationName,
+                Size = 5,
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        var messages = _factory.GetPendingRebusMessages<CreateVirtualDiskCommand>();
+        messages.Should().SatisfyRespectively(
+            m =>
+            {
+                m.ProjectId.Should().Be(EryphConstants.DefaultProjectId);
+                m.Name.Should().Be(DiskName);
+                m.Size.Should().Be(DiskSize);
+                m.StorageIdentifier.Should().Be(LocationName);
+                m.Environment.Should().Be(null);
+                m.DataStore.Should().Be(null);
             });
     }
 

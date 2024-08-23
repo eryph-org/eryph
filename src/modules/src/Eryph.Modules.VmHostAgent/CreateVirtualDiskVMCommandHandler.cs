@@ -5,10 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
-using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Messages.Resources.Disks;
-using Eryph.Resources.Disks;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Storage;
@@ -16,8 +14,6 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
-
-using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent;
 
@@ -56,6 +52,6 @@ internal class CreateVirtualDiskVMCommandHandler(
         from storageSettings in DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, vhdPath)
         select new CreateVirtualDiskVMCommandResponse
         {
-            DiskInfo = storageSettings.CreateDiskInfo(command.DiskId),
+            DiskInfo = storageSettings.CreateDiskInfo(),
         };
 }

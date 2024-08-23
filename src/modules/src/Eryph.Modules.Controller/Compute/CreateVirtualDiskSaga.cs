@@ -14,6 +14,9 @@ using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using LanguageExt;
+using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
 using static LanguageExt.Prelude;
@@ -41,29 +44,16 @@ internal class CreateVirtualDiskSaga(
             return;
         }
 
-        Data.Data.AgentName = agentLocator.FindAgentForDataStore(
-            message.DataStore ?? EryphConstants.DefaultDataStoreName,
-            message.Environment ?? EryphConstants.DefaultEnvironmentName);
-
-        var environmentName = Optional(message.Environment).Filter(notEmpty).Match(
-            Some: n => EnvironmentName.New(n),
-            None: () => EnvironmentName.New("default"));
-
-        var datastoreName = Optional(message.DataStore).Filter(notEmpty).Match(
-            Some: n => DataStoreName.New(n),
-            None: () => DataStoreName.New("default"));
-
-        await StartNewTask(new CreateVirtualDiskVMCommand
+        var result = CreateAgentCommand(message, project);
+        if (result.IsLeft)
         {
-            AgentName = Data.Data.AgentName,
-            ProjectName = ProjectName.New(project.Name), 
-            DataStore = datastoreName,
-            Environment = environmentName,
-            Name = CatletDriveName.New(message.Name),
-            DiskId = Data.Data.DiskId,
-            Size = message.Size,
-            StorageIdentifier = StorageIdentifier.New(message.StorageIdentifier),
-        });
+            await Fail(ErrorUtils.PrintError(Error.Many(result.LeftToSeq())));
+            return;
+        }
+
+        var agentCommand = result.ValueUnsafe();
+        Data.Data.AgentName = agentCommand.AgentName;
+        await StartNewTask(agentCommand);
     }
 
     public Task Handle(OperationTaskStatusEvent<CreateVirtualDiskVMCommand> message)
@@ -96,4 +86,34 @@ internal class CreateVirtualDiskSaga(
         config.Correlate<OperationTaskStatusEvent<CreateVirtualDiskVMCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
+
+    private Either<Error, CreateVirtualDiskVMCommand> CreateAgentCommand(
+        CreateVirtualDiskCommand command,
+        Project project) =>
+        from diskName in CatletDriveName.NewEither(command.Name)
+        from storageIdentifier in StorageIdentifier.NewEither(command.StorageIdentifier)
+        from dataStoreName in Optional(command.DataStore)
+            .Filter(notEmpty)
+            .Match(
+                Some: DataStoreName.NewEither,
+                None: () => DataStoreName.New(EryphConstants.DefaultDataStoreName))
+        from environmentName in Optional(command.Environment)
+            .Filter(notEmpty)
+            .Match(
+                Some: EnvironmentName.NewEither,
+                None: () => EnvironmentName.New(EryphConstants.DefaultEnvironmentName))
+        let projectName = ProjectName.New(project.Name)
+        let agentName = agentLocator.FindAgentForDataStore(
+            dataStoreName.Value, environmentName.Value)
+        select new CreateVirtualDiskVMCommand
+        {
+            AgentName = agentName,
+            ProjectName = projectName,
+            DataStore = dataStoreName,
+            Environment = environmentName,
+            Name = diskName,
+            DiskId = Data.Data.DiskId,
+            Size = command.Size,
+            StorageIdentifier = storageIdentifier,
+        };
 }

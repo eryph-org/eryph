@@ -156,7 +156,7 @@ namespace Eryph.VmManagement.Inventory
                 };
 
                 if (storageSetting?.DiskSettings != null)
-                    drive.Disk = storageSetting.DiskSettings.CreateDiskInfo(Guid.NewGuid());
+                    drive.Disk = storageSetting.DiskSettings.CreateDiskInfo();
 
                 yield return drive;
             }
