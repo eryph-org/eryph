@@ -39,7 +39,6 @@ public class Create(
         return new CreateVirtualDiskCommand
         {
             CorrelationId = request.CorrelationId.GetOrGenerate(),
-            TenantId = userRightsProvider.GetUserTenantId(),
             ProjectId = request.ProjectId,
             Name = request.Name,
             DataStore = request.Store,

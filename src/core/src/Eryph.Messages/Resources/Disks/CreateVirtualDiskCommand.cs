@@ -9,8 +9,6 @@ namespace Eryph.Messages.Resources.Disks;
 [SendMessageTo(MessageRecipient.Controllers)]
 public class CreateVirtualDiskCommand : IHasCorrelationId, ICommandWithName
 {
-    public Guid TenantId { get; set; }
-    
     public Guid ProjectId { get; set; }
 
     public Guid CorrelationId { get; set; }
