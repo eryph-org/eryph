@@ -86,6 +86,97 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.ToTable("CatletNetworkAdapters");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.Gene", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("GeneSetId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("GeneType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset>("LastSeen")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeneSetId");
+
+                    b.ToTable("Genes");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.GeneSet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTimeOffset>("LastSeen")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Organization")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("GeneSets");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.GeneSetReference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("GeneSetId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Organization")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeneSetId");
+
+                    b.ToTable("GeneSetReferences");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -808,6 +899,28 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Navigation("Catlet");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.Gene", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.GeneSet", "GeneSet")
+                        .WithMany("Genes")
+                        .HasForeignKey("GeneSetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GeneSet");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.GeneSetReference", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.GeneSet", "GeneSet")
+                        .WithMany("References")
+                        .HasForeignKey("GeneSetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GeneSet");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.NetworkPort", "NetworkPort")
@@ -1034,6 +1147,13 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired();
 
                     b.Navigation("RoutedNetwork");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.GeneSet", b =>
+                {
+                    b.Navigation("Genes");
+
+                    b.Navigation("References");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpPool", b =>

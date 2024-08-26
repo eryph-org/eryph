@@ -7,7 +7,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Events\" />
-    <Folder Include="Resources\Genes\Events\" />
     <Folder Include="Resources\Networks\Events\" />
   </ItemGroup>
   <ItemGroup>

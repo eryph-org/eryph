@@ -60,6 +60,12 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
     public DbSet<Tenant> Tenants { get; set; }
 
+    public DbSet<GeneSet> GeneSets { get; set; }
+
+    public DbSet<GeneSetReference> GeneSetReferences { get; set; }
+
+    public DbSet<Gene> Genes { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // The change tracking in the controller module uses transaction

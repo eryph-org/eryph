@@ -42,9 +42,9 @@ namespace Eryph.Core
             File.Delete(filePath);
         }
 
-        public IEnumerable<string> GetFiles(string path, string pattern)
+        public string[] GetFiles(string path, string pattern, SearchOption searchOption)
         {
-            return !Directory.Exists(path) ? new string[0] : Directory.GetFiles(path, pattern);
+            return !Directory.Exists(path) ? [] : Directory.GetFiles(path, pattern, searchOption);
         }
 
         public void MoveFile(string path, string newPath)

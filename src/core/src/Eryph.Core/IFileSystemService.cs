@@ -14,7 +14,7 @@ namespace Eryph.Core
         void WriteText(string filePath, string data);
 
         void FileDelete(string filePath);
-        IEnumerable<string> GetFiles(string path, string pattern);
+        string[] GetFiles(string path, string pattern, SearchOption searchOption);
 
         void MoveFile(string path, string newPath);
         long GetFileSize(string filePath);

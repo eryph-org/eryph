@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Messages.Resources.Catlets.Events;
+using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Rebus;
 using Microsoft.Extensions.Hosting;
 using Rebus.Bus;
@@ -42,10 +43,15 @@ internal class InventoryTimerService : IHostedService, IDisposable
     /// This method is called when the <see cref="IHostedService"/> starts. The implementation should return a task 
     /// </summary>
     /// <returns>A <see cref="Task"/> that represents the long running operations.</returns>
-    private Task RunJobAsync()
+    private async Task RunJobAsync()
     {
-        return _bus.Advanced.Topics.Publish($"broadcast_{QueueNames.VMHostAgent}", new InventoryRequestedEvent());
-
+        // TODO how should the dispatching work
+        await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{Environment.MachineName}",
+            new InventorizeGenePoolCommand()
+            {
+                AgentName = Environment.MachineName,
+            });
+        await  _bus.Advanced.Topics.Publish($"broadcast_{QueueNames.VMHostAgent}", new InventoryRequestedEvent());
     }
 
     public virtual async Task StopAsync(CancellationToken cancellationToken)

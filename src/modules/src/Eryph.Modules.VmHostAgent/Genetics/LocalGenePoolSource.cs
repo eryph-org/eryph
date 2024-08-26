@@ -229,6 +229,24 @@ internal class LocalGenePoolSource(
         }).ToEither();
     }
 
+    public EitherAsync<Error, GeneSetInfo> GetCachedGeneSet(
+        string geneSetPath,
+        CancellationToken cancellationToken) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let manifestPath = Path.Combine(geneSetPath, "geneset-tag.json")
+        from manifestExists in Try(() => fileSystem.FileExists(manifestPath))
+            .ToEitherAsync()
+        from __ in guard(manifestExists, Error.New("The gene set does not exist"))
+        from manifest in TryAsync(async () =>
+        {
+            await using var manifestStream = fileSystem.OpenRead(manifestPath);
+            return await JsonSerializer.DeserializeAsync<GenesetTagManifestData>(manifestStream,
+                    cancellationToken: cancellationToken);
+        }).ToEither()
+        from geneSetId in GeneSetIdentifier.NewEither(manifest.Geneset)
+            .ToAsync()
+        select new GeneSetInfo(geneSetId, geneSetPath, manifest, []);
+
     private class GenesInfo
     {
         public string[]? MergedGenes { get; set; }
