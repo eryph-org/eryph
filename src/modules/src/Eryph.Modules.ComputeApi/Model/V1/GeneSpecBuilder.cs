@@ -20,7 +20,10 @@ public class GeneSpecBuilder
         SingleEntityRequest request,
         AccessRight accessRight)
     {
-        throw new NotImplementedException();
+        if (!Guid.TryParse(request.Id, out var geneId))
+            throw new ArgumentException("The ID is not a GUID.", nameof(request));
+
+        return new GeneSpecs.GetById(geneId);
     }
 
     public ISpecification<StateDb.Model.Gene> GetEntitiesSpec(

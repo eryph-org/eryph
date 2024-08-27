@@ -10,6 +10,15 @@ namespace Eryph.StateDb.Specifications;
 
 public class GeneSpecs
 {
+    public sealed class GetById : Specification<Gene>, ISingleResultSpecification<Gene>
+    {
+        public GetById(Guid id)
+        {
+            Query.Where(x => x.Id == id)
+                .Include(x => x.GeneSet);
+        }
+    }
+
     public sealed class GetAll : Specification<Gene>
     {
         public GetAll()
