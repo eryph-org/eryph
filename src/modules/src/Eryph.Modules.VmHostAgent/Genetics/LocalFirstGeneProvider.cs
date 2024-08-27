@@ -58,19 +58,9 @@ internal class LocalFirstGeneProvider(
         GeneSetInfo genesetInfo,
         GeneType geneType,
         GeneIdentifier geneId) =>
-        from _ in RightAsync<Error, Unit>(Unit.Default)
-        let hash = geneType switch
-        {
-            GeneType.Catlet => Optional(genesetInfo.MetaData.CatletGene),
-            GeneType.Volume => genesetInfo.MetaData.VolumeGenes.ToSeq()
-                .Find(x => x.Name == geneId.GeneName.Value)
-                .Bind(x => Optional(x.Hash)),
-            GeneType.Fodder => genesetInfo.MetaData.FodderGenes.ToSeq()
-                .Find(x => x.Name == geneId.GeneName.Value)
-                .Bind(x => Optional(x.Hash)),
-            _ => throw new ArgumentOutOfRangeException(nameof(geneType))
-        }
-        from validHash in hash.Filter(notEmpty).ToEitherAsync(
+        from validHash in GeneSetManifestUtils.FindGeneHash(
+                genesetInfo.MetaData, geneType, geneId.GeneName)
+            .ToEitherAsync(
             Error.New($"Could not find {geneType.ToString().ToLowerInvariant()} gene {geneId.GeneName} in geneset {genesetInfo.Id}."))
         select validHash;
 

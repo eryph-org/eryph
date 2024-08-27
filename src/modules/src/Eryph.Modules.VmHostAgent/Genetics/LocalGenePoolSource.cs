@@ -9,14 +9,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
+using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
+using GeneType = Eryph.Core.Genetics.GeneType;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;
 
@@ -246,6 +250,55 @@ internal class LocalGenePoolSource(
         from geneSetId in GeneSetIdentifier.NewEither(manifest.Geneset)
             .ToAsync()
         select new GeneSetInfo(geneSetId, geneSetPath, manifest, []);
+
+    public EitherAsync<Error, Unit> RemoveCachedGene(
+        string genePoolPath,
+        GeneType geneType,
+        GeneIdentifier geneId) =>
+        from _ in TryAsync(async () =>
+        {
+            var geneSetPath = BuildGeneSetPath(geneId.GeneSet, genePoolPath);
+            var manifestPath = Path.Combine(geneSetPath, "manifest-tag.json");
+            if (!fileSystem.FileExists(manifestPath))
+                return unit;
+
+            var manifestJson = await fileSystem.ReadAllTextAsync(manifestPath);
+            var manifest = JsonSerializer.Deserialize<GenesetTagManifestData>(manifestJson);
+
+            var geneHash = GeneSetManifestUtils.FindGeneHash(
+                manifest, geneType, geneId.GeneName);
+            if (geneHash.IsNone)
+                return unit;
+
+            await RemoveMergedGene(geneSetPath, geneHash.ValueUnsafe());
+            var genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, geneId);
+
+            fileSystem.DeleteFile(genePath);
+
+            // TODO delete gene set folder when no genes are present anymore
+
+            return unit;
+        }).ToEither()
+        select unit;
+
+    private async Task RemoveMergedGene(string geneSetPath, string geneHash)
+    {
+        var genesInfo = await ReadGenesInfo(geneSetPath);
+        genesInfo.MergedGenes = genesInfo.MergedGenes?.Where(h => h != geneHash).ToArray();
+        await WriteGenesInfo(geneSetPath, genesInfo);
+    }
+
+    private async Task<GenesInfo> ReadGenesInfo(string geneSetPath)
+    {
+        var json = await fileSystem.ReadAllTextAsync(Path.Combine(geneSetPath, "genes.json"));
+        return JsonSerializer.Deserialize<GenesInfo>(json);
+    }
+
+    private async Task WriteGenesInfo(string geneSetPath, GenesInfo genesInfo)
+    {
+        var json = JsonSerializer.Serialize(genesInfo);
+        await fileSystem.WriteAllTextAsync(Path.Combine(geneSetPath, "genes.json"), json);
+    }
 
     private class GenesInfo
     {

@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
-using Eryph.GenePool.Model;
+using Eryph.Core.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -18,4 +18,9 @@ internal interface ILocalGenePool: IGenePool
     EitherAsync<Error, GeneInfo> CacheGene(GeneInfo geneInfo, GeneSetInfo geneSetInfo, CancellationToken cancel);
 
     public EitherAsync<Error, GeneSetInfo> GetCachedGeneSet(string geneSetPath, CancellationToken cancellationToken);
+
+    EitherAsync<Error, Unit> RemoveCachedGene(
+        string genePoolPath,
+        GeneType geneType,
+        GeneIdentifier geneId);
 }

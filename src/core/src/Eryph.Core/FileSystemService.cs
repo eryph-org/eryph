@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Eryph.Core
 {
@@ -30,6 +31,16 @@ namespace Eryph.Core
         public string ReadText(string filePath)
         {
             return FileExists(filePath) ? File.ReadAllText(filePath) : "";
+        }
+
+        public Task<string> ReadAllTextAsync(string path)
+        {
+            return File.ReadAllTextAsync(path);
+        }
+
+        public Task WriteAllTextAsync(string path, string text)
+        {
+            return File.WriteAllTextAsync(path, text);
         }
 
         public void WriteText(string filePath, string data)
@@ -99,6 +110,11 @@ namespace Eryph.Core
         public void DirectoryDelete(string directoryPath)
         {
             Directory.Delete(directoryPath, true);
+        }
+
+        public void DeleteFile(string path)
+        {
+            File.Delete(path);
         }
     }
 }
