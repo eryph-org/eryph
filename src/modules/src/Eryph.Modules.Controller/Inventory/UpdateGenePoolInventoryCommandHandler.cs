@@ -22,13 +22,16 @@ public class UpdateGenePoolInventoryCommandHandler(
     {
         foreach (var geneSetData in message.Inventory)
         {
-            await AddOrUpdateGeneSet(message.Timestamp, geneSetData);
+            await AddOrUpdateGeneSet(message.AgentName, message.Timestamp, geneSetData);
         }
 
         // TODO Remove outdated genesets and genes
     }
 
-    private async Task AddOrUpdateGeneSet(DateTimeOffset timestamp, GeneSetData geneSetData)
+    private async Task AddOrUpdateGeneSet(
+        string agentName,
+        DateTimeOffset timestamp,
+        GeneSetData geneSetData)
     {
         var dbGeneSet = await stateStore.For<GeneSet>().GetBySpecAsync(
             new GeneSetSpecs.GetForInventory(geneSetData.Id));
@@ -41,6 +44,7 @@ public class UpdateGenePoolInventoryCommandHandler(
                 Name = geneSetData.Id.GeneSet.Value,
                 Tag = geneSetData.Id.Tag.Value,
                 LastSeen = timestamp,
+                LastSeenAgent = agentName,
                 Hash = "abc",
                 Genes = [],
             };

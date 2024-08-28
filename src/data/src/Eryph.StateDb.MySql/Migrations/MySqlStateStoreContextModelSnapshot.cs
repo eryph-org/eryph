@@ -132,6 +132,10 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<DateTimeOffset>("LastSeen")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("LastSeenAgent")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("longtext");

@@ -42,8 +42,7 @@ internal class RemoveGeneSaga(
 
         await StartNewTask(new RemoveGenesVMCommand
         {
-            // TODO fix me
-            AgentName = Environment.MachineName,
+            AgentName = dbGene.GeneSet.LastSeenAgent,
             Genes = 
             [
                 new GeneIdentifierWithType(

@@ -20,7 +20,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Tag = table.Column<string>(type: "TEXT", nullable: false),
                     Hash = table.Column<string>(type: "TEXT", nullable: false),
-                    LastSeen = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    LastSeen = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastSeenAgent = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {

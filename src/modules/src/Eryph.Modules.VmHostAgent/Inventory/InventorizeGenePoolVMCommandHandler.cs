@@ -12,6 +12,7 @@ using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Resources.GenePool;
+using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
@@ -47,74 +48,90 @@ internal class InventorizeGenePoolCommandHandler(
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         let timestamp = DateTimeOffset.UtcNow
+        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         let genePool = genepoolFactory.CreateLocal()
-        from genePoolInventory in InventorizeGenePool(vmHostAgentConfig, genePool)
+        from genePoolInventory in InventorizeGenePool(genePoolPath, genePool)
         select new UpdateGenePoolInventoryCommand
         {
-            // TODO Use hardware ID instead?
             AgentName = Environment.MachineName,
             Timestamp = timestamp,
             Inventory = genePoolInventory.ToList(),
         };
 
     private EitherAsync<Error, Seq<GeneSetData>> InventorizeGenePool(
-        VmHostAgentConfiguration vmHostAgentConfig,
+        string genePoolPath,
         ILocalGenePool genePool) =>
         from _ in RightAsync<Error, Unit>(unit)
-        let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
         from manifestPaths in Try(() => fileSystemService.GetFiles(
                 genePoolPath, "geneset-tag.json", SearchOption.AllDirectories))
             .ToEitherAsync()
-        from geneSets in manifestPaths.ToSeq().Map(p => InventorizeGeneSet(Path.GetDirectoryName(p)!, genePool))
+        from geneSets in manifestPaths.ToSeq()
+            .Map(p => InventorizeGeneSet(p, genePoolPath, genePool)
+                .Match(Right: identity,
+                    Left: error =>
+                    {
+                        logger.LogError(error, "Inventory of gene set {Path} failed", p);
+                        return None;
+                    }))
             .SequenceSerial()
+            .Map(Right<Error, Seq<Option<GeneSetData>>>)
+            .ToAsync()
         select geneSets.Somes();
 
     private EitherAsync<Error, Option<GeneSetData>> InventorizeGeneSet(
-        string geneSetPath,
+        string geneSetManifestPath,
+        string genePoolPath,
         ILocalGenePool genePool) =>
-        Foo(geneSetPath, genePool)
-            .Match(
-                Right: Optional,
-                Left: error =>
-                {
-                    logger.LogError(error, "Inventory of gene set {Path} failed", geneSetPath);
-                    return None;
-                })
-            .Map(Right<Error, Option<GeneSetData>>)
-            .ToAsync();
-
-    private EitherAsync<Error, GeneSetData> Foo(string geneSetPath, ILocalGenePool genePool) =>
-        // TODO filter gene set references
-        from geneSetInfo in genePool.GetCachedGeneSet(geneSetPath, default)
+        from geneSetId in GenePoolPaths.GetGeneSetIdFromPath(genePoolPath, geneSetManifestPath)
+            .ToAsync()
+        from geneSetInfo in genePool.GetCachedGeneSet(genePoolPath, geneSetId, default)
+        from _ in guard(geneSetInfo.Id == geneSetId,
+            Error.New($"The gene set manifest '{geneSetManifestPath}' is in the wrong location."))
+        from geneSetData in notEmpty(geneSetInfo.MetaData.Reference)
+            ? RightAsync<Error, Option<GeneSetData>>(None)
+            : InventorizeGeneSet(geneSetInfo, genePoolPath).Map(Optional)
+        select geneSetData;
+    
+    private EitherAsync<Error, GeneSetData> InventorizeGeneSet(
+        GeneSetInfo geneSetInfo,
+        string genePoolPath) =>
+        from _ in RightAsync<Error, Unit>(unit)
         let catletGenes = Optional(geneSetInfo.MetaData.CatletGene)
             .Filter(notEmpty)
-            .Map(hash => new GeneData
-            {
-                GeneType = GeneType.Catlet,
-                Id = new GeneIdentifier(geneSetInfo.Id, GeneName.New("catlet")),
-                Hash = hash,
-                // TODO size
-            })
+            .Map(hash => (GeneType: GeneType.Catlet, Name: "catlet", Hash: hash))
             .ToSeq()
         let fodderGenes = geneSetInfo.MetaData.FodderGenes.ToSeq()
-            .Map(grd => new GeneData()
-            {
-                GeneType = GeneType.Fodder,
-                Id = new GeneIdentifier(geneSetInfo.Id, GeneName.New(grd.Name)),
-                Hash = grd.Hash,
-                // TODO size
-            })
+            .Map(grd => (GeneType: GeneType.Fodder, grd.Name, grd.Hash))
         let volumeGenes = geneSetInfo.MetaData.VolumeGenes.ToSeq()
-            .Map(grd => new GeneData()
-            {
-                GeneType = GeneType.Volume,
-                Id = new GeneIdentifier(geneSetInfo.Id, GeneName.New(grd.Name)),
-                Hash = grd.Hash,
-                // TODO size
-            })
+            .Map(grd => (GeneType: GeneType.Volume, grd.Name, grd.Hash))
+        let allGenes = catletGenes.Append(fodderGenes).Append(volumeGenes)
+        from geneData in allGenes
+            .Map(g => InventorizeGene(genePoolPath, geneSetInfo.Id, g.GeneType, g.Name, g.Hash))
+            .Sequence()
+            .ToAsync()
         select new GeneSetData
         {
             Id = geneSetInfo.Id,
-            Genes = catletGenes.Concat(fodderGenes).Concat(volumeGenes).ToList(),
+            Genes = geneData.Somes().ToList(),
         };
+
+    private Either<Error, Option<GeneData>> InventorizeGene(
+        string genePoolPath,
+        GeneSetIdentifier geneSetId,
+        GeneType geneType,
+        string geneName,
+        string hash) =>
+        from validGeneName in GeneName.NewEither(geneName)
+        let geneId = new GeneIdentifier(geneSetId, validGeneName)
+        let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, geneId)
+        from size in Try(() => fileSystemService.FileExists(genePath)
+                ? Some(fileSystemService.GetFileSize(genePath)) : None)
+            .ToEither().MapLeft(Error.New)
+        select size.Map(s => new GeneData
+        {
+            GeneType = geneType,
+            Id = geneId,
+            Hash = hash,
+            Size = s,
+        });
 }

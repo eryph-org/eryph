@@ -234,9 +234,11 @@ internal class LocalGenePoolSource(
     }
 
     public EitherAsync<Error, GeneSetInfo> GetCachedGeneSet(
-        string geneSetPath,
+        string genePoolPath,
+        GeneSetIdentifier geneSetId,
         CancellationToken cancellationToken) =>
         from _ in RightAsync<Error, Unit>(unit)
+        let geneSetPath = BuildGeneSetPath(geneSetId, genePoolPath)
         let manifestPath = Path.Combine(geneSetPath, "geneset-tag.json")
         from manifestExists in Try(() => fileSystem.FileExists(manifestPath))
             .ToEitherAsync()
@@ -247,8 +249,6 @@ internal class LocalGenePoolSource(
             return await JsonSerializer.DeserializeAsync<GenesetTagManifestData>(manifestStream,
                     cancellationToken: cancellationToken);
         }).ToEither()
-        from geneSetId in GeneSetIdentifier.NewEither(manifest.Geneset)
-            .ToAsync()
         select new GeneSetInfo(geneSetId, geneSetPath, manifest, []);
 
     public EitherAsync<Error, Unit> RemoveCachedGene(

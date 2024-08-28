@@ -21,7 +21,9 @@ public class GeneSet
 
     public required DateTimeOffset LastSeen { get; set; }
 
+    public required string LastSeenAgent { get; set; }
+
     public List<Gene> Genes { get; set; } = null!;
 
-    public List<GeneSetReference> References { get; set; }
+    public List<GeneSetReference> References { get; set; } = null!;
 }

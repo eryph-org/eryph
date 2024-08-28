@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
+using LanguageExt;
+using LanguageExt.Common;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
 
@@ -56,4 +60,34 @@ public static class GenePoolPaths
             geneFolder,
             $"{geneId.GeneName}.{extension}");
     }
+
+    public static Either<Error, GeneSetIdentifier> GetGeneSetIdFromPath(
+        string genePoolPath,
+        string geneSetPath) =>
+        from _1 in guard(Path.IsPathFullyQualified(genePoolPath),
+                Error.New("The gene pool path is not fully qualified."))
+            .ToEither()
+        from _2 in guard(Path.IsPathFullyQualified(geneSetPath),
+            Error.New("The gene set path is not fully qualified."))
+        from containedPath in PathUtils.GetContainedPath(genePoolPath, geneSetPath)
+            .ToEither(Error.New("The gene set path is not located in the gene pool."))
+        let relativePath = Path.GetRelativePath(genePoolPath, geneSetPath)
+        let parts = relativePath.Split(Path.DirectorySeparatorChar)
+        from _3 in guard(parts.Length != 3,
+            Error.New("The gene set path is invalid."))
+        from organizationName in OrganizationName.NewEither(parts[0])
+        from geneSetName in GeneSetName.NewEither(parts[1])
+        from tagName in TagName.NewEither(parts[2])
+        select new GeneSetIdentifier(organizationName, geneSetName, tagName);
+
+    public static Either<Error, GeneSetIdentifier> GetGeneSetIdFromManifestPath(
+        string genePoolPath,
+        string geneSetManifestPath) =>
+        from _1 in guard(
+                string.Equals(Path.GetFileName(geneSetManifestPath), "geneset-tag.json",
+                    StringComparison.OrdinalIgnoreCase),
+                Error.New("The gene set manifest path does not point to a gen eset manifest."))
+            .ToEither()
+        from geneSetId in GetGeneSetIdFromPath(genePoolPath, Path.GetDirectoryName(geneSetManifestPath))
+        select geneSetId;
 }

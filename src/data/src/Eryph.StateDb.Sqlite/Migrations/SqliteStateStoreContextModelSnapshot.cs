@@ -127,6 +127,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("LastSeenAgent")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");

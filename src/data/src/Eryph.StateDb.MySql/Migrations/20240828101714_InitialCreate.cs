@@ -27,7 +27,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Hash = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
+                    LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    LastSeenAgent = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
