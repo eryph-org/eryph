@@ -21,7 +21,7 @@ public class List(
     [NotNull] IListEntitySpecBuilder<ListRequest, StateDb.Model.Gene> specBuilder)
     : ListEntityEndpoint<ListRequest, Gene, StateDb.Model.Gene>(listRequestHandler, specBuilder)
 {
-    [Authorize(Policy = "compute:catlets:read")]
+    [Authorize(Policy = "compute:genes:read")]
     [HttpGet("genes")]
     [SwaggerOperation(
         Summary = "List all genes",

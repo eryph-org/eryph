@@ -12,6 +12,7 @@ using Eryph.Modules.ComputeApi.Model.V1;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Genes;
 
@@ -20,6 +21,7 @@ public class Get(
     [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Gene> specBuilder)
     : GetEntityEndpoint<SingleEntityRequest, Gene, StateDb.Model.Gene>(requestHandler, specBuilder)
 {
+    [Authorize(Policy = "compute:genes:read")]
     [HttpGet("genes/{id}")]
     [SwaggerOperation(
         Summary = "Gene a gene",

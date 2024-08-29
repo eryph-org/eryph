@@ -31,7 +31,7 @@ public class Delete(
         };
     }
 
-    [Authorize(Policy = "compute:catlets:write")]
+    [Authorize(Policy = "compute:genes:write")]
     [HttpDelete("genes/{id}")]
     [SwaggerOperation(
         Summary = "Deletes a gene",

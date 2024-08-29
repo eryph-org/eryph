@@ -73,6 +73,15 @@ namespace Eryph.Modules.ComputeApi
                     authority,
                     "compute:catlets:control", "compute:catlets:write", "compute:write")));
 
+            options.AddPolicy("compute:genes:read",
+                policy => policy.Requirements.Add(new HasScopeRequirement(
+                    authority,
+                    "compute:genes:read", "compute:genes:write", "compute:read", "compute:write")));
+            options.AddPolicy("compute:genes:write",
+                policy => policy.Requirements.Add(new HasScopeRequirement(
+                    authority,
+                    "compute:genes:write", "compute:write")));
+
             options.AddPolicy("compute:projects:read",
                 policy => policy.Requirements.Add(new HasScopeRequirement(
                     authority,
