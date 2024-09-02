@@ -10,8 +10,11 @@ using Dbosoft.Rebus.Operations;
 using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using Eryph.StateDb;
+using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Rebus.TransactionScopes;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
@@ -21,9 +24,20 @@ public class OperationRequestHandler<TEntity>(
     IHttpContextAccessor httpContextAccessor,
     IMapper mapper,
     IOperationDispatcher operationDispatcher,
+    ProblemDetailsFactory problemDetailsFactory,
+    IStateStore stateStore,
     IUserRightsProvider userRightsProvider)
-    : IOperationRequestHandler<TEntity> where TEntity : class
+    : OperationRequestHandlerBase(
+            endpointResolver,
+            httpContextAccessor,
+            mapper,
+            problemDetailsFactory,
+            operationDispatcher,
+            userRightsProvider),
+        IOperationRequestHandler<TEntity> where TEntity : class
 {
+    private readonly IUserRightsProvider _userRightsProvider = userRightsProvider;
+
     public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(
         Func<object> createOperationFunc,
         CancellationToken cancellationToken)
@@ -31,23 +45,21 @@ public class OperationRequestHandler<TEntity>(
         using var ta = new TransactionScope(TransactionScopeOption.Required, TransactionScopeAsyncFlowOption.Enabled);
         ta.EnlistRebus();
 
+        // TODO Should we use a subclass instead
+        if (typeof(TEntity) == typeof(Gene)
+            && !await _userRightsProvider.HasDefaultTenantAccess(AccessRight.Admin))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                detail: "You do not have super admin access.");
+        }
+
         var command = createOperationFunc();
-        var operation = await operationDispatcher.StartNew(
-            userRightsProvider.GetUserTenantId(),
-            httpContextAccessor.HttpContext?.TraceIdentifier ?? "",
-            command);
-        var operationModel = (operation as StateDb.Workflows.Operation)?.Model;
+        var result = await StartOperation(command);
 
-        if (operationModel == null)
-            return new UnprocessableEntityResult();
-
-        var mappedModel = mapper.Map<Operation>(operationModel);
-        var operationUri = new Uri(endpointResolver.GetEndpoint("common") + $"/v1/operations/{operationModel.Id}");
-
-        // TODO Do we need stateStore.SaveChanges() ?
-
+        await stateStore.SaveChangesAsync(cancellationToken);
         ta.Complete();
 
-        return new AcceptedResult(operationUri, new ListResponse<Operation>()) { Value = mappedModel };
+        return result;
     }
 }

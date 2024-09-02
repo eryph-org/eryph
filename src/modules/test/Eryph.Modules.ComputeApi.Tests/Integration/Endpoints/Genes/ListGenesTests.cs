@@ -22,8 +22,8 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
     private readonly WebModuleFactory<ComputeApiModule> _factory;
-    private static readonly Guid FodderGeneId = Guid.NewGuid();
-    private static readonly Guid VolumeGeneId = Guid.NewGuid();
+    private static readonly Guid FodderGeneId = new("77e1e6e5-3ede-4c21-ac09-fdc943e64f1d");
+    private static readonly Guid VolumeGeneId = new("bcba0b8c-4ea8-4036-aaa9-b20d80931712");
     private static readonly Guid GeneSetId = Guid.NewGuid();
 
     public ListGenesTests(WebModuleFactory<ComputeApiModule> factory)
