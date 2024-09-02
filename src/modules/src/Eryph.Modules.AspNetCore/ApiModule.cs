@@ -99,8 +99,8 @@ namespace Eryph.Modules.AspNetCore
                 c => !c.Handled);
 
             container.RegisterConditional(
-                typeof(IOperationRequestHandler<>),
-                typeof(EntityOperationRequestHandler<>),
+                typeof(ISingleEntityOperationRequestHandler<>),
+                typeof(SingleEntityOperationRequestHandler<>),
                 Lifestyle.Scoped,
                 c => !c.Handled);
             container.Register(typeof(ICreateEntityRequestHandler<>), typeof(CreateEntityRequestHandler<>), Lifestyle.Scoped);

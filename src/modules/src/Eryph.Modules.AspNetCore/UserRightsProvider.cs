@@ -80,6 +80,20 @@ public class UserRightsProvider : UserInfoProvider, IUserRightsProvider
         return userRoleAssignments.Any(x => sufficientRoles.Contains(x.RoleId));
     }
 
+    public Task<bool> HasDefaultTenantAccess(AccessRight requiredAccess)
+    {
+        var authContext = GetAuthContext();
+        if (authContext.TenantId != EryphConstants.DefaultTenantId)
+            return Task.FromResult(false);
+
+        if (authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole))
+            return Task.FromResult(true);
+
+        // All members of the default tenant have read access but only
+        // super admins have write or admin access.
+        return Task.FromResult(requiredAccess == AccessRight.Read);
+    }
+
     public IEnumerable<Guid> GetResourceRoles<TResource>(AccessRight accessRight) where TResource : Resource
     {
         var resourceType = typeof(TResource) switch

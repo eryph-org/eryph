@@ -51,7 +51,7 @@ namespace Eryph.Modules.ComputeApi
                 ListCatletHandler>();
             container.Register<IGetRequestHandler<StateDb.Model.Project, VirtualNetworkConfiguration>,
                 GetVirtualNetworksConfigurationHandler>();
-            container.Register<IOperationRequestHandler<StateDb.Model.VirtualDisk>,
+            container.Register<IEntityOperationRequestHandler<StateDb.Model.VirtualDisk>,
                 DeleteVirtualDiskHandler>();
 
             base.ConfigureContainer(serviceProvider, container);

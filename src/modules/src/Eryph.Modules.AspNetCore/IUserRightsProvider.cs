@@ -28,6 +28,7 @@ public interface IUserRightsProvider : IUserInfoProvider
     Task<bool> HasProjectAccess(string projectName, AccessRight requiredAccess);
     Task<bool> HasProjectAccess(Guid projectId, AccessRight requiredAccess);
     Task<bool> HasProjectAccess(Project project, AccessRight requiredAccess);
+    Task<bool> HasDefaultTenantAccess(AccessRight requiredAccess);
     IEnumerable<Guid> GetResourceRoles<TResource>(AccessRight accessRight) 
         where TResource : Resource;
 

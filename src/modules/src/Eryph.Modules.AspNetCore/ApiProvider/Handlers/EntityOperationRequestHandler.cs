@@ -26,7 +26,7 @@ public class EntityOperationRequestHandler<TEntity>(
     IUserRightsProvider userRightsProvider,
     IHttpContextAccessor httpContextAccessor,
     ProblemDetailsFactory problemDetailsFactory)
-    : IOperationRequestHandler<TEntity>
+    : IEntityOperationRequestHandler<TEntity>
     where TEntity : class
 {
     public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(

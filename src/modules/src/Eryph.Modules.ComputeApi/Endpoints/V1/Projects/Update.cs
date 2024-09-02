@@ -23,7 +23,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 
 public class Update(
-    [NotNull] IOperationRequestHandler<Project> operationHandler,
+    [NotNull] IEntityOperationRequestHandler<Project> operationHandler,
     [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Project> specBuilder)
     : OperationRequestEndpoint<UpdateProjectRequest, Project>(operationHandler, specBuilder)
 {

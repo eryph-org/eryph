@@ -16,7 +16,7 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 
 public class Delete(
-    [NotNull] IOperationRequestHandler<VirtualDisk> operationHandler,
+    [NotNull] IEntityOperationRequestHandler<VirtualDisk> operationHandler,
     [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, VirtualDisk> specBuilder)
     : ResourceOperationEndpoint<SingleEntityRequest, VirtualDisk>(operationHandler, specBuilder)
 {
