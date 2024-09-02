@@ -24,7 +24,6 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
     private readonly WebModuleFactory<ComputeApiModule> _factory;
     private static readonly Guid FodderGeneId = new("77e1e6e5-3ede-4c21-ac09-fdc943e64f1d");
     private static readonly Guid VolumeGeneId = new("bcba0b8c-4ea8-4036-aaa9-b20d80931712");
-    private static readonly Guid GeneSetId = Guid.NewGuid();
 
     public ListGenesTests(WebModuleFactory<ComputeApiModule> factory)
     {
@@ -35,23 +34,13 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
     {
         await SeedDefaultTenantAndProject();
 
-        await stateStore.For<GeneSet>().AddAsync(new GeneSet
-        {
-            Id = GeneSetId,
-            Organization = "testorg",
-            Name = "testgeneset",
-            Tag = "testtag",
-            Hash = "abcdefgh",
-            LastSeen = DateTimeOffset.UtcNow,
-            LastSeenAgent = "host",
-        });
-
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = FodderGeneId,
+            GeneSet = "testorg/testgeneset/testtag",
             Name = "testgene",
             LastSeen = DateTimeOffset.UtcNow,
-            GeneSetId = GeneSetId,
+            LastSeenAgent = "testhost",
             Hash = "12345678",
             GeneType = GeneType.Fodder,
             Size = 42,
@@ -60,9 +49,10 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = VolumeGeneId,
+            GeneSet = "testorg/testgeneset/testtag",
             Name = "testgene2",
             LastSeen = DateTimeOffset.UtcNow,
-            GeneSetId = GeneSetId,
+            LastSeenAgent = "testhost",
             Hash = "abcdefgh",
             GeneType = GeneType.Volume,
             Size = 43,

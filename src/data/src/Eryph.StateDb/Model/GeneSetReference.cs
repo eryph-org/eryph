@@ -10,11 +10,7 @@ public class GeneSetReference
 {
     public Guid Id { get; set; }
 
-    public string Organization { get; set; }
+    public required string GeneSet { get; set; }
 
-    public string Name { get; set; }
-
-    public string Tag { get; set; }
-
-    public GeneSet GeneSet { get; set; }
+    public IList<Gene> Genes { get; set; }
 }

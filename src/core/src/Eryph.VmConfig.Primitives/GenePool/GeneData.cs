@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 
-namespace Eryph.Resources.GenePool;
+namespace Eryph.GenePool;
 
 public class GeneData
 {

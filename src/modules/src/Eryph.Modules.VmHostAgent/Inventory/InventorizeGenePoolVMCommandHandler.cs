@@ -9,9 +9,9 @@ using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
+using Eryph.GenePool;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.Modules.VmHostAgent.Genetics;
-using Eryph.Resources.GenePool;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -58,7 +58,7 @@ internal class InventorizeGenePoolCommandHandler(
             Inventory = genePoolInventory.ToList(),
         };
 
-    private EitherAsync<Error, Seq<GeneSetData>> InventorizeGenePool(
+    private EitherAsync<Error, Seq<GeneData>> InventorizeGenePool(
         string genePoolPath,
         ILocalGenePool genePool) =>
         from _ in RightAsync<Error, Unit>(unit)
@@ -71,14 +71,15 @@ internal class InventorizeGenePoolCommandHandler(
                     Left: error =>
                     {
                         logger.LogError(error, "Inventory of gene set {Path} failed", p);
-                        return None;
+                        return Seq<GeneData>();
                     }))
             .SequenceSerial()
-            .Map(Right<Error, Seq<Option<GeneSetData>>>)
+            .Map(s => s.Flatten())
+            .Map(Right<Error, Seq<GeneData>>)
             .ToAsync()
-        select geneSets.Somes();
+        select geneSets;
 
-    private EitherAsync<Error, Option<GeneSetData>> InventorizeGeneSet(
+    private EitherAsync<Error, Seq<GeneData>> InventorizeGeneSet(
         string geneSetManifestPath,
         string genePoolPath,
         ILocalGenePool genePool) =>
@@ -88,11 +89,11 @@ internal class InventorizeGenePoolCommandHandler(
         from _ in guard(geneSetInfo.Id == geneSetId,
             Error.New($"The gene set manifest '{geneSetManifestPath}' is in the wrong location."))
         from geneSetData in notEmpty(geneSetInfo.MetaData.Reference)
-            ? RightAsync<Error, Option<GeneSetData>>(None)
-            : InventorizeGeneSet(geneSetInfo, genePoolPath).Map(Optional)
+            ? RightAsync<Error, Seq<GeneData>>(Seq<GeneData>())
+            : InventorizeGeneSet(geneSetInfo, genePoolPath)
         select geneSetData;
-    
-    private EitherAsync<Error, GeneSetData> InventorizeGeneSet(
+
+    private EitherAsync<Error, Seq<GeneData>> InventorizeGeneSet(
         GeneSetInfo geneSetInfo,
         string genePoolPath) =>
         from _ in RightAsync<Error, Unit>(unit)
@@ -109,11 +110,7 @@ internal class InventorizeGenePoolCommandHandler(
             .Map(g => InventorizeGene(genePoolPath, geneSetInfo.Id, g.GeneType, g.Name, g.Hash))
             .Sequence()
             .ToAsync()
-        select new GeneSetData
-        {
-            Id = geneSetInfo.Id,
-            Genes = geneData.Somes().ToList(),
-        };
+        select geneData.Somes();
 
     private Either<Error, Option<GeneData>> InventorizeGene(
         string genePoolPath,

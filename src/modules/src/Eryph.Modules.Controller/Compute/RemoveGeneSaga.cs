@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.ModuleCore;
@@ -14,6 +15,8 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
@@ -39,21 +42,17 @@ internal class RemoveGeneSaga(
         // TODO check that the gene is not used
         // For volumes check virtual disks
         // For fodder check catlet metadata
+        var geneId = dbGene.ToGeneIdWithType();
+        if (geneId.IsLeft)
+        {
+            await Fail(ErrorUtils.PrintError(Error.Many(geneId.LeftToSeq())));
+            return;
+        }
 
         await StartNewTask(new RemoveGenesVMCommand
         {
-            AgentName = dbGene.GeneSet.LastSeenAgent,
-            Genes = 
-            [
-                new GeneIdentifierWithType(
-                    dbGene.GeneType,
-                    new GeneIdentifier(
-                        new GeneSetIdentifier(
-                            OrganizationName.New(dbGene.GeneSet.Organization),
-                            GeneSetName.New(dbGene.GeneSet.Name),
-                            TagName.New(dbGene.GeneSet.Tag)),
-                        GeneName.New(dbGene.Name)))
-            ]
+            AgentName = dbGene.LastSeenAgent,
+            Genes = [geneId.ValueUnsafe()],
         });
     }
 

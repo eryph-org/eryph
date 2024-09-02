@@ -11,17 +11,19 @@ public class Gene
 {
     public Guid Id { get; set; }
 
-    public GeneType GeneType { get; set; }
+    public required GeneType GeneType { get; set; }
 
-    public string Name { get; set; }
+    public required string GeneSet { get; set; }
 
-    public Guid GeneSetId { get; set; }
+    public required string Name { get; set; }
 
-    public GeneSet GeneSet { get; set; }
+    public required DateTimeOffset LastSeen { get; set; }
 
-    public DateTimeOffset LastSeen { get; set; }
+    public required string LastSeenAgent { get; set; }
 
-    public long Size { get; set; }
+    public required long Size { get; set; }
 
-    public string Hash { get; set; }
+    public required string Hash { get; set; }
+
+    public IList<GeneSetReference> References { get; set; } = null!;
 }

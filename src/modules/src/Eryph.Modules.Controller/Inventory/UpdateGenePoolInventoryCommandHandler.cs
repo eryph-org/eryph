@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.GenePool;
 using Eryph.Messages.Resources.Genes.Commands;
-using Eryph.Resources.GenePool;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -20,62 +20,40 @@ public class UpdateGenePoolInventoryCommandHandler(
 {
     public async Task Handle(UpdateGenePoolInventoryCommand message)
     {
-        foreach (var geneSetData in message.Inventory)
+        foreach (var geneData in message.Inventory)
         {
-            await AddOrUpdateGeneSet(message.AgentName, message.Timestamp, geneSetData);
+            await AddOrUpdateGene(message.AgentName, message.Timestamp, geneData);
         }
 
         // TODO Remove outdated genesets and genes
     }
 
-    private async Task AddOrUpdateGeneSet(
+    private async Task AddOrUpdateGene(
         string agentName,
         DateTimeOffset timestamp,
-        GeneSetData geneSetData)
+        GeneData geneData)
     {
-        var dbGeneSet = await stateStore.For<GeneSet>().GetBySpecAsync(
-            new GeneSetSpecs.GetForInventory(geneSetData.Id));
-        if (dbGeneSet is null)
+        var dbGene = await stateStore.For<Gene>().GetBySpecAsync(
+            new GeneSpecs.GetForInventory(agentName, geneData.GeneType, geneData.Id));
+
+        if (dbGene is null)
         {
-            dbGeneSet = new GeneSet
+            dbGene = new Gene
             {
                 Id = Guid.NewGuid(),
-                Organization = geneSetData.Id.Organization.Value,
-                Name = geneSetData.Id.GeneSet.Value,
-                Tag = geneSetData.Id.Tag.Value,
+                GeneType = geneData.GeneType,
+                GeneSet = geneData.Id.GeneSet.Value,
+                Name = geneData.Id.GeneName.Value,
+                Size = geneData.Size,
+                Hash = geneData.Hash,
                 LastSeen = timestamp,
                 LastSeenAgent = agentName,
-                Hash = "abc",
-                Genes = [],
             };
-            await stateStore.For<GeneSet>().AddAsync(dbGeneSet);
+            await stateStore.For<Gene>().AddAsync(dbGene);
         }
         else
         {
-            dbGeneSet.LastSeen = timestamp;
-        }
-
-        foreach (var geneData in geneSetData.Genes)
-        {
-            var dbGene = dbGeneSet.Genes.FirstOrDefault(
-                g => g.Name == geneData.Id.GeneName.Value);
-            if (dbGene is null)
-            {
-                dbGene = new Gene
-                {
-                    Id = Guid.NewGuid(),
-                    GeneType = geneData.GeneType,
-                    Name = geneData.Id.GeneName.Value,
-                    Size = geneData.Size,
-                    Hash = geneData.Hash,
-                    LastSeen = timestamp
-                };
-                dbGeneSet.Genes.Add(dbGene);
-            }
-            else
-            {
-                dbGene.LastSeen = timestamp;
-            }
+            dbGene.LastSeen = timestamp;
         }
     }
 }

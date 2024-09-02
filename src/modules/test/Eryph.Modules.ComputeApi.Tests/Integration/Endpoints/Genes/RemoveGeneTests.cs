@@ -25,7 +25,6 @@ public class RemoveGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleF
 {
     private readonly WebModuleFactory<ComputeApiModule> _factory;
     private static readonly Guid GeneId = Guid.NewGuid();
-    private static readonly Guid GeneSetId = Guid.NewGuid();
 
     public RemoveGeneTests(WebModuleFactory<ComputeApiModule> factory)
     {
@@ -36,23 +35,13 @@ public class RemoveGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleF
     {
         await SeedDefaultTenantAndProject();
 
-        await stateStore.For<GeneSet>().AddAsync(new GeneSet
-        {
-            Id = GeneSetId,
-            Organization = "testorg",
-            Name = "testgeneset",
-            Tag = "testtag",
-            Hash = "abcdefgh",
-            LastSeen = DateTimeOffset.UtcNow,
-            LastSeenAgent = "host",
-        });
-
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = GeneId,
+            GeneSet = "testorg/testgeneset/testtag",
             Name = "testgene",
             LastSeen = DateTimeOffset.UtcNow,
-            GeneSetId = GeneSetId,
+            LastSeenAgent = "testhost",
             Hash = "12345678",
             GeneType = GeneType.Volume,
             Size = 42,
