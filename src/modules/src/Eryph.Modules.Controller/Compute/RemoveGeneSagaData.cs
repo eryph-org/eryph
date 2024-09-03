@@ -8,4 +8,5 @@ namespace Eryph.Modules.Controller.Compute;
 
 public class RemoveGeneSagaData
 {
+    public Guid GeneId { get; set; }
 }

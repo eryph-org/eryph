@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Modules.Controller.ChangeTracking;
+using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -18,14 +19,17 @@ namespace Eryph.Modules.Controller.Seeding;
 internal class CatletMetadataSeeder : SeederBase
 {
     private readonly IStateStoreRepository<CatletMetadata> _metadataRepository;
+    private readonly IVirtualMachineMetadataService _metadataService;
 
     public CatletMetadataSeeder(
         ChangeTrackingConfig config,
         IFileSystem fileSystem,
-        IStateStoreRepository<CatletMetadata> metadataRepository)
+        IStateStoreRepository<CatletMetadata> metadataRepository,
+        IVirtualMachineMetadataService metadataService)
         : base(fileSystem, config.VirtualMachinesConfigPath)
     {
         _metadataRepository = metadataRepository;
+        _metadataService = metadataService;
     }
 
     protected override async Task SeedAsync(
@@ -43,12 +47,7 @@ internal class CatletMetadataSeeder : SeederBase
         if (metadata is null)
             throw new SeederException($"The catlet metadata {entityId} is invalid");
 
-        await _metadataRepository.AddAsync(new CatletMetadata()
-        {
-            Id = entityId,
-            Metadata = JsonSerializer.Serialize(metadata),
-        },
-        cancellationToken);
+        await _metadataService.SaveMetadata(metadata, cancellationToken);
         await _metadataRepository.SaveChangesAsync(cancellationToken);
     }
 }

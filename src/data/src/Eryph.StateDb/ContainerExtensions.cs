@@ -14,6 +14,8 @@ public static class ContainerExtensions
     public static SimpleInjectorAddOptions RegisterStateStore(
         this SimpleInjectorAddOptions options)
     {
+        options.Container.Register<IGeneRepository, GeneRepository>(Lifestyle.Scoped);
+
         options.Container.Register(
             typeof(IReadRepositoryBase<>),
             typeof(ReadOnlyStateStoreRepository<>),

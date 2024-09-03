@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Eryph.Core;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Eryph.StateDb;
 
@@ -53,7 +55,9 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
     public DbSet<ReportedNetwork> ReportedNetworks { get; set; }
 
     public DbSet<CatletMetadata> Metadata { get; set; }
-    
+
+    public DbSet<CatletMetadataGene> MetadataGenes { get; set; }
+
     public DbSet<Project> Projects { get; set; }
 
     public DbSet<ProjectRoleAssignment> ProjectRoles { get; set; }
@@ -70,6 +74,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         // interceptors to detect changes. Hence, we force EF Core
         // to always create transactions.
         Database.AutoTransactionBehavior = AutoTransactionBehavior.Always;
+        optionsBuilder.LogTo(s => Debug.WriteLine(s));
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -261,6 +266,16 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .WithOne()
             .HasForeignKey(p => p.CatletMetadataId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CatletMetadata>()
+            .HasMany<CatletMetadataGene>()
+            .WithOne(g => g.Metadata)
+            .HasForeignKey(g => g.MetadataId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CatletMetadata>()
+            .Navigation(m => m.Genes)
+            .AutoInclude();
 
         modelBuilder.Entity<ReportedNetwork>()
             .HasKey(x => x.Id);

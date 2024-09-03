@@ -25,7 +25,7 @@ namespace Eryph.Modules.Controller.Compute;
 [UsedImplicitly]
 internal class RemoveGeneSaga(
     IWorkflow workflow,
-    IStateStoreRepository<Gene> geneRepository)
+    IGeneRepository geneRepository)
     : OperationTaskWorkflowSaga<RemoveGeneCommand, EryphSagaData<RemoveGeneSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<RemoveGenesVMCommand>>
 {
@@ -39,6 +39,8 @@ internal class RemoveGeneSaga(
             return;
         }
 
+        Data.Data.GeneId = dbGene.Id;
+
         // TODO check that the gene is not used
         // For volumes check virtual disks
         // For fodder check catlet metadata
@@ -46,6 +48,13 @@ internal class RemoveGeneSaga(
         if (geneId.IsLeft)
         {
             await Fail(ErrorUtils.PrintError(Error.Many(geneId.LeftToSeq())));
+            return;
+        }
+
+        var isUnused = await geneRepository.IsUnusedVolumeGene(dbGene.Id);
+        if (!isUnused)
+        {
+            await Fail($"The gene {geneId.ValueUnsafe().GeneIdentifier.Value} is in use.");
             return;
         }
 
@@ -57,7 +66,15 @@ internal class RemoveGeneSaga(
     }
 
     public Task Handle(OperationTaskStatusEvent<RemoveGenesVMCommand> message) =>
-        FailOrRun(message, () => Complete());
+        FailOrRun(message, async () =>
+        {
+            var dbGene = await geneRepository.GetByIdAsync(Data.Data.GeneId);
+            if (dbGene is not null)
+            {
+                await geneRepository.DeleteAsync(dbGene);
+            }
+            await Complete();
+        });
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<RemoveGeneSagaData>> config)
     {

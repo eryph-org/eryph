@@ -8,7 +8,15 @@ namespace Eryph.Modules.Controller.DataServices;
 
 public interface IVirtualMachineMetadataService
 {
-    Task<Option<CatletMetadata>> GetMetadata(Guid id);
-    Task<Unit> SaveMetadata(CatletMetadata metadata);
-    Task<Unit> RemoveMetadata(Guid id);
+    Task<Option<CatletMetadata>> GetMetadata(
+        Guid id,
+        CancellationToken cancellationToken = default);
+    
+    Task<Unit> SaveMetadata(
+        CatletMetadata metadata,
+        CancellationToken cancellationToken = default);
+
+    Task<Unit> RemoveMetadata(
+        Guid id,
+        CancellationToken cancellationToken = default);
 }

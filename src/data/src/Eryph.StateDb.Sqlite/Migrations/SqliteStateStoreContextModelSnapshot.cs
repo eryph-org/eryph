@@ -55,6 +55,35 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.ToTable("Metadata");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadataGene", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CatletMetadataId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneSet")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("MetadataId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CatletMetadataId");
+
+                    b.HasIndex("MetadataId");
+
+                    b.ToTable("MetadataGenes");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkAdapter", b =>
                 {
                     b.Property<Guid>("CatletId")
@@ -717,6 +746,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<bool>("Frozen")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("GeneName")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Geneset")
                         .HasColumnType("TEXT");
 
@@ -856,6 +888,21 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Navigation("AttachedDisk");
 
                     b.Navigation("Catlet");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadataGene", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.CatletMetadata", null)
+                        .WithMany("Genes")
+                        .HasForeignKey("CatletMetadataId");
+
+                    b.HasOne("Eryph.StateDb.Model.CatletMetadata", "Metadata")
+                        .WithMany()
+                        .HasForeignKey("MetadataId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Metadata");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkAdapter", b =>
@@ -1110,6 +1157,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired();
 
                     b.Navigation("RoutedNetwork");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadata", b =>
+                {
+                    b.Navigation("Genes");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpPool", b =>

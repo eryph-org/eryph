@@ -46,4 +46,12 @@ public class GeneSpecs
                              && x.Name == geneId.GeneName.Value);
         }
     }
+
+    public sealed class GetOutdated : Specification<Gene>
+    {
+        public GetOutdated(string agentName, DateTimeOffset timestamp)
+        {
+            Query.Where(x => x.LastSeenAgent == agentName && x.LastSeen < timestamp);
+        }
+    }
 }

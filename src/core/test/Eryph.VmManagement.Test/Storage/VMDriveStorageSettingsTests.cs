@@ -529,5 +529,7 @@ public class VMDriveStorageSettingsTests
         resultSettings.StorageIdentifier.Should().BeSome().Which.Should().Be("gene:testorg/testset/testtag:sda");
         resultSettings.Geneset.Should().BeSome()
             .Which.Should().Be(GeneSetIdentifier.New("testorg/testset/testtag"));
+        resultSettings.GeneName.Should().BeSome()
+            .Which.Should().Be(GeneName.New("sda"));
     }
 }
