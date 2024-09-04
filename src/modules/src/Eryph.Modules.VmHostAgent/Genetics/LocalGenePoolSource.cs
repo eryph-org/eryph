@@ -251,6 +251,19 @@ internal class LocalGenePoolSource(
         }).ToEither()
         select new GeneSetInfo(geneSetId, geneSetPath, manifest, []);
 
+    public EitherAsync<Error, Option<long>> GetCachedGeneSize(
+        string genePoolPath,
+        GeneType geneType,
+        GeneIdentifier geneId) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, geneId)
+        from geneExists in Try(() => fileSystem.FileExists(genePath))
+            .ToEitherAsync()
+        from fileSize in geneExists
+            ? Try(() => fileSystem.GetFileSize(genePath)).ToEitherAsync().Map(Optional)
+            : RightAsync<Error, Option<long>>(None)
+        select fileSize;
+
     public EitherAsync<Error, Unit> RemoveCachedGene(
         string genePoolPath,
         GeneType geneType,

@@ -122,6 +122,13 @@ internal class UpdateCatletSaga(
 
             Data.Data.State = UpdateVMState.Resolved;
 
+            await bus.SendLocal(new UpdateGenesInventoryCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Inventory = response.Inventory,
+                Timestamp = response.Timestamp,
+            });
+
             var metadata = await GetCatletMetadata(Data.Data.CatletId);
             if (metadata.IsNone)
             {
@@ -157,6 +164,13 @@ internal class UpdateCatletSaga(
             Data.Data.PendingGenes = Data.Data.PendingGenes
                 .Except([response.RequestedGene])
                 .ToList();
+
+            await bus.SendLocal(new UpdateGenesInventoryCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Inventory = [response.Inventory],
+                Timestamp = response.Timestamp,
+            });
 
             if (Data.Data.PendingGenes.Count > 0)
                 return;

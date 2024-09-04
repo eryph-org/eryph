@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.GenePool;
 using Eryph.GenePool.Client;
 using Eryph.Messages.Resources.Genes.Commands;
 using LanguageExt;
@@ -40,9 +41,22 @@ internal class LocalFirstGeneProvider(
                 + "This code must only be called with resolved IDs."))
         from geneHash in GetGeneHash(geneSetInfo, geneType, geneIdentifier)
         from _2 in EnsureGene(geneSetInfo, geneIdentifier, geneHash, reportProgress, cancel)
+        let localGenePool = genepoolFactory.CreateLocal()
+        let timestamp = DateTimeOffset.UtcNow
+        from geneSize in localGenePool.GetCachedGeneSize(genePoolPath, geneType, geneIdentifier)
+        from validGeneSize in geneSize.ToEitherAsync(
+            Error.New($"The gene {geneIdentifier} was not properly extracted."))
         select new PrepareGeneResponse
         {
             RequestedGene = new GeneIdentifierWithType(geneType, geneIdentifier),
+            Inventory = new GeneData()
+            {
+                GeneType = geneType,
+                Id = geneIdentifier,
+                Hash = geneHash,
+                Size = validGeneSize,
+            },
+            Timestamp = timestamp,
         };
 
     public EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
