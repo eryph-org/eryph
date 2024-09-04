@@ -54,7 +54,7 @@ internal class GenePoolInventory(
 
     private EitherAsync<Error, Seq<GeneData>> InventorizeGeneSet(
         string geneSetManifestPath) =>
-        from geneSetId in GenePoolPaths.GetGeneSetIdFromPath(genePoolPath, geneSetManifestPath)
+        from geneSetId in GenePoolPaths.GetGeneSetIdFromManifestPath(genePoolPath, geneSetManifestPath)
             .ToAsync()
         from geneData in InventoryGeneSet(geneSetId)
         select geneData;

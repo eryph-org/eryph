@@ -40,7 +40,7 @@ public static class GenePoolPaths
     {
         var geneFolder = geneType switch
         {
-            GeneType.Catlet => ".",
+            GeneType.Catlet => "",
             GeneType.Volume => "volumes",
             GeneType.Fodder => "fodder",
             _ => throw new ArgumentException($"The gene type '{geneType}' is not supported",
@@ -71,9 +71,8 @@ public static class GenePoolPaths
             Error.New("The gene set path is not fully qualified."))
         from containedPath in PathUtils.GetContainedPath(genePoolPath, geneSetPath)
             .ToEither(Error.New("The gene set path is not located in the gene pool."))
-        let relativePath = Path.GetRelativePath(genePoolPath, geneSetPath)
-        let parts = relativePath.Split(Path.DirectorySeparatorChar)
-        from _3 in guard(parts.Length != 3,
+        let parts = containedPath.Split(Path.DirectorySeparatorChar)
+        from _3 in guard(parts.Length == 3,
             Error.New("The gene set path is invalid."))
         from organizationName in OrganizationName.NewEither(parts[0])
         from geneSetName in GeneSetName.NewEither(parts[1])
@@ -86,7 +85,7 @@ public static class GenePoolPaths
         from _1 in guard(
                 string.Equals(Path.GetFileName(geneSetManifestPath), "geneset-tag.json",
                     StringComparison.OrdinalIgnoreCase),
-                Error.New("The gene set manifest path does not point to a gen eset manifest."))
+                Error.New("The gene set manifest path does not point to a gene set manifest."))
             .ToEither()
         from geneSetId in GetGeneSetIdFromPath(genePoolPath, Path.GetDirectoryName(geneSetManifestPath))
         select geneSetId;
