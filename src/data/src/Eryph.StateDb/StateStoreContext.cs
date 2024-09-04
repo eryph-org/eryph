@@ -268,9 +268,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<CatletMetadata>()
-            .HasMany<CatletMetadataGene>()
-            .WithOne(g => g.Metadata)
+            .HasMany(m => m.Genes)
+            .WithOne()
             .HasForeignKey(g => g.MetadataId)
+            .IsRequired()
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<CatletMetadata>()

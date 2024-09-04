@@ -110,17 +110,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     MetadataId = table.Column<Guid>(type: "TEXT", nullable: false),
                     GeneSet = table.Column<string>(type: "TEXT", nullable: false),
-                    GeneName = table.Column<string>(type: "TEXT", nullable: false),
-                    CatletMetadataId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    GeneName = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_MetadataGenes", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_MetadataGenes_Metadata_CatletMetadataId",
-                        column: x => x.CatletMetadataId,
-                        principalTable: "Metadata",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_MetadataGenes_Metadata_MetadataId",
                         column: x => x.MetadataId,
@@ -691,11 +685,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_Logs_TaskId",
                 table: "Logs",
                 column: "TaskId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_MetadataGenes_CatletMetadataId",
-                table: "MetadataGenes",
-                column: "CatletMetadataId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MetadataGenes_MetadataId",

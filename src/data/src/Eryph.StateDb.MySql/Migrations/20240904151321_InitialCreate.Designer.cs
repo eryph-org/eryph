@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20240903132046_InitialCreate")]
+    [Migration("20240904151321_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -69,9 +69,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<Guid?>("CatletMetadataId")
-                        .HasColumnType("char(36)");
-
                     b.Property<string>("GeneName")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -84,8 +81,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CatletMetadataId");
 
                     b.HasIndex("MetadataId");
 
@@ -902,15 +897,9 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     b.HasOne("Eryph.StateDb.Model.CatletMetadata", null)
                         .WithMany("Genes")
-                        .HasForeignKey("CatletMetadataId");
-
-                    b.HasOne("Eryph.StateDb.Model.CatletMetadata", "Metadata")
-                        .WithMany()
                         .HasForeignKey("MetadataId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Metadata");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkAdapter", b =>

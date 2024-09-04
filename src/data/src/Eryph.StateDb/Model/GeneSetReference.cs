@@ -12,5 +12,5 @@ public class GeneSetReference
 
     public required string GeneSet { get; set; }
 
-    public IList<Gene> Genes { get; set; }
+    public IList<Gene> Genes { get; set; } = null!;
 }

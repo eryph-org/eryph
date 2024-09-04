@@ -128,17 +128,11 @@ namespace Eryph.StateDb.MySql.Migrations
                     GeneSet = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     GeneName = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    CatletMetadataId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_MetadataGenes", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_MetadataGenes_Metadata_CatletMetadataId",
-                        column: x => x.CatletMetadataId,
-                        principalTable: "Metadata",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_MetadataGenes_Metadata_MetadataId",
                         column: x => x.MetadataId,
@@ -795,11 +789,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_Logs_TaskId",
                 table: "Logs",
                 column: "TaskId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_MetadataGenes_CatletMetadataId",
-                table: "MetadataGenes",
-                column: "CatletMetadataId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MetadataGenes_MetadataId",

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20240903132042_InitialCreate")]
+    [Migration("20240904151316_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -64,9 +64,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("CatletMetadataId")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("GeneName")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -79,8 +76,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CatletMetadataId");
 
                     b.HasIndex("MetadataId");
 
@@ -897,15 +892,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     b.HasOne("Eryph.StateDb.Model.CatletMetadata", null)
                         .WithMany("Genes")
-                        .HasForeignKey("CatletMetadataId");
-
-                    b.HasOne("Eryph.StateDb.Model.CatletMetadata", "Metadata")
-                        .WithMany()
                         .HasForeignKey("MetadataId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Metadata");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkAdapter", b =>
