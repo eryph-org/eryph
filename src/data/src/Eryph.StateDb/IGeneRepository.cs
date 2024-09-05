@@ -12,4 +12,6 @@ public interface IGeneRepository : IStateStoreRepository<Gene>
     Task<bool> IsUnusedVolumeGene(Guid geneId);
 
     Task<List<Gene>> GetUnusedVolumeGenes(string agentName);
+    Task<bool> IsUnusedFodderGene(Guid geneId);
+    Task<List<Gene>> GetUnusedFodderGenes(string agentName);
 }

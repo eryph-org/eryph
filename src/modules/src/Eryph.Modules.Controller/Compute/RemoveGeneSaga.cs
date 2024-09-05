@@ -41,9 +41,6 @@ internal class RemoveGeneSaga(
 
         Data.Data.GeneId = dbGene.Id;
 
-        // TODO check that the gene is not used
-        // For volumes check virtual disks
-        // For fodder check catlet metadata
         var geneId = dbGene.ToGeneIdWithType();
         if (geneId.IsLeft)
         {
@@ -51,7 +48,15 @@ internal class RemoveGeneSaga(
             return;
         }
 
-        var isUnused = await geneRepository.IsUnusedVolumeGene(dbGene.Id);
+        var isUnused = dbGene.GeneType switch
+        {
+            // Catlet genes are always unused as we store a (modified) copy
+            // in the catlet metadata
+            GeneType.Catlet => true,
+            GeneType.Fodder => await geneRepository.IsUnusedFodderGene(dbGene.Id),
+            GeneType.Volume => await geneRepository.IsUnusedVolumeGene(dbGene.Id),
+            _ => false,
+        };
         if (!isUnused)
         {
             await Fail($"The gene {geneId.ValueUnsafe().GeneIdentifier.Value} is in use.");
@@ -73,6 +78,7 @@ internal class RemoveGeneSaga(
             {
                 await geneRepository.DeleteAsync(dbGene);
             }
+            // TODO When deleting a volume gene, we might also need to remove the VirtualDisk entry
             await Complete();
         });
 
