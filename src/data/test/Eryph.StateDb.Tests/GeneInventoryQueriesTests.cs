@@ -13,14 +13,14 @@ namespace Eryph.StateDb.Tests;
 
 [Trait("Category", "Docker")]
 [Collection(nameof(MySqlDatabaseCollection))]
-public class MySqlGeneRepositoryTests(MySqlFixture databaseFixture)
-    : GeneRepositoryTests(databaseFixture);
+public class MySqlGeneInventoryQueriesTests(MySqlFixture databaseFixture)
+    : GeneInventoryQueriesTests(databaseFixture);
 
 [Collection(nameof(SqliteDatabaseCollection))]
-public class SqliteGeneRepositoryTests(SqliteFixture databaseFixture)
-    : GeneRepositoryTests(databaseFixture);
+public class SqliteGeneInventoryQueriesTests(SqliteFixture databaseFixture)
+    : GeneInventoryQueriesTests(databaseFixture);
 
-public abstract class GeneRepositoryTests(IDatabaseFixture databaseFixture)
+public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture)
     : StateDbTestBase(databaseFixture)
 {
     private const string AgentName = "testhost";
@@ -36,7 +36,7 @@ public abstract class GeneRepositoryTests(IDatabaseFixture databaseFixture)
     [Fact]
     public async Task Foo()
     {
-        await WithScope(async (geneRepository, stateStore) =>
+        await WithScope(async (_, stateStore) =>
         {
             await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
             {
@@ -49,7 +49,7 @@ public abstract class GeneRepositoryTests(IDatabaseFixture databaseFixture)
                 StorageIdentifier = "gene:testorg/testset/testtag:sda",
             });
 
-            await geneRepository.AddAsync(new Gene
+            await stateStore.For<Gene>().AddAsync(new Gene
             {
                 Id = UsedGeneId,
                 GeneSet = "testorg/testset/testtag",
@@ -61,7 +61,7 @@ public abstract class GeneRepositoryTests(IDatabaseFixture databaseFixture)
                 Hash = "12345678",
             });
 
-            await geneRepository.AddAsync(new Gene
+            await stateStore.For<Gene>().AddAsync(new Gene
             {
                 Id = UnusedGeneId,
                 GeneSet = "testorg/testset/testtag",
@@ -85,10 +85,10 @@ public abstract class GeneRepositoryTests(IDatabaseFixture databaseFixture)
         });
     }
 
-    private async Task WithScope(Func<IGeneRepository, IStateStore, Task> func)
+    private async Task WithScope(Func<IGeneInventoryQueries, IStateStore, Task> func)
     {
         await using var scope = CreateScope();
-        var geneRepository = scope.GetInstance<IGeneRepository>();
+        var geneRepository = scope.GetInstance<IGeneInventoryQueries>();
         var stateStore = scope.GetInstance<IStateStore>();
         await func(geneRepository, stateStore);
     }

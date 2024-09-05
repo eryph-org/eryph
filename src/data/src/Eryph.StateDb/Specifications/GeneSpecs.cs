@@ -20,19 +20,33 @@ public class GeneSpecs
         }
     }
 
+    public sealed class GetByGeneId : Specification<Gene>, ISingleResultSpecification<Gene>
+    {
+        public GetByGeneId(string agentName, GeneIdentifier geneId)
+        {
+            Query.Where(x => x.LastSeenAgent == agentName
+                             && x.GeneSet == geneId.GeneSet.Value
+                             && x.Name == geneId.GeneName.Value);
+        }
+    }
+
+    public sealed class GetByGeneIds : Specification<Gene>
+    {
+        public GetByGeneIds(string agentName, IList<GeneIdentifier> geneIds)
+        {
+            var values = geneIds
+                .Map(id => id.GeneSet.Value + ":" + id.GeneName.Value)
+                .ToList();
+
+            Query.Where(x => x.LastSeenAgent == agentName
+                             && values.Contains(x.GeneSet + ":" + x.Name));
+        }
+    }
+
     public sealed class GetAll : Specification<Gene>
     {
         public GetAll()
         {
-        }
-    }
-
-    public sealed class GetUnused : Specification<Gene>
-    {
-        public GetUnused(string agentName, StateStoreContext context)
-        {
-            Query.Where(x => x.LastSeenAgent == agentName
-                             && !context.VirtualDisks.Any(d => d.StorageIdentifier == x.Name));
         }
     }
 

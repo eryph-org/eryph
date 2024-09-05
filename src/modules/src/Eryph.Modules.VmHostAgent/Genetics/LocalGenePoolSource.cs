@@ -271,7 +271,7 @@ internal class LocalGenePoolSource(
         from _ in TryAsync(async () =>
         {
             var geneSetPath = BuildGeneSetPath(geneId.GeneSet, genePoolPath);
-            var manifestPath = Path.Combine(geneSetPath, "manifest-tag.json");
+            var manifestPath = Path.Combine(geneSetPath, "geneset-tag.json");
             if (!fileSystem.FileExists(manifestPath))
                 return unit;
 

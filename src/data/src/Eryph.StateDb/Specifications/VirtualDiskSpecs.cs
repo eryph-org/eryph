@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Ardalis.Specification;
+using Eryph.ConfigModel;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 
@@ -48,5 +51,27 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
+        public sealed class GetByGeneId : Specification<VirtualDisk>, ISingleResultSpecification
+        {
+            public GetByGeneId(string agentName, GeneIdentifier geneId)
+            {
+                Query.Where(x => x.LastSeenAgent == agentName
+                                 && x.Geneset == geneId.GeneSet.Value
+                                 && x.GeneName == geneId.GeneName.Value);
+            }
+        }
+
+        public sealed class GetByGeneIds : Specification<VirtualDisk>
+        {
+            public GetByGeneIds(string agentName, IList<GeneIdentifier> geneIds)
+            {
+                var values = geneIds
+                    .Map(id => id.GeneSet.Value + ":" + id.GeneName.Value)
+                    .ToList();
+
+                Query.Where(x => x.LastSeenAgent == agentName
+                                 && values.Contains(x.Geneset + ":" + x.GeneName));
+            }
+        }
     }
 }

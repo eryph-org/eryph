@@ -15,11 +15,11 @@ namespace Eryph.Modules.Controller.Inventory;
 
 [UsedImplicitly]
 internal class UpdateGenePoolInventoryCommandHandler(
-    IGeneRepository geneRepository)
+    IStateStoreRepository<Gene> geneRepository)
     : UpdateGenePoolInventoryCommandHandlerBase(geneRepository),
         IHandleMessages<UpdateGenePoolInventoryCommand>
 {
-    private readonly IGeneRepository _geneRepository = geneRepository;
+    private readonly IStateStoreRepository<Gene> _geneRepository = geneRepository;
 
     public async Task Handle(UpdateGenePoolInventoryCommand message)
     {

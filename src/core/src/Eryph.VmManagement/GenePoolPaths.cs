@@ -31,7 +31,7 @@ public static class GenePoolPaths
     public static string GetGeneSetManifestPath(
         string genePoolPath,
         GeneSetIdentifier geneSetId) =>
-        Path.Combine(GetGeneSetPath(genePoolPath, geneSetId), "manifest-tag.json");
+        Path.Combine(GetGeneSetPath(genePoolPath, geneSetId), "geneset-tag.json");
 
     public static string GetGenePath(
         string genePoolPath,

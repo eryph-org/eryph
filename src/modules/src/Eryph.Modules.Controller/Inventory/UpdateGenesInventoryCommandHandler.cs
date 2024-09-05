@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.StateDb;
+using Eryph.StateDb.Model;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.Controller.Inventory;
 
 internal class UpdateGenesInventoryCommandHandler(
-    IGeneRepository geneRepository)
+    IStateStoreRepository<Gene> geneRepository)
     : UpdateGenePoolInventoryCommandHandlerBase(geneRepository),
         IHandleMessages<UpdateGenesInventoryCommand>
 {

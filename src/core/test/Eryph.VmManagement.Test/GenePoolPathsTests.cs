@@ -48,7 +48,7 @@ public class GenePoolPathsTests
             @"Z:\volumes\genepool",
             GeneSetIdentifier.New("acme/acme-os/1.0"));
 
-        result.Should().Be(@"Z:\volumes\genepool\acme\acme-os\1.0\manifest-tag.json");
+        result.Should().Be(@"Z:\volumes\genepool\acme\acme-os\1.0\geneset-tag.json");
     }
 
     [Theory]

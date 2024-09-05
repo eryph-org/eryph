@@ -11,7 +11,7 @@ using Eryph.StateDb.Specifications;
 namespace Eryph.Modules.Controller.Inventory;
 
 internal abstract class UpdateGenePoolInventoryCommandHandlerBase(
-    IGeneRepository geneRepository)
+    IStateStoreRepository<Gene> geneRepository)
 {
 
     protected async Task AddOrUpdateGenes(

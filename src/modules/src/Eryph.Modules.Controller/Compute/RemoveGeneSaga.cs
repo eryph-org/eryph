@@ -9,8 +9,10 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Messages.Resources.Disks;
 using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.ModuleCore;
+using Eryph.Resources.Disks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -25,7 +27,9 @@ namespace Eryph.Modules.Controller.Compute;
 [UsedImplicitly]
 internal class RemoveGeneSaga(
     IWorkflow workflow,
-    IGeneRepository geneRepository)
+    IStateStoreRepository<Gene> geneRepository,
+    IStateStoreRepository<VirtualDisk> diskRepository,
+    IGeneInventoryQueries geneInventoryQueries)
     : OperationTaskWorkflowSaga<RemoveGeneCommand, EryphSagaData<RemoveGeneSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<RemoveGenesVMCommand>>
 {
@@ -39,7 +43,7 @@ internal class RemoveGeneSaga(
             return;
         }
 
-        Data.Data.GeneId = dbGene.Id;
+        Data.Data.AgentName = dbGene.LastSeenAgent;
 
         var geneId = dbGene.ToGeneIdWithType();
         if (geneId.IsLeft)
@@ -48,15 +52,9 @@ internal class RemoveGeneSaga(
             return;
         }
 
-        var isUnused = dbGene.GeneType switch
-        {
-            // Catlet genes are always unused as we store a (modified) copy
-            // in the catlet metadata
-            GeneType.Catlet => true,
-            GeneType.Fodder => await geneRepository.IsUnusedFodderGene(dbGene.Id),
-            GeneType.Volume => await geneRepository.IsUnusedVolumeGene(dbGene.Id),
-            _ => false,
-        };
+        Data.Data.GeneId = geneId.ValueUnsafe();
+
+        var isUnused = await geneInventoryQueries.IsUnusedGene(dbGene.Id);
         if (!isUnused)
         {
             await Fail($"The gene {geneId.ValueUnsafe().GeneIdentifier.Value} is in use.");
@@ -66,20 +64,56 @@ internal class RemoveGeneSaga(
         await StartNewTask(new RemoveGenesVMCommand
         {
             AgentName = dbGene.LastSeenAgent,
-            Genes = [geneId.ValueUnsafe()],
+            Genes = [Data.Data.GeneId],
         });
     }
 
     public Task Handle(OperationTaskStatusEvent<RemoveGenesVMCommand> message) =>
         FailOrRun(message, async () =>
         {
-            var dbGene = await geneRepository.GetByIdAsync(Data.Data.GeneId);
+            var dbGene = await geneRepository.GetBySpecAsync(
+                new GeneSpecs.GetByGeneId(Data.Data.AgentName, Data.Data.GeneId.GeneIdentifier));
             if (dbGene is not null)
             {
                 await geneRepository.DeleteAsync(dbGene);
             }
-            // TODO When deleting a volume gene, we might also need to remove the VirtualDisk entry
-            await Complete();
+
+            if (Data.Data.GeneId.GeneType != GeneType.Volume)
+            {
+                await Complete();
+                return;
+            }
+
+            var disk = await diskRepository.GetBySpecAsync(
+                new VirtualDiskSpecs.GetByGeneId(
+                    Data.Data.AgentName,
+                    Data.Data.GeneId.GeneIdentifier));
+            if (disk is null)
+            {
+                await Complete();
+                return;
+            }
+
+            await StartNewTask(new CheckDisksExistsCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Disks =
+                [
+                    new DiskInfo
+                    {
+                        Id = disk.Id,
+                        ProjectId = disk.Project.Id,
+                        ProjectName = disk.Project.Name,
+                        DataStore = disk.DataStore,
+                        Environment = disk.Environment,
+                        StorageIdentifier = disk.StorageIdentifier,
+                        Name = disk.Name,
+                        FileName = disk.FileName,
+                        Path = disk.Path,
+                        DiskIdentifier = disk.DiskIdentifier
+                    }
+                ]
+            });
         });
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<RemoveGeneSagaData>> config)
