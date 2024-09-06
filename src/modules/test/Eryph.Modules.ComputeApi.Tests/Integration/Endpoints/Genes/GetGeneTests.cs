@@ -15,7 +15,7 @@ using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
 
-using ApiGene = Eryph.Modules.ComputeApi.Model.V1.Gene;
+using ApiGene = Eryph.Modules.ComputeApi.Model.V1.GeneWithUsage;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
@@ -23,7 +23,8 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
 {
     private readonly WebModuleFactory<ComputeApiModule> _factory;
     private static readonly Guid GeneId = Guid.NewGuid();
-    private static readonly Guid GeneSetId = Guid.NewGuid();
+    private static readonly Guid DiskId = Guid.NewGuid();
+    private static readonly Guid GeneDiskId = Guid.NewGuid();
 
     public GetGeneTests(WebModuleFactory<ComputeApiModule> factory)
     {
@@ -37,21 +38,59 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = GeneId,
-            GeneSet = "testorg/testgeneset/testtag",
-            Name = "testgene",
+            GeneSet = "acme/acme-os/1.0",
+            Name = "sda",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = "testhost",
             Hash = "12345678",
             GeneType = GeneType.Volume,
             Size = 42,
         });
+
+        await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
+        {
+            Id = GeneDiskId,
+            Name = "test-disk",
+            StorageIdentifier = "gene:acme/acme-os/1.0:sda",
+            Geneset = "acme/acme-os/1.0",
+            GeneName = "sda",
+            LastSeenAgent = "testhost",
+            ProjectId = EryphConstants.DefaultProjectId,
+            Environment = EryphConstants.DefaultEnvironmentName,
+            DataStore = EryphConstants.DefaultDataStoreName,
+            LastSeen = DateTimeOffset.UtcNow,
+        });
+
+        await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
+        {
+            Id = DiskId,
+            Name = "other-disk",
+            ParentId = GeneDiskId,
+            LastSeenAgent = "testhost",
+            ProjectId = EryphConstants.DefaultProjectId,
+            Environment = EryphConstants.DefaultEnvironmentName,
+            DataStore = EryphConstants.DefaultDataStoreName,
+            LastSeen = DateTimeOffset.UtcNow,
+        });
     }
 
+    /*
     [Fact]
-    public async Task Gene_is_returned_when_authorized()
+    public async Task Gene_is_not_returned_when_not_authorized()
     {
         var response = await _factory.CreateDefaultClient()
-            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:read", true)
+            .SetEryphToken(Guid.NewGuid(), EryphConstants.SystemClientId, "compute:write", false)
+            .GetAsync($"v1/genes/{GeneId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+    */
+
+    [Fact]
+    public async Task Volume_gene_is_returned_with_usage()
+    {
+        var response = await _factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:read", false)
             .GetAsync($"v1/genes/{GeneId}");
 
         response.EnsureSuccessStatusCode();
@@ -64,9 +103,10 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
 
         gene.Should().NotBeNull();
         gene!.Id.Should().Be(GeneId.ToString());
-        gene!.Name.Should().Be("gene:testorg/testgeneset/testtag:testgene");
+        gene!.Name.Should().Be("gene:acme/acme-os/1.0:sda");
         gene!.Hash.Should().Be("12345678");
         gene!.GeneType.Should().Be(GeneType.Volume);
         gene!.Size.Should().Be(42);
+        gene.Disks.Should().Equal(DiskId);
     }
 }

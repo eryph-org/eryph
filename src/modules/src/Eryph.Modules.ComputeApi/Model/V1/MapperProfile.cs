@@ -88,6 +88,10 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.Gene, Gene>()
                 .ForMember(x => x.Name, o => o.MapFrom(s =>
                     new GeneIdentifier(GeneSetIdentifier.New(s.GeneSet), GeneName.New(s.Name)).Value));
+
+            CreateMap<StateDb.Model.Gene, GeneWithUsage>()
+                .ForMember(x => x.Name, o => o.MapFrom(s =>
+                    new GeneIdentifier(GeneSetIdentifier.New(s.GeneSet), GeneName.New(s.Name)).Value));
         }
     }
 }
