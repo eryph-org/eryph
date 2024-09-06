@@ -12,6 +12,7 @@ using Eryph.Core.Genetics;
 using Eryph.GenePool;
 using Eryph.GenePool.Client;
 using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -34,7 +35,7 @@ internal class LocalFirstGeneProvider(
         CancellationToken cancel) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
+        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from geneSetInfo in ProvideGeneSet(genePoolPath, geneIdentifier.GeneSet, [], cancel)
         from _1 in guard(geneSetInfo.Id == geneIdentifier.GeneSet,
             Error.New($"The gene '{geneIdentifier}' resolved to the gene set '{geneSetInfo.Id}'. "
@@ -64,7 +65,7 @@ internal class LocalFirstGeneProvider(
         CancellationToken cancellationToken) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
+        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from genesetInfo in ProvideGeneSet(genePoolPath, genesetIdentifier, Empty, cancellationToken)
         select genesetInfo.Id;
 

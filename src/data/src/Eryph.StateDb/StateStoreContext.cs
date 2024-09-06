@@ -72,7 +72,6 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         // interceptors to detect changes. Hence, we force EF Core
         // to always create transactions.
         Database.AutoTransactionBehavior = AutoTransactionBehavior.Always;
-        optionsBuilder.LogTo(s => Debug.WriteLine(s));
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -275,6 +274,9 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<CatletMetadata>()
             .Navigation(m => m.Genes)
             .AutoInclude();
+
+        modelBuilder.Entity<CatletMetadataGene>()
+            .HasKey(g => new { g.MetadataId, g.GeneId });
 
         modelBuilder.Entity<ReportedNetwork>()
             .HasKey(x => x.Id);

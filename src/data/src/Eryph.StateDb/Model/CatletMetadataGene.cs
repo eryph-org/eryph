@@ -8,8 +8,6 @@ namespace Eryph.StateDb.Model;
 
 public class CatletMetadataGene
 {
-    public Guid Id { get; set; }
-
     public Guid MetadataId {get; set; }
 
     public required string GeneId { get; set; }

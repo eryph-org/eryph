@@ -120,7 +120,7 @@ namespace Eryph.VmManagement.Storage
         private static Option<GeneIdentifier> GetGeneReference(
             VmHostAgentConfiguration vmHostAgentConfig,
             string vhdPath) =>
-            from genePath in PathUtils.GetContainedPath(Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool"), vhdPath)
+            from genePath in PathUtils.GetContainedPath(GenePoolPaths.GetGenePoolPath(vmHostAgentConfig), vhdPath)
             let geneDirectory = Path.GetDirectoryName(genePath)
             let genePathParts = geneDirectory.Split(Path.DirectorySeparatorChar)
             where genePathParts.Length == 4

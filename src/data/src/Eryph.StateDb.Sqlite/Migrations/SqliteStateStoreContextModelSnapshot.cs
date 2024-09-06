@@ -57,20 +57,13 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadataGene", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GeneId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid>("MetadataId")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("Id");
+                    b.Property<string>("GeneId")
+                        .HasColumnType("TEXT");
 
-                    b.HasIndex("MetadataId");
+                    b.HasKey("MetadataId", "GeneId");
 
                     b.ToTable("MetadataGenes");
                 });

@@ -62,20 +62,13 @@ namespace Eryph.StateDb.MySql.Migrations
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadataGene", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("GeneId")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<Guid>("MetadataId")
                         .HasColumnType("char(36)");
 
-                    b.HasKey("Id");
+                    b.Property<string>("GeneId")
+                        .HasColumnType("varchar(255)");
 
-                    b.HasIndex("MetadataId");
+                    b.HasKey("MetadataId", "GeneId");
 
                     b.ToTable("MetadataGenes");
                 });
