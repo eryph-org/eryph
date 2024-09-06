@@ -37,8 +37,7 @@ public class RemoveGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleF
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = GeneId,
-            GeneSet = "testorg/testgeneset/testtag",
-            Name = "testgene",
+            GeneId = "gene:acme/acme-os/1.0:sda",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = "testhost",
             Hash = "12345678",

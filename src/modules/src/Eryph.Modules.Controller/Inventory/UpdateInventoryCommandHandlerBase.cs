@@ -198,7 +198,6 @@ namespace Eryph.Modules.Controller.Inventory
                             DataStore = diskInfo.DataStore,
                             Environment = diskInfo.Environment,
                             Geneset = diskInfo.Geneset,
-                            GeneName = diskInfo.GeneName,
                             StorageIdentifier = diskInfo.StorageIdentifier,
                             Project = project,
                             FileName = diskInfo.FileName,

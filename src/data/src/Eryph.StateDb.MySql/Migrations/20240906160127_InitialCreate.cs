@@ -20,9 +20,7 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     GeneType = table.Column<int>(type: "int", nullable: false),
-                    GeneSet = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Name = table.Column<string>(type: "longtext", nullable: false)
+                    GeneId = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     LastSeenAgent = table.Column<string>(type: "longtext", nullable: false)
@@ -34,20 +32,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Genes", x => x.Id);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "GeneSetReferences",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    GeneSet = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GeneSetReferences", x => x.Id);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -95,39 +79,12 @@ namespace Eryph.StateDb.MySql.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "GeneGeneSetReference",
-                columns: table => new
-                {
-                    GenesId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    ReferencesId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GeneGeneSetReference", x => new { x.GenesId, x.ReferencesId });
-                    table.ForeignKey(
-                        name: "FK_GeneGeneSetReference_GeneSetReferences_ReferencesId",
-                        column: x => x.ReferencesId,
-                        principalTable: "GeneSetReferences",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_GeneGeneSetReference_Genes_GenesId",
-                        column: x => x.GenesId,
-                        principalTable: "Genes",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
                 name: "MetadataGenes",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     MetadataId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    GeneSet = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    GeneName = table.Column<string>(type: "longtext", nullable: false)
+                    GeneId = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
@@ -313,8 +270,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     DiskIdentifier = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Geneset = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    GeneName = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     Path = table.Column<string>(type: "longtext", nullable: true)
@@ -755,11 +710,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_GeneGeneSetReference_ReferencesId",
-                table: "GeneGeneSetReference",
-                column: "ReferencesId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_IpAssignment_NetworkPortId",
                 table: "IpAssignment",
                 column: "NetworkPortId");
@@ -894,7 +844,7 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "CatletNetworkAdapters");
 
             migrationBuilder.DropTable(
-                name: "GeneGeneSetReference");
+                name: "Genes");
 
             migrationBuilder.DropTable(
                 name: "IpAssignment");
@@ -922,12 +872,6 @@ namespace Eryph.StateDb.MySql.Migrations
 
             migrationBuilder.DropTable(
                 name: "VirtualDisks");
-
-            migrationBuilder.DropTable(
-                name: "GeneSetReferences");
-
-            migrationBuilder.DropTable(
-                name: "Genes");
 
             migrationBuilder.DropTable(
                 name: "IpPools");

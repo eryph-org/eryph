@@ -28,7 +28,6 @@ namespace Eryph.VmManagement.Storage
         public long? SizeBytes { get; set; }
         public long? SizeBytesCreate { get; set; }
         public Option<GeneSetIdentifier> Geneset { get; set; }
-        public Option<GeneName> GeneName { get; set; }
 
         public static Option<DiskStorageSettings> FromSourceString(
             VmHostAgentConfiguration vmHostAgentConfig,
@@ -85,7 +84,6 @@ namespace Eryph.VmManagement.Storage
                     StorageNames = nameAndId.Names,
                     StorageIdentifier = nameAndId.StorageIdentifier,
                     Geneset = geneId.Map(g => g.GeneSet),
-                    GeneName = geneId.Map(g => g.GeneName),
                     SizeBytes = vhdInfo.Value.Size,
                     UsedSizeBytes = vhdInfo.Value.FileSize,
                     DiskIdentifier = vhdInfo.Value.DiskIdentifier,

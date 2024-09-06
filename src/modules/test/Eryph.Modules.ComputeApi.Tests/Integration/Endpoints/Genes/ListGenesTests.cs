@@ -37,8 +37,7 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = FodderGeneId,
-            GeneSet = "testorg/testgeneset/testtag",
-            Name = "testgene",
+            GeneId = "gene:acme/acme-fodder/1.0:test-food",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = "testhost",
             Hash = "12345678",
@@ -49,8 +48,7 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = VolumeGeneId,
-            GeneSet = "testorg/testgeneset/testtag",
-            Name = "testgene2",
+            GeneId = "gene:acme/acme-os/1.0:sda",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = "testhost",
             Hash = "abcdefgh",
@@ -78,7 +76,7 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
             gene =>
             {
                 gene!.Id.Should().Be(FodderGeneId.ToString());
-                gene!.Name.Should().Be("gene:testorg/testgeneset/testtag:testgene");
+                gene!.Name.Should().Be("gene:acme/acme-fodder/1.0:test-food");
                 gene!.Hash.Should().Be("12345678");
                 gene!.GeneType.Should().Be(GeneType.Fodder);
                 gene!.Size.Should().Be(42);
@@ -86,7 +84,7 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
             gene =>
             {
                 gene!.Id.Should().Be(VolumeGeneId.ToString());
-                gene!.Name.Should().Be("gene:testorg/testgeneset/testtag:testgene2");
+                gene!.Name.Should().Be("gene:acme/acme-os/1.0:sda");
                 gene!.Hash.Should().Be("abcdefgh");
                 gene!.GeneType.Should().Be(GeneType.Volume);
                 gene!.Size.Should().Be(43);

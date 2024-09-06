@@ -8,14 +8,13 @@ using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace Eryph.Modules.Controller.Compute;
 
 internal static class StateStoreGeneExtensions
 {
     public static Either<Error, GeneIdentifierWithType> ToGeneIdWithType(this Gene dbGene) =>
-        from geneSetId in GeneSetIdentifier.NewEither(dbGene.GeneSet)
-        from geneName in GeneName.NewEither(dbGene.Name)
-        let geneId = new GeneIdentifier(geneSetId, geneName)
+        from geneId in GeneIdentifier.NewEither(dbGene.GeneId)
         select new GeneIdentifierWithType(dbGene.GeneType, geneId);
 }

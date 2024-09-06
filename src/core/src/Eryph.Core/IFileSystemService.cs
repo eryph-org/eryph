@@ -20,6 +20,7 @@ namespace Eryph.Core
         void WriteText(string filePath, string data);
 
         void FileDelete(string filePath);
+
         string[] GetFiles(string path, string pattern, SearchOption searchOption);
 
         void MoveFile(string path, string newPath);
@@ -32,7 +33,7 @@ namespace Eryph.Core
 
         void DeleteFile(string path);
 
-        void DirectoryDelete(string directoryPath);
+        void DeleteDirectory(string directoryPath);
 
     }
 }

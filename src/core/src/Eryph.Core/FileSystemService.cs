@@ -107,7 +107,7 @@ namespace Eryph.Core
             return new FileStream(path, FileMode.Create, FileAccess.Write);
         }
 
-        public void DirectoryDelete(string directoryPath)
+        public void DeleteDirectory(string directoryPath)
         {
             Directory.Delete(directoryPath, true);
         }

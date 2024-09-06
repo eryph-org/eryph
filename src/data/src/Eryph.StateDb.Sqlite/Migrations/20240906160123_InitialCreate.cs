@@ -17,8 +17,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     GeneType = table.Column<int>(type: "INTEGER", nullable: false),
-                    GeneSet = table.Column<string>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    GeneId = table.Column<string>(type: "TEXT", nullable: false),
                     LastSeen = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastSeenAgent = table.Column<string>(type: "TEXT", nullable: false),
                     Size = table.Column<long>(type: "INTEGER", nullable: false),
@@ -27,18 +26,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Genes", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "GeneSetReferences",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    GeneSet = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GeneSetReferences", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -80,37 +67,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "GeneGeneSetReference",
-                columns: table => new
-                {
-                    GenesId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ReferencesId = table.Column<Guid>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_GeneGeneSetReference", x => new { x.GenesId, x.ReferencesId });
-                    table.ForeignKey(
-                        name: "FK_GeneGeneSetReference_GeneSetReferences_ReferencesId",
-                        column: x => x.ReferencesId,
-                        principalTable: "GeneSetReferences",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_GeneGeneSetReference_Genes_GenesId",
-                        column: x => x.GenesId,
-                        principalTable: "Genes",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "MetadataGenes",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     MetadataId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    GeneSet = table.Column<string>(type: "TEXT", nullable: false),
-                    GeneName = table.Column<string>(type: "TEXT", nullable: false)
+                    GeneId = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -275,7 +237,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     StorageIdentifier = table.Column<string>(type: "TEXT", nullable: true),
                     DiskIdentifier = table.Column<Guid>(type: "TEXT", nullable: false),
                     Geneset = table.Column<string>(type: "TEXT", nullable: true),
-                    GeneName = table.Column<string>(type: "TEXT", nullable: true),
                     Frozen = table.Column<bool>(type: "INTEGER", nullable: false),
                     Path = table.Column<string>(type: "TEXT", nullable: true),
                     FileName = table.Column<string>(type: "TEXT", nullable: true),
@@ -651,11 +612,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_GeneGeneSetReference_ReferencesId",
-                table: "GeneGeneSetReference",
-                column: "ReferencesId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_IpAssignment_NetworkPortId",
                 table: "IpAssignment",
                 column: "NetworkPortId");
@@ -790,7 +746,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "CatletNetworkAdapters");
 
             migrationBuilder.DropTable(
-                name: "GeneGeneSetReference");
+                name: "Genes");
 
             migrationBuilder.DropTable(
                 name: "IpAssignment");
@@ -818,12 +774,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
             migrationBuilder.DropTable(
                 name: "VirtualDisks");
-
-            migrationBuilder.DropTable(
-                name: "GeneSetReferences");
-
-            migrationBuilder.DropTable(
-                name: "Genes");
 
             migrationBuilder.DropTable(
                 name: "IpPools");

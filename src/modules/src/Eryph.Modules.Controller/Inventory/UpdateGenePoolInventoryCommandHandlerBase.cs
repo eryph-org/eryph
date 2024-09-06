@@ -13,7 +13,6 @@ namespace Eryph.Modules.Controller.Inventory;
 internal abstract class UpdateGenePoolInventoryCommandHandlerBase(
     IStateStoreRepository<Gene> geneRepository)
 {
-
     protected async Task AddOrUpdateGenes(
         string agentName,
         DateTimeOffset timestamp,
@@ -39,8 +38,7 @@ internal abstract class UpdateGenePoolInventoryCommandHandlerBase(
             {
                 Id = Guid.NewGuid(),
                 GeneType = geneData.GeneType,
-                GeneSet = geneData.Id.GeneSet.Value,
-                Name = geneData.Id.GeneName.Value,
+                GeneId = geneData.Id.Value,
                 Size = geneData.Size,
                 Hash = geneData.Hash,
                 LastSeen = timestamp,

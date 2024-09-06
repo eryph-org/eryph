@@ -12,7 +12,5 @@ public class CatletMetadataGene
 
     public Guid MetadataId {get; set; }
 
-    public required string GeneSet {get; set; }
-
-    public required string GeneName { get; set; }
+    public required string GeneId { get; set; }
 }

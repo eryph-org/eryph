@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20240904151316_InitialCreate")]
+    [Migration("20240906160123_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -64,11 +64,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("GeneName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GeneSet")
+                    b.Property<string>("GeneId")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -114,7 +110,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("GeneSet")
+                    b.Property<string>("GeneId")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -132,31 +128,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<long>("Size")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.ToTable("Genes");
-                });
-
-            modelBuilder.Entity("Eryph.StateDb.Model.GeneSetReference", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("GeneSet")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("GeneSetReferences");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>
@@ -584,21 +561,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.ToTable("Tenants");
                 });
 
-            modelBuilder.Entity("GeneGeneSetReference", b =>
-                {
-                    b.Property<Guid>("GenesId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("ReferencesId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("GenesId", "ReferencesId");
-
-                    b.HasIndex("ReferencesId");
-
-                    b.ToTable("GeneGeneSetReference");
-                });
-
             modelBuilder.Entity("Eryph.StateDb.Model.IpPoolAssignment", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.IpAssignment");
@@ -743,9 +705,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.Property<bool>("Frozen")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("GeneName")
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("Geneset")
                         .HasColumnType("TEXT");
@@ -1054,21 +1013,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired();
 
                     b.Navigation("Task");
-                });
-
-            modelBuilder.Entity("GeneGeneSetReference", b =>
-                {
-                    b.HasOne("Eryph.StateDb.Model.Gene", null)
-                        .WithMany()
-                        .HasForeignKey("GenesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Eryph.StateDb.Model.GeneSetReference", null)
-                        .WithMany()
-                        .HasForeignKey("ReferencesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpPoolAssignment", b =>

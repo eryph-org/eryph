@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -38,8 +39,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = GeneId,
-            GeneSet = "acme/acme-os/1.0",
-            Name = "sda",
+            GeneId = "gene:acme/acme-os/1.0:sda",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = "testhost",
             Hash = "12345678",
@@ -53,7 +53,6 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
             Name = "test-disk",
             StorageIdentifier = "gene:acme/acme-os/1.0:sda",
             Geneset = "acme/acme-os/1.0",
-            GeneName = "sda",
             LastSeenAgent = "testhost",
             ProjectId = EryphConstants.DefaultProjectId,
             Environment = EryphConstants.DefaultEnvironmentName,
@@ -74,17 +73,15 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         });
     }
 
-    /*
     [Fact]
-    public async Task Gene_is_not_returned_when_not_authorized()
+    public async Task Gene_does_not_exist_returns_not_found()
     {
         var response = await _factory.CreateDefaultClient()
-            .SetEryphToken(Guid.NewGuid(), EryphConstants.SystemClientId, "compute:write", false)
-            .GetAsync($"v1/genes/{GeneId}");
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:read", false)
+            .GetAsync($"v1/genes/{Guid.NewGuid()}");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
-    */
 
     [Fact]
     public async Task Volume_gene_is_returned_with_usage()

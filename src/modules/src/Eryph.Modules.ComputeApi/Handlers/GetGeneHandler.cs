@@ -31,9 +31,7 @@ internal class GetGeneHandler(
         if (dbGene is null)
             return new NotFoundResult();
 
-        var geneId = new GeneIdentifier(
-            GeneSetIdentifier.New(dbGene.GeneSet),
-            GeneName.New(dbGene.Name));
+        var geneId = GeneIdentifier.New(dbGene.GeneId);
         var result = mapper.Map<GeneWithUsage>(dbGene);
         
         if (dbGene.GeneType == GeneType.Fodder)

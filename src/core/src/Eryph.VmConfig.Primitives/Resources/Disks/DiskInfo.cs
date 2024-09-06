@@ -14,7 +14,6 @@ namespace Eryph.Resources.Disks
         public string ProjectName { get; set; }
         public string Environment { get; set; }
         public string Geneset { get; set; }
-        public string GeneName { get; set; }
         public Guid DiskIdentifier { get; set; }
 
 

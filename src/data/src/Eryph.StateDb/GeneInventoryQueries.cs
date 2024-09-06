@@ -34,8 +34,7 @@ internal class GeneInventoryQueries(
         dbContext.Catlets
             .Where(c => c.AgentName == agentName
                         && dbContext.MetadataGenes
-                            .Any(mg => mg.GeneSet == geneId.GeneSet.Value
-                                       && mg.GeneName == geneId.GeneName.Value
+                            .Any(mg => mg.GeneId == geneId.Value
                                        && c.MetadataId == mg.MetadataId))
             .Select(c => c.Id)
             .Distinct()
@@ -46,9 +45,8 @@ internal class GeneInventoryQueries(
         GeneIdentifier geneId,
         CancellationToken cancellationToken = default) =>
         dbContext.VirtualDisks
-            .Where(d => d.LastSeenAgent == agentName
-                        && d.Geneset == geneId.GeneSet.Value
-                        && d.GeneName == geneId.GeneName.Value)
+            .Where(d => d.StorageIdentifier == geneId.Value
+                        && d.LastSeenAgent == agentName)
             .SelectMany(d => d.Children)
             .Select(c => c.Id)
             .Distinct()
@@ -56,9 +54,11 @@ internal class GeneInventoryQueries(
 
     private IQueryable<Gene> CreateUnusedGenesQuery() =>
         from gene in dbContext.Genes
-        where gene.GeneType != GeneType.Volume || !dbContext.VirtualDisks.Any(
-            d => d.Geneset == gene.GeneSet && d.Name == gene.Name && d.LastSeenAgent == gene.LastSeenAgent && (d.AttachedDrives.Count == 0 || d.Children.Count == 0))
-        where gene.GeneType != GeneType.Fodder || !dbContext.MetadataGenes.Any(
-            mg => mg.GeneSet == gene.GeneSet && mg.GeneName == gene.Name)
+        where gene.GeneType != GeneType.Volume
+              || !dbContext.VirtualDisks.Any(d => d.StorageIdentifier == gene.GeneId
+                                                  && d.LastSeenAgent == gene.LastSeenAgent
+                                                  && (d.AttachedDrives.Count == 0 || d.Children.Count == 0))
+        where gene.GeneType != GeneType.Fodder
+              || !dbContext.MetadataGenes.Any(mg => mg.GeneId == gene.GeneId)
         select gene;
 }

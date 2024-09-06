@@ -52,8 +52,7 @@ public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture
             await stateStore.For<Gene>().AddAsync(new Gene
             {
                 Id = UsedGeneId,
-                GeneSet = "testorg/testset/testtag",
-                Name = "sda",
+                GeneId = "gene:testorg/testset/testtag:sda",
                 GeneType = GeneType.Volume,
                 LastSeenAgent = AgentName,
                 LastSeen = DateTimeOffset.UtcNow,
@@ -64,8 +63,7 @@ public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture
             await stateStore.For<Gene>().AddAsync(new Gene
             {
                 Id = UnusedGeneId,
-                GeneSet = "testorg/testset/testtag",
-                Name = "sdb",
+                GeneId = "gene:testorg/testset/testtag:sdb",
                 GeneType = GeneType.Volume,
                 LastSeenAgent = AgentName,
                 LastSeen = DateTimeOffset.UtcNow,

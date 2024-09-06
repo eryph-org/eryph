@@ -56,8 +56,7 @@ namespace Eryph.StateDb.Specifications
             public GetByGeneId(string agentName, GeneIdentifier geneId)
             {
                 Query.Where(x => x.LastSeenAgent == agentName
-                                 && x.Geneset == geneId.GeneSet.Value
-                                 && x.GeneName == geneId.GeneName.Value);
+                                 && x.StorageIdentifier == geneId.Value);
             }
         }
 
@@ -65,12 +64,10 @@ namespace Eryph.StateDb.Specifications
         {
             public GetByGeneIds(string agentName, IList<GeneIdentifier> geneIds)
             {
-                var values = geneIds
-                    .Map(id => id.GeneSet.Value + ":" + id.GeneName.Value)
-                    .ToList();
+                var values = geneIds.Map(id => id.Value).ToList();
 
                 Query.Where(x => x.LastSeenAgent == agentName
-                                 && values.Contains(x.Geneset + ":" + x.GeneName));
+                                 && values.Contains(x.StorageIdentifier!));
             }
         }
     }

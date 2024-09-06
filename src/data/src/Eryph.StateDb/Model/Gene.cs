@@ -13,9 +13,7 @@ public class Gene
 
     public required GeneType GeneType { get; set; }
 
-    public required string GeneSet { get; set; }
-
-    public required string Name { get; set; }
+    public required string GeneId { get; set; }
 
     public required DateTimeOffset LastSeen { get; set; }
 
@@ -24,6 +22,4 @@ public class Gene
     public required long Size { get; set; }
 
     public required string Hash { get; set; }
-
-    public IList<GeneSetReference> References { get; set; } = null!;
 }

@@ -65,8 +65,7 @@ internal class VirtualMachineMetadataService : IVirtualMachineMetadataService
             .Map(g => new CatletMetadataGene
             {
                 MetadataId = metadata.Id,
-                GeneSet = g.GeneSet.Value,
-                GeneName = g.GeneName.Value,
+                GeneId = g.Value,
             })
             .ToList();
 
