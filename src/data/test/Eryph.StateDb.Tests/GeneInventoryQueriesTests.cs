@@ -78,7 +78,7 @@ public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture
 
         await WithScope(async (geneRepository, _) =>
         {
-            var genes = await geneRepository.GetUnusedVolumeGenes(AgentName);
+            var genes = await geneRepository.FindUnusedGenes(AgentName);
 
             genes.Should().SatisfyRespectively(
                 gene => gene.Id.Should().Be(UnusedGeneId));

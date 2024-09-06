@@ -17,35 +17,15 @@ internal class GeneInventoryQueries(
     StateStoreContext dbContext)
     : IGeneInventoryQueries
 {
-    private readonly ISpecificationEvaluator _specificationEvaluator = new SpecificationEvaluator();
-
-    public Task<bool> IsUnusedFodderGene(Guid geneId)
-    {
-        return CreateUnusedFodderGenesQuery()
-            .Where(g => g.Id == geneId)
-            .AnyAsync();
-    }
-
-    public Task<bool> IsUnusedVolumeGene(Guid geneId)
-    {
-        return CreateUnusedVolumeGenesQuery()
-            .Where(g => g.Id == geneId)
-            .AnyAsync();
-    }
-
-    public Task<List<Gene>> GetUnusedFodderGenes(string agentName)
-    {
-        return CreateUnusedFodderGenesQuery()
+    public Task<List<Gene>> FindUnusedGenes(string agentName) =>
+        CreateUnusedGenesQuery()
             .Where(g => g.LastSeenAgent == agentName)
             .ToListAsync();
-    }
 
-    public Task<List<Gene>> GetUnusedVolumeGenes(string agentName)
-    {
-        return CreateUnusedVolumeGenesQuery()
-            .Where(g => g.LastSeenAgent == agentName)
-            .ToListAsync();
-    }
+    public Task<bool> IsUnusedGene(Guid geneId) =>
+        CreateUnusedGenesQuery()
+            .Where(g => g.Id == geneId)
+            .AnyAsync();
 
     public Task<List<Guid>> GetCatletsUsingGene(
         string agentName,
@@ -60,34 +40,6 @@ internal class GeneInventoryQueries(
             .Select(c => c.Id)
             .Distinct()
             .ToListAsync(cancellationToken);
-
-    public Task<GeneWithUsage?> GetGeneWithUsage(
-        Guid id,
-        CancellationToken cancellationToken = default) =>
-        CreateGeneWithUsageQuery()
-            .Where(g => g.Id == id)
-            .FirstOrDefaultAsync(cancellationToken);
-
-    public Task<List<GeneWithUsage>> GetGenesWithUsage(CancellationToken cancellationToken = default) =>
-        CreateGeneWithUsageQuery()
-            .ToListAsync(cancellationToken);
-
-    private IQueryable<Gene> CreateUnusedVolumeGenesQuery() =>
-        dbContext.Genes.Where(x => !dbContext.VirtualDisks.Any(
-            d => d.StorageIdentifier == "gene:" + x.GeneSet + ":" + x.Name && (d.AttachedDrives.Count == 0 || d.Children.Count == 0)));
-
-    private IQueryable<Gene> CreateUnusedFodderGenesQuery() =>
-        dbContext.Genes.Where(x => !dbContext.MetadataGenes.Any(mg => mg.GeneSet == x.GeneSet && mg.GeneName == x.Name));
-
-    public Task<List<Gene>> FindUnusedGenes(string agentName) =>
-        CreateUnusedGenesQuery()
-            .Where(g => g.LastSeenAgent == agentName)
-            .ToListAsync();
-
-    public Task<bool> IsUnusedGene(Guid geneId) =>
-        CreateUnusedGenesQuery()
-            .Where(g => g.Id == geneId)
-            .AnyAsync();
 
     public Task<List<Guid>> GetDisksUsingGene(
         string agentName,
@@ -109,26 +61,4 @@ internal class GeneInventoryQueries(
         where gene.GeneType != GeneType.Fodder || !dbContext.MetadataGenes.Any(
             mg => mg.GeneSet == gene.GeneSet && mg.GeneName == gene.Name)
         select gene;
-
-    private IQueryable<GeneWithUsage> CreateGeneWithUsageQuery() =>
-        from gene in dbContext.Genes
-        select new GeneWithUsage
-        {
-            Id = gene.Id,
-            GeneType = gene.GeneType,
-            GeneSet = gene.GeneSet,
-            Name = gene.Name,
-            Size = gene.Size,
-            Hash = gene.Hash,
-            Catlets = string.Join(";", dbContext.Catlets.Where(c => 
-                dbContext.MetadataGenes.Any(mg => mg.GeneSet == gene.GeneSet && mg.GeneName == gene.Name && c.MetadataId == mg.MetadataId)
-                && c.AgentName == gene.LastSeenAgent)
-                .Select(c => c.Id)),
-            Disks = string.Join(";", dbContext.VirtualDisks.Where(d =>
-                d.LastSeenAgent == gene.LastSeenAgent
-                && d.Geneset == gene.GeneSet
-                && d.GeneName == gene.Name
-                && d.ParentId != null)
-                .Select(d => d.ParentId))
-        };
 }
