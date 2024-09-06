@@ -13,6 +13,8 @@ public class Gene
 
     public GeneType GeneType { get; set; }
 
+    public string GeneSet { get; set; }
+
     public string Name { get; set; }
 
     public long Size { get; set; }

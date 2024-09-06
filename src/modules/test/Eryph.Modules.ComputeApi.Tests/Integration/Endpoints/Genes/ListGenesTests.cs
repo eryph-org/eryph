@@ -76,7 +76,8 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
             gene =>
             {
                 gene!.Id.Should().Be(FodderGeneId.ToString());
-                gene!.Name.Should().Be("gene:acme/acme-fodder/1.0:test-food");
+                gene!.GeneSet.Should().Be("acme/acme-fodder/1.0");
+                gene!.Name.Should().Be("test-food");
                 gene!.Hash.Should().Be("12345678");
                 gene!.GeneType.Should().Be(GeneType.Fodder);
                 gene!.Size.Should().Be(42);
@@ -84,7 +85,8 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
             gene =>
             {
                 gene!.Id.Should().Be(VolumeGeneId.ToString());
-                gene!.Name.Should().Be("gene:acme/acme-os/1.0:sda");
+                gene!.GeneSet.Should().Be("acme/acme-os/1.0");
+                gene!.Name.Should().Be("sda");
                 gene!.Hash.Should().Be("abcdefgh");
                 gene!.GeneType.Should().Be(GeneType.Volume);
                 gene!.Size.Should().Be(43);

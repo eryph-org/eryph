@@ -86,10 +86,12 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                 .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier));
 
             CreateMap<StateDb.Model.Gene, Gene>()
-                .ForMember(x => x.Name, o => o.MapFrom(s => GeneIdentifier.New(s.GeneId).Value));
+                .ForMember(x => x.GeneSet, o => o.MapFrom(s => GeneIdentifier.New(s.GeneId).GeneSet.Value))
+                .ForMember(x => x.Name, o => o.MapFrom(s => GeneIdentifier.New(s.GeneId).GeneName.Value));
 
             CreateMap<StateDb.Model.Gene, GeneWithUsage>()
-                .ForMember(x => x.Name, o => o.MapFrom(s => GeneIdentifier.New(s.GeneId).Value));
+                .ForMember(x => x.GeneSet, o => o.MapFrom(s => GeneIdentifier.New(s.GeneId).GeneSet.Value))
+                .ForMember(x => x.Name, o => o.MapFrom(s => GeneIdentifier.New(s.GeneId).GeneName.Value));
         }
     }
 }

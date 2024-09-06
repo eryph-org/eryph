@@ -100,7 +100,8 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
 
         gene.Should().NotBeNull();
         gene!.Id.Should().Be(GeneId.ToString());
-        gene!.Name.Should().Be("gene:acme/acme-os/1.0:sda");
+        gene!.GeneSet.Should().Be("acme/acme-os/1.0");
+        gene!.Name.Should().Be("sda");
         gene!.Hash.Should().Be("12345678");
         gene!.GeneType.Should().Be(GeneType.Volume);
         gene!.Size.Should().Be(42);
