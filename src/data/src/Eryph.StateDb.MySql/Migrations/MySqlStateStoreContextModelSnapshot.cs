@@ -107,7 +107,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<string>("GeneId")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<int>("GeneType")
                         .HasColumnType("int");
@@ -121,12 +121,15 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<string>("LastSeenAgent")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LastSeenAgent", "GeneId")
+                        .IsUnique();
 
                     b.ToTable("Genes");
                 });

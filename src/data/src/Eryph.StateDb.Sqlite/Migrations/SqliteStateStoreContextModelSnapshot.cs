@@ -123,6 +123,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("LastSeenAgent", "GeneId")
+                        .IsUnique();
+
                     b.ToTable("Genes");
                 });
 

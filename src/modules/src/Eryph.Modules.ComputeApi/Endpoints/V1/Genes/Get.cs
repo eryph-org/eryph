@@ -24,7 +24,7 @@ public class Get(
     [Authorize(Policy = "compute:genes:read")]
     [HttpGet("genes/{id}")]
     [SwaggerOperation(
-        Summary = "Gene a gene",
+        Summary = "Get a gene",
         Description = "Get a gene",
         OperationId = "Genes_Get",
         Tags = ["Genes"])

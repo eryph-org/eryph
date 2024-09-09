@@ -15,6 +15,6 @@ public interface IGenePoolInventory
 {
     EitherAsync<Error, Seq<GeneData>> InventorizeGenePool();
 
-    EitherAsync<Error, Seq<GeneData>> InventoryGeneSet(
+    EitherAsync<Error, Seq<GeneData>> InventorizeGeneSet(
         GeneSetIdentifier geneSetId);
 }

@@ -5,7 +5,7 @@ using Eryph.GenePool;
 using Eryph.GenePool.Model;
 using Eryph.Resources;
 
-namespace Eryph.Messages.Resources.Genes.Commands;
+namespace Eryph.Messages.Genes.Commands;
 
 public class PrepareGeneResponse
 {

@@ -16,6 +16,8 @@ namespace Eryph.VmManagement;
 
 public static class GenePoolPaths
 {
+    private const string GeneSetManifestFileName = "geneset-tag.json";
+
     public static string GetGenePoolPath(
         VmHostAgentConfiguration vmHostAgentConfig) =>
         Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool");
@@ -31,7 +33,7 @@ public static class GenePoolPaths
     public static string GetGeneSetManifestPath(
         string genePoolPath,
         GeneSetIdentifier geneSetId) =>
-        Path.Combine(GetGeneSetPath(genePoolPath, geneSetId), "geneset-tag.json");
+        Path.Combine(GetGeneSetPath(genePoolPath, geneSetId), GeneSetManifestFileName);
 
     public static string GetGenePath(
         string genePoolPath,
@@ -56,7 +58,8 @@ public static class GenePoolPaths
                 nameof(geneType)),
         };
 
-        return Path.Combine(GetGeneSetPath(genePoolPath, geneId.GeneSet),
+        return Path.Combine(
+            GetGeneSetPath(genePoolPath, geneId.GeneSet),
             geneFolder,
             $"{geneId.GeneName}.{extension}");
     }
@@ -83,7 +86,7 @@ public static class GenePoolPaths
         string genePoolPath,
         string geneSetManifestPath) =>
         from _1 in guard(
-                string.Equals(Path.GetFileName(geneSetManifestPath), "geneset-tag.json",
+                string.Equals(Path.GetFileName(geneSetManifestPath), GeneSetManifestFileName,
                     StringComparison.OrdinalIgnoreCase),
                 Error.New("The gene set manifest path does not point to a gene set manifest."))
             .ToEither()

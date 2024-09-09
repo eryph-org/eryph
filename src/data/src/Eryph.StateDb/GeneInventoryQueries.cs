@@ -17,15 +17,19 @@ internal class GeneInventoryQueries(
     StateStoreContext dbContext)
     : IGeneInventoryQueries
 {
-    public Task<List<Gene>> FindUnusedGenes(string agentName) =>
+    public Task<List<Gene>> FindUnusedGenes(
+        string agentName,
+        CancellationToken cancellationToken = default) =>
         CreateUnusedGenesQuery()
             .Where(g => g.LastSeenAgent == agentName)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
-    public Task<bool> IsUnusedGene(Guid geneId) =>
+    public Task<bool> IsUnusedGene(
+        Guid geneId,
+        CancellationToken cancellationToken = default) =>
         CreateUnusedGenesQuery()
             .Where(g => g.Id == geneId)
-            .AnyAsync();
+            .AnyAsync(cancellationToken);
 
     public Task<List<Guid>> GetCatletsUsingGene(
         string agentName,
@@ -57,7 +61,7 @@ internal class GeneInventoryQueries(
         where gene.GeneType != GeneType.Volume
               || !dbContext.VirtualDisks.Any(d => d.StorageIdentifier == gene.GeneId
                                                   && d.LastSeenAgent == gene.LastSeenAgent
-                                                  && (d.AttachedDrives.Count == 0 || d.Children.Count == 0))
+                                                  && (d.AttachedDrives.Count != 0 || d.Children.Count != 0))
         where gene.GeneType != GeneType.Fodder
               || !dbContext.MetadataGenes.Any(mg => mg.GeneId == gene.GeneId)
         select gene;

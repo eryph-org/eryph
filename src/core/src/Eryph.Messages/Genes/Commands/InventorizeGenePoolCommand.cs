@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.Messages.Resources;
 
-namespace Eryph.Messages.Resources.Genes.Commands;
+namespace Eryph.Messages.Genes.Commands;
 
 [SendMessageTo(MessageRecipient.VMHostAgent)]
 public class InventorizeGenePoolCommand : IHostAgentCommand

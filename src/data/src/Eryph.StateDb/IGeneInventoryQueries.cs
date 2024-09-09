@@ -11,9 +11,13 @@ namespace Eryph.StateDb;
 
 public interface IGeneInventoryQueries
 {
-    Task<List<Gene>> FindUnusedGenes(string agentName);
+    Task<List<Gene>> FindUnusedGenes(
+        string agentName,
+        CancellationToken cancellationToken = default);
     
-    Task<bool> IsUnusedGene(Guid geneId);
+    Task<bool> IsUnusedGene(
+        Guid geneId,
+        CancellationToken cancellationToken = default);
 
     Task<List<Guid>> GetCatletsUsingGene(
         string agentName,

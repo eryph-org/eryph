@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
-using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.Messages.Genes.Commands;
 using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
@@ -34,7 +34,7 @@ internal class InventorizeGenePoolCommandHandler(
             RightAsync: c => bus.Advanced.Routing.Send(workflowOptions.OperationsDestination, c),
             LeftAsync: error =>
             {
-                logger.LogError(error, "Inventory of gene pool on host {HostName} failed", Environment.MachineName);
+                logger.LogError(error, "Inventory of gene pool failed");
                 return Task.CompletedTask;
             });
 

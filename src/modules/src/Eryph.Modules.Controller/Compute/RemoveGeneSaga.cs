@@ -9,8 +9,8 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Disks;
-using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.ModuleCore;
 using Eryph.Resources.Disks;
 using Eryph.StateDb;
@@ -31,7 +31,7 @@ internal class RemoveGeneSaga(
     IStateStoreRepository<VirtualDisk> diskRepository,
     IGeneInventoryQueries geneInventoryQueries)
     : OperationTaskWorkflowSaga<RemoveGeneCommand, EryphSagaData<RemoveGeneSagaData>>(workflow),
-        IHandleMessages<OperationTaskStatusEvent<RemoveGenesVMCommand>>
+        IHandleMessages<OperationTaskStatusEvent<RemoveGenesVmHostCommand>>
 {
     protected override async Task Initiated(RemoveGeneCommand message)
     {
@@ -61,14 +61,14 @@ internal class RemoveGeneSaga(
             return;
         }
 
-        await StartNewTask(new RemoveGenesVMCommand
+        await StartNewTask(new RemoveGenesVmHostCommand
         {
             AgentName = dbGene.LastSeenAgent,
             Genes = [Data.Data.GeneId],
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<RemoveGenesVMCommand> message) =>
+    public Task Handle(OperationTaskStatusEvent<RemoveGenesVmHostCommand> message) =>
         FailOrRun(message, async () =>
         {
             var dbGene = await geneRepository.GetBySpecAsync(
@@ -120,7 +120,7 @@ internal class RemoveGeneSaga(
     {
         base.CorrelateMessages(config);
 
-        config.Correlate<OperationTaskStatusEvent<RemoveGenesVMCommand>>(
+        config.Correlate<OperationTaskStatusEvent<RemoveGenesVmHostCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 }

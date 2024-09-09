@@ -5,11 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
+using Eryph.Messages.Resources;
 
-namespace Eryph.Messages.Resources.Genes.Commands;
+namespace Eryph.Messages.Genes.Commands;
 
 [SendMessageTo(MessageRecipient.VMHostAgent)]
-public class RemoveGenesVMCommand : IHostAgentCommand
+public class RemoveGenesVmHostCommand : IHostAgentCommand
 {
     public List<GeneIdentifierWithType> Genes { get; set; }
 

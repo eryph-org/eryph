@@ -14,15 +14,20 @@ internal static class GeneSetManifestUtils
         GenesetTagManifestData manifest,
         GeneType geneType,
         GeneName geneName) =>
-        (geneType switch
+        from _ in Some(unit)
+        let hash = geneType switch
         {
-            GeneType.Catlet => Optional(manifest.CatletGene),
+            GeneType.Catlet => geneName == GeneName.New("catlet")
+                ? Optional(manifest.CatletGene)
+                : None,
             GeneType.Volume => manifest.VolumeGenes.ToSeq()
                 .Find(x => x.Name == geneName.Value)
                 .Bind(x => Optional(x.Hash)),
             GeneType.Fodder => manifest.FodderGenes.ToSeq()
                 .Find(x => x.Name == geneName.Value)
                 .Bind(x => Optional(x.Hash)),
-            _ => throw new ArgumentOutOfRangeException(nameof(geneType))
-        }).Filter(notEmpty);
+            _ => None
+        }
+        from validHash in hash.Filter(notEmpty)
+        select validHash;
 }

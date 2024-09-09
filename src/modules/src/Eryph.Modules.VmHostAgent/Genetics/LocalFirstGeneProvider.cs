@@ -11,7 +11,7 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.GenePool;
 using Eryph.GenePool.Client;
-using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.Messages.Genes.Commands;
 using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;

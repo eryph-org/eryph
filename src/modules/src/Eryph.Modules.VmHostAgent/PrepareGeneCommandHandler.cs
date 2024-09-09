@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
-using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.Messages.Genes.Commands;
 using Eryph.Modules.VmHostAgent.Genetics;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;

@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 using Eryph.StateDb;
 using Xunit;
 using Eryph.Core;
-using Eryph.Messages.Resources.Genes.Commands;
 using FluentAssertions;
 using System.Net;
+using Eryph.Messages.Genes.Commands;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
@@ -31,7 +31,7 @@ public class CleanupGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModul
     [Theory]
     [InlineData("compute:read", true)]
     [InlineData("compute:write", false)]
-    public async Task Gene_is_not_deleted_when_not_authorized(
+    public async Task Genes_are_not_cleaned_up_when_not_authorized(
         string scope,
         bool isSuperAdmin)
     {
@@ -43,7 +43,7 @@ public class CleanupGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModul
     }
 
     [Fact]
-    public async Task Gene_is_deleted_when_authorized()
+    public async Task Genes_are_cleaned_up_when_authorized()
     {
         var response = await _factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)

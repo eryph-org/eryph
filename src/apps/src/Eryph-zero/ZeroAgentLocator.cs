@@ -15,5 +15,10 @@ namespace Eryph.Runtime.Zero
         {
             return Environment.MachineName;
         }
+
+        public string FindAgentForGenePool()
+        {
+            return Environment.MachineName;
+        }
     }
 }

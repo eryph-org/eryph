@@ -16,7 +16,7 @@ using System.Text.Json;
 using Eryph.Messages.Resources.Catlets.Commands;
 using FluentAssertions;
 using System.Net;
-using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.Messages.Genes.Commands;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 

@@ -9,9 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
-using Eryph.Core.Genetics;
 using Eryph.GenePool.Model;
-using Eryph.GenePool.Model.Responses;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -31,6 +29,8 @@ internal class LocalGenePoolSource(
     string poolName)
     : GenePoolBase, ILocalGenePool
 {
+    private const string GenesFileName = "genes.json";
+
     public EitherAsync<Error, GeneInfo> RetrieveGene(
         GeneSetInfo geneSetInfo,
         GeneIdentifier geneIdentifier,
@@ -139,7 +139,7 @@ internal class LocalGenePoolSource(
                 }
             }
 
-            await using var genesInfoStream = File.Open(Path.Combine(geneSetInfo.LocalPath, "genes.json"),
+            await using var genesInfoStream = File.Open(Path.Combine(geneSetInfo.LocalPath, GenesFileName),
                 FileMode.Create);
 
             mergedGenesInfo.MergedGenes = mergedGenesInfo.MergedGenes
@@ -289,17 +289,17 @@ internal class LocalGenePoolSource(
 
     private async Task<GenesInfo> ReadGenesInfo(string geneSetPath)
     {
-        if (!fileSystem.FileExists(Path.Combine(geneSetPath, "genes.json")))
+        if (!fileSystem.FileExists(Path.Combine(geneSetPath, GenesFileName)))
             return new GenesInfo { MergedGenes = [] };
 
-        var json = await fileSystem.ReadAllTextAsync(Path.Combine(geneSetPath, "genes.json"));
+        var json = await fileSystem.ReadAllTextAsync(Path.Combine(geneSetPath, GenesFileName));
         return JsonSerializer.Deserialize<GenesInfo>(json);
     }
 
     private async Task WriteGenesInfo(string geneSetPath, GenesInfo genesInfo)
     {
         var json = JsonSerializer.Serialize(genesInfo);
-        await fileSystem.WriteAllTextAsync(Path.Combine(geneSetPath, "genes.json"), json);
+        await fileSystem.WriteAllTextAsync(Path.Combine(geneSetPath, GenesFileName), json);
     }
 
     private class GenesInfo

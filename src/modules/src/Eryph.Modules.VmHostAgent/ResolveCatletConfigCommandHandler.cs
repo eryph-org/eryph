@@ -87,7 +87,7 @@ internal class ResolveCatletConfigCommandHandler(
             Seq<AncestorInfo>(), geneProvider, genepoolReader, cancellationToken)
         let timestamp = DateTimeOffset.UtcNow
         from inventory in result.ResolvedCatlets.Keys.ToSeq()
-            .Map(genePoolInventory.InventoryGeneSet)
+            .Map(genePoolInventory.InventorizeGeneSet)
             .SequenceSerial()
             .Map(s => s.Flatten())
         select new ResolveCatletConfigCommandResponse()

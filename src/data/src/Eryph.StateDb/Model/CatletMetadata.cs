@@ -10,5 +10,5 @@ public class CatletMetadata
 
     public string Metadata { get; set; } = "";
 
-    public ICollection<CatletMetadataGene> Genes { get; set; } = null!;
+    public IList<CatletMetadataGene> Genes { get; set; } = null!;
 }

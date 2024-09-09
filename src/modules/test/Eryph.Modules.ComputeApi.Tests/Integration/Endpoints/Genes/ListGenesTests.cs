@@ -61,7 +61,7 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
     public async Task Gene_is_returned_when_authorized()
     {
         var response = await _factory.CreateDefaultClient()
-            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:read", true)
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:read", false)
             .GetAsync("v1/genes");
 
         response.EnsureSuccessStatusCode();

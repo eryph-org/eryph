@@ -44,7 +44,7 @@ internal class GenePoolInventory(
             .ToAsync()
         select geneSets;
 
-    public EitherAsync<Error, Seq<GeneData>> InventoryGeneSet(
+    public EitherAsync<Error, Seq<GeneData>> InventorizeGeneSet(
         GeneSetIdentifier geneSetId) =>
         from geneSetInfo in genePool.GetCachedGeneSet(genePoolPath, geneSetId, default)
         from geneSetData in notEmpty(geneSetInfo.MetaData.Reference)
@@ -56,7 +56,7 @@ internal class GenePoolInventory(
         string geneSetManifestPath) =>
         from geneSetId in GenePoolPaths.GetGeneSetIdFromManifestPath(genePoolPath, geneSetManifestPath)
             .ToAsync()
-        from geneData in InventoryGeneSet(geneSetId)
+        from geneData in InventorizeGeneSet(geneSetId)
         select geneData;
 
     private EitherAsync<Error, Seq<GeneData>> InventorizeGeneSet(

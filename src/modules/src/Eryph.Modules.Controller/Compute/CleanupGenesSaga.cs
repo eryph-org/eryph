@@ -8,8 +8,8 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Disks;
-using Eryph.Messages.Resources.Genes.Commands;
 using Eryph.ModuleCore;
 using Eryph.Resources.Disks;
 using Eryph.StateDb;
@@ -28,14 +28,15 @@ public class CleanupGenesSaga(
     IStateStoreRepository<Gene> geneRepository,
     IStateStoreRepository<VirtualDisk> diskRepository,
     IGeneInventoryQueries geneInventoryQueries,
+    IStorageManagementAgentLocator agentLocator,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<CleanupGenesCommand, EryphSagaData<CleanupGenesSagaData>>(workflow),
-        IHandleMessages<OperationTaskStatusEvent<RemoveGenesVMCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<RemoveGenesVmHostCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CheckDisksExistsCommand>>
 {
     protected override async Task Initiated(CleanupGenesCommand message)
     {
-        Data.Data.AgentName = Environment.MachineName;
+        Data.Data.AgentName = agentLocator.FindAgentForGenePool();
 
         var unusedGenes = await geneInventoryQueries.FindUnusedGenes(Data.Data.AgentName);
         if (unusedGenes.Count == 0)
@@ -55,14 +56,14 @@ public class CleanupGenesSaga(
 
         Data.Data.GeneIds = geneIds.ValueUnsafe().ToList();
 
-        await StartNewTask(new RemoveGenesVMCommand
+        await StartNewTask(new RemoveGenesVmHostCommand
         {
             AgentName = Data.Data.AgentName,
             Genes = geneIds.ValueUnsafe().ToList(),
         });
     }
 
-    public Task Handle(OperationTaskStatusEvent<RemoveGenesVMCommand> message) =>
+    public Task Handle(OperationTaskStatusEvent<RemoveGenesVmHostCommand> message) =>
         FailOrRun(message, async () =>
         {
             var dbGenes = await geneRepository.ListAsync(
@@ -111,7 +112,7 @@ public class CleanupGenesSaga(
 
         config.Correlate<OperationTaskStatusEvent<CheckDisksExistsCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
-        config.Correlate<OperationTaskStatusEvent<RemoveGenesVMCommand>>(
+        config.Correlate<OperationTaskStatusEvent<RemoveGenesVmHostCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 }

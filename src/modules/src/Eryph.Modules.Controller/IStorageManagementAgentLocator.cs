@@ -3,4 +3,6 @@
 public interface IStorageManagementAgentLocator
 {
     string FindAgentForDataStore(string dataStore, string environment);
+
+    string FindAgentForGenePool();
 }

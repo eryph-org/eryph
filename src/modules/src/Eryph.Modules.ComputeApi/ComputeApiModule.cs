@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SimpleInjector;
-using Catlet = Eryph.Modules.ComputeApi.Model.V1.Catlet;
 using IEndpointResolver = Eryph.ModuleCore.IEndpointResolver;
 
 namespace Eryph.Modules.ComputeApi

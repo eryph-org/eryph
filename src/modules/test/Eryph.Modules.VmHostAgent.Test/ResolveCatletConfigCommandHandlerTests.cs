@@ -430,7 +430,7 @@ public class ResolveCatletConfigCommandHandlerTests
     private void ArrangeInventory(params string[] geneSetIds)
     {
         var map = toHashSet(geneSetIds.Map(i => GeneSetIdentifier.New(i)));
-        _genePoolInventoryMock.Setup(m => m.InventoryGeneSet(It.IsAny<GeneSetIdentifier>()))
+        _genePoolInventoryMock.Setup(m => m.InventorizeGeneSet(It.IsAny<GeneSetIdentifier>()))
             .Returns((GeneSetIdentifier geneSetId) => map.Contains(geneSetId)
                 ? RightAsync<Error, Seq<GeneData>>(Seq1(new GeneData
                 {

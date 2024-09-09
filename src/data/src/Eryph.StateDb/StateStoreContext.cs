@@ -6,7 +6,6 @@ using Eryph.Core;
 using Eryph.StateDb.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Eryph.StateDb;
 
@@ -300,5 +299,9 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<ReportedNetwork>()
             .Property(x => x.IpV6Subnets)
             .HasListConversion();
+
+        modelBuilder.Entity<Gene>()
+            .HasIndex(x => new { x.LastSeenAgent, x.GeneId })
+            .IsUnique();
     }
 }

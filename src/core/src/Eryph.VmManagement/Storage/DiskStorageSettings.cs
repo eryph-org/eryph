@@ -74,7 +74,6 @@ namespace Eryph.VmManagement.Storage
             from parentSettings in parentPath.Map(p => FromVhdPath(engine, vmHostAgentConfig, p))
                 .Sequence()
             let generation = parentSettings.Map(p => p.Generation).IfNone(-1) + 1
-            let geneId = nameAndId.StorageIdentifier.Bind(GeneIdentifier.NewOption)
             select
                 new DiskStorageSettings
                 {
@@ -83,7 +82,7 @@ namespace Eryph.VmManagement.Storage
                     FileName = System.IO.Path.GetFileName(vhdInfo.Value.Path),
                     StorageNames = nameAndId.Names,
                     StorageIdentifier = nameAndId.StorageIdentifier,
-                    Geneset = geneId.Map(g => g.GeneSet),
+                    Geneset = nameAndId.StorageIdentifier.Bind(GeneIdentifier.NewOption).Map(g => g.GeneSet),
                     SizeBytes = vhdInfo.Value.Size,
                     UsedSizeBytes = vhdInfo.Value.FileSize,
                     DiskIdentifier = vhdInfo.Value.DiskIdentifier,
