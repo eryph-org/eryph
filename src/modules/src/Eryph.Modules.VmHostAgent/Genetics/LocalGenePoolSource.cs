@@ -250,7 +250,7 @@ internal class LocalGenePoolSource(
         from _ in TryAsync(async () =>
         {
             var geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneId.GeneSet);
-            var manifestPath = GenePoolPaths.GetGeneSetManifestPath(geneSetPath, geneId.GeneSet);
+            var manifestPath = GenePoolPaths.GetGeneSetManifestPath(genePoolPath, geneId.GeneSet);
             if (!fileSystem.FileExists(manifestPath))
                 return unit;
 

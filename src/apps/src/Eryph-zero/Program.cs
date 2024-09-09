@@ -307,6 +307,13 @@ internal static class Program
                     from _2 in OvsDriverProvider<DriverCommandsRuntime>.ensureDriver(
                             runDir, !isWindowsService && !warmupMode, !isWindowsService && !warmupMode)
                         .MapFail(e => Error.New(-11, "The Hyper-V switch extension for OVS is not available.", e))
+                    // Force the creation of the host agent config file in case it does not exist.
+                    // Otherwise, we might run into concurrency issues later as the file is created
+                    // on first use.
+                    from hostSettings in HostSettingsProvider<DriverCommandsRuntime>.getHostSettings()
+                    from vmHostAgentConfig in VmHostAgentConfiguration<DriverCommandsRuntime>.getConfigYaml(
+                        Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
+                        hostSettings)
                     select runDir,
                     loggerFactory);
 

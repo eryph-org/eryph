@@ -47,6 +47,7 @@ namespace Eryph.StateDb.Specifications
 
                 if(!string.IsNullOrEmpty(agentName))
                     Query.Where(x => x.LastSeenAgent == agentName);
+                
                 Query.Include(x => x.Project);
             }
         }
@@ -57,6 +58,8 @@ namespace Eryph.StateDb.Specifications
             {
                 Query.Where(x => x.LastSeenAgent == agentName
                                  && x.StorageIdentifier == geneId.Value);
+
+                Query.Include(x => x.Project);
             }
         }
 
@@ -68,6 +71,8 @@ namespace Eryph.StateDb.Specifications
 
                 Query.Where(x => x.LastSeenAgent == agentName
                                  && values.Contains(x.StorageIdentifier!));
+
+                Query.Include(x => x.Project);
             }
         }
     }

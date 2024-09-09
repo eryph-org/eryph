@@ -25,8 +25,13 @@ internal class UpdateGenePoolInventoryCommandHandler(
     {
         await AddOrUpdateGenes(message.AgentName, message.Timestamp, message.Inventory);
 
-        var outdatedGenes = await _geneRepository.ListAsync(
-            new GeneSpecs.GetOutdated(message.AgentName, message.Timestamp));
-        await _geneRepository.DeleteRangeAsync(outdatedGenes);
+        // We cannot find the missing genes using the timestamp as the
+        // updated genes have been persisted to the database. If we want
+        // to optimize this in the future, we need to support transaction
+        // such that we can call SaveChangesAsync() here.
+        var geneIds = message.Inventory.Map(gene => gene.Id).ToList();
+        var missingGenes = await _geneRepository.ListAsync(
+            new GeneSpecs.GetMissing(message.AgentName, geneIds));
+        await _geneRepository.DeleteRangeAsync(missingGenes);
     }
 }

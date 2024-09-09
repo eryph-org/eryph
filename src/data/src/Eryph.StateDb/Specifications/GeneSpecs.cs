@@ -57,11 +57,12 @@ public class GeneSpecs
         }
     }
 
-    public sealed class GetOutdated : Specification<Gene>
+    public sealed class GetMissing : Specification<Gene>
     {
-        public GetOutdated(string agentName, DateTimeOffset timestamp)
+        public GetMissing(string agentName, IList<GeneIdentifier> geneIds)
         {
-            Query.Where(x => x.LastSeenAgent == agentName && x.LastSeen < timestamp);
+            var values = geneIds.Map(id => id.Value).ToList();
+            Query.Where(x => x.LastSeenAgent == agentName && !values.Contains(x.GeneId));
         }
     }
 }
