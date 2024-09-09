@@ -25,7 +25,7 @@ public class GeneSpecs
         public GetByGeneId(string agentName, GeneIdentifier geneId)
         {
             Query.Where(x => x.LastSeenAgent == agentName
-                             && x.GeneId == geneId.GeneSet.Value);
+                             && x.GeneId == geneId.Value);
         }
     }
 
