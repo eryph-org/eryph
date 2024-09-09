@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
@@ -31,7 +30,8 @@ internal class RemoveGeneSaga(
     IStateStoreRepository<VirtualDisk> diskRepository,
     IGeneInventoryQueries geneInventoryQueries)
     : OperationTaskWorkflowSaga<RemoveGeneCommand, EryphSagaData<RemoveGeneSagaData>>(workflow),
-        IHandleMessages<OperationTaskStatusEvent<RemoveGenesVmHostCommand>>
+        IHandleMessages<OperationTaskStatusEvent<RemoveGenesVmHostCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<CheckDisksExistsCommand>>
 {
     protected override async Task Initiated(RemoveGeneCommand message)
     {
@@ -116,10 +116,15 @@ internal class RemoveGeneSaga(
             });
         });
 
+    public Task Handle(OperationTaskStatusEvent<CheckDisksExistsCommand> message) =>
+        FailOrRun(message, () => Complete());
+
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<RemoveGeneSagaData>> config)
     {
         base.CorrelateMessages(config);
 
+        config.Correlate<OperationTaskStatusEvent<CheckDisksExistsCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<RemoveGenesVmHostCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }

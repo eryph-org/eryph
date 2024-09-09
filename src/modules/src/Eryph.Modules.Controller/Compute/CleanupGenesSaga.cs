@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
@@ -20,7 +19,6 @@ using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using GeneIdentifierWithType = Eryph.Core.Genetics.GeneIdentifierWithType;
 
 namespace Eryph.Modules.Controller.Compute;
 

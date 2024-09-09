@@ -9,7 +9,7 @@ namespace Eryph.Modules.Controller.Compute;
 
 public class CleanupGenesSagaData
 {
-    public IList<GeneIdentifierWithType> GeneIds { get; set; }
-    
-    public string AgentName { get; set; }
+    public string AgentName { get; set; } = null!;
+
+    public IList<GeneIdentifierWithType> GeneIds { get; set; } = [];
 }

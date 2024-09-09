@@ -23,6 +23,8 @@ namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFactory<ComputeApiModule>>
 {
     private readonly WebModuleFactory<ComputeApiModule> _factory;
+    
+    private const string AgentName = "testhost";
     private static readonly Guid FodderGeneId = Guid.NewGuid();
     private static readonly Guid VolumeGeneId = Guid.NewGuid();
     private static readonly Guid CatletId = Guid.NewGuid();
@@ -44,7 +46,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
             Id = FodderGeneId,
             GeneId = "gene:acme/acme-fodder/1.0:test-food",
             LastSeen = DateTimeOffset.UtcNow,
-            LastSeenAgent = "testhost",
+            LastSeenAgent = AgentName,
             Hash = "12345678",
             GeneType = GeneType.Fodder,
             Size = 42,
@@ -68,7 +70,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
             Id = CatletId,
             MetadataId = CatletMetadataId,
             Name = "test-catlet",
-            AgentName = "testhost",
+            AgentName = AgentName,
             ProjectId = EryphConstants.DefaultProjectId,
             Environment = EryphConstants.DefaultEnvironmentName,
             DataStore = EryphConstants.DefaultDataStoreName,
@@ -79,8 +81,8 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
             Id = VolumeGeneId,
             GeneId = "gene:acme/acme-os/1.0:sda",
             LastSeen = DateTimeOffset.UtcNow,
-            LastSeenAgent = "testhost",
-            Hash = "12345678",
+            LastSeenAgent = AgentName,
+            Hash = "abcdef",
             GeneType = GeneType.Volume,
             Size = 42,
         });
@@ -91,7 +93,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
             Name = "sda",
             StorageIdentifier = "gene:acme/acme-os/1.0:sda",
             Geneset = "acme/acme-os/1.0",
-            LastSeenAgent = "testhost",
+            LastSeenAgent = AgentName,
             ProjectId = EryphConstants.DefaultProjectId,
             Environment = EryphConstants.DefaultEnvironmentName,
             DataStore = EryphConstants.DefaultDataStoreName,
@@ -103,7 +105,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
             Id = DiskId,
             Name = "sda",
             ParentId = GeneDiskId,
-            LastSeenAgent = "testhost",
+            LastSeenAgent = AgentName,
             ProjectId = EryphConstants.DefaultProjectId,
             Environment = EryphConstants.DefaultEnvironmentName,
             DataStore = EryphConstants.DefaultDataStoreName,
@@ -166,7 +168,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         gene.Id.Should().Be(VolumeGeneId.ToString());
         gene.GeneSet.Should().Be("acme/acme-os/1.0");
         gene.Name.Should().Be("sda");
-        gene.Hash.Should().Be("12345678");
+        gene.Hash.Should().Be("abcdef");
         gene.GeneType.Should().Be(GeneType.Volume);
         gene.Size.Should().Be(42);
         gene.Catlets.Should().BeNullOrEmpty();

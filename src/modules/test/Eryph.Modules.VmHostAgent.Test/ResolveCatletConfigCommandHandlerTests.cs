@@ -111,13 +111,13 @@ public class ResolveCatletConfigCommandHandlerTests
             geneData =>
             {
                 geneData.GeneType.Should().Be(GeneType.Catlet);
-                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
+                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
                 geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
             },
             geneData =>
             {
                 geneData.GeneType.Should().Be(GeneType.Catlet);
-                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
+                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
                 geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
             });
 
@@ -219,13 +219,13 @@ public class ResolveCatletConfigCommandHandlerTests
             geneData =>
             {
                 geneData.GeneType.Should().Be(GeneType.Catlet);
-                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
+                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
                 geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
             },
             geneData =>
             {
                 geneData.GeneType.Should().Be(GeneType.Catlet);
-                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
+                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
                 geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
             });
 

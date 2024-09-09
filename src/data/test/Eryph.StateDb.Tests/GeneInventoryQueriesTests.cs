@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
@@ -180,6 +181,54 @@ public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture
                     gene.Size.Should().Be(4300);
                     gene.Hash.Should().Be("fedcba");
                 });
+        });
+    }
+
+    [Fact]
+    public async Task GetCatletsUsingGene_GeneIsUsed_ReturnsCatlet()
+    {
+        await WithScope(async (geneRepository, _) =>
+        {
+            var result = await geneRepository.GetCatletsUsingGene(
+                AgentName, GeneIdentifier.New("gene:acme/acme-fodder/1.0:used-food"));
+
+            result.Should().Equal(CatletIdId);
+        });
+    }
+
+    [Fact]
+    public async Task GetCatletsUsingGene_GeneIsUnused_ReturnsNothing()
+    {
+        await WithScope(async (geneRepository, _) =>
+        {
+            var result = await geneRepository.GetCatletsUsingGene(
+                AgentName, GeneIdentifier.New("gene:acme/acme-fodder/1.0:unused-food"));
+
+            result.Should().BeEmpty();
+        });
+    }
+
+    [Fact]
+    public async Task GetDiskUsingGene_GeneIsUsed_ReturnsDisk()
+    {
+        await WithScope(async (geneRepository, _) =>
+        {
+            var result = await geneRepository.GetDisksUsingGene(
+                AgentName, GeneIdentifier.New("gene:acme/acme-os/1.0:sda"));
+
+            result.Should().Equal(DiskId);
+        });
+    }
+
+    [Fact]
+    public async Task GetDisksUsingGene_GeneIsUnused_ReturnsNothing()
+    {
+        await WithScope(async (geneRepository, _) =>
+        {
+            var result = await geneRepository.GetDisksUsingGene(
+                AgentName, GeneIdentifier.New("gene:acme/acme-os/1.0:sdb"));
+
+            result.Should().BeEmpty();
         });
     }
 

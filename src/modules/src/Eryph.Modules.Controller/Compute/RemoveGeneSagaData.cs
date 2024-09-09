@@ -9,7 +9,7 @@ namespace Eryph.Modules.Controller.Compute;
 
 public class RemoveGeneSagaData
 {
-    public string AgentName { get; set; }
+    public string AgentName { get; set; } = null!;
 
-    public GeneIdentifierWithType GeneId { get; set; }
+    public GeneIdentifierWithType GeneId { get; set; } = null!;
 }
