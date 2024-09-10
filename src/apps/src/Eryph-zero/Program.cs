@@ -1220,7 +1220,7 @@ internal static class Program
         }
     }
 
-    private const string RegistryKeyName = "Eryph Zero";
+    private const string RegistryKeyName = "eryph-zero";
 
     private static void RegisterUninstaller(string installDirectory)
     {
@@ -1236,7 +1236,7 @@ internal static class Program
         var eryphKey = uninstallKey.CreateSubKey(RegistryKeyName)
             ?? throw new InvalidOperationException("Could not create registry key for registering the uninstaller.");
 
-        eryphKey.SetValue("DisplayName", "Eryph Zero");
+        eryphKey.SetValue("DisplayName", "eryph-zero");
         eryphKey.SetValue("DisplayIcon", @"C:\Windows\System32\msiexec.exe,0");
         eryphKey.SetValue("UninstallString", uninstallerPath);
         eryphKey.SetValue("DisplayVersion", fileVersion.ProductVersion ?? "");
