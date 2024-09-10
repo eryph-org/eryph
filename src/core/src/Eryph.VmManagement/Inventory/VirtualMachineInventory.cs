@@ -114,28 +114,6 @@ namespace Eryph.VmManagement.Inventory
                     ));
         }
 
-        private static DiskInfo CreateDiskInfo(DiskStorageSettings storageSettings)
-        {
-            return new DiskInfo
-            {
-                Id = Guid.NewGuid(),
-                DiskIdentifier = storageSettings.DiskIdentifier,
-                Name = storageSettings.Name,
-                ProjectName = storageSettings.StorageNames.ProjectName.IfNone(EryphConstants.DefaultProjectName),
-                ProjectId = storageSettings.StorageNames.ProjectId.Map(i => (Guid?)i).IfNoneUnsafe((Guid?)null),
-                Environment = storageSettings.StorageNames.EnvironmentName.IfNone(EryphConstants.DefaultEnvironmentName),
-                DataStore = storageSettings.StorageNames.DataStoreName.IfNone(EryphConstants.DefaultDataStoreName),
-                StorageIdentifier = storageSettings.StorageIdentifier.IfNoneUnsafe((string)null),
-                Frozen = storageSettings.StorageIdentifier.Match(Some: _ => false, None: () => true),
-                Parent = storageSettings.ParentSettings.Map(CreateDiskInfo).IfNoneUnsafe((DiskInfo)null),
-                Geneset = storageSettings.Geneset.Map(s => s.Value).IfNoneUnsafe((string)null),
-                Path = storageSettings.Path,
-                FileName = storageSettings.FileName,
-                SizeBytes = storageSettings.SizeBytes,
-                UsedSizeBytes = storageSettings.UsedSizeBytes
-            };
-        }
-
         private static Guid GetMetadataId(TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             var notes = vmInfo.Value.Notes;
@@ -178,7 +156,7 @@ namespace Eryph.VmManagement.Inventory
                 };
 
                 if (storageSetting?.DiskSettings != null)
-                    drive.Disk = CreateDiskInfo(storageSetting.DiskSettings);
+                    drive.Disk = storageSetting.DiskSettings.CreateDiskInfo();
 
                 yield return drive;
             }

@@ -7,31 +7,26 @@ using AutoMapper;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
+namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+
+internal class ListRequestHandler<TRequest, TResult, TModel>(
+    IMapper mapper,
+    IReadRepositoryBase<TModel> repository,
+    IUserRightsProvider userRightsProvider)
+    : IListRequestHandler<TRequest, TResult, TModel>
+    where TModel : class
+    where TRequest : IListRequest
 {
-    internal class ListRequestHandler<TRequest, TResult, TModel>
-        : IListRequestHandler<TRequest, TResult, TModel>
-        where TModel : class
-        where TRequest : IListRequest
+    public async Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
+        TRequest request,
+        Func<TRequest, ISpecification<TModel>> createSpecificationFunc,
+        CancellationToken cancellationToken)
     {
-        private readonly IMapper _mapper;
-        private readonly IReadRepositoryBase<TModel> _repository;
+        var queryResult = await repository.ListAsync(createSpecificationFunc(request), cancellationToken);
 
-        public ListRequestHandler(IMapper mapper, IReadRepositoryBase<TModel> repository)
-        {
-            _mapper = mapper;
-            _repository = repository;
-        }
+        var authContext = userRightsProvider.GetAuthContext();
+        var result = mapper.Map<IEnumerable<TResult>>(queryResult,  o => o.SetAuthContext(authContext));
 
-        public async Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
-            TRequest request,
-            Func<TRequest, ISpecification<TModel>> createSpecificationFunc,
-            CancellationToken cancellationToken)
-        {
-            var queryResult = await _repository.ListAsync(createSpecificationFunc(request), cancellationToken);
-            var result = _mapper.Map<IEnumerable<TResult>>(queryResult);
-
-            return new JsonResult(new ListResponse<TResult> { Value = result });
-        }
+        return new JsonResult(new ListResponse<TResult> { Value = result });
     }
 }

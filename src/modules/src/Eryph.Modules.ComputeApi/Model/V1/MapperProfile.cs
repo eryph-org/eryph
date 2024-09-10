@@ -2,6 +2,7 @@
 using System.Linq;
 using AutoMapper;
 using Eryph.Core;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
 
@@ -12,8 +13,6 @@ namespace Eryph.Modules.ComputeApi.Model.V1
 
         public MapperProfile()
         {
-            string userRole = null;
-
             CreateMap<StateDb.Model.ReportedNetwork, CatletNetwork>();
 
             CreateMap<StateDb.Model.VirtualNetwork, VirtualNetwork>()
@@ -26,8 +25,6 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.Catlet, Catlet>();
             CreateMap<StateDb.Model.CatletDrive, CatletDrive>();
             CreateMap<StateDb.Model.CatletNetworkAdapter, CatletNetworkAdapter>();
-            CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>().ForMember(x => x.Path,
-                o => { o.MapFrom(s => userRole == "Admin" ? s.Path : null); });
 
             CreateMap<(StateDb.Model.Catlet Catlet, CatletNetworkPort Port), CatletNetwork>()
                 .ConvertUsing((src, target) =>
@@ -76,6 +73,16 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             memberMap.ForMember(x => x.ProjectName, o => o.MapFrom(s => s.Project.Name));
             memberMap.ForMember(x => x.RoleName,
                 o => o.MapFrom((src,m) => RoleNames.GetRoleName(src.RoleId)));
+
+            CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>()
+                .ForMember(d => d.Project, o => o.MapFrom(s => s.Project.Name))
+                .ForMember(x => x.Path, o => o.MapFrom((s, _, _, context) =>
+                {
+                    var authContext = context.GetAuthContext();
+                    var isSuperAdmin = authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole);
+                    return isSuperAdmin ? s.Path : null;
+                }))
+                .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier));
         }
     }
 }

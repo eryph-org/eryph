@@ -23,6 +23,19 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
+        public sealed class GetByName : Specification<VirtualDisk>
+        {
+            public GetByName(Guid projectId, string dataStore, string environment,
+                string storageIdentifier, string name)
+            {
+                Query.Where(x => x.Project.Id == projectId
+                                 && x.DataStore == dataStore
+                                 && x.Environment == environment
+                                 && x.StorageIdentifier == storageIdentifier
+                                 && x.Name == name);
+            }
+        }
+
         public sealed class FindOutdated : Specification<VirtualDisk>
         {
             public FindOutdated(DateTimeOffset lastSeenBefore, [CanBeNull] string agentName)

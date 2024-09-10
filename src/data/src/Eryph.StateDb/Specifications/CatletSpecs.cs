@@ -50,5 +50,16 @@ namespace Eryph.StateDb.Specifications
                     .ThenInclude(x => x!.Parent);
             }
         }
+
+        public sealed class GetForDelete : Specification<Catlet>, ISingleResultSpecification
+        {
+            public GetForDelete(Guid catletId)
+            {
+                Query.Where(x => x.Id == catletId)
+                    .Include(x => x.Project)
+                    .Include(x => x.Drives)
+                    .ThenInclude(x => x.AttachedDisk);
+            }
+        }
     }
 }

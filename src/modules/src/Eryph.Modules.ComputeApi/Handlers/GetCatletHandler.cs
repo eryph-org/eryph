@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using AutoMapper;
+using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
@@ -18,39 +19,33 @@ using Catlet = Eryph.Modules.ComputeApi.Model.V1.Catlet;
 
 namespace Eryph.Modules.ComputeApi.Handlers;
 
-internal class GetCatletHandler : IGetRequestHandler<StateDb.Model.Catlet, Catlet>
+internal class GetCatletHandler(
+    IMapper mapper,
+    IReadRepositoryBase<StateDb.Model.Catlet> catletRepository,
+    IReadRepositoryBase<CatletNetworkPort> networkPortRepository,
+    IUserRightsProvider userRightsProvider)
+    : IGetRequestHandler<StateDb.Model.Catlet, Catlet>
 {
-    private readonly IMapper _mapper;
-    private readonly IReadRepositoryBase<StateDb.Model.Catlet> _catletRepository;
-    private readonly IReadRepositoryBase<CatletNetworkPort> _networkPortRepository;
-
-    public GetCatletHandler(
-        IMapper mapper,
-        IReadRepositoryBase<StateDb.Model.Catlet> catletRepository,
-        IReadRepositoryBase<CatletNetworkPort> networkPortRepository)
-    {
-        _mapper = mapper;
-        _catletRepository = catletRepository;
-        _networkPortRepository = networkPortRepository;
-    }
-
     public async Task<ActionResult<Catlet>> HandleGetRequest(
         Func<ISingleResultSpecification<StateDb.Model.Catlet>> specificationFunc,
         CancellationToken cancellationToken)
     {
-        var catlet = await _catletRepository.GetBySpecAsync(specificationFunc(), cancellationToken);
+        var catlet = await catletRepository.GetBySpecAsync(specificationFunc(), cancellationToken);
         if (catlet is null)
             return new NotFoundResult();
 
-        var mappedResult = _mapper.Map<Catlet>(catlet);
-        var catletPorts = await _networkPortRepository.ListAsync(
+        var authContext = userRightsProvider.GetAuthContext();
+
+        var mappedResult = mapper.Map<Catlet>(catlet, o => o.SetAuthContext(authContext));
+        var catletPorts = await networkPortRepository.ListAsync(
             new CatletNetworkPortSpecs.GetByCatletMetadataId(catlet.MetadataId),
             cancellationToken);
 
         var catletPortsWithCatlet = catletPorts
             .Map(p => (Catlet: catlet, Port: p));
             
-        mappedResult.Networks = _mapper.Map<IEnumerable<CatletNetwork>>(catletPortsWithCatlet);
+        mappedResult.Networks = mapper.Map<IEnumerable<CatletNetwork>>(
+            catletPortsWithCatlet, o => o.SetAuthContext(authContext));
         return new JsonResult(mappedResult);
     }
 }
