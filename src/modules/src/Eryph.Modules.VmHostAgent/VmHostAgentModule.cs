@@ -13,11 +13,13 @@ using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.Modules.VmHostAgent.Tracing;
 using Eryph.Rebus;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Tracing;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -38,6 +40,14 @@ namespace Eryph.Modules.VmHostAgent
     [UsedImplicitly]
     public class VmHostAgentModule
     {
+        private readonly TracingConfig _tracingConfig = new();
+
+        public VmHostAgentModule(IConfiguration configuration)
+        {
+            configuration.GetSection("Tracing")
+                .Bind(_tracingConfig);
+        }
+
         public string Name => "Eryph.VmHostAgent";
 
         [UsedImplicitly]
@@ -88,8 +98,13 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterInstance(serviceProvider.GetRequiredService<IAgentControlService>());
 
             container.Register<StartBusModuleHandler>();
-            container.RegisterSingleton<ITracer, Tracer>();
-            container.RegisterSingleton<ITraceWriter, DiagnosticTraceWriter>();
+
+            if (_tracingConfig.Enabled)
+            {
+                container.RegisterSingleton<ITracer, Tracer>();
+                container.RegisterSingleton<ITraceWriter, DiagnosticTraceWriter>();
+                container.RegisterDecorator(typeof(IHandleMessages<>), typeof(TraceDecorator<>));
+            }
 
             container.RegisterSingleton<IPowershellEngine, PowershellEngine>();
 
@@ -118,7 +133,6 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);
             container.AddRebusOperationsHandlers();
-            container.RegisterDecorator(typeof(IHandleMessages<>), typeof(TraceDecorator<>));
 
             var localName = $"{QueueNames.VMHostAgent}.{Environment.MachineName}";
             container.ConfigureRebus(configurer => configurer
