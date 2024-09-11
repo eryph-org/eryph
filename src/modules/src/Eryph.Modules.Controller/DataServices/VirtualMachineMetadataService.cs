@@ -56,7 +56,6 @@ internal class VirtualMachineMetadataService : IVirtualMachineMetadataService
             entity.Metadata = JsonSerializer.Serialize(metadata);
         }
 
-        // TODO this churns through IDs
         entity.Genes = metadata.Fodder.ToSeq()
             .Append(Prelude.Optional(metadata.ParentConfig).ToSeq().Map(p => p.Fodder.ToSeq()))
             .Map(f => GeneIdentifier.NewOption(f.Source))
