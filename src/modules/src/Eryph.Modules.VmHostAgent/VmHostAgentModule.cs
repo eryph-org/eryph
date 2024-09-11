@@ -103,10 +103,7 @@ namespace Eryph.Modules.VmHostAgent
             {
                 container.RegisterSingleton<ITracer, Tracer>();
                 container.RegisterSingleton<ITraceWriter, DiagnosticTraceWriter>();
-            }
-            else
-            {
-                container.RegisterSingleton<ITracer, NullTracer>();
+                container.RegisterDecorator(typeof(IHandleMessages<>), typeof(TraceDecorator<>));
             }
 
             container.RegisterSingleton<IPowershellEngine, PowershellEngine>();
@@ -136,7 +133,6 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);
             container.AddRebusOperationsHandlers();
-            container.RegisterDecorator(typeof(IHandleMessages<>), typeof(TraceDecorator<>));
 
             var localName = $"{QueueNames.VMHostAgent}.{Environment.MachineName}";
             container.ConfigureRebus(configurer => configurer
