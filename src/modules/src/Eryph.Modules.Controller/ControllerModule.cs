@@ -126,7 +126,7 @@ namespace Eryph.Modules.Controller
                 options.AddChangeTracking();
             
             options.Services.AddHostedHandler<StartBusModuleHandler>();
-            options.Services.AddHostedHandler<SyncNetworksHandler>();
+            options.AddHostedService<SyncNetworksStartupService>();
             options.AddHostedService<InventoryTimerService>();
             options.AddLogging();
         }
