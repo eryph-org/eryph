@@ -77,8 +77,8 @@ namespace Eryph.Modules.AspNetCore
         [UsedImplicitly]
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
-            options.AddAspNetCore()
-                .AddControllerActivation();
+            options.AddAspNetCore().AddControllerActivation();
+            options.AddLogging();
         }
 
         [UsedImplicitly]
@@ -127,7 +127,7 @@ namespace Eryph.Modules.AspNetCore
                 return configurer
                     .Serialization(s => s.UseEryphSettings())
                     .Transport(t =>
-                        serviceProvider.GetRequiredService<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
+                        container.GetRequiredService<IRebusTransportConfigurer>().ConfigureAsOneWayClient(t))
                     .Options(x =>
                     {
                         x.RetryStrategy();

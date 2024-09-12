@@ -139,7 +139,7 @@ namespace Eryph.Modules.VmHostAgent
             container.ConfigureRebus(configurer => configurer
                 .Serialization(s => s.UseEryphSettings())
                 .Transport(t =>
-                    serviceProvider.GetService<IRebusTransportConfigurer>()
+                    container.GetService<IRebusTransportConfigurer>()
                         .Configure(t, localName))
                 .Options(x =>
                 {
@@ -147,7 +147,7 @@ namespace Eryph.Modules.VmHostAgent
                     x.SetNumberOfWorkers(5);
                     x.EnableSynchronousRequestReply();
                 })
-                .Subscriptions(s => serviceProvider.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
+                .Subscriptions(s => container.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
                 .Logging(x => x.MicrosoftExtensionsLogging(container.GetInstance<ILoggerFactory>()))
                 .Start());
         }

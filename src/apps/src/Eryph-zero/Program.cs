@@ -249,20 +249,20 @@ internal static class Program
                 logger.Information("Starting eryph-zero {Version}", new ZeroApplicationInfoProvider().ProductVersion);
 
                 if (warmupMode)
-                    logger.Information("Running in warmup mode. Process will be stopped after start is completed");
+                    logger.Information("Running in warmup mode. Process will be stopped after start is completed.");
 
                 await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
                 var basePathUrl = ConfigureUrl(startupConfig.BasePath);
 
                 var endpoints = new Dictionary<string, string>
-                    {
+                {
+                        { "base", $"{basePathUrl}" },
                         { "identity", $"{basePathUrl}identity" },
                         { "compute", $"{basePathUrl}compute" },
                         { "common", $"{basePathUrl}common" },
                         { "network", $"{basePathUrl}network" },
-
-                    };
+                };
 
                 ZeroConfig.EnsureConfiguration();
 
@@ -336,14 +336,6 @@ internal static class Program
 
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-                
-                container.RegisterInstance<ILoggerFactory>(loggerFactory);
-                container.RegisterConditional(
-                    typeof(ILogger),
-                    c => typeof(Microsoft.Extensions.Logging.Logger<>).MakeGenericType(c.Consumer!.ImplementationType),
-                    Lifestyle.Singleton,
-                    _ => true);
-
                 container.Bootstrap(ovsRunDir);
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
@@ -380,14 +372,14 @@ internal static class Program
                             ["changeTracking:virtualMachinesConfigPath"] = ZeroConfig.GetMetadataConfigPath(),
                         });
                     })
-                    .HostModule<VmHostAgentModule>()
+                    .HostModule<ZeroStartupModule>()
+                    .AddVmHostAgentModule()
                     .HostModule<NetworkModule>()
                     .AddControllerModule(container)
                     .AddComputeApiModule()
                     .AddIdentityModule(container)
                     .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
-                    .ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<
-                        EventLogSettings, EventLogLoggerProvider>)
+                    //.ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<EventLogSettings, EventLogLoggerProvider>)
                     .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
                     // The logger must not be disposed here as it is injected into multiple modules.
                     // Serilog requires a single logger instance for synchronization.

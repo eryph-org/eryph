@@ -96,7 +96,7 @@ namespace Eryph.Modules.Controller
             container.ConfigureRebus(configurer => configurer
                 .Serialization(s => s.UseEryphSettings())
                 .Transport(t =>
-                    serviceProvider.GetRequiredService<IRebusTransportConfigurer>()
+                    container.GetInstance<IRebusTransportConfigurer>()
                         .Configure(t, QueueNames.Controllers))
                 .Options(x =>
                 {
@@ -104,13 +104,13 @@ namespace Eryph.Modules.Controller
                     x.SetNumberOfWorkers(5);
                     x.EnableSimpleInjectorUnitOfWork();
                 })
-                .Timeouts(t => serviceProvider.GetRequiredService<IRebusConfigurer<ITimeoutManager>>().Configure(t))
+                .Timeouts(t => container.GetInstance<IRebusConfigurer<ITimeoutManager>>().Configure(t))
                 .Sagas(s =>
                 {
-                    serviceProvider.GetRequiredService<IRebusConfigurer<ISagaStorage>>().Configure(s);
+                    container.GetInstance<IRebusConfigurer<ISagaStorage>>().Configure(s);
                     s.EnforceExclusiveAccess();
                 })
-                .Subscriptions(s => serviceProvider.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
+                .Subscriptions(s => container.GetService<IRebusConfigurer<ISubscriptionStorage>>()?.Configure(s))
                 .Logging(x => x.MicrosoftExtensionsLogging(container.GetInstance<ILoggerFactory>()))
                 .Start());
 
