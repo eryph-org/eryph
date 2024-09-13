@@ -1,12 +1,13 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.IO.Hashing;
 using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
-using Serilog;
 
 namespace Eryph.Runtime.Zero;
 
@@ -27,83 +28,56 @@ internal class OVSPackage
         }
 
         var ovsPackageFile = Path.Combine(parentDir, "ovspackage.zip");
-        var ovsPackageBackupFile = Path.Combine(parentDir, "ovspackage_backup.zip");
-
-        
         var ovsPackageExists = File.Exists(ovsPackageFile);
-        var ovsBackupExists = File.Exists(ovsPackageBackupFile);
+        if (!File.Exists(ovsPackageFile))
+            throw new IOException("The OVS package is missing.");
 
-        var ovsRootPath =
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "eryph", "ovs");
+        var ovsRootPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "eryph", "ovs");
 
-        logger.LogDebug("OVS Package installation: Package root: {RootPath}, package file found: {OvsPackageExists}, backup file found: {OvsBackupExists}",
-            parentDir, ovsPackageExists, ovsBackupExists);
+        logger.LogDebug("OVS Package installation: root: {RootPath}, package file: {OvsPackageExists}",
+            parentDir, ovsPackageExists);
 
         var ovsRootDir = new DirectoryInfo(ovsRootPath);
-        if(!ovsRootDir.Exists)
-            ovsRootDir.Create(GetOvsDirectorySecurity());
+        ovsRootDir.Create();
+        ovsRootDir.SetAccessControl(GetOvsDirectorySecurity());
 
-        var runDirNo = 0;
-        foreach (var ovsFilesDir in ovsRootDir.GetDirectories("run_*"))
+        var ovsRunDirectory = FindRunDirectory(ovsRootDir);
+        if (ovsRunDirectory is not null)
         {
-            logger.LogDebug("Checking path '{OvsFileDir}' for ovs files", ovsFilesDir.FullName);
-            var hasOvs = ovsFilesDir.GetFiles("ovs-vswitchd.exe", SearchOption.AllDirectories).Any()
-                && ovsFilesDir.GetFiles("dbo_ovse.inf", SearchOption.AllDirectories).Any();
-           
-            if(!hasOvs) continue;
-           
-            var name = ovsFilesDir.Name.Replace("run_", "");
-            if(!int.TryParse(name, out var dirNo)) continue;
-
-            if (dirNo > runDirNo)
+            logger.LogInformation("Found existing OpenVSwitch installation '{OvsDirectory}'", ovsRunDirectory.FullName);
+            var stopWatch = Stopwatch.StartNew();
+            var isValid = IsRunDirValid(ovsRunDirectory, ovsPackageFile);
+            logger.LogInformation("Run dir check took: {MilliSeconds}ms", stopWatch.ElapsedMilliseconds);
+            if (!isValid)
             {
-                logger.LogDebug("Found ovs folder, run dir no increased to {RunDirNo} ", runDirNo);
-                runDirNo = dirNo;
+                logger.LogInformation("Existing OpenVSwitch installation is outdated or incomplete. Reinstalling...");
+                ovsRunDirectory = null;
             }
         }
 
-        if (runDirNo == 0)
+        if (ovsRunDirectory is null)
         {
-
-            if (!ovsPackageExists && !ovsBackupExists)
-                throw new IOException(
-                    "Could not find existing OpenVSwitch run directory and ovs package to create it from.");
-
-            if (ovsBackupExists && relativePackagePath== null)
-            {
-                logger.LogInformation("No OpenVSwitch Installation folder found. Trying to recreate from backup.");
-                File.Move(ovsPackageBackupFile, ovsPackageFile);
-                ovsPackageExists = true;
-            }
-        }
-
-        if (ovsPackageExists)
-        {
-            logger.LogInformation("Installing Open VSwitch package");
-            runDirNo = ovsRootDir.GetDirectories("run_*")
+            logger.LogInformation("Installing OpenVSwitch package...");
+            var nextRunDirNo = ovsRootDir.GetDirectories("run_*")
                 .Map(d => Prelude.parseInt(d.Name.Replace("run_", "")))
-                .Somes().Fold(0, Math.Max) + 1;
-            var extractFolder = Path.Combine(ovsRootDir.FullName, $"run_{runDirNo:D}");
-            ZipFile.ExtractToDirectory(ovsPackageFile, extractFolder);
-
-            if (relativePackagePath == null)
-                File.Move(ovsPackageFile, ovsPackageBackupFile, true);
+                .Somes()
+                .Fold(0, Math.Max) + 1;
+            ovsRunDirectory = new DirectoryInfo(Path.Combine(ovsRootDir.FullName, $"run_{nextRunDirNo:D}"));
+            ZipFile.ExtractToDirectory(ovsPackageFile, ovsRunDirectory.FullName);
+            logger.LogInformation("OpenVSwitch package successfully installed.");
         }
 
-        //cleanup old rundirs (if not in use any more)
-        foreach (var ovsFilesDir in ovsRootDir.GetDirectories("run_*"))
+        // Cleanup old OVS installations (if not in use anymore)
+        foreach (var directory in ovsRootDir.GetDirectories("run_*"))
         {
-            var name = ovsFilesDir.Name.Replace("run_", "");
-            if (!int.TryParse(name, out var dirNo)) continue;
-
-            if(dirNo == runDirNo) continue;
+            if (directory.FullName == ovsRunDirectory.FullName)
+                continue;
 
             try
             {
-                ovsFilesDir.Delete(true);
-
+                directory.Delete(true);
             }
             catch
             {
@@ -111,42 +85,48 @@ internal class OVSPackage
             }
         }
 
-        var resolvedRunDir = new DirectoryInfo(Path.Combine(ovsRootPath, $"run_{runDirNo:D}"));
-
-        // should not happen, but to be sure
-        if(!resolvedRunDir.GetFiles("ovs-vswitchd.exe", SearchOption.AllDirectories).Any())
-            throw new IOException($"Could not find OpenVSwitch in directory {resolvedRunDir}");
-
-        logger.LogDebug("Found OVS package in {OvsPackage}", resolvedRunDir.FullName);
-
-        return resolvedRunDir.FullName;
-
+        return ovsRunDirectory.FullName;
     }
 
     public static string? GetCurrentOVSPath()
     {
-        var ovsRootPath =
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "eryph", "ovs");
+        var ovsRootPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "eryph", "ovs");
         
-        if(!Directory.Exists(ovsRootPath))
+        var ovsRootDir = new DirectoryInfo(ovsRootPath);
+        if (!ovsRootDir.Exists)
             return null;
 
-        var ovsRootDir = new DirectoryInfo(ovsRootPath);
-        foreach (var ovsFilesDir in ovsRootDir.GetDirectories("run_*"))
-        {
-            
-            if (!ovsFilesDir.GetFiles("ovs-vsctl.exe", SearchOption.AllDirectories).Any())
-                continue;
-
-            return ovsFilesDir.FullName;
-        }
-
-        return null;
+        var ovsRunDir = FindRunDirectory(ovsRootDir);
+        return ovsRunDir?.FullName;
     }
 
-    public static DirectorySecurity GetOvsDirectorySecurity()
+    private static DirectoryInfo? FindRunDirectory(DirectoryInfo rootDirectory)
+    {
+        DirectoryInfo? bestMatch = null;
+        var bestMatchNo = 0;
+        foreach (var ovsFilesDir in rootDirectory.GetDirectories("run_*"))
+        {
+            if (ovsFilesDir.GetFiles("ovs-vsctl.exe", SearchOption.AllDirectories).Length == 0)
+                continue;
+
+            var name = ovsFilesDir.Name.Replace("run_", "");
+            if (int.TryParse(name, out var currentNo) && currentNo > bestMatchNo)
+            {
+                bestMatch = ovsFilesDir;
+                bestMatchNo = currentNo;
+            }
+            else if (bestMatch is null)
+            {
+                bestMatch = ovsFilesDir;
+            }
+        }
+
+        return bestMatch;
+    }
+
+    private static DirectorySecurity GetOvsDirectorySecurity()
     {
         var directorySecurity = new DirectorySecurity();
         IdentityReference adminId = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
@@ -180,5 +160,34 @@ internal class OVSPackage
         directorySecurity.SetAccessRuleProtection(true, true);
 
         return directorySecurity;
+    }
+
+    public static bool IsRunDirValid(DirectoryInfo ovsRunDirectory, string packagePath)
+    {
+        var runDirFiles = ovsRunDirectory.GetFiles("*", SearchOption.AllDirectories);
+        var crc32 = new Crc32();
+
+        using var archive = ZipFile.OpenRead(packagePath);
+        foreach (var entry in archive.Entries.Where(entry => !entry.FullName.EndsWith('/')))
+        {
+            var entryPath = Path.GetFullPath(entry.FullName, ovsRunDirectory.FullName);
+            var fileInfo = runDirFiles.FirstOrDefault(
+                fi => string.Equals(entryPath, fi.FullName, StringComparison.OrdinalIgnoreCase));
+
+            if (fileInfo is null)
+                return false;
+
+            crc32.Reset();
+            
+            using var stream = fileInfo.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            crc32.Append(stream);
+
+            // Use CRC32 to detect changed files as we can get the CRC32 checksums from the ZIP
+            // archive without decompression.
+            if (entry.Crc32 != crc32.GetCurrentHashAsUInt32())
+                return false;
+        }
+
+        return true;
     }
 }
