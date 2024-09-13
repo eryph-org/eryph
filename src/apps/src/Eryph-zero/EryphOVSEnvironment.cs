@@ -6,9 +6,9 @@ namespace Eryph.Runtime.Zero;
 
 public class EryphOVSEnvironment : SystemEnvironment
 {
-    private readonly EryphOvsPathProvider _runPathProvider;
+    private readonly IEryphOvsPathProvider _runPathProvider;
 
-    public EryphOVSEnvironment(EryphOvsPathProvider runPathProvider, ILoggerFactory loggerFactory) : base(
+    public EryphOVSEnvironment(IEryphOvsPathProvider runPathProvider, ILoggerFactory loggerFactory) : base(
         loggerFactory)
     {
         _runPathProvider = runPathProvider;
@@ -19,9 +19,9 @@ public class EryphOVSEnvironment : SystemEnvironment
 
     private class EryphOVsFileSystem : DefaultFileSystem
     {
-        private readonly EryphOvsPathProvider _runPathProvider;
+        private readonly IEryphOvsPathProvider _runPathProvider;
 
-        public EryphOVsFileSystem(EryphOvsPathProvider runPathProvider) : base(OSPlatform.Windows)
+        public EryphOVsFileSystem(IEryphOvsPathProvider runPathProvider) : base(OSPlatform.Windows)
         {
             _runPathProvider = runPathProvider;
         }

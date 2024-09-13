@@ -215,25 +215,14 @@ internal static class Program
     {
         return await AdminGuard.CommandIsElevated(async () =>
         {
-            ZeroStartupConfig startupConfig;
+            string? basePath;
             Serilog.Core.Logger logger;
 
             try
             {
-                startupConfig = StartupConfiguration(args, sp =>
-                {
-                    var configuration = sp.GetRequiredService<IConfiguration>();
-                    return new ZeroStartupConfig
-                    {
-                        Configuration = configuration,
-                        BasePath = configuration["basePath"],
-                        SslEndpointManager = sp.GetRequiredService<ISSLEndpointManager>(),
-                        CryptoIO = sp.GetRequiredService<ICryptoIOServices>(),
-                        CertificateGenerator = sp.GetRequiredService<ICertificateGenerator>(),
-                        OvsPackageDir = configuration["ovsPackagePath"]
-                    };
-                });
-                logger = ZeroLogging.CreateLogger(startupConfig.Configuration);
+                var startupConfig = ReadConfiguration(args);
+                basePath = startupConfig["basePath"];
+                logger = ZeroLogging.CreateLogger(startupConfig);
             }
             catch (Exception ex)
             {
@@ -241,7 +230,6 @@ internal static class Program
                 return -1;
             }
 
-            var returnCode = 0;
             var warmupMode = args.Contains("--warmup");
 
             try
@@ -253,90 +241,27 @@ internal static class Program
 
                 await using var processLock = new ProcessFileLock(Path.Combine(ZeroConfig.GetConfigPath(), ".lock"));
 
-                var basePathUrl = ConfigureUrl(startupConfig.BasePath);
+                var basePathUrl = ConfigureUrl(basePath);
 
                 var endpoints = new Dictionary<string, string>
                 {
-                        { "base", $"{basePathUrl}" },
-                        { "identity", $"{basePathUrl}identity" },
-                        { "compute", $"{basePathUrl}compute" },
-                        { "common", $"{basePathUrl}common" },
-                        { "network", $"{basePathUrl}network" },
+                    { "base", $"{basePathUrl}" },
+                    { "identity", $"{basePathUrl}identity" },
+                    { "compute", $"{basePathUrl}compute" },
+                    { "common", $"{basePathUrl}common" },
+                    { "network", $"{basePathUrl}network" },
                 };
 
-                ZeroConfig.EnsureConfiguration();
-
-                await SystemClientGenerator.EnsureSystemClient(startupConfig.CertificateGenerator, startupConfig.CryptoIO,
-                    new Uri(endpoints["identity"]));
-
-                using var _ = await startupConfig.SslEndpointManager
-                    .EnableSslEndpoint(new SSLOptions(
-                        "eryph-zero CA",
-                        Network.FQDN,
-                        DateTime.UtcNow.AddDays(-1),
-                        365 * 5,
-                        ZeroConfig.GetPrivateConfigPath(),
-                        "eryphCA",
-                        Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
-                        basePathUrl));
-
-
-
                 processLock.SetMetadata(new Dictionary<string, object>
-                    {
-                        {
-                            "endpoints", endpoints
-                        }
-                    });
-
-                var isWindowsService = WindowsServiceHelpers.IsWindowsService();
-                using var loggerFactory = new SerilogLoggerFactory(logger, dispose: false);
-
-                var result = await DriverCommands.Run(
-                    from _1 in SystemRequirementsChecker<DriverCommandsRuntime>.ensureHyperV(isWindowsService)
-                        .MapFail(e => Error.New(
-                            -10,
-                            "Hyper-V is not available. Make sure it is installed and the management service (VMMS) is running.",
-                            e))
-                    from ovsLogger in default(DriverCommandsRuntime).Logger<OVSPackage>()
-                    from runDir in Eff(() => OVSPackage.UnpackAndProvide(
-                        ovsLogger,
-                        startupConfig.OvsPackageDir))
-                        .ToAff()
-                        .MapFail(e => Error.New(-12, "Could not extract the included OVS/OVN distribution.", e))
-                    from _2 in OvsDriverProvider<DriverCommandsRuntime>.ensureDriver(
-                            runDir, !isWindowsService && !warmupMode, !isWindowsService && !warmupMode)
-                        .MapFail(e => Error.New(-11, "The Hyper-V switch extension for OVS is not available.", e))
-                    // Force the creation of the host agent config file in case it does not exist.
-                    // Otherwise, we might run into concurrency issues later as the file is created
-                    // on first use.
-                    from hostSettings in HostSettingsProvider<DriverCommandsRuntime>.getHostSettings()
-                    from vmHostAgentConfig in VmHostAgentConfiguration<DriverCommandsRuntime>.getConfigYaml(
-                        Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
-                        hostSettings)
-                    select runDir,
-                    loggerFactory);
-
-                if (result.Case is Error error)
                 {
-                    if (isWindowsService)
                     {
-                        logger.Fatal(error, "The service startup failed.");
+                        "endpoints", endpoints
                     }
-                    else
-                    {
-                        Spectre.Console.AnsiConsole.Write(new Rows(
-                            new Markup("[red]The command failed with the following error(s):[/]"),
-                            Renderable(error)));
-                    }
-                    return error.Code;
-                }
-
-                var ovsRunDir = result.ToOption().ValueUnsafe();
+                });
 
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
-                container.Bootstrap(ovsRunDir);
+                container.Bootstrap();
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
                 var builder = ModulesHost.CreateDefaultBuilder(args);
@@ -356,6 +281,7 @@ internal static class Program
                     {
                         config.AddInMemoryCollection(new Dictionary<string, string>
                         {
+                            { "warmupMode", warmupMode.ToString() },
                             { "privateConfigPath", ZeroConfig.GetPrivateConfigPath() },
                             { "bus:type", "inmemory" },
                             { "databus:type", "inmemory" },
@@ -379,15 +305,11 @@ internal static class Program
                     .AddComputeApiModule()
                     .AddIdentityModule(container)
                     .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
-                    //.ConfigureServices(LoggerProviderOptions.RegisterProviderOptions<EventLogSettings, EventLogLoggerProvider>)
                     .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
                     // The logger must not be disposed here as it is injected into multiple modules.
                     // Serilog requires a single logger instance for synchronization.
                     .UseSerilog(logger: logger, dispose: false)
                     .Build();
-
-                //starting here all errors should be considered as recoverable
-                returnCode = -1;
 
                 if (warmupMode)
                 {
@@ -396,9 +318,9 @@ internal static class Program
                         await host.StartAsync();
                         await Task.Delay(1000);
                         logger.Information("Warmup completed. Stopping.");
-                        var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));    
+                        using var cancelSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));    
                         await host.StopAsync(cancelSource.Token);
-                        returnCode = 0;
+                        return 0;
                     }
                     finally
                     {
@@ -415,18 +337,18 @@ internal static class Program
                 else
                 {
                     await host.RunAsync();
+                    return 0;
                 }
             }
             catch (Exception ex)
             {
                 logger.Fatal(ex, "eryph-zero failure");
+                return ex is ErrorException { Code: < 0 } eex ? eex.Code : -1;
             }
             finally
             {
                 await logger.DisposeAsync();
             }
-
-            return returnCode;
         });
 
     }
@@ -440,7 +362,7 @@ internal static class Program
         return uriBuilder.Uri;
     }
 
-    private static T StartupConfiguration<T>(string[] args, Func<IServiceProvider, T> selectResult)
+    private static IConfiguration ReadConfiguration(string[] args)
     {
         using var configHost = Host.CreateDefaultBuilder()
             .ConfigureAppConfiguration((hostingContext, config) =>
@@ -457,20 +379,9 @@ internal static class Program
                     config.AddCommandLine(args);
                 }
             })
-            .ConfigureServices(srv =>
-            {
-                srv.AddSingleton<ISSLEndpointManager, SSLEndpointManager>();
-                srv.AddSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
-                srv.AddSingleton<IRSAProvider, RSAProvider>();
-                srv.AddSingleton<ISSLEndpointRegistry, WinHttpSSLEndpointRegistry>();
-                srv.AddSingleton<ICryptoIOServices, WindowsCryptoIOServices>();
-                srv.AddSingleton<ICertificateGenerator, CertificateGenerator>();
-            })
             .Build();
 
-        var res = selectResult(configHost.Services);
-
-        return res;
+        return configHost.Services.GetRequiredService<IConfiguration>();
     }
 
     private static readonly IPEndPoint DefaultLoopbackEndpoint = new(IPAddress.Loopback, port: 0);

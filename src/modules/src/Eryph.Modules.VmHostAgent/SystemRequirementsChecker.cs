@@ -50,10 +50,8 @@ public static class SystemRequirementsChecker<RT> where RT : struct,
         isService
             ? Schedule.NoDelayOnFirst
               & Schedule.linear(TimeSpan.FromSeconds(1))
-              // The default startup timeout for services on Windows is 30 seconds.
-              // We retry for at most 15 seconds, so we hopefully exit with
-              // an error message before Windows terminates our process.
-              & Schedule.upto(TimeSpan.FromSeconds(15))
+              & Schedule.maxDelay(TimeSpan.FromSeconds(10))
+              & Schedule.upto(TimeSpan.FromMinutes(5))
             : Schedule.Never;
 
     private static Eff<RT, Unit> logInformation(string msg) =>
