@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
-using Eryph.AnsiConsole;
 using Eryph.App;
 using Eryph.AnsiConsole.Sys;
 using Eryph.ModuleCore;
@@ -258,6 +257,8 @@ internal static class Program
                         "endpoints", endpoints
                     }
                 });
+
+                ZeroConfig.EnsureConfiguration();
 
                 var container = new Container();
                 container.Options.DefaultScopedLifestyle = new AsyncScopedLifestyle();
@@ -872,34 +873,6 @@ internal static class Program
 
                 }
             }
-        }
-
-
-        EitherAsync<Error, Unit> RunWarmup(string eryphBinPath)
-        {
-            var cancelTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-            return TryAsync(async () =>
-            {
-                var process = new Process
-                {
-                    StartInfo =
-                    {
-                        FileName = eryphBinPath,
-                        Arguments = "run --warmup",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = false,
-                        RedirectStandardError = false,
-                        CreateNoWindow = true,
-                        WorkingDirectory = Environment.SystemDirectory
-                    },
-                    EnableRaisingEvents = true
-                };
-                process.Start();
-                await process.WaitForExitAsync(cancelTokenSource.Token);
-
-
-                return Unit.Default;
-            }).ToEither();
         }
     }
 

@@ -34,8 +34,6 @@ public sealed class ZeroStartupService(
     {
         logger.LogInformation("Zero startup service started.");
 
-        ZeroConfig.EnsureConfiguration();
-
         await EnsureSystemClient();
         await EnableSslEndpoint();
         await EnsureHyperVAndOvs();
