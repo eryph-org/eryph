@@ -20,45 +20,38 @@ using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Configuration;
 using Eryph.Modules.VmHostAgent.Genetics;
-using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
-using Eryph.Runtime.Zero.Configuration.Clients;
-using Eryph.Runtime.Zero.HttpSys;
-using Eryph.Security.Cryptography;
+using Eryph.Runtime.Zero.Configuration.Networks;
+using Eryph.Runtime.Zero.Startup;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Data.Core;
 using LanguageExt;
-using LanguageExt.UnsafeValueAccess;
+using LanguageExt.Common;
+using LanguageExt.Effects.Traits;
+using LanguageExt.Sys.IO;
+using LanguageExt.Sys.Traits;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Logging.Configuration;
-using Microsoft.Extensions.Logging.EventLog;
+using Microsoft.IdentityModel.Logging;
+using Microsoft.Win32;
 using Serilog;
+using Serilog.Extensions.Logging;
+using Serilog.Sinks.SystemConsole.Themes;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
+using Spectre.Console;
+
 using static Eryph.Modules.VmHostAgent.Networks.NetworkProviderManager<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static Eryph.Modules.VmHostAgent.Networks.OvsDriverProvider<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
-using Eryph.Runtime.Zero.Configuration.Networks;
-using Eryph.VmManagement.Data.Core;
-using LanguageExt.Common;
-using LanguageExt.Effects.Traits;
-using LanguageExt.Sys.IO;
-using LanguageExt.Sys.Traits;
-using Microsoft.Extensions.Hosting.WindowsServices;
-using Serilog.Extensions.Logging;
-using Serilog.Sinks.SystemConsole.Themes;
-using Microsoft.Extensions.Logging;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
-using Microsoft.IdentityModel.Logging;
-using Microsoft.Win32;
-using Spectre.Console;
 
 using static LanguageExt.Prelude;
 using static Eryph.AnsiConsole.Prelude;
@@ -258,6 +251,8 @@ internal static class Program
                     }
                 });
 
+                // We need to ensure this early that the configuration directories exist
+                // as the identity module tries to write files during bootstrapping.
                 ZeroConfig.EnsureConfiguration();
 
                 var container = new Container();
@@ -272,7 +267,6 @@ internal static class Program
                     {
                         hb.UseWindowsService(cfg => cfg.ServiceName = "eryph-zero");
                     })
-
                     .UseAspNetCore((module, webHostBuilder) =>
                     {
                         webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); });

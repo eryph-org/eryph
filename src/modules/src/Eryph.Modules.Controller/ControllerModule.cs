@@ -10,6 +10,7 @@ using Eryph.Configuration;
 using Eryph.Core;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Configuration;
+using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller.ChangeTracking;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Modules.Controller.Inventory;
@@ -40,23 +41,20 @@ namespace Eryph.Modules.Controller
     [UsedImplicitly]
     public class ControllerModule
     {
-        private readonly ChangeTrackingConfig _changeTrackingConfig;
+        private readonly ChangeTrackingConfig _changeTrackingConfig = new();
 
         public string Name => "Eryph.Controller";
 
         public ControllerModule(IConfiguration configuration)
         {
-            _changeTrackingConfig = configuration
-                .GetSection("ChangeTracking")
-                .Get<ChangeTrackingConfig>();
+             configuration.GetSection("ChangeTracking")
+                .Bind(_changeTrackingConfig);
         }
 
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.RegisterSingleton<IFileSystem, FileSystem>();
             container.RegisterInstance(_changeTrackingConfig);
-
-            container.Register<StartBusModuleHandler>();
 
             container.Register<IRebusUnitOfWork, StateStoreDbUnitOfWork>(Lifestyle.Scoped);
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
@@ -124,9 +122,9 @@ namespace Eryph.Modules.Controller
             
             if(_changeTrackingConfig.TrackChanges)
                 options.AddChangeTracking();
-            
-            options.Services.AddHostedHandler<StartBusModuleHandler>();
-            options.AddHostedService<SyncNetworksStartupService>();
+
+            options.AddStartupHandler<SyncNetworksHandler>();
+            options.AddStartupHandler<StartBusModuleHandler>();
             options.AddHostedService<InventoryTimerService>();
             options.AddLogging();
         }

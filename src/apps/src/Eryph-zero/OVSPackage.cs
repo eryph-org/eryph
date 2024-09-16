@@ -16,28 +16,22 @@ internal class OVSPackage
     public static string UnpackAndProvide(ILogger<OVSPackage> logger, string? relativePackagePath = null)
     {
         var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-        var parentDir = baseDir.Parent?.FullName ?? throw new IOException($"Invalid path {baseDir}");
+        var parentDir = baseDir.Parent?.FullName ?? throw new IOException("Invalid OpenVSwitch package path");
 
-        if (relativePackagePath != null)
+        if (relativePackagePath is not null)
         {
-           parentDir =  Path.Combine(parentDir, relativePackagePath);
-           if (!Directory.Exists(parentDir))
-           {
-               throw new IOException($"Invalid path '{parentDir}'");
-           }
+            parentDir = Path.Combine(parentDir, relativePackagePath);
         }
 
         var ovsPackageFile = Path.Combine(parentDir, "ovspackage.zip");
-        var ovsPackageExists = File.Exists(ovsPackageFile);
         if (!File.Exists(ovsPackageFile))
-            throw new IOException("The OVS package is missing.");
+            throw new IOException($"The OpenVSwitch package is missing: '{ovsPackageFile}'");
 
         var ovsRootPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "eryph", "ovs");
 
-        logger.LogDebug("OVS Package installation: root: {RootPath}, package file: {OvsPackageExists}",
-            parentDir, ovsPackageExists);
+        logger.LogDebug("Using OpenVSwitch package '{OvsPackageFile}'.", ovsPackageFile);
 
         var ovsRootDir = new DirectoryInfo(ovsRootPath);
         ovsRootDir.Create();
@@ -47,9 +41,7 @@ internal class OVSPackage
         if (ovsRunDirectory is not null)
         {
             logger.LogInformation("Found existing OpenVSwitch installation '{OvsDirectory}'", ovsRunDirectory.FullName);
-            var stopWatch = Stopwatch.StartNew();
             var isValid = IsRunDirValid(ovsRunDirectory, ovsPackageFile);
-            logger.LogInformation("Run dir check took: {MilliSeconds}ms", stopWatch.ElapsedMilliseconds);
             if (!isValid)
             {
                 logger.LogInformation("Existing OpenVSwitch installation is outdated or incomplete. Reinstalling...");
@@ -168,7 +160,7 @@ internal class OVSPackage
         var crc32 = new Crc32();
 
         using var archive = ZipFile.OpenRead(packagePath);
-        foreach (var entry in archive.Entries.Where(entry => !entry.FullName.EndsWith('/')))
+        foreach (var entry in archive.Entries.Where(e => !e.FullName.EndsWith('/')))
         {
             var entryPath = Path.GetFullPath(entry.FullName, ovsRunDirectory.FullName);
             var fileInfo = runDirFiles.FirstOrDefault(

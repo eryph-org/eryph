@@ -1,23 +1,15 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Dbosoft.Hosuto.HostedServices;
+using Eryph.ModuleCore.Startup;
 using Eryph.Rebus;
 using Rebus.Bus;
 
-namespace Eryph.Modules.VmHostAgent
+namespace Eryph.Modules.VmHostAgent;
+
+public class StartBusModuleHandler(IBus bus) : IStartupHandler
 {
-    public class StartBusModuleHandler : IHostedServiceHandler
+    public async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        private readonly IBus _bus;
-
-        public StartBusModuleHandler(IBus bus)
-        {
-            _bus = bus;
-        }
-
-        public Task Execute(CancellationToken stoppingToken)
-        {
-            return _bus.Advanced.Topics.Subscribe($"broadcast_{QueueNames.VMHostAgent}");
-        }
+        await bus.Advanced.Topics.Subscribe($"broadcast_{QueueNames.VMHostAgent}");
     }
 }

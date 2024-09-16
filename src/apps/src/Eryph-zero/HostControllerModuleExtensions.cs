@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
+using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller;
 using Eryph.StateDb.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,7 +36,7 @@ namespace Eryph.Runtime.Zero
             {
                 return (context, options) =>
                 {
-                    options.AddHostedService<DatabaseResetService>();
+                    options.AddStartupHandler<DatabaseResetHandler>();
                     options.RegisterSqliteStateStore();
 
                     next(context, options);

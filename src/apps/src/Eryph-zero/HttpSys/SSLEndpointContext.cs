@@ -3,7 +3,7 @@ using Eryph.Runtime.Zero.HttpSys.SSLBinding;
 
 namespace Eryph.Runtime.Zero.HttpSys;
 
-public class SSLEndpointContext : IDisposable
+public sealed class SSLEndpointContext : IDisposable
 {
     private readonly ISSLEndpointRegistry _registry;
     private readonly Uri _url;

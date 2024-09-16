@@ -4,21 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.ModuleCore.Startup;
 using Eryph.StateDb;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SimpleInjector;
-using SimpleInjector.Lifestyles;
 
 namespace Eryph.Runtime.Zero;
 
-internal class DatabaseResetService(Container container, ILogger logger) : IHostedService
+internal class DatabaseResetHandler(
+    ILogger logger,
+    StateStoreContext stateStoreContext)
+    : IStartupHandler
 {
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        await using var scope = AsyncScopedLifestyle.BeginScope(container);
-        var database = scope.GetInstance<StateStoreContext>().Database;
+        var database = stateStoreContext.Database;
         var pendingMigrations = await database.GetPendingMigrationsAsync(cancellationToken);
         if (pendingMigrations.Any())
         {
@@ -26,10 +26,5 @@ internal class DatabaseResetService(Container container, ILogger logger) : IHost
             await database.EnsureDeletedAsync(cancellationToken);
             await database.MigrateAsync(cancellationToken);
         }
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
     }
 }

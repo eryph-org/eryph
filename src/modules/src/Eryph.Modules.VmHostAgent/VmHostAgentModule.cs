@@ -9,6 +9,7 @@ using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.ModuleCore.Networks;
+using Eryph.ModuleCore.Startup;
 using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.Modules.VmHostAgent.Networks;
@@ -79,10 +80,8 @@ namespace Eryph.Modules.VmHostAgent
             options.AddHostedService<OVSChassisService>();
             options.AddHostedService<WmiWatcherModuleService>();
             options.AddHostedService<GeneticsRequestWatcherService>();
+            options.AddStartupHandler<StartBusModuleHandler>();
             options.AddLogging();
-
-            options.Services.AddHostedHandler<StartBusModuleHandler>();
-
         }
 
         [UsedImplicitly]
@@ -96,8 +95,6 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterSingleton<IFileSystem, FileSystem>();
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
             container.RegisterInstance(serviceProvider.GetRequiredService<IAgentControlService>());
-
-            container.Register<StartBusModuleHandler>();
 
             if (_tracingConfig.Enabled)
             {
