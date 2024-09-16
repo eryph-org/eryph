@@ -41,13 +41,6 @@ public static class ApiModuleFactoryExtensions
             container.Options.AllowOverridingRegistrations = true;
             hostBuilder.UseSimpleInjector(container);
 
-            container.RegisterInstance<ILoggerFactory>(new NullLoggerFactory());
-            container.RegisterConditional(
-                typeof(ILogger),
-                c => typeof(Logger<>).MakeGenericType(c.Consumer!.ImplementationType),
-                Lifestyle.Singleton,
-                _ => true);
-
             hostBuilder.UseEnvironment(Environments.Development);
 
             var endpoints = new Dictionary<string, string>
@@ -80,9 +73,6 @@ public static class ApiModuleFactoryExtensions
             container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
             container.RegisterInstance(new InMemNetwork());
-            container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
-            container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
-            container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
 
             container.RegisterInstance(new InMemoryDatabaseRoot());
             configureContainer(container);

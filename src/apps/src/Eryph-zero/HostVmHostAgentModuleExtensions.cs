@@ -8,34 +8,33 @@ using Eryph.Modules.VmHostAgent;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 
-namespace Eryph.Runtime.Zero
+namespace Eryph.Runtime.Zero;
+
+public static class HostVmHostAgentModuleExtensions
 {
-    public static class HostVmHostAgentModuleExtensions
+    public static IModulesHostBuilder AddVmHostAgentModule(this IModulesHostBuilder builder)
     {
-        public static IModulesHostBuilder AddVmHostAgentModule(this IModulesHostBuilder builder)
+        builder.HostModule<VmHostAgentModule>();
+        builder.ConfigureFrameworkServices((_, services) =>
         {
-            builder.HostModule<VmHostAgentModule>();
-            builder.ConfigureFrameworkServices((_, services) =>
-            {
-                services.AddTransient<IConfigureContainerFilter<VmHostAgentModule>, VmHostAgentModuleFilters>();
-            });
+            services.AddTransient<IConfigureContainerFilter<VmHostAgentModule>, VmHostAgentModuleFilters>();
+        });
 
-            return builder;
-        }
+        return builder;
+    }
 
-        private sealed class VmHostAgentModuleFilters
-            : IConfigureContainerFilter<VmHostAgentModule>
+    private sealed class VmHostAgentModuleFilters
+        : IConfigureContainerFilter<VmHostAgentModule>
+    {
+        public Action<IModuleContext<VmHostAgentModule>, Container> Invoke(
+            Action<IModuleContext<VmHostAgentModule>, Container> next)
         {
-            public Action<IModuleContext<VmHostAgentModule>, Container> Invoke(
-                Action<IModuleContext<VmHostAgentModule>, Container> next)
+            return (context, container) =>
             {
-                return (context, container) =>
-                {
-                    container.UseInMemoryBus(context.ModulesHostServices);
+                container.UseInMemoryBus(context.ModulesHostServices);
                     
-                    next(context, container);
-                };
-            }
+                next(context, container);
+            };
         }
     }
 }
