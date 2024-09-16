@@ -87,14 +87,14 @@ namespace Eryph.Runtime.Zero.Configuration
 
         public static string GetPrivateConfigPath()
         {
-            return Path.Combine(GetConfigPath(), "private");;
+            return Path.Combine(GetConfigPath(), "private");
         }
 
 
         public static void EnsureConfiguration()
         {
             Config.EnsurePath(GetConfigPath());
-            //Config.EnsurePath(GetPrivateConfigPath(), GetPrivateDirectorySecurity());
+            Config.EnsurePath(GetPrivateConfigPath(), GetPrivateDirectorySecurity());
             Config.EnsurePath(GetClientConfigPath());
             Config.EnsurePath(GetVMConfigPath());
             Config.EnsurePath(GetMetadataConfigPath());
