@@ -62,9 +62,10 @@ public class WindowsCertificateStoreService : ICertificateStoreService
     {
         using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
         machineStore.Open(OpenFlags.ReadWrite);
+        var winCert = new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate));
 
         var storedCerts = machineStore.Certificates.Find(X509FindType.FindBySubjectDistinguishedName,
-            certificate.SubjectDN.ToString(), false);
+            winCert.SubjectName.Name, false);
             
         if(storedCerts.Count > 0)
             machineStore.RemoveRange(storedCerts);
@@ -84,7 +85,7 @@ public class WindowsCertificateStoreService : ICertificateStoreService
             return;
         }
 
-        var winCert = new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate));
+        
         machineStore.Add(winCert);
 
     }
