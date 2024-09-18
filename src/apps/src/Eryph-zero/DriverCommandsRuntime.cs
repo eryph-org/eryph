@@ -19,7 +19,6 @@ namespace Eryph.Runtime.Zero;
 internal readonly struct DriverCommandsRuntime :
     HasAnsiConsole<DriverCommandsRuntime>,
     HasConsole<DriverCommandsRuntime>,
-    HasDirectory<DriverCommandsRuntime>,
     HasDism<DriverCommandsRuntime>,
     HasFile<DriverCommandsRuntime>,
     HasHostNetworkCommands<DriverCommandsRuntime>,
@@ -48,8 +47,6 @@ internal readonly struct DriverCommandsRuntime :
     public CancellationTokenSource CancellationTokenSource => Env.CancellationTokenSource;
 
     public Eff<DriverCommandsRuntime, ConsoleIO> ConsoleEff => SuccessEff(LanguageExt.Sys.Live.ConsoleIO.Default);
-
-    public Eff<DriverCommandsRuntime, DirectoryIO> DirectoryEff => SuccessEff(LanguageExt.Sys.Live.DirectoryIO.Default);
 
     public Eff<DriverCommandsRuntime, DismIO> DismEff => SuccessEff(LiveDismIO.Default);
 

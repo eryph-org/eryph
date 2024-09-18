@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.ModuleCore.Startup;
+using Eryph.Modules.VmHostAgent;
 using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.HttpSys;
 using Eryph.Security.Cryptography;
@@ -26,6 +28,9 @@ public class ZeroStartupModule
     public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
     {
         container.RegisterSingleton(serviceProvider.GetRequiredService<IEryphOvsPathProvider>);
+        container.RegisterSingleton(serviceProvider.GetRequiredService<IHostSettingsProvider>);
+        container.RegisterSingleton(serviceProvider.GetRequiredService<INetworkProviderManager>);
+        container.RegisterSingleton(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>);
         container.RegisterSingleton<ICertificateGenerator, CertificateGenerator>();
         container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
         container.RegisterSingleton<ICryptoIOServices, WindowsCryptoIOServices>();
@@ -39,7 +44,11 @@ public class ZeroStartupModule
     public void AddSimpleInjector(SimpleInjectorAddOptions options)
     {
         options.AddLogging();
+        // This handler must be executed first as it ensures that Hyper-V is
+        // available and responds to WMI queries. Otherwise, other code can
+        // fail during service start after a reboot.
         options.AddStartupHandler<EnsureHyperVAndOvsStartupHandler>();
+        options.AddStartupHandler<EnsureConfigurationStartupHandler>();
         options.AddStartupHandler<SystemClientStartupHandler>();
         options.AddHostedService<SslEndpointService>();
     }
