@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Eryph.Configuration.Model;
 using Eryph.Core;
+using Eryph.ModuleCore;
 using Eryph.Security.Cryptography;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
@@ -13,12 +14,22 @@ using Org.BouncyCastle.X509;
 
 namespace Eryph.Runtime.Zero.Configuration.Clients
 {
-    public static class SystemClientGenerator
+    public interface ISystemClientGenerator
     {
-        private static readonly string[] RequiredScopes = {"compute:write", "identity:write"};
+        Task EnsureSystemClient();
+    }
 
-        public static async Task EnsureSystemClient(ICertificateGenerator certificateGenerator, ICryptoIOServices cryptoIOServices, Uri identityEndpoint)
+    public class SystemClientGenerator(
+        ICertificateGenerator certificateGenerator,
+        ICryptoIOServices cryptoIOServices,
+        IEndpointResolver endpointResolver)
+        : ISystemClientGenerator
+    {
+        private static readonly string[] RequiredScopes = ["compute:write", "identity:write"];
+
+        public async Task EnsureSystemClient()
         {
+            var identityEndpoint = endpointResolver.GetEndpoint("identity");
             var systemClientDataFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.json");
             var systemClientKeyFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.key");
 

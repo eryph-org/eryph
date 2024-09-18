@@ -41,13 +41,6 @@ public static class ApiModuleFactoryExtensions
             container.Options.AllowOverridingRegistrations = true;
             hostBuilder.UseSimpleInjector(container);
 
-            container.RegisterInstance<ILoggerFactory>(new NullLoggerFactory());
-            container.RegisterConditional(
-                typeof(ILogger),
-                c => typeof(Logger<>).MakeGenericType(c.Consumer!.ImplementationType),
-                Lifestyle.Singleton,
-                _ => true);
-
             hostBuilder.UseEnvironment(Environments.Development);
 
             var endpoints = new Dictionary<string, string>
@@ -80,9 +73,6 @@ public static class ApiModuleFactoryExtensions
             container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
             container.RegisterInstance(new InMemNetwork());
-            container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
-            container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
-            container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
 
             container.RegisterInstance(new InMemoryDatabaseRoot());
             configureContainer(container);
@@ -90,6 +80,7 @@ public static class ApiModuleFactoryExtensions
             hostBuilder.ConfigureFrameworkServices((_, services) =>
             {
                 services.AddTransient<IAddSimpleInjectorFilter<ComputeApiModule>, ModuleFilters>();
+                services.AddTransient<IConfigureContainerFilter<ComputeApiModule>, ModuleFilters>();
             });
         }).WithWebHostBuilder(webBuilder =>
         {
@@ -129,7 +120,9 @@ public static class ApiModuleFactoryExtensions
                 .ToList();
         }
 
-    private class ModuleFilters : IAddSimpleInjectorFilter<ComputeApiModule>
+    private class ModuleFilters
+        : IAddSimpleInjectorFilter<ComputeApiModule>,
+            IConfigureContainerFilter<ComputeApiModule>
     {
         public Action<IModulesHostBuilderContext<ComputeApiModule>, SimpleInjectorAddOptions> Invoke(
             Action<IModulesHostBuilderContext<ComputeApiModule>, SimpleInjectorAddOptions> next)
@@ -138,6 +131,20 @@ public static class ApiModuleFactoryExtensions
             {
                 options.RegisterSqliteStateStore();
                 next(context, options);
+            };
+        }
+
+        public Action<IModuleContext<ComputeApiModule>, Container> Invoke(
+            Action<IModuleContext<ComputeApiModule>, Container> next)
+        {
+            return (context, container) =>
+            {
+                next(context, container);
+
+                container.RegisterInstance(context.ModulesHostServices.GetRequiredService<InMemNetwork>());
+                container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
+                container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
+                container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
             };
         }
     }

@@ -1,26 +1,19 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Rebus.Operations;
+using Eryph.ModuleCore.Startup;
 using Rebus.Bus;
 
-namespace Eryph.Modules.Controller
+namespace Eryph.Modules.Controller;
+
+public class StartBusModuleHandler(
+    IBus bus,
+    WorkflowOptions workflowOptions)
+    : IStartupHandler
 {
-    public class StartBusModuleHandler : IHostedServiceHandler
+    public async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        private readonly IBus _bus;
-        private readonly WorkflowOptions _workflowOptions;
-
-        public StartBusModuleHandler(IBus bus, WorkflowOptions workflowOptions)
-        {
-            _bus = bus;
-            _workflowOptions = workflowOptions;
-        }
-
-        public async Task Execute(CancellationToken stoppingToken)
-        {
-            await OperationsSetup.SubscribeEvents(_bus, _workflowOptions);
-            await _bus.Advanced.Topics.Subscribe("vm_events");
-        }
+        await OperationsSetup.SubscribeEvents(bus, workflowOptions);
+        await bus.Advanced.Topics.Subscribe("vm_events");
     }
 }

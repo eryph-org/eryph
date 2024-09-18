@@ -1,11 +1,30 @@
-﻿namespace Eryph.Runtime.Zero;
+﻿using System;
 
-public class EryphOvsPathProvider
+namespace Eryph.Runtime.Zero;
+
+public interface IEryphOvsPathProvider
 {
-    public string OvsRunPath { get; }
+    string OvsRunPath { get; }
 
-    public EryphOvsPathProvider(string runPath)
+    void SetOvsRunPath(string ovsRunPath);
+}
+
+public class EryphOvsPathProvider : IEryphOvsPathProvider
+{
+    private string? _ovsRunPath;
+
+    public EryphOvsPathProvider() { }
+    
+    public EryphOvsPathProvider(string ovsRunPath)
     {
-        OvsRunPath = runPath;
+        _ovsRunPath = ovsRunPath;
+    }
+
+    public string OvsRunPath => _ovsRunPath ?? throw new InvalidOperationException(
+        "The OVS run dir has not been provided yet.");
+
+    public void SetOvsRunPath(string ovsRunPath)
+    {
+        _ovsRunPath = ovsRunPath;
     }
 }

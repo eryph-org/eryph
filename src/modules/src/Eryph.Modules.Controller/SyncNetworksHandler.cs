@@ -1,29 +1,27 @@
-﻿using System.Threading;
+﻿using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using Dbosoft.Hosuto.HostedServices;
 using Eryph.Core;
+using Eryph.ModuleCore.Startup;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
+using SimpleInjector.Lifestyles;
 
 namespace Eryph.Modules.Controller;
 
-public class SyncNetworksHandler : IHostedServiceHandler
+public class SyncNetworksHandler(
+    INetworkSyncService networkSyncService,
+     ILogger logger)
+    : IStartupHandler
 {
-    private readonly Container _container;
-    private readonly ILogger _logger;
-
-    public SyncNetworksHandler(Container container, ILogger<SyncNetworksHandler> logger)
+    public async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        _container = container;
-        _logger = logger;
-    }
-
-    public Task Execute(CancellationToken stoppingToken)
-    {
-        return _container.GetInstance<INetworkSyncService>().SyncNetworks(stoppingToken)
+        logger.LogInformation("Syncing networks...");
+        await networkSyncService.SyncNetworks(cancellationToken)
             .IfLeft(l =>
             {
-                _logger.LogError(l.ToException(), "Failed to sync networks on startup.");
+                logger.LogError(l, "Failed to sync networks on startup.");
             });
     }
 }

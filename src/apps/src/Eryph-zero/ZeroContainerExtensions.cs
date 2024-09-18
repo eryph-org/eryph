@@ -15,19 +15,22 @@ using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Eryph.StateDb.Sqlite;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Rebus.Sagas;
 using Rebus.Subscriptions;
 using Rebus.Timeouts;
+using Rebus.Transport.InMem;
 using SimpleInjector;
 
 namespace Eryph.Runtime.Zero
 {
     internal static class ZeroContainerExtensions
     {
-        public static void Bootstrap(this Container container, string ovsRunDir)
+        public static void Bootstrap(this Container container)
         {
-            container.UseInMemoryBus();
+            container.RegisterInstance(Info.Network);
             
             container.UseSqlLite();
 
@@ -35,7 +38,7 @@ namespace Eryph.Runtime.Zero
             container.Register<ICryptoIOServices, WindowsCryptoIOServices>();
             container.Register<ICertificateGenerator, CertificateGenerator>();
             container.Register<ICertificateStoreService, WindowsCertificateStoreService>();
-            container.RegisterInstance(new EryphOvsPathProvider(ovsRunDir));
+            container.RegisterInstance<IEryphOvsPathProvider>(new EryphOvsPathProvider());
             container.Register<IOVNSettings, LocalOVSWithOVNSettings>();
             container.Register<ISysEnvironment, EryphOVSEnvironment>();
             container.Register<INetworkProviderManager, NetworkProviderManager>();
@@ -57,9 +60,9 @@ namespace Eryph.Runtime.Zero
             });
         }
 
-        public static Container UseInMemoryBus(this Container container)
+        public static Container UseInMemoryBus(this Container container, IServiceProvider serviceProvider)
         {
-            container.RegisterInstance(Info.Network);
+            container.RegisterInstance(serviceProvider.GetRequiredService<InMemNetwork>());
             container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
             container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
             container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
