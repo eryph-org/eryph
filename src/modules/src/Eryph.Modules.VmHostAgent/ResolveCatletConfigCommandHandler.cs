@@ -12,6 +12,7 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Genetics;
+using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -47,12 +48,14 @@ using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 /// </para>
 /// </remarks>
 [UsedImplicitly]
-public class ResolveCatletConfigCommandHandler(
+internal class ResolveCatletConfigCommandHandler(
     IMessageContext messageContext,
     ITaskMessaging messaging,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigManager,
-    IGeneProvider geneProvider)
+    IGeneProvider geneProvider,
+    IGenePoolFactory genePoolFactory,
+    IGenePoolInventoryFactory genePoolInventoryFactory)
     : IHandleMessages<OperationTask<ResolveCatletConfigCommand>>
 {
     public Task Handle(OperationTask<ResolveCatletConfigCommand> message) =>
@@ -65,23 +68,34 @@ public class ResolveCatletConfigCommandHandler(
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
         let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
-        from result in Handle(command, geneProvider, genepoolReader, cancellationToken)
+        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+        let localGenePool = genePoolFactory.CreateLocal()
+        let genePoolInventory = genePoolInventoryFactory.Create(genePoolPath, localGenePool)
+        from result in Handle(command, geneProvider, genepoolReader, genePoolInventory, cancellationToken)
         select result;
 
     public static EitherAsync<Error, ResolveCatletConfigCommandResponse> Handle(
         ResolveCatletConfigCommand command,
         IGeneProvider geneProvider,
         ILocalGenepoolReader genepoolReader,
+        IGenePoolInventory genePoolInventory,
         CancellationToken cancellationToken) =>
         from genesetsFromConfig in ResolveGeneSets(command.Config, GeneSetMap.Empty,
                 geneProvider, cancellationToken)
             .MapLeft(e => Error.New("Could not resolve genes in the catlet config.", e))
         from result in ResolveParent(command.Config.Parent, genesetsFromConfig, new CatletMap(),
             Seq<AncestorInfo>(), geneProvider, genepoolReader, cancellationToken)
+        let timestamp = DateTimeOffset.UtcNow
+        from inventory in result.ResolvedCatlets.Keys.ToSeq()
+            .Map(genePoolInventory.InventorizeGeneSet)
+            .SequenceSerial()
+            .Map(s => s.Flatten())
         select new ResolveCatletConfigCommandResponse()
         {
             ParentConfigs = result.ResolvedCatlets.ToDictionary(),
             ResolvedGeneSets = result.ResolvedGeneSets.ToDictionary(),
+            Inventory = inventory.ToList(),
+            Timestamp = timestamp,
         };
 
     private static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveParent(

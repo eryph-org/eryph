@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core.Genetics;
-using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.Messages.Genes.Commands;
 using LanguageExt;
 using LanguageExt.Common;
 using SimpleInjector;

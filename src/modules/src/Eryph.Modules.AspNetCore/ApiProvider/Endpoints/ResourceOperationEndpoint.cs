@@ -8,7 +8,7 @@ public abstract class ResourceOperationEndpoint<TRequest,TResource> : OperationR
     where TResource : Resource 
     where TRequest : SingleEntityRequest
 {
-    protected ResourceOperationEndpoint(IOperationRequestHandler<TResource> operationHandler, 
+    protected ResourceOperationEndpoint(IEntityOperationRequestHandler<TResource> operationHandler, 
         ISingleEntitySpecBuilder<SingleEntityRequest, TResource> specBuilder) : base(operationHandler, specBuilder)
     {
 

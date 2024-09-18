@@ -16,7 +16,7 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class Delete(
-    [NotNull] IOperationRequestHandler<Catlet> operationHandler,
+    [NotNull] IEntityOperationRequestHandler<Catlet> operationHandler,
     [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
     : ResourceOperationEndpoint<SingleEntityRequest, Catlet>(operationHandler, specBuilder)
 {

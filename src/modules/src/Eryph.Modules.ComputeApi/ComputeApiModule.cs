@@ -49,9 +49,10 @@ namespace Eryph.Modules.ComputeApi
                 GetCatletHandler>();
             container.Register<IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet>,
                 ListCatletHandler>();
+            container.Register<IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage>, GetGeneHandler>();
             container.Register<IGetRequestHandler<StateDb.Model.Project, VirtualNetworkConfiguration>,
                 GetVirtualNetworksConfigurationHandler>();
-            container.Register<IOperationRequestHandler<StateDb.Model.VirtualDisk>,
+            container.Register<IEntityOperationRequestHandler<StateDb.Model.VirtualDisk>,
                 DeleteVirtualDiskHandler>();
 
             base.ConfigureContainer(serviceProvider, container);
@@ -72,6 +73,15 @@ namespace Eryph.Modules.ComputeApi
                 policy => policy.Requirements.Add(new HasScopeRequirement(
                     authority,
                     "compute:catlets:control", "compute:catlets:write", "compute:write")));
+
+            options.AddPolicy("compute:genes:read",
+                policy => policy.Requirements.Add(new HasScopeRequirement(
+                    authority,
+                    "compute:genes:read", "compute:genes:write", "compute:read", "compute:write")));
+            options.AddPolicy("compute:genes:write",
+                policy => policy.Requirements.Add(new HasScopeRequirement(
+                    authority,
+                    "compute:genes:write", "compute:write")));
 
             options.AddPolicy("compute:projects:read",
                 policy => policy.Requirements.Add(new HasScopeRequirement(

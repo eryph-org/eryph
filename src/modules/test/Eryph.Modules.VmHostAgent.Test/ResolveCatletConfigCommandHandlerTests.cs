@@ -7,16 +7,23 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
+using Eryph.GenePool;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Genetics;
+using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.VmManagement;
 using Eryph.VmManagement.TestBase;
+using LanguageExt;
+using LanguageExt.Common;
 using Moq;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Test;
 
 public class ResolveCatletConfigCommandHandlerTests
 {
+    private readonly Mock<IGenePoolInventory> _genePoolInventoryMock = new();
     private readonly Mock<ILocalGenepoolReader> _genepoolReaderMock = new();
     private readonly Mock<IGeneProvider> _geneProviderMock = new();
     private readonly CancellationToken _cancelToken = new();
@@ -75,10 +82,13 @@ public class ResolveCatletConfigCommandHandlerTests
             (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet"),
             (GeneType.Catlet, "gene:acme/acme-os/1.0:catlet"));
 
+        ArrangeInventory("acme/acme-os/starter-1.0", "acme/acme-os/1.0");
+
         var result = await ResolveCatletConfigCommandHandler.Handle(
             new ResolveCatletConfigCommand { Config = config },
             _geneProviderMock.Object,
             _genepoolReaderMock.Object,
+            _genePoolInventoryMock.Object,
             _cancelToken);
 
         var commandResponse = result.Should().BeRight().Subject;
@@ -96,6 +106,20 @@ public class ResolveCatletConfigCommandHandlerTests
             .WhoseValue.Name.Should().Be("acme-os-base");
         commandResponse.ParentConfigs.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/starter-1.0"))
             .WhoseValue.Name.Should().Be("acme-os-starter");
+
+        commandResponse.Inventory.Should().SatisfyRespectively(
+            geneData =>
+            {
+                geneData.GeneType.Should().Be(GeneType.Catlet);
+                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
+                geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
+            },
+            geneData =>
+            {
+                geneData.GeneType.Should().Be(GeneType.Catlet);
+                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
+                geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
+            });
 
         // Gene sets should only be resolved exactly once.
         _geneProviderMock.Verify(
@@ -166,10 +190,13 @@ public class ResolveCatletConfigCommandHandlerTests
             (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet"),
             (GeneType.Catlet, "gene:acme/acme-os/1.0:catlet"));
 
+        ArrangeInventory("acme/acme-os/starter-1.0", "acme/acme-os/1.0");
+
         var result = await ResolveCatletConfigCommandHandler.Handle(
             new ResolveCatletConfigCommand { Config = config },
             _geneProviderMock.Object,
             _genepoolReaderMock.Object,
+            _genePoolInventoryMock.Object,
             _cancelToken);
 
         var commandResponse = result.Should().BeRight().Subject;
@@ -187,6 +214,20 @@ public class ResolveCatletConfigCommandHandlerTests
             .WhoseValue.Name.Should().Be("acme-os-base");
         commandResponse.ParentConfigs.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/starter-1.0"))
             .WhoseValue.Name.Should().Be("acme-os-starter");
+
+        commandResponse.Inventory.Should().SatisfyRespectively(
+            geneData =>
+            {
+                geneData.GeneType.Should().Be(GeneType.Catlet);
+                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
+                geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
+            },
+            geneData =>
+            {
+                geneData.GeneType.Should().Be(GeneType.Catlet);
+                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
+                geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
+            });
 
         // Gene sets should only be resolved exactly once.
         _geneProviderMock.Verify(
@@ -219,16 +260,19 @@ public class ResolveCatletConfigCommandHandlerTests
 
         _geneProviderMock.SetupGeneSets();
         _geneProviderMock.SetupGenes();
+        ArrangeInventory();
 
         var result = await ResolveCatletConfigCommandHandler.Handle(
             new ResolveCatletConfigCommand { Config = config },
             _geneProviderMock.Object,
             _genepoolReaderMock.Object,
+            _genePoolInventoryMock.Object,
             _cancelToken);
 
         var commandResponse = result.Should().BeRight().Subject;
         commandResponse.ParentConfigs.Should().BeEmpty();
         commandResponse.ResolvedGeneSets.Should().BeEmpty();
+        commandResponse.Inventory.Should().BeEmpty();
     }
 
     [Fact]
@@ -257,6 +301,7 @@ public class ResolveCatletConfigCommandHandlerTests
             new ResolveCatletConfigCommand { Config = config },
             _geneProviderMock.Object,
             _genepoolReaderMock.Object,
+            _genePoolInventoryMock.Object,
             _cancelToken);
 
         var error = result.Should().BeLeft().Subject;
@@ -283,10 +328,13 @@ public class ResolveCatletConfigCommandHandlerTests
 
         _geneProviderMock.SetupGenes();
 
+        ArrangeInventory();
+
         var result = await ResolveCatletConfigCommandHandler.Handle(
             new ResolveCatletConfigCommand { Config = config },
             _geneProviderMock.Object,
             _genepoolReaderMock.Object,
+            _genePoolInventoryMock.Object,
             _cancelToken);
 
         var error = result.Should().BeLeft().Subject;
@@ -313,10 +361,13 @@ public class ResolveCatletConfigCommandHandlerTests
 
         _geneProviderMock.SetupGenes();
 
+        ArrangeInventory();
+
         var result = await ResolveCatletConfigCommandHandler.Handle(
             new ResolveCatletConfigCommand { Config = config },
             _geneProviderMock.Object,
             _genepoolReaderMock.Object,
+            _genePoolInventoryMock.Object,
             _cancelToken);
 
         var error = result.Should().BeLeft().Subject;
@@ -357,10 +408,13 @@ public class ResolveCatletConfigCommandHandlerTests
             (GeneType.Catlet, "gene:acme/acme-os/first-1.0:catlet"),
             (GeneType.Catlet, "gene:acme/acme-os/second-1.0:catlet"));
 
+        ArrangeInventory("acme/acme-os/first-1.0", "acme/acme-os/second-1.0");
+
         var result = await ResolveCatletConfigCommandHandler.Handle(
             new ResolveCatletConfigCommand { Config = config },
             _geneProviderMock.Object,
             _genepoolReaderMock.Object,
+            _genePoolInventoryMock.Object,
             _cancelToken);
 
         var error = result.Should().BeLeft().Subject;
@@ -371,5 +425,20 @@ public class ResolveCatletConfigCommandHandlerTests
             + "-> (acme/acme-os/first -> acme/acme-os/first-1.0).");
         error.Inner.Should().BeSome().Which.Message.Should().Be(
             "The pedigree contains a circle.");
+    }
+
+    private void ArrangeInventory(params string[] geneSetIds)
+    {
+        var map = toHashSet(geneSetIds.Map(i => GeneSetIdentifier.New(i)));
+        _genePoolInventoryMock.Setup(m => m.InventorizeGeneSet(It.IsAny<GeneSetIdentifier>()))
+            .Returns((GeneSetIdentifier geneSetId) => map.Contains(geneSetId)
+                ? RightAsync<Error, Seq<GeneData>>(Seq1(new GeneData
+                {
+                    GeneType = GeneType.Catlet,
+                    Id = new GeneIdentifier(geneSetId, GeneName.New("catlet")),
+                    Hash = "12345678",
+                    Size = 42,
+                }))
+                : LeftAsync<Error, Seq<GeneData>>(Error.New("The gene set does not exist.")));
     }
 }

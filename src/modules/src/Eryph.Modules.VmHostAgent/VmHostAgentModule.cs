@@ -128,6 +128,7 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterSingleton<IGeneProvider, LocalFirstGeneProvider>();
             container.RegisterSingleton<IGeneRequestDispatcher, GeneRequestRegistry>();
             container.RegisterSingleton<IGeneRequestBackgroundQueue, GeneBackgroundTaskQueue>();
+            container.RegisterSingleton<IGenePoolInventoryFactory, GenePoolInventoryFactory>();
 
 
             container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());

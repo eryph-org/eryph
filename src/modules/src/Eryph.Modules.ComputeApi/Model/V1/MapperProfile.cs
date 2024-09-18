@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using AutoMapper;
+using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
@@ -83,6 +84,12 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                     return isSuperAdmin ? s.Path : null;
                 }))
                 .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier));
+
+            CreateMap<StateDb.Model.Gene, Gene>()
+                .Include<StateDb.Model.Gene, GeneWithUsage>()
+                .ForMember(x => x.GeneSet, o => o.MapFrom(s => GeneIdentifier.New(s.GeneId).GeneSet.Value))
+                .ForMember(x => x.Name, o => o.MapFrom(s => GeneIdentifier.New(s.GeneId).GeneName.Value));
+            CreateMap<StateDb.Model.Gene, GeneWithUsage>();
         }
     }
 }

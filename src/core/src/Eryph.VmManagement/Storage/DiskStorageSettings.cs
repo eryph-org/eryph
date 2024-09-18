@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
+using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
-using Eryph.GenePool.Model;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 using LanguageExt.Common;
@@ -46,35 +46,19 @@ namespace Eryph.VmManagement.Storage
                 };
             }
 
-            var parts = templateString.Split(':', StringSplitOptions.RemoveEmptyEntries);
-
-            if (parts.Length < 2)
-            {
-                return Option<DiskStorageSettings>.None;
-            }
-
-            var genesetName = parts[1].Replace('/', '\\');
-            var diskName = "sda";
-
-            if (parts.Length == 3)
-            {
-                diskName = parts[2];
-            }
-
-            var geneDiskPath = System.IO.Path.Combine(vmHostAgentConfig.Defaults.Volumes,
-                "genepool", genesetName, "volumes", $"{diskName}.vhdx");
-            var (geneDiskStorageNames, geneDiskStorageIdentifier) = StorageNames.FromVhdPath(geneDiskPath, vmHostAgentConfig);
-
-            return new DiskStorageSettings
-            {
-                StorageNames = geneDiskStorageNames,
-                StorageIdentifier = geneDiskStorageIdentifier,
-                Path = System.IO.Path.GetDirectoryName(geneDiskPath),
-                FileName = System.IO.Path.GetFileName(geneDiskPath),
-                Generation = 0,
-                Name = System.IO.Path.GetFileNameWithoutExtension(geneDiskPath)
-            };
-
+            return from geneId in GeneIdentifier.NewOption(templateString)
+                   let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+                   let geneDiskPath = GenePoolPaths.GetGenePath(genePoolPath, GeneType.Volume, geneId)
+                   let namesAndId = StorageNames.FromVhdPath(geneDiskPath, vmHostAgentConfig)
+                   select new DiskStorageSettings
+                   {
+                       StorageNames = namesAndId.Names,
+                       StorageIdentifier = namesAndId.StorageIdentifier,
+                       Path = System.IO.Path.GetDirectoryName(geneDiskPath),
+                       FileName = System.IO.Path.GetFileName(geneDiskPath),
+                       Generation = 0,
+                       Name = System.IO.Path.GetFileNameWithoutExtension(geneDiskPath)
+                   };
         }
 
         public static EitherAsync<Error, DiskStorageSettings> FromVhdPath(

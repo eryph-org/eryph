@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Eryph.Core
 {
@@ -32,6 +33,16 @@ namespace Eryph.Core
             return FileExists(filePath) ? File.ReadAllText(filePath) : "";
         }
 
+        public Task<string> ReadAllTextAsync(string path)
+        {
+            return File.ReadAllTextAsync(path);
+        }
+
+        public Task WriteAllTextAsync(string path, string text)
+        {
+            return File.WriteAllTextAsync(path, text);
+        }
+
         public void WriteText(string filePath, string data)
         { 
             File.WriteAllText(filePath, data);
@@ -42,9 +53,9 @@ namespace Eryph.Core
             File.Delete(filePath);
         }
 
-        public IEnumerable<string> GetFiles(string path, string pattern)
+        public string[] GetFiles(string path, string pattern, SearchOption searchOption)
         {
-            return !Directory.Exists(path) ? new string[0] : Directory.GetFiles(path, pattern);
+            return !Directory.Exists(path) ? [] : Directory.GetFiles(path, pattern, searchOption);
         }
 
         public void MoveFile(string path, string newPath)
@@ -96,9 +107,14 @@ namespace Eryph.Core
             return new FileStream(path, FileMode.Create, FileAccess.Write);
         }
 
-        public void DirectoryDelete(string directoryPath)
+        public void DeleteDirectory(string directoryPath)
         {
             Directory.Delete(directoryPath, true);
+        }
+
+        public void DeleteFile(string path)
+        {
+            File.Delete(path);
         }
     }
 }

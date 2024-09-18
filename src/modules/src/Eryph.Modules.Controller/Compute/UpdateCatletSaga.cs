@@ -8,8 +8,9 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
@@ -122,6 +123,13 @@ internal class UpdateCatletSaga(
 
             Data.Data.State = UpdateVMState.Resolved;
 
+            await bus.SendLocal(new UpdateGenesInventoryCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Inventory = response.Inventory,
+                Timestamp = response.Timestamp,
+            });
+
             var metadata = await GetCatletMetadata(Data.Data.CatletId);
             if (metadata.IsNone)
             {
@@ -157,6 +165,13 @@ internal class UpdateCatletSaga(
             Data.Data.PendingGenes = Data.Data.PendingGenes
                 .Except([response.RequestedGene])
                 .ToList();
+
+            await bus.SendLocal(new UpdateGenesInventoryCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Inventory = [response.Inventory],
+                Timestamp = response.Timestamp,
+            });
 
             if (Data.Data.PendingGenes.Count > 0)
                 return;

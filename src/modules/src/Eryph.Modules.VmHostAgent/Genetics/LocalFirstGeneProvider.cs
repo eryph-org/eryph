@@ -9,8 +9,10 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.GenePool;
 using Eryph.GenePool.Client;
-using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.Messages.Genes.Commands;
+using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -33,16 +35,29 @@ internal class LocalFirstGeneProvider(
         CancellationToken cancel) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
+        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from geneSetInfo in ProvideGeneSet(genePoolPath, geneIdentifier.GeneSet, [], cancel)
         from _1 in guard(geneSetInfo.Id == geneIdentifier.GeneSet,
             Error.New($"The gene '{geneIdentifier}' resolved to the gene set '{geneSetInfo.Id}'. "
                 + "This code must only be called with resolved IDs."))
         from geneHash in GetGeneHash(geneSetInfo, geneType, geneIdentifier)
         from _2 in EnsureGene(geneSetInfo, geneIdentifier, geneHash, reportProgress, cancel)
+        let localGenePool = genepoolFactory.CreateLocal()
+        let timestamp = DateTimeOffset.UtcNow
+        from geneSize in localGenePool.GetCachedGeneSize(genePoolPath, geneType, geneIdentifier)
+        from validGeneSize in geneSize.ToEitherAsync(
+            Error.New($"The gene {geneIdentifier} was not properly extracted."))
         select new PrepareGeneResponse
         {
             RequestedGene = new GeneIdentifierWithType(geneType, geneIdentifier),
+            Inventory = new GeneData()
+            {
+                GeneType = geneType,
+                Id = geneIdentifier,
+                Hash = geneHash,
+                Size = validGeneSize,
+            },
+            Timestamp = timestamp,
         };
 
     public EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
@@ -50,7 +65,7 @@ internal class LocalFirstGeneProvider(
         CancellationToken cancellationToken) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool")
+        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from genesetInfo in ProvideGeneSet(genePoolPath, genesetIdentifier, Empty, cancellationToken)
         select genesetInfo.Id;
 
@@ -58,19 +73,9 @@ internal class LocalFirstGeneProvider(
         GeneSetInfo genesetInfo,
         GeneType geneType,
         GeneIdentifier geneId) =>
-        from _ in RightAsync<Error, Unit>(Unit.Default)
-        let hash = geneType switch
-        {
-            GeneType.Catlet => Optional(genesetInfo.MetaData.CatletGene),
-            GeneType.Volume => genesetInfo.MetaData.VolumeGenes.ToSeq()
-                .Find(x => x.Name == geneId.GeneName.Value)
-                .Bind(x => Optional(x.Hash)),
-            GeneType.Fodder => genesetInfo.MetaData.FodderGenes.ToSeq()
-                .Find(x => x.Name == geneId.GeneName.Value)
-                .Bind(x => Optional(x.Hash)),
-            _ => throw new ArgumentOutOfRangeException(nameof(geneType))
-        }
-        from validHash in hash.Filter(notEmpty).ToEitherAsync(
+        from validHash in GeneSetManifestUtils.FindGeneHash(
+                genesetInfo.MetaData, geneType, geneId.GeneName)
+            .ToEitherAsync(
             Error.New($"Could not find {geneType.ToString().ToLowerInvariant()} gene {geneId.GeneName} in geneset {genesetInfo.Id}."))
         select validHash;
 

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
-using Eryph.Messages.Resources.Genes.Commands;
+using Eryph.Messages.Genes.Commands;
 using Eryph.Modules.VmHostAgent.Genetics;
 using LanguageExt;
 using LanguageExt.Common;

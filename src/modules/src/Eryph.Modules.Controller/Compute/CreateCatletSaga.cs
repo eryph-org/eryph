@@ -7,6 +7,7 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
@@ -18,6 +19,7 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
+using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
@@ -28,6 +30,7 @@ namespace Eryph.Modules.Controller.Compute;
 [UsedImplicitly]
 internal class CreateCatletSaga(
     IWorkflow workflow,
+    IBus bus,
     IIdGenerator<long> idGenerator,
     IVirtualMachineDataService vmDataService,
     IStateStore stateStore)
@@ -96,6 +99,13 @@ internal class CreateCatletSaga(
                 throw new InvalidOperationException("Config is missing.");
 
             Data.Data.State = CreateVMState.Resolved;
+
+            await bus.SendLocal(new UpdateGenesInventoryCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Inventory = response.Inventory,
+                Timestamp = response.Timestamp,
+            });
 
             var result = PrepareConfigs(
                 Data.Data.Config,

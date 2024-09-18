@@ -15,6 +15,27 @@ namespace Eryph.StateDb.MySql.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "Genes",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    GeneType = table.Column<int>(type: "int", nullable: false),
+                    GeneId = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    LastSeenAgent = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Size = table.Column<long>(type: "bigint", nullable: false),
+                    Hash = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Genes", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Metadata",
                 columns: table => new
                 {
@@ -54,6 +75,26 @@ namespace Eryph.StateDb.MySql.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Tenants", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "MetadataGenes",
+                columns: table => new
+                {
+                    MetadataId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    GeneId = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MetadataGenes", x => new { x.MetadataId, x.GeneId });
+                    table.ForeignKey(
+                        name: "FK_MetadataGenes_Metadata_MetadataId",
+                        column: x => x.MetadataId,
+                        principalTable: "Metadata",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -668,6 +709,12 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Genes_LastSeenAgent_GeneId",
+                table: "Genes",
+                columns: new[] { "LastSeenAgent", "GeneId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_IpAssignment_NetworkPortId",
                 table: "IpAssignment",
                 column: "NetworkPortId");
@@ -797,10 +844,16 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "CatletNetworkAdapters");
 
             migrationBuilder.DropTable(
+                name: "Genes");
+
+            migrationBuilder.DropTable(
                 name: "IpAssignment");
 
             migrationBuilder.DropTable(
                 name: "Logs");
+
+            migrationBuilder.DropTable(
+                name: "MetadataGenes");
 
             migrationBuilder.DropTable(
                 name: "OperationProjectModel");

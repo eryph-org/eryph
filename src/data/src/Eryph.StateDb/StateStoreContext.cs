@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Eryph.Core;
 using Eryph.StateDb.Model;
@@ -53,12 +54,16 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
     public DbSet<ReportedNetwork> ReportedNetworks { get; set; }
 
     public DbSet<CatletMetadata> Metadata { get; set; }
-    
+
+    public DbSet<CatletMetadataGene> MetadataGenes { get; set; }
+
     public DbSet<Project> Projects { get; set; }
 
     public DbSet<ProjectRoleAssignment> ProjectRoles { get; set; }
 
     public DbSet<Tenant> Tenants { get; set; }
+
+    public DbSet<Gene> Genes { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -258,6 +263,20 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasForeignKey(p => p.CatletMetadataId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<CatletMetadata>()
+            .HasMany(m => m.Genes)
+            .WithOne()
+            .HasForeignKey(g => g.MetadataId)
+            .IsRequired()
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CatletMetadata>()
+            .Navigation(m => m.Genes)
+            .AutoInclude();
+
+        modelBuilder.Entity<CatletMetadataGene>()
+            .HasKey(g => new { g.MetadataId, g.GeneId });
+
         modelBuilder.Entity<ReportedNetwork>()
             .HasKey(x => x.Id);
 
@@ -280,5 +299,9 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<ReportedNetwork>()
             .Property(x => x.IpV6Subnets)
             .HasListConversion();
+
+        modelBuilder.Entity<Gene>()
+            .HasIndex(x => new { x.LastSeenAgent, x.GeneId })
+            .IsUnique();
     }
 }

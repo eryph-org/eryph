@@ -73,7 +73,7 @@ namespace Eryph.VmManagement.Storage
                             Environment: EryphConstants.DefaultEnvironmentName, 
                             Datastore: EryphConstants.DefaultDataStoreName, 
                             Path: getDefault(vmHostAgentConfig.Defaults)))
-                    ).Map(pc => from relativePath in GetContainedPath(pc.Path, path)
+                    ).Map(pc => from relativePath in PathUtils.GetContainedPath(pc.Path, path)
                         select (pc.Environment, pc.Datastore, RelativePath: relativePath))
                     .Somes()
                     .HeadOrNone()
@@ -117,19 +117,10 @@ namespace Eryph.VmManagement.Storage
                    select paths.VhdPath;
         }
 
-        private static Option<string> GetContainedPath(string relativeTo, string path)
-        {
-            var relativePath = Path.GetRelativePath(relativeTo, path);
-            if (relativePath.StartsWith("..") || relativePath.StartsWith(".") || relativePath == path)
-                return None;
-
-            return Some(relativePath);
-        }
-
         private static Option<GeneIdentifier> GetGeneReference(
             VmHostAgentConfiguration vmHostAgentConfig,
             string vhdPath) =>
-            from genePath in GetContainedPath(Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool"), vhdPath)
+            from genePath in PathUtils.GetContainedPath(GenePoolPaths.GetGenePoolPath(vmHostAgentConfig), vhdPath)
             let geneDirectory = Path.GetDirectoryName(genePath)
             let genePathParts = geneDirectory.Split(Path.DirectorySeparatorChar)
             where genePathParts.Length == 4

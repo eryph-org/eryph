@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20240624105439_InitialCreate")]
+    [Migration("20240909103414_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -58,6 +58,19 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.ToTable("Metadata");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadataGene", b =>
+                {
+                    b.Property<Guid>("MetadataId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("MetadataId", "GeneId");
+
+                    b.ToTable("MetadataGenes");
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkAdapter", b =>
                 {
                     b.Property<Guid>("CatletId")
@@ -82,6 +95,41 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.HasKey("CatletId", "Id");
 
                     b.ToTable("CatletNetworkAdapters");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.Gene", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("GeneType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastSeen")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastSeenAgent")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastSeenAgent", "GeneId")
+                        .IsUnique();
+
+                    b.ToTable("Genes");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpAssignment", b =>
@@ -795,6 +843,15 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Navigation("Catlet");
                 });
 
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadataGene", b =>
+                {
+                    b.HasOne("Eryph.StateDb.Model.CatletMetadata", null)
+                        .WithMany("Genes")
+                        .HasForeignKey("MetadataId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Eryph.StateDb.Model.CatletNetworkAdapter", b =>
                 {
                     b.HasOne("Eryph.StateDb.Model.Catlet", "Catlet")
@@ -1032,6 +1089,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired();
 
                     b.Navigation("RoutedNetwork");
+                });
+
+            modelBuilder.Entity("Eryph.StateDb.Model.CatletMetadata", b =>
+                {
+                    b.Navigation("Genes");
                 });
 
             modelBuilder.Entity("Eryph.StateDb.Model.IpPool", b =>

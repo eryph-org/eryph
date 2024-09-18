@@ -18,7 +18,7 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class Delete(
-    [NotNull] IOperationRequestHandler<ProjectRoleAssignment> operationHandler,
+    [NotNull] IEntityOperationRequestHandler<ProjectRoleAssignment> operationHandler,
     [NotNull] ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder,
     IUserRightsProvider userRightsProvider)
     : OperationRequestEndpoint<ProjectMemberRequest, ProjectRoleAssignment>(operationHandler, specBuilder)

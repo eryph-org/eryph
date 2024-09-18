@@ -26,9 +26,18 @@ public class EntityOperationRequestHandler<TEntity>(
     IUserRightsProvider userRightsProvider,
     IHttpContextAccessor httpContextAccessor,
     ProblemDetailsFactory problemDetailsFactory)
-    : IOperationRequestHandler<TEntity>
+    : OperationRequestHandlerBase(
+            endpointResolver,
+            httpContextAccessor,
+            mapper,
+            problemDetailsFactory,
+            operationDispatcher,
+            userRightsProvider),
+        IEntityOperationRequestHandler<TEntity>
     where TEntity : class
 {
+    private readonly IUserRightsProvider _userRightsProvider = userRightsProvider;
+
     public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(
         Func<ISingleResultSpecification<TEntity>?> specificationFunc,
         Func<TEntity, object> createOperationFunc,
@@ -44,15 +53,19 @@ public class EntityOperationRequestHandler<TEntity>(
         {
             case null:
                 return new NotFoundResult();
-            case Resource resource when !(await userRightsProvider.HasResourceAccess(resource.Id, AccessRight.Write)):
+            case Gene _ when !(await _userRightsProvider.HasDefaultTenantAccess(AccessRight.Admin)):
+                return Problem(
+                    statusCode: StatusCodes.Status403Forbidden,
+                    detail: "You do not have super admin access.");
+            case Resource resource when !(await _userRightsProvider.HasResourceAccess(resource.Id, AccessRight.Write)):
                 return Problem(
                     statusCode: StatusCodes.Status403Forbidden,
                     detail: "You do not have write access to the project.");
-            case Project project when !(await userRightsProvider.HasProjectAccess(project.Id, AccessRight.Admin)):
+            case Project project when !(await _userRightsProvider.HasProjectAccess(project.Id, AccessRight.Admin)):
                 return Problem(
                     statusCode: StatusCodes.Status403Forbidden,
                     detail: "You do not have admin access to the project.");
-            case ProjectRoleAssignment roleAssignment when !(await userRightsProvider.HasProjectAccess(roleAssignment.ProjectId, AccessRight.Admin)):
+            case ProjectRoleAssignment roleAssignment when !(await _userRightsProvider.HasProjectAccess(roleAssignment.ProjectId, AccessRight.Admin)):
                 return Problem(
                     statusCode: StatusCodes.Status403Forbidden,
                     detail: "You do not have admin access to the project.");
@@ -63,22 +76,12 @@ public class EntityOperationRequestHandler<TEntity>(
             return validationResult;
 
         var command = createOperationFunc(model);
-        var operation = await operationDispatcher.StartNew(
-            userRightsProvider.GetUserTenantId(),
-            httpContextAccessor.HttpContext?.TraceIdentifier ?? "",
-            command);
-        var operationModel = (operation as StateDb.Workflows.Operation)?.Model;
-
-        if (operationModel == null)
-            return new UnprocessableEntityResult();
-
-        var mappedModel = mapper.Map<Operation>(operationModel);
-        var operationUri = new Uri(endpointResolver.GetEndpoint("common") + $"/v1/operations/{operationModel.Id}");
+        var result = await StartOperation(command);
 
         await repository.SaveChangesAsync(cancellationToken);
         ta.Complete();
 
-        return new AcceptedResult(operationUri, new ListResponse<Operation>()){ Value = mappedModel };
+        return result;
     }
 
     /// <summary>
@@ -87,24 +90,4 @@ public class EntityOperationRequestHandler<TEntity>(
     /// <param name="model"></param>
     /// <returns></returns>
     protected virtual ActionResult? ValidateRequest(TEntity model) => null;
-
-    /// <summary>
-    /// Creates a response with <see cref="ProblemDetails"/> in the same
-    /// way as <see cref="ControllerBase.Problem"/> does.
-    /// </summary>
-    protected ObjectResult Problem(int statusCode, string detail)
-    {
-        var httpContext = httpContextAccessor.HttpContext
-            ?? throw new InvalidOperationException("HttpContext is not available.");
-
-        var problemDetails = problemDetailsFactory.CreateProblemDetails(
-            httpContext,
-            statusCode: statusCode,
-            detail: detail);
-
-        return new ObjectResult(problemDetails)
-        {
-            StatusCode = problemDetails.Status,
-        };
-    }
 }

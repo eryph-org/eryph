@@ -31,6 +31,7 @@ public static class ContainerExtensions
             typeof(StateStoreRepository<>),
             Lifestyle.Scoped);
 
+        options.Container.Register<IGeneInventoryQueries, GeneInventoryQueries>(Lifestyle.Scoped);
         options.Container.Register<IStateStore, StateStore>(Lifestyle.Scoped);
 
         return options;

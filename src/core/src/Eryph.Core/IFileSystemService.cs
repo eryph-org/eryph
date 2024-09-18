@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Eryph.Core
 {
@@ -11,10 +12,16 @@ namespace Eryph.Core
 
         void WriteAllBytes(string filePath, byte[] data);
         string ReadText(string filePath);
+
+        Task<string> ReadAllTextAsync(string path);
+
+        Task WriteAllTextAsync(string path, string text);
+
         void WriteText(string filePath, string data);
 
         void FileDelete(string filePath);
-        IEnumerable<string> GetFiles(string path, string pattern);
+
+        string[] GetFiles(string path, string pattern, SearchOption searchOption);
 
         void MoveFile(string path, string newPath);
         long GetFileSize(string filePath);
@@ -24,7 +31,9 @@ namespace Eryph.Core
         Stream OpenRead(string path);
         Stream OpenWrite(string path);
 
-        void DirectoryDelete(string directoryPath);
+        void DeleteFile(string path);
+
+        void DeleteDirectory(string directoryPath);
 
     }
 }

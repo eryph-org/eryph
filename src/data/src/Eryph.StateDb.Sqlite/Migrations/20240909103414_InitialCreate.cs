@@ -12,6 +12,23 @@ namespace Eryph.StateDb.Sqlite.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "Genes",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    GeneType = table.Column<int>(type: "INTEGER", nullable: false),
+                    GeneId = table.Column<string>(type: "TEXT", nullable: false),
+                    LastSeen = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastSeenAgent = table.Column<string>(type: "TEXT", nullable: false),
+                    Size = table.Column<long>(type: "INTEGER", nullable: false),
+                    Hash = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Genes", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Metadata",
                 columns: table => new
                 {
@@ -47,6 +64,24 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Tenants", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MetadataGenes",
+                columns: table => new
+                {
+                    MetadataId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    GeneId = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MetadataGenes", x => new { x.MetadataId, x.GeneId });
+                    table.ForeignKey(
+                        name: "FK_MetadataGenes_Metadata_MetadataId",
+                        column: x => x.MetadataId,
+                        principalTable: "Metadata",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -576,6 +611,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Genes_LastSeenAgent_GeneId",
+                table: "Genes",
+                columns: new[] { "LastSeenAgent", "GeneId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_IpAssignment_NetworkPortId",
                 table: "IpAssignment",
                 column: "NetworkPortId");
@@ -705,10 +746,16 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "CatletNetworkAdapters");
 
             migrationBuilder.DropTable(
+                name: "Genes");
+
+            migrationBuilder.DropTable(
                 name: "IpAssignment");
 
             migrationBuilder.DropTable(
                 name: "Logs");
+
+            migrationBuilder.DropTable(
+                name: "MetadataGenes");
 
             migrationBuilder.DropTable(
                 name: "OperationProjectModel");
