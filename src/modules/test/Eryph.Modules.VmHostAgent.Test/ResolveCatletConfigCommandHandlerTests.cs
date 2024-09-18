@@ -107,19 +107,13 @@ public class ResolveCatletConfigCommandHandlerTests
         commandResponse.ParentConfigs.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/starter-1.0"))
             .WhoseValue.Name.Should().Be("acme-os-starter");
 
-        commandResponse.Inventory.Should().SatisfyRespectively(
-            geneData =>
-            {
-                geneData.GeneType.Should().Be(GeneType.Catlet);
-                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
-                geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
-            },
-            geneData =>
-            {
-                geneData.GeneType.Should().Be(GeneType.Catlet);
-                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
-                geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
-            });
+        commandResponse.Inventory.Should().Satisfy(
+            geneData => geneData.GeneType == GeneType.Catlet
+                        && geneData.Id.GeneSet == GeneSetIdentifier.New("acme/acme-os/starter-1.0")
+                        && geneData.Id.GeneName == GeneName.New("catlet"),
+            geneData => geneData.GeneType == GeneType.Catlet
+                        && geneData.Id.GeneSet == GeneSetIdentifier.New("acme/acme-os/1.0")
+                        && geneData.Id.GeneName == GeneName.New("catlet"));
 
         // Gene sets should only be resolved exactly once.
         _geneProviderMock.Verify(
@@ -215,19 +209,13 @@ public class ResolveCatletConfigCommandHandlerTests
         commandResponse.ParentConfigs.Should().ContainKey(GeneSetIdentifier.New("acme/acme-os/starter-1.0"))
             .WhoseValue.Name.Should().Be("acme-os-starter");
 
-        commandResponse.Inventory.Should().SatisfyRespectively(
-            geneData =>
-            {
-                geneData.GeneType.Should().Be(GeneType.Catlet);
-                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/starter-1.0"));
-                geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
-            },
-            geneData =>
-            {
-                geneData.GeneType.Should().Be(GeneType.Catlet);
-                geneData.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
-                geneData.Id.GeneName.Should().Be(GeneName.New("catlet"));
-            });
+        commandResponse.Inventory.Should().Satisfy(
+            geneData => geneData.GeneType == GeneType.Catlet
+                        && geneData.Id.GeneSet == GeneSetIdentifier.New("acme/acme-os/starter-1.0")
+                        && geneData.Id.GeneName == GeneName.New("catlet"),
+            geneData => geneData.GeneType == GeneType.Catlet
+                        && geneData.Id.GeneSet == GeneSetIdentifier.New("acme/acme-os/1.0")
+                        && geneData.Id.GeneName == GeneName.New("catlet"));
 
         // Gene sets should only be resolved exactly once.
         _geneProviderMock.Verify(
