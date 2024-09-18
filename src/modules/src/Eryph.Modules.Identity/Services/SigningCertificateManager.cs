@@ -1,4 +1,6 @@
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,58 +31,49 @@ namespace Eryph.Modules.Identity.Services
 
         public async Task<X509Certificate2> GetSigningCertificate(string storePath)
         {
+            var nameBuilder = new X500DistinguishedNameBuilder();
+            nameBuilder.AddOrganizationName("eryph");
+            nameBuilder.AddOrganizationalUnitName("identity");
+            nameBuilder.AddCommonName("eryph-identity-signing");
+
             var res = await EnsureCertificateExists(
-                Path.Combine(storePath, "identity-signing.key"), new X509Name("CN=eryph-identity, O=eryph, OU=identity"));
+                Path.Combine(storePath, "identity-signing.key"), nameBuilder.Build());
+            return res;
+            /*
             var cert = new X509Certificate2(DotNetUtilities.ToX509Certificate(res.certificate));
-            var rsa = DotNetUtilities.ToRSA(res.keyPair.Private as RsaPrivateCrtKeyParameters);
+            var rsaParameters = DotNetUtilities.ToRSAParameters((RsaPrivateCrtKeyParameters)res.keyPair.Private);
+            var rsa = RSA.Create(rsaParameters);
             return cert.CopyWithPrivateKey(rsa);
+            */
         }
 
-        private async Task<(X509Certificate certificate,
-            AsymmetricCipherKeyPair keyPair)> EnsureCertificateExists(string privateKeyFile, X509Name issuerName)
+        private async Task<X509Certificate2> EnsureCertificateExists(string privateKeyFile, X500DistinguishedName issuerName)
         {
-            X509Certificate certificate = null;
 
-            var entropy = Encoding.UTF8.GetBytes(issuerName.ToString());
+            //var entropy = Encoding.UTF8.GetBytes(issuerName.ToString());
+            //var keyPair = await _cryptoIOServices.TryReadPrivateKeyFile(privateKeyFile, entropy);
 
-            var keyPair = await _cryptoIOServices.TryReadPrivateKeyFile(privateKeyFile, entropy);
 
-            if (keyPair != null)
+            var certs = _storeService.GetFromMyStore2(issuerName);
+            if (certs.Count == 1)
             {
-                var certs = _storeService.GetFromMyStore(issuerName);
-                foreach (var cert in certs)
-                {
-                    if (cert.GetPublicKey().Equals(keyPair.Public))
-                    {
-                        certificate = cert;
-                        continue;
-                    }
-
-                    _storeService.RemoveFromMyStore(cert);
-                }
-
-                if (certificate != null)
-                    return (certificate, keyPair);
+                return certs[0];
             }
 
-            (certificate, keyPair) = _certificateGenerator.GenerateSelfSignedCertificate(
+            foreach (var cert in certs)
+            {
+                _storeService.RemoveFromMyStore2(cert);
+            }
+
+            var certificate = _certificateGenerator.GenerateSelfSignedCertificate2(
                 issuerName,
                 5 * 365,
-                2048,
-                cfg =>
-                {
-                    cfg.AddExtension(
-                        X509Extensions.BasicConstraints.Id, true, new BasicConstraints(false));
-
-                    cfg.AddExtension(
-                        X509Extensions.KeyUsage, true, new KeyUsage(
-                            KeyUsage.DigitalSignature));
-                });
+                2048);
 
             _storeService.AddToMyStore(certificate);
-            await _cryptoIOServices.WritePrivateKeyFile(privateKeyFile, keyPair, entropy);
+            //await _cryptoIOServices.WritePrivateKeyFile(privateKeyFile, keyPair, entropy);
 
-            return (certificate, keyPair);
+            return certificate;
         }
     }
 }

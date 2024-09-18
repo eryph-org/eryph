@@ -1,20 +1,26 @@
 using System;
+using System.Dynamic;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.X509;
+using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Eryph.Security.Cryptography;
 
 public class CertificateGenerator : ICertificateGenerator
 {
     private readonly IRSAProvider _rsaProvider;
+    private readonly ICertificateKeyGenerator _certificateKeyGenerator;
 
 
-    public CertificateGenerator(IRSAProvider rsaProvider)
+    public CertificateGenerator(IRSAProvider rsaProvider, ICertificateKeyGenerator certificateKeyGenerator)
     {
         _rsaProvider = rsaProvider;
+        _certificateKeyGenerator = certificateKeyGenerator;
     }
 
     /// <summary>
@@ -48,7 +54,26 @@ public class CertificateGenerator : ICertificateGenerator
             configureGenerator
         ), kp);
     }
-        
+
+    public X509Certificate2 GenerateSelfSignedCertificate2(
+        X500DistinguishedName subjectName,
+        int validDays,
+        int keyLength)
+    {
+        var rsa = _certificateKeyGenerator.GenerateRsaKeyPair(keyLength, true);
+        //using var algorithm = RSA.Create(keySizeInBits: keyLength);
+
+        var request = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, true));
+        request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, critical: true));
+
+        var certificate = request.CreateSelfSigned(
+            DateTimeOffset.UtcNow.Subtract(TimeSpan.FromHours(1)),
+            DateTimeOffset.UtcNow.AddDays(validDays));
+
+        return certificate;
+    }
+
     public (X509Certificate Certificate, AsymmetricCipherKeyPair KeyPair) 
         GenerateCertificate(
             AsymmetricCipherKeyPair issuerKeyPair,

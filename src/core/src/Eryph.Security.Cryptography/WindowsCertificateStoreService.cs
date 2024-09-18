@@ -47,6 +47,35 @@ public class WindowsCertificateStoreService : ICertificateStoreService
 
     }
 
+    public IReadOnlyList<X509Certificate2> GetFromMyStore2(X500DistinguishedName subjectName)
+    {
+        using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+        machineStore.Open(OpenFlags.ReadOnly);
+
+        return machineStore.Certificates.Find(
+                X509FindType.FindBySubjectDistinguishedName,
+                subjectName.Name,
+                false)
+            .ToList();
+    }
+
+    public void AddToMyStore(X509Certificate2 certificate)
+    {
+        using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+        machineStore.Open(OpenFlags.ReadWrite);
+
+        var storedCerts = machineStore.Certificates.Find(
+            X509FindType.FindBySubjectDistinguishedName,
+            certificate.SubjectName.Name,
+            false);
+
+        if (storedCerts.Count > 0)
+            machineStore.RemoveRange(storedCerts);
+
+        machineStore.Add(certificate);
+        
+    }
+
     public IEnumerable<X509Certificate> GetFromRootStore(X509Name distinguishedName)
     {
         using var machineStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
@@ -109,6 +138,12 @@ public class WindowsCertificateStoreService : ICertificateStoreService
         machineStore.Remove(winCert);
     }
     
+    public void RemoveFromMyStore2(X509Certificate2 certificate)
+    {
+        using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+        machineStore.Open(OpenFlags.ReadWrite);
+        machineStore.Remove(certificate);
+    }
 
     public bool IsValidRootCertificate(X509Certificate certificate)
     {

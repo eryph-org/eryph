@@ -4,7 +4,6 @@ using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Eryph.Modules.Identity.Services;
-using Org.BouncyCastle.Asn1.IsisMtt.Ocsp;
 
 namespace Eryph.Modules.Identity.Test.Integration;
 

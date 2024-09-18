@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Security.Cryptography.X509Certificates;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.X509;
+using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Eryph.Security.Cryptography
 {
@@ -23,6 +25,11 @@ namespace Eryph.Security.Cryptography
             int validDays,
             int keyLength,
             Action<X509V3CertificateGenerator>? configureGenerator = null);
+
+        X509Certificate2 GenerateSelfSignedCertificate2(
+            X500DistinguishedName subjectName,
+            int validDays,
+            int keyLength);
 
         (X509Certificate Certificate, AsymmetricCipherKeyPair KeyPair) 
             GenerateCertificate(

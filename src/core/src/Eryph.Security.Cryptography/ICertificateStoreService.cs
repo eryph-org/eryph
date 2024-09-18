@@ -1,7 +1,8 @@
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.X509;
+using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 
 namespace Eryph.Security.Cryptography;
@@ -16,4 +17,7 @@ public interface ICertificateStoreService
 
     IEnumerable<X509Certificate> GetFromMyStore(X509Name issuerName);
     IEnumerable<X509Certificate> GetFromRootStore(X509Name distinguishedName);
+    IReadOnlyList<X509Certificate2> GetFromMyStore2(X500DistinguishedName subjectName);
+    void AddToMyStore(X509Certificate2 certificate);
+    void RemoveFromMyStore2(X509Certificate2 certificate);
 }

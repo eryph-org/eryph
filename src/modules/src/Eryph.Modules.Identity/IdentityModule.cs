@@ -178,6 +178,7 @@ namespace Eryph.Modules.Identity
         {
             container.Register<IRSAProvider, RSAProvider>();
             container.Register<ICertificateGenerator, CertificateGenerator>();
+            container.Register(sp.GetRequiredService<ICertificateKeyGenerator>);
             container.Register(sp.GetRequiredService<IEndpointResolver>);
             container.Register(typeof(IIdentityDbRepository<>), typeof(IdentityDbRepository<>), Lifestyle.Scoped);
             container.Register<IClientService, ClientService>(Lifestyle.Scoped);
