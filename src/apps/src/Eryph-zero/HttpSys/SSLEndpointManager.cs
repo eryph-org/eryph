@@ -47,7 +47,7 @@ public class SSLEndpointManager : ISSLEndpointManager
 
         // TODO remove soon-to-expire certificates
         // TODO remove certificates with different host name
-        var certs = _storeService.GetFromMyStore2(subjectName);
+        var certs = _storeService.GetFromMyStore(subjectName);
         if (certs.Count == 1)
             return certs[0];
 

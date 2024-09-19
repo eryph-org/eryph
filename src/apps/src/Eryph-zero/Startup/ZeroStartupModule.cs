@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.Configuration;
+using Eryph.Configuration.Model;
 using Eryph.Core;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.VmHostAgent;
@@ -31,11 +33,13 @@ public class ZeroStartupModule
         container.RegisterSingleton(serviceProvider.GetRequiredService<IHostSettingsProvider>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<INetworkProviderManager>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>);
+
+        container.Register(serviceProvider.GetRequiredService<IConfigWriterService<ClientConfigModel>>);
+        container.Register(serviceProvider.GetRequiredService<IConfigReaderService<ClientConfigModel>>);
         container.RegisterSingleton<ICertificateGenerator, CertificateGenerator>();
         container.RegisterSingleton<ICertificateKeyPairGenerator, WindowsCertificateKeyPairPairGenerator>();
         container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
         container.RegisterSingleton<ICryptoIOServices, WindowsCryptoIOServices>();
-        container.RegisterSingleton<IRSAProvider, RSAProvider>();
         container.RegisterSingleton<ISSLEndpointManager, SSLEndpointManager>();
         container.RegisterSingleton<ISSLEndpointRegistry, WinHttpSSLEndpointRegistry>();
         container.Register<ISystemClientGenerator, SystemClientGenerator>();

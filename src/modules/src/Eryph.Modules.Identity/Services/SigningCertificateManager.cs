@@ -48,7 +48,7 @@ namespace Eryph.Modules.Identity.Services
             X500DistinguishedName issuerName,
             X509KeyUsageFlags keyUsages)
         {
-            var certs = _storeService.GetFromMyStore2(issuerName);
+            var certs = _storeService.GetFromMyStore(issuerName);
             if (certs.Count == 1)
             {
                 return certs[0];
@@ -56,7 +56,7 @@ namespace Eryph.Modules.Identity.Services
 
             foreach (var cert in certs)
             {
-                _storeService.RemoveFromMyStore2(cert);
+                _storeService.RemoveFromMyStore(cert);
             }
 
             var keyPair = _certificateKeyPairGenerator.GenerateProtectedRsaKeyPair(2048);

@@ -20,6 +20,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 public class NewKey(
     IClientService clientService,
     ICertificateGenerator certificateGenerator,
+    ICertificateKeyPairGenerator certificateKeyPairGenerator,
     IUserInfoProvider userInfoProvider)
     : EndpointBaseAsync
         .WithRequest<NewClientKeyRequest>
@@ -58,7 +59,9 @@ public class NewKey(
         }
         else
         {
-            key = await descriptor.NewClientCertificate(certificateGenerator);
+            key = descriptor.NewClientCertificate(
+                certificateGenerator,
+                certificateKeyPairGenerator);
             descriptor = await clientService.Update(descriptor, cancellationToken);
         }
 

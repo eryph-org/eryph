@@ -1,16 +1,16 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Eryph.Configuration;
 using Eryph.Configuration.Model;
 using Eryph.Core;
 using Eryph.ModuleCore;
 using Eryph.Security.Cryptography;
-using Org.BouncyCastle.Asn1.X509;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.X509;
 
 namespace Eryph.Runtime.Zero.Configuration.Clients
 {
@@ -21,7 +21,10 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
 
     public class SystemClientGenerator(
         ICertificateGenerator certificateGenerator,
+        ICertificateKeyPairGenerator certificateKeyPairGenerator,
         ICryptoIOServices cryptoIOServices,
+        IConfigReaderService<ClientConfigModel> configReader,
+        IConfigWriterService<ClientConfigModel> configWriter,
         IEndpointResolver endpointResolver)
         : ISystemClientGenerator
     {
@@ -30,86 +33,78 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
         public async Task EnsureSystemClient()
         {
             var identityEndpoint = endpointResolver.GetEndpoint("identity");
-            var systemClientDataFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.json");
+            var entropy = Encoding.UTF8.GetBytes(identityEndpoint.ToString());
             var systemClientKeyFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.key");
 
-            var recreateSystemClient = !File.Exists(systemClientDataFile) || !File.Exists(systemClientKeyFile);
-            var entropy = Encoding.UTF8.GetBytes(identityEndpoint.ToString());
+            var existingConfig = configReader.GetConfig()
+                .FirstOrDefault(c => c.ClientId == EryphConstants.SystemClientId);
+            
+            using var existingPrivateKey = await cryptoIOServices.TryReadPrivateKeyFile(systemClientKeyFile, entropy);
 
+            if (IsValid(existingConfig, existingPrivateKey))
+                return;
 
-            var clientIO = new ConfigIO(ZeroConfig.GetClientConfigPath());
+            if (existingConfig is not null)
+                await configWriter.Delete(existingConfig, EryphConstants.DefaultProjectName);
 
-            if (!recreateSystemClient && File.Exists(systemClientDataFile))
-            {
-                var currentConfig = clientIO.ReadConfigFile<ClientConfigModel>(EryphConstants.SystemClientId);
-                if(!currentConfig.AllowedScopes.SequenceEqual(RequiredScopes))
-                    recreateSystemClient = true;
-            }
+            using var keyPair = certificateKeyPairGenerator.GenerateRsaKeyPair(2048);
+            var subjectNameBuilder = new X500DistinguishedNameBuilder();
+            subjectNameBuilder.AddOrganizationName("eryph");
+            subjectNameBuilder.AddOrganizationalUnitName("eryph-identity-client");
+            subjectNameBuilder.AddCommonName(EryphConstants.SystemClientId);
 
-            AsymmetricKeyParameter publicKey = null;
-            if (File.Exists(systemClientDataFile))
-                try
-                {
-                    var systemClientData =
-                        JsonSerializer.Deserialize<ClientConfigModel>(await File.ReadAllTextAsync(systemClientDataFile));
-                    publicKey = systemClientData != null 
-                        ? GetPublicKey(systemClientData.X509CertificateBase64)
-                        : null;
-                }
-                catch (Exception)
-                {
-                    recreateSystemClient = true;
-                }
+            using var certificate = certificateGenerator.GenerateSelfSignedCertificate(
+                subjectNameBuilder.Build(),
+                keyPair,
+                5 * 365,
+                [
+                    new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true),
+                    new X509EnhancedKeyUsageExtension(
+                        [Oid.FromFriendlyName("Client Authentication", OidGroup.EnhancedKeyUsage)],
+                        true),
+                ]);
 
-            AsymmetricCipherKeyPair privateKeyPair = null;
-            if (!recreateSystemClient && File.Exists(systemClientKeyFile))
-                try
-                {
-                    
-                    privateKeyPair = await cryptoIOServices.TryReadPrivateKeyFile(systemClientKeyFile, entropy);
-                }
-                catch (Exception)
-                {
-                    recreateSystemClient = true;
-                }
-
-            if (!recreateSystemClient && publicKey != null && privateKeyPair != null)
-                if (privateKeyPair.Public.Equals(publicKey))
-                    return;
-
-            RemoveSystemClient();
-
-            var (certificate, keyPair) = certificateGenerator.GenerateSelfSignedCertificate(
-                new X509Name($"CN={EryphConstants.SystemClientId}"), 5*365, 2048);
-
-            var newClient = new ClientConfigModel
+            var config = new ClientConfigModel
             {
                 ClientId = EryphConstants.SystemClientId,
-                X509CertificateBase64 = Convert.ToBase64String(certificate.GetEncoded()),
+                X509CertificateBase64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                 AllowedScopes = RequiredScopes,
                 TenantId = EryphConstants.DefaultTenantId,
-                Roles = new []{EryphConstants.SuperAdminRole}
+                Roles = [EryphConstants.SuperAdminRole],
             };
 
-            await clientIO.SaveConfigFile(newClient, newClient.ClientId);
+            await configWriter.Add(config, EryphConstants.DefaultProjectName);
             await cryptoIOServices.WritePrivateKeyFile(systemClientKeyFile, keyPair, entropy);
         }
 
-        private static void RemoveSystemClient()
+        private static bool IsValid(ClientConfigModel? configData, RSA? privateKey)
         {
-            var systemClientDataFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.json");
-            var systemClientKeyFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.key");
+            if(configData is null || privateKey is null)
+                return false;
 
-            if (File.Exists(systemClientDataFile)) File.Delete(systemClientDataFile);
+            if (!configData.AllowedScopes.SequenceEqual(RequiredScopes))
+                return false;
 
-            if (File.Exists(systemClientKeyFile)) File.Delete(systemClientKeyFile);
+            using var publicKey = GetPublicKey(configData.X509CertificateBase64);
+            if (publicKey is null)
+                return false;
+
+            return CryptographicOperations.FixedTimeEquals(
+                privateKey.ExportSubjectPublicKeyInfo(),
+                publicKey.ExportSubjectPublicKeyInfo());
         }
 
-        private static AsymmetricKeyParameter GetPublicKey(string certData)
+        private static RSA? GetPublicKey(string certificateData)
         {
-            var parser = new X509CertificateParser();
-            var cert2 = parser.ReadCertificate(Convert.FromBase64String(certData));
-            return cert2.GetPublicKey();
+            try
+            {
+                using var certificate = new X509Certificate2(Convert.FromBase64String(certificateData));
+                return certificate.GetRSAPublicKey();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 }

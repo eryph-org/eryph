@@ -175,7 +175,6 @@ namespace Eryph.Modules.Identity
         [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider sp, Container container)
         {
-            container.Register<IRSAProvider, RSAProvider>();
             container.Register<ICertificateGenerator, CertificateGenerator>();
             container.Register(sp.GetRequiredService<ICertificateKeyPairGenerator>);
             container.Register(sp.GetRequiredService<IEndpointResolver>);
