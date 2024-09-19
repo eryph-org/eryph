@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 
 namespace Eryph.Security.Cryptography;
 
-public interface ICertificateKeyGenerator
+public interface ICertificateKeyPairGenerator
 {
-    public RSA GenerateRsaKeyPair(int keyLength, bool isProtected);
+    public RSA GenerateRsaKeyPair(int keyLength);
+
+    public RSA GenerateProtectedRsaKeyPair(int keyLength);
 }

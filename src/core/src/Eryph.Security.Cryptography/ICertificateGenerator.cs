@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.X509;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
+using X509Extension = System.Security.Cryptography.X509Certificates.X509Extension;
 
 namespace Eryph.Security.Cryptography
 {
@@ -26,19 +29,10 @@ namespace Eryph.Security.Cryptography
             int keyLength,
             Action<X509V3CertificateGenerator>? configureGenerator = null);
 
-        X509Certificate2 GenerateSelfSignedCertificate2(
+        X509Certificate2 GenerateSelfSignedCertificate(
             X500DistinguishedName subjectName,
+            RSA keyPair,
             int validDays,
-            int keyLength);
-
-        (X509Certificate Certificate, AsymmetricCipherKeyPair KeyPair) 
-            GenerateCertificate(
-                AsymmetricCipherKeyPair issuerKeyPair,
-                X509Certificate issuerCertificate,
-                X509Name subjectName,
-                DateTime notAfter,
-                int keyLength,
-                
-                Action<X509V3CertificateGenerator>? configureGenerator = null);
+            IReadOnlyList<X509Extension> extensions);
     }
 }

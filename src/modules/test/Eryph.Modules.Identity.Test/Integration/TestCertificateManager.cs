@@ -9,14 +9,22 @@ namespace Eryph.Modules.Identity.Test.Integration;
 
 internal class TestCertificateManager : ISigningCertificateManager
 {
-
-
-    public Task<X509Certificate2> GetSigningCertificate(string _)
+    public X509Certificate2 GetSigningCertificate()
     {
         var collection = new X509Certificate2Collection();
         collection.Import(Path.Combine(Path.GetDirectoryName(GetType().Assembly.Location)!, "testsigning.pfx")
             , "test", X509KeyStorageFlags.PersistKeySet);
 
-        return Task.FromResult(collection[0]);
+        return collection[0];
+    }
+
+    public X509Certificate2 GetEncryptionCertificate()
+    {
+        // TODO separate certificate for encryption
+        var collection = new X509Certificate2Collection();
+        collection.Import(Path.Combine(Path.GetDirectoryName(GetType().Assembly.Location)!, "testsigning.pfx")
+            , "test", X509KeyStorageFlags.PersistKeySet);
+
+        return collection[0];
     }
 }

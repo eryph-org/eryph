@@ -22,13 +22,9 @@ internal sealed class SslEndpointService(
     {
         var baseUrl = endpointResolver.GetEndpoint("base");
 
-        _sslEndpointContext = await sslEndpointManager.EnableSslEndpoint(new SSLOptions(
-            "eryph-zero CA",
+        _sslEndpointContext = await sslEndpointManager.EnableSslEndpoint(new SslOptions(
             Network.FQDN,
-            DateTime.UtcNow.AddDays(-1),
             365 * 5,
-            ZeroConfig.GetPrivateConfigPath(),
-            "eryphCA",
             Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
             baseUrl));
     }

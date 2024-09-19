@@ -20,4 +20,5 @@ public interface ICertificateStoreService
     IReadOnlyList<X509Certificate2> GetFromMyStore2(X500DistinguishedName subjectName);
     void AddToMyStore(X509Certificate2 certificate);
     void RemoveFromMyStore2(X509Certificate2 certificate);
+    void AddToRootStore(X509Certificate2 certificate);
 }

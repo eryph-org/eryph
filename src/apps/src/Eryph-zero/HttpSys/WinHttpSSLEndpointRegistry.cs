@@ -9,19 +9,14 @@ using WinHttpServerApi;
 
 namespace Eryph.Runtime.Zero.HttpSys;
 
-[SupportedOSPlatform("windows7.0")]
+[SupportedOSPlatform("windows")]
 public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
 {
-
-    public SSLEndpointContext RegisterSSLEndpoint(SSLOptions options, X509Chain chain)
+    public SSLEndpointContext RegisterSSLEndpoint(SslOptions options, X509Certificate2 certificate)
     {
-        if (options.AppId == null)
-            throw new ArgumentException("AppId in options is required for WinHttp SSL setup", nameof(options));
-
         if (options.Url == null)
             throw new ArgumentException("Url in options is required for WinHttp SSL setup", nameof(options));
 
-        var certificate = chain.ChainElements[0].Certificate;
         var ipPort = options.Url.IsDefaultPort ? 443 : options.Url.Port;
 
         var ipEndpoint = new IPEndPoint(IPAddress.Parse("0.0.0.0"), ipPort);
@@ -54,7 +49,7 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
             api.AddUrl(options.Url.ToString(), permissions, false);
 
         ICertificateBindingConfiguration config = new CertificateBindingConfiguration();
-        var certificateBinding = config.Query(ipEndpoint).FirstOrDefault(x => x.AppId == options.AppId);
+        var certificateBinding = config.Query(ipEndpoint).FirstOrDefault(x => x.AppId == options.ApplicationId);
 
 
         if (certificateBinding != null && certificateBinding.Thumbprint != certificate.Thumbprint)
@@ -66,7 +61,7 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
         if (certificateBinding == null)
         {
             certificateBinding = new CertificateBinding(
-                certificate.Thumbprint, StoreName.My, ipEndpoint, options.AppId.GetValueOrDefault());
+                certificate.Thumbprint, StoreName.My, ipEndpoint, options.ApplicationId);
             config.Bind(certificateBinding);
         }
         
@@ -91,7 +86,5 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
         {
             api.DeleteUrl(urlAcl.Url);
         }
-
-        
     }
 }

@@ -6,6 +6,7 @@ namespace Eryph.Runtime.Zero.HttpSys;
 
 public interface ISSLEndpointRegistry
 {
-    SSLEndpointContext RegisterSSLEndpoint(SSLOptions options, X509Chain chain);
+    SSLEndpointContext RegisterSSLEndpoint(SslOptions options, X509Certificate2 certificate);
+
     void UnRegisterSSLEndpoint(Uri url, CertificateBinding binding);
 }

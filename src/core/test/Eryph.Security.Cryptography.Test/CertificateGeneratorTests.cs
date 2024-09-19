@@ -18,7 +18,6 @@ public class CertificateGeneratorTests
         var rsaProvider = new Mock<IRSAProvider>();
         rsaProvider.Setup(x => x.CreateRSAKeyPair(2048)).Returns(testKey);
 
-
         var gen = new CertificateGenerator(rsaProvider.Object);
         var (cert, kp) = gen.GenerateSelfSignedCertificate(
             new X509Name("CN=test"), 10, 2048,

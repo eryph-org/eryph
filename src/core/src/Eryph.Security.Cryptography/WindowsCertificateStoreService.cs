@@ -118,6 +118,13 @@ public class WindowsCertificateStoreService : ICertificateStoreService
         machineStore.Add(winCert);
 
     }
+
+    public void AddToRootStore(X509Certificate2 certificate)
+    {
+        using var machineStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
+        machineStore.Open(OpenFlags.ReadWrite);
+        machineStore.Add(certificate);
+    }
     
             
     public void RemoveFromRootStore(X509Certificate certificate)

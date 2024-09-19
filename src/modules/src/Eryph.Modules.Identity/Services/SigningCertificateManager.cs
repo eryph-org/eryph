@@ -5,55 +5,49 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Security.Cryptography;
-using Org.BouncyCastle.Asn1.X509;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Security;
-using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Eryph.Modules.Identity.Services
 {
     public class SigningCertificateManager : ISigningCertificateManager
     {
         private readonly ICertificateGenerator _certificateGenerator;
-        private readonly ICryptoIOServices _cryptoIOServices;
+        private readonly ICertificateKeyPairGenerator _certificateKeyPairGenerator;
         private readonly ICertificateStoreService _storeService;
 
         public SigningCertificateManager(
-            ICryptoIOServices cryptoIOServices,
             ICertificateStoreService storeService,
-            ICertificateGenerator certificateGenerator)
+            ICertificateGenerator certificateGenerator,
+            ICertificateKeyPairGenerator certificateKeyPairGenerator)
         {
-            _cryptoIOServices = cryptoIOServices;
             _storeService = storeService;
             _certificateGenerator = certificateGenerator;
+            _certificateKeyPairGenerator = certificateKeyPairGenerator;
         }
 
-        public async Task<X509Certificate2> GetSigningCertificate(string storePath)
+        public X509Certificate2 GetSigningCertificate()
         {
             var nameBuilder = new X500DistinguishedNameBuilder();
             nameBuilder.AddOrganizationName("eryph");
             nameBuilder.AddOrganizationalUnitName("identity");
             nameBuilder.AddCommonName("eryph-identity-signing");
 
-            var res = await EnsureCertificateExists(
-                Path.Combine(storePath, "identity-signing.key"), nameBuilder.Build());
-            return res;
-            /*
-            var cert = new X509Certificate2(DotNetUtilities.ToX509Certificate(res.certificate));
-            var rsaParameters = DotNetUtilities.ToRSAParameters((RsaPrivateCrtKeyParameters)res.keyPair.Private);
-            var rsa = RSA.Create(rsaParameters);
-            return cert.CopyWithPrivateKey(rsa);
-            */
+            return GetCertificate(nameBuilder.Build(), X509KeyUsageFlags.DigitalSignature);
         }
 
-        private async Task<X509Certificate2> EnsureCertificateExists(string privateKeyFile, X500DistinguishedName issuerName)
+        public X509Certificate2 GetEncryptionCertificate()
         {
+            var nameBuilder = new X500DistinguishedNameBuilder();
+            nameBuilder.AddOrganizationName("eryph");
+            nameBuilder.AddOrganizationalUnitName("identity");
+            nameBuilder.AddCommonName("eryph-identity-encryption");
 
-            //var entropy = Encoding.UTF8.GetBytes(issuerName.ToString());
-            //var keyPair = await _cryptoIOServices.TryReadPrivateKeyFile(privateKeyFile, entropy);
+            return GetCertificate(nameBuilder.Build(), X509KeyUsageFlags.KeyEncipherment);
+        }
 
-
+        private X509Certificate2 GetCertificate(
+            X500DistinguishedName issuerName,
+            X509KeyUsageFlags keyUsages)
+        {
             var certs = _storeService.GetFromMyStore2(issuerName);
             if (certs.Count == 1)
             {
@@ -65,13 +59,15 @@ namespace Eryph.Modules.Identity.Services
                 _storeService.RemoveFromMyStore2(cert);
             }
 
-            var certificate = _certificateGenerator.GenerateSelfSignedCertificate2(
+            var keyPair = _certificateKeyPairGenerator.GenerateProtectedRsaKeyPair(2048);
+
+            var certificate = _certificateGenerator.GenerateSelfSignedCertificate(
                 issuerName,
+                keyPair,
                 5 * 365,
-                2048);
+                [new X509KeyUsageExtension(keyUsages, true)]);
 
             _storeService.AddToMyStore(certificate);
-            //await _cryptoIOServices.WritePrivateKeyFile(privateKeyFile, keyPair, entropy);
 
             return certificate;
         }

@@ -5,5 +5,7 @@ namespace Eryph.Modules.Identity.Services;
 
 public interface ISigningCertificateManager
 {
-    Task<X509Certificate2> GetSigningCertificate(string storePath);
+    X509Certificate2 GetSigningCertificate();
+
+    X509Certificate2 GetEncryptionCertificate();
 }

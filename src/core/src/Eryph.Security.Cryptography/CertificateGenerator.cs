@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Dynamic;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -8,19 +9,18 @@ using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.X509;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
+using X509Extension = System.Security.Cryptography.X509Certificates.X509Extension;
 
 namespace Eryph.Security.Cryptography;
 
 public class CertificateGenerator : ICertificateGenerator
 {
     private readonly IRSAProvider _rsaProvider;
-    private readonly ICertificateKeyGenerator _certificateKeyGenerator;
 
 
-    public CertificateGenerator(IRSAProvider rsaProvider, ICertificateKeyGenerator certificateKeyGenerator)
+    public CertificateGenerator(IRSAProvider rsaProvider)
     {
         _rsaProvider = rsaProvider;
-        _certificateKeyGenerator = certificateKeyGenerator;
     }
 
     /// <summary>
@@ -55,48 +55,32 @@ public class CertificateGenerator : ICertificateGenerator
         ), kp);
     }
 
-    public X509Certificate2 GenerateSelfSignedCertificate2(
+    public X509Certificate2 GenerateSelfSignedCertificate(
         X500DistinguishedName subjectName,
+        RSA keyPair,
         int validDays,
-        int keyLength)
+        IReadOnlyList<X509Extension> extensions)
     {
-        var rsa = _certificateKeyGenerator.GenerateRsaKeyPair(keyLength, true);
-        //using var algorithm = RSA.Create(keySizeInBits: keyLength);
-
-        var request = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest(subjectName, keyPair, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         request.CertificateExtensions.Add(new X509BasicConstraintsExtension(false, false, 0, true));
-        request.CertificateExtensions.Add(new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, critical: true));
+
+        var publicKey = new PublicKey(keyPair);
+        var subjectKeyIdentifier = new X509SubjectKeyIdentifierExtension(publicKey, false);
+        var authorityKeyIdentifier = X509AuthorityKeyIdentifierExtension
+            .CreateFromSubjectKeyIdentifier(subjectKeyIdentifier);
+        request.CertificateExtensions.Add(subjectKeyIdentifier);
+        request.CertificateExtensions.Add(authorityKeyIdentifier);
+
+        foreach (var extension in extensions)
+        {
+            request.CertificateExtensions.Add(extension);
+        }
 
         var certificate = request.CreateSelfSigned(
-            DateTimeOffset.UtcNow.Subtract(TimeSpan.FromHours(1)),
+            DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(1)),
             DateTimeOffset.UtcNow.AddDays(validDays));
 
         return certificate;
-    }
-
-    public (X509Certificate Certificate, AsymmetricCipherKeyPair KeyPair) 
-        GenerateCertificate(
-            AsymmetricCipherKeyPair issuerKeyPair,
-            X509Certificate issuerCertificate,
-            X509Name subjectName,
-            DateTime notAfter,
-            int keyLength,
-                
-            Action<X509V3CertificateGenerator>? configureGenerator = null)
-    {
-        var serialNo = BigInteger.ProbablePrime(120, new Random());
-        var kp = _rsaProvider.CreateRSAKeyPair(keyLength);
-
-        return (GenerateCertificate(
-            kp,
-            issuerKeyPair,
-            subjectName,
-            issuerCertificate.SubjectDN,
-            serialNo,
-            issuerCertificate.SerialNumber,
-            notAfter > issuerCertificate.NotAfter ? issuerCertificate.NotAfter : notAfter,
-            configureGenerator
-        ), kp);
     }
 
     private static X509Certificate GenerateCertificate(
