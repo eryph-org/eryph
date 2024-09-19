@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ModuleCore;
-using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.HttpSys;
 using Microsoft.Extensions.Hosting;
 
@@ -22,11 +21,8 @@ internal sealed class SslEndpointService(
     {
         var baseUrl = endpointResolver.GetEndpoint("base");
 
-        _sslEndpointContext = await sslEndpointManager.EnableSslEndpoint(new SslOptions(
-            Network.FQDN,
-            365 * 5,
-            Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
-            baseUrl));
+        _sslEndpointContext = await sslEndpointManager.EnableSslEndpoint(
+            new SslOptions(baseUrl, 365 * 5, Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931")));
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

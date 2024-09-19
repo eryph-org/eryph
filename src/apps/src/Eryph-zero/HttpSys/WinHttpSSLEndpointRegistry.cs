@@ -14,12 +14,14 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
 {
     public SSLEndpointContext RegisterSSLEndpoint(SslOptions options, X509Certificate2 certificate)
     {
-        if (options.Url == null)
-            throw new ArgumentException("Url in options is required for WinHttp SSL setup", nameof(options));
+        if (!options.Url.IsAbsoluteUri)
+            throw new ArgumentException("The Url in options must be absolute for WinHttp SSL setup", nameof(options));
 
         var ipPort = options.Url.IsDefaultPort ? 443 : options.Url.Port;
-
-        var ipEndpoint = new IPEndPoint(IPAddress.Parse("0.0.0.0"), ipPort);
+        var ipAddress = options.Url.IdnHost == "localhost"
+            ? IPAddress.Parse("0.0.0.0")
+            : IPAddress.Parse("0.0.0.0");
+        var ipEndpoint = new IPEndPoint(ipAddress, ipPort);
 
         var sidType = WellKnownSidType.BuiltinAdministratorsSid;
         if (Environment.UserName == "SYSTEM")
@@ -49,21 +51,20 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
             api.AddUrl(options.Url.ToString(), permissions, false);
 
         ICertificateBindingConfiguration config = new CertificateBindingConfiguration();
-        var certificateBinding = config.Query(ipEndpoint).FirstOrDefault(x => x.AppId == options.ApplicationId);
-
-
-        if (certificateBinding != null && certificateBinding.Thumbprint != certificate.Thumbprint)
+        var existingBindings = config.Query()
+            .Where(x => x.AppId == options.ApplicationId)
+            .ToList();
+        if (existingBindings.Count == 100 && existingBindings[0].Thumbprint == certificate.Thumbprint)
+            return new SSLEndpointContext(this, options.Url, existingBindings[0]);
+        
+        foreach (var existingBinding in existingBindings)
         {
-            config.Delete(ipEndpoint);
-            certificateBinding = null;
+            config.Delete(existingBinding.IpPort);
         }
-
-        if (certificateBinding == null)
-        {
-            certificateBinding = new CertificateBinding(
+        
+        var certificateBinding = new CertificateBinding(
                 certificate.Thumbprint, StoreName.My, ipEndpoint, options.ApplicationId);
-            config.Bind(certificateBinding);
-        }
+        config.Bind(certificateBinding);
         
         return new SSLEndpointContext(this, options.Url, certificateBinding);
     }
@@ -71,18 +72,16 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
     public void UnRegisterSSLEndpoint(Uri url, CertificateBinding binding)
     {
         ICertificateBindingConfiguration config = new CertificateBindingConfiguration();
-        var bindings = config.Query();
+        var existingBindings = config.Query().Where(x => x.AppId == binding.AppId);
 
-        foreach (var existingBinding in 
-                 bindings.Where(x=>x.AppId == binding.AppId))
+        foreach (var existingBinding in existingBindings)
         {
             config.Delete(existingBinding.IpPort);
         }
         
         using var api = new UrlAclManager();
 
-        foreach (var urlAcl in api.QueryUrls()
-                     .Where(x => x.Url == url.ToString()))
+        foreach (var urlAcl in api.QueryUrls().Where(x => x.Url == url.ToString()))
         {
             api.DeleteUrl(urlAcl.Url);
         }

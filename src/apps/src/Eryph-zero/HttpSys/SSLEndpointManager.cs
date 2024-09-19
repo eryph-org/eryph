@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -41,26 +42,33 @@ public class SSLEndpointManager : ISSLEndpointManager
         var subjectNameBuilder = new X500DistinguishedNameBuilder();
         subjectNameBuilder.AddOrganizationName("eryph");
         subjectNameBuilder.AddOrganizationalUnitName("eryph-zero");
-        subjectNameBuilder.AddCommonName(options.SubjectDnsName);
+        // We always use localhost as the common name for the certificate.
+        // Otherwise, we cannot clean up old certificates after the DNS
+        // has changed.
+        subjectNameBuilder.AddCommonName("localhost");
 
         var subjectName = subjectNameBuilder.Build();
+        var certificates = _storeService.GetFromMyStore(subjectName);
+        if (certificates.Count == 1 && IsUsable(certificates[0], options))
+            return certificates[0];
 
-        // TODO remove soon-to-expire certificates
-        // TODO remove certificates with different host name
-        var certs = _storeService.GetFromMyStore(subjectName);
-        if (certs.Count == 1)
-            return certs[0];
-
+        _storeService.RemoveFromMyStore(subjectName);
+        _storeService.RemoveFromRootStore(subjectName);
+        
         var subjectAlternativeNameBuilder = new SubjectAlternativeNameBuilder();
         subjectAlternativeNameBuilder.AddIpAddress(IPAddress.Loopback);
         subjectAlternativeNameBuilder.AddIpAddress(IPAddress.IPv6Loopback);
         subjectAlternativeNameBuilder.AddDnsName("localhost");
-        subjectAlternativeNameBuilder.AddDnsName(options.SubjectDnsName);
-
-        var keyPair = _certificateKeyPairGenerator.GenerateProtectedRsaKeyPair(2048);
+        if (options.Url.IdnHost != "localhost")
+        {
+            subjectAlternativeNameBuilder.AddDnsName(options.Url.IdnHost);
+        }
+        
+        using var keyPair = _certificateKeyPairGenerator.GenerateProtectedRsaKeyPair(2048);
 
         var cert = _certificateGenerator.GenerateSelfSignedCertificate(
             subjectName,
+            "eryph-zero self-signed TLS certificate",
             keyPair,
             options.ValidDays,
             [
@@ -78,4 +86,9 @@ public class SSLEndpointManager : ISSLEndpointManager
 
         return cert;
     }
+
+    private static bool IsUsable(X509Certificate2 certificate, SslOptions options) =>
+        certificate.HasPrivateKey
+        && certificate.MatchesHostname(options.Url.IdnHost, false, false)
+        && certificate.NotAfter > DateTime.UtcNow.AddDays(30);
 }

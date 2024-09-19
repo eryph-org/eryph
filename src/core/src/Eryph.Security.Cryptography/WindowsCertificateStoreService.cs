@@ -12,23 +12,17 @@ public class WindowsCertificateStoreService : ICertificateStoreService
 {
     public void AddToMyStore(X509Certificate2 certificate)
     {
-        using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadWrite);
-
-        var storedCerts = machineStore.Certificates.Find(
-            X509FindType.FindBySubjectDistinguishedName,
-            certificate.SubjectName.Name,
-            false);
-
-        if (storedCerts.Count > 0)
-            machineStore.RemoveRange(storedCerts);
-
-        machineStore.Add(certificate);
+        AddToStore(certificate, StoreName.My);
     }
 
     public void AddToRootStore(X509Certificate2 certificate)
     {
-        using var machineStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
+        AddToStore(certificate, StoreName.Root);
+    }
+
+    private static void AddToStore(X509Certificate2 certificate, StoreName storeName)
+    {
+        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
         machineStore.Open(OpenFlags.ReadWrite);
         machineStore.Add(certificate);
     }
@@ -45,30 +39,24 @@ public class WindowsCertificateStoreService : ICertificateStoreService
             .ToList();
     }
 
-    public IReadOnlyList<X509Certificate2> GetFromRootStore(X500DistinguishedName subjectName)
+    public void RemoveFromMyStore(X500DistinguishedName subjectName)
     {
-        using var machineStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadOnly);
-
-        return machineStore.Certificates.Find(
-                X509FindType.FindBySubjectDistinguishedName,
-                subjectName.Name,
-                false)
-            .ToList();
+        RemoveFromStore(subjectName, StoreName.My);
     }
 
-    public void RemoveFromMyStore(X509Certificate2 certificate)
+    public void RemoveFromRootStore(X500DistinguishedName subjectName)
     {
-        using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadWrite);
-        machineStore.Remove(certificate);
+        RemoveFromStore(subjectName, StoreName.Root);
     }
 
-
-    public void RemoveFromRootStore(X509Certificate2 certificate)
+    private static void RemoveFromStore(X500DistinguishedName subjectName, StoreName storeName)
     {
-        using var machineStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
+        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
         machineStore.Open(OpenFlags.ReadWrite);
-        machineStore.Remove(certificate);
+        var certificates = machineStore.Certificates.Find(
+            X509FindType.FindBySubjectDistinguishedName,
+            subjectName.Name,
+            false);
+        machineStore.RemoveRange(certificates);
     }
 }

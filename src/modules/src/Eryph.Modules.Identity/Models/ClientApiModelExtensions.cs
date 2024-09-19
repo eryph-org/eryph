@@ -35,6 +35,7 @@ namespace Eryph.Modules.Identity.Models
 
             using var certificate = certificateGenerator.GenerateSelfSignedCertificate(
                 subjectNameBuilder.Build(),
+                $"eryph identity client {client.ClientId}",
                 keyPair,
                 5 * 365,
                 [
@@ -58,8 +59,8 @@ namespace Eryph.Modules.Identity.Models
                 DisplayName = client.Name
             };
 
-            descriptor.Scopes.UnionWith(client.AllowedScopes ?? Array.Empty<string>());
-            descriptor.AppRoles.UnionWith(client.Roles ?? Array.Empty<Guid>());
+            descriptor.Scopes.UnionWith(client.AllowedScopes ?? []);
+            descriptor.AppRoles.UnionWith(client.Roles ?? []);
             return descriptor;
         }
 

@@ -9,6 +9,7 @@ public interface ICertificateGenerator
 {
     X509Certificate2 GenerateSelfSignedCertificate(
         X500DistinguishedName subjectName,
+        string friendlyName,
         RSA keyPair,
         int validDays,
         IReadOnlyList<X509Extension> extensions);

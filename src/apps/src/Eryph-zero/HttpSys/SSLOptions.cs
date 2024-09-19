@@ -3,7 +3,6 @@ using System;
 namespace Eryph.Runtime.Zero.HttpSys;
 
 public record SslOptions(
-    string SubjectDnsName,
+    Uri Url,
     int ValidDays,
-    Guid ApplicationId,
-    Uri Url);
+    Guid ApplicationId);

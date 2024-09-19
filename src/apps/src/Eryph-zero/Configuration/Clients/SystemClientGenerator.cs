@@ -55,6 +55,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
 
             using var certificate = certificateGenerator.GenerateSelfSignedCertificate(
                 subjectNameBuilder.Build(),
+                "eryph identity system client",
                 keyPair,
                 5 * 365,
                 [
