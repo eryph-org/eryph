@@ -22,7 +22,7 @@ public class Create(
     IClientService clientService,
     IEndpointResolver endpointResolver,
     ICertificateGenerator certificateGenerator,
-    ICertificateKeyPairGenerator certificateKeyPairGenerator,
+    ICertificateKeyService certificateKeyService,
     IOpenIddictScopeManager scopeManager,
     IUserInfoProvider userInfoProvider)
     : EndpointBaseAsync
@@ -55,7 +55,7 @@ public class Create(
         var descriptor = client.ToDescriptor();
         var privateKey = descriptor.NewClientCertificate(
             certificateGenerator,
-            certificateKeyPairGenerator);
+            certificateKeyService);
 
         descriptor = await clientService.Add(descriptor, false, cancellationToken);
 

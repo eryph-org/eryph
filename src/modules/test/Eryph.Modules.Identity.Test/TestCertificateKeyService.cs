@@ -8,19 +8,19 @@ using Eryph.Security.Cryptography;
 
 namespace Eryph.Modules.Identity.Test;
 
-internal class TestCertificateKeyPairGenerator : ICertificateKeyPairGenerator
+internal class TestCertificateKeyService : ICertificateKeyService
 {
-    public RSA GenerateRsaKeyPair(int keyLength)
+    public RSA GenerateRsaKey(int keyLength)
     {
         return RSA.Create(keyLength);
     }
 
-    public RSA GeneratePersistedRsaKeyPair(string keyName, int keyLength)
+    public RSA GeneratePersistedRsaKey(string keyName, int keyLength)
     {
         throw new NotImplementedException();
     }
 
-    public RSA GetPersistedRsaKeyPair(string keyName)
+    public RSA GetPersistedRsaKey(string keyName)
     {
         throw new NotImplementedException();
     }

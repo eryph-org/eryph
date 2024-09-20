@@ -176,7 +176,7 @@ namespace Eryph.Modules.Identity
         public void ConfigureContainer(IServiceProvider sp, Container container)
         {
             container.Register<ICertificateGenerator, CertificateGenerator>();
-            container.Register(sp.GetRequiredService<ICertificateKeyPairGenerator>);
+            container.Register(sp.GetRequiredService<ICertificateKeyService>);
             container.Register(sp.GetRequiredService<IEndpointResolver>);
             container.Register(typeof(IIdentityDbRepository<>), typeof(IdentityDbRepository<>), Lifestyle.Scoped);
             container.Register<IClientService, ClientService>(Lifestyle.Scoped);

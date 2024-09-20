@@ -22,12 +22,12 @@ namespace Eryph.Modules.Identity.Models
         public static string NewClientCertificate(
             this ClientApplicationDescriptor client,
             ICertificateGenerator certificateGenerator,
-            ICertificateKeyPairGenerator certificateKeyPairGenerator)
+            ICertificateKeyService certificateKeyService)
         {
             if (string.IsNullOrWhiteSpace(client.ClientId))
                 throw new ArgumentException("The client ID is missing", nameof(client));
 
-            using var keyPair = certificateKeyPairGenerator.GenerateRsaKeyPair(2048);
+            using var keyPair = certificateKeyService.GenerateRsaKey(2048);
             var subjectNameBuilder = new X500DistinguishedNameBuilder();
             subjectNameBuilder.AddOrganizationName("eryph");
             subjectNameBuilder.AddOrganizationalUnitName("eryph-identity-client");

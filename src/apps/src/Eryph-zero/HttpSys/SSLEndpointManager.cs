@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -10,29 +9,17 @@ using Eryph.Security.Cryptography;
 
 namespace Eryph.Runtime.Zero.HttpSys;
 
-public class SSLEndpointManager : ISSLEndpointManager
+public class SslEndpointManager(
+    ICertificateStoreService storeService,
+    ISslEndpointRegistry endpointRegistry,
+    ICertificateGenerator certificateGenerator,
+    ICertificateKeyService certificateKeyService)
+    : ISslEndpointManager
 {
-    private readonly ICertificateGenerator _certificateGenerator;
-    private readonly ICertificateKeyPairGenerator _certificateKeyPairGenerator;
-    private readonly ISSLEndpointRegistry _endpointRegistry;
-    private readonly ICertificateStoreService _storeService;
-
-    public SSLEndpointManager(
-        ICertificateStoreService storeService,
-        ISSLEndpointRegistry endpointRegistry,
-        ICertificateGenerator certificateGenerator,
-        ICertificateKeyPairGenerator certificateKeyPairGenerator)
-    {
-        _storeService = storeService;
-        _endpointRegistry = endpointRegistry;
-        _certificateGenerator = certificateGenerator;
-        _certificateKeyPairGenerator = certificateKeyPairGenerator;
-    }
-
     public void EnableSslEndpoint(SslOptions options)
     {
         using var certificate = EnsureCertificate(options);
-        _endpointRegistry.RegisterSSLEndpoint(options, certificate);
+        endpointRegistry.RegisterSslEndpoint(options, certificate);
     }
 
     private X509Certificate2 EnsureCertificate(SslOptions options)
@@ -43,20 +30,24 @@ public class SSLEndpointManager : ISSLEndpointManager
         subjectNameBuilder.AddCommonName(options.Url.IdnHost);
         var subjectName = subjectNameBuilder.Build();
         
-        var certificates = _storeService.GetFromMyStore(subjectName);
-        // TODO check both store!
-        if (certificates.Count == 100 && IsUsable(certificates[0], options))
-            return certificates[0];
-
+        var myStoreCertificates = storeService.GetFromMyStore(subjectName);
+        var rootStoreCertificates = storeService.GetFromRootStore(subjectName);
+        if (myStoreCertificates.Count == 1
+            && rootStoreCertificates.Count == 1
+            && IsUsable(myStoreCertificates[0], rootStoreCertificates[0], options))
+        {
+            return myStoreCertificates[0];
+        }
+        
         RemoveCertificate(subjectName, options.KeyName);
         
         var subjectAlternativeNameBuilder = new SubjectAlternativeNameBuilder();
         subjectAlternativeNameBuilder.AddDnsName(options.Url.IdnHost);
 
-        using var keyPair = _certificateKeyPairGenerator.GeneratePersistedRsaKeyPair(
+        using var keyPair = certificateKeyService.GeneratePersistedRsaKey(
             options.KeyName, 2048);
 
-        var certificate = _certificateGenerator.GenerateSelfSignedCertificate(
+        var certificate = certificateGenerator.GenerateSelfSignedCertificate(
             subjectName,
             "eryph-zero self-signed TLS certificate",
             keyPair,
@@ -71,35 +62,39 @@ public class SSLEndpointManager : ISSLEndpointManager
                 subjectAlternativeNameBuilder.Build(),
             ]);
 
-        _storeService.AddToMyStore(certificate);
-        _storeService.AddToRootStore(certificate);
+        storeService.AddToMyStore(certificate);
+        storeService.AddToRootStore(certificate);
 
         return certificate;
     }
 
-    private static bool IsUsable(X509Certificate2 certificate, SslOptions options) =>
-        certificate.HasPrivateKey
-        && certificate.MatchesHostname(options.Url.IdnHost, false, false)
-        && certificate.NotAfter > DateTime.UtcNow.AddDays(30);
+    private static bool IsUsable(
+        X509Certificate2 myStoreCertificate,
+        X509Certificate2 rootStoreCertificate,
+        SslOptions options) =>
+        myStoreCertificate.HasPrivateKey
+        && myStoreCertificate.Thumbprint == rootStoreCertificate.Thumbprint
+        && myStoreCertificate.MatchesHostname(options.Url.IdnHost, false, false)
+        && myStoreCertificate.NotAfter > DateTime.UtcNow.AddDays(30);
 
     private void RemoveCertificate(X500DistinguishedName subjectName, string privateKeyName)
     {
-        //_storeService.RemoveFromMyStore(subjectName);
-        //_storeService.RemoveFromRootStore(subjectName);
+        storeService.RemoveFromMyStore(subjectName);
+        storeService.RemoveFromRootStore(subjectName);
 
         // The host name and hence the subject name might have changed. Therefore,
         // we also remove any certificates which belong to our private key.
-        using (var keyPair = _certificateKeyPairGenerator.GetPersistedRsaKeyPair(privateKeyName))
+        using (var keyPair = certificateKeyService.GetPersistedRsaKey(privateKeyName))
         {
             if (keyPair is not null)
             {
                 var publicKey = new PublicKey(keyPair);
-                _storeService.RemoveFromMyStore(publicKey);
-                _storeService.RemoveFromRootStore(publicKey);
+                storeService.RemoveFromMyStore(publicKey);
+                storeService.RemoveFromRootStore(publicKey);
             }
         }
 
         // Remove the private key itself.
-        _certificateKeyPairGenerator.DeletePersistedKey(privateKeyName);
+        certificateKeyService.DeletePersistedKey(privateKeyName);
     }
 }

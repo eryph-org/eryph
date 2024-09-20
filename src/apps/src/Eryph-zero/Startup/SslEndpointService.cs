@@ -12,8 +12,8 @@ namespace Eryph.Runtime.Zero.Startup;
 
 internal class SslEndpointService(
     IEndpointResolver endpointResolver,
-    ISSLEndpointManager sslEndpointManager,
-    ISSLEndpointRegistry sslEndpointRegistry)
+    ISslEndpointManager sslEndpointManager,
+    ISslEndpointRegistry sslEndpointRegistry)
     : IHostedService
 {
     private readonly SslOptions _options = new(
@@ -30,7 +30,7 @@ internal class SslEndpointService(
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        sslEndpointRegistry.UnRegisterSSLEndpoint(_options);
+        sslEndpointRegistry.UnRegisterSslEndpoint(_options);
         return Task.CompletedTask;
     }
 }

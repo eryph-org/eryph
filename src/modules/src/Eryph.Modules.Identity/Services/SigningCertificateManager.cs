@@ -11,7 +11,7 @@ namespace Eryph.Modules.Identity.Services;
 public class SigningCertificateManager(
     ICertificateStoreService storeService,
     ICertificateGenerator certificateGenerator,
-    ICertificateKeyPairGenerator certificateKeyPairGenerator)
+    ICertificateKeyService certificateKeyService)
     : ISigningCertificateManager
 {
     public X509Certificate2 GetSigningCertificate()
@@ -54,7 +54,7 @@ public class SigningCertificateManager(
 
         RemoveCertificate(subjectName, keyName);
 
-        using var keyPair = certificateKeyPairGenerator.GeneratePersistedRsaKeyPair(
+        using var keyPair = certificateKeyService.GeneratePersistedRsaKey(
             keyName, 2048);
 
         var certificate = certificateGenerator.GenerateSelfSignedCertificate(
@@ -83,7 +83,7 @@ public class SigningCertificateManager(
 
         // Also remove any certificates with the same key name. They will become
         // unusable as we are going to remove the private key.
-        using (var keyPair = certificateKeyPairGenerator.GetPersistedRsaKeyPair(keyName))
+        using (var keyPair = certificateKeyService.GetPersistedRsaKey(keyName))
         {
             if (keyPair is not null)
             {
@@ -93,6 +93,6 @@ public class SigningCertificateManager(
         }
 
         // Remove the private key itself.
-        certificateKeyPairGenerator.DeletePersistedKey(keyName);
+        certificateKeyService.DeletePersistedKey(keyName);
     }
 }

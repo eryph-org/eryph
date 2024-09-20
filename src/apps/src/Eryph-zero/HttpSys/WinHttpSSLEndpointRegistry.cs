@@ -10,9 +10,9 @@ using WinHttpServerApi;
 namespace Eryph.Runtime.Zero.HttpSys;
 
 [SupportedOSPlatform("windows")]
-public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
+public class WinHttpSslEndpointRegistry : ISslEndpointRegistry
 {
-    public void RegisterSSLEndpoint(SslOptions options, X509Certificate2 certificate)
+    public void RegisterSslEndpoint(SslOptions options, X509Certificate2 certificate)
     {
         if (!options.Url.IsAbsoluteUri)
             throw new ArgumentException("The Url in options must be absolute for WinHttp SSL setup", nameof(options));
@@ -52,12 +52,12 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
         RegisterProcessExitEvent(options);
     }
 
-    public void UnRegisterSSLEndpoint(SslOptions options)
+    public void UnRegisterSslEndpoint(SslOptions options)
     {
         RemoveBindingAndAcl(options.Url.ToString(), options.ApplicationId);
     }
 
-    private void CreateCertificateBinding(Uri url, string thumbprint, Guid applicationId)
+    private static void CreateCertificateBinding(Uri url, string thumbprint, Guid applicationId)
     {
         var certBindingConfig = new CertificateBindingConfiguration();
         var existingBindings = certBindingConfig.Query().Where(x => x.AppId == applicationId);

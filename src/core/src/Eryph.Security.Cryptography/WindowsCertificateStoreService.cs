@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Versioning;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Eryph.Security.Cryptography;
@@ -29,7 +28,19 @@ public class WindowsCertificateStoreService : ICertificateStoreService
 
     public IReadOnlyList<X509Certificate2> GetFromMyStore(X500DistinguishedName subjectName)
     {
-        using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+        return GetFromStore(subjectName, StoreName.My);
+    }
+
+    public IReadOnlyList<X509Certificate2> GetFromRootStore(X500DistinguishedName subjectName)
+    {
+        return GetFromStore(subjectName, StoreName.Root);
+    }
+
+    private static IReadOnlyList<X509Certificate2> GetFromStore(
+        X500DistinguishedName subjectName,
+        StoreName storeName)
+    {
+        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
         machineStore.Open(OpenFlags.ReadOnly);
 
         return machineStore.Certificates.Find(

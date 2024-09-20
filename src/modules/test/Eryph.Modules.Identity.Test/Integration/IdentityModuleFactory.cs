@@ -36,7 +36,7 @@ namespace Eryph.Modules.Identity.Test.Integration
             _container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
             _container.RegisterSingleton<ISigningCertificateManager, TestCertificateManager>();
-            _container.RegisterSingleton<ICertificateKeyPairGenerator, TestCertificateKeyPairGenerator>();
+            _container.RegisterSingleton<ICertificateKeyService, TestCertificateKeyService>();
 
             _container.RegisterInstance(new InMemoryDatabaseRoot());
             _container

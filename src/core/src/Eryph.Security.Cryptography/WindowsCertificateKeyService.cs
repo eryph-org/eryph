@@ -10,14 +10,14 @@ using System.Threading.Tasks;
 namespace Eryph.Security.Cryptography;
 
 [SupportedOSPlatform("windows")]
-public class WindowsCertificateKeyPairPairGenerator : ICertificateKeyPairGenerator
+public class WindowsCertificateKeyService : ICertificateKeyService
 {
-    public RSA GenerateRsaKeyPair(int keyLength)
+    public RSA GenerateRsaKey(int keyLength)
     {
         return RSA.Create(keyLength);
     }
 
-    public RSA GeneratePersistedRsaKeyPair(string keyName, int keyLength)
+    public RSA GeneratePersistedRsaKey(string keyName, int keyLength)
     {
         using var cngKey = CngKey.Create(
             CngAlgorithm.Rsa,
@@ -35,7 +35,7 @@ public class WindowsCertificateKeyPairPairGenerator : ICertificateKeyPairGenerat
         return new RSACng(cngKey);
     }
 
-    public RSA? GetPersistedRsaKeyPair(string keyName)
+    public RSA? GetPersistedRsaKey(string keyName)
     {
         if (!CngKey.Exists(keyName, CngProvider.MicrosoftSoftwareKeyStorageProvider, CngKeyOpenOptions.MachineKey))
             return null;

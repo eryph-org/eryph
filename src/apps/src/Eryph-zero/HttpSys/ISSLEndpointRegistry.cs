@@ -3,9 +3,9 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Eryph.Runtime.Zero.HttpSys;
 
-public interface ISSLEndpointRegistry
+public interface ISslEndpointRegistry
 {
-    void RegisterSSLEndpoint(SslOptions options, X509Certificate2 certificate);
+    void RegisterSslEndpoint(SslOptions options, X509Certificate2 certificate);
 
-    void UnRegisterSSLEndpoint(SslOptions options);
+    void UnRegisterSslEndpoint(SslOptions options);
 }

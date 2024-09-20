@@ -21,7 +21,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
 
     public class SystemClientGenerator(
         ICertificateGenerator certificateGenerator,
-        ICertificateKeyPairGenerator certificateKeyPairGenerator,
+        ICertificateKeyService certificateKeyService,
         ICryptoIOServices cryptoIOServices,
         IConfigReaderService<ClientConfigModel> configReader,
         IConfigWriterService<ClientConfigModel> configWriter,
@@ -47,7 +47,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
             if (existingConfig is not null)
                 await configWriter.Delete(existingConfig, EryphConstants.DefaultProjectName);
 
-            using var keyPair = certificateKeyPairGenerator.GenerateRsaKeyPair(2048);
+            using var keyPair = certificateKeyService.GenerateRsaKey(2048);
             var subjectNameBuilder = new X500DistinguishedNameBuilder();
             subjectNameBuilder.AddOrganizationName("eryph");
             subjectNameBuilder.AddOrganizationalUnitName("eryph-identity-client");

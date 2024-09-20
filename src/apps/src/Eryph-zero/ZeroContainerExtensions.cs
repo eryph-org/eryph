@@ -34,7 +34,7 @@ namespace Eryph.Runtime.Zero
             
             container.UseSqlLite();
 
-            container.Register<ICertificateKeyPairGenerator, WindowsCertificateKeyPairPairGenerator>();
+            container.Register<ICertificateKeyService, WindowsCertificateKeyService>();
             container.Register<ICryptoIOServices, WindowsCryptoIOServices>();
             container.Register<ICertificateGenerator, CertificateGenerator>();
             container.Register<ICertificateStoreService, WindowsCertificateStoreService>();
