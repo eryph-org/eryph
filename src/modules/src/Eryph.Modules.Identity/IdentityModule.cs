@@ -34,12 +34,10 @@ namespace Eryph.Modules.Identity
     public class IdentityModule : WebModule
     {
         private readonly IEndpointResolver _endpointResolver;
-        private readonly IConfiguration _configuration;
 
-        public IdentityModule(IEndpointResolver endpointResolver, IConfiguration configuration)
+        public IdentityModule(IEndpointResolver endpointResolver)
         {
             _endpointResolver = endpointResolver;
-            _configuration = configuration;
         }
 
         public override string Path => _endpointResolver.GetEndpoint("identity").ToString();

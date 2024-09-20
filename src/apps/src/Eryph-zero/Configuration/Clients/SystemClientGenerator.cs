@@ -19,12 +19,11 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
         Task EnsureSystemClient();
     }
 
-    public class SystemClientGenerator(
+    internal class SystemClientGenerator(
         ICertificateGenerator certificateGenerator,
         ICertificateKeyService certificateKeyService,
         ICryptoIOServices cryptoIOServices,
-        IConfigReaderService<ClientConfigModel> configReader,
-        IConfigWriterService<ClientConfigModel> configWriter,
+        IClientConfigService configService,
         IEndpointResolver endpointResolver)
         : ISystemClientGenerator
     {
@@ -36,8 +35,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
             var entropy = Encoding.UTF8.GetBytes(identityEndpoint.ToString());
             var systemClientKeyFile = Path.Combine(ZeroConfig.GetClientConfigPath(), "system-client.key");
 
-            var existingConfig = configReader.GetConfig()
-                .FirstOrDefault(c => c.ClientId == EryphConstants.SystemClientId);
+            var existingConfig = await configService.Get(EryphConstants.SystemClientId);
             
             using var existingPrivateKey = await cryptoIOServices.TryReadPrivateKeyFile(systemClientKeyFile, entropy);
 
@@ -45,7 +43,7 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
                 return;
 
             if (existingConfig is not null)
-                await configWriter.Delete(existingConfig, EryphConstants.DefaultProjectName);
+                configService.Delete(EryphConstants.SystemClientId);
 
             using var keyPair = certificateKeyService.GenerateRsaKey(2048);
             var subjectNameBuilder = new X500DistinguishedNameBuilder();
@@ -74,13 +72,13 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
                 Roles = [EryphConstants.SuperAdminRole],
             };
 
-            await configWriter.Add(config, EryphConstants.DefaultProjectName);
+            await configService.Save(config);
             await cryptoIOServices.WritePrivateKeyFile(systemClientKeyFile, keyPair, entropy);
         }
 
         private static bool IsValid(ClientConfigModel? configData, RSA? privateKey)
         {
-            if(configData is null || privateKey is null)
+            if (configData is null || privateKey is null)
                 return false;
 
             if (!configData.AllowedScopes.SequenceEqual(RequiredScopes))
@@ -90,9 +88,8 @@ namespace Eryph.Runtime.Zero.Configuration.Clients
             if (publicKey is null)
                 return false;
 
-            return CryptographicOperations.FixedTimeEquals(
-                privateKey.ExportSubjectPublicKeyInfo(),
-                publicKey.ExportSubjectPublicKeyInfo());
+            return privateKey.ExportSubjectPublicKeyInfo()
+                .SequenceEqual(publicKey.ExportSubjectPublicKeyInfo());
         }
 
         private static RSA? GetPublicKey(string certificateData)
