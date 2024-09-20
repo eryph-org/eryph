@@ -12,15 +12,12 @@ using FluentAssertions;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Security;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 using Xunit;
 using Xunit.Abstractions;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 
 namespace Eryph.Modules.Identity.Test.Integration
 {
@@ -69,12 +66,11 @@ namespace Eryph.Modules.Identity.Test.Integration
 
         private async Task<string> GetClientAccessToken(string keyString, string certString)
         {
+            using var keyPair = RSA.Create();
+            keyPair.ImportFromPem(keyString);
+            var rsaParameters = keyPair.ExportParameters(true);
 
-            var keyPair =
-                (AsymmetricCipherKeyPair)new PemReader(new StringReader(keyString)).ReadObject();
-            var rsaParameters = DotNetUtilities.ToRSAParameters(keyPair.Private as RsaPrivateCrtKeyParameters);
 
-            
             var factory = new IdentityModuleFactory().WithWebHostBuilder(c =>
             {
                 c.ConfigureTestServices(
