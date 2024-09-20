@@ -5,6 +5,9 @@ using System.Runtime.Versioning;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using Eryph.Runtime.Zero.HttpSys.SSLBinding;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.TagHelpers;
+using Org.BouncyCastle.Tls;
 using WinHttpServerApi;
 
 namespace Eryph.Runtime.Zero.HttpSys;
@@ -16,12 +19,6 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
     {
         if (!options.Url.IsAbsoluteUri)
             throw new ArgumentException("The Url in options must be absolute for WinHttp SSL setup", nameof(options));
-
-        var ipPort = options.Url.IsDefaultPort ? 443 : options.Url.Port;
-        var ipAddress = options.Url.IdnHost == "localhost"
-            ? IPAddress.Parse("0.0.0.0")
-            : IPAddress.Parse("0.0.0.0");
-        var ipEndpoint = new IPEndPoint(ipAddress, ipPort);
 
         var sidType = WellKnownSidType.BuiltinAdministratorsSid;
         if (Environment.UserName == "SYSTEM")
@@ -47,32 +44,22 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
                 break;
         }
         
-        if(!aclFound)
+        if (!aclFound)
             api.AddUrl(options.Url.ToString(), permissions, false);
 
-        ICertificateBindingConfiguration config = new CertificateBindingConfiguration();
-        var existingBindings = config.Query()
-            .Where(x => x.AppId == options.ApplicationId)
-            .ToList();
-        if (existingBindings.Count == 100 && existingBindings[0].Thumbprint == certificate.Thumbprint)
-            return new SSLEndpointContext(this, options.Url, existingBindings[0]);
-        
-        foreach (var existingBinding in existingBindings)
-        {
-            config.Delete(existingBinding.IpPort);
-        }
-        
-        var certificateBinding = new CertificateBinding(
-                certificate.Thumbprint, StoreName.My, ipEndpoint, options.ApplicationId);
-        config.Bind(certificateBinding);
-        
-        return new SSLEndpointContext(this, options.Url, certificateBinding);
+
+
+        CreateCertificateBinding(options.Url, certificate.Thumbprint, options.ApplicationId);
+
+        var context = new SSLEndpointContext(this, options.Url, options.ApplicationId);
+        //AppDomain.CurrentDomain.ProcessExit += (sender, args) => UnRegisterSSLEndpoint(options.Url, certificateBinding);
+        return context;
     }
 
-    public void UnRegisterSSLEndpoint(Uri url, CertificateBinding binding)
+    public void UnRegisterSSLEndpoint(Uri url, Guid applicationId)
     {
         ICertificateBindingConfiguration config = new CertificateBindingConfiguration();
-        var existingBindings = config.Query().Where(x => x.AppId == binding.AppId);
+        var existingBindings = config.Query().Where(x => x.AppId == applicationId);
 
         foreach (var existingBinding in existingBindings)
         {
@@ -84,6 +71,35 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
         foreach (var urlAcl in api.QueryUrls().Where(x => x.Url == url.ToString()))
         {
             api.DeleteUrl(urlAcl.Url);
+        }
+    }
+
+    private static void UnregisterEndpoint2(Uri url, Guid applicationId)
+    {
+
+    }
+
+    private void CreateCertificateBinding(Uri url, string thumbprint, Guid applicationId)
+    {
+        var certBindingConfig = new CertificateBindingConfiguration();
+        var existingBindings = certBindingConfig.Query().Where(x => x.AppId == applicationId);
+        foreach (var existingBinding in existingBindings)
+        {
+            certBindingConfig.Delete(existingBinding.IpPort);
+        }
+
+        var ipPort = url.IsDefaultPort ? 443 : url.Port;
+        if (url.IdnHost == "localhost")
+        {
+            certBindingConfig.Bind(new CertificateBinding(
+                thumbprint, StoreName.My, new IPEndPoint(IPAddress.Loopback, ipPort), applicationId));
+            certBindingConfig.Bind(new CertificateBinding(
+                thumbprint, StoreName.My, new IPEndPoint(IPAddress.IPv6Loopback, ipPort), applicationId));
+        }
+        else
+        {
+            certBindingConfig.Bind(new CertificateBinding(
+                thumbprint, StoreName.My, new IPEndPoint(IPAddress.Parse("0.0.0.0"), ipPort), applicationId));
         }
     }
 }

@@ -8,5 +8,5 @@ public interface ISSLEndpointRegistry
 {
     SSLEndpointContext RegisterSSLEndpoint(SslOptions options, X509Certificate2 certificate);
 
-    void UnRegisterSSLEndpoint(Uri url, CertificateBinding binding);
+    void UnRegisterSSLEndpoint(Uri url, Guid applicationId);
 }

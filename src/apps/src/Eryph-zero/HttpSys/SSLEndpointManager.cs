@@ -33,7 +33,7 @@ public class SSLEndpointManager : ISSLEndpointManager
 
     public async Task<SSLEndpointContext> EnableSslEndpoint(SslOptions options)
     {
-        var certificate = EnsureCertificate(options);
+        using var certificate = EnsureCertificate(options);
         return _endpointRegistry.RegisterSSLEndpoint(options, certificate);
     }
 
@@ -43,7 +43,7 @@ public class SSLEndpointManager : ISSLEndpointManager
         subjectNameBuilder.AddOrganizationName("eryph");
         subjectNameBuilder.AddOrganizationalUnitName("eryph-zero");
         // We always use localhost as the common name for the certificate.
-        // Otherwise, we cannot clean up old certificates after the DNS
+        // Otherwise, we cannot clean up old certificates after the DNS name
         // has changed.
         subjectNameBuilder.AddCommonName("localhost");
 
