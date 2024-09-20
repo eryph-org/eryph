@@ -4,21 +4,18 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using FluentAssertions;
-using Moq;
 using Xunit;
 
 namespace Eryph.Security.Cryptography.Test;
 
 public class CertificateGeneratorTests
 {
-    
     [Fact]
     public void GenerateSelfSignedCertificate_GeneratesCorrectCertificate()
     {
-        var sw = Stopwatch.StartNew();
         using var rsa = RSA.Create(2048);
-        var time = sw.ElapsedTicks;
-
+        var expectedSubjectKeyId = new X509SubjectKeyIdentifierExtension(new PublicKey(rsa), false)
+            .SubjectKeyIdentifier;
 
         var subjectName = new X500DistinguishedName("CN=test");
 
@@ -28,7 +25,9 @@ public class CertificateGeneratorTests
             "test certificate",
             rsa,
             10,
-            []);
+            [
+                new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true),
+            ]);
 
         certificate.FriendlyName.Should().Be("test certificate");
         certificate.HasPrivateKey.Should().BeTrue();
@@ -43,34 +42,24 @@ public class CertificateGeneratorTests
             {
                 var basicConstraints = extension.Should().BeOfType<X509BasicConstraintsExtension>().Subject;
                 basicConstraints.CertificateAuthority.Should().BeFalse();
-
+                basicConstraints.Critical.Should().BeTrue();
+            },
+            extension =>
+            {
+                var subjectKeyIdentifier = extension.Should().BeOfType<X509SubjectKeyIdentifierExtension>().Subject;
+                subjectKeyIdentifier.SubjectKeyIdentifier.Should().Be(expectedSubjectKeyId);
+                subjectKeyIdentifier.Critical.Should().BeFalse();
+            },
+            extension =>
+            {
+                var authorityKeyIdentifier = extension.Should().BeOfType<X509AuthorityKeyIdentifierExtension>().Subject;
+                authorityKeyIdentifier.Critical.Should().BeFalse();
+            },
+            extension =>
+            {
+                var keyUsage = extension.Should().BeOfType<X509KeyUsageExtension>().Subject;
+                keyUsage.KeyUsages.Should().Be(X509KeyUsageFlags.DigitalSignature);
+                keyUsage.Critical.Should().BeTrue();
             });
-
-        /*
-        cert.SubjectDN.Should().Be(new X509Name("CN=test"));
-        cert.IssuerDN.Should().Be(new X509Name("CN=test"));
-        cert.NotBefore.Should().BeAfter(DateTime.Now.Subtract(new TimeSpan(1, 1,0,0)));
-        cert.NotAfter.Should().BeBefore(DateTime.Now.Add(new TimeSpan(10, 0, 1, 0)));
-        cert.SerialNumber.Should().NotBeNull();
-        */
     }
-    
-    /*
-    private static AsymmetricCipherKeyPair GetTestPrivateKey()
-    {
-        
-        const string keyString = @"-----BEGIN RSA PRIVATE KEY-----
-MIIBOQIBAAJBAIF1DAqrNpUaH+dUf0l4M1AYkVqsDXW/k/+jZdWEec4FIAWBT16i
-AishEvQT/SS238dzGtVEsCZyFWvp3m3Oip0CAwEAAQJAEh7lpBqqJb3F6HYR6SFL
-oXMG6Ze6vJgn6bkf+H62JAmtiyiqzmfLgTkugZxiGei9zglsMAqQCMJk7IGe9aCs
-iwIhAMIvvlBefrJ2vf5F0EjxXlhpDbU8XASyGeraQVO+yQvjAiEAqqqDxmPmluEr
-9YdoZR6S5zSraG5J6GEXR1RRlgxy138CIDgD/7k9WPzwJeRojSnNfrKwM0UZkU3F
-dpZ5uSiIO4STAiB/BWQIX0g7GaIHHt3TDPtXO3srwZIec0zJGPeUDvXWbwIgXKjg
-9yLTnafGGFSjTW2RLbOhJEp5p5gt7PnityO8kXI=
------END RSA PRIVATE KEY-----";
-
-        using var reader = new StringReader(keyString);
-        return (AsymmetricCipherKeyPair) new PemReader(reader).ReadObject();
-    }
-    */
 }
