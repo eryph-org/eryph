@@ -7,7 +7,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Security.Cryptography;
-using LanguageExt;
 
 namespace Eryph.Runtime.Zero.HttpSys;
 
@@ -30,11 +29,10 @@ public class SSLEndpointManager : ISSLEndpointManager
         _certificateKeyPairGenerator = certificateKeyPairGenerator;
     }
 
-
-    public async Task<SSLEndpointContext> EnableSslEndpoint(SslOptions options)
+    public void EnableSslEndpoint(SslOptions options)
     {
         using var certificate = EnsureCertificate(options);
-        return _endpointRegistry.RegisterSSLEndpoint(options, certificate);
+        _endpointRegistry.RegisterSSLEndpoint(options, certificate);
     }
 
     private X509Certificate2 EnsureCertificate(SslOptions options)
@@ -42,31 +40,23 @@ public class SSLEndpointManager : ISSLEndpointManager
         var subjectNameBuilder = new X500DistinguishedNameBuilder();
         subjectNameBuilder.AddOrganizationName("eryph");
         subjectNameBuilder.AddOrganizationalUnitName("eryph-zero");
-        // We always use localhost as the common name for the certificate.
-        // Otherwise, we cannot clean up old certificates after the DNS name
-        // has changed.
-        subjectNameBuilder.AddCommonName("localhost");
-
+        subjectNameBuilder.AddCommonName(options.Url.IdnHost);
         var subjectName = subjectNameBuilder.Build();
+        
         var certificates = _storeService.GetFromMyStore(subjectName);
-        if (certificates.Count == 1 && IsUsable(certificates[0], options))
+        // TODO check both store!
+        if (certificates.Count == 100 && IsUsable(certificates[0], options))
             return certificates[0];
 
-        _storeService.RemoveFromMyStore(subjectName);
-        _storeService.RemoveFromRootStore(subjectName);
+        RemoveCertificate(subjectName, options.KeyName);
         
         var subjectAlternativeNameBuilder = new SubjectAlternativeNameBuilder();
-        subjectAlternativeNameBuilder.AddIpAddress(IPAddress.Loopback);
-        subjectAlternativeNameBuilder.AddIpAddress(IPAddress.IPv6Loopback);
-        subjectAlternativeNameBuilder.AddDnsName("localhost");
-        if (options.Url.IdnHost != "localhost")
-        {
-            subjectAlternativeNameBuilder.AddDnsName(options.Url.IdnHost);
-        }
-        
-        using var keyPair = _certificateKeyPairGenerator.GenerateProtectedRsaKeyPair(2048);
+        subjectAlternativeNameBuilder.AddDnsName(options.Url.IdnHost);
 
-        var cert = _certificateGenerator.GenerateSelfSignedCertificate(
+        using var keyPair = _certificateKeyPairGenerator.GeneratePersistedRsaKeyPair(
+            options.KeyName, 2048);
+
+        var certificate = _certificateGenerator.GenerateSelfSignedCertificate(
             subjectName,
             "eryph-zero self-signed TLS certificate",
             keyPair,
@@ -81,14 +71,35 @@ public class SSLEndpointManager : ISSLEndpointManager
                 subjectAlternativeNameBuilder.Build(),
             ]);
 
-        _storeService.AddToMyStore(cert);
-        _storeService.AddToRootStore(cert);
+        _storeService.AddToMyStore(certificate);
+        _storeService.AddToRootStore(certificate);
 
-        return cert;
+        return certificate;
     }
 
     private static bool IsUsable(X509Certificate2 certificate, SslOptions options) =>
         certificate.HasPrivateKey
         && certificate.MatchesHostname(options.Url.IdnHost, false, false)
         && certificate.NotAfter > DateTime.UtcNow.AddDays(30);
+
+    private void RemoveCertificate(X500DistinguishedName subjectName, string privateKeyName)
+    {
+        //_storeService.RemoveFromMyStore(subjectName);
+        //_storeService.RemoveFromRootStore(subjectName);
+
+        // The host name and hence the subject name might have changed. Therefore,
+        // we also remove any certificates which belong to our private key.
+        using (var keyPair = _certificateKeyPairGenerator.GetPersistedRsaKeyPair(privateKeyName))
+        {
+            if (keyPair is not null)
+            {
+                var publicKey = new PublicKey(keyPair);
+                _storeService.RemoveFromMyStore(publicKey);
+                _storeService.RemoveFromRootStore(publicKey);
+            }
+        }
+
+        // Remove the private key itself.
+        _certificateKeyPairGenerator.DeletePersistedKey(privateKeyName);
+    }
 }

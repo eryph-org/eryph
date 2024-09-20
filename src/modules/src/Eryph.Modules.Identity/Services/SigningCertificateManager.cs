@@ -23,6 +23,7 @@ public class SigningCertificateManager(
 
         return GetCertificate(
             nameBuilder.Build(),
+            "eryph-identity-signing-key",
             "eryph-zero identity token signing",
             X509KeyUsageFlags.DigitalSignature);
     }
@@ -36,12 +37,14 @@ public class SigningCertificateManager(
 
         return GetCertificate(
             nameBuilder.Build(),
+            "eryph-identity-encryption-key",
             "eryph-zero identity token encryption",
             X509KeyUsageFlags.KeyEncipherment);
     }
 
     private X509Certificate2 GetCertificate(
         X500DistinguishedName subjectName,
+        string keyName,
         string friendlyName,
         X509KeyUsageFlags keyUsage)
     {
@@ -49,9 +52,10 @@ public class SigningCertificateManager(
         if (certificates.Count == 1 && IsUsable(certificates[0], keyUsage))
             return certificates[0];
 
-        storeService.RemoveFromMyStore(subjectName);
+        RemoveCertificate(subjectName, keyName);
 
-        var keyPair = certificateKeyPairGenerator.GenerateProtectedRsaKeyPair(2048);
+        using var keyPair = certificateKeyPairGenerator.GeneratePersistedRsaKeyPair(
+            keyName, 2048);
 
         var certificate = certificateGenerator.GenerateSelfSignedCertificate(
             subjectName,
@@ -72,4 +76,23 @@ public class SigningCertificateManager(
         && certificate.NotAfter > DateTime.UtcNow.AddDays(30)
         && certificate.Extensions.OfType<X509KeyUsageExtension>()
             .Any(e => e.KeyUsages.HasFlag(keyUsage));
+
+    private void RemoveCertificate(X500DistinguishedName subjectName, string keyName)
+    {
+        storeService.RemoveFromMyStore(subjectName);
+
+        // Also remove any certificates with the same key name. They will become
+        // unusable as we are going to remove the private key.
+        using (var keyPair = certificateKeyPairGenerator.GetPersistedRsaKeyPair(keyName))
+        {
+            if (keyPair is not null)
+            {
+                var publicKey = new PublicKey(keyPair);
+                storeService.RemoveFromMyStore(publicKey);
+            }
+        }
+
+        // Remove the private key itself.
+        certificateKeyPairGenerator.DeletePersistedKey(keyName);
+    }
 }

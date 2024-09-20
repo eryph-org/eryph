@@ -11,5 +11,9 @@ public interface ICertificateKeyPairGenerator
 {
     public RSA GenerateRsaKeyPair(int keyLength);
 
-    public RSA GenerateProtectedRsaKeyPair(int keyLength);
+    public RSA GeneratePersistedRsaKeyPair(string keyName, int keyLength);
+
+    RSA? GetPersistedRsaKeyPair(string keyName);
+    
+    void DeletePersistedKey(string keyName);
 }

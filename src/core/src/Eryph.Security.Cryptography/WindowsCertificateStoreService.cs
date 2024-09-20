@@ -39,9 +39,19 @@ public class WindowsCertificateStoreService : ICertificateStoreService
             .ToList();
     }
 
+    public void RemoveFromMyStore(PublicKey subjectKey)
+    {
+        RemoveFromStore(subjectKey, StoreName.My);
+    }
+
     public void RemoveFromMyStore(X500DistinguishedName subjectName)
     {
         RemoveFromStore(subjectName, StoreName.My);
+    }
+
+    public void RemoveFromRootStore(PublicKey subjectKey)
+    {
+        RemoveFromStore(subjectKey, StoreName.Root);
     }
 
     public void RemoveFromRootStore(X500DistinguishedName subjectName)
@@ -56,6 +66,18 @@ public class WindowsCertificateStoreService : ICertificateStoreService
         var certificates = machineStore.Certificates.Find(
             X509FindType.FindBySubjectDistinguishedName,
             subjectName.Name,
+            false);
+        machineStore.RemoveRange(certificates);
+    }
+
+    private static void RemoveFromStore(PublicKey subjectKey, StoreName storeName)
+    {
+        var extension = new X509SubjectKeyIdentifierExtension(subjectKey, false);
+        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
+        machineStore.Open(OpenFlags.ReadWrite);
+        var certificates = machineStore.Certificates.Find(
+            X509FindType.FindBySubjectKeyIdentifier,
+            extension.SubjectKeyIdentifier!,
             false);
         machineStore.RemoveRange(certificates);
     }

@@ -1,5 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -8,33 +11,51 @@ namespace Eryph.Security.Cryptography.Test;
 
 public class CertificateGeneratorTests
 {
-    /*
+    
     [Fact]
-    public void GeneratesSelfSignedRootCertificate()
+    public void GenerateSelfSignedCertificate_GeneratesCorrectCertificate()
     {
-        var testKey = GetTestPrivateKey();
-        var rsaProvider = new Mock<IRSAProvider>();
-        rsaProvider.Setup(x => x.CreateRSAKeyPair(2048)).Returns(testKey);
+        var sw = Stopwatch.StartNew();
+        using var rsa = RSA.Create(2048);
+        var time = sw.ElapsedTicks;
 
-        var gen = new CertificateGenerator(rsaProvider.Object);
-        var (cert, kp) = gen.GenerateSelfSignedCertificate(
-            new X509Name("CN=test"), 10, 2048,
-            cfg =>
+
+        var subjectName = new X500DistinguishedName("CN=test");
+
+        var generator = new CertificateGenerator();
+        using var certificate = generator.GenerateSelfSignedCertificate(
+            subjectName,
+            "test certificate",
+            rsa,
+            10,
+            []);
+
+        certificate.FriendlyName.Should().Be("test certificate");
+        certificate.HasPrivateKey.Should().BeTrue();
+        certificate.Subject.Should().Be("CN=test");
+        certificate.Issuer.Should().Be("CN=test");
+        certificate.NotBefore.Should().BeCloseTo(DateTime.Now.AddDays(-1), TimeSpan.FromMinutes(10));
+        certificate.NotAfter.Should().BeCloseTo(DateTime.Now.AddDays(10), TimeSpan.FromMinutes(10));
+        certificate.SerialNumber.Should().NotBeEmpty();
+
+        certificate.Extensions.Should().SatisfyRespectively(
+            extension =>
             {
-                cfg.AddExtension(
-                    X509Extensions.BasicConstraints.Id,
-                    true, new BasicConstraints(true));
+                var basicConstraints = extension.Should().BeOfType<X509BasicConstraintsExtension>().Subject;
+                basicConstraints.CertificateAuthority.Should().BeFalse();
+
             });
 
-        kp.Should().Be(testKey);
+        /*
         cert.SubjectDN.Should().Be(new X509Name("CN=test"));
         cert.IssuerDN.Should().Be(new X509Name("CN=test"));
         cert.NotBefore.Should().BeAfter(DateTime.Now.Subtract(new TimeSpan(1, 1,0,0)));
         cert.NotAfter.Should().BeBefore(DateTime.Now.Add(new TimeSpan(10, 0, 1, 0)));
         cert.SerialNumber.Should().NotBeNull();
- 
+        */
     }
     
+    /*
     private static AsymmetricCipherKeyPair GetTestPrivateKey()
     {
         

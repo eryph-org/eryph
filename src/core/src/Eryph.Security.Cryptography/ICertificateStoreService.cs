@@ -13,5 +13,8 @@ public interface ICertificateStoreService
 
     void RemoveFromMyStore(X500DistinguishedName subjectName);
 
+    void RemoveFromMyStore(PublicKey subjectKey);
+
     void RemoveFromRootStore(X500DistinguishedName subjectName);
+    void RemoveFromRootStore(PublicKey subjectKey);
 }

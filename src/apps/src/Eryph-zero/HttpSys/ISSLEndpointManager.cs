@@ -4,5 +4,5 @@ namespace Eryph.Runtime.Zero.HttpSys;
 
 public interface ISSLEndpointManager
 {
-    Task<SSLEndpointContext> EnableSslEndpoint(SslOptions options);
+    void EnableSslEndpoint(SslOptions options);
 }

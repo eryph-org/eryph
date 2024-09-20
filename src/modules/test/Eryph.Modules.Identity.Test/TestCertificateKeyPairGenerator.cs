@@ -15,7 +15,22 @@ internal class TestCertificateKeyPairGenerator : ICertificateKeyPairGenerator
         return RSA.Create(keyLength);
     }
 
-    public RSA GenerateProtectedRsaKeyPair(int keyLength)
+    public RSA GeneratePersistedRsaKeyPair(string keyName, int keyLength)
+    {
+        throw new NotImplementedException();
+    }
+
+    public RSA GetPersistedRsaKeyPair(string keyName)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void DeletePersistedKey(string keyName)
+    {
+        throw new NotImplementedException();
+    }
+
+    public RSA GenerateProtectedRsaKeyPair(string keyName, int keyLength)
     {
         return RSA.Create(keyLength);
     }

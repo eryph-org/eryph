@@ -10,28 +10,27 @@ using Microsoft.Extensions.Hosting;
 
 namespace Eryph.Runtime.Zero.Startup;
 
-internal sealed class SslEndpointService(
+internal class SslEndpointService(
     IEndpointResolver endpointResolver,
-    ISSLEndpointManager sslEndpointManager)
-    : IHostedService, IDisposable
+    ISSLEndpointManager sslEndpointManager,
+    ISSLEndpointRegistry sslEndpointRegistry)
+    : IHostedService
 {
-    private SSLEndpointContext? _sslEndpointContext;
+    private readonly SslOptions _options = new(
+        endpointResolver.GetEndpoint("base"),
+        365 * 5,
+        Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
+        "eryph-zero-tls-key");
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        var baseUrl = endpointResolver.GetEndpoint("base");
-
-        _sslEndpointContext = await sslEndpointManager.EnableSslEndpoint(
-            new SslOptions(baseUrl, 365 * 5, Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931")));
+        sslEndpointManager.EnableSslEndpoint(_options);
+        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        sslEndpointRegistry.UnRegisterSSLEndpoint(_options);
         return Task.CompletedTask;
-    }
-
-    public void Dispose()
-    {
-        _sslEndpointContext?.Dispose();
     }
 }
