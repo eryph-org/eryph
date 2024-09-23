@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO.Abstractions;
 using System.Net.Http;
+using System.Web.Services.Description;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
@@ -64,13 +65,6 @@ namespace Eryph.Modules.VmHostAgent
             })
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
                 .AddPolicyHandler(GetRetryPolicy());
-
-
-            services.AddSingleton(serviceProvider.GetRequiredService<ISysEnvironment>());
-            services.AddSingleton(serviceProvider.GetRequiredService<IOVNSettings>());
-            services.AddOvsNode<OVSDbNode>();
-            services.AddOvsNode<OVSSwitchNode>();
-            services.AddOvsNode<OVNChassisNode>();
         }
 
         [UsedImplicitly]
@@ -91,6 +85,13 @@ namespace Eryph.Modules.VmHostAgent
             container.Register<IHostNetworkCommands<AgentRuntime>, HostNetworkCommands<AgentRuntime>>();
             container.Register<IOVSControl, OVSControl>();
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkSyncService>());
+
+            container.RegisterSingleton<OVNChassisNode>();
+            container.RegisterSingleton<OVSDbNode>();
+            container.RegisterSingleton<OVSSwitchNode>();
+            container.RegisterSingleton<IOVSService<OVNChassisNode>, OVSNodeService<OVNChassisNode>>();
+            container.RegisterSingleton<IOVSService<OVSDbNode>, OVSNodeService<OVSDbNode>>();
+            container.RegisterSingleton<IOVSService<OVSSwitchNode>, OVSNodeService<OVSSwitchNode>>();
 
             container.RegisterSingleton<IFileSystem, FileSystem>();
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
