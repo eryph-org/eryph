@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 
 namespace Eryph.Modules.Identity.Services;
 
-public interface ISigningCertificateManager
+public interface ITokenCertificateManager
 {
-    X509Certificate2 GetSigningCertificate();
-
     X509Certificate2 GetEncryptionCertificate();
+
+    X509Certificate2 GetSigningCertificate();
 }

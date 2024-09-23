@@ -42,18 +42,23 @@ namespace Eryph.Modules.Identity
 
         public override string Path => _endpointResolver.GetEndpoint("identity").ToString();
 
+
+#pragma warning disable S2325
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
+#pragma warning restore S2325
         {
-            options.AddAspNetCore()
-                .AddControllerActivation();
+            options.AddAspNetCore().AddControllerActivation();
+            options.AddLogging();
         }
 
+#pragma warning disable S2325
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
+#pragma warning restore S2325
             IHostEnvironment env)
         {
             var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
             var authority = endpointResolver.GetEndpoint("identity").ToString();
-            var signingCertManager = serviceProvider.GetRequiredService<ISigningCertificateManager>();
+            var signingCertManager = serviceProvider.GetRequiredService<ITokenCertificateManager>();
 
             services.AddDbContext<IdentityDbContext>(options =>
             {
@@ -173,8 +178,8 @@ namespace Eryph.Modules.Identity
         [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider sp, Container container)
         {
-            container.Register<ICertificateGenerator, CertificateGenerator>();
             container.Register(sp.GetRequiredService<ICertificateKeyService>);
+            container.Register(sp.GetRequiredService<ICertificateGenerator>);
             container.Register(sp.GetRequiredService<IEndpointResolver>);
             container.Register(typeof(IIdentityDbRepository<>), typeof(IdentityDbRepository<>), Lifestyle.Scoped);
             container.Register<IClientService, ClientService>(Lifestyle.Scoped);

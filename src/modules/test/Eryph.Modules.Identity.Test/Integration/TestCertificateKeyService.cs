@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.Security.Cryptography;
 
-namespace Eryph.Modules.Identity.Test;
+namespace Eryph.Modules.Identity.Test.Integration;
 
 internal class TestCertificateKeyService : ICertificateKeyService
 {
@@ -17,7 +17,7 @@ internal class TestCertificateKeyService : ICertificateKeyService
 
     public RSA GeneratePersistedRsaKey(string keyName, int keyLength)
     {
-        throw new NotImplementedException();
+        return RSA.Create(keyLength);
     }
 
     public RSA GetPersistedRsaKey(string keyName)
@@ -28,10 +28,5 @@ internal class TestCertificateKeyService : ICertificateKeyService
     public void DeletePersistedKey(string keyName)
     {
         throw new NotImplementedException();
-    }
-
-    public RSA GenerateProtectedRsaKeyPair(string keyName, int keyLength)
-    {
-        return RSA.Create(keyLength);
     }
 }

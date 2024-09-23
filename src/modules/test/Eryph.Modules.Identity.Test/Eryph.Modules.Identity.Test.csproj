@@ -25,9 +25,4 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Eryph.Modules.Identity\Eryph.Modules.Identity.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <None Update="testsigning.pfx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 </Project>

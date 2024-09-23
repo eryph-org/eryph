@@ -7,7 +7,7 @@ namespace Eryph.Security.Cryptography;
 
 public class CertificateGenerator : ICertificateGenerator
 {
-    public X509Certificate2 GenerateSelfSignedCertificate(
+    public virtual X509Certificate2 GenerateSelfSignedCertificate(
         X500DistinguishedName subjectName,
         string friendlyName,
         RSA keyPair,
@@ -33,7 +33,6 @@ public class CertificateGenerator : ICertificateGenerator
             DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(1)),
             DateTimeOffset.UtcNow.AddDays(validDays));
 
-        certificate.FriendlyName = friendlyName;
         return certificate;
     }
 }

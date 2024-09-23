@@ -8,11 +8,11 @@ using Eryph.Security.Cryptography;
 
 namespace Eryph.Modules.Identity.Services;
 
-public class SigningCertificateManager(
+public class TokenCertificateManager(
     ICertificateStoreService storeService,
     ICertificateGenerator certificateGenerator,
     ICertificateKeyService certificateKeyService)
-    : ISigningCertificateManager
+    : ITokenCertificateManager
 {
     public X509Certificate2 GetSigningCertificate()
     {
@@ -24,7 +24,7 @@ public class SigningCertificateManager(
         return GetCertificate(
             nameBuilder.Build(),
             "eryph-identity-signing-key",
-            "eryph-zero identity token signing",
+            "eryph identity token signing",
             X509KeyUsageFlags.DigitalSignature);
     }
 
@@ -38,7 +38,7 @@ public class SigningCertificateManager(
         return GetCertificate(
             nameBuilder.Build(),
             "eryph-identity-encryption-key",
-            "eryph-zero identity token encryption",
+            "eryph identity token encryption",
             X509KeyUsageFlags.KeyEncipherment);
     }
 

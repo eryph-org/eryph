@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Eryph.Security.Cryptography.Test;
 
-public class CertificateGeneratorTests
+public class WindowsCertificateGeneratorTests
 {
     [Fact]
     public void GenerateSelfSignedCertificate_GeneratesCorrectCertificate()
@@ -19,7 +19,7 @@ public class CertificateGeneratorTests
 
         var subjectName = new X500DistinguishedName("CN=test");
 
-        var generator = new CertificateGenerator();
+        var generator = new WindowsCertificateGenerator();
         using var certificate = generator.GenerateSelfSignedCertificate(
             subjectName,
             "test certificate",

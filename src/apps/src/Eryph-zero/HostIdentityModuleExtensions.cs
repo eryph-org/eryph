@@ -28,7 +28,7 @@ namespace Eryph.Runtime.Zero
                 services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, IdentityModuleFilters>();
             });
 
-            container.Register<ISigningCertificateManager, SigningCertificateManager>();
+            container.Register<ITokenCertificateManager, TokenCertificateManager>();
 
             container
                 .Register<IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
