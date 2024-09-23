@@ -18,16 +18,16 @@ public sealed class TokenCertificateFixture : IDisposable
 
         using var encryptionKey = RSA.Create(2048);
         EncryptionCertificate = certificateGenerator.GenerateSelfSignedCertificate(
-            new X500DistinguishedName("CN=eryph-identity-signing"),
-            "eryph identity token signing",
+            new X500DistinguishedName("CN=test-token-encryption"),
+            "test token encryption",
             encryptionKey,
             10,
             [new X509KeyUsageExtension(X509KeyUsageFlags.KeyEncipherment, true)]);
 
         using var signingKey = RSA.Create(2048);
         SigningCertificate = certificateGenerator.GenerateSelfSignedCertificate(
-            new X500DistinguishedName("CN=eryph-identity-signing"),
-            "eryph identity token signing",
+            new X500DistinguishedName("CN=test-token-signing"),
+            "test token signing",
             signingKey,
             10,
             [new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true)]);

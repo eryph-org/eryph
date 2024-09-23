@@ -14,32 +14,32 @@ public class TokenCertificateManager(
     ICertificateKeyService certificateKeyService)
     : ITokenCertificateManager
 {
-    public X509Certificate2 GetSigningCertificate()
-    {
-        var nameBuilder = new X500DistinguishedNameBuilder();
-        nameBuilder.AddOrganizationName("eryph");
-        nameBuilder.AddOrganizationalUnitName("identity");
-        nameBuilder.AddCommonName("eryph-identity-signing");
-
-        return GetCertificate(
-            nameBuilder.Build(),
-            "eryph-identity-signing-key",
-            "eryph identity token signing",
-            X509KeyUsageFlags.DigitalSignature);
-    }
-
     public X509Certificate2 GetEncryptionCertificate()
     {
         var nameBuilder = new X500DistinguishedNameBuilder();
         nameBuilder.AddOrganizationName("eryph");
         nameBuilder.AddOrganizationalUnitName("identity");
-        nameBuilder.AddCommonName("eryph-identity-encryption");
+        nameBuilder.AddCommonName("eryph-identity-token-encryption");
 
         return GetCertificate(
             nameBuilder.Build(),
-            "eryph-identity-encryption-key",
+            "eryph-identity-token-encryption-key",
             "eryph identity token encryption",
             X509KeyUsageFlags.KeyEncipherment);
+    }
+
+    public X509Certificate2 GetSigningCertificate()
+    {
+        var nameBuilder = new X500DistinguishedNameBuilder();
+        nameBuilder.AddOrganizationName("eryph");
+        nameBuilder.AddOrganizationalUnitName("identity");
+        nameBuilder.AddCommonName("eryph-identity-token-signing");
+
+        return GetCertificate(
+            nameBuilder.Build(),
+            "eryph-identity-token-signing-key",
+            "eryph identity token signing",
+            X509KeyUsageFlags.DigitalSignature);
     }
 
     private X509Certificate2 GetCertificate(

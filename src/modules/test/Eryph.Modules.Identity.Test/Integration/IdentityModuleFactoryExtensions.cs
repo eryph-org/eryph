@@ -70,20 +70,6 @@ public static class IdentityModuleFactoryExtensions
             });
         });
 
-    public static WebModuleFactory<IdentityModule> WithTokenCertificates(
-        this WebModuleFactory<IdentityModule> factory,
-        TokenCertificateFixture tokenCertificates)
-    {
-        return factory.WithModuleHostBuilder(hostBuilder =>
-        {
-            hostBuilder.ConfigureFrameworkServices((_, services) =>
-            {
-                services.AddTransient<IConfigureContainerFilter<IdentityModule>>(
-                    _ => new TokenCertificatesModuleFilter(tokenCertificates));
-            });
-        });
-    }
-
     public static WebModuleFactory<IdentityModule> WithXunitLogging(
         this WebModuleFactory<IdentityModule> factory,
         ITestOutputHelper testOutputHelper)
@@ -95,24 +81,6 @@ public static class IdentityModuleFactoryExtensions
                 services.AddLogging(loggingBuilder => loggingBuilder.AddXUnit(testOutputHelper));
             });
         });
-    }
-
-    private class TokenCertificatesModuleFilter(
-        TokenCertificateFixture tokenCertificate)
-        : IConfigureContainerFilter<IdentityModule>
-    {
-        public Action<IModuleContext<IdentityModule>, Container> Invoke(
-            Action<IModuleContext<IdentityModule>, Container> next)
-        {
-            return (context, container) =>
-            {
-                next(context, container);
-                container.Options.AllowOverridingRegistrations = true;
-
-                container.RegisterInstance<ITokenCertificateManager>(
-                    new TestTokenCertificateManager(tokenCertificate));
-            };
-        }
     }
 
     private class AllowAnonymous : IAuthorizationHandler

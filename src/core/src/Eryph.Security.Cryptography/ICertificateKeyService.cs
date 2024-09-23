@@ -9,9 +9,9 @@ namespace Eryph.Security.Cryptography;
 
 public interface ICertificateKeyService
 {
-    public RSA GenerateRsaKey(int keyLength);
+    RSA GenerateRsaKey(int keyLength);
 
-    public RSA GeneratePersistedRsaKey(string keyName, int keyLength);
+    RSA GeneratePersistedRsaKey(string keyName, int keyLength);
 
     RSA? GetPersistedRsaKey(string keyName);
     
