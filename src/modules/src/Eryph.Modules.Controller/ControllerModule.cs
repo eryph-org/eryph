@@ -88,8 +88,6 @@ namespace Eryph.Modules.Controller
 
             //use network services from host
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
-            container.RegisterInstance(serviceProvider.GetRequiredService<IOVNSettings>());
-            container.RegisterInstance(serviceProvider.GetRequiredService<ISysEnvironment>());
 
             container.ConfigureRebus(configurer => configurer
                 .Serialization(s => s.UseEryphSettings())

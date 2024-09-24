@@ -32,6 +32,7 @@ public static class HostVmHostAgentModuleExtensions
             return (context, container) =>
             {
                 container.UseInMemoryBus(context.ModulesHostServices);
+                container.UseOvn(context.ModulesHostServices);
                     
                 next(context, container);
             };

@@ -16,7 +16,6 @@ using Dbosoft.OVN.Nodes;
 using Eryph.App;
 using Eryph.AnsiConsole.Sys;
 using Eryph.ModuleCore;
-using Eryph.Modules.Network;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Configuration;
 using Eryph.Modules.VmHostAgent.Genetics;
@@ -295,7 +294,7 @@ internal static class Program
                     })
                     .HostModule<ZeroStartupModule>()
                     .AddVmHostAgentModule()
-                    .HostModule<NetworkModule>()
+                    .AddNetworkModule()
                     .AddControllerModule(container)
                     .AddComputeApiModule()
                     .AddIdentityModule(container)
@@ -748,8 +747,8 @@ internal static class Program
                     {
                         var ovsEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsPath), loggerFactory);
                         var ovsControl = new OVSControl(ovsEnv);
-                        await using var ovsDbNode = new OVSDbNode(ovsEnv, loggerFactory);
-                        await using var ovsVSwitchNode = new OVSSwitchNode(ovsEnv, loggerFactory);
+                        await using var ovsDbNode = new OVSDbNode(ovsEnv, new LocalOVSWithOVNSettings(), loggerFactory);
+                        await using var ovsVSwitchNode = new OVSSwitchNode(ovsEnv, new LocalOVSWithOVNSettings(), loggerFactory);
                         var cancelSource = new CancellationTokenSource(TimeSpan.FromMinutes(1));
                         // ReSharper disable AccessToDisposedClosure
 

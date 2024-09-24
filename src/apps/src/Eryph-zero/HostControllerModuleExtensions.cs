@@ -51,6 +51,7 @@ namespace Eryph.Runtime.Zero
                     next(context, container);
 
                     container.UseInMemoryBus(context.ModulesHostServices);
+                    container.UseOvn(context.ModulesHostServices);
                 };
             }
         }

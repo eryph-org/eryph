@@ -7,34 +7,27 @@ using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 
-namespace Eryph.Modules.Network
+namespace Eryph.Modules.Network;
+
+[UsedImplicitly]
+public class NetworkModule
 {
     [UsedImplicitly]
-    public class NetworkModule
+    public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
     {
+        container.RegisterSingleton(serviceProvider.GetRequiredService<IAgentControlService>);
+        container.RegisterSingleton<SyncedOVNDatabaseNode>();
+        container.RegisterSingleton<NetworkControllerNode>();
+        container.RegisterSingleton<IOVSService<SyncedOVNDatabaseNode>, OVSNodeService<SyncedOVNDatabaseNode>>();
+        container.RegisterSingleton<IOVSService<NetworkControllerNode>, OVSNodeService<NetworkControllerNode>>();
+    }
 
-        [UsedImplicitly]
-        public void ConfigureServices(IServiceProvider sp, IServiceCollection services)
-        {
-            services.AddSingleton(sp.GetRequiredService<ISysEnvironment>());
-            services.AddSingleton(sp.GetRequiredService<IOVNSettings>());
-            services.AddSingleton(sp.GetRequiredService<IAgentControlService>());
+    [UsedImplicitly]
+    public void AddSimpleInjector(SimpleInjectorAddOptions options)
+    {
+        options.AddHostedService<OwnThreadOVSNodeHostedService<SyncedOVNDatabaseNode>>();
+        options.AddHostedService<OwnThreadOVSNodeHostedService<NetworkControllerNode>>();
 
-            services.AddOvsNode<SyncedOVNDatabaseNode>();
-            services.AddOvsNode<NetworkControllerNode>();
-
-        }
-
-        [UsedImplicitly]
-        public void AddSimpleInjector(SimpleInjectorAddOptions options)
-        {
-
-
-            options.AddHostedService<OwnThreadOVSNodeHostedService<SyncedOVNDatabaseNode>>();
-            options.AddHostedService<OwnThreadOVSNodeHostedService<NetworkControllerNode>>();
-
-            options.AddLogging();
-        }
-
+        options.AddLogging();
     }
 }

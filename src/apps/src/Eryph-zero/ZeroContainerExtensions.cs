@@ -18,6 +18,7 @@ using Eryph.StateDb.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Rebus.Sagas;
 using Rebus.Subscriptions;
@@ -40,8 +41,7 @@ namespace Eryph.Runtime.Zero
             container.RegisterSingleton<ICertificateGenerator, WindowsCertificateGenerator>();
             container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
             container.RegisterInstance<IEryphOvsPathProvider>(new EryphOvsPathProvider());
-            container.Register<IOVNSettings, LocalOVSWithOVNSettings>();
-            container.Register<ISysEnvironment, EryphOVSEnvironment>();
+
             container.Register<INetworkProviderManager, NetworkProviderManager>();
             container.RegisterSingleton<INetworkSyncService, NetworkSyncServiceBridgeService>();
             container.RegisterSingleton<IAgentControlService, AgentControlService>();
@@ -67,6 +67,21 @@ namespace Eryph.Runtime.Zero
             container.Register<IRebusTransportConfigurer, DefaultTransportSelector>();
             container.Register<IRebusConfigurer<ISagaStorage>, DefaultSagaStoreSelector>();
             container.Register<IRebusConfigurer<ITimeoutManager>, DefaultTimeoutsStoreSelector>();
+
+            return container;
+        }
+
+        public static Container UseOvn(this Container container, IServiceProvider serviceProvider)
+        {
+            container.RegisterInstance(serviceProvider.GetRequiredService<IEryphOvsPathProvider>());
+
+            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+            var ovnSettings = new LocalOVSWithOVNSettings();
+            ovnSettings.Logging.File.Level = configuration.GetValue<OvsLogLevel?>(
+                "Ovn:Logging:File:Level") ?? OvsLogLevel.Off;
+            container.RegisterInstance<IOVNSettings>(ovnSettings);
+            container.RegisterInstance<IOvsSettings>(ovnSettings);
+            container.RegisterSingleton<ISysEnvironment, EryphOVSEnvironment>();
 
             return container;
         }
