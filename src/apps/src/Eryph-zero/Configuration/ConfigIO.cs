@@ -14,10 +14,13 @@ namespace Eryph.Runtime.Zero.Configuration
             _basePath = basePath;
         }
 
-        public T ReadConfigFile<T>(string id)
+        public async Task<T?> ReadConfigFile<T>(string id)
         {
             var filePath = Path.Combine(_basePath, CoerceValidFileName(id) + ".json");
-            var json = File.ReadAllText(filePath);
+            if (!File.Exists(filePath))
+                return default;
+
+            var json = await File.ReadAllTextAsync(filePath);
             return JsonSerializer.Deserialize<T>(json);
 
         }

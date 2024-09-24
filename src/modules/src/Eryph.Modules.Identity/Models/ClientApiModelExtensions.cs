@@ -1,37 +1,53 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OpenIddict.Abstractions;
-using Org.BouncyCastle.Asn1.X509;
-using Org.BouncyCastle.OpenSsl;
 
 namespace Eryph.Modules.Identity.Models
 {
     [UsedImplicitly]
     public static class ClientApiModelExtensions
     {
-
-        public static async Task<string> NewClientCertificate(this ClientApplicationDescriptor client, ICertificateGenerator certificateGenerator)
+        public static string NewClientCertificate(
+            this ClientApplicationDescriptor client,
+            ICertificateGenerator certificateGenerator,
+            ICertificateKeyService certificateKeyService)
         {
-            var (certificate, keyPair) = certificateGenerator.GenerateSelfSignedCertificate(
-                new X509Name("CN="+ client.ClientId),
-                30*365,2048);
-            client.Certificate = Convert.ToBase64String(certificate.GetEncoded());
+            if (string.IsNullOrWhiteSpace(client.ClientId))
+                throw new ArgumentException("The client ID is missing", nameof(client));
 
-            var stringBuilder = new StringBuilder();
+            using var keyPair = certificateKeyService.GenerateRsaKey(2048);
+            var subjectNameBuilder = new X500DistinguishedNameBuilder();
+            subjectNameBuilder.AddOrganizationName("eryph");
+            subjectNameBuilder.AddOrganizationalUnitName("eryph-identity-client");
+            subjectNameBuilder.AddCommonName(client.ClientId);
 
-            await using var writer = new StringWriter(stringBuilder);
-            new PemWriter(writer).WriteObject(keyPair);
+            using var certificate = certificateGenerator.GenerateSelfSignedCertificate(
+                subjectNameBuilder.Build(),
+                $"eryph identity client {client.ClientId}",
+                keyPair,
+                5 * 365,
+                [
+                    new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true),
+                    new X509EnhancedKeyUsageExtension(
+                        [Oid.FromFriendlyName("Client Authentication", OidGroup.EnhancedKeyUsage)],
+                        true),
+                ]);
 
-            return stringBuilder.ToString();
+            client.Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
+
+            return keyPair.ExportRSAPrivateKeyPem();
         }
 
         public static ClientApplicationDescriptor ToDescriptor(this Client client)
@@ -43,8 +59,8 @@ namespace Eryph.Modules.Identity.Models
                 DisplayName = client.Name
             };
 
-            descriptor.Scopes.UnionWith(client.AllowedScopes ?? Array.Empty<string>());
-            descriptor.AppRoles.UnionWith(client.Roles ?? Array.Empty<Guid>());
+            descriptor.Scopes.UnionWith(client.AllowedScopes ?? []);
+            descriptor.AppRoles.UnionWith(client.Roles ?? []);
             return descriptor;
         }
 

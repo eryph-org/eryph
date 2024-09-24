@@ -9,22 +9,13 @@ using WinHttpServerApi;
 
 namespace Eryph.Runtime.Zero.HttpSys;
 
-[SupportedOSPlatform("windows7.0")]
-public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
+[SupportedOSPlatform("windows")]
+public class WinHttpSslEndpointRegistry : ISslEndpointRegistry
 {
-
-    public SSLEndpointContext RegisterSSLEndpoint(SSLOptions options, X509Chain chain)
+    public void RegisterSslEndpoint(SslOptions options, X509Certificate2 certificate)
     {
-        if (options.AppId == null)
-            throw new ArgumentException("AppId in options is required for WinHttp SSL setup", nameof(options));
-
-        if (options.Url == null)
-            throw new ArgumentException("Url in options is required for WinHttp SSL setup", nameof(options));
-
-        var certificate = chain.ChainElements[0].Certificate;
-        var ipPort = options.Url.IsDefaultPort ? 443 : options.Url.Port;
-
-        var ipEndpoint = new IPEndPoint(IPAddress.Parse("0.0.0.0"), ipPort);
+        if (!options.Url.IsAbsoluteUri)
+            throw new ArgumentException("The Url in options must be absolute for WinHttp SSL setup", nameof(options));
 
         var sidType = WellKnownSidType.BuiltinAdministratorsSid;
         if (Environment.UserName == "SYSTEM")
@@ -50,48 +41,66 @@ public class WinHttpSSLEndpointRegistry : ISSLEndpointRegistry
                 break;
         }
         
-        if(!aclFound)
+        if (!aclFound)
             api.AddUrl(options.Url.ToString(), permissions, false);
 
-        ICertificateBindingConfiguration config = new CertificateBindingConfiguration();
-        var certificateBinding = config.Query(ipEndpoint).FirstOrDefault(x => x.AppId == options.AppId);
+        CreateCertificateBinding(options.Url, certificate.Thumbprint, options.ApplicationId);
 
-
-        if (certificateBinding != null && certificateBinding.Thumbprint != certificate.Thumbprint)
-        {
-            config.Delete(ipEndpoint);
-            certificateBinding = null;
-        }
-
-        if (certificateBinding == null)
-        {
-            certificateBinding = new CertificateBinding(
-                certificate.Thumbprint, StoreName.My, ipEndpoint, options.AppId.GetValueOrDefault());
-            config.Bind(certificateBinding);
-        }
-        
-        return new SSLEndpointContext(this, options.Url, certificateBinding);
+        // We really need to make sure that the bindings and ACL entries are cleaned up.
+        // .NET does not guarantee that the normal host shutdown, dispose handlers or
+        // even finalizers are called. Hence, we register a process exit event to clean up.
+        RegisterProcessExitEvent(options);
     }
 
-    public void UnRegisterSSLEndpoint(Uri url, CertificateBinding binding)
+    public void UnRegisterSslEndpoint(SslOptions options)
+    {
+        RemoveBindingAndAcl(options.Url.ToString(), options.ApplicationId);
+    }
+
+    private static void CreateCertificateBinding(Uri url, string thumbprint, Guid applicationId)
+    {
+        var certBindingConfig = new CertificateBindingConfiguration();
+        var existingBindings = certBindingConfig.Query().Where(x => x.AppId == applicationId);
+        foreach (var existingBinding in existingBindings)
+        {
+            certBindingConfig.Delete(existingBinding.IpPort);
+        }
+
+        var ipPort = url.IsDefaultPort ? 443 : url.Port;
+        if (url.IdnHost == "localhost")
+        {
+            certBindingConfig.Bind(new CertificateBinding(
+                thumbprint, StoreName.My, new IPEndPoint(IPAddress.Loopback, ipPort), applicationId));
+            certBindingConfig.Bind(new CertificateBinding(
+                thumbprint, StoreName.My, new IPEndPoint(IPAddress.IPv6Loopback, ipPort), applicationId));
+        }
+        else
+        {
+            certBindingConfig.Bind(new CertificateBinding(
+                thumbprint, StoreName.My, new IPEndPoint(IPAddress.Any, ipPort), applicationId));
+        }
+    }
+
+    private static void RegisterProcessExitEvent(SslOptions options)
+    {
+        var url = options.Url.ToString();
+        var applicationId = options.ApplicationId;
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => RemoveBindingAndAcl(url, applicationId);
+    }
+
+    private static void RemoveBindingAndAcl(string url, Guid applicationId)
     {
         ICertificateBindingConfiguration config = new CertificateBindingConfiguration();
-        var bindings = config.Query();
-
-        foreach (var existingBinding in 
-                 bindings.Where(x=>x.AppId == binding.AppId))
+        var existingBindings = config.Query().Where(x => x.AppId == applicationId);
+        foreach (var existingBinding in existingBindings)
         {
             config.Delete(existingBinding.IpPort);
         }
-        
-        using var api = new UrlAclManager();
 
-        foreach (var urlAcl in api.QueryUrls()
-                     .Where(x => x.Url == url.ToString()))
+        using var api = new UrlAclManager();
+        foreach (var urlAcl in api.QueryUrls().Where(x => x.Url == url))
         {
             api.DeleteUrl(urlAcl.Url);
         }
-
-        
     }
 }

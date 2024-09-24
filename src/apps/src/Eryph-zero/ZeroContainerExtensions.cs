@@ -10,6 +10,7 @@ using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Rebus;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
+using Eryph.Runtime.Zero.Configuration.Clients;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Security.Cryptography;
 using Eryph.StateDb;
@@ -34,10 +35,10 @@ namespace Eryph.Runtime.Zero
             
             container.UseSqlLite();
 
-            container.Register<IRSAProvider, RSAProvider>();
-            container.Register<ICryptoIOServices, WindowsCryptoIOServices>();
-            container.Register<ICertificateGenerator, CertificateGenerator>();
-            container.Register<ICertificateStoreService, WindowsCertificateStoreService>();
+            container.RegisterSingleton<ICertificateKeyService, WindowsCertificateKeyService>();
+            container.RegisterSingleton<ICryptoIOServices, WindowsCryptoIOServices>();
+            container.RegisterSingleton<ICertificateGenerator, WindowsCertificateGenerator>();
+            container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
             container.RegisterInstance<IEryphOvsPathProvider>(new EryphOvsPathProvider());
             container.Register<IOVNSettings, LocalOVSWithOVNSettings>();
             container.Register<ISysEnvironment, EryphOVSEnvironment>();

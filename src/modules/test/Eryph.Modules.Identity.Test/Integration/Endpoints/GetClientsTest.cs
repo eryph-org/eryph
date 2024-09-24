@@ -2,38 +2,32 @@ using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
+using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 using Xunit;
-using Client = Eryph.Modules.Identity.Models.V1.Client;
 
 namespace Eryph.Modules.Identity.Test.Integration.Endpoints;
 
-public class GetClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
+[Collection("Token certificate collection")]
+public class GetClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
 {
     private readonly WebModuleFactory<IdentityModule> _factory;
 
-    public GetClientsTest(IdentityModuleNoAuthFactory factory)
+    public GetClientsTest(
+        WebModuleFactory<IdentityModule> factory,
+        TokenCertificateFixture tokenCertificates)
     {
-        _factory = factory;
+        _factory = factory.WithIdentityHost(tokenCertificates)
+            .WithoutAuthorization();
     }
-
 
     private WebModuleFactory<IdentityModule> SetupClients()
     {
-
-
-        var factory = _factory.WithModuleConfiguration(options =>
-        {
-            options.ConfigureContainer(container =>
-            {
-                container.Options.AllowOverridingRegistrations = true;
-
-            });
-        }).WithModuleConfiguration(o =>
+        var factory = _factory.WithModuleConfiguration(o =>
         {
             o.Configure(ctx =>
             {
@@ -58,6 +52,5 @@ public class GetClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
         var result = await factory.CreateDefaultClient().GetFromJsonAsync<Client>("v1/clients/test2");
         result.Should().NotBeNull();
         result.Id.Should().Be("test2");
-
     }
 }

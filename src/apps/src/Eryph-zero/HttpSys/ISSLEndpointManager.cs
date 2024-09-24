@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 
 namespace Eryph.Runtime.Zero.HttpSys;
 
-public interface ISSLEndpointManager
+public interface ISslEndpointManager
 {
-    Task<SSLEndpointContext> EnableSslEndpoint(SSLOptions options);
+    void EnableSslEndpoint(SslOptions options);
 }

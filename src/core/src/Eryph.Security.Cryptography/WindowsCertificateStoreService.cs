@@ -2,122 +2,94 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Versioning;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using Org.BouncyCastle.Asn1.X509;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Security;
-using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
-
 
 namespace Eryph.Security.Cryptography;
 
 [SupportedOSPlatform("windows")]
 public class WindowsCertificateStoreService : ICertificateStoreService
 {
-    
-    public void AddAsRootCertificate(X509Certificate certificate)
+    public void AddToMyStore(X509Certificate2 certificate)
     {
-        using var machineStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadWrite);
-        
-        var winCert = new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate));
+        AddToStore(certificate, StoreName.My);
+    }
 
-        var storedCerts = machineStore.Certificates.Find(
+    public void AddToRootStore(X509Certificate2 certificate)
+    {
+        AddToStore(certificate, StoreName.Root);
+    }
+
+    private static void AddToStore(X509Certificate2 certificate, StoreName storeName)
+    {
+        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
+        machineStore.Open(OpenFlags.ReadWrite);
+        machineStore.Add(certificate);
+    }
+
+    public IReadOnlyList<X509Certificate2> GetFromMyStore(X500DistinguishedName subjectName)
+    {
+        return GetFromStore(subjectName, StoreName.My);
+    }
+
+    public IReadOnlyList<X509Certificate2> GetFromRootStore(X500DistinguishedName subjectName)
+    {
+        return GetFromStore(subjectName, StoreName.Root);
+    }
+
+    private static IReadOnlyList<X509Certificate2> GetFromStore(
+        X500DistinguishedName subjectName,
+        StoreName storeName)
+    {
+        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
+        machineStore.Open(OpenFlags.ReadOnly);
+
+        return machineStore.Certificates.Find(
+                X509FindType.FindBySubjectDistinguishedName,
+                subjectName.Name,
+                false)
+            .ToList();
+    }
+
+    public void RemoveFromMyStore(PublicKey subjectKey)
+    {
+        RemoveFromStore(subjectKey, StoreName.My);
+    }
+
+    public void RemoveFromMyStore(X500DistinguishedName subjectName)
+    {
+        RemoveFromStore(subjectName, StoreName.My);
+    }
+
+    public void RemoveFromRootStore(PublicKey subjectKey)
+    {
+        RemoveFromStore(subjectKey, StoreName.Root);
+    }
+
+    public void RemoveFromRootStore(X500DistinguishedName subjectName)
+    {
+        RemoveFromStore(subjectName, StoreName.Root);
+    }
+
+    private static void RemoveFromStore(X500DistinguishedName subjectName, StoreName storeName)
+    {
+        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
+        machineStore.Open(OpenFlags.ReadWrite);
+        var certificates = machineStore.Certificates.Find(
             X509FindType.FindBySubjectDistinguishedName,
-            winCert.SubjectName.Name, false);
-            
-        if(storedCerts.Count > 0)
-            machineStore.RemoveRange(storedCerts);
-            
-        machineStore.Add(winCert);
-    }
-    
-    
-    public IEnumerable<X509Certificate> GetFromMyStore(X509Name issuerName)
-    {
-        using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadOnly);
-
-
-        return machineStore.Certificates.Find(X509FindType.FindByIssuerDistinguishedName,
-                issuerName.ToString() ?? "", false)
-            .Select(DotNetUtilities.FromX509Certificate);
-
+            subjectName.Name,
+            false);
+        machineStore.RemoveRange(certificates);
     }
 
-    public IEnumerable<X509Certificate> GetFromRootStore(X509Name distinguishedName)
+    private static void RemoveFromStore(PublicKey subjectKey, StoreName storeName)
     {
-        using var machineStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadOnly);
-        var dnString = distinguishedName.ToString();
-        return machineStore.Certificates.Find(X509FindType.FindBySubjectDistinguishedName,
-                dnString ?? "", false)
-            .Select(DotNetUtilities.FromX509Certificate);
-
-    }
-
-    public void AddToMyStore(X509Certificate certificate, AsymmetricCipherKeyPair? keyPair=null)
-    {
-        using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+        var extension = new X509SubjectKeyIdentifierExtension(subjectKey, false);
+        using var machineStore = new X509Store(storeName, StoreLocation.LocalMachine);
         machineStore.Open(OpenFlags.ReadWrite);
-
-        var storedCerts = machineStore.Certificates.Find(X509FindType.FindBySubjectDistinguishedName,
-            certificate.SubjectDN.ToString(), false);
-            
-        if(storedCerts.Count > 0)
-            machineStore.RemoveRange(storedCerts);
-
-        if (keyPair != null)
-        {
-            var rsaParams = (RsaPrivateCrtKeyParameters)keyPair.Private;
-            var rsaKey = DotNetUtilities.ToRSA(rsaParams, new CspParameters
-            {
-                KeyContainerName = Guid.NewGuid().ToString(),
-                KeyNumber = (int)KeyNumber.Exchange,
-                Flags = CspProviderFlags.UseMachineKeyStore
-            });
-            var winCertWithKey = new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate));
-
-            machineStore.Add(winCertWithKey.CopyWithPrivateKey(rsaKey));
-            return;
-        }
-
-        var winCert = new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate));
-        machineStore.Add(winCert);
-
-    }
-    
-            
-    public void RemoveFromRootStore(X509Certificate certificate)
-    {
-        using var machineStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadWrite);
-        var winCert = new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate));
-
-        machineStore.Remove(winCert);
-    }
-
-    public void RemoveFromMyStore(X509Certificate certificate)
-    {
-        using var machineStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadWrite);
-        var winCert = new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate));
-
-        machineStore.Remove(winCert);
-    }
-    
-
-    public bool IsValidRootCertificate(X509Certificate certificate)
-    {
-        using var machineStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
-        machineStore.Open(OpenFlags.ReadOnly);
-
-        var winCert = new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate));
-
-        if (!winCert.Verify()) return false;
-        var storedCert = machineStore.Certificates.Find(X509FindType.FindByThumbprint, winCert.Thumbprint!, true);
-        return storedCert.Count >= 0;
+        var certificates = machineStore.Certificates.Find(
+            X509FindType.FindBySubjectKeyIdentifier,
+            extension.SubjectKeyIdentifier!,
+            false);
+        machineStore.RemoveRange(certificates);
     }
 }

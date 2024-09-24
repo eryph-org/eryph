@@ -34,28 +34,31 @@ namespace Eryph.Modules.Identity
     public class IdentityModule : WebModule
     {
         private readonly IEndpointResolver _endpointResolver;
-        private readonly IConfiguration _configuration;
 
-        public IdentityModule(IEndpointResolver endpointResolver, IConfiguration configuration)
+        public IdentityModule(IEndpointResolver endpointResolver)
         {
             _endpointResolver = endpointResolver;
-            _configuration = configuration;
         }
 
         public override string Path => _endpointResolver.GetEndpoint("identity").ToString();
 
+
+#pragma warning disable S2325
         public void AddSimpleInjector(SimpleInjectorAddOptions options)
+#pragma warning restore S2325
         {
-            options.AddAspNetCore()
-                .AddControllerActivation();
+            options.AddAspNetCore().AddControllerActivation();
+            options.AddLogging();
         }
 
+#pragma warning disable S2325
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services,
+#pragma warning restore S2325
             IHostEnvironment env)
         {
             var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
             var authority = endpointResolver.GetEndpoint("identity").ToString();
-            var signingCertManager = serviceProvider.GetRequiredService<ISigningCertificateManager>();
+            var signingCertManager = serviceProvider.GetRequiredService<ITokenCertificateManager>();
 
             services.AddDbContext<IdentityDbContext>(options =>
             {
@@ -63,9 +66,8 @@ namespace Eryph.Modules.Identity
                 options.UseOpenIddict<ApplicationEntity, AuthorizationEntity, OpenIddictEntityFrameworkCoreScope, TokenEntity, string>();
             });
 
-
-            var signingCert = signingCertManager.GetSigningCertificate(_configuration["privateConfigPath"])
-                .GetAwaiter().GetResult();
+            var encryptionCertificate = signingCertManager.GetEncryptionCertificate();
+            var signingCertificate = signingCertManager.GetSigningCertificate();
 
             services.AddMvc()
                 .AddApiProvider<IdentityModule>(op => op.ApiName = "Eryph Identity Api");
@@ -124,8 +126,8 @@ namespace Eryph.Modules.Identity
                     options.AllowClientCredentialsFlow();
 
                    // Register the signing and encryption credentials.
-                    options.AddSigningCertificate(signingCert);
-                    options.AddDevelopmentEncryptionCertificate();
+                    options.AddSigningCertificate(signingCertificate);
+                    options.AddEncryptionCertificate(encryptionCertificate);
 
                     // Register the ASP.NET Core host and configure the ASP.NET Core-specific options.
                     options.UseAspNetCore()
@@ -176,8 +178,8 @@ namespace Eryph.Modules.Identity
         [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider sp, Container container)
         {
-            container.Register<IRSAProvider, RSAProvider>();
-            container.Register<ICertificateGenerator, CertificateGenerator>();
+            container.Register(sp.GetRequiredService<ICertificateKeyService>);
+            container.Register(sp.GetRequiredService<ICertificateGenerator>);
             container.Register(sp.GetRequiredService<IEndpointResolver>);
             container.Register(typeof(IIdentityDbRepository<>), typeof(IdentityDbRepository<>), Lifestyle.Scoped);
             container.Register<IClientService, ClientService>(Lifestyle.Scoped);

@@ -101,7 +101,7 @@ public class ValidateClientSecretEvents
                 return;
             }
 
-            var certificate = new X509Certificate2(Convert.FromBase64String(application.Certificate));
+            using var certificate = new X509Certificate2(Convert.FromBase64String(application.Certificate));
             var securityKey = new X509SecurityKey(certificate);
 
 

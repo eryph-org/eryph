@@ -1,168 +1,100 @@
+using System;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Security.Cryptography;
-using Org.BouncyCastle.Asn1.X509;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Security;
-using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Eryph.Runtime.Zero.HttpSys;
 
-public class SSLEndpointManager : ISSLEndpointManager
+public class SslEndpointManager(
+    ICertificateStoreService storeService,
+    ISslEndpointRegistry endpointRegistry,
+    ICertificateGenerator certificateGenerator,
+    ICertificateKeyService certificateKeyService)
+    : ISslEndpointManager
 {
-    private readonly ICertificateGenerator _certificateGenerator;
-    private readonly ICryptoIOServices _cryptoIOServices;
-    private readonly ISSLEndpointRegistry _endpointRegistry;
-    private readonly ICertificateStoreService _storeService;
-
-    public SSLEndpointManager(
-        ICryptoIOServices cryptoIOServices,
-        ICertificateStoreService storeService,
-        ISSLEndpointRegistry endpointRegistry,
-        ICertificateGenerator certificateGenerator)
+    public void EnableSslEndpoint(SslOptions options)
     {
-        _cryptoIOServices = cryptoIOServices;
-        _storeService = storeService;
-        _endpointRegistry = endpointRegistry;
-        _certificateGenerator = certificateGenerator;
+        using var certificate = EnsureCertificate(options);
+        endpointRegistry.RegisterSslEndpoint(options, certificate);
     }
 
-
-    public async Task<SSLEndpointContext> EnableSslEndpoint(SSLOptions options)
+    private X509Certificate2 EnsureCertificate(SslOptions options)
     {
-        var (newCaCertificate, caCertificate, caKeyPair) = await EnsureAuthorityExists(options.RootCertificate);
-
-        var certificates =
-            _storeService.GetFromMyStore(caCertificate.SubjectDN).ToArray();
-
-        X509Certificate certificate = null;
-
-        if (certificates.Length == 1)
-            certificate = certificates[0];
-        else
-            //remove all certs in case of duplicates and recreate
-            foreach (var deleteCertificate in certificates)
-                _storeService.RemoveFromMyStore(deleteCertificate);
-
-        if (certificate != null)
+        var subjectNameBuilder = new X500DistinguishedNameBuilder();
+        subjectNameBuilder.AddOrganizationName("eryph");
+        subjectNameBuilder.AddOrganizationalUnitName("eryph-zero");
+        subjectNameBuilder.AddCommonName(options.Url.IdnHost);
+        var subjectName = subjectNameBuilder.Build();
+        
+        var myStoreCertificates = storeService.GetFromMyStore(subjectName);
+        var rootStoreCertificates = storeService.GetFromRootStore(subjectName);
+        if (myStoreCertificates.Count == 1
+            && rootStoreCertificates.Count == 1
+            && IsUsable(myStoreCertificates[0], rootStoreCertificates[0], options))
         {
-            var valid = certificate.VerifyLocal();
-
-            if (!valid || newCaCertificate)
-            {
-                _storeService.RemoveFromMyStore(certificate);
-                certificate = null;
-            }
+            return myStoreCertificates[0];
         }
+        
+        RemoveCertificate(subjectName, options.KeyName);
+        
+        var subjectAlternativeNameBuilder = new SubjectAlternativeNameBuilder();
+        subjectAlternativeNameBuilder.AddDnsName(options.Url.IdnHost);
 
-        certificate ??= CreateSSLCertificate(options.Certificate, caCertificate, caKeyPair);
-        var chain = new X509Chain();
-        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-        chain.ChainPolicy.ExtraStore.Add(new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate)));
-        chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
-        chain.Build(new X509Certificate2(DotNetUtilities.ToX509Certificate(certificate)));
+        using var keyPair = certificateKeyService.GeneratePersistedRsaKey(
+            options.KeyName, 2048);
 
-        return _endpointRegistry.RegisterSSLEndpoint(options, chain);
-    }
+        var certificate = certificateGenerator.GenerateSelfSignedCertificate(
+            subjectName,
+            "eryph-zero self-signed TLS certificate",
+            keyPair,
+            options.ValidDays,
+            [
+                new X509KeyUsageExtension(
+                    X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment,
+                    true),
+                new X509EnhancedKeyUsageExtension(
+                    [Oid.FromFriendlyName("Server Authentication", OidGroup.EnhancedKeyUsage)],
+                    true),
+                subjectAlternativeNameBuilder.Build(),
+            ]);
 
-    private X509Certificate CreateSSLCertificate(CertificateOptions options,
-        X509Certificate caCertificate,
-        AsymmetricCipherKeyPair caKeyPair)
-    {
-        var validEndDate = options.ValidStartDate.AddDays(options.ValidityDays);
-
-        var (certificate, keyPair) = _certificateGenerator.GenerateCertificate(
-            caKeyPair,
-            caCertificate,
-            options.Name,
-            validEndDate,
-            2048,
-            cfg =>
-            {
-                cfg.AddExtension(
-                    X509Extensions.BasicConstraints.Id, true, new BasicConstraints(false));
-
-                cfg.AddExtension(
-                    X509Extensions.KeyUsage, true, new KeyUsage(
-                        KeyUsage.NonRepudiation | KeyUsage.DigitalSignature |
-                        KeyUsage.KeyEncipherment));
-
-                cfg.AddExtension(
-                    X509Extensions.ExtendedKeyUsage, true, new ExtendedKeyUsage(
-                        KeyPurposeID.IdKPServerAuth
-                    ));
-
-                var subjectAltNames = new GeneralNames(new[]
-                {
-                    new GeneralName(GeneralName.IPAddress, IPAddress.Loopback.ToString()),
-                    new GeneralName(GeneralName.IPAddress, IPAddress.IPv6Loopback.ToString()),
-                    new GeneralName(GeneralName.DnsName, "localhost"),
-                    new GeneralName(GeneralName.DnsName, options.DnsName)
-                });
-                cfg.AddExtension(
-                    X509Extensions.SubjectAlternativeName, false, subjectAltNames);
-            }
-        );
-
-
-        _storeService.AddToMyStore(certificate, keyPair);
+        storeService.AddToMyStore(certificate);
+        storeService.AddToRootStore(certificate);
 
         return certificate;
     }
 
-    private async Task<(bool newCertificate,
-        X509Certificate caCertificate,
-        AsymmetricCipherKeyPair keyPair)> EnsureAuthorityExists(RootCertificateOptions options)
+    private static bool IsUsable(
+        X509Certificate2 myStoreCertificate,
+        X509Certificate2 rootStoreCertificate,
+        SslOptions options) =>
+        myStoreCertificate.HasPrivateKey
+        && myStoreCertificate.Thumbprint == rootStoreCertificate.Thumbprint
+        && myStoreCertificate.MatchesHostname(options.Url.IdnHost, false, false)
+        && myStoreCertificate.NotAfter > DateTime.UtcNow.AddDays(30);
+
+    private void RemoveCertificate(X500DistinguishedName subjectName, string privateKeyName)
     {
-        X509Certificate caCertificate = null;
+        storeService.RemoveFromMyStore(subjectName);
+        storeService.RemoveFromRootStore(subjectName);
 
-        var privateKeyFile = Path.Combine(options.ExportDirectory, $"{options.FileName}.key");
-        var entropy = Encoding.UTF8.GetBytes(options.Name.ToString());
-
-        var keyPair = await _cryptoIOServices.TryReadPrivateKeyFile(privateKeyFile, entropy);
-
-        if (keyPair != null)
+        // The host name and hence the subject name might have changed. Therefore,
+        // we also remove any certificates which belong to our private key.
+        using (var keyPair = certificateKeyService.GetPersistedRsaKey(privateKeyName))
         {
-            var certs = _storeService.GetFromRootStore(options.Name);
-            foreach (var cert in certs)
+            if (keyPair is not null)
             {
-                if (cert.GetPublicKey().Equals(keyPair.Public))
-                {
-                    caCertificate = cert;
-                    continue;
-                }
-
-                _storeService.RemoveFromRootStore(cert);
+                var publicKey = new PublicKey(keyPair);
+                storeService.RemoveFromMyStore(publicKey);
+                storeService.RemoveFromRootStore(publicKey);
             }
-
-            if (caCertificate != null)
-                return (false, caCertificate, keyPair);
         }
 
-        (caCertificate, keyPair) = _certificateGenerator.GenerateSelfSignedCertificate(
-            options.Name,
-            5 * 365,
-            2048,
-            cfg =>
-            {
-                cfg.AddExtension(
-                    X509Extensions.BasicConstraints.Id, true, new BasicConstraints(1));
-
-                cfg.AddExtension(
-                    X509Extensions.KeyUsage, true, new KeyUsage(
-                        KeyUsage.KeyCertSign | KeyUsage.CrlSign |
-                        KeyUsage.DigitalSignature));
-            });
-
-        _storeService.AddAsRootCertificate(caCertificate);
-        await _cryptoIOServices.WritePrivateKeyFile(privateKeyFile, keyPair, entropy);
-
-        return (true, caCertificate, keyPair);
+        // Remove the private key itself.
+        certificateKeyService.DeletePersistedKey(privateKeyName);
     }
-
-
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO.Abstractions;
 using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Configuration;
@@ -27,9 +28,7 @@ namespace Eryph.Runtime.Zero
                 services.AddTransient<IAddSimpleInjectorFilter<IdentityModule>, IdentityModuleFilters>();
             });
 
-            container.RegisterSingleton<IConfigReaderService<ClientConfigModel>, ClientConfigReaderService>();
-            container.RegisterSingleton<IConfigWriterService<ClientConfigModel>, ClientConfigWriterService>();
-            container.Register<ISigningCertificateManager, SigningCertificateManager>();
+            container.Register<ITokenCertificateManager, TokenCertificateManager>();
 
             container
                 .Register<IDbContextConfigurer<IdentityDbContext>, InMemoryIdentityDbContextConfigurer>();
@@ -48,13 +47,11 @@ namespace Eryph.Runtime.Zero
                 {
                     next(context, container);
 
-                    container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigWriterService<ClientConfigModel>>);
-                    container.Register(context.ModulesHostServices
-                        .GetRequiredService<IConfigReaderService<ClientConfigModel>>);
+                    container.RegisterSingleton<IClientConfigService, ClientConfigService>();
                     container.RegisterDecorator(typeof(IClientService),
                         typeof(ClientServiceWithConfigServiceDecorator));
 
+                    container.RegisterSingleton<IFileSystem, FileSystem>();
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityClientSeeder>();
                     container.Collection.Append<IConfigSeeder<IdentityModule>, IdentityScopesSeeder>();
                 };

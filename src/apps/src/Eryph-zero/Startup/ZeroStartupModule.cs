@@ -31,12 +31,14 @@ public class ZeroStartupModule
         container.RegisterSingleton(serviceProvider.GetRequiredService<IHostSettingsProvider>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<INetworkProviderManager>);
         container.RegisterSingleton(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>);
-        container.RegisterSingleton<ICertificateGenerator, CertificateGenerator>();
-        container.RegisterSingleton<ICertificateStoreService, WindowsCertificateStoreService>();
-        container.RegisterSingleton<ICryptoIOServices, WindowsCryptoIOServices>();
-        container.RegisterSingleton<IRSAProvider, RSAProvider>();
-        container.RegisterSingleton<ISSLEndpointManager, SSLEndpointManager>();
-        container.RegisterSingleton<ISSLEndpointRegistry, WinHttpSSLEndpointRegistry>();
+
+        container.RegisterSingleton<IClientConfigService, ClientConfigService>();
+        container.RegisterSingleton(serviceProvider.GetRequiredService<ICertificateGenerator>);
+        container.RegisterSingleton(serviceProvider.GetRequiredService<ICertificateKeyService>);
+        container.RegisterSingleton(serviceProvider.GetRequiredService<ICertificateStoreService>);
+        container.RegisterSingleton(serviceProvider.GetRequiredService<ICryptoIOServices>);
+        container.RegisterSingleton<ISslEndpointManager, SslEndpointManager>();
+        container.RegisterSingleton<ISslEndpointRegistry, WinHttpSslEndpointRegistry>();
         container.Register<ISystemClientGenerator, SystemClientGenerator>();
     }
 

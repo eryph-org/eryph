@@ -1,45 +1,41 @@
 ﻿using System;
+using System.IO.Abstractions;
+using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Configuration;
 using Eryph.Configuration.Model;
+using Eryph.Modules.Controller.Seeding;
 using Eryph.Modules.Identity;
 using Eryph.Modules.Identity.Services;
 using JetBrains.Annotations;
-using Microsoft.Extensions.Logging;
 
-namespace Eryph.Runtime.Zero.Configuration.Clients
+namespace Eryph.Runtime.Zero.Configuration.Clients;
+
+[UsedImplicitly]
+internal class IdentityClientSeeder(
+    IFileSystem fileSystem,
+    IClientService clientService)
+    : IConfigSeeder<IdentityModule>
 {
-    [UsedImplicitly]
-    internal class IdentityClientSeeder : IConfigSeeder<IdentityModule>
+    private readonly string _configPath = ZeroConfig.GetClientConfigPath();
+
+    public async Task Execute(CancellationToken stoppingToken)
     {
-        private readonly IConfigReaderService<ClientConfigModel> _clientConfigService;
-        private readonly IClientService _clientService;
-        private readonly ILogger<IdentityClientSeeder> _logger;
-
-        public IdentityClientSeeder(IConfigReaderService<ClientConfigModel> clientConfigService, ILogger<IdentityClientSeeder> logger,
-            IClientService clientService)
+        var files = fileSystem.Directory.EnumerateFiles(_configPath, "*.json");
+        foreach (var file in files)
         {
-            _clientConfigService = clientConfigService;
-            _logger = logger;
-            _clientService = clientService;
-        }
-
-        public async Task Execute(CancellationToken stoppingToken)
-        {
-            foreach (var clientConfigModel in _clientConfigService.GetConfig())
+            try
             {
-                var clientDescriptor = clientConfigModel.ToDescriptor();
-
-                try
-                {
-                   await _clientService.Add(clientDescriptor, true, stoppingToken);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "failed to load client {clientId}", clientConfigModel.ClientId);
-
-                }
+                var content = await fileSystem.File.ReadAllTextAsync(file, Encoding.UTF8, stoppingToken);
+                var clientConfig = JsonSerializer.Deserialize<ClientConfigModel>(content);
+                var clientDescriptor = clientConfig.ToDescriptor();
+                await clientService.Add(clientDescriptor, true, stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                throw new SeederException($"Failed to seed identity client from file '{file}'", ex);
             }
         }
     }

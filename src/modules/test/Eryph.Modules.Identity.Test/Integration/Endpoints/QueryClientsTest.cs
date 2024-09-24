@@ -5,42 +5,35 @@ using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
-using Eryph.IdentityDb;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 using Xunit;
-using Client = Eryph.Modules.Identity.Models.V1.Client;
 
 namespace Eryph.Modules.Identity.Test.Integration.Endpoints;
 
-public class QueryClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
+[Collection("Token certificate collection")]
+public class QueryClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
 {
     private readonly WebModuleFactory<IdentityModule> _factory;
 
-    public QueryClientsTest(IdentityModuleNoAuthFactory factory)
+    public QueryClientsTest(
+        WebModuleFactory<IdentityModule> factory,
+        TokenCertificateFixture tokenCertificates)
     {
-        _factory = factory;
+        _factory = factory.WithIdentityHost(tokenCertificates)
+            .WithoutAuthorization();
     }
 
     private WebModuleFactory<IdentityModule> SetupClients()
     {
-
-
         var factory = _factory.WithModuleConfiguration(options =>
         {
-            options.ConfigureContainer(container =>
-            {
-                container.Options.AllowOverridingRegistrations = true;
-
-            });
-        }).WithModuleConfiguration(o =>
-        {
-            o.Configure(ctx =>
+            options.Configure(ctx =>
             {
                 var container = ctx.Services.GetRequiredService<Container>();
                 using var scope = AsyncScopedLifestyle.BeginScope(container);
@@ -71,6 +64,4 @@ public class QueryClientsTest : IClassFixture<IdentityModuleNoAuthFactory>
         result.Value.First().Id.Should().Be("test1");
         result.Value.Last().Id.Should().Be("test2");
     }
-
-
 }

@@ -5,41 +5,32 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ModuleCore;
-using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.HttpSys;
 using Microsoft.Extensions.Hosting;
 
 namespace Eryph.Runtime.Zero.Startup;
 
-internal sealed class SslEndpointService(
+internal class SslEndpointService(
     IEndpointResolver endpointResolver,
-    ISSLEndpointManager sslEndpointManager)
-    : IHostedService, IDisposable
+    ISslEndpointManager sslEndpointManager,
+    ISslEndpointRegistry sslEndpointRegistry)
+    : IHostedService
 {
-    private SSLEndpointContext? _sslEndpointContext;
+    private readonly SslOptions _options = new(
+        endpointResolver.GetEndpoint("base"),
+        365 * 5,
+        Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
+        "eryph-zero-tls-key");
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        var baseUrl = endpointResolver.GetEndpoint("base");
-
-        _sslEndpointContext = await sslEndpointManager.EnableSslEndpoint(new SSLOptions(
-            "eryph-zero CA",
-            Network.FQDN,
-            DateTime.UtcNow.AddDays(-1),
-            365 * 5,
-            ZeroConfig.GetPrivateConfigPath(),
-            "eryphCA",
-            Guid.Parse("9412ee86-c21b-4eb8-bd89-f650fbf44931"),
-            baseUrl));
+        sslEndpointManager.EnableSslEndpoint(_options);
+        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        sslEndpointRegistry.UnRegisterSslEndpoint(_options);
         return Task.CompletedTask;
-    }
-
-    public void Dispose()
-    {
-        _sslEndpointContext?.Dispose();
     }
 }
