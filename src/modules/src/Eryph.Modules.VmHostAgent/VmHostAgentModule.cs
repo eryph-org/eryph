@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO.Abstractions;
 using System.Net.Http;
-using System.Web.Services.Description;
-using Dbosoft.Hosuto.HostedServices;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.Rebus;
@@ -31,7 +29,6 @@ using Polly.Extensions.Http;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
-using Rebus.Serialization.Json;
 using Rebus.Subscriptions;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
