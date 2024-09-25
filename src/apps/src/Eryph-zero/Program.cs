@@ -25,7 +25,6 @@ using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Runtime.Zero.Startup;
 using Eryph.VmManagement;
-using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
@@ -803,31 +802,9 @@ internal static class Program
                         }
                     }
 
-                    using var psEngine = new PowershellEngine(loggerFactory.CreateLogger<PowershellEngine>());
-                    var removeSwitch = from extensions in psEngine.GetObjectsAsync<VMSwitchExtension>(PsCommandBuilder.Create()
-                            .AddCommand("Get-VMSwitch")
-                            .AddCommand("Get-VMSwitchExtension")
-                            .AddParameter("Name", "dbosoft Open vSwitch Extension")).ToAsync().ToError()
-                        from uRemove in extensions.Where(e => e.Value.Enabled)
-                            .Map(e => LogProgress($"Removing vm switch '{e.Value.SwitchName}'...").Bind(_ => psEngine.RunAsync(PsCommandBuilder.Create()
-                                                   .AddCommand("Remove-VMSwitch")
-                                                   .AddParameter("Name", e.Value.SwitchName)
-                                                   .AddParameter("Force", true)).ToAsync().ToError()))
-                            .TraverseSerial(l => l).Map(_ => Unit.Default)
-                        select Unit.Default;
-
-                    _ = await removeSwitch.IfLeft(l =>
-                    {
-                        Log.Warning("VM Switch cleanup failed with error '{error}'.\nIf necessary, delete the eryph overlay switch manually.", l);
-
-                    });
-
-                    var removeDriver = DriverCommands.RemoveDriver(loggerFactory);
-                    _ = (await removeDriver).IfFail(l =>
-                    {
-                        Log.Warning("Hyper-V switch extension cleanup failed with error '{error}'.\nIf necessary, remove the Hyper-V switch extension manually.", l);
-
-                    });
+                    await DriverCommands.Run(
+                        UninstallCommands.RemoveNetworking(),
+                        loggerFactory);
 
                     if (Directory.Exists(dataDir) && deleteAppData)
                     {
