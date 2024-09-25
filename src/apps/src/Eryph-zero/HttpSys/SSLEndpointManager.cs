@@ -57,7 +57,7 @@ public class SslEndpointManager(
                     X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment,
                     true),
                 new X509EnhancedKeyUsageExtension(
-                    [Oid.FromFriendlyName("Server Authentication", OidGroup.EnhancedKeyUsage)],
+                    [Oid.FromOidValue(Oids.EnhancedKeyUsage.ServerAuthentication, OidGroup.EnhancedKeyUsage)],
                     true),
                 subjectAlternativeNameBuilder.Build(),
             ]);

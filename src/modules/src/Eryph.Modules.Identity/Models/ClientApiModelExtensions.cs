@@ -41,7 +41,7 @@ namespace Eryph.Modules.Identity.Models
                 [
                     new X509KeyUsageExtension(X509KeyUsageFlags.DigitalSignature, true),
                     new X509EnhancedKeyUsageExtension(
-                        [Oid.FromFriendlyName("Client Authentication", OidGroup.EnhancedKeyUsage)],
+                        [Oid.FromOidValue(Oids.EnhancedKeyUsage.ClientAuthentication, OidGroup.EnhancedKeyUsage)],
                         true),
                 ]);
 
