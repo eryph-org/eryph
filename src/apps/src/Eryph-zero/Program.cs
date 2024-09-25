@@ -273,6 +273,7 @@ internal static class Program
                     .UseSimpleInjector(container)
                     .ConfigureAppConfiguration((_, config) =>
                     {
+                        config.AddEnvironmentVariables("ERYPH_");
                         config.AddInMemoryCollection(new Dictionary<string, string>
                         {
                             { "warmupMode", warmupMode.ToString() },
@@ -367,6 +368,7 @@ internal static class Program
                     .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: false);
 
                 config.AddEnvironmentVariables();
+                config.AddEnvironmentVariables("ERYPH_");
 
                 if (args is { Length: > 0 })
                 {
