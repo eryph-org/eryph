@@ -19,13 +19,13 @@ internal class UninstallCommands
 {
     public static Aff<DriverCommandsRuntime, Unit> RemoveNetworking() =>
         from _1 in RemoveOverlaySwitch()
-                   | @catch(e => logError<UninstallCommands>(
-                       e, "The eryph overlay switch could not be remove. If necessary, remove it manually."))
+                   | @catch(e => logWarning<UninstallCommands>(
+                       e, "The eryph overlay switch could not be removed. If necessary, remove it manually."))
         from _2 in RemoveNetNats()
-                   | @catch(e => logError<UninstallCommands>(
-                       e, "The NAT configurations could not be remove. If necessary, remove them manually."))
+                   | @catch(e => logWarning<UninstallCommands>(
+                       e, "The NAT configurations could not be removed. If necessary, remove them manually."))
         from _3 in RemoveDrivers()
-                   | @catch(e => logError<UninstallCommands>(
+                   | @catch(e => logWarning<UninstallCommands>(
                        e, "The Hyper-V switch extension could not be removed. If necessary, remove it manually."))
         select unit;
 

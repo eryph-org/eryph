@@ -121,7 +121,7 @@ internal static class PowerShellInvokeExtensions
         if (error != null)
         {
             var message =
-                $" Command: {error.InvocationInfo?.MyCommand}, Error: {error}, Exception: {error.Exception}";
+                $"Command: {error.InvocationInfo?.MyCommand}, Error: {error}, Exception: {error.Exception}";
 
             log.LogError(error.Exception, message);
 
