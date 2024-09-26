@@ -11,7 +11,7 @@ namespace Eryph.Modules.ComputeApi.Model;
 
 public class ResourceSpecBuilder<TResource>(IUserRightsProvider userRightsProvider)
     : ISingleEntitySpecBuilder<SingleEntityRequest, TResource>,
-        IListEntitySpecBuilder<ListRequest, TResource>
+        IListEntitySpecBuilder<ProjectListRequest, TResource>
     where TResource : Resource
 {
     public ISingleResultSpecification<TResource> GetSingleEntitySpec(SingleEntityRequest request, AccessRight accessRight)
@@ -26,12 +26,21 @@ public class ResourceSpecBuilder<TResource>(IUserRightsProvider userRightsProvid
             CustomizeQuery);
     }
 
-    public ISpecification<TResource> GetEntitiesSpec(ListRequest request)
+    public ISpecification<TResource> GetEntitiesSpec(ProjectListRequest request)
     {
+        Guid? projectId = null;
+        if (request.ProjectId is not null)
+        { 
+            if (!Guid.TryParse(request.ProjectId, out var pId))
+                throw new ArgumentException("The Project ID is not a GUID.", nameof(request));
+
+            projectId = pId;
+        } 
+        
         return new ResourceSpecs<TResource>.GetAll(
             userRightsProvider.GetAuthContext(),
             userRightsProvider.GetResourceRoles<TResource>(AccessRight.Read),
-            request.ProjectId,
+            projectId,
             CustomizeQuery);
     }
 

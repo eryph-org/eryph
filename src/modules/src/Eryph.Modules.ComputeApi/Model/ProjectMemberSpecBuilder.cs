@@ -26,8 +26,11 @@ public class ProjectMemberSpecBuilder(IUserRightsProvider userRightsProvider) :
 
     public ISpecification<ProjectRoleAssignment> GetEntitiesSpec(ProjectMembersListRequest request)
     {
+        if (!Guid.TryParse(request.ProjectId, out var projectId))
+            throw new ArgumentException("The ID is not a GUID", nameof(request));
+
         return new ProjectRoleAssignmentSpecs.GetByProject(
-            request.ProjectId.GetValueOrDefault(),
+            projectId,
             userRightsProvider.GetAuthContext(),
             userRightsProvider.GetProjectRoles(AccessRight.Read));
     }
