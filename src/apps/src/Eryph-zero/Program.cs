@@ -770,8 +770,10 @@ internal static class Program
                             let controlCancel = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                             from uCleanup in LogProgress("Removing OVS bridges....")
                             from bridges in ovsControl.GetBridges(controlCancel.Token)
-                            from uRemove in bridges.Map(b => ovsControl.RemoveBridge(b.Name, controlCancel.Token))
-                                .TraverseSerial(l => l).Map(_ => Unit.Default)
+                            from uRemove in bridges
+                                .Map(b => ovsControl.RemoveBridge(b.Name, controlCancel.Token)
+                                    .MapLeft(l => Error.New($"Failed to remove OVS bridge {b.Name}.", l)))
+                                .SequenceSerial().Map(_ => Unit.Default)
                             let stopCancel = new CancellationTokenSource(TimeSpan.FromMinutes(5))
 
                             from uStopLog in LogProgress("Stopping temporary chassis services...")
