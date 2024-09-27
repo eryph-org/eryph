@@ -13,9 +13,9 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
 public class List(
-    [NotNull] IListRequestHandler<ListRequest, VirtualNetwork, StateDb.Model.VirtualNetwork> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<ListRequest, StateDb.Model.VirtualNetwork> specBuilder)
-    : ListEntityEndpoint<ListRequest, VirtualNetwork, StateDb.Model.VirtualNetwork>(listRequestHandler, specBuilder)
+    [NotNull] IProjectListRequestHandler<ProjectListRequest, VirtualNetwork, StateDb.Model.VirtualNetwork> listRequestHandler,
+    [NotNull] IListEntitySpecBuilder<ProjectListRequest, StateDb.Model.VirtualNetwork> specBuilder)
+    : ListEntityEndpoint<ProjectListRequest, VirtualNetwork, StateDb.Model.VirtualNetwork>(listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
     [HttpGet("vnetworks")]
@@ -23,11 +23,11 @@ public class List(
         Summary = "Get list of virtual networks",
         Description = "Get list of virtual networks",
         OperationId = "VNetworks_List",
-        Tags = ["Virtual networks"])
+        Tags = ["Virtual Networks"])
     ]
     [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualNetwork>))]
     public override Task<ActionResult<ListResponse<VirtualNetwork>>> HandleAsync(
-        [FromRoute] ListRequest request,
+        [FromRoute] ProjectListRequest request,
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(request, cancellationToken);

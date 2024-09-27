@@ -13,9 +13,9 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class List(
-    [NotNull] IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<ListRequest, StateDb.Model.Catlet> specBuilder)
-    : ListEntityEndpoint<ListRequest, Catlet, StateDb.Model.Catlet>(listRequestHandler, specBuilder)
+    [NotNull] IProjectListRequestHandler<ProjectListRequest, Catlet, StateDb.Model.Catlet> listRequestHandler,
+    [NotNull] IListEntitySpecBuilder<ProjectListRequest, StateDb.Model.Catlet> specBuilder)
+    : ListEntityEndpoint<ProjectListRequest, Catlet, StateDb.Model.Catlet>(listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("catlets")]
@@ -27,7 +27,7 @@ public class List(
     ]
     [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Catlet>))]
     public override Task<ActionResult<ListResponse<Catlet>>> HandleAsync(
-        [FromRoute] ListRequest request,
+        [FromRoute] ProjectListRequest request,
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(request, cancellationToken);

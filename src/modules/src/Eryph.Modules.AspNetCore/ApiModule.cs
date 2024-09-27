@@ -92,6 +92,13 @@ namespace Eryph.Modules.AspNetCore
             container.RegisterConditional(typeof(IGetRequestHandler<,>),
                 typeof(GetRequestHandler<,>), Lifestyle.Scoped,
                 c => !c.Handled);
+
+            container.RegisterConditional(
+                typeof(IProjectListRequestHandler<,,>),
+                typeof(ProjectListRequestHandler<,,>),
+                Lifestyle.Scoped,
+                c => !c.Handled);
+
             container.RegisterConditional(
                 typeof(IListRequestHandler<,,>),
                 typeof(ListRequestHandler<,,>),

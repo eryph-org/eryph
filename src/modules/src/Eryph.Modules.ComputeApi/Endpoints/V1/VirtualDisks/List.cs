@@ -13,9 +13,9 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 
 public class List(
-    [NotNull] IListRequestHandler<ListRequest, VirtualDisk, StateDb.Model.VirtualDisk> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<ListRequest, StateDb.Model.VirtualDisk> specBuilder)
-    : ListEntityEndpoint<ListRequest, VirtualDisk, StateDb.Model.VirtualDisk>(listRequestHandler, specBuilder)
+    [NotNull] IListRequestHandler<ProjectListRequest, VirtualDisk, StateDb.Model.VirtualDisk> listRequestHandler,
+    [NotNull] IListEntitySpecBuilder<ProjectListRequest, StateDb.Model.VirtualDisk> specBuilder)
+    : ListEntityEndpoint<ProjectListRequest, VirtualDisk, StateDb.Model.VirtualDisk>(listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("virtualdisks")]
@@ -27,7 +27,7 @@ public class List(
     ]
     [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualDisk>))]
     public override Task<ActionResult<ListResponse<VirtualDisk>>> HandleAsync(
-        [FromRoute] ListRequest request,
+        [FromRoute] ProjectListRequest request,
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(request, cancellationToken);
