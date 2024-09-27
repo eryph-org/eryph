@@ -7,7 +7,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
 {
     public abstract class ListEntityEndpoint<TRequest, TResult, TEntity>
         : ListEndpoint<TRequest, TResult, TEntity> 
-        where TRequest : IListRequest
+        where TRequest : IListEntitiesRequest
         where TEntity : class
     {
         private readonly IListEntitySpecBuilder<TRequest,TEntity> _specBuilder;

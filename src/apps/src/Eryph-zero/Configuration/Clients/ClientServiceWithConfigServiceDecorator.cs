@@ -14,7 +14,7 @@ internal class ClientServiceWithConfigServiceDecorator(
     IClientConfigService configService)
     : IClientService
 {
-    public ValueTask<IEnumerable<ClientApplicationDescriptor>> List(
+    public ValueTask<IReadOnlyList<ClientApplicationDescriptor>> List(
         Guid tenantId,
         CancellationToken cancellationToken)
     {

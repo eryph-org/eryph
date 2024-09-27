@@ -14,7 +14,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1;
 
 public class GeneSpecBuilder
     : ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Gene>,
-        IListEntitySpecBuilder<ListRequest, StateDb.Model.Gene>
+        IListEntitySpecBuilder<ListEntitiesRequest, StateDb.Model.Gene>
 {
     public ISingleResultSpecification<StateDb.Model.Gene> GetSingleEntitySpec(
         SingleEntityRequest request,
@@ -27,7 +27,7 @@ public class GeneSpecBuilder
     }
 
     public ISpecification<StateDb.Model.Gene> GetEntitiesSpec(
-        ListRequest request)
+        ListEntitiesRequest request)
     {
         return new GeneSpecs.GetAll();
     }

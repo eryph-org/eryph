@@ -36,7 +36,7 @@ public class Create(
         OperationId = "ProjectMembers_Add",
         Tags = ["ProjectMembers"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] NewProjectMemberRequest request,
         CancellationToken cancellationToken = default)
     {

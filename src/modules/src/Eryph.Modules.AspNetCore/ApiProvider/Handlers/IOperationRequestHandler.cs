@@ -12,7 +12,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 
 public interface IOperationRequestHandler<TEntity> where TEntity : class
 {
-    Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(
+    Task<ActionResult<ListEntitiesResponse<Operation>>> HandleOperationRequest(
         Func<object> createOperationFunc,
         CancellationToken cancellationToken);
 }

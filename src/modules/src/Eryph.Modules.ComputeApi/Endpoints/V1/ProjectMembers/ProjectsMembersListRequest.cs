@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
-public class ProjectMembersListRequest: ListByProjectRequest
+public class ProjectMembersListRequest: ListEntitiesInProjectRequest
 {
 
 }

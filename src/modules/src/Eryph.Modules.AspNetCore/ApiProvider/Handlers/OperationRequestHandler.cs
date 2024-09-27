@@ -38,7 +38,7 @@ public class OperationRequestHandler<TEntity>(
 {
     private readonly IUserRightsProvider _userRightsProvider = userRightsProvider;
 
-    public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(
+    public async Task<ActionResult<ListEntitiesResponse<Operation>>> HandleOperationRequest(
         Func<object> createOperationFunc,
         CancellationToken cancellationToken)
     {

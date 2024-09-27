@@ -9,9 +9,9 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
 {
     public interface IListRequestHandler<TRequest, TResult, TEntity>
         where TEntity : class
-        where TRequest : IListRequest
+        where TRequest : IListEntitiesRequest
     {
-        Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
+        Task<ActionResult<ListEntitiesResponse<TResult>>> HandleListRequest(
             TRequest request,
             Func<TRequest, ISpecification<TEntity>> createSpecificationFunc, CancellationToken cancellationToken);
     }

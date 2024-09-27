@@ -38,7 +38,7 @@ public class EntityOperationRequestHandler<TEntity>(
 {
     private readonly IUserRightsProvider _userRightsProvider = userRightsProvider;
 
-    public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(
+    public async Task<ActionResult<ListEntitiesResponse<Operation>>> HandleOperationRequest(
         Func<ISingleResultSpecification<TEntity>?> specificationFunc,
         Func<TEntity, object> createOperationFunc,
         CancellationToken cancellationToken)

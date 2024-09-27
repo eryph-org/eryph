@@ -9,7 +9,7 @@ using System;
 namespace Eryph.Modules.ComputeApi.Model;
 
 public class VirtualNetworkSpecBuilder : ResourceSpecBuilder<StateDb.Model.VirtualNetwork>,
-    IListEntitySpecBuilder<ProjectListRequest, StateDb.Model.VirtualNetwork>
+    IListEntitySpecBuilder<ListEntitiesFilteredByProjectRequest, StateDb.Model.VirtualNetwork>
 {
     private readonly IUserRightsProvider _userRightsProvider;
 
@@ -18,7 +18,7 @@ public class VirtualNetworkSpecBuilder : ResourceSpecBuilder<StateDb.Model.Virtu
         _userRightsProvider = userRightsProvider;
     }
 
-    public ISpecification<StateDb.Model.VirtualNetwork> GetEntitiesSpec(ProjectListRequest request)
+    public ISpecification<StateDb.Model.VirtualNetwork> GetEntitiesSpec(ListEntitiesFilteredByProjectRequest request)
     {
         Guid? projectId = null;
         if (request.ProjectId is not null)

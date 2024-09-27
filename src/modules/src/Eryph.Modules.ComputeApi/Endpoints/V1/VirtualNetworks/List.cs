@@ -13,9 +13,9 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
 public class List(
-    [NotNull] IProjectListRequestHandler<ProjectListRequest, VirtualNetwork, StateDb.Model.VirtualNetwork> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<ProjectListRequest, StateDb.Model.VirtualNetwork> specBuilder)
-    : ListEntityEndpoint<ProjectListRequest, VirtualNetwork, StateDb.Model.VirtualNetwork>(listRequestHandler, specBuilder)
+    [NotNull] IProjectListRequestHandler<ListEntitiesFilteredByProjectRequest, VirtualNetwork, StateDb.Model.VirtualNetwork> listRequestHandler,
+    [NotNull] IListEntitySpecBuilder<ListEntitiesFilteredByProjectRequest, StateDb.Model.VirtualNetwork> specBuilder)
+    : ListEntityEndpoint<ListEntitiesFilteredByProjectRequest, VirtualNetwork, StateDb.Model.VirtualNetwork>(listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
     [HttpGet("vnetworks")]
@@ -25,9 +25,9 @@ public class List(
         OperationId = "VNetworks_List",
         Tags = ["Virtual Networks"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualNetwork>))]
-    public override Task<ActionResult<ListResponse<VirtualNetwork>>> HandleAsync(
-        [FromRoute] ProjectListRequest request,
+    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListEntitiesResponse<VirtualNetwork>))]
+    public override Task<ActionResult<ListEntitiesResponse<VirtualNetwork>>> HandleAsync(
+        [FromRoute] ListEntitiesFilteredByProjectRequest request,
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(request, cancellationToken);

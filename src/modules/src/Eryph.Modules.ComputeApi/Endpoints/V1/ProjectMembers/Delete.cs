@@ -31,7 +31,7 @@ public class Delete(
         OperationId = "ProjectMembers_Remove",
         Tags = ["ProjectMembers"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
         [FromRoute] ProjectMemberRequest request,
         CancellationToken cancellationToken = default)
     {

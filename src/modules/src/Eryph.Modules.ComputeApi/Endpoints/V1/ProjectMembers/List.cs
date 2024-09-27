@@ -26,8 +26,8 @@ public class List(
         OperationId = "ProjectMembers_List",
         Tags = ["ProjectMembers"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<ProjectMemberRole>))]
-    public override Task<ActionResult<ListResponse<ProjectMemberRole>>> HandleAsync(
+    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListEntitiesResponse<ProjectMemberRole>))]
+    public override Task<ActionResult<ListEntitiesResponse<ProjectMemberRole>>> HandleAsync(
         [FromRoute] ProjectMembersListRequest request,
         CancellationToken cancellationToken = default)
     {

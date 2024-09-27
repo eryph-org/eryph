@@ -52,7 +52,7 @@ public class Create(
         OperationId = "Catlets_Create",
         Tags = ["Catlets"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] NewCatletRequest request,
         CancellationToken cancellationToken = default)
     {

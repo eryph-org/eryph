@@ -47,7 +47,7 @@ namespace Eryph.Modules.ComputeApi
                 GetCatletConfigurationHandler>();
             container.Register<IGetRequestHandler<StateDb.Model.Catlet, Catlet>,
                 GetCatletHandler>();
-            container.Register<IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet>,
+            container.Register<IListRequestHandler<ListEntitiesRequest, Catlet, StateDb.Model.Catlet>,
                 ListCatletHandler>();
             container.Register<IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage>, GetGeneHandler>();
             container.Register<IGetRequestHandler<StateDb.Model.Project, VirtualNetworkConfiguration>,
