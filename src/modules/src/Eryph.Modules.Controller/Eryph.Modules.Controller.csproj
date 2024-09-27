@@ -13,7 +13,7 @@
     <ProjectReference Include="..\..\..\data\src\Eryph.StateDb\Eryph.StateDb.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.6" />
+    <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.8" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.6.1" />
     <PackageReference Include="Eryph.ConfigModel.System.Json" Version="0.6.1" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
