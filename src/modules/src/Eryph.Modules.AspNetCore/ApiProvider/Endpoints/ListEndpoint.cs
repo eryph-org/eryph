@@ -11,7 +11,8 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 [Route("v{version:apiVersion}")]
 public abstract class ListEndpoint<TRequest,TResult,TEntity> : EndpointBaseAsync
     .WithRequest<TRequest>
-    .WithActionResult<ListEntitiesResponse<TResult>> where TEntity : class
+    .WithActionResult<ListEntitiesResponse<TResult>>
+    where TEntity : class
     where TRequest : IListEntitiesRequest
 {
     private readonly IListRequestHandler<TRequest, TResult, TEntity> _listRequestHandler;

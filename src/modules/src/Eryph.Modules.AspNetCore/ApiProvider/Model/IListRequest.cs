@@ -2,6 +2,4 @@
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model;
 
-public interface IListEntitiesRequest
-{
-}
+public interface IListRequest;

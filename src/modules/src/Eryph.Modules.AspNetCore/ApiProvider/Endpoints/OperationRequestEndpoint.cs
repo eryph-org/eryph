@@ -17,7 +17,7 @@ public abstract class OperationRequestEndpoint<TRequest, TEntity>(
     ISingleEntitySpecBuilder<TRequest, TEntity> specBuilder)
     : EndpointBaseAsync
         .WithRequest<TRequest>
-        .WithActionResult<ListEntitiesResponse<Operation>>
+        .WithActionResult<Operation>
     where TEntity : class
     where TRequest : SingleEntityRequest
 {
@@ -29,7 +29,7 @@ public abstract class OperationRequestEndpoint<TRequest, TEntity>(
     }
 
     [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]
-    public override Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(TRequest request,
+    public override Task<ActionResult<Operation>> HandleAsync(TRequest request,
         CancellationToken cancellationToken = default)
     {
         return operationHandler.HandleOperationRequest(() => CreateSpecification(request),
@@ -42,13 +42,13 @@ public abstract class OperationRequestEndpoint<TEntity>(
     IOperationRequestHandler<TEntity> operationHandler)
     : EndpointBaseAsync
         .WithoutRequest
-        .WithActionResult<ListEntitiesResponse<Operation>>
+        .WithActionResult<Operation>
     where TEntity : class
 {
     protected abstract object CreateOperationMessage();
 
     [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]
-    public override Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
+    public override Task<ActionResult<Operation>> HandleAsync(
         CancellationToken cancellationToken = default)
     {
         return operationHandler.HandleOperationRequest(CreateOperationMessage, cancellationToken);

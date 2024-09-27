@@ -26,7 +26,7 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         _repository = repository;
     }
 
-    public async ValueTask<IList<TDescriptor>> List(Guid tenantId, CancellationToken cancellationToken)
+    public async ValueTask<IReadOnlyList<TDescriptor>> List(Guid tenantId, CancellationToken cancellationToken)
     {
         var clients = await _repository.ListAsync(GetListSpec(tenantId), cancellationToken);
         var populatedClients = await clients.ToSeq().Map(async entity =>
