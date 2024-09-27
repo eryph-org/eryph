@@ -25,7 +25,6 @@ using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Runtime.Zero.Startup;
 using Eryph.VmManagement;
-using Eryph.VmManagement.Data.Core;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
@@ -40,8 +39,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.Win32;
 using Serilog;
+using Serilog.Events;
 using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
+using Serilog.Templates;
+using Serilog.Templates.Themes;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 using Spectre.Console;
@@ -686,16 +688,17 @@ internal static class Program
             outWriter = File.CreateText(outFile.FullName);
             Console.SetOut(outWriter);
             Console.SetError(outWriter);
-
         }
 
         try
         {
-
+            var consoleTemplate = new ExpressionTemplate(
+                "[{@t:yyyy-MM-dd HH:mm:ss.fff} {@l:u3}] {@m}\n{#if @x is not null}{Inspect(@x).Message}\n{#end}");
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
                 .Enrich.FromLogContext()
-                .WriteTo.Console(theme: ConsoleTheme.None)
+                .WriteTo.Logger(c =>
+                    c.MinimumLevel.Is(LogEventLevel.Information)
+                    .WriteTo.Console(consoleTemplate))
                 .CreateLogger();
 
             return await AdminGuard.CommandIsElevated(async () =>
@@ -705,7 +708,6 @@ internal static class Program
 
                 var ovsDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                     "openvswitch");
-
 
                 var loggerFactory = new SerilogLoggerFactory(Log.Logger);
                 var sysEnv = new SystemEnvironment(loggerFactory);
@@ -724,16 +726,14 @@ internal static class Program
                                 var fin = await syncClient.SendSyncCommand("STOP_VSWITCH", cancelSource1.Token)
                                     .Bind(_ => syncClient.SendSyncCommand("STOP_OVSDB", cancelSource1.Token))
                                     .Run();
-                                fin.IfFail(l =>
-                                    Log.Logger.Debug("Failed to send stop chassis commands. Error: {error}", l));
+                                fin.IfFail(l => Log.Logger.Debug(l, "Failed to send stop chassis commands."));
                                 return Unit.Default; // ignore error from stop command - we can also take control of existing processes
                             }).ToAsync()
                             : Unit.Default
 
                         from uStopped in serviceExists
-                            ?
-                            LogProgress("Stopping running service...").Bind(_ =>
-                                serviceManager.EnsureServiceStopped(cancelSource1.Token))
+                            ? LogProgress("Stopping running service...")
+                                .Bind(_ => serviceManager.EnsureServiceStopped(cancelSource1.Token))
                             : Unit.Default
                         let cancelSource2 = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                         from uUninstalled in serviceExists
@@ -770,8 +770,10 @@ internal static class Program
                             let controlCancel = new CancellationTokenSource(TimeSpan.FromMinutes(5))
                             from uCleanup in LogProgress("Removing OVS bridges....")
                             from bridges in ovsControl.GetBridges(controlCancel.Token)
-                            from uRemove in bridges.Map(b => ovsControl.RemoveBridge(b.Name, controlCancel.Token))
-                                .TraverseSerial(l => l).Map(_ => Unit.Default)
+                            from uRemove in bridges
+                                .Map(b => ovsControl.RemoveBridge(b.Name, controlCancel.Token)
+                                    .MapLeft(l => Error.New($"Failed to remove OVS bridge {b.Name}.", l)))
+                                .SequenceSerial().Map(_ => Unit.Default)
                             let stopCancel = new CancellationTokenSource(TimeSpan.FromMinutes(5))
 
                             from uStopLog in LogProgress("Stopping temporary chassis services...")
@@ -782,8 +784,7 @@ internal static class Program
                         
                         _ = await ovsCleanup.IfLeft(l =>
                         {
-                            Log.Warning("OVS Cleanup failed with error '{error}'.\nIf necessary, delete OVS network adapters manually.", l);
-
+                            Log.Logger.Warning(l, "The OVS cleanup failed. If necessary, delete the OVS network adapters manually.");
                         });
 
                         // ReSharper restore AccessToDisposedClosure
@@ -798,59 +799,40 @@ internal static class Program
                         }
                         catch (Exception ex)
                         {
-                            Log.Logger.Debug(ex, "Failed to delete ovs data files from '{ovsPath}'", ovsDataDir);
-                            Log.Warning("OVS data files cleanup failed with error '{error}'. \nIf necessary, delete OVS data files manually from {ovsPath}", ex.Message, ovsDataDir);
+                            Log.Logger.Warning(ex, "The OVS data files cleanup failed. If necessary, delete the OVS data files manually from '{OvsPath}'.", ovsDataDir);
                         }
                     }
 
-                    using var psEngine = new PowershellEngine(loggerFactory.CreateLogger<PowershellEngine>());
-                    var removeSwitch = from extensions in psEngine.GetObjectsAsync<VMSwitchExtension>(PsCommandBuilder.Create()
-                            .AddCommand("Get-VMSwitch")
-                            .AddCommand("Get-VMSwitchExtension")
-                            .AddParameter("Name", "dbosoft Open vSwitch Extension")).ToAsync().ToError()
-                        from uRemove in extensions.Where(e => e.Value.Enabled)
-                            .Map(e => LogProgress($"Removing vm switch '{e.Value.SwitchName}'...").Bind(_ => psEngine.RunAsync(PsCommandBuilder.Create()
-                                                   .AddCommand("Remove-VMSwitch")
-                                                   .AddParameter("Name", e.Value.SwitchName)
-                                                   .AddParameter("Force", true)).ToAsync().ToError()))
-                            .TraverseSerial(l => l).Map(_ => Unit.Default)
-                        select Unit.Default;
-
-                    _ = await removeSwitch.IfLeft(l =>
-                    {
-                        Log.Warning("VM Switch cleanup failed with error '{error}'.\nIf necessary, delete the eryph overlay switch manually.", l);
-
-                    });
-
-                    var removeDriver = DriverCommands.RemoveDriver(loggerFactory);
-                    _ = (await removeDriver).IfFail(l =>
-                    {
-                        Log.Warning("Hyper-V switch extension cleanup failed with error '{error}'.\nIf necessary, remove the Hyper-V switch extension manually.", l);
-
-                    });
+                    await DriverCommands.Run(
+                        UninstallCommands.RemoveNetworking(),
+                        loggerFactory);
 
                     if (Directory.Exists(dataDir) && deleteAppData)
                     {
-                        Log.Logger.Information("Removing data files...");
-                        Directory.Delete(dataDir, true);
+                        try
+                        {
+                            Log.Logger.Information("Removing data files...");
+                            Directory.Delete(dataDir, true);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Logger.Warning(ex, "The data files cleanup failed. If necessary, delete data files manually from '{DataDir}'.", dataDir);
+                        }
                     }
 
                     UnregisterUninstaller();
 
-                    Log.Logger.Information("Uninstallation completed");
+                    Log.Logger.Information("Uninstallation completed.");
 
                     return 0;
 
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("Uninstallation failed. Error: {message}", ex.Message);
-                    Log.Debug(ex, "Error Details");
+                    Log.Logger.Error(ex, "Uninstallation failed.");
 
                     return -1;
                 }
-                
-
             });
         }
         finally
@@ -863,9 +845,8 @@ internal static class Program
 
                 if (deleteOutFile)
                 {
-                    Task.Delay(2000).GetAwaiter().GetResult();
+                    await Task.Delay(2000);
                     File.Delete(outFile.FullName);
-
                 }
             }
         }

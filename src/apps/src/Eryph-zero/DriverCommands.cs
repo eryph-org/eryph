@@ -4,13 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ModuleCore;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Sys;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero;
@@ -66,16 +65,6 @@ internal static class DriverCommands
     {
         return Run(ensureDriver(
             ovsRunDir, canInstall, canUpgrade),
-            loggerFactory);
-    }
-
-    public static Task<Fin<Unit>> RemoveDriver(
-        ILoggerFactory loggerFactory)
-    {
-        return Run(
-            from _ in uninstallDriver()
-            from __ in removeAllDriverPackages()
-            select unit,
             loggerFactory);
     }
 
