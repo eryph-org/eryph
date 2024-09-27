@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations;
 
-public class OperationsListRequest : ListRequest
+public class OperationsListRequest : ListEntitiesRequest
 {
     /// <summary>
     /// Filters returned log entries by the requested timestamp

@@ -15,9 +15,9 @@ internal class ListRequestHandler<TRequest, TResult, TModel>(
     IUserRightsProvider userRightsProvider)
     : IListRequestHandler<TRequest, TResult, TModel>
     where TModel : class
-    where TRequest : IListRequest
+    where TRequest : IListEntitiesRequest
 {
-    public async Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
+    public async Task<ActionResult<ListEntitiesResponse<TResult>>> HandleListRequest(
         TRequest request,
         Func<TRequest, ISpecification<TModel>> createSpecificationFunc,
         CancellationToken cancellationToken)
@@ -25,8 +25,8 @@ internal class ListRequestHandler<TRequest, TResult, TModel>(
         var queryResult = await repository.ListAsync(createSpecificationFunc(request), cancellationToken);
 
         var authContext = userRightsProvider.GetAuthContext();
-        var result = mapper.Map<IEnumerable<TResult>>(queryResult,  o => o.SetAuthContext(authContext));
+        var result = mapper.Map<IReadOnlyList<TResult>>(queryResult,  o => o.SetAuthContext(authContext));
 
-        return new JsonResult(new ListResponse<TResult> { Value = result });
+        return new JsonResult(new ListEntitiesResponse<TResult> { Value = result });
     }
 }

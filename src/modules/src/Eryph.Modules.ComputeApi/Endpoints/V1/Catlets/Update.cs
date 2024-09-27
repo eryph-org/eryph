@@ -47,7 +47,7 @@ public class Update(
         OperationId = "Catlets_Update",
         Tags = ["Catlets"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
         [FromRoute] UpdateCatletRequest request,
         CancellationToken cancellationToken = default)
     {

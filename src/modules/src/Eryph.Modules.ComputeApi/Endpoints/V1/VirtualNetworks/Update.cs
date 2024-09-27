@@ -52,7 +52,7 @@ public class Update(
         OperationId = "VNetworks_Create",
         Tags = ["Virtual Networks"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] UpdateProjectNetworksRequest request,
         CancellationToken cancellationToken = default)
     {

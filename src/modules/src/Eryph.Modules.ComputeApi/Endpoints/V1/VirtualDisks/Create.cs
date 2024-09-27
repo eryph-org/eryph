@@ -56,7 +56,7 @@ public class Create(
         OperationId = "VirtualDisks_Create",
         Tags = ["Virtual Disks"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] NewVirtualDiskRequest request,
         CancellationToken cancellationToken = default)
     {

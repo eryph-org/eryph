@@ -35,7 +35,7 @@ public class Create(
         OperationId = "Projects_Create",
         Tags = ["Projects"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] NewProjectRequest request,
         CancellationToken cancellationToken = default)
     {

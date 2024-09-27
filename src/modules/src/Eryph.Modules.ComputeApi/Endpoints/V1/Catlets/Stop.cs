@@ -37,7 +37,7 @@ public class Stop(
         OperationId = "Catlets_Stop",
         Tags = ["Catlets"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
         [FromRoute] StopCatletRequest request,
         CancellationToken cancellationToken = default)
     {

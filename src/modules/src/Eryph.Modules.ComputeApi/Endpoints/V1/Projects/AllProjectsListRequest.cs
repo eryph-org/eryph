@@ -2,7 +2,7 @@
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 
-public class AllProjectsListRequest : ListRequest
+public class AllProjectsListRequest : ListEntitiesRequest
 {
 
 }

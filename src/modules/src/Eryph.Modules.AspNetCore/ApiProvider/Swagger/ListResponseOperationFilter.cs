@@ -21,7 +21,7 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Swagger
             if (responseType == null)
                 return;
 
-            if(!responseType.Type.IsClosedTypeOf(typeof(ListResponse<>)))
+            if(!responseType.Type.IsClosedTypeOf(typeof(ListEntitiesResponse<>)))
                 return;
 
             operation.Extensions.Add(new KeyValuePair<string, IOpenApiExtension>("x-ms-pageable", new OpenApiObject

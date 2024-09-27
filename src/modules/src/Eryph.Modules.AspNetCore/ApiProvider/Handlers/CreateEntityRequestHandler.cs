@@ -23,7 +23,7 @@ internal class CreateEntityRequestHandler<TEntity>(
     StateStoreContext dbContext)
     : ICreateEntityRequestHandler<TEntity>
 {
-    public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(
+    public async Task<ActionResult<Operation>> HandleOperationRequest(
         Func<object> createOperationFunc,
         CancellationToken cancellationToken)
     {
@@ -47,6 +47,6 @@ internal class CreateEntityRequestHandler<TEntity>(
         await dbContext.SaveChangesAsync(cancellationToken);
         ta.Complete();
 
-        return new AcceptedResult(operationUri, new ListResponse<Operation>()) { Value = mappedModel };
+        return new AcceptedResult(operationUri, mappedModel);
     }
 }

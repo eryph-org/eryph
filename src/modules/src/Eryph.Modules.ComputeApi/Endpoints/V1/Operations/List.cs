@@ -24,8 +24,8 @@ public class List(
         OperationId = "Operations_List",
         Tags = ["Operations"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Operation>))]
-    public override Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListEntitiesResponse<Operation>))]
+    public override Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
         [FromRoute] OperationsListRequest request,
         CancellationToken cancellationToken = default)
     {

@@ -22,7 +22,7 @@ public class List(
     IUserInfoProvider userInfoProvider)
     : EndpointBaseAsync
         .WithoutRequest
-        .WithActionResult<ListResponse<Client>>
+        .WithActionResult<ListEntitiesResponse<Client>>
 {
     [HttpGet("clients")]
     [Authorize("identity:clients:read")]
@@ -32,15 +32,15 @@ public class List(
         OperationId = "Clients_List",
         Tags = ["Clients"])
     ]
-    [SwaggerResponse(Status200OK, "Success", typeof(ListResponse<Client>))]
-    public override async Task<ActionResult<ListResponse<Client>>> HandleAsync(
+    [SwaggerResponse(Status200OK, "Success", typeof(ListEntitiesResponse<Client>))]
+    public override async Task<ActionResult<ListEntitiesResponse<Client>>> HandleAsync(
         CancellationToken cancellationToken = default)
     {
         var tenantId = userInfoProvider.GetUserTenantId();
 
-        var clients = await clientService.List(tenantId, cancellationToken).Map(e => 
-            e.Map(c => c.ToClient<Client>()));
+        var clientDescriptors = await clientService.List(tenantId, cancellationToken);
+        var clients = clientDescriptors.Map(d => d.ToClient<Client>()).ToList();
 
-        return Ok(new ListResponse<Client> { Value = clients });
+        return Ok(new ListEntitiesResponse<Client> { Value = clients });
     }
 }

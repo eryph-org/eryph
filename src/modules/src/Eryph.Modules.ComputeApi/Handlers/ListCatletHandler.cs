@@ -25,11 +25,11 @@ internal class ListCatletHandler(
     IReadonlyStateStoreRepository<StateDb.Model.Catlet> catletRepository,
     IReadonlyStateStoreRepository<CatletNetworkPort> networkPortRepository,
     IUserRightsProvider userRightsProvider)
-    : IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet>
+    : IListRequestHandler<ListEntitiesRequest, Catlet, StateDb.Model.Catlet>
 {
-    public async Task<ActionResult<ListResponse<Catlet>>> HandleListRequest(
-        ListRequest request,
-        Func<ListRequest, ISpecification<StateDb.Model.Catlet>> createSpecificationFunc,
+    public async Task<ActionResult<ListEntitiesResponse<Catlet>>> HandleListRequest(
+        ListEntitiesRequest request,
+        Func<ListEntitiesRequest, ISpecification<StateDb.Model.Catlet>> createSpecificationFunc,
         CancellationToken cancellationToken)
     {
         var dbCatlets = await catletRepository.ListAsync(createSpecificationFunc(request), cancellationToken);
@@ -50,6 +50,6 @@ internal class ListCatletHandler(
             return catlet;
         }).SequenceSerial();
 
-        return new JsonResult(new ListResponse<Catlet> { Value = result });
+        return new JsonResult(new ListEntitiesResponse<Catlet> { Value = result.ToList() });
     }
 }

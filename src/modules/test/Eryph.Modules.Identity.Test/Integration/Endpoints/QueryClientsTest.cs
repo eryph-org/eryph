@@ -58,7 +58,7 @@ public class QueryClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
     {
         var factory = SetupClients();
 
-        var result = await factory.CreateDefaultClient().GetFromJsonAsync<ListResponse<Client>>("v1/clients");
+        var result = await factory.CreateDefaultClient().GetFromJsonAsync<ListEntitiesResponse<Client>>("v1/clients");
         result.Should().NotBeNull();
         result.Value.Count().Should().Be(2);
         result.Value.First().Id.Should().Be("test1");

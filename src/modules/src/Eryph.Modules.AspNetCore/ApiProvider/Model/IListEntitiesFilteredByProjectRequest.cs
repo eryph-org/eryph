@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model;
 
-public interface IProjectListRequest : IListRequest
+public interface IListEntitiesFilteredByProjectRequest : IListEntitiesRequest
 {
     public string? ProjectId { get; }
 }
