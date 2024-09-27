@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -56,5 +57,4 @@ namespace Eryph.Modules.Identity.Services
             return new ClientSpecs.GetAll(tenantId);
         }
     }
-
 }
