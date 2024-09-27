@@ -265,7 +265,10 @@ internal class LocalGenePoolSource(
             var genes = await RemoveMergedGene(geneSetPath, geneHash.ValueUnsafe());
             
             var genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, geneId);
-            fileSystem.DeleteFile(genePath);
+            if (fileSystem.FileExists(genePath))
+            {
+                fileSystem.DeleteFile(genePath);
+            }
 
             if (genes.MergedGenes is null || genes.MergedGenes.Length == 0)
             {
