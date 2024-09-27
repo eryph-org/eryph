@@ -5,7 +5,8 @@ using JetBrains.Annotations;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
 {
-    public abstract class ListEntityEndpoint<TRequest, TResult, TEntity> : ListEndpoint<TRequest, TResult, TEntity> 
+    public abstract class ListEntityEndpoint<TRequest, TResult, TEntity>
+        : ListEndpoint<TRequest, TResult, TEntity> 
         where TRequest : IListRequest
         where TEntity : class
     {

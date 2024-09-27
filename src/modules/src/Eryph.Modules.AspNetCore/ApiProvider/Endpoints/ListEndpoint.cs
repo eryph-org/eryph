@@ -6,29 +6,29 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints
+namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
+
+[Route("v{version:apiVersion}")]
+public abstract class ListEndpoint<TRequest,TResult,TEntity> : EndpointBaseAsync
+    .WithRequest<TRequest>
+    .WithActionResult<ListResponse<TResult>> where TEntity : class
+    where TRequest : IListRequest
 {
-    [Route("v{version:apiVersion}")]
-    public abstract class ListEndpoint<TRequest,TResult,TEntity> : EndpointBaseAsync
-        .WithRequest<TRequest>
-        .WithActionResult<ListResponse<TResult>> where TEntity : class
-        where TRequest : IListRequest
+    private readonly IListRequestHandler<TRequest, TResult, TEntity> _listRequestHandler;
+
+    protected ListEndpoint(
+        IListRequestHandler<TRequest, TResult, TEntity> listRequestHandler)
     {
-        private readonly IListRequestHandler<TRequest, TResult, TEntity> _listRequestHandler;
-
-        protected ListEndpoint(
-            IListRequestHandler<TRequest, TResult, TEntity> listRequestHandler)
-        {
-            _listRequestHandler = listRequestHandler;
-        }
-
-        protected abstract ISpecification<TEntity> CreateSpecification(TRequest request);
-
-
-        public override Task<ActionResult<ListResponse<TResult>>> HandleAsync(TRequest request, CancellationToken cancellationToken = default)
-        {
-            return _listRequestHandler.HandleListRequest(request,CreateSpecification, cancellationToken);
-        }
+        _listRequestHandler = listRequestHandler;
     }
 
+    protected abstract ISpecification<TEntity> CreateSpecification(TRequest request);
+
+
+    public override Task<ActionResult<ListResponse<TResult>>> HandleAsync(
+        TRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return _listRequestHandler.HandleListRequest(request,CreateSpecification, cancellationToken);
+    }
 }
