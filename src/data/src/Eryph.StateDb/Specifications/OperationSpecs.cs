@@ -9,10 +9,13 @@ namespace Eryph.StateDb.Specifications
 {
     public static class OperationSpecs
     {
-        internal static void ExpandFields(ISpecificationBuilder<OperationModel> query, string? expand, DateTimeOffset requestLogTimestamp)
+        internal static void ExpandFields(
+            ISpecificationBuilder<OperationModel> query,
+            string? expand,
+            DateTimeOffset? requestLogTimestamp)
         {
-            if (string.IsNullOrWhiteSpace(expand)) return;
-
+            if (string.IsNullOrWhiteSpace(expand))
+                return;
 
             var expandedFields = expand.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
@@ -21,8 +24,7 @@ namespace Eryph.StateDb.Specifications
                 switch (expandedField)
                 {
                     case "logs":
-                        query.Include(x => x.LogEntries
-                            .Where(l => l.Timestamp > requestLogTimestamp));
+                        query.Include(x => x.LogEntries.Where(l => l.Timestamp > requestLogTimestamp));
                         break;
                     case "tasks":
                         query.Include(x => x.Tasks)
@@ -38,10 +40,9 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
-
         public sealed class GetAll : Specification<OperationModel>
         {
-            public GetAll(AuthContext authContext, IEnumerable<Guid> sufficientRoles, string? expanded, DateTimeOffset requestLogTimestamp)
+            public GetAll(AuthContext authContext, IEnumerable<Guid> sufficientRoles, string? expanded, DateTimeOffset? requestLogTimestamp)
             {
                 Query.Where(x=>x.TenantId == authContext.TenantId);
 
@@ -58,7 +59,7 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class GetById : Specification<OperationModel>, ISingleResultSpecification<OperationModel>
         {
-            public GetById(Guid id, AuthContext authContext, IEnumerable<Guid> sufficientRoles, string? expanded, DateTimeOffset requestLogTimestamp)
+            public GetById(Guid id, AuthContext authContext, IEnumerable<Guid> sufficientRoles, string? expanded, DateTimeOffset? requestLogTimestamp)
             {
                 Query.Where(x => x.Id == id && x.TenantId == authContext.TenantId);
 

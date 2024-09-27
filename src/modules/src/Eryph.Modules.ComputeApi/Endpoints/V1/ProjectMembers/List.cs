@@ -7,15 +7,16 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class List(
-    [NotNull] IListRequestHandler<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<ProjectMembersListRequest, StateDb.Model.ProjectRoleAssignment> specBuilder)
-    : ListEntityEndpoint<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment>(
+    IListRequestHandler<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment> listRequestHandler,
+    IListEntitySpecBuilder<ProjectMembersListRequest, StateDb.Model.ProjectRoleAssignment> specBuilder)
+    : ListEntitiesEndpoint<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment>(
         listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
@@ -26,8 +27,8 @@ public class List(
         OperationId = "ProjectMembers_List",
         Tags = ["ProjectMembers"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListEntitiesResponse<ProjectMemberRole>))]
-    public override Task<ActionResult<ListEntitiesResponse<ProjectMemberRole>>> HandleAsync(
+    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<ProjectMemberRole>))]
+    public override Task<ActionResult<ListResponse<ProjectMemberRole>>> HandleAsync(
         [FromRoute] ProjectMembersListRequest request,
         CancellationToken cancellationToken = default)
     {

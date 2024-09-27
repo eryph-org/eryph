@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,5 +8,5 @@ public class NewProjectMemberRequest : RequestBase
 {
     [FromBody] public required NewProjectMemberBody Body { get; set; }
     
-    [FromRoute(Name = "projectId")] public required Guid ProjectId { get; set; }
+    [FromRoute(Name = "projectId")] public required string ProjectId { get; set; }
 }

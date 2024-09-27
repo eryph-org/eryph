@@ -12,14 +12,19 @@ public class ProjectMemberSpecBuilder(IUserRightsProvider userRightsProvider) :
     ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment>,
     IListEntitySpecBuilder<ProjectMembersListRequest, ProjectRoleAssignment>
 {
-    public ISingleResultSpecification<ProjectRoleAssignment> GetSingleEntitySpec(ProjectMemberRequest request, AccessRight accessRight)
+    public ISingleResultSpecification<ProjectRoleAssignment>? GetSingleEntitySpec(
+        ProjectMemberRequest request,
+        AccessRight accessRight)
     {
+        if (!Guid.TryParse(request.ProjectId, out var projectId))
+            return null;
+
         if (!Guid.TryParse(request.Id, out var memberId))
-            throw new ArgumentException("The ID is not a GUID", nameof(request));
+            return null;
 
         return new ProjectRoleAssignmentSpecs.GetById(
             memberId,
-            request.Project,
+            projectId,
             userRightsProvider.GetAuthContext(),
             userRightsProvider.GetProjectRoles(accessRight));
     }

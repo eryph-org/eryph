@@ -4,14 +4,14 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 
-public abstract class ListEntityEndpoint<TRequest, TResult, TEntity>
+public abstract class ListEntitiesEndpoint<TRequest, TResult, TEntity>
     : ListEndpoint<TRequest, TResult, TEntity> 
-    where TRequest : IListEntitiesRequest
+    where TRequest : IListRequest
     where TEntity : class
 {
     private readonly IListEntitySpecBuilder<TRequest,TEntity> _specBuilder;
 
-    protected ListEntityEndpoint(
+    protected ListEntitiesEndpoint(
         IListRequestHandler<TRequest, TResult, TEntity> listRequestHandler,
         IListEntitySpecBuilder<TRequest,TEntity> specBuilder)
         : base(listRequestHandler)

@@ -10,4 +10,4 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 public interface IProjectListRequestHandler<TRequest, TResult, TEntity>
     : IListRequestHandler<TRequest, TResult, TEntity>
     where TEntity : class
-    where TRequest : IListEntitiesFilteredByProjectRequest;
+    where TRequest : IListFilteredByProjectRequest;

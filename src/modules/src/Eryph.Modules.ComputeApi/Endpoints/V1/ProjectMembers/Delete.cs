@@ -18,8 +18,8 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class Delete(
-    [NotNull] IEntityOperationRequestHandler<ProjectRoleAssignment> operationHandler,
-    [NotNull] ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder,
+    IEntityOperationRequestHandler<ProjectRoleAssignment> operationHandler,
+    ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder,
     IUserRightsProvider userRightsProvider)
     : OperationRequestEndpoint<ProjectMemberRequest, ProjectRoleAssignment>(operationHandler, specBuilder)
 {
@@ -31,14 +31,17 @@ public class Delete(
         OperationId = "ProjectMembers_Remove",
         Tags = ["ProjectMembers"])
     ]
-    public override async Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] ProjectMemberRequest request,
         CancellationToken cancellationToken = default)
     {
         if (!Guid.TryParse(request.Id, out _))
             return NotFound();
 
-        var hasAccess = await userRightsProvider.HasProjectAccess(request.Project, AccessRight.Admin);
+        if(!Guid.TryParse(request.ProjectId, out var projectId))
+            return NotFound();
+
+        var hasAccess = await userRightsProvider.HasProjectAccess(projectId, AccessRight.Admin);
         if (!hasAccess)
             return Problem(
                 statusCode: StatusCodes.Status403Forbidden,

@@ -13,8 +13,8 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class Get(
-    [NotNull] IGetRequestHandler<StateDb.Model.Catlet, Catlet> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Catlet> specBuilder)
+    IGetRequestHandler<StateDb.Model.Catlet, Catlet> requestHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Catlet> specBuilder)
     : GetEntityEndpoint<SingleEntityRequest, Catlet, StateDb.Model.Catlet>(requestHandler, specBuilder)
 {
     [HttpGet("catlets/{id}")]

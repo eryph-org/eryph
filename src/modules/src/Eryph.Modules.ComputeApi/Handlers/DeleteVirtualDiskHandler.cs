@@ -18,13 +18,13 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 namespace Eryph.Modules.ComputeApi.Handlers;
 
 internal class DeleteVirtualDiskHandler(
-    [NotNull] IOperationDispatcher operationDispatcher,
-    [NotNull] IStateStoreRepository<VirtualDisk> repository,
-    [NotNull] IEndpointResolver endpointResolver,
-    [NotNull] IMapper mapper,
-    [NotNull] IUserRightsProvider userRightsProvider,
-    [NotNull] IHttpContextAccessor httpContextAccessor,
-    [NotNull] ProblemDetailsFactory problemDetailsFactory)
+    IOperationDispatcher operationDispatcher,
+    IStateStoreRepository<VirtualDisk> repository,
+    IEndpointResolver endpointResolver,
+    IMapper mapper,
+    IUserRightsProvider userRightsProvider,
+    IHttpContextAccessor httpContextAccessor,
+    ProblemDetailsFactory problemDetailsFactory)
     : EntityOperationRequestHandler<VirtualDisk>(
         operationDispatcher,
         repository,
@@ -34,7 +34,7 @@ internal class DeleteVirtualDiskHandler(
         httpContextAccessor,
         problemDetailsFactory)
 {
-    protected override ActionResult ValidateRequest(VirtualDisk model)
+    protected override ActionResult? ValidateRequest(VirtualDisk model)
     {
         if (model.StorageIdentifier?.StartsWith("gene:") == true)
             return Problem(

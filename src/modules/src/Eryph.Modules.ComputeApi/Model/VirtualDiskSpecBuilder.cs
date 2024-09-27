@@ -2,20 +2,15 @@
 using Eryph.Modules.AspNetCore;
 using Eryph.StateDb.Model;
 
-namespace Eryph.Modules.ComputeApi.Model
+namespace Eryph.Modules.ComputeApi.Model;
+
+public class VirtualDiskSpecBuilder(
+    IUserRightsProvider userRightsProvider)
+    : ResourceSpecBuilder<VirtualDisk>(userRightsProvider)
 {
-    public class VirtualDiskSpecBuilder : ResourceSpecBuilder<VirtualDisk>
+    protected override void CustomizeQuery(ISpecificationBuilder<VirtualDisk> query)
     {
-        public VirtualDiskSpecBuilder(IUserRightsProvider userRightsProvider) : base(userRightsProvider)
-        {
-        }
-
-
-        protected override void CustomizeQuery(ISpecificationBuilder<VirtualDisk> specification)
-        {
-            specification.Include(x => x.AttachedDrives);
-            specification.Include(x => x.Children);
-        }
-
+        query.Include(x => x.AttachedDrives);
+        query.Include(x => x.Children);
     }
 }

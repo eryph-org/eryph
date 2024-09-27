@@ -5,17 +5,18 @@ using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using Eryph.Modules.ComputeApi.Model;
+using Eryph.Modules.ComputeApi.Model.V1;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
 public class Get(
-    [NotNull] IGetRequestHandler<StateDb.Model.VirtualNetwork, VirtualNetwork> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.VirtualNetwork> specBuilder)
+    IGetRequestHandler<StateDb.Model.VirtualNetwork, VirtualNetwork> requestHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.VirtualNetwork> specBuilder)
     : GetEntityEndpoint<SingleEntityRequest, VirtualNetwork, StateDb.Model.VirtualNetwork>(requestHandler,
         specBuilder)
 {
@@ -28,7 +29,7 @@ public class Get(
         OperationId = "VNetworks_Get",
         Tags = ["Virtual Networks"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(VirtualNetwork))]
+    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(VirtualNetwork))]
     public override async Task<ActionResult<VirtualNetwork>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)

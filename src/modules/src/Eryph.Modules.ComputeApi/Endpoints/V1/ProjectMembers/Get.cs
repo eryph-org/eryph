@@ -7,14 +7,15 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class Get(
-    [NotNull] IGetRequestHandler<ProjectRoleAssignment, ProjectMemberRole> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder)
+    IGetRequestHandler<ProjectRoleAssignment, ProjectMemberRole> requestHandler,
+    ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder)
     : GetEntityEndpoint<ProjectMemberRequest, ProjectMemberRole, ProjectRoleAssignment>(requestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
@@ -25,7 +26,7 @@ public class Get(
         OperationId = "ProjectMembers_Get",
         Tags = ["ProjectMembers"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ProjectMemberRole))]
+    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ProjectMemberRole))]
     public override Task<ActionResult<ProjectMemberRole>> HandleAsync(
         [FromRoute] ProjectMemberRequest request,
         CancellationToken cancellationToken = default)

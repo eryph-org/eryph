@@ -5,6 +5,7 @@ using Ardalis.Specification;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -28,12 +29,14 @@ public abstract class OperationRequestEndpoint<TRequest, TEntity>(
         return specBuilder.GetSingleEntitySpec(request, AccessRight.Write);
     }
 
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]
+    [SwaggerResponse(StatusCodes.Status202Accepted, "Success", typeof(Operation))]
     public override Task<ActionResult<Operation>> HandleAsync(TRequest request,
         CancellationToken cancellationToken = default)
     {
-        return operationHandler.HandleOperationRequest(() => CreateSpecification(request),
-            m => CreateOperationMessage(m, request), cancellationToken);
+        return operationHandler.HandleOperationRequest(
+            () => CreateSpecification(request),
+            m => CreateOperationMessage(m, request),
+            cancellationToken);
     }
 }
 
@@ -47,10 +50,12 @@ public abstract class OperationRequestEndpoint<TEntity>(
 {
     protected abstract object CreateOperationMessage();
 
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]
+    [SwaggerResponse(StatusCodes.Status202Accepted, "Success", typeof(Operation))]
     public override Task<ActionResult<Operation>> HandleAsync(
         CancellationToken cancellationToken = default)
     {
-        return operationHandler.HandleOperationRequest(CreateOperationMessage, cancellationToken);
+        return operationHandler.HandleOperationRequest(
+            CreateOperationMessage,
+            cancellationToken);
     }
 }

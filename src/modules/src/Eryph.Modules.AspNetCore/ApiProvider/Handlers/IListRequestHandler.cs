@@ -5,14 +5,14 @@ using Ardalis.Specification;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
+namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+
+public interface IListRequestHandler<TRequest, TResult, TEntity>
+    where TEntity : class
+    where TRequest : IListRequest
 {
-    public interface IListRequestHandler<TRequest, TResult, TEntity>
-        where TEntity : class
-        where TRequest : IListEntitiesRequest
-    {
-        Task<ActionResult<ListEntitiesResponse<TResult>>> HandleListRequest(
-            TRequest request,
-            Func<TRequest, ISpecification<TEntity>> createSpecificationFunc, CancellationToken cancellationToken);
-    }
+    Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
+        TRequest request,
+        Func<TRequest, ISpecification<TEntity>> createSpecificationFunc,
+        CancellationToken cancellationToken);
 }

@@ -10,7 +10,7 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.ModuleCore.Networks;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.ComputeApi.Model;
+using Eryph.Modules.ComputeApi.Model.V1;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;

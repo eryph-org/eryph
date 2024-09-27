@@ -4,18 +4,19 @@ using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using Eryph.Modules.ComputeApi.Model;
+using Eryph.Modules.ComputeApi.Model.V1;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
 public class List(
-    [NotNull] IProjectListRequestHandler<ListEntitiesFilteredByProjectRequest, VirtualNetwork, StateDb.Model.VirtualNetwork> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<ListEntitiesFilteredByProjectRequest, StateDb.Model.VirtualNetwork> specBuilder)
-    : ListEntityEndpoint<ListEntitiesFilteredByProjectRequest, VirtualNetwork, StateDb.Model.VirtualNetwork>(listRequestHandler, specBuilder)
+    IProjectListRequestHandler<ListFilteredByProjectRequest, VirtualNetwork, StateDb.Model.VirtualNetwork> listRequestHandler,
+    IListEntitySpecBuilder<ListFilteredByProjectRequest, StateDb.Model.VirtualNetwork> specBuilder)
+    : ListEntitiesEndpoint<ListFilteredByProjectRequest, VirtualNetwork, StateDb.Model.VirtualNetwork>(listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
     [HttpGet("vnetworks")]
@@ -25,9 +26,9 @@ public class List(
         OperationId = "VNetworks_List",
         Tags = ["Virtual Networks"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListEntitiesResponse<VirtualNetwork>))]
-    public override Task<ActionResult<ListEntitiesResponse<VirtualNetwork>>> HandleAsync(
-        [FromRoute] ListEntitiesFilteredByProjectRequest request,
+    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualNetwork>))]
+    public override Task<ActionResult<ListResponse<VirtualNetwork>>> HandleAsync(
+        [FromRoute] ListFilteredByProjectRequest request,
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(request, cancellationToken);

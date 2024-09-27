@@ -1,32 +1,38 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
-using Eryph.Core;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using Eryph.Modules.ComputeApi.Model;
+using Eryph.Modules.ComputeApi.Model.V1;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
 public class GetVNetworksConfig(
-    [NotNull] IGetRequestHandler<Project, VirtualNetworkConfiguration> requestHandler,
+    IGetRequestHandler<Project, VirtualNetworkConfiguration> requestHandler,
     IUserRightsProvider userRightsProvider)
     : SingleResultEndpoint<ProjectRequest, VirtualNetworkConfiguration, Project>(requestHandler)
 {
-    protected override ISingleResultSpecification<Project> CreateSpecification(ProjectRequest request)
+    protected override ISingleResultSpecification<Project>? CreateSpecification(ProjectRequest request)
     {
+        if (!Guid.TryParse(request.ProjectId, out var projectId))
+            return null;
+
         var sufficientRoles = userRightsProvider.GetProjectRoles(AccessRight.Read);
 
-        return new ProjectSpecs.GetById(request.ProjectId.GetValueOrDefault(),
-            userRightsProvider.GetAuthContext(), sufficientRoles);
+        return new ProjectSpecs.GetById(
+            projectId,
+            userRightsProvider.GetAuthContext(),
+            sufficientRoles);
     }
 
     [Authorize(Policy = "compute:projects:read")]
@@ -38,7 +44,7 @@ public class GetVNetworksConfig(
         OperationId = "VNetworks_GetConfig",
         Tags = ["Virtual Networks"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(VirtualNetworkConfiguration))]
+    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(VirtualNetworkConfiguration))]
     public override Task<ActionResult<VirtualNetworkConfiguration>> HandleAsync(
         [FromRoute] ProjectRequest request,
         CancellationToken cancellationToken = default)
