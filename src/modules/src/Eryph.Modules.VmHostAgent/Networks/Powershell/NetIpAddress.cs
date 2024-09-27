@@ -2,6 +2,6 @@
 
 public class NetIpAddress
 {
-    public string IpAddress { get; private set; }
+    public string? IPAddress { get; private set; }
     public byte PrefixLength { get; private set; }
 }

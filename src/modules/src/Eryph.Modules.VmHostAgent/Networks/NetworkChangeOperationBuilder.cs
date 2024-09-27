@@ -491,13 +491,13 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
                                           var currentIp = ips[0];
                                           var res = currentIp.PrefixLength == newBridge.Network.Cidr &&
-                                                 currentIp.IpAddress == newBridge.IPAddress.ToString();
+                                                 currentIp.IPAddress == newBridge.IPAddress.ToString();
 
                                           if (!res)
                                           {
                                               _logger.LogDebug("host nat adapter {bridgeName} has invalid ip. Expected: {expectedIp}/{expectedSuffix}, Actual: {actualIp}/{actualSuffix}",
                                                       networkProvider.BridgeName, newBridge.IPAddress, newBridge.Network.Cidr,
-                                                      currentIp.IpAddress, currentIp.PrefixLength);
+                                                      currentIp.IPAddress, currentIp.PrefixLength);
 
                                           }
 
