@@ -68,7 +68,7 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
 
         response.EnsureSuccessStatusCode();
 
-        var genes = await response.Content.ReadFromJsonAsync<ListEntitiesResponse<ApiGene>>(
+        var genes = await response.Content.ReadFromJsonAsync<ListResponse<ApiGene>>(
             new JsonSerializerOptions(JsonSerializerDefaults.Web)
             {
                 Converters = { new JsonStringEnumConverter() },

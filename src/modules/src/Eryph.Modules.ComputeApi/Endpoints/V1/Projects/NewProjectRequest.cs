@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,7 +8,5 @@ public class NewProjectRequest : RequestBase
 {
     [FromBody] public required Guid CorrelationId { get; set; }
 
-    [FromBody]
-    [Required]
-    public required string Name { get; set; }
+    [FromBody] public required string Name { get; set; }
 }

@@ -32,7 +32,7 @@ public class Cleanup(IOperationRequestHandler<Gene> operationHandler)
         OperationId = "Genes_Cleanup",
         Tags = ["Genes"])
     ]
-    public override Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
+    public override Task<ActionResult<Operation>> HandleAsync(
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(cancellationToken);

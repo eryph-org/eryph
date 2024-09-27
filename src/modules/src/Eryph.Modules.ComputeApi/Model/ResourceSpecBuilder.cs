@@ -9,15 +9,17 @@ using Resource = Eryph.StateDb.Model.Resource;
 
 namespace Eryph.Modules.ComputeApi.Model;
 
-public class ResourceSpecBuilder<TResource>(IUserRightsProvider userRightsProvider)
+public abstract class ResourceSpecBuilder<TResource>(IUserRightsProvider userRightsProvider)
     : ISingleEntitySpecBuilder<SingleEntityRequest, TResource>,
-        IListEntitySpecBuilder<ListEntitiesFilteredByProjectRequest, TResource>
+        IListEntitySpecBuilder<ListFilteredByProjectRequest, TResource>
     where TResource : Resource
 {
-    public ISingleResultSpecification<TResource> GetSingleEntitySpec(SingleEntityRequest request, AccessRight accessRight)
+    public ISingleResultSpecification<TResource>? GetSingleEntitySpec(
+        SingleEntityRequest request,
+        AccessRight accessRight)
     {
         if (!Guid.TryParse(request.Id, out var resourceId))
-            throw new ArgumentException("The ID is not a GUID.", nameof(request));
+            return null;
         
         return new ResourceSpecs<TResource>.GetById(
             resourceId,
@@ -26,7 +28,7 @@ public class ResourceSpecBuilder<TResource>(IUserRightsProvider userRightsProvid
             CustomizeQuery);
     }
 
-    public ISpecification<TResource> GetEntitiesSpec(ListEntitiesFilteredByProjectRequest request)
+    public ISpecification<TResource> GetEntitiesSpec(ListFilteredByProjectRequest request)
     {
         Guid? projectId = null;
         if (request.ProjectId is not null)
@@ -44,7 +46,7 @@ public class ResourceSpecBuilder<TResource>(IUserRightsProvider userRightsProvid
             CustomizeQuery);
     }
 
-    protected virtual void CustomizeQuery(ISpecificationBuilder<TResource> specification)
+    protected virtual void CustomizeQuery(ISpecificationBuilder<TResource> query)
     {
     }
 }

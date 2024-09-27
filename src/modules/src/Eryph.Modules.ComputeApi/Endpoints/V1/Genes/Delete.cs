@@ -19,8 +19,8 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Genes;
 
 public class Delete(
-    [NotNull] IEntityOperationRequestHandler<Gene> operationHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Gene> specBuilder)
+    IEntityOperationRequestHandler<Gene> operationHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, Gene> specBuilder)
     : OperationRequestEndpoint<SingleEntityRequest, Gene>(operationHandler, specBuilder)
 {
     protected override object CreateOperationMessage(Gene model, SingleEntityRequest request)
@@ -39,7 +39,7 @@ public class Delete(
         OperationId = "Genes_Delete",
         Tags = ["Genes"])
     ]
-    public override async Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)
     {

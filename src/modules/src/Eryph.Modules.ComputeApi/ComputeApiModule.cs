@@ -4,7 +4,6 @@ using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Handlers;
-using Eryph.Modules.ComputeApi.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
@@ -47,7 +46,7 @@ namespace Eryph.Modules.ComputeApi
                 GetCatletConfigurationHandler>();
             container.Register<IGetRequestHandler<StateDb.Model.Catlet, Catlet>,
                 GetCatletHandler>();
-            container.Register<IListRequestHandler<ListEntitiesRequest, Catlet, StateDb.Model.Catlet>,
+            container.Register<IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet>,
                 ListCatletHandler>();
             container.Register<IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage>, GetGeneHandler>();
             container.Register<IGetRequestHandler<StateDb.Model.Project, VirtualNetworkConfiguration>,

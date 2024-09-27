@@ -12,9 +12,9 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations;
 
 public class List(
-    [NotNull] IListRequestHandler<OperationsListRequest, Operation, StateDb.Model.OperationModel> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<OperationsListRequest, StateDb.Model.OperationModel> specBuilder)
-    : ListEntityEndpoint<OperationsListRequest, Operation, StateDb.Model.OperationModel>(
+    IListRequestHandler<OperationsListRequest, Operation, StateDb.Model.OperationModel> listRequestHandler,
+    IListEntitySpecBuilder<OperationsListRequest, StateDb.Model.OperationModel> specBuilder)
+    : ListEntitiesEndpoint<OperationsListRequest, Operation, StateDb.Model.OperationModel>(
         listRequestHandler, specBuilder)
 {
     [HttpGet("operations")]
@@ -24,8 +24,8 @@ public class List(
         OperationId = "Operations_List",
         Tags = ["Operations"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListEntitiesResponse<Operation>))]
-    public override Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
+    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Operation>))]
+    public override Task<ActionResult<ListResponse<Operation>>> HandleAsync(
         [FromRoute] OperationsListRequest request,
         CancellationToken cancellationToken = default)
     {

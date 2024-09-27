@@ -12,10 +12,12 @@ public class OperationSpecBuilder(IUserRightsProvider userRightsProvider)
     : ISingleEntitySpecBuilder<OperationRequest, OperationModel>,
         IListEntitySpecBuilder<OperationsListRequest, OperationModel>
 {
-    public ISingleResultSpecification<OperationModel> GetSingleEntitySpec(OperationRequest request, AccessRight accessRight)
+    public ISingleResultSpecification<OperationModel>? GetSingleEntitySpec(
+        OperationRequest request,
+        AccessRight accessRight)
     {
         if (!Guid.TryParse(request.Id, out var operationId))
-            throw new ArgumentException("The ID is not a GUID.", nameof(request));
+            return null;
             
         return new OperationSpecs.GetById(
             operationId,

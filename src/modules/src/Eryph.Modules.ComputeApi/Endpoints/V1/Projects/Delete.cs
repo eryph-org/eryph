@@ -28,7 +28,7 @@ public class Delete(
         OperationId = "Projects_Delete",
         Tags = ["Projects"])
     ]
-    public override async Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)
     {

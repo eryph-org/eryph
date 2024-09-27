@@ -9,7 +9,6 @@ using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
@@ -24,7 +23,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
 public class Update(
-    [NotNull] ICreateEntityRequestHandler<StateDb.Model.Project> operationHandler,
+    ICreateEntityRequestHandler<StateDb.Model.Project> operationHandler,
     IUserRightsProvider userRightsProvider)
     : NewOperationRequestEndpoint<UpdateProjectNetworksRequest, StateDb.Model.Project>(operationHandler)
 {

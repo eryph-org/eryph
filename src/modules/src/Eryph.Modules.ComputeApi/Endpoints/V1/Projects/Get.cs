@@ -8,6 +8,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using ProjectModel = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
@@ -15,8 +16,8 @@ using ProjectModel = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 
 public class Get(
-    [NotNull] IGetRequestHandler<Project, ProjectModel> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Project> specBuilder)
+    IGetRequestHandler<Project, ProjectModel> requestHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, Project> specBuilder)
     : GetEntityEndpoint<SingleEntityRequest, ProjectModel, Project>(requestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
@@ -27,7 +28,7 @@ public class Get(
         OperationId = "Projects_Get",
         Tags = ["Projects"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ProjectModel))]
+    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ProjectModel))]
     public override async Task<ActionResult<ProjectModel>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)

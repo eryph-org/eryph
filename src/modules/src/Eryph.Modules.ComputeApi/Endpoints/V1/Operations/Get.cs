@@ -12,8 +12,8 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations;
 
 public class Get(
-    [NotNull] IGetRequestHandler<StateDb.Model.OperationModel, Operation> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<OperationRequest, StateDb.Model.OperationModel> specBuilder)
+    IGetRequestHandler<StateDb.Model.OperationModel, Operation> requestHandler,
+    ISingleEntitySpecBuilder<OperationRequest, StateDb.Model.OperationModel> specBuilder)
     : GetEntityEndpoint<OperationRequest, Operation, StateDb.Model.OperationModel>(requestHandler, specBuilder)
 {
     [HttpGet("operations/{id}")]

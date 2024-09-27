@@ -22,13 +22,14 @@ public abstract class SingleResultEndpoint<TRequest, TResult, TModel> : Endpoint
         _requestHandler = requestHandler;
     }
 
-    protected abstract ISingleResultSpecification<TModel> CreateSpecification(TRequest request);
+    protected abstract ISingleResultSpecification<TModel>? CreateSpecification(TRequest request);
 
     public override Task<ActionResult<TResult>> HandleAsync(
         TRequest request,
         CancellationToken cancellationToken = default)
     {
         return _requestHandler.HandleGetRequest(
-            () => CreateSpecification(request), cancellationToken );
+            () => CreateSpecification(request),
+            cancellationToken );
     }
 }

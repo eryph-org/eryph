@@ -86,7 +86,7 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
             .PostAsJsonAsync($"v1/projects/{projectId}/members",
                 new NewProjectMemberBody()
                 {
-                    RoleId = EryphConstants.BuildInRoles.Reader,
+                    RoleId = EryphConstants.BuildInRoles.Reader.ToString(),
                     CorrelationId = Guid.NewGuid(),
                     MemberId = memberId,
                 });
@@ -121,7 +121,7 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
             .PostAsJsonAsync($"v1/projects/{projectId}/members",
                 new NewProjectMemberBody()
                 {
-                    RoleId = EryphConstants.BuildInRoles.Reader,
+                    RoleId = EryphConstants.BuildInRoles.Reader.ToString(),
                     CorrelationId = Guid.NewGuid(),
                     MemberId = "system-client"
                 });
@@ -142,7 +142,7 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
             .PostAsJsonAsync($"v1/projects/{projectId}/members",
                 new NewProjectMemberBody()
                 {
-                    RoleId = EryphConstants.BuildInRoles.Reader,
+                    RoleId = EryphConstants.BuildInRoles.Reader.ToString(),
                     CorrelationId = Guid.NewGuid(),
                     MemberId = UserId.ToString(),
                 });

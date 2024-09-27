@@ -20,8 +20,8 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class Update(
-    [NotNull] IEntityOperationRequestHandler<Catlet> operationHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
+    IEntityOperationRequestHandler<Catlet> operationHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
     : ResourceOperationEndpoint<UpdateCatletRequest, Catlet>(operationHandler, specBuilder)
 {
     protected override object CreateOperationMessage(Catlet model, UpdateCatletRequest request )
@@ -47,13 +47,10 @@ public class Update(
         OperationId = "Catlets_Update",
         Tags = ["Catlets"])
     ]
-    public override async Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] UpdateCatletRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!Guid.TryParse(request.Id, out _))
-            return NotFound();
-
         var validation = RequestValidations.ValidateCatletConfig(
             request.Body.Configuration,
             nameof(NewCatletRequest.Configuration));

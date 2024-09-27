@@ -36,7 +36,7 @@ public class Delete(
         OperationId = "Catlets_Delete",
         Tags = ["Catlets"])
     ]
-    public override async Task<ActionResult<ListEntitiesResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)
     {

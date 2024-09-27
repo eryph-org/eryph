@@ -62,7 +62,7 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             .SetEryphToken(EryphConstants.DefaultTenantId, notAuthorizedUserId, scope, false)
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
-                ProjectId = EryphConstants.DefaultProjectId,
+                ProjectId = EryphConstants.DefaultProjectId.ToString(),
                 Name = DiskName,
                 Size = DiskSize,
                 Location = LocationName,
@@ -92,7 +92,7 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
-                ProjectId = EryphConstants.DefaultProjectId,
+                ProjectId = EryphConstants.DefaultProjectId.ToString(),
                 Name = DiskName,
                 Location = LocationName,
                 Size = DiskSize,
@@ -124,7 +124,7 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
-                ProjectId = EryphConstants.DefaultProjectId,
+                ProjectId = EryphConstants.DefaultProjectId.ToString(),
                 Name = DiskName,
                 Location = LocationName,
                 Size = DiskSize,
@@ -140,7 +140,7 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
-                ProjectId = EryphConstants.DefaultProjectId,
+                ProjectId = EryphConstants.DefaultProjectId.ToString(),
                 Name = DiskName,
                 Location = LocationName,
                 Size = 5,
@@ -170,7 +170,7 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
-                ProjectId = EryphConstants.DefaultProjectId,
+                ProjectId = EryphConstants.DefaultProjectId.ToString(),
                 Name = DiskName,
                 Location = LocationName,
                 Size = 5,

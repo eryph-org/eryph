@@ -17,21 +17,21 @@ public class ProjectListRequestHandler<TRequest, TResult, TModel>(
     IUserRightsProvider userRightsProvider)
     : IProjectListRequestHandler<TRequest, TResult, TModel>
     where TModel : class
-    where TRequest : IListEntitiesFilteredByProjectRequest
+    where TRequest : IListFilteredByProjectRequest
 {
-    public async Task<ActionResult<ListEntitiesResponse<TResult>>> HandleListRequest(
+    public async Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
         TRequest request,
         Func<TRequest, ISpecification<TModel>> createSpecificationFunc,
         CancellationToken cancellationToken)
     {
         if (request.ProjectId is not null && ! Guid.TryParse(request.ProjectId, out _))
-            return new JsonResult(new ListEntitiesResponse<TResult> { Value = [] });
+            return new JsonResult(new ListResponse<TResult> { Value = [] });
 
         var queryResult = await repository.ListAsync(createSpecificationFunc(request), cancellationToken);
 
         var authContext = userRightsProvider.GetAuthContext();
         var result = mapper.Map<IReadOnlyList<TResult>>(queryResult, o => o.SetAuthContext(authContext));
 
-        return new JsonResult(new ListEntitiesResponse<TResult> { Value = result });
+        return new JsonResult(new ListResponse<TResult> { Value = result });
     }
 }

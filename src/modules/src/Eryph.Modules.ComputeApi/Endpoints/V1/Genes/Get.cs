@@ -17,8 +17,8 @@ using Microsoft.AspNetCore.Authorization;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Genes;
 
 public class Get(
-    [NotNull] IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Gene> specBuilder)
+    IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage> requestHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Gene> specBuilder)
     : GetEntityEndpoint<SingleEntityRequest, GeneWithUsage, StateDb.Model.Gene>(requestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:genes:read")]
