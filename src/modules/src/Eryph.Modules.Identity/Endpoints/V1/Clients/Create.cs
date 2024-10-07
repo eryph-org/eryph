@@ -32,8 +32,8 @@ public class Create(
     [Authorize(Policy = "identity:clients:write")]
     [HttpPost("clients")]
     [SwaggerOperation(
-        Summary = "Creates a new client",
-        Description = "Creates a client",
+        Summary = "Create a new client",
+        Description = "Create a client",
         OperationId = "Clients_Create",
         Tags = ["Clients"])
     ]

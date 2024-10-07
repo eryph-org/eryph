@@ -26,8 +26,8 @@ public class Cleanup(IOperationRequestHandler<Gene> operationHandler)
     [Authorize(Policy = "compute:genes:write")]
     [HttpDelete("genes")]
     [SwaggerOperation(
-        Summary = "Removes unused genes",
-        Description = "Removes unused genes from the local gene pool",
+        Summary = "Remove all unused genes",
+        Description = "Remove all unused genes from the local gene pool",
         OperationId = "Genes_Cleanup",
         Tags = ["Genes"])
     ]

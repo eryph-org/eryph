@@ -8,9 +8,9 @@ using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.ComputeApi.Model;
 
-public class ProjectSpecBuilder(IUserRightsProvider userRightsProvider) :
-    ISingleEntitySpecBuilder<SingleEntityRequest, Project>,
-    IListEntitySpecBuilder<ListRequest, Project>
+public class ProjectSpecBuilder(IUserRightsProvider userRightsProvider)
+    : ISingleEntitySpecBuilder<SingleEntityRequest, Project>,
+        IListEntitySpecBuilder<Project>
 {
     public ISingleResultSpecification<Project>? GetSingleEntitySpec(
         SingleEntityRequest request,
@@ -25,7 +25,7 @@ public class ProjectSpecBuilder(IUserRightsProvider userRightsProvider) :
             userRightsProvider.GetProjectRoles(accessRight));
     }
 
-    public ISpecification<Project> GetEntitiesSpec(ListRequest request)
+    public ISpecification<Project> GetEntitiesSpec()
     {
         return new ProjectSpecs.GetAll(
             userRightsProvider.GetAuthContext(),

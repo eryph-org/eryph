@@ -28,8 +28,8 @@ public class Create(
     [Authorize(Policy = "compute:projects:write")]
     [HttpPost("projects")]
     [SwaggerOperation(
-        Summary = "Creates a new project",
-        Description = "Creates a project",
+        Summary = "Create a new project",
+        Description = "Create a project",
         OperationId = "Projects_Create",
         Tags = ["Projects"])
     ]

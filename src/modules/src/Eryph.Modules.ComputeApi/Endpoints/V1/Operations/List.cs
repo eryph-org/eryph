@@ -18,8 +18,8 @@ public class List(
 {
     [HttpGet("operations")]
     [SwaggerOperation(
-        Summary = "List all Operations",
-        Description = "List all Operations",
+        Summary = "List all operations",
+        Description = "List all operations",
         OperationId = "Operations_List",
         Tags = ["Operations"])
     ]

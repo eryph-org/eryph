@@ -8,13 +8,12 @@ using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using LanguageExt;
 
 namespace Eryph.Modules.ComputeApi.Model.V1;
 
 public class GeneSpecBuilder
     : ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Gene>,
-        IListEntitySpecBuilder<ListRequest, StateDb.Model.Gene>
+        IListEntitySpecBuilder<StateDb.Model.Gene>
 {
     public ISingleResultSpecification<StateDb.Model.Gene> GetSingleEntitySpec(
         SingleEntityRequest request,
@@ -26,8 +25,7 @@ public class GeneSpecBuilder
         return new GeneSpecs.GetById(geneId);
     }
 
-    public ISpecification<StateDb.Model.Gene> GetEntitiesSpec(
-        ListRequest request)
+    public ISpecification<StateDb.Model.Gene> GetEntitiesSpec()
     {
         return new GeneSpecs.GetAll();
     }

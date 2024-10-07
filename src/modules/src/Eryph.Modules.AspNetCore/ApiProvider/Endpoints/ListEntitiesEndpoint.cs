@@ -4,6 +4,26 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 
+public abstract class ListEntitiesEndpoint<TResult, TEntity>
+    : ListEndpoint<TResult, TEntity>
+    where TEntity : class
+{
+    private readonly IListEntitySpecBuilder<TEntity> _specBuilder;
+
+    protected ListEntitiesEndpoint(
+        IListRequestHandler<TResult, TEntity> listRequestHandler,
+        IListEntitySpecBuilder<TEntity> specBuilder)
+        : base(listRequestHandler)
+    {
+        _specBuilder = specBuilder;
+    }
+
+    protected override ISpecification<TEntity> CreateSpecification()
+    {
+        return _specBuilder.GetEntitiesSpec();
+    }
+}
+
 public abstract class ListEntitiesEndpoint<TRequest, TResult, TEntity>
     : ListEndpoint<TRequest, TResult, TEntity> 
     where TRequest : IListRequest

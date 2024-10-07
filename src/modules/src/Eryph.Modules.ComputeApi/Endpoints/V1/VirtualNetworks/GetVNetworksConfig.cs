@@ -38,8 +38,8 @@ public class GetVNetworksConfig(
     // ReSharper disable once StringLiteralTypo
     [HttpGet("projects/{projectId}/virtualnetworks/config")]
     [SwaggerOperation(
-        Summary = "Get project virtual networks configuration",
-        Description = "Get the configuration for all networks in a project",
+        Summary = "Get the virtual network configuration of a project",
+        Description = "Get the virtual network configuration of a project",
         OperationId = "VirtualNetworks_GetConfig",
         Tags = ["Virtual Networks"])
     ]

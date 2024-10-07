@@ -46,8 +46,8 @@ public class Update(
     // ReSharper disable once StringLiteralTypo
     [HttpPatch("virtualnetworks")]
     [SwaggerOperation(
-        Summary = "Modify the virtual network configuration of a project",
-        Description = "Modify the virtual network configuration of a project",
+        Summary = "Update the virtual network configuration of a project",
+        Description = "Update the virtual network configuration of a project",
         OperationId = "VirtualNetworks_Create",
         Tags = ["Virtual Networks"])
     ]

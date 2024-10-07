@@ -17,9 +17,9 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Genes;
 
 public class List(
-    IListRequestHandler<ListRequest, Gene, StateDb.Model.Gene> listRequestHandler,
-    IListEntitySpecBuilder<ListRequest, StateDb.Model.Gene> specBuilder)
-    : ListEntitiesEndpoint<ListRequest, Gene, StateDb.Model.Gene>(listRequestHandler, specBuilder)
+    IListRequestHandler<Gene, StateDb.Model.Gene> listRequestHandler,
+    IListEntitySpecBuilder<StateDb.Model.Gene> specBuilder)
+    : ListEntitiesEndpoint<Gene, StateDb.Model.Gene>(listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:genes:read")]
     [HttpGet("genes")]
@@ -31,9 +31,8 @@ public class List(
     ]
     [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Gene>))]
     public override Task<ActionResult<ListResponse<Gene>>> HandleAsync(
-        [FromRoute] ListRequest request,
         CancellationToken cancellationToken = default)
     {
-        return base.HandleAsync(request, cancellationToken);
+        return base.HandleAsync(cancellationToken);
     }
 }
