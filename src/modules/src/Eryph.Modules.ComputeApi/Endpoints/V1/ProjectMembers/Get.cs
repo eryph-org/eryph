@@ -5,7 +5,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -24,7 +23,7 @@ public class Get(
         Summary = "Get a project member",
         Description = "Get a project member",
         OperationId = "ProjectMembers_Get",
-        Tags = ["ProjectMembers"])
+        Tags = ["Project Members"])
     ]
     [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ProjectMemberRole))]
     public override Task<ActionResult<ProjectMemberRole>> HandleAsync(

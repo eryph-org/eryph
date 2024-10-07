@@ -7,7 +7,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -32,7 +31,7 @@ public class Start(
     [HttpPut("catlets/{id}/start")]
     [SwaggerOperation(
         Summary = "Starts a catlet",
-        Description = "Starts a catlet",
+        Description = "Start a catlet",
         OperationId = "Catlets_Start",
         Tags = ["Catlets"])
     ]

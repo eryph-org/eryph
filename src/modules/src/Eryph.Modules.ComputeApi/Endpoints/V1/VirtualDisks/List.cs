@@ -5,7 +5,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -13,15 +12,15 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 
 public class List(
-    [NotNull] IListRequestHandler<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<ListFilteredByProjectRequest, StateDb.Model.VirtualDisk> specBuilder)
+    IListRequestHandler<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk> listRequestHandler,
+    IListEntitySpecBuilder<ListFilteredByProjectRequest, StateDb.Model.VirtualDisk> specBuilder)
     : ListEntitiesEndpoint<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk>(listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("virtualdisks")]
     [SwaggerOperation(
-        Summary = "Get list of Virtual Disks",
-        Description = "Get list of Virtual Disks",
+        Summary = "List all virtual disks",
+        Description = "List all virtual disks",
         OperationId = "VirtualDisks_List",
         Tags = ["Virtual Disks"])
     ]

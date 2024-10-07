@@ -5,7 +5,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +24,7 @@ public class List(
         Summary = "List all project members",
         Description = "List all project members",
         OperationId = "ProjectMembers_List",
-        Tags = ["ProjectMembers"])
+        Tags = ["Project Members"])
     ]
     [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<ProjectMemberRole>))]
     public override Task<ActionResult<ListResponse<ProjectMemberRole>>> HandleAsync(

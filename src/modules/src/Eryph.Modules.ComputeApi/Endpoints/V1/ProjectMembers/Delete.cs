@@ -6,9 +6,7 @@ using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -29,7 +27,7 @@ public class Delete(
         Summary = "Remove a project member",
         Description = "Removes a project member assignment",
         OperationId = "ProjectMembers_Remove",
-        Tags = ["ProjectMembers"])
+        Tags = ["Project Members"])
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] ProjectMemberRequest request,

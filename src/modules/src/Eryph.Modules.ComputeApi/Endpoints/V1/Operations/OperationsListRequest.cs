@@ -1,6 +1,5 @@
 ﻿using System;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations;

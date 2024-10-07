@@ -6,7 +6,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -14,17 +13,17 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 
 public class Get(
-    [NotNull] IGetRequestHandler<StateDb.Model.VirtualDisk, VirtualDisk> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.VirtualDisk> specBuilder)
+    IGetRequestHandler<StateDb.Model.VirtualDisk, VirtualDisk> requestHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.VirtualDisk> specBuilder)
     : GetEntityEndpoint<SingleEntityRequest, VirtualDisk, StateDb.Model.VirtualDisk>(requestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("virtualdisks/{id}")]
     [SwaggerOperation(
-        Summary = "Get a Virtual Disk",
-        Description = "Get a Virtual Disk",
+        Summary = "Get a virtual disk",
+        Description = "Get a virtual disk",
         OperationId = "VirtualDisks_Get",
-        Tags = new[] { "Virtual Disks" })
+        Tags = ["Virtual Disks"])
     ]
     [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(VirtualDisk))]
 

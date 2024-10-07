@@ -11,12 +11,10 @@ using Eryph.Messages.Resources.Disks;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -55,8 +53,8 @@ public class Create(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("virtualdisks")]
     [SwaggerOperation(
-        Summary = "Creates a virtual disk",
-        Description = "Creates a virtual disk",
+        Summary = "Create a virtual disk",
+        Description = "Create a virtual disk",
         OperationId = "VirtualDisks_Create",
         Tags = ["Virtual Disks"])
     ]

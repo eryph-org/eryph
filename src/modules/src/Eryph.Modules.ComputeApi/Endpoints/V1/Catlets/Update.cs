@@ -42,8 +42,8 @@ public class Update(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPut("catlets/{id}")]
     [SwaggerOperation(
-        Summary = "Updates a catlet",
-        Description = "Updates a catlet",
+        Summary = "Update a catlet",
+        Description = "Update a catlet",
         OperationId = "Catlets_Update",
         Tags = ["Catlets"])
     ]

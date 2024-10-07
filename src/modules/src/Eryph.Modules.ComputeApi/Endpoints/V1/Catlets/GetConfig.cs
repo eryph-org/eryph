@@ -6,7 +6,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Catlet = Eryph.StateDb.Model.Catlet;
@@ -14,8 +13,8 @@ using Catlet = Eryph.StateDb.Model.Catlet;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class GetConfig(
-    [NotNull] IGetRequestHandler<Catlet, CatletConfiguration> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
+    IGetRequestHandler<Catlet, CatletConfiguration> requestHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, Catlet> specBuilder)
     : GetEntityEndpoint<SingleEntityRequest, CatletConfiguration, Catlet>(requestHandler, specBuilder)
 {
     [HttpGet("catlets/{id}/config")]

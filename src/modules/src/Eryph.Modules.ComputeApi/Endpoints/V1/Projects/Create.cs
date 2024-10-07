@@ -9,9 +9,7 @@ using Eryph.Messages.Projects;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using LanguageExt;
 using LanguageExt.Common;
@@ -23,7 +21,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 
 public class Create(
-    [NotNull] ICreateEntityRequestHandler<Project> operationHandler,
+    ICreateEntityRequestHandler<Project> operationHandler,
     IUserRightsProvider userRightsProvider)
     : NewOperationRequestEndpoint<NewProjectRequest, Project>(operationHandler)
 {
