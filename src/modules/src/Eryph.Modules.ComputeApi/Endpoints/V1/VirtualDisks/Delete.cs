@@ -7,7 +7,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -16,8 +15,8 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 
 public class Delete(
-    [NotNull] IEntityOperationRequestHandler<VirtualDisk> operationHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, VirtualDisk> specBuilder)
+    IEntityOperationRequestHandler<VirtualDisk> operationHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, VirtualDisk> specBuilder)
     : ResourceOperationEndpoint<SingleEntityRequest, VirtualDisk>(operationHandler, specBuilder)
 {
     protected override object CreateOperationMessage(VirtualDisk model, SingleEntityRequest request)
@@ -31,8 +30,8 @@ public class Delete(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpDelete("virtualdisks/{id}")]
     [SwaggerOperation(
-        Summary = "Deletes a virtual disk",
-        Description = "Deletes a virtual disk",
+        Summary = "Delete a virtual disk",
+        Description = "Delete a virtual disk",
         OperationId = "VirtualDisks_Delete",
         Tags = ["Virtual Disks"])
     ]

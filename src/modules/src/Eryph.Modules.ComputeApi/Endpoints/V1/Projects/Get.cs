@@ -6,7 +6,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -23,8 +22,8 @@ public class Get(
     [Authorize(Policy = "compute:projects:read")]
     [HttpGet("projects/{id}")]
     [SwaggerOperation(
-        Summary = "Get a projects",
-        Description = "Get a projects",
+        Summary = "Get a project",
+        Description = "Get a project",
         OperationId = "Projects_Get",
         Tags = ["Projects"])
     ]

@@ -44,11 +44,11 @@ public class Update(
 
     [Authorize(Policy = "compute:projects:write")]
     // ReSharper disable once StringLiteralTypo
-    [HttpPost("vnetworks")]
+    [HttpPatch("virtualnetworks")]
     [SwaggerOperation(
-        Summary = "Creates or updates virtual networks of project",
-        Description = "Creates or updates virtual networks",
-        OperationId = "VNetworks_Create",
+        Summary = "Modify the virtual network configuration of a project",
+        Description = "Modify the virtual network configuration of a project",
+        OperationId = "VirtualNetworks_Create",
         Tags = ["Virtual Networks"])
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(

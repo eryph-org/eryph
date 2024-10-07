@@ -6,7 +6,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -22,11 +21,11 @@ public class Get(
 {
     [Authorize(Policy = "compute:projects:read")]
     // ReSharper disable once StringLiteralTypo
-    [HttpGet("vnetworks/{id}")]
+    [HttpGet("virtualnetworks/{id}")]
     [SwaggerOperation(
         Summary = "Get a virtual network",
         Description = "Get a virtual network",
-        OperationId = "VNetworks_Get",
+        OperationId = "VirtualNetworks_Get",
         Tags = ["Virtual Networks"])
     ]
     [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(VirtualNetwork))]

@@ -5,7 +5,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,11 +18,12 @@ public class List(
     : ListEntitiesEndpoint<ListFilteredByProjectRequest, VirtualNetwork, StateDb.Model.VirtualNetwork>(listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
-    [HttpGet("vnetworks")]
+    // ReSharper disable once StringLiteralTypo
+    [HttpGet("virtualnetworks")]
     [SwaggerOperation(
-        Summary = "Get list of virtual networks",
-        Description = "Get list of virtual networks",
-        OperationId = "VNetworks_List",
+        Summary = "List all virtual networks",
+        Description = "List all virtual networks",
+        OperationId = "VirtualNetworks_List",
         Tags = ["Virtual Networks"])
     ]
     [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualNetwork>))]

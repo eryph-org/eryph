@@ -7,7 +7,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -32,8 +31,8 @@ public class Stop(
     [Authorize(Policy = "compute:catlets:control")]
     [HttpPut("catlets/{id}/stop")]
     [SwaggerOperation(
-        Summary = "Stops a catlet",
-        Description = "Stops a catlet",
+        Summary = "Stop a catlet",
+        Description = "Stop a catlet",
         OperationId = "Catlets_Stop",
         Tags = ["Catlets"])
     ]

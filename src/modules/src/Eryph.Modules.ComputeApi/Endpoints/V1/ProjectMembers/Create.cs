@@ -9,7 +9,6 @@ using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -31,10 +30,10 @@ public class Create(
     [Authorize(Policy = "compute:projects:write")]
     [HttpPost("projects/{projectId}/members")]
     [SwaggerOperation(
-        Summary = "Adds a project member",
+        Summary = "Add a project member",
         Description = "Add a project member",
         OperationId = "ProjectMembers_Add",
-        Tags = ["ProjectMembers"])
+        Tags = ["Project Members"])
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] NewProjectMemberRequest request,

@@ -9,7 +9,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -37,11 +36,11 @@ public class GetVNetworksConfig(
 
     [Authorize(Policy = "compute:projects:read")]
     // ReSharper disable once StringLiteralTypo
-    [HttpGet("projects/{projectId}/vnetworks/config")]
+    [HttpGet("projects/{projectId}/virtualnetworks/config")]
     [SwaggerOperation(
         Summary = "Get project virtual networks configuration",
         Description = "Get the configuration for all networks in a project",
-        OperationId = "VNetworks_GetConfig",
+        OperationId = "VirtualNetworks_GetConfig",
         Tags = ["Virtual Networks"])
     ]
     [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(VirtualNetworkConfiguration))]
