@@ -34,8 +34,8 @@ public class Delete(
     [Authorize(Policy = "compute:genes:write")]
     [HttpDelete("genes/{id}")]
     [SwaggerOperation(
-        Summary = "Removes a gene",
-        Description = "Removes a gene from the local gene pool",
+        Summary = "Remove a gene",
+        Description = "Remove a gene from the local gene pool",
         OperationId = "Genes_Delete",
         Tags = ["Genes"])
     ]

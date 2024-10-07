@@ -30,7 +30,7 @@ public class Start(
     [Authorize(Policy = "compute:catlets:control")]
     [HttpPut("catlets/{id}/start")]
     [SwaggerOperation(
-        Summary = "Starts a catlet",
+        Summary = "Start a catlet",
         Description = "Start a catlet",
         OperationId = "Catlets_Start",
         Tags = ["Catlets"])

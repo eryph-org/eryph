@@ -19,7 +19,7 @@ public class GetConfig(
 {
     [HttpGet("catlets/{id}/config")]
     [SwaggerOperation(
-        Summary = "Get catlet configuration",
+        Summary = "Get a catlet configuration",
         Description = "Get the configuration of a catlet",
         OperationId = "Catlets_GetConfig",
         Tags = ["Catlets"])

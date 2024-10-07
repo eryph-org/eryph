@@ -22,8 +22,8 @@ public class Delete(
     [Authorize(Policy = "identity:clients:write")]
     [HttpDelete("clients/{id}")]
     [SwaggerOperation(
-        Summary = "Deletes a client",
-        Description = "Deletes a client",
+        Summary = "Delete a client",
+        Description = "Delete a client",
         OperationId = "Clients_Delete",
         Tags = ["Clients"])
     ]

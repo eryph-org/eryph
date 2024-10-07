@@ -26,10 +26,10 @@ public class Update(
     [Authorize(Policy = "identity:clients:write")]
     [HttpPut("clients/{id}")]
     [SwaggerOperation(
-        Summary = "Updates a client",
-        Description = "Updates a client",
+        Summary = "Update a client",
+        Description = "Update a client",
         OperationId = "Clients_Update",
-        Tags = new[] { "Clients" })
+        Tags = ["Clients"])
     ]
     [SwaggerResponse(Status200OK, "Success", typeof(Client))]
     public override async Task<ActionResult<Client>> HandleAsync(

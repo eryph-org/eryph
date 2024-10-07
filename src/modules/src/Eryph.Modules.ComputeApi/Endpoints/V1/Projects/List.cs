@@ -13,9 +13,9 @@ using ProjectModel = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 
 public class List(
-    IListRequestHandler<ListRequest, ProjectModel, StateDb.Model.Project> listRequestHandler,
-    IListEntitySpecBuilder<ListRequest, StateDb.Model.Project> specBuilder)
-    : ListEntitiesEndpoint<ListRequest, ProjectModel, StateDb.Model.Project>(listRequestHandler,
+    IListRequestHandler<ProjectModel, StateDb.Model.Project> listRequestHandler,
+    IListEntitySpecBuilder<StateDb.Model.Project> specBuilder)
+    : ListEntitiesEndpoint<ProjectModel, StateDb.Model.Project>(listRequestHandler,
         specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
@@ -29,9 +29,8 @@ public class List(
     ]
     [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<ProjectModel>))]
     public override Task<ActionResult<ListResponse<ProjectModel>>> HandleAsync(
-        [FromRoute] ListRequest request,
         CancellationToken cancellationToken = default)
     {
-        return base.HandleAsync(request, cancellationToken);
+        return base.HandleAsync(cancellationToken);
     }
 }

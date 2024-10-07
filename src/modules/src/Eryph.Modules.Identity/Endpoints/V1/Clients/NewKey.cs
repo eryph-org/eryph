@@ -27,10 +27,10 @@ public class NewKey(
         .WithActionResult<ClientWithSecret>
 {
     [Authorize(Policy = "identity:clients:write")]
-    [HttpPost("clients/{id}/newkey")]
+    [HttpPost("clients/{id}/key")]
     [SwaggerOperation(
-        Summary = "Updates a client key",
-        Description = "Updates a client key",
+        Summary = "Create or replace the client key",
+        Description = "Create or replace a client key",
         OperationId = "Clients_NewKey",
         Tags = ["Clients"])
     ]
@@ -44,12 +44,11 @@ public class NewKey(
         if (descriptor == null)
             return NotFound();
 
-        var sharedSecret = (request.Body?.SharedSecret).GetValueOrDefault(false);
+        var sharedSecret = (request.Body.SharedSecret).GetValueOrDefault(false);
         string key;
         if (sharedSecret)
         {
-            key = Convert.ToBase64String(
-                    RandomNumberGenerator.GetBytes(50))
+            key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64))
                 .Replace('+', '-')
                 .Replace('/', '_')
                 .Replace('=', '0');

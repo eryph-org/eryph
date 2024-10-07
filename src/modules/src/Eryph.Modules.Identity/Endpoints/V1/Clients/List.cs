@@ -27,8 +27,8 @@ public class List(
     [HttpGet("clients")]
     [Authorize("identity:clients:read")]
     [SwaggerOperation(
-        Summary = "Lists clients",
-        Description = "Lists clients",
+        Summary = "List all clients",
+        Description = "List all clients",
         OperationId = "Clients_List",
         Tags = ["Clients"])
     ]

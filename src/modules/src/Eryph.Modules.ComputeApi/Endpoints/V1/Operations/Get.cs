@@ -17,8 +17,8 @@ public class Get(
 {
     [HttpGet("operations/{id}")]
     [SwaggerOperation(
-        Summary = "Get a operation",
-        Description = "Get a operation",
+        Summary = "Get an operation",
+        Description = "Get an operation",
         OperationId = "Operations_Get",
         Tags = ["Operations"])
     ]
