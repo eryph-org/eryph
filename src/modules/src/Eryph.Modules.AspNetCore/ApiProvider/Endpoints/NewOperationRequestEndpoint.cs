@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -26,8 +26,12 @@ public abstract class NewOperationRequestEndpoint<TRequest, TModel> : EndpointBa
 
     protected abstract object CreateOperationMessage(TRequest request);
 
-
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status202Accepted,
+        description: "Success",
+        type: typeof(Operation),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<Operation>> HandleAsync(
         TRequest request,
         CancellationToken cancellationToken = default)

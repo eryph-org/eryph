@@ -39,7 +39,7 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         return populatedClients.ToList();
     }
 
-    public async ValueTask<TDescriptor> Get(string clientId, Guid tenantId, CancellationToken cancellationToken)
+    public async ValueTask<TDescriptor?> Get(string clientId, Guid tenantId, CancellationToken cancellationToken)
     {
         var entity = await _repository.GetBySpecAsync(GetSingleEntitySpec(clientId, tenantId), cancellationToken);
         if(entity == null)

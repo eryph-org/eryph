@@ -27,7 +27,12 @@ public class Get(
         OperationId = "Projects_Get",
         Tags = ["Projects"])
     ]
-    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ProjectModel))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ProjectModel),
+        contentTypes: ["application/json"])
+    ]
     public override async Task<ActionResult<ProjectModel>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)

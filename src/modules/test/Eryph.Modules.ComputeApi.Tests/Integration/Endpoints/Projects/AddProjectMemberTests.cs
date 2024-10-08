@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Messages.Projects;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -89,13 +90,13 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
                     RoleId = EryphConstants.BuildInRoles.Reader.ToString(),
                     CorrelationId = Guid.NewGuid(),
                     MemberId = memberId,
-                });
+                },
+                options: ApiJsonSerializerOptions.Options);
 
-        response.Should().NotBeNull();
         var messages = _factory.GetPendingRebusMessages<AddProjectMemberCommand>();
         if (isAuthorized)
         {
-            response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
+            response.StatusCode.Should().Be(HttpStatusCode.Accepted);
             messages.Should().SatisfyRespectively(
                 m =>
                 {
@@ -124,10 +125,10 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
                     RoleId = EryphConstants.BuildInRoles.Reader.ToString(),
                     CorrelationId = Guid.NewGuid(),
                     MemberId = "system-client"
-                });
+                },
+                options: ApiJsonSerializerOptions.Options);
 
-        response.Should().NotBeNull();
-        response!.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Should().HaveStatusCode(HttpStatusCode.BadRequest);
 
         var messages = _factory.GetPendingRebusMessages<AddProjectMemberCommand>();
         messages.Should().BeEmpty();
@@ -145,7 +146,8 @@ public class AddProjectMemberTests : InMemoryStateDbTestBase,
                     RoleId = EryphConstants.BuildInRoles.Reader.ToString(),
                     CorrelationId = Guid.NewGuid(),
                     MemberId = UserId.ToString(),
-                });
+                },
+                options: ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.BadRequest);

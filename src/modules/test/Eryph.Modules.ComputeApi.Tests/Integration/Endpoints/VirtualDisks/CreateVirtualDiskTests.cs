@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Messages.Resources.Disks;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -66,7 +67,8 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
                 Name = DiskName,
                 Size = DiskSize,
                 Location = LocationName,
-            });
+            },
+            options: ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(expectedStatusCode);
     }
@@ -98,7 +100,8 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
                 Size = DiskSize,
                 Environment = EnvironmentName,
                 Store = StoreName,
-            });
+            },
+            options: ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -128,7 +131,8 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
                 Name = DiskName,
                 Location = LocationName,
                 Size = DiskSize,
-            });
+            },
+            options: ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -146,7 +150,8 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
                 Size = 5,
                 Environment = EnvironmentName,
                 Store = StoreName,
-            });
+            },
+            options: ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
@@ -174,7 +179,8 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
                 Name = DiskName,
                 Location = LocationName,
                 Size = 5,
-            });
+            },
+            options: ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 

@@ -26,7 +26,12 @@ public class List(
         OperationId = "VirtualNetworks_List",
         Tags = ["Virtual Networks"])
     ]
-    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualNetwork>))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ListResponse<VirtualNetwork>),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<ListResponse<VirtualNetwork>>> HandleAsync(
         [FromRoute] ListFilteredByProjectRequest request,
         CancellationToken cancellationToken = default)

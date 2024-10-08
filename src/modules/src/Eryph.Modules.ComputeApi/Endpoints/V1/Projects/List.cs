@@ -27,7 +27,12 @@ public class List(
         Tags = 
         ["Projects"])
     ]
-    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<ProjectModel>))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ListResponse<ProjectModel>),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<ListResponse<ProjectModel>>> HandleAsync(
         CancellationToken cancellationToken = default)
     {

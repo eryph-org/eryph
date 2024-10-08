@@ -6,6 +6,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -24,7 +25,12 @@ public class List(
         OperationId = "VirtualDisks_List",
         Tags = ["Virtual Disks"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualDisk>))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ListResponse<VirtualDisk>),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<ListResponse<VirtualDisk>>> HandleAsync(
         [FromRoute] ListFilteredByProjectRequest request,
         CancellationToken cancellationToken = default)

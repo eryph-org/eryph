@@ -6,11 +6,10 @@ using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
 using Swashbuckle.AspNetCore.Annotations;
-
-using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
@@ -31,7 +30,12 @@ public class Update(
         OperationId = "Clients_Update",
         Tags = ["Clients"])
     ]
-    [SwaggerResponse(Status200OK, "Success", typeof(Client))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(Client),
+        contentTypes: ["application/json"])
+    ]
     public override async Task<ActionResult<Client>> HandleAsync(
         [FromRoute] UpdateClientRequest request,
         CancellationToken cancellationToken = default)
@@ -54,7 +58,7 @@ public class Update(
 
         await clientService.Update(persistentDescriptor, cancellationToken);
 
-        var updatedClient = persistentDescriptor.ToClient<Client>();
+        var updatedClient = persistentDescriptor.ToClient();
 
         return Ok(updatedClient);
     }

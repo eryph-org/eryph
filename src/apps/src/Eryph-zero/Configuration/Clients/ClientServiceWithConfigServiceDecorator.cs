@@ -21,7 +21,7 @@ internal class ClientServiceWithConfigServiceDecorator(
         return decoratedService.List(tenantId, cancellationToken);
     }
 
-    public ValueTask<ClientApplicationDescriptor> Get(
+    public ValueTask<ClientApplicationDescriptor?> Get(
         string clientId,
         Guid tenantId,
         CancellationToken cancellationToken)

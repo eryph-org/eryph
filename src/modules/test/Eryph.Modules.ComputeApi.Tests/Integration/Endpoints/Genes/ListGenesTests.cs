@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using System.Text.Json;
 using FluentAssertions;
 using ApiGene = Eryph.Modules.ComputeApi.Model.V1.Gene;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
+using Eryph.Modules.AspNetCore.ApiProvider;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
@@ -66,13 +68,10 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:read", false)
             .GetAsync("v1/genes");
 
-        response.EnsureSuccessStatusCode();
+        response.Should().HaveStatusCode(HttpStatusCode.OK);
 
         var genes = await response.Content.ReadFromJsonAsync<ListResponse<ApiGene>>(
-            new JsonSerializerOptions(JsonSerializerDefaults.Web)
-            {
-                Converters = { new JsonStringEnumConverter() },
-            });
+            options: ApiJsonSerializerOptions.Options);
 
         genes.Value.Should().SatisfyRespectively(
             gene =>
