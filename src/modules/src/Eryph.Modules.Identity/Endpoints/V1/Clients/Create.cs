@@ -27,7 +27,7 @@ public class Create(
     IOpenIddictScopeManager scopeManager,
     IUserInfoProvider userInfoProvider)
     : EndpointBaseAsync
-        .WithRequest<NewClientRequest>
+        .WithRequest<NewClientRequestBody>
         .WithActionResult<ClientWithSecret>
 {
     [Authorize(Policy = "identity:clients:write")]
@@ -45,7 +45,7 @@ public class Create(
         contentTypes: ["application/json"])
     ]
     public override async Task<ActionResult<ClientWithSecret>> HandleAsync(
-        [FromBody] NewClientRequest client,
+        [FromBody] NewClientRequestBody client,
         CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)
