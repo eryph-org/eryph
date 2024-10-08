@@ -33,12 +33,16 @@ namespace Eryph.Modules.VmHostAgent.Genetics
         {
             switch (geneManifest.Format)
             {
+                case "plain":
+                    await CopyPlain(geneManifest, stream, genesetDirectory, cancel);
+                    break;
                 case "gz":
                     await DecompressGZip(geneManifest, stream, genesetDirectory, cancel);
                     break;
                 case "xz":
                     await DecompressXz(geneManifest, stream, genesetDirectory, cancel);
                     break;
+                default: throw new NotSupportedException($"Unsupported gene format {geneManifest.Format}");
             }
         }
 
@@ -149,6 +153,27 @@ namespace Eryph.Modules.VmHostAgent.Genetics
                 GeneType.Fodder => "fodder",
                 _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
             };
+        }
+
+        private async Task CopyPlain(GeneManifestData geneManifest, Stream stream, string genesetDirectory,
+            CancellationToken cancel)
+        {
+            var folderName = genesetDirectory;
+            var genePath = GetGenePath(geneManifest.Type);
+            if (!string.IsNullOrWhiteSpace(genePath))
+            {
+                folderName = Path.Combine(folderName, genePath);
+            }
+
+            _fileSystemService.EnsureDirectoryExists(folderName);
+
+            if (geneManifest.FileName == null)
+                throw new InvalidOperationException("Missing filename for plain gene.");
+
+            var fileName = Path.Combine(folderName, geneManifest.FileName);
+            await using var fileStream = _fileSystemService.OpenWrite(fileName);
+            fileStream.SetLength(geneManifest.OriginalSize.GetValueOrDefault());
+            await stream.CopyToAsync(fileStream, cancel);
         }
 
         private async Task DecompressXz(GeneManifestData geneManifest, Stream stream, string genesetDirectory, CancellationToken cancel)
