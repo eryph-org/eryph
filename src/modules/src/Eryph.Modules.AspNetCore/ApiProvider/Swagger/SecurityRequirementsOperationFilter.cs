@@ -7,21 +7,22 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.AspNetCore.ApiProvider.Swagger;
 
 public class SecurityRequirementsOperationFilter : IOperationFilter
 {
     public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        // Policy names map to scopes
-        var requiredScopes = context.MethodInfo
-            .GetCustomAttributes(true)
+        var scopes = context.ApiDescription.ActionDescriptor.EndpointMetadata
             .OfType<AuthorizeAttribute>()
-            .Select(attr => attr.Policy)
+            .Map(a => Optional(a.Policy))
+            .Somes()
             .Distinct()
             .ToList();
 
-        if (requiredScopes.Count == 0)
+        if (scopes.Count == 0)
             return;
 
         var oAuthScheme = new OpenApiSecurityScheme
@@ -33,7 +34,7 @@ public class SecurityRequirementsOperationFilter : IOperationFilter
         [
             new OpenApiSecurityRequirement
             {
-                [oAuthScheme] = requiredScopes.ToList()
+                [oAuthScheme] = scopes.ToList()
             }
         ];
     }

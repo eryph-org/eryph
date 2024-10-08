@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Asp.Versioning.ApiExplorer;
+using Eryph.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
@@ -47,19 +48,29 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Swagger
 
             if (_apiOptions.OAuthOptions is not null)
             {
-                options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
-                {
-                    Type = SecuritySchemeType.OAuth2,
-                    Flows = new OpenApiOAuthFlows()
+                options.AddSecurityDefinition(
+                    EryphConstants.Authorization.SecuritySchemeId,
+                    new OpenApiSecurityScheme
                     {
-                        ClientCredentials = new OpenApiOAuthFlow()
+                        Type = SecuritySchemeType.OAuth2,
+                        // Client assertions are not supported by the OpenAPI specification.
+                        // See https://github.com/OAI/OpenAPI-Specification/issues/1875.
+                        Description = """
+                                      Eryph only supports the client credentials flow. Depending
+                                      on the client, you can use either the client secret or a
+                                      client assertion with type
+                                      `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`.
+                                      """,
+                        Flows = new OpenApiOAuthFlows()
                         {
-                            TokenUrl = _apiOptions.OAuthOptions.TokenEndpoint,
-                            Scopes = _apiOptions.OAuthOptions.Scopes
-                                .ToDictionary(s => s.Name, s => s.Description),
+                            ClientCredentials = new OpenApiOAuthFlow()
+                            {
+                                TokenUrl = _apiOptions.OAuthOptions.TokenEndpoint,
+                                Scopes = _apiOptions.OAuthOptions.Scopes
+                                    .ToDictionary(s => s.Name, s => s.Description),
+                            },
                         },
-                    },
-                });
+                    });
             }
         }
 

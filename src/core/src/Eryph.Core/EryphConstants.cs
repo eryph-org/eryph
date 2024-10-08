@@ -65,20 +65,6 @@ namespace Eryph.Core
                 public static readonly string IdentityApi = "identity_api";
             }
 
-            public static class Policies
-            {
-                public static readonly string CatletsRead = "compute:catlets:read";
-                public static readonly string CatletsWrite = "compute:catlets:write";
-                public static readonly string CatletsControl = "compute:catlets:control";
-                public static readonly string GenesRead = "compute:genes:read";
-                public static readonly string GenesWrite = "compute:genes:write";
-                public static readonly string ProjectsRead = "compute:projects:read";
-                public static readonly string ProjectsWrite = "compute:projects:write";
-
-                public static readonly string IdentityClientsRead = "identity:clients:read";
-                public static readonly string IdentityClientsWrite = "identity:clients:write";
-            }
-
             public static class Scopes
             {
                 public static readonly string ComputeRead = "compute:read";
@@ -114,6 +100,8 @@ namespace Eryph.Core
                 new(Scopes.IdentityClientsRead, [Audiences.IdentityApi], "Grants read access for identity clients"),
                 new(Scopes.IdentityClientsWrite, [Audiences.IdentityApi], "Grants write access for identity clients"),
             ];
+
+            public static readonly string SecuritySchemeId = "oauth2";
 
             public record Scope(string Name, IReadOnlyList<string> Resources, string Description);
         }
