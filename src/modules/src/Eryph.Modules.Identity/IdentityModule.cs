@@ -78,7 +78,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
 
         services.AddAuthorization(options =>
         {
-            options.AddPolicy(EryphConstants.Authorization.Policies.IdentityClientsRead,
+            options.AddPolicy(EryphConstants.Authorization.Scopes.IdentityClientsRead,
                 policy => policy.Requirements.Add(new HasScopeRequirement(
                     authority,
                     EryphConstants.Authorization.Scopes.IdentityClientsRead,

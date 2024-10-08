@@ -55,46 +55,46 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
 
     public static void ConfigureScopes(AuthorizationOptions options, string authority)
     {
-        options.AddPolicy(EryphConstants.Authorization.Policies.CatletsRead,
+        options.AddPolicy(EryphConstants.Authorization.Scopes.CatletsRead,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
                 EryphConstants.Authorization.Scopes.CatletsRead,
                 EryphConstants.Authorization.Scopes.CatletsWrite,
                 EryphConstants.Authorization.Scopes.ComputeRead,
                 EryphConstants.Authorization.Scopes.ComputeWrite)));
-        options.AddPolicy(EryphConstants.Authorization.Policies.CatletsWrite,
+        options.AddPolicy(EryphConstants.Authorization.Scopes.CatletsWrite,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
                 EryphConstants.Authorization.Scopes.CatletsWrite,
                 EryphConstants.Authorization.Scopes.ComputeWrite)));
-        options.AddPolicy(EryphConstants.Authorization.Policies.CatletsControl,
+        options.AddPolicy(EryphConstants.Authorization.Scopes.CatletsControl,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
                 EryphConstants.Authorization.Scopes.CatletsControl,
                 EryphConstants.Authorization.Scopes.CatletsWrite,
                 EryphConstants.Authorization.Scopes.ComputeWrite)));
 
-        options.AddPolicy(EryphConstants.Authorization.Policies.GenesRead,
+        options.AddPolicy(EryphConstants.Authorization.Scopes.GenesRead,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
                 EryphConstants.Authorization.Scopes.GenesRead,
                 EryphConstants.Authorization.Scopes.GenesWrite,
                 EryphConstants.Authorization.Scopes.ComputeRead,
                 EryphConstants.Authorization.Scopes.ComputeWrite)));
-        options.AddPolicy(EryphConstants.Authorization.Policies.GenesWrite,
+        options.AddPolicy(EryphConstants.Authorization.Scopes.GenesWrite,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
                 EryphConstants.Authorization.Scopes.GenesWrite,
                 EryphConstants.Authorization.Scopes.ComputeWrite)));
 
-        options.AddPolicy(EryphConstants.Authorization.Policies.ProjectsRead,
+        options.AddPolicy(EryphConstants.Authorization.Scopes.ProjectsRead,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
                 EryphConstants.Authorization.Scopes.ProjectsRead,
                 EryphConstants.Authorization.Scopes.ProjectsWrite,
                 EryphConstants.Authorization.Scopes.ComputeRead,
                 EryphConstants.Authorization.Scopes.ComputeWrite)));
-        options.AddPolicy(EryphConstants.Authorization.Policies.ProjectsWrite,
+        options.AddPolicy(EryphConstants.Authorization.Scopes.ProjectsWrite,
             policy => policy.Requirements.Add(new HasScopeRequirement(
                 authority,
                 EryphConstants.Authorization.Scopes.ProjectsWrite,
