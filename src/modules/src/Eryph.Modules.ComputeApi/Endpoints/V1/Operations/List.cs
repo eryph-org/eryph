@@ -5,6 +5,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -23,7 +24,12 @@ public class List(
         OperationId = "Operations_List",
         Tags = ["Operations"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Operation>))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ListResponse<Operation>),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<ListResponse<Operation>>> HandleAsync(
         [FromRoute] OperationsListRequest request,
         CancellationToken cancellationToken = default)

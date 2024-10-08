@@ -4,12 +4,13 @@ namespace Eryph.Modules.ComputeApi.Model.V1;
 
 public class FloatingNetworkPort
 {
-    public string Name { get; set; }
-    public string Provider { get; set; }
-    public string Subnet { get; set; }
+    public required string Name { get; set; }
+    
+    public required string Provider { get; set; }
+    
+    public required string Subnet { get; set; }
 
-    public IEnumerable<string> IpV4Addresses { get; set; }
+    public IReadOnlyList<string>? IpV4Addresses { get; set; }
 
-    public IEnumerable<string> IpV4Subnets { get; set; }
-
+    public IReadOnlyList<string>? IpV4Subnets { get; set; }
 }

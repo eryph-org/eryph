@@ -1,5 +1,4 @@
-﻿using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +8,7 @@ using Ardalis.Specification;
 using AutoMapper;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
+using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Eryph.StateDb;
 using Microsoft.AspNetCore.Mvc;
@@ -22,11 +22,15 @@ internal class GetGeneHandler(
     : IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage>
 {
     public async Task<ActionResult<GeneWithUsage>> HandleGetRequest(
-        Func<ISingleResultSpecification<StateDb.Model.Gene>> specificationFunc,
+        Func<ISingleResultSpecification<StateDb.Model.Gene>?> specificationFunc,
         CancellationToken cancellationToken)
     {
+        var specification = specificationFunc();
+        if (specification is null)
+            return new NotFoundResult();
+
         var dbGene = await geneRepository.GetBySpecAsync(
-            specificationFunc(),
+            specification,
             cancellationToken);
         if (dbGene is null)
             return new NotFoundResult();
@@ -36,14 +40,16 @@ internal class GetGeneHandler(
         
         if (dbGene.GeneType == GeneType.Fodder)
         {
-            result.Catlets = await geneInventoryQueries.GetCatletsUsingGene(
+            var catletIds = await geneInventoryQueries.GetCatletsUsingGene(
                 dbGene.LastSeenAgent, geneId, cancellationToken);
+            result.Catlets = mapper.Map<IReadOnlyList<string>>(catletIds);
         }
         
         if (dbGene.GeneType == GeneType.Volume)
         {
-            result.Disks = await geneInventoryQueries.GetDisksUsingGene(
+            var diskIds = await geneInventoryQueries.GetDisksUsingGene(
                 dbGene.LastSeenAgent, geneId, cancellationToken);
+            result.Disks = mapper.Map<IReadOnlyList<string>>(diskIds);
         }
 
         return new JsonResult(result);

@@ -45,7 +45,7 @@ internal class ListCatletHandler(
             var catletPortsWithCatlet = dbCatletPorts
                 .Map(p => (Catlet: dbCatlet, Port: p));
 
-            catlet.Networks = mapper.Map<IEnumerable<CatletNetwork>>(
+            catlet.Networks = mapper.Map<IReadOnlyList<CatletNetwork>>(
                 catletPortsWithCatlet, o => o.SetAuthContext(authContext));
             return catlet;
         }).SequenceSerial();

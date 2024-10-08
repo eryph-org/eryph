@@ -6,37 +6,31 @@ using JetBrains.Annotations;
 namespace Eryph.Modules.Identity.Models.V1;
 
 [PublicAPI]
-public class Client
+public class Client : IAllowedScopesHolder
 {
     /// <summary>
-    ///     Unique identifier for a eryph client
-    ///     Only characters a-z, A-Z, numbers 0-9 and hyphens are allowed.
+    /// The Unique identifier of the eryph client.
+    /// Only characters a-z, A-Z, numbers 0-9 and hyphens are allowed.
     /// </summary>
-    [Key]
     [MaxLength(40)]
-    public string Id { get; set; }
+    public required string Id { get; set; }
 
     /// <summary>
-    ///     human readable name of client, for example email address of owner
+    /// Human-readable name of the client, for example email address of owner.
     /// </summary>
     [MaxLength(254)]
-    public string Name { get; set; }
+    public required string Name { get; set; }
+
+    /// <inheritdoc/>
+    public required IReadOnlyList<string> AllowedScopes { get; set; }
 
     /// <summary>
-    ///     allowed scopes of client
+    /// The roles of the client,
     /// </summary>
-    public string[] AllowedScopes { get; set; }
-
+    public required IReadOnlyList<string> Roles { get; set; }
 
     /// <summary>
-    ///     Roles of client
+    /// The ID of the tenant to which the client belongs.
     /// </summary>
-    public Guid[] Roles { get; set; }
-
-    /// <summary>
-    ///    Tenant of client
-    /// </summary>
-    public Guid TenantId { get; set; }
-
-
+    public required string TenantId { get; set; }
 }

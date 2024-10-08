@@ -43,7 +43,12 @@ public class GetVNetworksConfig(
         OperationId = "VirtualNetworks_GetConfig",
         Tags = ["Virtual Networks"])
     ]
-    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(VirtualNetworkConfiguration))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(VirtualNetworkConfiguration),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<VirtualNetworkConfiguration>> HandleAsync(
         [FromRoute] ProjectRequest request,
         CancellationToken cancellationToken = default)

@@ -26,7 +26,12 @@ public class List(
         OperationId = "ProjectMembers_List",
         Tags = ["Project Members"])
     ]
-    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ListResponse<ProjectMemberRole>))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ListResponse<ProjectMemberRole>),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<ListResponse<ProjectMemberRole>>> HandleAsync(
         [FromRoute] ProjectMembersListRequest request,
         CancellationToken cancellationToken = default)

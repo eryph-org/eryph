@@ -11,9 +11,9 @@ public class Catlet
 
     public required CatletStatus Status { get; set; }
 
-    public IEnumerable<CatletNetwork>? Networks { get; set; }
+    public IReadOnlyList<CatletNetwork>? Networks { get; set; }
 
-    public IEnumerable<CatletNetworkAdapter>? NetworkAdapters { get; set; }
+    public IReadOnlyList<CatletNetworkAdapter>? NetworkAdapters { get; set; }
 
-    public IEnumerable<CatletDrive>? Drives { get; set; }
+    public IReadOnlyList<CatletDrive>? Drives { get; set; }
 }

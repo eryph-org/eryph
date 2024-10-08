@@ -8,7 +8,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1;
 
 public class GeneWithUsage : Gene
 {
-    public IList<Guid> Catlets { get; set; } = null!;
+    public IReadOnlyList<string>? Catlets { get; set; }
 
-    public IList<Guid> Disks { get; set; } = null!;
+    public IReadOnlyList<string>? Disks { get; set; }
 }

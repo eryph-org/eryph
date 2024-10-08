@@ -25,7 +25,12 @@ public class Get(
         OperationId = "ProjectMembers_Get",
         Tags = ["Project Members"])
     ]
-    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(ProjectMemberRole))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ProjectMemberRole),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<ProjectMemberRole>> HandleAsync(
         [FromRoute] ProjectMemberRequest request,
         CancellationToken cancellationToken = default)

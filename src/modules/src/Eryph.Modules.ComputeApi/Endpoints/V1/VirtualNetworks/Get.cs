@@ -28,7 +28,12 @@ public class Get(
         OperationId = "VirtualNetworks_Get",
         Tags = ["Virtual Networks"])
     ]
-    [SwaggerResponse(StatusCodes.Status200OK, "Success", typeof(VirtualNetwork))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(VirtualNetwork),
+        contentTypes: ["application/json"])
+    ]
     public override async Task<ActionResult<VirtualNetwork>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)

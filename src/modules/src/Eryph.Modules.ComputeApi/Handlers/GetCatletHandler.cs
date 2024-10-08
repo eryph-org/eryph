@@ -27,10 +27,14 @@ internal class GetCatletHandler(
     : IGetRequestHandler<StateDb.Model.Catlet, Catlet>
 {
     public async Task<ActionResult<Catlet>> HandleGetRequest(
-        Func<ISingleResultSpecification<StateDb.Model.Catlet>> specificationFunc,
+        Func<ISingleResultSpecification<StateDb.Model.Catlet>?> specificationFunc,
         CancellationToken cancellationToken)
     {
-        var catlet = await catletRepository.GetBySpecAsync(specificationFunc(), cancellationToken);
+        var specification = specificationFunc();
+        if (specification is null)
+            return new NotFoundResult();
+
+        var catlet = await catletRepository.GetBySpecAsync(specification, cancellationToken);
         if (catlet is null)
             return new NotFoundResult();
 
@@ -44,7 +48,7 @@ internal class GetCatletHandler(
         var catletPortsWithCatlet = catletPorts
             .Map(p => (Catlet: catlet, Port: p));
             
-        mappedResult.Networks = mapper.Map<IEnumerable<CatletNetwork>>(
+        mappedResult.Networks = mapper.Map<IReadOnlyList<CatletNetwork>>(
             catletPortsWithCatlet, o => o.SetAuthContext(authContext));
         return new JsonResult(mappedResult);
     }

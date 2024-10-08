@@ -31,25 +31,17 @@ public static class ApiProviderExtensions
 
         mvcBuilder.AddMvcOptions(options =>
         {
-            // Remove media types and formatters which are not required. This
-            // also prevents unwanted media types (e.g. text/plain) from showing
+            // Remove media types which are not required as we only accept JSON requests.
+            // This also prevents unwanted media types (e.g. text/plain) from showing
             // up in the OpenAPI specifications.
-
             var jsonInputFormatter = options.InputFormatters.OfType<SystemTextJsonInputFormatter>().Single();
             jsonInputFormatter.SupportedMediaTypes.Clear();
             jsonInputFormatter.SupportedMediaTypes.Add("application/json");
-
-            options.OutputFormatters.RemoveType<StringOutputFormatter>();
-            var jsonOutputFormatter = options.OutputFormatters.OfType<SystemTextJsonOutputFormatter>().Single();
-            jsonOutputFormatter.SupportedMediaTypes.Clear();
-            jsonOutputFormatter.SupportedMediaTypes.Add("application/json");
         });
-
+        
         mvcBuilder.AddJsonOptions(options =>
         {
-            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-            options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-            options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+            options.JsonSerializerOptions.AddEryphApiSettings();
         });
 
         services.AddProblemDetails(problemDetailsOptions =>

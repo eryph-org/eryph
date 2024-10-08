@@ -11,6 +11,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -29,7 +30,12 @@ public class List(
         OperationId = "Genes_List",
         Tags = ["Genes"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Gene>))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ListResponse<Gene>),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<ListResponse<Gene>>> HandleAsync(
         CancellationToken cancellationToken = default)
     {

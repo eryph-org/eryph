@@ -29,7 +29,12 @@ public abstract class OperationRequestEndpoint<TRequest, TEntity>(
         return specBuilder.GetSingleEntitySpec(request, AccessRight.Write);
     }
 
-    [SwaggerResponse(StatusCodes.Status202Accepted, "Success", typeof(Operation))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status202Accepted,
+        description: "Success",
+        type: typeof(Operation),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<Operation>> HandleAsync(TRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -50,7 +55,12 @@ public abstract class OperationRequestEndpoint<TEntity>(
 {
     protected abstract object CreateOperationMessage();
 
-    [SwaggerResponse(StatusCodes.Status202Accepted, "Success", typeof(Operation))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status202Accepted,
+        description: "Success",
+        type: typeof(Operation),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<Operation>> HandleAsync(
         CancellationToken cancellationToken = default)
     {

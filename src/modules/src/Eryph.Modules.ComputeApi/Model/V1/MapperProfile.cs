@@ -5,6 +5,7 @@ using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.ComputeApi.Model.V1
@@ -30,7 +31,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<(StateDb.Model.Catlet Catlet, CatletNetworkPort Port), CatletNetwork>()
                 .ConvertUsing((src, target) =>
                 {
-                    target ??= new CatletNetwork();
+                    //target ??= new CatletNetwork();
                     var ipV4Addresses = src.Port.IpAssignments?.Map(assignment => assignment.IpAddress)
                         ?? Array.Empty<string>();
                     var routerIp = src.Port.Network.RouterPort.IpAssignments?.FirstOrDefault()?.IpAddress;
@@ -50,8 +51,8 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                             Name = src.Port.FloatingPort.Name,
                             Subnet = src.Port.FloatingPort.SubnetName,
                             Provider = src.Port.FloatingPort.ProviderName,
-                            IpV4Addresses = floatingPortIp,
-                            IpV4Subnets = src.Port.FloatingPort.IpAssignments?.Map(x => x.Subnet).Map(x => x.IpNetwork)
+                            IpV4Addresses = floatingPortIp.ToList(),
+                            IpV4Subnets = src.Port.FloatingPort.IpAssignments?.Map(x => x.Subnet).Map(x => x.IpNetwork).ToList(),
                         };
                     }
 
@@ -84,6 +85,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                     return isSuperAdmin ? s.Path : null;
                 }))
                 .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier));
+            CreateMap<StateDb.Model.CatletDrive, VirtualDiskAttachmentInfo>();
 
             CreateMap<StateDb.Model.Gene, Gene>()
                 .Include<StateDb.Model.Gene, GeneWithUsage>()

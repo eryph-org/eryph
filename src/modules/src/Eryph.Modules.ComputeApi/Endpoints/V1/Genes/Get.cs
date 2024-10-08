@@ -12,6 +12,7 @@ using Eryph.Modules.ComputeApi.Model.V1;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Genes;
 
@@ -28,7 +29,12 @@ public class Get(
         OperationId = "Genes_Get",
         Tags = ["Genes"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(GeneWithUsage))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(GeneWithUsage),
+        contentTypes: ["application/json"])
+    ]
     public override async Task<ActionResult<GeneWithUsage>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)
