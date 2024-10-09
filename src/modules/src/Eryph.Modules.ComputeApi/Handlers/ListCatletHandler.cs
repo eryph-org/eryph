@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,11 +24,11 @@ internal class ListCatletHandler(
     IReadonlyStateStoreRepository<StateDb.Model.Catlet> catletRepository,
     IReadonlyStateStoreRepository<CatletNetworkPort> networkPortRepository,
     IUserRightsProvider userRightsProvider)
-    : IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet>
+    : IProjectListRequestHandler<ListFilteredByProjectRequest, Catlet, StateDb.Model.Catlet>
 {
     public async Task<ActionResult<ListResponse<Catlet>>> HandleListRequest(
-        ListRequest request,
-        Func<ListRequest, ISpecification<StateDb.Model.Catlet>> createSpecificationFunc,
+        ListFilteredByProjectRequest request,
+        Func<ListFilteredByProjectRequest, ISpecification<StateDb.Model.Catlet>> createSpecificationFunc,
         CancellationToken cancellationToken)
     {
         var dbCatlets = await catletRepository.ListAsync(createSpecificationFunc(request), cancellationToken);

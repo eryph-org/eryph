@@ -22,6 +22,17 @@ public class MapperProfile : Profile
                 x => x.Progress,
                 m => m.MapFrom(x => x.Status == OperationTaskStatus.Completed
                     ? 100
-                    : x.Progress.Select(p => p.Progress).DefaultIfEmpty().Max()));
+                    : x.Progress.Select(p => p.Progress).DefaultIfEmpty().Max()))
+            .ForMember(x => x.Reference,
+                m =>
+                {
+                    m.Condition(x => x.ReferenceType.HasValue);
+                    m.MapFrom(s => new OperationTaskReference
+                        {
+                            Id = s.ReferenceId!,
+                            Type = s.ReferenceType!.Value,
+                            ProjectName = s.ReferenceProjectName!
+                        });
+                });
     }
 }

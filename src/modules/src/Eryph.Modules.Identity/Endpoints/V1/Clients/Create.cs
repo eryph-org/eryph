@@ -64,7 +64,7 @@ public class Create(
         descriptor = await clientService.Add(descriptor, false, cancellationToken);
 
         var createdClient = descriptor.ToClient(privateKey);
-        var clientUri = new Uri(endpointResolver.GetEndpoint("identity"), $"v1/clients/{createdClient.Id}");
+        var clientUri = new Uri(endpointResolver.GetEndpoint("identity") + $"/v1/clients/{createdClient.Id}");
 
         return Created(clientUri, createdClient);
     }

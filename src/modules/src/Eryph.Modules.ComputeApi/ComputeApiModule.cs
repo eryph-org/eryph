@@ -42,7 +42,7 @@ public class ComputeApiModule(IEndpointResolver endpointResolver)
             GetCatletConfigurationHandler>();
         container.Register<IGetRequestHandler<StateDb.Model.Catlet, Catlet>,
             GetCatletHandler>();
-        container.Register<IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet>,
+        container.Register<IProjectListRequestHandler<ListFilteredByProjectRequest, Catlet, StateDb.Model.Catlet>,
             ListCatletHandler>();
         container.Register<IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage>, GetGeneHandler>();
         container.Register<IGetRequestHandler<StateDb.Model.Project, VirtualNetworkConfiguration>,
