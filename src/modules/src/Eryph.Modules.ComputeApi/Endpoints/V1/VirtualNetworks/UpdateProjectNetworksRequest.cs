@@ -4,7 +4,7 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
-public class UpdateProjectNetworksRequest : RequestBase
+public class UpdateProjectNetworksRequest : ProjectRequest
 {
     public Guid? CorrelationId { get; set; }
 

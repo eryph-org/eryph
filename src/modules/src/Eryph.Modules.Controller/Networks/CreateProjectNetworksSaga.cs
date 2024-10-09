@@ -57,20 +57,15 @@ namespace Eryph.Modules.Controller.Networks
 
         protected override async Task Initiated(CreateNetworksCommand message)
         {
-
             Data.Config = _validator.NormalizeConfig(message.Config);
             _log.LogTrace("Update project networks. Config: {@Config}", Data.Config);
-            
-            var projectName = Optional(Data.Config.Project).Filter(notEmpty).Match(
-                Some: n => ProjectName.New(n),
-                None: () => ProjectName.New("default"));
 
             var project = await _projectRepository.GetBySpecAsync(
-                new ProjectSpecs.GetByName(message.TenantId, projectName.Value));
+                new ProjectSpecs.GetById(message.TenantId, message.ProjectId));
 
             if (project == null)
             {
-                await Fail(new ErrorData { ErrorMessage = $"Project {Data.Config.Project} not found" });
+                await Fail($"The project {message.ProjectId} was not found.");
                 return;
             }
 
