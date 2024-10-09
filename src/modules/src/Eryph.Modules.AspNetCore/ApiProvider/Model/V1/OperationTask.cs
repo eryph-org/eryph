@@ -15,4 +15,6 @@ public class OperationTask
     public required int Progress { get; set; }
 
     public required OperationTaskStatus Status { get; set; }
+
+    public OperationTaskReference? Reference { get; set; }
 }

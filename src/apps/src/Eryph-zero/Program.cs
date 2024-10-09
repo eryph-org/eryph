@@ -239,8 +239,8 @@ internal static class Program
                 var endpoints = new Dictionary<string, string>
                 {
                     { "base", $"{basePathUrl}" },
-                    { "identity", $"{basePathUrl}identity/" },
-                    { "compute", $"{basePathUrl}compute/" },
+                    { "identity", $"{basePathUrl}identity" },
+                    { "compute", $"{basePathUrl}compute" },
                 };
 
                 processLock.SetMetadata(new Dictionary<string, object>

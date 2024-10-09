@@ -43,7 +43,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
 #pragma warning restore S2325
         IHostEnvironment env)
     {
-        var authority = endpointResolver.GetEndpoint("identity");
+        var authority = endpointResolver.GetEndpoint("identity").ToString();
         var signingCertManager = serviceProvider.GetRequiredService<ITokenCertificateManager>();
 
         services.AddDbContext<IdentityDbContext>(options =>
@@ -61,7 +61,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
                 options.ApiName = "Eryph Identity Api";
                 options.OAuthOptions = new ApiProviderOAuthOptions()
                 {
-                    TokenEndpoint = new Uri(authority, "connect/token"),
+                    TokenEndpoint = new Uri(authority + "/connect/token"),
                     Scopes = EryphConstants.Authorization.AllScopes
                         .Where(s => s.Resources.Contains(EryphConstants.Authorization.Audiences.IdentityApi))
                         .ToList()
@@ -71,7 +71,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.Authority = authority.ToString();
+                options.Authority = authority;
                 options.Audience = EryphConstants.Authorization.Audiences.IdentityApi;
             });
 
@@ -80,14 +80,14 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         {
             options.AddPolicy(EryphConstants.Authorization.Scopes.IdentityClientsRead,
                 policy => policy.Requirements.Add(new HasScopeRequirement(
-                    authority.ToString(),
+                    authority,
                     EryphConstants.Authorization.Scopes.IdentityClientsRead,
                     EryphConstants.Authorization.Scopes.IdentityClientsWrite,
                     EryphConstants.Authorization.Scopes.IdentityRead,
                     EryphConstants.Authorization.Scopes.IdentityWrite)));
             options.AddPolicy(EryphConstants.Authorization.Scopes.IdentityClientsWrite,
                 policy => policy.Requirements.Add(new HasScopeRequirement(
-                    authority.ToString(),
+                    authority,
                     EryphConstants.Authorization.Scopes.IdentityClientsWrite,
                     EryphConstants.Authorization.Scopes.IdentityWrite)));
         });
@@ -113,7 +113,7 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
             .AddServer(options =>
             {
                 options.DisableAccessTokenEncryption();
-                options.SetIssuer(authority);
+
                 // Enable the token endpoint.
                 options.SetTokenEndpointUris("connect/token");
                 // Enable the client credentials flow.

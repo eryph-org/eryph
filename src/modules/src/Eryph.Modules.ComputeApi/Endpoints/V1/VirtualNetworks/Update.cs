@@ -32,14 +32,14 @@ public class Update(
         if (!Guid.TryParse(request.ProjectId, out var projectId))
             throw new ArgumentException("The project ID is invalid.", nameof(request));
 
-        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(request.Configuration)
+        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(request.Body.Configuration)
             ?? throw new ArgumentException("The configuration is missing", nameof(request));
 
         var config = ProjectNetworksConfigDictionaryConverter.Convert(configDictionary);
 
         return new CreateNetworksCommand
         { 
-            CorrelationId = request.CorrelationId.GetOrGenerate(),
+            CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
             Config = config,
             TenantId = userRightsProvider.GetUserTenantId(),
             ProjectId = projectId,
@@ -56,7 +56,7 @@ public class Update(
         Tags = ["Virtual Networks"])
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
-        [FromBody] UpdateProjectNetworksRequest request,
+        [FromRoute] UpdateProjectNetworksRequest request,
         CancellationToken cancellationToken = default)
     {
         if (!Guid.TryParse(request.ProjectId, out var projectId))
@@ -69,8 +69,8 @@ public class Update(
                 detail: "You do not have admin access to the given project.");
 
         var validation = RequestValidations.ValidateProjectNetworkConfig(
-            request.Configuration,
-            nameof(UpdateProjectNetworksRequest.Configuration));
+            request.Body.Configuration,
+            nameof(UpdateProjectNetworksRequestBody.Configuration));
         if (validation.IsFail)
             return ValidationProblem(
                 detail: "The network configuration is invalid.",

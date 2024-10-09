@@ -42,7 +42,7 @@ internal class CreateEntityRequestHandler<TEntity>(
             return new UnprocessableEntityResult();
 
         var mappedModel = mapper.Map<Operation>(operationModel);
-        var operationUri = new Uri(endpointResolver.GetEndpoint("compute"), $"v1/operations/{operationModel.Id}");
+        var operationUri = new Uri(endpointResolver.GetEndpoint("compute") + $"/v1/operations/{operationModel.Id}");
 
         await dbContext.SaveChangesAsync(cancellationToken);
         ta.Complete();

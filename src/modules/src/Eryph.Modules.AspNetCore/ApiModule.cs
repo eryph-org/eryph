@@ -53,7 +53,7 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
                 options.ApiName = ApiName;
                 options.OAuthOptions = new ApiProviderOAuthOptions()
                 {
-                    TokenEndpoint = new Uri(authority, "connect/token"),
+                    TokenEndpoint = new Uri(authority + "/connect/token"),
                     Scopes = EryphConstants.Authorization.AllScopes
                         .Where(s => s.Resources.Contains(AudienceName))
                         .ToList()

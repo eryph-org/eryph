@@ -6,5 +6,5 @@ public class CatletNetworkAdapter
 {
     public required string Name { get; set; }
     
-    public required string MacAddress { get; set; }
+    public string? MacAddress { get; set; }
 }
