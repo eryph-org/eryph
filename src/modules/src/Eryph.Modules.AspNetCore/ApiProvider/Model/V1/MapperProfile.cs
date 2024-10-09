@@ -3,50 +3,25 @@ using AutoMapper;
 using Eryph.Core;
 using Eryph.StateDb.Model;
 
+namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
+public class MapperProfile : Profile
 {
-    public class MapperProfile : Profile
+    public MapperProfile()
     {
-        public MapperProfile()
-        {
-            CreateMap<StateDb.Model.OperationModel, Operation>();
+        CreateMap<StateDb.Model.OperationModel, Operation>();
 
-            CreateMap<StateDb.Model.OperationProjectModel, Project>()
-                .Flatten(x => x.Project);
+        CreateMap<StateDb.Model.OperationProjectModel, Project>()
+            .Flatten(x => x.Project);
 
-
-            CreateMap<StateDb.Model.OperationLogEntry, OperationLogEntry>();
-            CreateMap<StateDb.Model.OperationResourceModel, OperationResource>();
-            CreateMap<StateDb.Model.Project, Project>();
-            CreateMap<StateDb.Model.OperationTaskModel, OperationTask>()
-                .ForMember(x => x.ParentTask, m => m.MapFrom(x => x.ParentTaskId))
-                .ForMember(x=>x.Progress, m =>
-                {
-                    m.MapFrom(x =>
-                        x.Status == OperationTaskStatus.Completed 
-                            ? 100
-                            : x.Progress == null 
-                                ? 0 
-                                : x.Progress.Count > 0 
-                                    ? x.Progress.Max(p => p.Progress) 
-                                    : 0);
-                })
-                .ForMember(x => x.Reference,
-                    m =>
-                    {
-                        m.Condition(x => x.ReferenceType.HasValue);
-                        m.MapFrom(s =>
-
-                                new OperationTaskReference
-                                {
-                                    Id = s.ReferenceId,
-                                    Type = s.ReferenceType,
-                                    ProjectName = s.ReferenceProjectName
-                                }
-                            );
-                    });
-
-        }
+        CreateMap<StateDb.Model.OperationLogEntry, OperationLogEntry>();
+        CreateMap<StateDb.Model.OperationResourceModel, OperationResource>();
+        CreateMap<StateDb.Model.Project, Project>();
+        CreateMap<StateDb.Model.OperationTaskModel, OperationTask>()
+            .ForMember(
+                x => x.Progress,
+                m => m.MapFrom(x => x.Status == OperationTaskStatus.Completed
+                    ? 100
+                    : x.Progress.Select(p => p.Progress).DefaultIfEmpty().Max()));
     }
 }

@@ -30,5 +30,5 @@ public class VirtualDisk
     /// </summary>
     public string? ParentId { get; set; }
 
-    public IReadOnlyList<VirtualDiskAttachmentInfo>? AttachedCatlets { get; set; }
+    public IReadOnlyList<VirtualDiskAttachedCatlet>? AttachedCatlets { get; set; }
 }

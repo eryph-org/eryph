@@ -34,7 +34,7 @@ public class Create(
     [HttpPost("clients")]
     [SwaggerOperation(
         Summary = "Create a new client",
-        Description = "Create a client",
+        Description = "Create a new client",
         OperationId = "Clients_Create",
         Tags = ["Clients"])
     ]

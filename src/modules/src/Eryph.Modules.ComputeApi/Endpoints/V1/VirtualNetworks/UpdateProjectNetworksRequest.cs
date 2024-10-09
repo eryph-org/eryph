@@ -6,7 +6,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
 public class UpdateProjectNetworksRequest : RequestBase
 {
-    public required Guid CorrelationId { get; set; }
+    public Guid? CorrelationId { get; set; }
 
     public required JsonElement Configuration { get; set; }
 }

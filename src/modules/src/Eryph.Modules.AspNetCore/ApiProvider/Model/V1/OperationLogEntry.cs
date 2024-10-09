@@ -1,15 +1,14 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
+namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+
+public class OperationLogEntry
 {
-    public class OperationLogEntry
-    {
-        [Key] public string Id { get; set; } = null!;
+    public required string Id { get; set; }
 
-        public string? TaskId { get; set; }
+    public required string TaskId { get; set; }
 
-        public string? Message { get; set; }
-        public DateTimeOffset Timestamp { get; set; }
-    }
+    public string? Message { get; set; }
+
+    public required DateTimeOffset Timestamp { get; set; }
 }

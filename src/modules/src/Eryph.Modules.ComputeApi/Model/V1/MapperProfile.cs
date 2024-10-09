@@ -5,7 +5,6 @@ using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
-using Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.ComputeApi.Model.V1
@@ -29,15 +28,15 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.CatletNetworkAdapter, CatletNetworkAdapter>();
 
             CreateMap<(StateDb.Model.Catlet Catlet, CatletNetworkPort Port), CatletNetwork>()
-                .ConvertUsing((src, target) =>
+                .ConvertUsing((src, foo) =>
                 {
                     //target ??= new CatletNetwork();
-                    var ipV4Addresses = src.Port.IpAssignments?.Map(assignment => assignment.IpAddress)
-                        ?? Array.Empty<string>();
-                    var routerIp = src.Port.Network.RouterPort.IpAssignments?.FirstOrDefault()?.IpAddress;
-                    var subnets = src.Port.IpAssignments?.Map(x => x.Subnet.IpNetwork) ?? Array.Empty<string>();
+                    var ipV4Addresses = src.Port.IpAssignments?.Map(assignment => assignment.IpAddress).ToList()
+                        ?? [];
+                    var routerIp = src.Port.Network.RouterPort?.IpAssignments?.FirstOrDefault()?.IpAddress;
+                    var subnets = src.Port.IpAssignments?.Map(x => x.Subnet!.IpNetwork).ToList() ?? [];
                     var dnsServers = src.Port.IpAssignments?.Map(x => x.Subnet).Cast<VirtualNetworkSubnet>()
-                        .Map(x => x.DnsServersV4) ?? Array.Empty<string>();
+                        .Map(x => x.DnsServersV4).ToList() ?? [];
 
                     var reportedNetwork = src.Catlet.ReportedNetworks.FirstOrDefault(x =>
                         x.IpV4Addresses.SequenceEqual(ipV4Addresses));
@@ -50,24 +49,25 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                         {
                             Name = src.Port.FloatingPort.Name,
                             Subnet = src.Port.FloatingPort.SubnetName,
-                            Provider = src.Port.FloatingPort.ProviderName,
-                            IpV4Addresses = floatingPortIp.ToList(),
+                            Provider = src.Port.FloatingPort?.ProviderName,
+                            IpV4Addresses = floatingPortIp?.ToList(),
                             IpV4Subnets = src.Port.FloatingPort.IpAssignments?.Map(x => x.Subnet).Map(x => x.IpNetwork).ToList(),
                         };
                     }
 
-                    target.Name = src.Port.Network.Name;
-                    target.Provider = src.Port.Network.NetworkProvider;
-                    target.IpV4Addresses = reportedNetwork?.IpV4Addresses ?? ipV4Addresses;
-                    //IpV6Addresses = reportedNetwork?.IpV6Addresses ?? Enumerable.Empty<string>(),
-                    target.IPv4DefaultGateway = reportedNetwork?.IPv4DefaultGateway ?? routerIp;
-                    //IPv6DefaultGateway = reportedNetwork?.IPv6DefaultGateway,
-                    target.IpV4Subnets = reportedNetwork?.IpV4Subnets ?? subnets;
-                    //IpV6Subnets = reportedNetwork?.IpV6Subnets ?? Enumerable.Empty<string>(),
-                    target.DnsServerAddresses = reportedNetwork?.DnsServerAddresses ?? dnsServers;
-                    target.FloatingPort = floatingPort;
-
-                    return target;
+                    return new CatletNetwork
+                    {
+                        Name = src.Port.Network.Name,
+                        Provider = src.Port.Network.NetworkProvider,
+                        IpV4Addresses = reportedNetwork?.IpV4Addresses.ToList() ?? ipV4Addresses,
+                        //IpV6Addresses = reportedNetwork?.IpV6Addresses ?? Enumerable.Empty<string>(),
+                        IPv4DefaultGateway = reportedNetwork?.IPv4DefaultGateway ?? routerIp,
+                        //IPv6DefaultGateway = reportedNetwork?.IPv6DefaultGateway,
+                        IpV4Subnets = reportedNetwork?.IpV4Subnets.ToList() ?? subnets,
+                        //IpV6Subnets = reportedNetwork?.IpV6Subnets ?? Enumerable.Empty<string>(),
+                        DnsServerAddresses = reportedNetwork?.DnsServerAddresses.ToList() ?? dnsServers,
+                        FloatingPort = floatingPort,
+                    };
                 });
 
             var memberMap = CreateMap<ProjectRoleAssignment, ProjectMemberRole>();
@@ -85,7 +85,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                     return isSuperAdmin ? s.Path : null;
                 }))
                 .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier));
-            CreateMap<StateDb.Model.CatletDrive, VirtualDiskAttachmentInfo>();
+            CreateMap<StateDb.Model.CatletDrive, VirtualDiskAttachedCatlet>();
 
             CreateMap<StateDb.Model.Gene, Gene>()
                 .Include<StateDb.Model.Gene, GeneWithUsage>()

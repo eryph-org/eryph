@@ -1,13 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Eryph.Resources;
+﻿using Eryph.Resources;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
+namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+
+public class OperationResource
 {
-    public class OperationResource
-    {
-        [Key] public string Id { get; set; } = null!;
+    public required string Id { get; set; }
 
-        public string? ResourceId { get; set; }
-        public ResourceType ResourceType { get; set; }
-    }
+    public required string ResourceId { get; set; }
+    
+    public required ResourceType ResourceType { get; set; }
 }

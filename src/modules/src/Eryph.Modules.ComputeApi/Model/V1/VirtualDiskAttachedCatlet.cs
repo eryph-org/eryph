@@ -7,7 +7,7 @@ using Eryph.ConfigModel.Catlets;
 
 namespace Eryph.Modules.ComputeApi.Model.V1;
 
-public class VirtualDiskAttachmentInfo
+public class VirtualDiskAttachedCatlet
 {
     public required CatletDriveType Type { get; set; }
 
