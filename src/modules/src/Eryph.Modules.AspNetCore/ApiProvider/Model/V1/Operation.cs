@@ -1,23 +1,22 @@
 ﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using Eryph.StateDb.Model;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
+namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+
+public class Operation
 {
-    public class Operation
-    {
-        [Key] public string Id { get; set; } = null!;
+    public required string Id { get; set; }
 
-        public OperationStatus Status { get; set; }
+    public required OperationStatus Status { get; set; }
 
-        public string? StatusMessage { get; set; }
+    public string? StatusMessage { get; set; }
 
-        public IEnumerable<OperationResource>? Resources { get; set; }
+    public IReadOnlyList<OperationResource>? Resources { get; set; }
 
-        public IEnumerable<OperationLogEntry>? LogEntries { get; set; }
-        public IEnumerable<Project>? Projects { get; set; }
+    public IReadOnlyList<OperationLogEntry>? LogEntries { get; set; }
 
-        public IEnumerable<OperationTask>? Tasks { get; set; }
+    public IReadOnlyList<Project>? Projects { get; set; }
 
-    }
+    public IReadOnlyList<OperationTask>? Tasks { get; set; }
+
 }

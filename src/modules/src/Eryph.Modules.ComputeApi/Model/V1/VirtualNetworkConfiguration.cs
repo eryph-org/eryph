@@ -4,5 +4,5 @@ namespace Eryph.Modules.ComputeApi.Model.V1;
 
 public class VirtualNetworkConfiguration
 {
-    public JsonElement Configuration { get; set; }
+    public required JsonElement Configuration { get; set; }
 }

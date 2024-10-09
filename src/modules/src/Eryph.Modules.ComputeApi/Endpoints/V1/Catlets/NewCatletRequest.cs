@@ -6,7 +6,7 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class NewCatletRequest : RequestBase
 {
-    public required Guid CorrelationId { get; set; }
+    public Guid? CorrelationId { get; set; }
 
     public required JsonElement Configuration { get; set; }
 }

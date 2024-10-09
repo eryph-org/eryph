@@ -1,19 +1,18 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Eryph.StateDb.Model;
+﻿using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 
 public class OperationTask
 {
-    [Key] public string Id { get; set; } = null!;
+    public required string Id { get; set; }
 
-    public string? ParentTask { get; set; }
-    public string? Name { get; set; }
+    public string? ParentTaskId { get; set; }
+
+    public required string Name { get; set; }
+    
     public string? DisplayName { get; set; }
 
-    public int Progress { get; set; }
+    public required int Progress { get; set; }
 
-    public OperationTaskStatus Status { get; set; }
-
-    public OperationTaskReference? Reference { get; set; }
+    public required OperationTaskStatus Status { get; set; }
 }

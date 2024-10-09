@@ -4,8 +4,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1;
 
 public class CatletNetworkAdapter
 {
-
-    public string Name { get; set; }
+    public required string Name { get; set; }
     
-    public string MacAddress { get; set; }
+    public required string MacAddress { get; set; }
 }

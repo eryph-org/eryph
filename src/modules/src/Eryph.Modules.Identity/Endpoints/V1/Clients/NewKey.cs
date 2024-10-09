@@ -29,7 +29,7 @@ public class NewKey(
     [HttpPost("clients/{id}/key")]
     [SwaggerOperation(
         Summary = "Create or replace the client key",
-        Description = "Create or replace a client key",
+        Description = "Create or replace the client key",
         OperationId = "Clients_NewKey",
         Tags = ["Clients"])
     ]
