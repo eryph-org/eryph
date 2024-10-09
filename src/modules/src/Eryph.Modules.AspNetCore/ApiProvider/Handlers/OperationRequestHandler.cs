@@ -8,7 +8,6 @@ using System.Transactions;
 using AutoMapper;
 using Dbosoft.Rebus.Operations;
 using Eryph.ModuleCore;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;

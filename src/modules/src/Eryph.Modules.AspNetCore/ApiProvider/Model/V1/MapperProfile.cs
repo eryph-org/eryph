@@ -26,7 +26,7 @@ public class MapperProfile : Profile
             .ForMember(x => x.Reference,
                 m =>
                 {
-                    m.Condition(x => x.ReferenceType.HasValue);
+                    m.PreCondition(x => x.ReferenceType.HasValue);
                     m.MapFrom(s => new OperationTaskReference
                         {
                             Id = s.ReferenceId!,
