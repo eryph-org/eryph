@@ -29,6 +29,9 @@ public class Update(
 {
     protected override object CreateOperationMessage(UpdateProjectNetworksRequest request)
     {
+        if (!Guid.TryParse(request.ProjectId, out var projectId))
+            throw new ArgumentException("The project ID is invalid.", nameof(request));
+
         var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(request.Configuration)
             ?? throw new ArgumentException("The configuration is missing", nameof(request));
 
@@ -38,23 +41,33 @@ public class Update(
         { 
             CorrelationId = request.CorrelationId.GetOrGenerate(),
             Config = config,
-            TenantId = userRightsProvider.GetUserTenantId()
+            TenantId = userRightsProvider.GetUserTenantId(),
+            ProjectId = projectId,
         };
     }
 
     [Authorize(Policy = "compute:projects:write")]
     // ReSharper disable once StringLiteralTypo
-    [HttpPatch("virtualnetworks")]
+    [HttpPut("projects/{projectId}/virtualnetworks/config")]
     [SwaggerOperation(
         Summary = "Update the virtual network configuration of a project",
         Description = "Update the virtual network configuration of a project",
-        OperationId = "VirtualNetworks_Create",
+        OperationId = "VirtualNetworks_UpdateConfig",
         Tags = ["Virtual Networks"])
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] UpdateProjectNetworksRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (!Guid.TryParse(request.ProjectId, out var projectId))
+            return NotFound();
+
+        var hasAccess = await userRightsProvider.HasProjectAccess(projectId, AccessRight.Admin);
+        if (!hasAccess)
+            return Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                detail: "You do not have admin access to the given project.");
+
         var validation = RequestValidations.ValidateProjectNetworkConfig(
             request.Configuration,
             nameof(UpdateProjectNetworksRequest.Configuration));
@@ -62,18 +75,6 @@ public class Update(
             return ValidationProblem(
                 detail: "The network configuration is invalid.",
                 modelStateDictionary: validation.ToModelStateDictionary());
-
-        var config = validation.ToOption().ValueUnsafe();
-
-        var projectName = Optional(config.Project).Filter(notEmpty).Match(
-            Some: n => ProjectName.New(n),
-            None: () => ProjectName.New("default"));
-
-        var projectAccess = await userRightsProvider.HasProjectAccess(projectName.Value, AccessRight.Admin);
-        if (!projectAccess)
-            return Problem(
-                statusCode: StatusCodes.Status403Forbidden,
-                detail: "You do not have admin access to the given project.");
 
         return await base.HandleAsync(request, cancellationToken);
     }

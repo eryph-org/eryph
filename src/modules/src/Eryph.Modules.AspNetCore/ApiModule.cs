@@ -45,7 +45,7 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
         var endpointResolver = serviceProvider.GetRequiredService<IEndpointResolver>();
         services.AddSingleton(endpointResolver);
 
-        var authority = endpointResolver.GetEndpoint("identity").ToString();
+        var authority = endpointResolver.GetEndpoint("identity");
 
         services.AddMvc()
             .AddApiProvider<TModule>(options =>
@@ -53,7 +53,7 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
                 options.ApiName = ApiName;
                 options.OAuthOptions = new ApiProviderOAuthOptions()
                 {
-                    TokenEndpoint = new Uri(authority + "/connect/token"),
+                    TokenEndpoint = new Uri(authority, "connect/token"),
                     Scopes = EryphConstants.Authorization.AllScopes
                         .Where(s => s.Resources.Contains(AudienceName))
                         .ToList()
@@ -63,8 +63,7 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                options.Authority = endpointResolver.GetEndpoint("identity").ToString();
-
+                options.Authority = authority.ToString();
                 options.Audience = AudienceName;
                 if (env.IsDevelopment())
                     options.RequireHttpsMetadata = false;

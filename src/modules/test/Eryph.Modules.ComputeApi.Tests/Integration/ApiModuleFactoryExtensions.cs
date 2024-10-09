@@ -45,11 +45,8 @@ public static class ApiModuleFactoryExtensions
 
             var endpoints = new Dictionary<string, string>
             {
-                { "identity", "http://localhost/identity" },
-                { "compute", "http://localhost/compute" },
-                { "common", "http://localhost/common" },
-                { "network", "http://localhost/network" },
-
+                { "identity", "http://localhost/identity/" },
+                { "compute", "http://localhost/compute/" },
             };
 
             hostBuilder.ConfigureAppConfiguration(cfg =>
