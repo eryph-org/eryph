@@ -49,7 +49,9 @@ public abstract class ListEndpoint<TResult, TEntity> : EndpointBaseAsync
 
     protected abstract ISpecification<TEntity> CreateSpecification();
 
+#pragma warning disable S6965
     public override Task<ActionResult<ListResponse<TResult>>> HandleAsync(
+#pragma warning restore S6965
         CancellationToken cancellationToken = default)
     {
         return _listRequestHandler.HandleListRequest(CreateSpecification, cancellationToken);

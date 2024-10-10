@@ -17,7 +17,7 @@ public class HasScopeHandler : AuthorizationHandler<HasScopeRequirement>
             return Task.CompletedTask;
     
         var scopes = scopeClaim.Value.Split(' ');
-        if (scopes.Any(requirement.Scopes.Contains))
+        if (scopes.Exists(requirement.Scopes.Contains))
             context.Succeed(requirement);
 
         return Task.CompletedTask;
