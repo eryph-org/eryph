@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Messages.Projects;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 using Eryph.StateDb;
 using Eryph.StateDb.TestBase;
@@ -41,7 +42,8 @@ public class CreateProjectTests : InMemoryStateDbTestBase,
                 {
                     CorrelationId = Guid.NewGuid(),
                     Name = "test-project",
-                });
+                },
+                options: ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
@@ -66,7 +68,8 @@ public class CreateProjectTests : InMemoryStateDbTestBase,
                 {
                     CorrelationId = Guid.NewGuid(),
                     Name = "test-project",
-                });
+                },
+                options: ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.Accepted);
@@ -91,7 +94,8 @@ public class CreateProjectTests : InMemoryStateDbTestBase,
                 {
                     CorrelationId = Guid.NewGuid(),
                     Name = "test-project",
-                });
+                },
+                options: ApiJsonSerializerOptions.Options);
 
         response.Should().NotBeNull();
         response!.StatusCode.Should().Be(HttpStatusCode.Accepted);

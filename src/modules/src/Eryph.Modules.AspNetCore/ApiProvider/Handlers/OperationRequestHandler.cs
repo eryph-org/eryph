@@ -8,7 +8,6 @@ using System.Transactions;
 using AutoMapper;
 using Dbosoft.Rebus.Operations;
 using Eryph.ModuleCore;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -38,7 +37,7 @@ public class OperationRequestHandler<TEntity>(
 {
     private readonly IUserRightsProvider _userRightsProvider = userRightsProvider;
 
-    public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(
+    public async Task<ActionResult<Operation>> HandleOperationRequest(
         Func<object> createOperationFunc,
         CancellationToken cancellationToken)
     {

@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
@@ -108,12 +109,17 @@ public class GetOperationTest : InMemoryStateDbTestBase,
     [Fact]
     public async Task Get_Returns_Existing_Operation()
     {
-        var result = await _factory.CreateDefaultClient()
+        var response = await _factory.CreateDefaultClient()
             .SetEryphToken(TenantId, UserId, "compute:project:read", false)
-            .GetFromJsonAsync<ApiOperation>($"v1/operations/{ExistingOperationId}");
-        
-        result.Should().NotBeNull();
-        result!.Id.Should().Be(ExistingOperationId.ToString());
+            .GetAsync($"v1/operations/{ExistingOperationId}");
+
+        response.Should().HaveStatusCode(HttpStatusCode.OK);
+
+        var operation = await response.Content.ReadFromJsonAsync<ApiOperation>(
+            options: ApiJsonSerializerOptions.Options);
+
+        operation.Should().NotBeNull();
+        operation!.Id.Should().Be(ExistingOperationId.ToString());
     }
 
     [Fact]
@@ -140,11 +146,16 @@ public class GetOperationTest : InMemoryStateDbTestBase,
     [Fact]
     public async Task Get_Returns_cross_Operation_as_admin()
     {
-        var result = await _factory.CreateDefaultClient()
+        var response = await _factory.CreateDefaultClient()
             .SetEryphToken(TenantId, UserId, "compute:project:read", true)
-            .GetFromJsonAsync<ApiOperation>($"v1/operations/{CrossOperationId}");
-        
-        result.Should().NotBeNull();
-        result!.Id.Should().Be(CrossOperationId.ToString());
+            .GetAsync($"v1/operations/{CrossOperationId}");
+
+        response.Should().HaveStatusCode(HttpStatusCode.OK);
+
+        var operation =  await response.Content.ReadFromJsonAsync<ApiOperation>(
+            options: ApiJsonSerializerOptions.Options);
+
+        operation.Should().NotBeNull();
+        operation!.Id.Should().Be(CrossOperationId.ToString());
     }
 }

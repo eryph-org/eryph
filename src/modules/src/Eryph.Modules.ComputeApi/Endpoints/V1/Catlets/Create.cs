@@ -9,12 +9,10 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using JetBrains.Annotations;
 using LanguageExt.UnsafeValueAccess;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -26,7 +24,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class Create(
-    [NotNull] ICreateEntityRequestHandler<Catlet> operationHandler,
+    ICreateEntityRequestHandler<Catlet> operationHandler,
     IReadonlyStateStoreRepository<Catlet> repository,
     IUserRightsProvider userRightsProvider)
     : NewOperationRequestEndpoint<NewCatletRequest, Catlet>(operationHandler)
@@ -47,12 +45,12 @@ public class Create(
     [Authorize(Policy = "compute:catlets:write")]
     [HttpPost("catlets")]
     [SwaggerOperation(
-        Summary = "Creates a new catlet",
-        Description = "Creates a catlet",
+        Summary = "Create a new catlet",
+        Description = "Create a catlet",
         OperationId = "Catlets_Create",
         Tags = ["Catlets"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromBody] NewCatletRequest request,
         CancellationToken cancellationToken = default)
     {

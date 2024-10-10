@@ -1,29 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 
-namespace Eryph.Modules.ComputeApi.Model.V1
+namespace Eryph.Modules.ComputeApi.Model.V1;
+
+public class VirtualDisk
 {
-    public class VirtualDisk
-    {
-        [Key] public required string Id { get; set; }
+    public required string Id { get; set; }
 
-        public required string Name { get; set; }
+    public required string Name { get; set; }
         
-        public required string Location { get; set; }
+    public required string Location { get; set; }
         
-        public required string DataStore { get; set; }
+    public required string DataStore { get; set; }
         
-        public required string Project { get; set; }
+    public required Project Project { get; set; }
         
-        public required string Environment { get; set; }
+    public required string Environment { get; set; }
 
-        public string Path { get; set; }
+    /// <summary>
+    /// The file system path of the virtual disk. This information
+    /// is only available to administrators.
+    /// </summary>
+    public string? Path { get; set; }
 
-        public long SizeBytes { get; set; }
+    public long? SizeBytes { get; set; }
 
-        public string ParentId { get; set; }
+    /// <summary>
+    /// The ID of the parent disk when this disk is a differential disk.
+    /// </summary>
+    public string? ParentId { get; set; }
 
-        public IEnumerable<CatletDrive> AttachedDrives { get; set; }
-    }
+    public IReadOnlyList<VirtualDiskAttachedCatlet>? AttachedCatlets { get; set; }
 }

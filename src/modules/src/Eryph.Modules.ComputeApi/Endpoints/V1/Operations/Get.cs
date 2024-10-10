@@ -5,21 +5,20 @@ using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Operations;
 
 public class Get(
-    [NotNull] IGetRequestHandler<StateDb.Model.OperationModel, Operation> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<OperationRequest, StateDb.Model.OperationModel> specBuilder)
+    IGetRequestHandler<StateDb.Model.OperationModel, Operation> requestHandler,
+    ISingleEntitySpecBuilder<OperationRequest, StateDb.Model.OperationModel> specBuilder)
     : GetEntityEndpoint<OperationRequest, Operation, StateDb.Model.OperationModel>(requestHandler, specBuilder)
 {
     [HttpGet("operations/{id}")]
     [SwaggerOperation(
-        Summary = "Get a operation",
-        Description = "Get a operation",
+        Summary = "Get an operation",
+        Description = "Get an operation",
         OperationId = "Operations_Get",
         Tags = ["Operations"])
     ]
@@ -27,9 +26,6 @@ public class Get(
         [FromRoute] OperationRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!Guid.TryParse(request.Id, out _))
-            return NotFound();
-
         return await base.HandleAsync(request, cancellationToken);
     }
 }

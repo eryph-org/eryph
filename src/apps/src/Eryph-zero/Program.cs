@@ -241,8 +241,6 @@ internal static class Program
                     { "base", $"{basePathUrl}" },
                     { "identity", $"{basePathUrl}identity" },
                     { "compute", $"{basePathUrl}compute" },
-                    { "common", $"{basePathUrl}common" },
-                    { "network", $"{basePathUrl}network" },
                 };
 
                 processLock.SetMetadata(new Dictionary<string, object>

@@ -32,9 +32,8 @@ public static class IdentityModuleFactoryExtensions
 
             var endpoints = new Dictionary<string, string>
             {
-                {"identity", "https://localhost/identity"},
-                {"compute", "https://localhost/compute"},
-                {"common", "https://localhost/common"},
+                {"identity", "https://localhost/identity/"},
+                {"compute", "https://localhost/compute/"},
             };
 
             container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));

@@ -6,8 +6,7 @@ public class NewClientKeyRequest
 {
     [FromRoute(Name = "id")] public required string Id { get; set; }
 
-    [FromBody] 
-    public required NewClientKeyRequestBody Body { get; set; }
+    [FromBody] public required NewClientKeyRequestBody Body { get; set; }
 }
 
 public class NewClientKeyRequestBody

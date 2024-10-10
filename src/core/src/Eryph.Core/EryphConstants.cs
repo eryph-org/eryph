@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Eryph.Core
 {
@@ -54,6 +55,55 @@ namespace Eryph.Core
         public static class Limits
         {
             public static readonly int MaxCatletAncestors = 5;
+        }
+
+        public static class Authorization
+        {
+            public static class Audiences
+            {
+                public static readonly string ComputeApi = "compute_api";
+                public static readonly string IdentityApi = "identity_api";
+            }
+
+            public static class Scopes
+            {
+                public static readonly string ComputeRead = "compute:read";
+                public static readonly string ComputeWrite = "compute:write";
+                public static readonly string CatletsRead = "compute:catlets:read";
+                public static readonly string CatletsWrite = "compute:catlets:write";
+                public static readonly string CatletsControl = "compute:catlets:control";
+                public static readonly string GenesRead = "compute:genes:read";
+                public static readonly string GenesWrite = "compute:genes:write";
+                public static readonly string ProjectsRead = "compute:projects:read";
+                public static readonly string ProjectsWrite = "compute:projects:write";
+
+                public static readonly string IdentityRead = "identity:read";
+                public static readonly string IdentityWrite = "identity:write";
+                public static readonly string IdentityClientsRead = "identity:clients:read";
+                public static readonly string IdentityClientsWrite = "identity:clients:write";
+            }
+
+            public static readonly IReadOnlyList<Scope> AllScopes =
+            [
+                new(Scopes.ComputeRead, [Audiences.ComputeApi], "Grants read access to the compute API"),
+                new(Scopes.ComputeWrite, [Audiences.ComputeApi], "Grants write access to the compute API"),
+                new(Scopes.CatletsRead, [Audiences.ComputeApi], "Grants read access for catlets"),
+                new(Scopes.CatletsWrite, [Audiences.ComputeApi], "Grants write access for catlets"),
+                new(Scopes.CatletsControl, [Audiences.ComputeApi], "Grants control access (start, stop) for catlets"),
+                new(Scopes.GenesRead, [Audiences.ComputeApi], "Grants read access for genes"),
+                new(Scopes.GenesWrite, [Audiences.ComputeApi], "Grants write access for genes"),
+                new(Scopes.ProjectsRead, [Audiences.ComputeApi], "Grants read access for projects"),
+                new(Scopes.ProjectsWrite, [Audiences.ComputeApi], "Grants write access for projects"),
+
+                new(Scopes.IdentityRead, [Audiences.IdentityApi], "Grants read access to the identity API"),
+                new(Scopes.IdentityWrite, [Audiences.IdentityApi], "Grants write access to the identity API"),
+                new(Scopes.IdentityClientsRead, [Audiences.IdentityApi], "Grants read access for identity clients"),
+                new(Scopes.IdentityClientsWrite, [Audiences.IdentityApi], "Grants write access for identity clients"),
+            ];
+
+            public static readonly string SecuritySchemeId = "oauth2";
+
+            public record Scope(string Name, IReadOnlyList<string> Resources, string Description);
         }
     }
 }

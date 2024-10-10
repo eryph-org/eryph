@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Authorization;
@@ -27,12 +26,12 @@ public class Cleanup(IOperationRequestHandler<Gene> operationHandler)
     [Authorize(Policy = "compute:genes:write")]
     [HttpDelete("genes")]
     [SwaggerOperation(
-        Summary = "Removes unused genes",
-        Description = "Removes unused genes from the local gene pool",
+        Summary = "Remove all unused genes",
+        Description = "Remove all unused genes from the local gene pool",
         OperationId = "Genes_Cleanup",
         Tags = ["Genes"])
     ]
-    public override Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override Task<ActionResult<Operation>> HandleAsync(
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(cancellationToken);

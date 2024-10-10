@@ -15,12 +15,15 @@ internal class GetRequestHandler<TEntity, TResponse>(
     : IGetRequestHandler<TEntity, TResponse> where TEntity : class
 {
     public async Task<ActionResult<TResponse>> HandleGetRequest(
-        Func<ISingleResultSpecification<TEntity>> specificationFunc,
+        Func<ISingleResultSpecification<TEntity>?> specificationFunc,
         CancellationToken cancellationToken)
     {
-        var result = await repository.GetBySpecAsync(specificationFunc(), cancellationToken);
+        var specification = specificationFunc();
+        if(specification is null)
+            return new NotFoundResult();
 
-        if (result == null)
+        var result = await repository.GetBySpecAsync(specification, cancellationToken);
+        if (result is null)
             return new NotFoundResult();
 
         var authContext = userRightsProvider.GetAuthContext();

@@ -6,11 +6,9 @@ using Ardalis.Specification;
 using AutoMapper;
 using Dbosoft.Rebus.Operations;
 using Eryph.ModuleCore;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Rebus.TransactionScopes;
@@ -38,7 +36,7 @@ public class EntityOperationRequestHandler<TEntity>(
 {
     private readonly IUserRightsProvider _userRightsProvider = userRightsProvider;
 
-    public async Task<ActionResult<ListResponse<Operation>>> HandleOperationRequest(
+    public async Task<ActionResult<Operation>> HandleOperationRequest(
         Func<ISingleResultSpecification<TEntity>?> specificationFunc,
         Func<TEntity, object> createOperationFunc,
         CancellationToken cancellationToken)

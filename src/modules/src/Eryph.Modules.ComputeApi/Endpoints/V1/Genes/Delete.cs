@@ -19,8 +19,8 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Genes;
 
 public class Delete(
-    [NotNull] IEntityOperationRequestHandler<Gene> operationHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, Gene> specBuilder)
+    IEntityOperationRequestHandler<Gene> operationHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, Gene> specBuilder)
     : OperationRequestEndpoint<SingleEntityRequest, Gene>(operationHandler, specBuilder)
 {
     protected override object CreateOperationMessage(Gene model, SingleEntityRequest request)
@@ -34,12 +34,12 @@ public class Delete(
     [Authorize(Policy = "compute:genes:write")]
     [HttpDelete("genes/{id}")]
     [SwaggerOperation(
-        Summary = "Removes a gene",
-        Description = "Removes a gene from the local gene pool",
+        Summary = "Remove a gene",
+        Description = "Remove a gene from the local gene pool",
         OperationId = "Genes_Delete",
         Tags = ["Genes"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)
     {

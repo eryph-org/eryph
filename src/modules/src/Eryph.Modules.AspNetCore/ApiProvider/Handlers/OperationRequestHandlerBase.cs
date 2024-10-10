@@ -54,7 +54,7 @@ public abstract class OperationRequestHandlerBase(
             return new UnprocessableEntityResult();
 
         var mappedModel = mapper.Map<Operation>(operationModel);
-        var operationUri = new Uri(endpointResolver.GetEndpoint("common") + $"/v1/operations/{operationModel.Id}");
-        return new AcceptedResult(operationUri, new ListResponse<Operation>()) { Value = mappedModel };
+        var operationUri = new Uri(endpointResolver.GetEndpoint("compute") + $"/v1/operations/{operationModel.Id}");
+        return new AcceptedResult(operationUri, mappedModel);
     }
 }

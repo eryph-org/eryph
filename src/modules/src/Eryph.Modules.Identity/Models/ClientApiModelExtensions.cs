@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -7,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.Modules.Identity.Endpoints.V1.Clients;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
@@ -50,30 +50,47 @@ namespace Eryph.Modules.Identity.Models
             return keyPair.ExportRSAPrivateKeyPem();
         }
 
-        public static ClientApplicationDescriptor ToDescriptor(this Client client)
+        public static ClientApplicationDescriptor ToDescriptor(
+            this NewClientRequestBody client,
+            Guid tenantId)
         {
             var descriptor = new ClientApplicationDescriptor
             {
-                TenantId = client.TenantId,
-                ClientId = client.Id,
+                ClientId = Guid.NewGuid().ToString(),
+                TenantId = tenantId,
                 DisplayName = client.Name
             };
 
             descriptor.Scopes.UnionWith(client.AllowedScopes ?? []);
-            descriptor.AppRoles.UnionWith(client.Roles ?? []);
+            descriptor.AppRoles.UnionWith(client.Roles.Map(Guid.Parse) ?? []);
             return descriptor;
         }
 
-        public static TClient ToClient<TClient>(this ClientApplicationDescriptor descriptor)
-            where TClient : Client, new()
+        public static Client ToClient(
+            this ClientApplicationDescriptor descriptor)
         {
-            return new TClient
+            return new Client
             {
-                Id = descriptor.ClientId,
-                Name = descriptor.DisplayName,
-                TenantId = descriptor.TenantId,
-                AllowedScopes = descriptor.Scopes.ToArray(),
-                Roles = descriptor.AppRoles.ToArray()
+                Id = descriptor.ClientId!,
+                Name = descriptor.DisplayName!,
+                TenantId = descriptor.TenantId.ToString(),
+                AllowedScopes = descriptor.Scopes.ToList(),
+                Roles = descriptor.AppRoles.Map(r => r.ToString()).ToList(),
+            };
+        }
+
+        public static ClientWithSecret ToClient(
+            this ClientApplicationDescriptor descriptor,
+            string key)
+        {
+            return new ClientWithSecret
+            {
+                Id = descriptor.ClientId!,
+                Name = descriptor.DisplayName!,
+                TenantId = descriptor.TenantId.ToString(),
+                AllowedScopes = descriptor.Scopes.ToList(),
+                Roles = descriptor.AppRoles.Map(r => r.ToString()).ToList(),
+                Key = key,
             };
         }
 
@@ -82,15 +99,33 @@ namespace Eryph.Modules.Identity.Models
             IOpenIddictScopeManager scopeManager,
             ModelStateDictionary modelState,
             CancellationToken cancellationToken)
-            where TClient : Client
+            where TClient : IAllowedScopesHolder
         {
             foreach (var scope in client.AllowedScopes)
             {
                 if (await scopeManager.FindByNameAsync(scope, cancellationToken) == null)
                 {
                     modelState.AddModelError(
-                        $"$.{nameof(Client.AllowedScopes)}",
+                        $"$.{nameof(IAllowedScopesHolder.AllowedScopes)}",
                         $"The scope {scope} is invalid");
+                }
+            }
+        }
+
+        public static void ValidateRoles(
+            this NewClientRequestBody client,
+            ModelStateDictionary modelState)
+        {
+            if (client.Roles is null)
+                return;
+
+            foreach (var role in client.Roles)
+            {
+                if (!Guid.TryParse(role, out var guid) || guid != EryphConstants.SuperAdminRole)
+                {
+                    modelState.AddModelError(
+                        $"$.{nameof(NewClientRequestBody.Roles)}",
+                        $"The role {role} is invalid");
                 }
             }
         }

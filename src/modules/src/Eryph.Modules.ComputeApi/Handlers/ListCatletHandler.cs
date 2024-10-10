@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,11 +24,11 @@ internal class ListCatletHandler(
     IReadonlyStateStoreRepository<StateDb.Model.Catlet> catletRepository,
     IReadonlyStateStoreRepository<CatletNetworkPort> networkPortRepository,
     IUserRightsProvider userRightsProvider)
-    : IListRequestHandler<ListRequest, Catlet, StateDb.Model.Catlet>
+    : IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, Catlet, StateDb.Model.Catlet>
 {
     public async Task<ActionResult<ListResponse<Catlet>>> HandleListRequest(
-        ListRequest request,
-        Func<ListRequest, ISpecification<StateDb.Model.Catlet>> createSpecificationFunc,
+        ListFilteredByProjectRequest request,
+        Func<ListFilteredByProjectRequest, ISpecification<StateDb.Model.Catlet>> createSpecificationFunc,
         CancellationToken cancellationToken)
     {
         var dbCatlets = await catletRepository.ListAsync(createSpecificationFunc(request), cancellationToken);
@@ -45,11 +44,11 @@ internal class ListCatletHandler(
             var catletPortsWithCatlet = dbCatletPorts
                 .Map(p => (Catlet: dbCatlet, Port: p));
 
-            catlet.Networks = mapper.Map<IEnumerable<CatletNetwork>>(
+            catlet.Networks = mapper.Map<IReadOnlyList<CatletNetwork>>(
                 catletPortsWithCatlet, o => o.SetAuthContext(authContext));
             return catlet;
         }).SequenceSerial();
 
-        return new JsonResult(new ListResponse<Catlet> { Value = result });
+        return new JsonResult(new ListResponse<Catlet> { Value = result.ToList() });
     }
 }
