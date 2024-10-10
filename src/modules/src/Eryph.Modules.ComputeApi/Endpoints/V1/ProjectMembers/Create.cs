@@ -28,7 +28,7 @@ public class Create(
     : NewOperationRequestEndpoint<NewProjectMemberRequest, ProjectRoleAssignment>(operationHandler)
 {
     [Authorize(Policy = "compute:projects:write")]
-    [HttpPost("projects/{projectId}/members")]
+    [HttpPost("projects/{project_id}/members")]
     [SwaggerOperation(
         Summary = "Add a project member",
         Description = "Add a project member",

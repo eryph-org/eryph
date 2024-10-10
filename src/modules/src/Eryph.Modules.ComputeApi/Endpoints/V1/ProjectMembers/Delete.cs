@@ -23,7 +23,7 @@ public class Delete(
     : OperationRequestEndpoint<SingleEntityInProjectRequest, ProjectRoleAssignment>(operationHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:write")]
-    [HttpDelete("projects/{projectId}/members/{id}")]
+    [HttpDelete("projects/{project_id}/members/{id}")]
     [SwaggerOperation(
         Summary = "Remove a project member",
         Description = "Removes a project member assignment",
