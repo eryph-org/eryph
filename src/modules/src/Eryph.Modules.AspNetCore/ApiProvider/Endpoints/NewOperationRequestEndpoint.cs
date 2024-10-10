@@ -32,7 +32,9 @@ public abstract class NewOperationRequestEndpoint<TRequest, TModel> : EndpointBa
         type: typeof(Operation),
         contentTypes: ["application/json"])
     ]
+#pragma warning disable S6965
     public override Task<ActionResult<Operation>> HandleAsync(
+#pragma warning restore S6965
         TRequest request,
         CancellationToken cancellationToken = default)
     {

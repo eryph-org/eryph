@@ -89,7 +89,9 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Swagger
                 License = new OpenApiLicense
                 {
                     Name = "MIT",
+#pragma warning disable S1075
                     Url = new Uri("https://opensource.org/licenses/MIT"),
+#pragma warning restore S1075
                 },
             };
 
