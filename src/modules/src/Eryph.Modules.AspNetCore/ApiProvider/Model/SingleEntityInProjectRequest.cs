@@ -9,5 +9,5 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model;
 
 public class SingleEntityInProjectRequest : SingleEntityRequest
 {
-    [FromRoute(Name = "projectId")] public required string ProjectId { get; set; }
+    [FromRoute(Name = "project_id")] public required string ProjectId { get; set; }
 }

@@ -27,7 +27,7 @@ public class Client : IAllowedScopesHolder
     /// <summary>
     /// The roles of the client,
     /// </summary>
-    public required IReadOnlyList<string> Roles { get; set; }
+    public IReadOnlyList<string>? Roles { get; set; }
 
     /// <summary>
     /// The ID of the tenant to which the client belongs.

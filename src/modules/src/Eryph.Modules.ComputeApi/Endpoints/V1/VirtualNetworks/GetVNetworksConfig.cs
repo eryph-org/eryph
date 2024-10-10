@@ -36,7 +36,7 @@ public class GetVNetworksConfig(
 
     [Authorize(Policy = "compute:projects:read")]
     // ReSharper disable once StringLiteralTypo
-    [HttpGet("projects/{projectId}/virtualnetworks/config")]
+    [HttpGet("projects/{project_id}/virtualnetworks/config")]
     [SwaggerOperation(
         Summary = "Get the virtual network configuration of a project",
         Description = "Get the virtual network configuration of a project",

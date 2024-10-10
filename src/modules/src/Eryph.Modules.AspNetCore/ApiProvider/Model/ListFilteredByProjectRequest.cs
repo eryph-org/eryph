@@ -5,5 +5,5 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model;
 
 public class ListFilteredByProjectRequest : ListRequest, IListFilteredByProjectRequest
 {
-    [FromQuery(Name = "projectId")] public string? ProjectId { get; set; }
+    [FromQuery(Name = "project_id")] public string? ProjectId { get; set; }
 }

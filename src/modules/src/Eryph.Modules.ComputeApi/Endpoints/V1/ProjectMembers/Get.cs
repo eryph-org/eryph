@@ -19,7 +19,7 @@ public class Get(
     : GetEntityEndpoint<SingleEntityInProjectRequest, ProjectMemberRole, ProjectRoleAssignment>(requestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
-    [HttpGet("projects/{projectId}/members/{id}")]
+    [HttpGet("projects/{project_id}/members/{id}")]
     [SwaggerOperation(
         Summary = "Get a project member",
         Description = "Get a project member",

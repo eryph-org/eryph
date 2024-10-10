@@ -48,7 +48,7 @@ public class Update(
 
     [Authorize(Policy = "compute:projects:write")]
     // ReSharper disable once StringLiteralTypo
-    [HttpPut("projects/{projectId}/virtualnetworks/config")]
+    [HttpPut("projects/{project_id}/virtualnetworks/config")]
     [SwaggerOperation(
         Summary = "Update the virtual network configuration of a project",
         Description = "Update the virtual network configuration of a project",

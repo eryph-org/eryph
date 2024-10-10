@@ -19,7 +19,7 @@ public class List(
         listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
-    [HttpGet("projects/{projectId}/members")]
+    [HttpGet("projects/{project_id}/members")]
     [SwaggerOperation(
         Summary = "List all project members",
         Description = "List all project members",
