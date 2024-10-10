@@ -31,9 +31,6 @@ public class Delete(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!Guid.TryParse(request.Id, out _))
-            return NotFound();
-
         return await base.HandleAsync(request, cancellationToken);
     }
 
