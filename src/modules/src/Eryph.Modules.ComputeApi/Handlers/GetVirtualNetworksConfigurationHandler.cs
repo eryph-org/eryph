@@ -17,39 +17,37 @@ using Eryph.StateDb.Specifications;
 using Microsoft.AspNetCore.Mvc;
 using VirtualNetwork = Eryph.StateDb.Model.VirtualNetwork;
 
-namespace Eryph.Modules.ComputeApi.Handlers
+namespace Eryph.Modules.ComputeApi.Handlers;
+
+internal class GetVirtualNetworksConfigurationHandler(
+    IStateStore stateStore)
+    : IGetRequestHandler<Project, VirtualNetworkConfiguration>
 {
-    internal class GetVirtualNetworksConfigurationHandler : IGetRequestHandler<Project, 
-        VirtualNetworkConfiguration>
+    public async Task<ActionResult<VirtualNetworkConfiguration>> HandleGetRequest(
+        Func<ISingleResultSpecification<Project>?> specificationFunc,
+        CancellationToken cancellationToken)
     {
-        private readonly IStateStore _stateStore;
+        var projectSpec = specificationFunc();
+        if (projectSpec is null)
+            return new NotFoundResult();
 
-        public GetVirtualNetworksConfigurationHandler(IStateStore stateStore)
-        {
-            _stateStore = stateStore;
-        }
-
-        public async Task<ActionResult<VirtualNetworkConfiguration>> HandleGetRequest(Func<ISingleResultSpecification<Project>> specificationFunc, CancellationToken cancellationToken)
-        {
-            var projectSpec = specificationFunc();
-
-            var project= await _stateStore.Read<Project>().GetBySpecAsync(projectSpec, cancellationToken);
-
-            if (project == null)
-                return new NotFoundResult();
+        var project = await stateStore.Read<Project>().GetBySpecAsync(projectSpec, cancellationToken);
+        if (project is null)
+            return new NotFoundResult();
             
-            var networks = await _stateStore.For<VirtualNetwork>().ListAsync(new VirtualNetworkSpecs.GetForProjectConfig(project.Id), cancellationToken);
+        var networks = await stateStore.For<VirtualNetwork>().ListAsync(
+            new VirtualNetworkSpecs.GetForProjectConfig(project.Id),
+            cancellationToken);
 
-            var projectConfig = networks.ToNetworksConfig(project.Name);
+        var projectConfig = networks.ToNetworksConfig(project.Name);
 
-            var configString = ConfigModelJsonSerializer.Serialize(projectConfig);
+        var configString = ConfigModelJsonSerializer.Serialize(projectConfig);
 
-            var result = new VirtualNetworkConfiguration()
-            {
-                Configuration = JsonSerializer.Deserialize<JsonElement>(configString)
-            };
+        var result = new VirtualNetworkConfiguration()
+        {
+            Configuration = JsonSerializer.Deserialize<JsonElement>(configString)
+        };
 
-            return result;
-        }
+        return result;
     }
 }

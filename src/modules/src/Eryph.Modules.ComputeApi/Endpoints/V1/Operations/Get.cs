@@ -26,9 +26,6 @@ public class Get(
         [FromRoute] OperationRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!Guid.TryParse(request.Id, out _))
-            return NotFound();
-
         return await base.HandleAsync(request, cancellationToken);
     }
 }

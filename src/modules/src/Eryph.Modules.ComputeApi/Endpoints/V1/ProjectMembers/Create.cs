@@ -79,8 +79,6 @@ public class Create(
         AuthContext authContext) =>
         ValidateProperty(request, r => r.Body.MemberId,
             i => ValidateMemberId(i, authContext), required: true)
-        | ValidateProperty(request, r => r.ProjectId,
-            i => parseGuid(i).ToValidation(Error.New("The project ID is invalid.")), required: true)
         | ValidateProperty(request, r => r.Body.RoleId,
             i => parseGuid(i).ToValidation(Error.New("The role ID is invalid.")), required: true);
 

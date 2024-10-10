@@ -9,7 +9,7 @@ public class OperationRequest : SingleEntityRequest
     /// <summary>
     /// Filters returned log entries by the requested timestamp
     /// </summary>
-    [FromQuery(Name = "logTimeStamp")] public DateTimeOffset? LogTimestamp { get; set; }
+    [FromQuery(Name = "log_time_stamp")] public DateTimeOffset? LogTimestamp { get; set; }
 
 
     /// <summary>

@@ -34,9 +34,6 @@ public class Delete(
         [FromRoute] SingleEntityInProjectRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!Guid.TryParse(request.Id, out _))
-            return NotFound();
-
         if(!Guid.TryParse(request.ProjectId, out var projectId))
             return NotFound();
 
