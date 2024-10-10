@@ -13,9 +13,9 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class List(
-    IListRequestHandler<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment> listRequestHandler,
-    IListEntitySpecBuilder<ProjectMembersListRequest, StateDb.Model.ProjectRoleAssignment> specBuilder)
-    : ListEntitiesEndpoint<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment>(
+    IListRequestHandler<ListInProjectRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment> listRequestHandler,
+    IListEntitySpecBuilder<ListInProjectRequest, StateDb.Model.ProjectRoleAssignment> specBuilder)
+    : ListEntitiesEndpoint<ListInProjectRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment>(
         listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
@@ -33,7 +33,7 @@ public class List(
         contentTypes: ["application/json"])
     ]
     public override Task<ActionResult<ListResponse<ProjectMemberRole>>> HandleAsync(
-        [FromRoute] ProjectMembersListRequest request,
+        [FromRoute] ListInProjectRequest request,
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(request, cancellationToken);

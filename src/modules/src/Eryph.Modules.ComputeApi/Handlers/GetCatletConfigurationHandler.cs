@@ -178,7 +178,7 @@ internal class GetCatletConfigurationHandler(
 
         //remove all settings also configured in image
         var metadataEntity = await stateStore.Read<StateDb.Model.CatletMetadata>().GetByIdAsync(catlet.MetadataId, cancellationToken);
-        CatletMetadata metadata = null;
+        CatletMetadata? metadata = null;
         if (metadataEntity != null)
             metadata = JsonSerializer.Deserialize<CatletMetadata>(metadataEntity.Metadata);
 
@@ -362,7 +362,7 @@ internal class GetCatletConfigurationHandler(
 
 
 
-        if (config.Cpu.Count == null)
+        if (config.Cpu?.Count == null)
             config.Cpu = null;
 
         if (config.Memory?.Startup.GetValueOrDefault() == 0 && config.Memory?.Maximum.GetValueOrDefault() ==0

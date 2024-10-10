@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
-using Eryph.StateDb.Model;
+using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using CatletStatus = Eryph.StateDb.Model.CatletStatus;
 
 namespace Eryph.Modules.ComputeApi.Model.V1;
 
@@ -8,6 +9,8 @@ public class Catlet
     public required string Id { get; set; }
 
     public required string Name { get; set; }
+
+    public required Project Project { get; set; }
 
     public required CatletStatus Status { get; set; }
 

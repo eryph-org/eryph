@@ -11,11 +11,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 
-public class ProjectListRequestHandler<TRequest, TResult, TModel>(
+public class ListFilteredByProjectRequestHandler<TRequest, TResult, TModel>(
     IMapper mapper,
     IReadRepositoryBase<TModel> repository,
     IUserRightsProvider userRightsProvider)
-    : IProjectListRequestHandler<TRequest, TResult, TModel>
+    : IListFilteredByProjectRequestHandler<TRequest, TResult, TModel>
     where TModel : class
     where TRequest : IListFilteredByProjectRequest
 {

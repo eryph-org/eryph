@@ -2,18 +2,18 @@
 using Ardalis.Specification;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
-using Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 
 namespace Eryph.Modules.ComputeApi.Model;
 
 public class ProjectMemberSpecBuilder(IUserRightsProvider userRightsProvider) :
-    ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment>,
-    IListEntitySpecBuilder<ProjectMembersListRequest, ProjectRoleAssignment>
+    ISingleEntitySpecBuilder<SingleEntityInProjectRequest, ProjectRoleAssignment>,
+    IListEntitySpecBuilder<ListInProjectRequest, ProjectRoleAssignment>
 {
     public ISingleResultSpecification<ProjectRoleAssignment>? GetSingleEntitySpec(
-        ProjectMemberRequest request,
+        SingleEntityInProjectRequest request,
         AccessRight accessRight)
     {
         if (!Guid.TryParse(request.ProjectId, out var projectId))
@@ -29,7 +29,8 @@ public class ProjectMemberSpecBuilder(IUserRightsProvider userRightsProvider) :
             userRightsProvider.GetProjectRoles(accessRight));
     }
 
-    public ISpecification<ProjectRoleAssignment> GetEntitiesSpec(ProjectMembersListRequest request)
+    public ISpecification<ProjectRoleAssignment> GetEntitiesSpec(
+        ListInProjectRequest request)
     {
         if (!Guid.TryParse(request.ProjectId, out var projectId))
             throw new ArgumentException("The ID is not a GUID", nameof(request));
