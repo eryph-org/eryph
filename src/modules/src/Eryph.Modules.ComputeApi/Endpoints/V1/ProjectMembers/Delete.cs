@@ -6,6 +6,7 @@ using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -17,9 +18,9 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class Delete(
     IEntityOperationRequestHandler<ProjectRoleAssignment> operationHandler,
-    ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder,
+    ISingleEntitySpecBuilder<SingleEntityInProjectRequest, ProjectRoleAssignment> specBuilder,
     IUserRightsProvider userRightsProvider)
-    : OperationRequestEndpoint<ProjectMemberRequest, ProjectRoleAssignment>(operationHandler, specBuilder)
+    : OperationRequestEndpoint<SingleEntityInProjectRequest, ProjectRoleAssignment>(operationHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:write")]
     [HttpDelete("projects/{projectId}/members/{id}")]
@@ -30,7 +31,7 @@ public class Delete(
         Tags = ["Project Members"])
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
-        [FromRoute] ProjectMemberRequest request,
+        [FromRoute] SingleEntityInProjectRequest request,
         CancellationToken cancellationToken = default)
     {
         if (!Guid.TryParse(request.Id, out _))
@@ -48,7 +49,9 @@ public class Delete(
         return await base.HandleAsync(request, cancellationToken);
     }
 
-    protected override object CreateOperationMessage(ProjectRoleAssignment model, ProjectMemberRequest request)
+    protected override object CreateOperationMessage(
+        ProjectRoleAssignment model,
+        SingleEntityInProjectRequest request)
     {
         return new RemoveProjectMemberCommand
         {

@@ -13,7 +13,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class List(
-    IProjectListRequestHandler<ListFilteredByProjectRequest, Catlet, StateDb.Model.Catlet> listRequestHandler,
+    IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, Catlet, StateDb.Model.Catlet> listRequestHandler,
     IListEntitySpecBuilder<ListFilteredByProjectRequest, StateDb.Model.Catlet> specBuilder)
     : ListEntitiesEndpoint<ListFilteredByProjectRequest, Catlet, StateDb.Model.Catlet>(listRequestHandler, specBuilder)
 {

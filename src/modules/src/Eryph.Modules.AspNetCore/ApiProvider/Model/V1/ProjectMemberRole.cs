@@ -4,9 +4,7 @@ public class ProjectMemberRole
 {
     public required string Id { get; set; }
 
-    public required string ProjectId { get; set; }
-
-    public required string ProjectName { get; set; }
+    public required Project Project { get; set; }
 
     public required string MemberId { get; set; }
 

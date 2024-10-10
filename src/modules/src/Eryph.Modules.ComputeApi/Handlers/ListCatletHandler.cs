@@ -24,7 +24,7 @@ internal class ListCatletHandler(
     IReadonlyStateStoreRepository<StateDb.Model.Catlet> catletRepository,
     IReadonlyStateStoreRepository<CatletNetworkPort> networkPortRepository,
     IUserRightsProvider userRightsProvider)
-    : IProjectListRequestHandler<ListFilteredByProjectRequest, Catlet, StateDb.Model.Catlet>
+    : IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, Catlet, StateDb.Model.Catlet>
 {
     public async Task<ActionResult<ListResponse<Catlet>>> HandleListRequest(
         ListFilteredByProjectRequest request,

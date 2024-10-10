@@ -13,7 +13,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
 public class List(
-    IProjectListRequestHandler<ListFilteredByProjectRequest, VirtualNetwork, StateDb.Model.VirtualNetwork> listRequestHandler,
+    IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, VirtualNetwork, StateDb.Model.VirtualNetwork> listRequestHandler,
     IListEntitySpecBuilder<ListFilteredByProjectRequest, StateDb.Model.VirtualNetwork> specBuilder)
     : ListEntitiesEndpoint<ListFilteredByProjectRequest, VirtualNetwork, StateDb.Model.VirtualNetwork>(listRequestHandler, specBuilder)
 {

@@ -104,8 +104,8 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
             c => !c.Handled);
 
         container.RegisterConditional(
-            typeof(IProjectListRequestHandler<,,>),
-            typeof(ProjectListRequestHandler<,,>),
+            typeof(IListFilteredByProjectRequestHandler<,,>),
+            typeof(ListFilteredByProjectRequestHandler<,,>),
             Lifestyle.Scoped,
             c => !c.Handled);
 

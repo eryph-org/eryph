@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
 using Microsoft.AspNetCore.Authorization;
@@ -14,8 +15,8 @@ namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class Get(
     IGetRequestHandler<ProjectRoleAssignment, ProjectMemberRole> requestHandler,
-    ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder)
-    : GetEntityEndpoint<ProjectMemberRequest, ProjectMemberRole, ProjectRoleAssignment>(requestHandler, specBuilder)
+    ISingleEntitySpecBuilder<SingleEntityInProjectRequest, ProjectRoleAssignment> specBuilder)
+    : GetEntityEndpoint<SingleEntityInProjectRequest, ProjectMemberRole, ProjectRoleAssignment>(requestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
     [HttpGet("projects/{projectId}/members/{id}")]
@@ -32,7 +33,7 @@ public class Get(
         contentTypes: ["application/json"])
     ]
     public override Task<ActionResult<ProjectMemberRole>> HandleAsync(
-        [FromRoute] ProjectMemberRequest request,
+        [FromRoute] SingleEntityInProjectRequest request,
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(request, cancellationToken);
