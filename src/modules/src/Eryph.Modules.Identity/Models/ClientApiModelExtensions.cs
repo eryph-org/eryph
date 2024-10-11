@@ -61,8 +61,8 @@ namespace Eryph.Modules.Identity.Models
                 DisplayName = client.Name
             };
 
-            descriptor.Scopes.UnionWith(client.AllowedScopes ?? []);
-            descriptor.AppRoles.UnionWith(client.Roles.Map(Guid.Parse) ?? []);
+            descriptor.Scopes.UnionWith(client.AllowedScopes);
+            descriptor.AppRoles.UnionWith(client.Roles?.Map(Guid.Parse) ?? []);
             return descriptor;
         }
 
