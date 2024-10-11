@@ -7,6 +7,7 @@ using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.ModuleCore;
 using Eryph.ModuleCore.Networks;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.VmHostAgent.Genetics;
@@ -128,6 +129,7 @@ namespace Eryph.Modules.VmHostAgent
 
             container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);
+            container.Collection.Append(typeof(IHandleMessages<>), typeof(FailedOperationTaskHandler<>), Lifestyle.Scoped);
             container.AddRebusOperationsHandlers();
 
             var localName = $"{QueueNames.VMHostAgent}.{Environment.MachineName}";
