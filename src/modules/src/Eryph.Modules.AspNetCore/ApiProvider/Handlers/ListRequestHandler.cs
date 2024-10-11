@@ -9,14 +9,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 
-internal class ListRequestHandler<TResult, TModel>(
+public class ListRequestHandler<TResult, TModel>(
     IMapper mapper,
     IReadRepositoryBase<TModel> repository,
     IUserRightsProvider userRightsProvider)
     : IListRequestHandler<TResult, TModel>
     where TModel : class
 {
-    public async Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
+    public virtual async Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
         Func<ISpecification<TModel>> createSpecificationFunc,
         CancellationToken cancellationToken)
     {
@@ -29,7 +29,7 @@ internal class ListRequestHandler<TResult, TModel>(
     }
 }
 
-internal class ListRequestHandler<TRequest, TResult, TModel>(
+public class ListRequestHandler<TRequest, TResult, TModel>(
     IMapper mapper,
     IReadRepositoryBase<TModel> repository,
     IUserRightsProvider userRightsProvider)
@@ -37,7 +37,7 @@ internal class ListRequestHandler<TRequest, TResult, TModel>(
     where TModel : class
     where TRequest : IListRequest
 {
-    public async Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
+    public virtual async Task<ActionResult<ListResponse<TResult>>> HandleListRequest(
         TRequest request,
         Func<TRequest, ISpecification<TModel>> createSpecificationFunc,
         CancellationToken cancellationToken)

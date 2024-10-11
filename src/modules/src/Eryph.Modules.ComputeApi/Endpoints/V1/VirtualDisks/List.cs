@@ -13,7 +13,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 
 public class List(
-    IListRequestHandler<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk> listRequestHandler,
+    IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk> listRequestHandler,
     IListEntitySpecBuilder<ListFilteredByProjectRequest, StateDb.Model.VirtualDisk> specBuilder)
     : ListEntitiesEndpoint<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk>(listRequestHandler, specBuilder)
 {

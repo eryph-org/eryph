@@ -13,7 +13,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class List(
-    IListRequestHandler<ListInProjectRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment> listRequestHandler,
+    IListInProjectRequestHandler<ListInProjectRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment> listRequestHandler,
     IListEntitySpecBuilder<ListInProjectRequest, StateDb.Model.ProjectRoleAssignment> specBuilder)
     : ListEntitiesEndpoint<ListInProjectRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment>(
         listRequestHandler, specBuilder)

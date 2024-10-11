@@ -31,6 +31,9 @@ internal class ListCatletHandler(
         Func<ListFilteredByProjectRequest, ISpecification<StateDb.Model.Catlet>> createSpecificationFunc,
         CancellationToken cancellationToken)
     {
+        if (request.ProjectId is not null && !Guid.TryParse(request.ProjectId, out _))
+            return new JsonResult(new ListResponse<Catlet> { Value = [] });
+
         var dbCatlets = await catletRepository.ListAsync(createSpecificationFunc(request), cancellationToken);
         var authContext = userRightsProvider.GetAuthContext();
 
