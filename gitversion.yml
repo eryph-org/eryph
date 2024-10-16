@@ -4,3 +4,8 @@ branches: {}
 ignore:
   sha: []
 merge-message-formats: {}
+
+branches:
+  release:
+    increment: Inherit
+    tag: rc
