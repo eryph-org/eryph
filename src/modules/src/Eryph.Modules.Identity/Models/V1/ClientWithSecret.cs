@@ -6,8 +6,7 @@ namespace Eryph.Modules.Identity.Models.V1;
 public class ClientWithSecret : Client
 {
     /// <summary>
-    ///     private Key of client
+    /// The private key or shared secret of the client.
     /// </summary>
-    public string Key { get; set; }
-
+    public required string Key { get; set; }
 }

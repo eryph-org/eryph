@@ -17,66 +17,57 @@ namespace Eryph.Modules.ComputeApi.Model.V1
             CreateMap<StateDb.Model.ReportedNetwork, CatletNetwork>();
 
             CreateMap<StateDb.Model.VirtualNetwork, VirtualNetwork>()
-            .ForMember(x => x.ProviderName,
-                x => x.MapFrom(y => y.NetworkProvider))
-            .ForMember(x => x.ProjectId, x => x.MapFrom(y => y.ProjectId))
-            .ForMember(x => x.TenantId, x => x
-                .MapFrom(y => y.Project.TenantId));
+                .ForMember(x => x.ProviderName, x => x.MapFrom(y => y.NetworkProvider));
 
             CreateMap<StateDb.Model.Catlet, Catlet>();
             CreateMap<StateDb.Model.CatletDrive, CatletDrive>();
             CreateMap<StateDb.Model.CatletNetworkAdapter, CatletNetworkAdapter>();
 
             CreateMap<(StateDb.Model.Catlet Catlet, CatletNetworkPort Port), CatletNetwork>()
-                .ConvertUsing((src, target) =>
+                .ConstructUsing((src, _) =>
                 {
-                    target ??= new CatletNetwork();
-                    var ipV4Addresses = src.Port.IpAssignments?.Map(assignment => assignment.IpAddress)
-                        ?? Array.Empty<string>();
-                    var routerIp = src.Port.Network.RouterPort.IpAssignments?.FirstOrDefault()?.IpAddress;
-                    var subnets = src.Port.IpAssignments?.Map(x => x.Subnet.IpNetwork) ?? Array.Empty<string>();
-                    var dnsServers = src.Port.IpAssignments?.Map(x => x.Subnet).Cast<VirtualNetworkSubnet>()
-                        .Map(x => x.DnsServersV4) ?? Array.Empty<string>();
+                    var ipV4Addresses = src.Port.IpAssignments.Map(assignment => assignment.IpAddress!).ToList();
+                    var routerIp = src.Port.Network.RouterPort?.IpAssignments.FirstOrDefault()?.IpAddress;
+                    var subnets = src.Port.IpAssignments.Map(x => x.Subnet!.IpNetwork!).ToList();
+                    var dnsServers = src.Port.IpAssignments.Map(x => x.Subnet)
+                        .Cast<VirtualNetworkSubnet>()
+                        .Map(x => x.DnsServersV4!).ToList();
 
-                    var reportedNetwork = src.Catlet.ReportedNetworks.FirstOrDefault(x =>
-                        x.IpV4Addresses.SequenceEqual(ipV4Addresses));
+                    var reportedNetwork = src.Catlet.ReportedNetworks
+                        .FirstOrDefault(x => x.IpV4Addresses.SequenceEqual(ipV4Addresses));
 
-                    FloatingNetworkPort floatingPort = null;
+                    FloatingNetworkPort? floatingPort = null;
                     if (src.Port.FloatingPort != null)
                     {
-                        var floatingPortIp = src.Port.FloatingPort.IpAssignments?.Map(x => x.IpAddress);
+                        var floatingPortIp = src.Port.FloatingPort.IpAssignments.Map(x => x.IpAddress!);
                         floatingPort = new FloatingNetworkPort()
                         {
                             Name = src.Port.FloatingPort.Name,
                             Subnet = src.Port.FloatingPort.SubnetName,
-                            Provider = src.Port.FloatingPort.ProviderName,
-                            IpV4Addresses = floatingPortIp,
-                            IpV4Subnets = src.Port.FloatingPort.IpAssignments?.Map(x => x.Subnet).Map(x => x.IpNetwork)
+                            Provider = src.Port.FloatingPort.ProviderName!,
+                            IpV4Addresses = floatingPortIp.ToList(),
+                            IpV4Subnets = src.Port.FloatingPort.IpAssignments.Map(x => x.Subnet!).Map(x => x.IpNetwork!).ToList(),
                         };
                     }
 
-                    target.Name = src.Port.Network.Name;
-                    target.Provider = src.Port.Network.NetworkProvider;
-                    target.IpV4Addresses = reportedNetwork?.IpV4Addresses ?? ipV4Addresses;
-                    //IpV6Addresses = reportedNetwork?.IpV6Addresses ?? Enumerable.Empty<string>(),
-                    target.IPv4DefaultGateway = reportedNetwork?.IPv4DefaultGateway ?? routerIp;
-                    //IPv6DefaultGateway = reportedNetwork?.IPv6DefaultGateway,
-                    target.IpV4Subnets = reportedNetwork?.IpV4Subnets ?? subnets;
-                    //IpV6Subnets = reportedNetwork?.IpV6Subnets ?? Enumerable.Empty<string>(),
-                    target.DnsServerAddresses = reportedNetwork?.DnsServerAddresses ?? dnsServers;
-                    target.FloatingPort = floatingPort;
-
-                    return target;
+                    return new CatletNetwork
+                    {
+                        Name = src.Port.Network.Name,
+                        Provider = src.Port.Network.NetworkProvider!,
+                        IpV4Addresses = reportedNetwork?.IpV4Addresses.ToList() ?? ipV4Addresses,
+                        IPv4DefaultGateway = reportedNetwork?.IPv4DefaultGateway ?? routerIp,
+                        IpV4Subnets = reportedNetwork?.IpV4Subnets.ToList() ?? subnets,
+                        DnsServerAddresses = reportedNetwork?.DnsServerAddresses.ToList() ?? dnsServers,
+                        FloatingPort = floatingPort,
+                    };
                 });
 
             var memberMap = CreateMap<ProjectRoleAssignment, ProjectMemberRole>();
             memberMap.ForMember(x => x.MemberId, o => o.MapFrom(dest => dest.IdentityId));
-            memberMap.ForMember(x => x.ProjectName, o => o.MapFrom(s => s.Project.Name));
             memberMap.ForMember(x => x.RoleName,
-                o => o.MapFrom((src,m) => RoleNames.GetRoleName(src.RoleId)));
+                o => o.MapFrom((src, _) => RoleNames.GetRoleName(src.RoleId)));
 
             CreateMap<StateDb.Model.VirtualDisk, VirtualDisk>()
-                .ForMember(d => d.Project, o => o.MapFrom(s => s.Project.Name))
                 .ForMember(x => x.Path, o => o.MapFrom((s, _, _, context) =>
                 {
                     var authContext = context.GetAuthContext();
@@ -84,6 +75,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                     return isSuperAdmin ? s.Path : null;
                 }))
                 .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier));
+            CreateMap<StateDb.Model.CatletDrive, VirtualDiskAttachedCatlet>();
 
             CreateMap<StateDb.Model.Gene, Gene>()
                 .Include<StateDb.Model.Gene, GeneWithUsage>()

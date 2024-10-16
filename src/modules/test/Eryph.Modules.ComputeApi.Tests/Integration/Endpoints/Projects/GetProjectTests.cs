@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
@@ -89,7 +90,8 @@ public class GetProjectTests : InMemoryStateDbTestBase,
         if (isAuthorized)
         {
             response!.StatusCode.Should().Be(HttpStatusCode.OK);
-            var project = await response.Content.ReadFromJsonAsync<ApiProject>();
+            var project = await response.Content.ReadFromJsonAsync<ApiProject>(
+                options: ApiJsonSerializerOptions.Options);
             project.Id.Should().Be(projectId.ToString("D"));
             project.Id.Should().NotBeNullOrWhiteSpace();
 

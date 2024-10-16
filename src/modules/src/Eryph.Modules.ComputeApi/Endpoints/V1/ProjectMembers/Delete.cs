@@ -8,7 +8,6 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,27 +17,27 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class Delete(
-    [NotNull] IEntityOperationRequestHandler<ProjectRoleAssignment> operationHandler,
-    [NotNull] ISingleEntitySpecBuilder<ProjectMemberRequest, ProjectRoleAssignment> specBuilder,
+    IEntityOperationRequestHandler<ProjectRoleAssignment> operationHandler,
+    ISingleEntitySpecBuilder<SingleEntityInProjectRequest, ProjectRoleAssignment> specBuilder,
     IUserRightsProvider userRightsProvider)
-    : OperationRequestEndpoint<ProjectMemberRequest, ProjectRoleAssignment>(operationHandler, specBuilder)
+    : OperationRequestEndpoint<SingleEntityInProjectRequest, ProjectRoleAssignment>(operationHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:write")]
-    [HttpDelete("projects/{projectId}/members/{id}")]
+    [HttpDelete("projects/{project_id}/members/{id}")]
     [SwaggerOperation(
         Summary = "Remove a project member",
         Description = "Removes a project member assignment",
         OperationId = "ProjectMembers_Remove",
-        Tags = ["ProjectMembers"])
+        Tags = ["Project Members"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
-        [FromRoute] ProjectMemberRequest request,
+    public override async Task<ActionResult<Operation>> HandleAsync(
+        [FromRoute] SingleEntityInProjectRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!Guid.TryParse(request.Id, out _))
+        if(!Guid.TryParse(request.ProjectId, out var projectId))
             return NotFound();
 
-        var hasAccess = await userRightsProvider.HasProjectAccess(request.Project, AccessRight.Admin);
+        var hasAccess = await userRightsProvider.HasProjectAccess(projectId, AccessRight.Admin);
         if (!hasAccess)
             return Problem(
                 statusCode: StatusCodes.Status403Forbidden,
@@ -47,7 +46,9 @@ public class Delete(
         return await base.HandleAsync(request, cancellationToken);
     }
 
-    protected override object CreateOperationMessage(ProjectRoleAssignment model, ProjectMemberRequest request)
+    protected override object CreateOperationMessage(
+        ProjectRoleAssignment model,
+        SingleEntityInProjectRequest request)
     {
         return new RemoveProjectMemberCommand
         {

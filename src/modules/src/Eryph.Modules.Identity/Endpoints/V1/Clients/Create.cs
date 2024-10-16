@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
@@ -26,43 +27,45 @@ public class Create(
     IOpenIddictScopeManager scopeManager,
     IUserInfoProvider userInfoProvider)
     : EndpointBaseAsync
-        .WithRequest<Client>
+        .WithRequest<NewClientRequestBody>
         .WithActionResult<ClientWithSecret>
 {
     [Authorize(Policy = "identity:clients:write")]
     [HttpPost("clients")]
     [SwaggerOperation(
-        Summary = "Creates a new client",
-        Description = "Creates a client",
+        Summary = "Create a new client",
+        Description = "Create a new client",
         OperationId = "Clients_Create",
         Tags = ["Clients"])
     ]
-    [SwaggerResponse(Status201Created, "Success", typeof(ClientWithSecret))]
+    [SwaggerResponse(
+        statusCode: Status201Created,
+        description: "Success",
+        type: typeof(ClientWithSecret),
+        contentTypes: ["application/json"])
+    ]
     public override async Task<ActionResult<ClientWithSecret>> HandleAsync(
-        [FromBody] Client client,
+        [FromBody] NewClientRequestBody client,
         CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
 
-        client.Id = Guid.NewGuid().ToString();
-        client.TenantId = userInfoProvider.GetUserTenantId();
-
         await client.ValidateScopes(scopeManager, ModelState, cancellationToken);
+        client.ValidateRoles(ModelState);
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
 
-        var descriptor = client.ToDescriptor();
+        var descriptor = client.ToDescriptor(userInfoProvider.GetUserTenantId());
         var privateKey = descriptor.NewClientCertificate(
             certificateGenerator,
             certificateKeyService);
 
         descriptor = await clientService.Add(descriptor, false, cancellationToken);
 
-        var createdClient = descriptor.ToClient<ClientWithSecret>();
-        createdClient.Key = privateKey;
+        var createdClient = descriptor.ToClient(privateKey);
+        var clientUri = new Uri(endpointResolver.GetEndpoint("identity") + $"/v1/clients/{createdClient.Id}");
 
-        var clientUri = new Uri(endpointResolver.GetEndpoint("identity") + $"/v1/clients/{client.Id}");
         return Created(clientUri, createdClient);
     }
 }

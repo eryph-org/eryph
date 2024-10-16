@@ -9,10 +9,9 @@ using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
-using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
@@ -27,29 +26,33 @@ public class NewKey(
         .WithActionResult<ClientWithSecret>
 {
     [Authorize(Policy = "identity:clients:write")]
-    [HttpPost("clients/{id}/newkey")]
+    [HttpPost("clients/{id}/key")]
     [SwaggerOperation(
-        Summary = "Updates a client key",
-        Description = "Updates a client key",
+        Summary = "Create or replace the client key",
+        Description = "Create or replace the client key",
         OperationId = "Clients_NewKey",
         Tags = ["Clients"])
     ]
-    [SwaggerResponse(Status200OK, "Success", typeof(ClientWithSecret))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ClientWithSecret),
+        contentTypes: ["application/json"])
+    ]
     public override async Task<ActionResult<ClientWithSecret>> HandleAsync(
         [FromRoute] NewClientKeyRequest request,
         CancellationToken cancellationToken = default)
     {
         var tenantId = userInfoProvider.GetUserTenantId();
         var descriptor = await clientService.Get(request.Id, tenantId, cancellationToken);
-        if (descriptor == null)
+        if (descriptor is null)
             return NotFound();
 
-        var sharedSecret = (request.Body?.SharedSecret).GetValueOrDefault(false);
+        var sharedSecret = (request.Body.SharedSecret).GetValueOrDefault(false);
         string key;
         if (sharedSecret)
         {
-            key = Convert.ToBase64String(
-                    RandomNumberGenerator.GetBytes(50))
+            key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64))
                 .Replace('+', '-')
                 .Replace('/', '_')
                 .Replace('=', '0');
@@ -65,9 +68,8 @@ public class NewKey(
             descriptor = await clientService.Update(descriptor, cancellationToken);
         }
 
-        var createdClient = descriptor.ToClient<ClientWithSecret>();
-        createdClient.Key = key;
+        var updatedClient = descriptor.ToClient(key);
 
-        return Ok(createdClient);
+        return Ok(updatedClient);
     }
 }

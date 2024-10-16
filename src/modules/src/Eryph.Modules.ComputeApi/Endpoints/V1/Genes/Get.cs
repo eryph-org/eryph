@@ -9,16 +9,16 @@ using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.ComputeApi.Model.V1;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Genes;
 
 public class Get(
-    [NotNull] IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Gene> specBuilder)
+    IGetRequestHandler<StateDb.Model.Gene, GeneWithUsage> requestHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Gene> specBuilder)
     : GetEntityEndpoint<SingleEntityRequest, GeneWithUsage, StateDb.Model.Gene>(requestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:genes:read")]
@@ -29,14 +29,16 @@ public class Get(
         OperationId = "Genes_Get",
         Tags = ["Genes"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(GeneWithUsage))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(GeneWithUsage),
+        contentTypes: ["application/json"])
+    ]
     public override async Task<ActionResult<GeneWithUsage>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!Guid.TryParse(request.Id, out _))
-            return NotFound();
-
         return await base.HandleAsync(request, cancellationToken);
     }
 }

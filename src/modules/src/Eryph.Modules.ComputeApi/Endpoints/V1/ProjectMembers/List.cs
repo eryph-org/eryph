@@ -5,30 +5,35 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class List(
-    [NotNull] IListRequestHandler<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<ProjectMembersListRequest, StateDb.Model.ProjectRoleAssignment> specBuilder)
-    : ListEntityEndpoint<ProjectMembersListRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment>(
+    IListInProjectRequestHandler<ListInProjectRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment> listRequestHandler,
+    IListEntitySpecBuilder<ListInProjectRequest, StateDb.Model.ProjectRoleAssignment> specBuilder)
+    : ListEntitiesEndpoint<ListInProjectRequest, ProjectMemberRole, StateDb.Model.ProjectRoleAssignment>(
         listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:projects:read")]
-    [HttpGet("projects/{projectId}/members")]
+    [HttpGet("projects/{project_id}/members")]
     [SwaggerOperation(
         Summary = "List all project members",
         Description = "List all project members",
         OperationId = "ProjectMembers_List",
-        Tags = ["ProjectMembers"])
+        Tags = ["Project Members"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<ProjectMemberRole>))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ListResponse<ProjectMemberRole>),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<ListResponse<ProjectMemberRole>>> HandleAsync(
-        [FromRoute] ProjectMembersListRequest request,
+        [FromRoute] ListInProjectRequest request,
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(request, cancellationToken);

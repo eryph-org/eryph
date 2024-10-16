@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Asp.Versioning.ApiExplorer;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Eryph.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
@@ -37,10 +39,39 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Swagger
         /// <inheritdoc />
         public void Configure(SwaggerGenOptions options)
         {
-            // add a swagger document for each discovered API version
-            // note: you might choose to skip or document deprecated API versions differently
+            // Add an OpenAPI document for each discovered API version.
+            // Note: you might choose to skip or document deprecated API versions differently
             foreach (var description in _provider.ApiVersionDescriptions)
+            {
                 options.SwaggerDoc(description.GroupName, CreateInfoForApiVersion(description));
+            }
+
+            if (_apiOptions.OAuthOptions is not null)
+            {
+                options.AddSecurityDefinition(
+                    EryphConstants.Authorization.SecuritySchemeId,
+                    new OpenApiSecurityScheme
+                    {
+                        Type = SecuritySchemeType.OAuth2,
+                        // Client assertions are not supported by the OpenAPI specification.
+                        // See https://github.com/OAI/OpenAPI-Specification/issues/1875.
+                        Description = """
+                                      Eryph only supports the client credentials flow. Depending
+                                      on the client, you can use either the client secret or a
+                                      client assertion with type
+                                      `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`.
+                                      """,
+                        Flows = new OpenApiOAuthFlows()
+                        {
+                            ClientCredentials = new OpenApiOAuthFlow()
+                            {
+                                TokenUrl = _apiOptions.OAuthOptions.TokenEndpoint,
+                                Scopes = _apiOptions.OAuthOptions.Scopes
+                                    .ToDictionary(s => s.Name, s => s.Description),
+                            },
+                        },
+                    });
+            }
         }
 
         private OpenApiInfo CreateInfoForApiVersion(ApiVersionDescription description)
@@ -50,8 +81,18 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Swagger
                 Title = _apiOptions.ApiName,
                 Version = description.ApiVersion.ToString(),
                 Description = _apiOptions.ApiName,
-                Contact = new OpenApiContact {Name = "dbosoft", Email = "support@dbosoft.eu"},
-                License = new OpenApiLicense {Name = "MIT", Url = new Uri("https://opensource.org/licenses/MIT")}
+                Contact = new OpenApiContact
+                {
+                    Name = "dbosoft",
+                    Email = "support@dbosoft.eu",
+                },
+                License = new OpenApiLicense
+                {
+                    Name = "MIT",
+#pragma warning disable S1075
+                    Url = new Uri("https://opensource.org/licenses/MIT"),
+#pragma warning restore S1075
+                },
             };
 
             if (description.IsDeprecated) info.Description += " This API version has been deprecated.";

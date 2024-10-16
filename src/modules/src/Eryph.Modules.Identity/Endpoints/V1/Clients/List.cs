@@ -7,12 +7,10 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
-using LanguageExt;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
-using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
@@ -27,19 +25,24 @@ public class List(
     [HttpGet("clients")]
     [Authorize("identity:clients:read")]
     [SwaggerOperation(
-        Summary = "Lists clients",
-        Description = "Lists clients",
+        Summary = "List all clients",
+        Description = "List all clients",
         OperationId = "Clients_List",
         Tags = ["Clients"])
     ]
-    [SwaggerResponse(Status200OK, "Success", typeof(ListResponse<Client>))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ListResponse<Client>),
+        contentTypes: ["application/json"])
+    ]
     public override async Task<ActionResult<ListResponse<Client>>> HandleAsync(
         CancellationToken cancellationToken = default)
     {
         var tenantId = userInfoProvider.GetUserTenantId();
 
-        var clients = await clientService.List(tenantId, cancellationToken).Map(e => 
-            e.Map(c => c.ToClient<Client>()));
+        var clientDescriptors = await clientService.List(tenantId, cancellationToken);
+        var clients = clientDescriptors.Map(d => d.ToClient()).ToList();
 
         return Ok(new ListResponse<Client> { Value = clients });
     }

@@ -5,29 +5,34 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
 
 public class List(
-    [NotNull] IListRequestHandler<ListRequest, VirtualDisk, StateDb.Model.VirtualDisk> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<ListRequest, StateDb.Model.VirtualDisk> specBuilder)
-    : ListEntityEndpoint<ListRequest, VirtualDisk, StateDb.Model.VirtualDisk>(listRequestHandler, specBuilder)
+    IListFilteredByProjectRequestHandler<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk> listRequestHandler,
+    IListEntitySpecBuilder<ListFilteredByProjectRequest, StateDb.Model.VirtualDisk> specBuilder)
+    : ListEntitiesEndpoint<ListFilteredByProjectRequest, VirtualDisk, StateDb.Model.VirtualDisk>(listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:catlets:read")]
     [HttpGet("virtualdisks")]
     [SwaggerOperation(
-        Summary = "Get list of Virtual Disks",
-        Description = "Get list of Virtual Disks",
+        Summary = "List all virtual disks",
+        Description = "List all virtual disks",
         OperationId = "VirtualDisks_List",
         Tags = ["Virtual Disks"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<VirtualDisk>))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ListResponse<VirtualDisk>),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<ListResponse<VirtualDisk>>> HandleAsync(
-        [FromRoute] ListRequest request,
+        [FromRoute] ListFilteredByProjectRequest request,
         CancellationToken cancellationToken = default)
     {
         return base.HandleAsync(request, cancellationToken);

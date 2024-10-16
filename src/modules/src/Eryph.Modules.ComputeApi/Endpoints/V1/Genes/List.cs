@@ -11,15 +11,16 @@ using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Genes;
 
 public class List(
-    [NotNull] IListRequestHandler<ListRequest, Gene, StateDb.Model.Gene> listRequestHandler,
-    [NotNull] IListEntitySpecBuilder<ListRequest, StateDb.Model.Gene> specBuilder)
-    : ListEntityEndpoint<ListRequest, Gene, StateDb.Model.Gene>(listRequestHandler, specBuilder)
+    IListRequestHandler<Gene, StateDb.Model.Gene> listRequestHandler,
+    IListEntitySpecBuilder<StateDb.Model.Gene> specBuilder)
+    : ListEntitiesEndpoint<Gene, StateDb.Model.Gene>(listRequestHandler, specBuilder)
 {
     [Authorize(Policy = "compute:genes:read")]
     [HttpGet("genes")]
@@ -29,11 +30,15 @@ public class List(
         OperationId = "Genes_List",
         Tags = ["Genes"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(ListResponse<Gene>))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(ListResponse<Gene>),
+        contentTypes: ["application/json"])
+    ]
     public override Task<ActionResult<ListResponse<Gene>>> HandleAsync(
-        [FromRoute] ListRequest request,
         CancellationToken cancellationToken = default)
     {
-        return base.HandleAsync(request, cancellationToken);
+        return base.HandleAsync(cancellationToken);
     }
 }

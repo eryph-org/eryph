@@ -14,14 +14,14 @@ internal class ClientServiceWithConfigServiceDecorator(
     IClientConfigService configService)
     : IClientService
 {
-    public ValueTask<IEnumerable<ClientApplicationDescriptor>> List(
+    public ValueTask<IReadOnlyList<ClientApplicationDescriptor>> List(
         Guid tenantId,
         CancellationToken cancellationToken)
     {
         return decoratedService.List(tenantId, cancellationToken);
     }
 
-    public ValueTask<ClientApplicationDescriptor> Get(
+    public ValueTask<ClientApplicationDescriptor?> Get(
         string clientId,
         Guid tenantId,
         CancellationToken cancellationToken)

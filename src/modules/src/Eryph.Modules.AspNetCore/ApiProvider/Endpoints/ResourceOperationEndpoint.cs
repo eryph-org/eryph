@@ -4,12 +4,15 @@ using Eryph.StateDb.Model;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 
-public abstract class ResourceOperationEndpoint<TRequest,TResource> : OperationRequestEndpoint<TRequest, TResource> 
+public abstract class ResourceOperationEndpoint<TRequest,TResource>
+    : OperationRequestEndpoint<TRequest, TResource> 
     where TResource : Resource 
     where TRequest : SingleEntityRequest
 {
-    protected ResourceOperationEndpoint(IEntityOperationRequestHandler<TResource> operationHandler, 
-        ISingleEntitySpecBuilder<SingleEntityRequest, TResource> specBuilder) : base(operationHandler, specBuilder)
+    protected ResourceOperationEndpoint(
+        IEntityOperationRequestHandler<TResource> operationHandler,
+        ISingleEntitySpecBuilder<SingleEntityRequest, TResource> specBuilder)
+        : base(operationHandler, specBuilder)
     {
 
     }

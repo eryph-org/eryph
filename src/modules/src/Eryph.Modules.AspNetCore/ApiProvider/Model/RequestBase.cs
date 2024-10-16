@@ -1,6 +1,5 @@
-﻿namespace Eryph.Modules.AspNetCore.ApiProvider.Model
+﻿namespace Eryph.Modules.AspNetCore.ApiProvider.Model;
+
+public class RequestBase
 {
-    public class RequestBase
-    {
-    }
 }

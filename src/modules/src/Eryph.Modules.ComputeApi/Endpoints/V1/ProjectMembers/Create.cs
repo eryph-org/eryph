@@ -8,9 +8,7 @@ using Eryph.Messages.Projects;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -19,35 +17,39 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
+using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
 public class Create(
-    [NotNull] ICreateEntityRequestHandler<ProjectRoleAssignment> operationHandler,
+    ICreateEntityRequestHandler<ProjectRoleAssignment> operationHandler,
     IUserRightsProvider userRightsProvider)
     : NewOperationRequestEndpoint<NewProjectMemberRequest, ProjectRoleAssignment>(operationHandler)
 {
     [Authorize(Policy = "compute:projects:write")]
-    [HttpPost("projects/{projectId}/members")]
+    [HttpPost("projects/{project_id}/members")]
     [SwaggerOperation(
-        Summary = "Adds a project member",
+        Summary = "Add a project member",
         Description = "Add a project member",
         OperationId = "ProjectMembers_Add",
-        Tags = ["ProjectMembers"])
+        Tags = ["Project Members"])
     ]
-    public override async Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] NewProjectMemberRequest request,
         CancellationToken cancellationToken = default)
     {
-        var hasAccess = await userRightsProvider.HasProjectAccess(request.ProjectId, AccessRight.Admin);
+        if (!Guid.TryParse(request.ProjectId, out var projectId))
+            return NotFound();
+
+        var hasAccess = await userRightsProvider.HasProjectAccess(projectId, AccessRight.Admin);
         if (!hasAccess)
             return Problem(
                 statusCode: StatusCodes.Status403Forbidden,
                 detail: "You do not have admin access to the given project.");
 
         var authContext = userRightsProvider.GetAuthContext();
-        var validation = ValidateRequest(request.Body, authContext);
+        var validation = ValidateRequest(request, authContext);
         if (validation.IsFail)
             return ValidationProblem(validation.ToModelStateDictionary());
 
@@ -56,21 +58,29 @@ public class Create(
 
     protected override object CreateOperationMessage(NewProjectMemberRequest request)
     {
+        if (!Guid.TryParse(request.ProjectId, out var projectId))
+            throw new ArgumentException("The project ID is invalid.", nameof(request));
+
+        if (!Guid.TryParse(request.Body.RoleId, out var roleId))
+            throw new ArgumentException("The role ID is invalid.", nameof(request));
+
         return new AddProjectMemberCommand
         {
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
             MemberId = request.Body.MemberId,
-            ProjectId = request.ProjectId,
+            ProjectId = projectId,
             TenantId = userRightsProvider.GetUserTenantId(),
-            RoleId = request.Body.RoleId
+            RoleId = roleId,
         };
     }
 
     private static Validation<ValidationIssue, Unit> ValidateRequest(
-        NewProjectMemberBody requestBody,
+        NewProjectMemberRequest request,
         AuthContext authContext) =>
-        ComplexValidations.ValidateProperty(requestBody, r => r.MemberId,
-            i => ValidateMemberId(i, authContext), required: true);
+        ValidateProperty(request, r => r.Body.MemberId,
+            i => ValidateMemberId(i, authContext), required: true)
+        | ValidateProperty(request, r => r.Body.RoleId,
+            i => parseGuid(i).ToValidation(Error.New("The role ID is invalid.")), required: true);
 
     private static Validation<Error, string> ValidateMemberId(
         string memberId,

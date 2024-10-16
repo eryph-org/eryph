@@ -6,15 +6,15 @@ using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.ComputeApi.Model.V1;
-using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 public class Get(
-    [NotNull] IGetRequestHandler<StateDb.Model.Catlet, Catlet> requestHandler,
-    [NotNull] ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Catlet> specBuilder)
+    IGetRequestHandler<StateDb.Model.Catlet, Catlet> requestHandler,
+    ISingleEntitySpecBuilder<SingleEntityRequest, StateDb.Model.Catlet> specBuilder)
     : GetEntityEndpoint<SingleEntityRequest, Catlet, StateDb.Model.Catlet>(requestHandler, specBuilder)
 {
     [HttpGet("catlets/{id}")]
@@ -24,14 +24,16 @@ public class Get(
         OperationId = "Catlets_Get",
         Tags = ["Catlets"])
     ]
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, "Success", typeof(Catlet))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(Catlet),
+        contentTypes: ["application/json"])
+    ]
     public override async Task<ActionResult<Catlet>> HandleAsync(
         [FromRoute] SingleEntityRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!Guid.TryParse(request.Id, out _))
-            return NotFound();
-
         return await base.HandleAsync(request, cancellationToken);
     }
 }

@@ -6,10 +6,9 @@ using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-
-using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
@@ -29,7 +28,12 @@ public class Get(
         OperationId = "Clients_Get",
         Tags = ["Clients"])
     ]
-    [SwaggerResponse(Status200OK, "Success", typeof(Client))]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(Client),
+        contentTypes: ["application/json"])
+    ]
     public override async Task<ActionResult<Client>> HandleAsync(
         [FromRoute] GetClientRequest request, 
         CancellationToken cancellationToken = default)
@@ -37,10 +41,10 @@ public class Get(
         var tenantId = userInfoProvider.GetUserTenantId();
         var descriptor = await clientService.Get(request.Id, tenantId, cancellationToken);
 
-        if (descriptor == null)
+        if (descriptor is null)
             return NotFound();
 
-        var client = descriptor.ToClient<Client>();
+        var client = descriptor.ToClient();
         return Ok(client);
     }
 }

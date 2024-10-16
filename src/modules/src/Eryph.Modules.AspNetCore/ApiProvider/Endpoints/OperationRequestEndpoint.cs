@@ -5,6 +5,7 @@ using Ardalis.Specification;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
@@ -17,7 +18,7 @@ public abstract class OperationRequestEndpoint<TRequest, TEntity>(
     ISingleEntitySpecBuilder<TRequest, TEntity> specBuilder)
     : EndpointBaseAsync
         .WithRequest<TRequest>
-        .WithActionResult<ListResponse<Operation>>
+        .WithActionResult<Operation>
     where TEntity : class
     where TRequest : SingleEntityRequest
 {
@@ -28,12 +29,21 @@ public abstract class OperationRequestEndpoint<TRequest, TEntity>(
         return specBuilder.GetSingleEntitySpec(request, AccessRight.Write);
     }
 
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]
-    public override Task<ActionResult<ListResponse<Operation>>> HandleAsync(TRequest request,
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status202Accepted,
+        description: "Success",
+        type: typeof(Operation),
+        contentTypes: ["application/json"])
+    ]
+#pragma warning disable S6965
+    public override Task<ActionResult<Operation>> HandleAsync(TRequest request,
+#pragma warning restore S6965
         CancellationToken cancellationToken = default)
     {
-        return operationHandler.HandleOperationRequest(() => CreateSpecification(request),
-            m => CreateOperationMessage(m, request), cancellationToken);
+        return operationHandler.HandleOperationRequest(
+            () => CreateSpecification(request),
+            m => CreateOperationMessage(m, request),
+            cancellationToken);
     }
 }
 
@@ -42,15 +52,24 @@ public abstract class OperationRequestEndpoint<TEntity>(
     IOperationRequestHandler<TEntity> operationHandler)
     : EndpointBaseAsync
         .WithoutRequest
-        .WithActionResult<ListResponse<Operation>>
+        .WithActionResult<Operation>
     where TEntity : class
 {
     protected abstract object CreateOperationMessage();
 
-    [SwaggerResponse(Microsoft.AspNetCore.Http.StatusCodes.Status202Accepted, "Success", typeof(Operation))]
-    public override Task<ActionResult<ListResponse<Operation>>> HandleAsync(
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status202Accepted,
+        description: "Success",
+        type: typeof(Operation),
+        contentTypes: ["application/json"])
+    ]
+#pragma warning disable S6965
+    public override Task<ActionResult<Operation>> HandleAsync(
+#pragma warning restore S6965
         CancellationToken cancellationToken = default)
     {
-        return operationHandler.HandleOperationRequest(CreateOperationMessage, cancellationToken);
+        return operationHandler.HandleOperationRequest(
+            CreateOperationMessage,
+            cancellationToken);
     }
 }

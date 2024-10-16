@@ -8,7 +8,6 @@ using Ardalis.Specification;
 using Eryph.Core;
 using Eryph.IdentityDb;
 using Eryph.IdentityDb.Entities;
-using Eryph.StateDb.Model;
 using LanguageExt;
 using OpenIddict.Abstractions;
 
@@ -27,19 +26,20 @@ public abstract class BaseApplicationService<TEntity, TDescriptor>
         _repository = repository;
     }
 
-    public async ValueTask<IEnumerable<TDescriptor>> List(Guid tenantId, CancellationToken cancellationToken)
+    public async ValueTask<IReadOnlyList<TDescriptor>> List(Guid tenantId, CancellationToken cancellationToken)
     {
-        return await _repository.ListAsync(GetListSpec(tenantId), cancellationToken)
-            .MapAsync(list => list.Map(async entity =>
-            {
-                var descriptor = new TDescriptor();
-                await PopulateDescriptorFromApplication(descriptor, entity, cancellationToken);
-                return descriptor;
-            }).SequenceSerial());
+        var clients = await _repository.ListAsync(GetListSpec(tenantId), cancellationToken);
+        var populatedClients = await clients.ToSeq().Map(async entity =>
+        {
+            var descriptor = new TDescriptor();
+            await PopulateDescriptorFromApplication(descriptor, entity, cancellationToken);
+            return descriptor;
+        }).SequenceSerial();
 
+        return populatedClients.ToList();
     }
 
-    public async ValueTask<TDescriptor> Get(string clientId, Guid tenantId, CancellationToken cancellationToken)
+    public async ValueTask<TDescriptor?> Get(string clientId, Guid tenantId, CancellationToken cancellationToken)
     {
         var entity = await _repository.GetBySpecAsync(GetSingleEntitySpec(clientId, tenantId), cancellationToken);
         if(entity == null)

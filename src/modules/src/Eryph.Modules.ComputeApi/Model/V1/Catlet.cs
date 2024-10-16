@@ -1,22 +1,22 @@
 ﻿using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using Eryph.StateDb.Model;
+using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using CatletStatus = Eryph.StateDb.Model.CatletStatus;
 
-namespace Eryph.Modules.ComputeApi.Model.V1
+namespace Eryph.Modules.ComputeApi.Model.V1;
+
+public class Catlet
 {
-    public class Catlet
-    {
-        [Key] public string Id { get; set; }
+    public required string Id { get; set; }
 
-        public string Name { get; set; }
+    public required string Name { get; set; }
 
-        public CatletStatus Status { get; set; }
+    public required Project Project { get; set; }
 
-        public IEnumerable<CatletNetwork> Networks { get; set; }
+    public required CatletStatus Status { get; set; }
 
+    public IReadOnlyList<CatletNetwork>? Networks { get; set; }
 
-        public IEnumerable<CatletNetworkAdapter> NetworkAdapters { get; set; }
+    public IReadOnlyList<CatletNetworkAdapter>? NetworkAdapters { get; set; }
 
-        public IEnumerable<CatletDrive> Drives { get; set; }
-    }
+    public IReadOnlyList<CatletDrive>? Drives { get; set; }
 }

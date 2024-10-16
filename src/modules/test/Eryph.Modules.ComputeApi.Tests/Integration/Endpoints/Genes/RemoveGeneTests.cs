@@ -57,7 +57,7 @@ public class RemoveGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleF
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, scope, isSuperAdmin)
             .DeleteAsync($"v1/genes/{GeneId}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.Should().HaveStatusCode(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class RemoveGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleF
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .DeleteAsync($"v1/genes/{GeneId}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        response.Should().HaveStatusCode(HttpStatusCode.Accepted);
 
         var messages = _factory.GetPendingRebusMessages<RemoveGeneCommand>();
         messages.Should().SatisfyRespectively(

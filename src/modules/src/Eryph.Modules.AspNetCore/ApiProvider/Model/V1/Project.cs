@@ -1,13 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1
+public class Project
 {
-    public class Project
-    {
-        [Key] public string Id { get; set; }
+    public required string Id { get; set; }
 
-        public string Name { get; set; }
-        public string TenantId { get; set; }
-
-    }
+    public required string Name { get; set; }
+    
+    public required string TenantId { get; set; }
 }

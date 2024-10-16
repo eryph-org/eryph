@@ -8,5 +8,5 @@ public class NewProjectMemberBody
 
     public required string MemberId { get; set; }
 
-    public required Guid RoleId { get; set; }
+    public required string RoleId { get; set; }
 }

@@ -4,15 +4,11 @@ using System.Threading.Tasks;
 using Ardalis.Specification;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers
+namespace Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+
+public interface IGetRequestHandler<TEntity, TResponse> where TEntity : class
 {
-
-
-    public interface IGetRequestHandler<TEntity, TResponse> where TEntity : class
-    {
-        Task<ActionResult<TResponse>> HandleGetRequest(
-            Func<ISingleResultSpecification<TEntity>> specificationFunc,
-            CancellationToken cancellationToken);
-
-    }
+    Task<ActionResult<TResponse>> HandleGetRequest(
+        Func<ISingleResultSpecification<TEntity>?> specificationFunc,
+        CancellationToken cancellationToken);
 }

@@ -56,5 +56,4 @@ namespace Eryph.Modules.Identity.Services
             return new ClientSpecs.GetAll(tenantId);
         }
     }
-
 }

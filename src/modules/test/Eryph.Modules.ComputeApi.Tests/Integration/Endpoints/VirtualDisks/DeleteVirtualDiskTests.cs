@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
@@ -98,7 +99,8 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             .DeleteAsync($"v1/virtualdisks/{DiskId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
+            options: ApiJsonSerializerOptions.Options);
         problemDetails.Should().NotBeNull();
         problemDetails!.Detail.Should().Be("The disk is attached to a virtual machine and cannot be deleted.");
     }
@@ -126,7 +128,8 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             .DeleteAsync($"v1/virtualdisks/{DiskId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
+            options: ApiJsonSerializerOptions.Options);
         problemDetails.Should().NotBeNull();
         problemDetails!.Detail.Should().Be("The disk has children and cannot be deleted.");
     }
@@ -155,7 +158,8 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             .DeleteAsync($"v1/virtualdisks/{genePoolDiskId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
+            options: ApiJsonSerializerOptions.Options);
         problemDetails.Should().NotBeNull();
         problemDetails!.Detail.Should().Be("The disk belongs to the gene pool and cannot be deleted.");
     }
@@ -175,7 +179,8 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             .DeleteAsync($"v1/virtualdisks/{DiskId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>(
+            options: ApiJsonSerializerOptions.Options);
         problemDetails.Should().NotBeNull();
         problemDetails!.Detail.Should().Be("The configuration of the disk is frozen. The disk cannot be deleted.");
     }

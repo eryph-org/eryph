@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
@@ -133,10 +134,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         response.EnsureSuccessStatusCode();
 
         var gene = await response.Content.ReadFromJsonAsync<ApiGene>(
-            new JsonSerializerOptions(JsonSerializerDefaults.Web)
-            {
-                Converters = { new JsonStringEnumConverter() },
-            });
+            options: ApiJsonSerializerOptions.Options);
 
         gene.Should().NotBeNull();
         gene.Id.Should().Be(FodderGeneId.ToString());
@@ -145,7 +143,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         gene.Hash.Should().Be("12345678");
         gene.GeneType.Should().Be(GeneType.Fodder);
         gene.Size.Should().Be(42);
-        gene.Catlets.Should().Equal(CatletId);
+        gene.Catlets.Should().Equal(CatletId.ToString());
         gene.Disks.Should().BeNullOrEmpty();
     }
 
@@ -157,12 +155,9 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
             .GetAsync($"v1/genes/{VolumeGeneId}");
 
         response.EnsureSuccessStatusCode();
-        
+
         var gene = await response.Content.ReadFromJsonAsync<ApiGene>(
-            new JsonSerializerOptions(JsonSerializerDefaults.Web)
-            {
-                Converters = { new JsonStringEnumConverter() },
-            });
+            options: ApiJsonSerializerOptions.Options);
 
         gene.Should().NotBeNull();
         gene.Id.Should().Be(VolumeGeneId.ToString());
@@ -172,6 +167,6 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         gene.GeneType.Should().Be(GeneType.Volume);
         gene.Size.Should().Be(42);
         gene.Catlets.Should().BeNullOrEmpty();
-        gene.Disks.Should().Equal(DiskId);
+        gene.Disks.Should().Equal(DiskId.ToString());
     }
 }

@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
+using Eryph.Core;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
@@ -41,12 +44,15 @@ public class QueryClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
                 _ = clientService.Add(new ClientApplicationDescriptor
                 {
                     ClientId = "test1",
+                    DisplayName = "Test Client 1",
+                    Scopes = { EryphConstants.Authorization.Scopes.ComputeWrite }
                 }, false, CancellationToken.None).GetAwaiter().GetResult();
                 _ = clientService.Add(new ClientApplicationDescriptor
                 {
-                    ClientId = "test2"
+                    ClientId = "test2",
+                    DisplayName = "Test Client 2",
+                    Scopes = { EryphConstants.Authorization.Scopes.ComputeRead }
                 }, false, CancellationToken.None).GetAwaiter().GetResult();
-
             });
         });
 
@@ -58,10 +64,25 @@ public class QueryClientsTest : IClassFixture<WebModuleFactory<IdentityModule>>
     {
         var factory = SetupClients();
 
-        var result = await factory.CreateDefaultClient().GetFromJsonAsync<ListResponse<Client>>("v1/clients");
-        result.Should().NotBeNull();
-        result.Value.Count().Should().Be(2);
-        result.Value.First().Id.Should().Be("test1");
-        result.Value.Last().Id.Should().Be("test2");
+        var response = await factory.CreateDefaultClient().GetAsync("v1/clients");
+        response.Should().HaveStatusCode(HttpStatusCode.OK);
+
+        var clients = await response.Content.ReadFromJsonAsync<ListResponse<Client>>(
+            options: ApiJsonSerializerOptions.Options);
+
+        clients.Should().NotBeNull();
+        clients.Value.Should().SatisfyRespectively(
+            client =>
+            {
+                client.Id.Should().Be("test1");
+                client.Name.Should().Be("Test Client 1");
+                client.AllowedScopes.Should().Equal(EryphConstants.Authorization.Scopes.ComputeWrite);
+            },
+            client =>
+            {
+                client.Id.Should().Be("test2");
+                client.Name.Should().Be("Test Client 2");
+                client.AllowedScopes.Should().Equal(EryphConstants.Authorization.Scopes.ComputeRead);
+            });
     }
 }
