@@ -30,7 +30,7 @@ public static class OperationTaskExtensions
     {
         return either.MatchAsync(
             LeftAsync: l => messaging.FailTask(message, l),
-            RightAsync: _ => Task.CompletedTask);
+            RightAsync: _ => Task.FromResult(Prelude.unit));
     }
 
     public static Task FailTask(

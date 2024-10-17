@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20240909103418_InitialCreate")]
+    [Migration("20241017162406_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -71,6 +71,10 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("GeneId")
                         .HasColumnType("varchar(255)");
 
+                    b.Property<string>("Architecture")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.HasKey("MetadataId", "GeneId");
 
                     b.ToTable("MetadataGenes");
@@ -107,6 +111,10 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
+
+                    b.Property<string>("Architecture")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<string>("GeneId")
                         .IsRequired()
@@ -690,6 +698,9 @@ namespace Eryph.StateDb.MySql.Migrations
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
+
+                    b.Property<string>("Architecture")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("DataStore")
                         .IsRequired()

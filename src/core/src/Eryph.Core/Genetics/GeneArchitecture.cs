@@ -65,9 +65,9 @@ public class ProcessorArchitecture : EryphName<ProcessorArchitecture>
     {
         ValidOrThrow(
             from _ in guard(
-                string.Equals(value, "hyperv", StringComparison.OrdinalIgnoreCase)
+                string.Equals(value, "amd64", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(value, "any", StringComparison.OrdinalIgnoreCase),
-                Error.New("The hypervisor is invalid")
+                Error.New("The processor architecture is invalid")
             ).ToValidation()
             select unit);
     }
