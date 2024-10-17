@@ -1,11 +1,9 @@
 assembly-versioning-scheme: MajorMinorPatch
 mode: ContinuousDeployment
-branches: {}
 ignore:
   sha: []
 merge-message-formats: {}
 
 branches:
-  release:
-    increment: Inherit
-    tag: rc
+ release:
+   tag: 'beta-ci'
