@@ -72,6 +72,7 @@ public class GenePoolPathsTests
         var result = GenePoolPaths.GetGenePath(
             @"Z:\volumes\genepool",
             geneType,
+            GeneArchitecture.New("any"),
             GeneIdentifier.New(geneId));
 
         result.Should().Be(expected);

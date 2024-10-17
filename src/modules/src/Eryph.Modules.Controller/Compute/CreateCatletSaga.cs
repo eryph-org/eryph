@@ -79,6 +79,7 @@ internal class CreateCatletSaga(
         {
             Data.Data.State = CreateVMState.Placed;
             Data.Data.AgentName = response.AgentName;
+            Data.Data.Architecture = response.Architecture;
 
             await StartNewTask(new ResolveCatletConfigCommand()
             {
@@ -120,6 +121,36 @@ internal class CreateCatletSaga(
             Data.Data.Config = result.ValueUnsafe().Config;
             Data.Data.BredConfig = result.ValueUnsafe().BredConfig;
             Data.Data.ParentConfig = result.ValueUnsafe().ParentConfig.IfNoneUnsafe((CatletConfig?)null);
+
+            var geneIds = CatletGeneCollecting.CollectGenes(Data.Data.BredConfig);
+            if (geneIds.IsFail)
+            {
+                await Fail(ErrorUtils.PrintError(Error.Many(geneIds.FailToSeq())));
+                return;
+            }
+
+            await StartNewTask(new ResolveGenesCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Genes = geneIds.SuccessToSeq().Flatten().Map(g => g.GeneIdentifier).ToList(),
+            });
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<ResolveGenesCommand> message)
+    {
+        if (Data.Data.State >= CreateVMState.GenesResolved)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async (ResolveGenesCommandResponse response) =>
+        {
+            if (Data.Data.Config is null)
+                throw new InvalidOperationException("Config is missing.");
+
+            Data.Data.State = CreateVMState.GenesResolved;
+
+            Data.Data.ResolvedGenes = response.ResolvedArchitectures;
+
             Data.Data.MachineId = Guid.NewGuid();
 
             await StartNewTask(new CreateCatletVMCommand
@@ -160,7 +191,20 @@ internal class CreateCatletSaga(
             if (project == null)
                 throw new InvalidOperationException($"Project '{projectName}' not found.");
 
-            response.MachineMetadata.ParentConfig = Data.Data.ParentConfig;
+            var catletMetadata = new Resources.Machines.CatletMetadata
+            {
+                Id = response.MetadataId,
+                MachineId = Data.Data.MachineId,
+                VMId = response.VmId,
+                Fodder = Data.Data.Config!.Fodder,
+                Variables = Data.Data.Config.Variables,
+                Parent = Data.Data.Config.Parent,
+                ParentConfig = Data.Data.ParentConfig,
+                Architecture = response.Architecture.Value,
+                GeneArchitectures = Data.Data.ResolvedGenes?.ToDictionary(
+                    kvp => kvp.Key.Value,
+                    kvp => kvp.Value.Value),
+            };
 
             _ = await vmDataService.AddNewVM(new Catlet
             {
@@ -171,7 +215,7 @@ internal class CreateCatletSaga(
                 Name = response.Inventory.Name,
                 Environment = environmentName.Value,
                 DataStore = datastoreName.Value,
-            }, response.MachineMetadata);
+            }, catletMetadata);
 
             await StartNewTask(new UpdateCatletCommand
             {

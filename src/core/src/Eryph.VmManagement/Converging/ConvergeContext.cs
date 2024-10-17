@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Storage;
@@ -19,6 +21,8 @@ namespace Eryph.VmManagement.Converging
         public readonly VMHostMachineData HostInfo;
         public readonly CatletMetadata Metadata;
         public readonly MachineNetworkSettings[] NetworkSettings;
+        public readonly HashMap<GeneIdentifier, GeneArchitecture> ResolvedGenes;
+
 
         public ConvergeContext(
             VmHostAgentConfiguration vmHostAgentConfig,
@@ -28,7 +32,8 @@ namespace Eryph.VmManagement.Converging
             CatletMetadata metadata,
             VMStorageSettings storageSettings, 
             MachineNetworkSettings[] networkSettings,
-            VMHostMachineData hostInfo)
+            VMHostMachineData hostInfo,
+            HashMap<GeneIdentifier, GeneArchitecture> resolvedGenes)
         {
             VmHostAgentConfig = vmHostAgentConfig;
             Engine = engine;
@@ -38,6 +43,7 @@ namespace Eryph.VmManagement.Converging
             StorageSettings = storageSettings;
             NetworkSettings = networkSettings;
             HostInfo = hostInfo;
+            ResolvedGenes = resolvedGenes;
         }
 
         public EitherAsync<Error, Unit> ReportProgressAsync(string message)

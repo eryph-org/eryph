@@ -30,6 +30,7 @@ internal class LocalFirstGeneProvider(
 {
     public EitherAsync<Error, PrepareGeneResponse> ProvideGene(
         GeneType geneType,
+        GeneArchitecture geneArchitecture,
         GeneIdentifier geneIdentifier,
         Func<string, int, Task<Unit>> reportProgress,
         CancellationToken cancel) =>
@@ -40,11 +41,11 @@ internal class LocalFirstGeneProvider(
         from _1 in guard(geneSetInfo.Id == geneIdentifier.GeneSet,
             Error.New($"The gene '{geneIdentifier}' resolved to the gene set '{geneSetInfo.Id}'. "
                 + "This code must only be called with resolved IDs."))
-        from geneHash in GetGeneHash(geneSetInfo, geneType, geneIdentifier)
+        from geneHash in GetGeneHash(geneSetInfo, geneType, geneArchitecture, geneIdentifier)
         from _2 in EnsureGene(geneSetInfo, geneIdentifier, geneHash, reportProgress, cancel)
         let localGenePool = genepoolFactory.CreateLocal()
         let timestamp = DateTimeOffset.UtcNow
-        from geneSize in localGenePool.GetCachedGeneSize(genePoolPath, geneType, geneIdentifier)
+        from geneSize in localGenePool.GetCachedGeneSize(genePoolPath, geneType, geneArchitecture, geneIdentifier)
         from validGeneSize in geneSize.ToEitherAsync(
             Error.New($"The gene {geneIdentifier} was not properly extracted."))
         select new PrepareGeneResponse
@@ -54,6 +55,7 @@ internal class LocalFirstGeneProvider(
             {
                 GeneType = geneType,
                 Id = geneIdentifier,
+                Architecture = GeneArchitecture.New("any"),
                 Hash = geneHash,
                 Size = validGeneSize,
             },
@@ -72,9 +74,13 @@ internal class LocalFirstGeneProvider(
     private static EitherAsync<Error, string> GetGeneHash(
         GeneSetInfo genesetInfo,
         GeneType geneType,
+        GeneArchitecture geneArchitecture,
         GeneIdentifier geneId) =>
         from validHash in GeneSetManifestUtils.FindGeneHash(
-                genesetInfo.MetaData, geneType, geneId.GeneName)
+                genesetInfo.MetaData,
+                geneType,
+                geneArchitecture,
+                geneId.GeneName)
             .ToEitherAsync(
             Error.New($"Could not find {geneType.ToString().ToLowerInvariant()} gene {geneId.GeneName} in geneset {genesetInfo.Id}."))
         select validHash;

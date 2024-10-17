@@ -38,6 +38,7 @@ public class RemoveGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleF
         {
             Id = GeneId,
             GeneId = "gene:acme/acme-os/1.0:sda",
+            Architecture = "hyperv/amd64",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = "testhost",
             Hash = "12345678",

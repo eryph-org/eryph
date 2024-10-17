@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.GenePool.Model;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
@@ -233,9 +234,10 @@ internal class LocalGenePoolSource(
     public EitherAsync<Error, Option<long>> GetCachedGeneSize(
         string genePoolPath,
         GeneType geneType,
+        GeneArchitecture geneArchitecture,
         GeneIdentifier geneId) =>
         from _ in RightAsync<Error, Unit>(unit)
-        let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, geneId)
+        let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, geneArchitecture, geneId)
         from geneExists in Try(() => fileSystem.FileExists(genePath))
             .ToEitherAsync()
         from fileSize in geneExists
@@ -246,6 +248,7 @@ internal class LocalGenePoolSource(
     public EitherAsync<Error, Unit> RemoveCachedGene(
         string genePoolPath,
         GeneType geneType,
+        GeneArchitecture geneArchitecture,
         GeneIdentifier geneId) =>
         from _ in TryAsync(async () =>
         {
@@ -258,13 +261,13 @@ internal class LocalGenePoolSource(
             var manifest = JsonSerializer.Deserialize<GenesetTagManifestData>(manifestJson);
 
             var geneHash = GeneSetManifestUtils.FindGeneHash(
-                manifest, geneType, geneId.GeneName);
+                manifest, geneType, geneArchitecture, geneId.GeneName);
             if (geneHash.IsNone)
                 return unit;
 
             var genes = await RemoveMergedGene(geneSetPath, geneHash.ValueUnsafe());
             
-            var genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, geneId);
+            var genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, geneArchitecture, geneId);
             if (fileSystem.FileExists(genePath))
             {
                 fileSystem.DeleteFile(genePath);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Ardalis.Specification;
 using Eryph.ConfigModel;
+using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 
@@ -63,6 +64,18 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
+        public sealed class GetByUniqueGeneId : Specification<VirtualDisk>, ISingleResultSpecification
+        {
+            public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier geneId)
+            {
+                Query.Where(x => x.LastSeenAgent == agentName
+                                 && x.StorageIdentifier == geneId.Identifier.Value
+                                 && x.Architecture == geneId.Architecture.Value);
+
+                Query.Include(x => x.Project);
+            }
+        }
+
         public sealed class GetByGeneIds : Specification<VirtualDisk>
         {
             public GetByGeneIds(string agentName, IList<GeneIdentifier> geneIds)
@@ -71,6 +84,19 @@ namespace Eryph.StateDb.Specifications
 
                 Query.Where(x => x.LastSeenAgent == agentName
                                  && values.Contains(x.StorageIdentifier!));
+
+                Query.Include(x => x.Project);
+            }
+        }
+
+        public sealed class GetByUniqueGeneIds : Specification<VirtualDisk>
+        {
+            public GetByUniqueGeneIds(string agentName, IList<UniqueGeneIdentifier> geneIds)
+            {
+                var values = geneIds.Map(id => $"{id.Identifier.Value}|{id.Architecture.Value}").ToList();
+
+                Query.Where(x => x.LastSeenAgent == agentName
+                                 && values.Contains(x.StorageIdentifier! + "|" + x.Architecture!));
 
                 Query.Include(x => x.Project);
             }

@@ -11,5 +11,5 @@ public class RemoveGeneSagaData
 {
     public string AgentName { get; set; } = null!;
 
-    public GeneIdentifierWithType GeneId { get; set; } = null!;
+    public UniqueGeneIdentifier GeneId { get; set; } = null!;
 }

@@ -29,6 +29,16 @@ public class GeneSpecs
         }
     }
 
+    public sealed class GetByUniqueGeneId : Specification<Gene>, ISingleResultSpecification<Gene>
+    {
+        public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier geneId)
+        {
+            Query.Where(x => x.LastSeenAgent == agentName
+                             && x.GeneId == geneId.Identifier.Value
+                             && x.Architecture == geneId.Architecture.Value);
+        }
+    }
+
     public sealed class GetByGeneIds : Specification<Gene>
     {
         public GetByGeneIds(string agentName, IList<GeneIdentifier> geneIds)
@@ -37,6 +47,17 @@ public class GeneSpecs
 
             Query.Where(x => x.LastSeenAgent == agentName
                              && values.Contains(x.GeneId));
+        }
+    }
+
+    public sealed class GetByUniqueGeneIds : Specification<Gene>
+    {
+        public GetByUniqueGeneIds(string agentName, IList<UniqueGeneIdentifier> geneIds)
+        {
+            var values = geneIds.Map(id => $"{id.Identifier.Value}|{id.Architecture.Value}").ToList();
+
+            Query.Where(x => x.LastSeenAgent == agentName
+                             && values.Contains(x.GeneId + "|" + x.Architecture));
         }
     }
 

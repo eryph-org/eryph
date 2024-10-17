@@ -1,5 +1,6 @@
 ﻿using System;
 using Eryph.ConfigModel;
+using Eryph.Core.Genetics;
 
 namespace Eryph.Messages.Resources.Events
 {
@@ -10,6 +11,9 @@ namespace Eryph.Messages.Resources.Events
 
         [PrivateIdentifier]
         public string AgentName { get; set; }
+
+        public GeneArchitecture Architecture { get; set; }
+
         public bool Confirmed { get; set; }
     }
 }

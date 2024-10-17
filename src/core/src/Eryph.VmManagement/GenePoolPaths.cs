@@ -22,6 +22,9 @@ public static class GenePoolPaths
         VmHostAgentConfiguration vmHostAgentConfig) =>
         Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool");
 
+    public static bool IsPathInGenePool(string genePoolPath, string path) =>
+        PathUtils.GetContainedPath(genePoolPath, path).IsSome;
+
     public static string GetGeneSetPath(
         string genePoolPath,
         GeneSetIdentifier geneSetId) =>
@@ -38,6 +41,7 @@ public static class GenePoolPaths
     public static string GetGenePath(
         string genePoolPath,
         GeneType geneType,
+        GeneArchitecture geneArchitecture,
         GeneIdentifier geneId)
     {
         var geneFolder = geneType switch
@@ -58,9 +62,14 @@ public static class GenePoolPaths
                 nameof(geneType)),
         };
 
+        var architecture = geneArchitecture.IsAny
+            ? ""
+            : $"{geneArchitecture.Hypervisor.Value}/{geneArchitecture.ProcessorArchitecture.Value}";
+
         return Path.Combine(
             GetGeneSetPath(genePoolPath, geneId.GeneSet),
             geneFolder,
+            architecture,
             $"{geneId.GeneName}.{extension}");
     }
 
@@ -92,4 +101,68 @@ public static class GenePoolPaths
             .ToEither()
         from geneSetId in GetGeneSetIdFromPath(genePoolPath, Path.GetDirectoryName(geneSetManifestPath))
         select geneSetId;
+
+    public static Either<Error, (GeneType Type, GeneIdentifier Identitier, GeneArchitecture Architecture)> GetGeneIdFromPath(
+        string genePoolPath,
+        string genePath) =>
+        from _1 in guard(Path.IsPathFullyQualified(genePoolPath),
+                Error.New("The gene pool path is not fully qualified."))
+            .ToEither()
+        from _2 in guard(Path.IsPathFullyQualified(genePath),
+            Error.New("The gene path is not fully qualified."))
+        from containedPath in PathUtils.GetContainedPath(genePoolPath, genePath)
+            .ToEither(Error.New("The gene path is not located in the gene pool."))
+        let parts = containedPath.Split(Path.DirectorySeparatorChar)
+        from _3 in guard(parts.Length >= 4 && parts.Length <= 7, Error.New("The gene path is invalid."))
+        from organizationName in OrganizationName.NewEither(parts[0])
+        from geneSetName in GeneSetName.NewEither(parts[1])
+        from tagName in TagName.NewEither(parts[2])
+        let geneSetId = new GeneSetIdentifier(organizationName, geneSetName, tagName)
+        from geneType in parts[3].ToLowerInvariant() switch
+        {
+            "catlet.json" => Right<Error, GeneType>(GeneType.Catlet),
+            "volumes" => Right(GeneType.Volume),
+            "fodder" => Right(GeneType.Fodder),
+            _ => Error.New("The gene path is invalid.")
+        }
+        from geneNameAndArchitecture in geneType switch
+        {
+            GeneType.Catlet => (Name: GeneName.New("catlet"),
+                                Architecture: GeneArchitecture.New("any")),
+            GeneType.Volume or GeneType.Fodder => Foo(geneType, parts[4..]),
+            _ => Error.New("The gene path is invalid.")
+        }
+        let geneId = new GeneIdentifier(geneSetId, geneNameAndArchitecture.Name)
+        select (geneType,geneId, geneNameAndArchitecture.Architecture);
+
+    private static Either<Error, (GeneName Name, GeneArchitecture Architecture)> Foo(
+        GeneType geneType,
+        string[] segments) =>
+        from _ in guard(segments.Length >= 1 && segments.Length <= 3, Error.New("The gene path is invalid"))
+            .ToEither()
+        from architecture in GetArchitectureFromPathSegment(segments[..^2])
+            .MapLeft(e => Error.New("The gene path is invalid", e))
+        let fileName = segments[^1]
+        from __ in guard(Path.HasExtension(fileName), Error.New("The gene path is invalid"))
+        let extension = Path.GetExtension(fileName)?.ToLowerInvariant()
+        from _3 in guard(geneType is GeneType.Fodder && extension == "json"
+                         || geneType is GeneType.Volume && extension == "vhdx",
+            Error.New("The gene path is invalid"))
+        from geneName in GeneName.NewEither(Path.GetFileNameWithoutExtension(fileName))
+        select (geneName, architecture);
+
+    private static Either<Error, GeneArchitecture> GetArchitectureFromPathSegment(
+        string[] parts) =>
+        from result in parts.Length switch
+        {
+            0 => GeneArchitecture.New("any"),
+            1 => from hypervisor in Hypervisor.NewEither(parts[0])
+                let processorArchitecture = ProcessorArchitecture.New("any")
+                select new GeneArchitecture(hypervisor, processorArchitecture),
+            2 => from hypervisor in Hypervisor.NewEither(parts[0])
+                from processorArchitecture in ProcessorArchitecture.NewEither(parts[1])
+                select new GeneArchitecture(hypervisor, processorArchitecture),
+            _ => Error.New("The gene architecture is invalid.")
+        }
+        select result;
 }

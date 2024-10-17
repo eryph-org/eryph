@@ -46,6 +46,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         {
             Id = FodderGeneId,
             GeneId = "gene:acme/acme-fodder/1.0:test-food",
+            Architecture = "any",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = AgentName,
             Hash = "12345678",
@@ -62,6 +63,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
                 {
                     MetadataId = CatletMetadataId,
                     GeneId = "gene:acme/acme-fodder/1.0:test-food",
+                    Architecture = "any",
                 },
             ],
         });
@@ -81,6 +83,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         {
             Id = VolumeGeneId,
             GeneId = "gene:acme/acme-os/1.0:sda",
+            Architecture = "hyperv/amd64",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = AgentName,
             Hash = "abcdef",

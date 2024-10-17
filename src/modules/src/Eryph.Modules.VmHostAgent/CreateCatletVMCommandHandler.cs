@@ -5,6 +5,7 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
@@ -25,6 +26,7 @@ namespace Eryph.Modules.VmHostAgent
     internal class CreateCatletVMCommandHandler : 
         CatletConfigCommandHandler<CreateCatletVMCommand, ConvergeCatletResult>
     {
+        private readonly IHostArchitectureProvider _hostArchitectureProvider;
         private readonly IHostInfoProvider _hostInfoProvider;
         private readonly IHostSettingsProvider _hostSettingsProvider;
         private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
@@ -33,11 +35,13 @@ namespace Eryph.Modules.VmHostAgent
             IPowershellEngine engine,
             ITaskMessaging messaging,
             ILogger log,
+            IHostArchitectureProvider hostArchitectureProvider,
             IHostInfoProvider hostInfoProvider,
             IHostSettingsProvider hostSettingsProvider,
             IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
             : base(engine, messaging, log)
         {
+            _hostArchitectureProvider = hostArchitectureProvider;
             _hostInfoProvider = hostInfoProvider;
             _hostSettingsProvider = hostSettingsProvider;
             _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
@@ -50,6 +54,7 @@ namespace Eryph.Modules.VmHostAgent
             from plannedStorageSettings in VMStorageSettings.Plan(
                 vmHostAgentConfig, LongToString(command.StorageId), command.Config, None)
             from createdVM in CreateVM(plannedStorageSettings, Engine, command.BredConfig)
+            let metadataId = Guid.NewGuid()
             let metadata = new CatletMetadata
             {
                 Id = Guid.NewGuid(),
@@ -58,14 +63,17 @@ namespace Eryph.Modules.VmHostAgent
                 Fodder = command.Config.Fodder,
                 Variables = command.Config.Variables,
                 Parent = command.Config.Parent,
+                Architecture = _hostArchitectureProvider.Architecture.Value,
             }
-            from _ in SetMetadataId(createdVM, metadata.Id)
+            from _ in SetMetadataId(createdVM, metadataId)
             from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, createdVM, _hostInfoProvider)
             select new ConvergeCatletResult
             {
+                VmId = createdVM.Value.Id,
+                MetadataId = metadataId,
                 Inventory = inventory,
-                MachineMetadata = metadata,
                 Timestamp = DateTimeOffset.UtcNow,
+                Architecture = _hostArchitectureProvider.Architecture,
             };
 
         private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(

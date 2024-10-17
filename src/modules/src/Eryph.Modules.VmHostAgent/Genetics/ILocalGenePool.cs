@@ -25,10 +25,12 @@ internal interface ILocalGenePool: IGenePool
     EitherAsync<Error, Option<long>> GetCachedGeneSize(
         string genePoolPath,
         GeneType geneType,
+        GeneArchitecture geneArchitecture,
         GeneIdentifier geneId);
 
     EitherAsync<Error, Unit> RemoveCachedGene(
         string genePoolPath,
         GeneType geneType,
+        GeneArchitecture geneArchitecture,
         GeneIdentifier geneId);
 }

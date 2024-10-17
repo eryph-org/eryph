@@ -7,6 +7,7 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.GenePool.Model;
 using Eryph.Resources.Disks;
@@ -202,10 +203,11 @@ namespace Eryph.VmManagement
             CatletConfig machineConfig,
             CatletMetadata metadata,
             MachineNetworkSettings[] networkSetting,
-            VMStorageSettings storageSettings)
+            VMStorageSettings storageSettings,
+            HashMap<GeneIdentifier, GeneArchitecture> resolvedGenes)
         {
             var convergeContext =
-                new ConvergeContext(vmHostAgentConfig, engine, reportProgress, machineConfig, metadata, storageSettings, networkSetting, hostInfo);
+                new ConvergeContext(vmHostAgentConfig, engine, reportProgress, machineConfig, metadata, storageSettings, networkSetting, hostInfo, resolvedGenes);
 
             var convergeTasks = new ConvergeTaskBase[]
             {
@@ -236,7 +238,8 @@ namespace Eryph.VmManagement
             // does not require them.
             var convergeContext = new ConvergeContext(
                 vmHostAgentConfig, engine, reportProgress, machineConfig,
-                metadata, storageSettings, [], hostInfo);
+                metadata, storageSettings, [], hostInfo,
+                LanguageExt.HashMap<GeneIdentifier, GeneArchitecture>.Empty);
 
             var convergeTasks = new ConvergeTaskBase[]
             {

@@ -97,6 +97,8 @@ internal class RepositoryGenePool(
                                ?? throw new InvalidDataException("empty response from gene api");
 
                 downloadEntry = new GetGeneDownloadResponse(parsedGeneId.Hash, response.Manifest,
+                    // TODO IS this correct or use readable content?
+                    response.Content?.Content,
                     response.DownloadUris, response.DownloadExpires.GetValueOrDefault());
             }
 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Storage;
@@ -23,6 +24,7 @@ namespace Eryph.VmManagement.Test.Storage;
 public class VMDriveStorageSettingsTests
 {
     private readonly Mock<Func<string, EitherAsync<Error, Option<VhdInfo>>>> _getVhdInfoMock = new();
+    private readonly Mock<Func<GeneIdentifier, Option<GeneArchitecture>>> _getArchitecture = new();
 
     private readonly VmHostAgentConfiguration _vmHostAgentConfiguration = new()
     {
@@ -78,7 +80,8 @@ public class VMDriveStorageSettingsTests
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
-            _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
+            _vmHostAgentConfiguration, config, _storageSettings,
+            _getVhdInfoMock.Object, _getArchitecture.Object);
 
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
@@ -136,7 +139,8 @@ public class VMDriveStorageSettingsTests
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
-            _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
+            _vmHostAgentConfiguration, config, _storageSettings,
+            _getVhdInfoMock.Object, _getArchitecture.Object);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -177,7 +181,8 @@ public class VMDriveStorageSettingsTests
             }));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
-                       _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
+            _vmHostAgentConfiguration, config, _storageSettings,
+            _getVhdInfoMock.Object, _getArchitecture.Object);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -214,7 +219,8 @@ public class VMDriveStorageSettingsTests
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
-            _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
+            _vmHostAgentConfiguration, config, _storageSettings,
+            _getVhdInfoMock.Object, _getArchitecture.Object);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -252,7 +258,8 @@ public class VMDriveStorageSettingsTests
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
-            _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
+            _vmHostAgentConfiguration, config, _storageSettings,
+            _getVhdInfoMock.Object, _getArchitecture.Object);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -297,7 +304,8 @@ public class VMDriveStorageSettingsTests
             }));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
-            _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
+            _vmHostAgentConfiguration, config, _storageSettings,
+            _getVhdInfoMock.Object, _getArchitecture.Object);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -342,7 +350,8 @@ public class VMDriveStorageSettingsTests
             }));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
-            _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
+            _vmHostAgentConfiguration, config, _storageSettings,
+            _getVhdInfoMock.Object, _getArchitecture.Object);
 
         result.Should().BeLeft().Which.Message.Should().Be("Disk size is below minimum size of the virtual disk");
     }
@@ -370,7 +379,8 @@ public class VMDriveStorageSettingsTests
             }));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
-            _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
+            _vmHostAgentConfiguration, config, _storageSettings,
+            _getVhdInfoMock.Object, _getArchitecture.Object);
 
         result.Should().BeLeft().Which.Message.Should().Be("Disk size is below minimum size of the virtual disk");
     }
@@ -398,7 +408,8 @@ public class VMDriveStorageSettingsTests
             }));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
-            _vmHostAgentConfiguration, config, _storageSettings, _getVhdInfoMock.Object);
+            _vmHostAgentConfiguration, config, _storageSettings,
+            _getVhdInfoMock.Object, _getArchitecture.Object);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>

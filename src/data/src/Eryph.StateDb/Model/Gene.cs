@@ -15,6 +15,8 @@ public class Gene
 
     public required string GeneId { get; set; }
 
+    public required string Architecture { get; set; }
+
     public required DateTimeOffset LastSeen { get; set; }
 
     public required string LastSeenAgent { get; set; }

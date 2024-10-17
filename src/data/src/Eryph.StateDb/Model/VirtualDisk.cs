@@ -17,6 +17,8 @@ public class VirtualDisk : Disk
 
     public string? Geneset { get; set; }
 
+    public string? Architecture { get; set; }
+
     public bool Frozen { get; set; }
 
     public string? Path { get; set; }

@@ -231,7 +231,6 @@ internal class UpdateCatletSaga(
         {
             Data.Data.State = UpdateVMState.VMUpdated;
 
-            await metadataService.SaveMetadata(response.MachineMetadata);
 
             //TODO: replace this with operation call
             await bus.SendLocal(new UpdateInventoryCommand
@@ -242,9 +241,16 @@ internal class UpdateCatletSaga(
             });
 
             var catlet = await vmDataService.GetVM(Data.Data.CatletId);
-            if(catlet.IsNone)
+            if (catlet.IsNone)
             {
                 await Fail($"Could not find catlet with ID {Data.Data.CatletId}.");
+                return;
+            }
+
+            var metadata = await metadataService.GetMetadata(catlet.ValueUnsafe().MetadataId);
+            if (metadata.IsNone)
+            {
+                await Fail($"Could not find metadata of catlet with ID {Data.Data.CatletId}.");
                 return;
             }
 
@@ -253,7 +259,7 @@ internal class UpdateCatletSaga(
                 Config = Data.Data.BredConfig,
                 VMId = response.Inventory.VMId,
                 CatletId = Data.Data.CatletId,
-                MachineMetadata = response.MachineMetadata,
+                MachineMetadata = metadata.ValueUnsafe(),
             });
         });
     }
