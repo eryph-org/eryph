@@ -37,7 +37,8 @@ namespace Eryph.VmManagement.Converging
                     //make a plan
                     from plannedDriveStorageSettings in VMDriveStorageSettings.PlanDriveStorageSettings(
                         Context.VmHostAgentConfig, Context.Config, Context.StorageSettings,
-                        path => VhdQuery.GetVhdInfo(Context.Engine, path).ToError().ToAsync().MapT(o => o.Value))
+                        path => VhdQuery.GetVhdInfo(Context.Engine, path).ToError().ToAsync().MapT(o => o.Value),
+                        id => Context.ResolvedGenes.Find(id))
                     //ensure that the changes reflect the current VM settings
                     from infoReloaded in vmInfo.Reload(Context.Engine)
                     //detach removed disks

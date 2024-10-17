@@ -42,6 +42,7 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         {
             Id = FodderGeneId,
             GeneId = "gene:acme/acme-fodder/1.0:test-food",
+            Architecture = "any",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = AgentName,
             Hash = "12345678",
@@ -53,6 +54,7 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         {
             Id = VolumeGeneId,
             GeneId = "gene:acme/acme-os/1.0:sda",
+            Architecture = "hyperv/amd64",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = AgentName,
             Hash = "abcdefgh",

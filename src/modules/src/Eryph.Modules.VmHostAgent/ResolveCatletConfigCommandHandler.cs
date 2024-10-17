@@ -26,6 +26,7 @@ namespace Eryph.Modules.VmHostAgent;
 
 using GeneSetMap = HashMap<GeneSetIdentifier, GeneSetIdentifier>;
 using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
+using ArchitectureMap = HashMap<GeneIdentifier, GeneArchitecture>;
 
 /// <summary>
 /// This command handler resolves the ancestors and referenced gene sets
@@ -51,6 +52,7 @@ using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 internal class ResolveCatletConfigCommandHandler(
     IMessageContext messageContext,
     ITaskMessaging messaging,
+    IFileSystemService fileSystem,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigManager,
     IGeneProvider geneProvider,
@@ -67,7 +69,7 @@ internal class ResolveCatletConfigCommandHandler(
         CancellationToken cancellationToken) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
-        let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
+        let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
         let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         let localGenePool = genePoolFactory.CreateLocal()
         let genePoolInventory = genePoolInventoryFactory.Create(genePoolPath, localGenePool)
@@ -135,11 +137,13 @@ internal class ResolveCatletConfigCommandHandler(
             .ToAsync()
         from provideResult in geneProvider.ProvideGene(
                 GeneType.Catlet,
+                // TODO we can hardcode any as catlets are not architecture specific but this should be done nicer
+                GeneArchitecture.New("any"),
                 new GeneIdentifier(resolvedId, GeneName.New("catlet")),
                 (_, _) => Task.FromResult(unit),
                 default)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
-        from config in ReadCatletConfig(resolvedId, genepoolReader).ToAsync()
+        from config in ReadCatletConfig(resolvedId, genepoolReader)
         from resolveResult in ResolveGeneSets(config, resolvedGeneSets, geneProvider, cancellationToken)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from parentsResult in ResolveParent(config.Parent, resolveResult, resolvedCatlets,
@@ -181,16 +185,19 @@ internal class ResolveCatletConfigCommandHandler(
             .MapLeft(e => Error.New($"Could not resolve the gene set tag '{geneSetId}'.", e))
         select resolved;
 
-    public static Either<Error, CatletConfig> ReadCatletConfig(
+    public static EitherAsync<Error, CatletConfig> ReadCatletConfig(
         GeneSetIdentifier geneSetId,
         ILocalGenepoolReader genepoolReader) =>
         from json in genepoolReader.ReadGeneContent(
-            GeneType.Catlet, new GeneIdentifier(geneSetId, GeneName.New("catlet")))
+            GeneType.Catlet,
+            // TODO should we change this? we can hardcode any as catlets are not architecture specific.
+            GeneArchitecture.New("any"),
+            new GeneIdentifier(geneSetId, GeneName.New("catlet")))
         from config in Try(() =>
         {
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);
             return CatletConfigDictionaryConverter.Convert(configDictionary);
-        }).ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'.", Error.New(ex)))
+        }).ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'.", ex)).ToAsync()
         select config;
 
     private static Error CreateError(

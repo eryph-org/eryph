@@ -1,8 +1,11 @@
-﻿using Eryph.ConfigModel.Catlets;
+﻿using Eryph.ConfigModel;
+using Eryph.ConfigModel.Catlets;
+using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Storage;
+using LanguageExt;
 
 namespace Eryph.VmManagement.Test;
 
@@ -43,7 +46,9 @@ public class ConvergeFixture
 
     public ConvergeContext Context =>
         new(VmHostAgentConfiguration, Engine, ReportProgressCallBack,
-            Config, Metadata, StorageSettings, NetworkSettings, HostInfo);
+            Config, Metadata, StorageSettings, NetworkSettings, HostInfo,
+            // TODO fix me
+            HashMap<GeneIdentifier, GeneArchitecture>.Empty);
 
     private static Task ReportProgressCallBack(string _) => Task.CompletedTask;
 

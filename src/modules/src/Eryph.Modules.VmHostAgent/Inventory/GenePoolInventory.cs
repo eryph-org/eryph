@@ -64,15 +64,15 @@ internal class GenePoolInventory(
         from _ in RightAsync<Error, Unit>(unit)
         let catletGenes = Optional(geneSetInfo.MetaData.CatletGene)
             .Filter(notEmpty)
-            .Map(hash => (GeneType: GeneType.Catlet, Name: "catlet", Hash: hash))
+            .Map(hash => (GeneType: GeneType.Catlet, Name: "catlet", Architecture: "any", Hash: hash))
             .ToSeq()
         let fodderGenes = geneSetInfo.MetaData.FodderGenes.ToSeq()
-            .Map(grd => (GeneType: GeneType.Fodder, grd.Name, grd.Hash))
+            .Map(grd => (GeneType: GeneType.Fodder, grd.Name, grd.Architecture, grd.Hash))
         let volumeGenes = geneSetInfo.MetaData.VolumeGenes.ToSeq()
-            .Map(grd => (GeneType: GeneType.Volume, grd.Name, grd.Hash))
+            .Map(grd => (GeneType: GeneType.Volume, grd.Name, grd.Architecture, grd.Hash))
         let allGenes = catletGenes.Append(fodderGenes).Append(volumeGenes)
         from geneData in allGenes
-            .Map(g => InventorizeGene(geneSetInfo.Id, g.GeneType, g.Name, g.Hash))
+            .Map(g => InventorizeGene(geneSetInfo.Id, g.GeneType, g.Name, g.Architecture, g.Hash))
             .SequenceSerial()
         select geneData.Somes();
 
@@ -80,15 +80,18 @@ internal class GenePoolInventory(
         GeneSetIdentifier geneSetId,
         GeneType geneType,
         string geneName,
+        string architecture,
         string hash) =>
         from validGeneName in GeneName.NewEither(geneName).ToAsync()
         let geneId = new GeneIdentifier(geneSetId, validGeneName)
-        let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, geneId)
-        from size in genePool.GetCachedGeneSize(genePoolPath, geneType, geneId)
+        from validArchitecture in GeneArchitecture.NewEither(architecture).ToAsync()
+        let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, validArchitecture, geneId)
+        from size in genePool.GetCachedGeneSize(genePoolPath, geneType, validArchitecture, geneId)
         select size.Map(s => new GeneData
         {
             GeneType = geneType,
             Id = geneId,
+            Architecture = validArchitecture,
             Hash = hash,
             Size = s,
         });

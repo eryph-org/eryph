@@ -45,18 +45,20 @@ public static class CatletFeeding
             ];
         });
 
-    public static Either<Error, CatletConfig> Feed(
+    public static EitherAsync<Error, CatletConfig> Feed(
         CatletConfig catletConfig,
+        HashMap<GeneIdentifier, GeneArchitecture> resolvedGenes,
         ILocalGenepoolReader genepoolReader) =>
         from allRemovedFodderKeys in catletConfig.Fodder.ToSeq()
             .Filter(f => f.Remove.GetValueOrDefault())
             .Map(f => FodderKey.Create(f.Name, f.Source))
             .Sequence()
+            .ToAsync()
         from _ in allRemovedFodderKeys
             .Map(k => k.Source)
             .Somes()
             .Map(s => ValidateIsResolved(s, genepoolReader))
-            .Sequence()
+            .SequenceSerial()
         let removedSources = allRemovedFodderKeys
             .Filter(k => k.Name.IsNone)
             .Map(k => k.Source)
@@ -67,12 +69,13 @@ public static class CatletFeeding
         let fodder = catletConfig.Fodder.ToSeq()
             .Filter(f => !f.Remove.GetValueOrDefault())
         from expandedFodder in fodder
-            .Map(f => ExpandFodderConfig(f, genepoolReader))
-            .Sequence()
+            .Map(f => ExpandFodderConfig(f, resolvedGenes, genepoolReader))
+            .SequenceSerial()
             .Map(l => l.Flatten())
         from expandedFodderWithKeys in expandedFodder
             .Map(FodderWithKey.Create)
             .Sequence()
+            .ToAsync()
         let filteredFodder = expandedFodderWithKeys
             .Filter(fwk => !fwk.Key.Source.Map(s => removedSources.Contains(s)).IfNone(false))
             .Filter(fwk => !removedFodderKeys.Contains(fwk.Key))
@@ -85,8 +88,9 @@ public static class CatletFeeding
         })
         select fedConfig;
 
-    public static Either<Error, Seq<FodderConfig>> ExpandFodderConfig(
+    public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfig(
         FodderConfig fodderConfig,
+        HashMap<GeneIdentifier, GeneArchitecture> resolvedGenes,
         ILocalGenepoolReader genepoolReader) =>
         from geneId in Optional(fodderConfig.Source)
             .Filter(notEmpty)
@@ -94,36 +98,44 @@ public static class CatletFeeding
             .Map(GeneIdentifier.NewEither)
             .Sequence()
             .FilterT(id => id.GeneName != GeneName.New("catlet"))
+            .ToAsync()
         from expanded in geneId.Match(
-            Some: id => ExpandFodderConfigFromSource(fodderConfig, genepoolReader)
+            Some: id => ExpandFodderConfigFromSource(fodderConfig, resolvedGenes, genepoolReader)
                 .MapLeft(e => Error.New($"Could not expand the fodder gene '{id}'.", e)),
             None: () => Seq([fodderConfig]))
         select expanded;
 
-    public static Either<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
+    public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
         FodderConfig fodderConfig,
+        HashMap<GeneIdentifier, GeneArchitecture> resolvedGenes,
         ILocalGenepoolReader genepoolReader) =>
-        from geneId in GeneIdentifier.NewEither(fodderConfig.Source)
+        from geneId in GeneIdentifier.NewEither(fodderConfig.Source).ToAsync()
         from _ in ValidateIsResolved(geneId, genepoolReader)
         from name in Optional(fodderConfig.Name)
             .Filter(notEmpty)
             .Map(FodderName.NewEither)
             .Sequence()
-        from geneContent in genepoolReader.ReadGeneContent(GeneType.Fodder, geneId)
+            .ToAsync()
+        from architecture in resolvedGenes.Find(geneId)
+            .ToEither(Error.New($"Could not find the architecture for gene '{geneId}'."))
+            .ToAsync()
+        from geneContent in genepoolReader.ReadGeneContent(GeneType.Fodder, architecture, geneId)
         from geneFodderConfig in Try(() =>
         {
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(geneContent);
             return FodderGeneConfigDictionaryConverter.Convert(configDictionary);
 
-        }).ToEither(Error.New)
+        }).ToEither(Error.New).ToAsync()
         from geneFodderWithName in geneFodderConfig.Fodder.ToSeq()
             .Map(f => from n in FodderName.NewEither(f.Name)
                       select (Name: n, Config: f))
             .Sequence()
+            .ToAsync()
         let filteredGeneFodder = geneFodderWithName
             .Filter(fwn => name.IsNone || fwn.Name == name)
             .Map(fwn => fwn.Config)
         from boundVariables in BindVariables(fodderConfig.Variables.ToSeq(), geneFodderConfig.Variables.ToSeq())
+            .ToAsync()
         let boundFodder = filteredGeneFodder
             .Map(f => f.CloneWith(c =>
             {
@@ -158,7 +170,7 @@ public static class CatletFeeding
             }),
             None: geneVariable.Clone());
 
-    private static Either<Error, Unit> ValidateIsResolved(
+    private static EitherAsync<Error, Unit> ValidateIsResolved(
         GeneIdentifier geneId,
         ILocalGenepoolReader genepoolReader) =>
         from resolvedId in genepoolReader.GetGenesetReference(geneId.GeneSet)

@@ -97,9 +97,9 @@ namespace Eryph.Modules.VmHostAgent
         }
 
 
-        protected Task<Either<Error, CatletMetadata>> EnsureMetadata(
-            CatletMetadata metadata,
-            TypedPsObject<VirtualMachineInfo> vmInfo)
+        protected EitherAsync<Error, Unit> EnsureMetadata(
+            TypedPsObject<VirtualMachineInfo> vmInfo,
+            Guid metadataId)
         {
             var notes = vmInfo.Value.Notes;
 
@@ -118,20 +118,22 @@ namespace Eryph.Modules.VmHostAgent
 
             if (string.IsNullOrWhiteSpace(metadataIdString))
             {
-                var newNotes = $"eryph metadata id: {metadata.Id}";
+                var newNotes = $"eryph metadata id: {metadataId}";
 
                 return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("Notes", newNotes)).MapAsync(u => metadata).ToError();
+                    .AddParameter("Notes", newNotes))
+                    .ToError()
+                    .ToAsync();
             }
 
-            if (!Guid.TryParse(metadataIdString, out var metadataId))
+            if (!Guid.TryParse(metadataIdString, out var exitingMetadataId))
                 throw new InvalidOperationException("Found invalid eryph metadata id in VM notes.");
 
 
-            if (metadataId != metadata.Id)
+            if (exitingMetadataId != metadataId)
                 throw new InvalidOperationException("Inconsistent metadata id between VM and expected metadata id.");
 
-            return Prelude.RightAsync<Error, CatletMetadata>(metadata).ToEither();
+            return Prelude.unit;
         }
 
         protected EitherAsync<Error, Unit> SetMetadataId(TypedPsObject<VirtualMachineInfo> vmInfo,

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core.Genetics;
 using Eryph.ModuleCore;
 
 namespace Eryph.Modules.Controller.Compute
@@ -21,5 +23,9 @@ namespace Eryph.Modules.Controller.Compute
         public Guid MachineId { get; set; }
         
         public Guid TenantId { get; set; }
+
+        public GeneArchitecture? Architecture { get; set; }
+
+        public IReadOnlyDictionary<GeneIdentifier, GeneArchitecture>? ResolvedGenes { get; set; }
     }
 }

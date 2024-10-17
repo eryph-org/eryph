@@ -65,6 +65,8 @@ internal class VirtualMachineMetadataService : IVirtualMachineMetadataService
             {
                 MetadataId = metadata.Id,
                 GeneId = g.Value,
+                // TODO FIX ME
+                Architecture = "any",
             })
             .ToList();
 

@@ -1,7 +1,9 @@
 ﻿using System;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Storage;
 using Eryph.VmManagement.Tracing;
@@ -15,10 +17,12 @@ namespace Eryph.Modules.VmHostAgent;
 [UsedImplicitly]
 internal class UpdateCatletVMCommandHandler(
     IPowershellEngine engine,
+    IFileSystemService fileSystem,
     ITaskMessaging messaging,
     ILogger log,
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
+    IHostArchitectureProvider hostArchitectureProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
     : CatletConfigCommandHandler<UpdateCatletVMCommand, ConvergeCatletResult>(engine, messaging, log)
 {
@@ -35,12 +39,13 @@ internal class UpdateCatletVMCommandHandler(
                 vmHostAgentConfig, LongToString(command.NewStorageId),
                 command.Config, currentStorageSettings)
             .WriteTrace()
-        from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
-        let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
+        from _ in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
+        from catletArchitecture in GeneArchitecture.NewEither(command.MachineMetadata.Architecture).ToAsync()
+        let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
         from fedConfig in CatletFeeding.Feed(
-                CatletFeeding.FeedSystemVariables(command.Config, metadata),
-                genepoolReader)
-            .ToAsync()
+            CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
+            command.ResolvedGenes.ToHashMap(),
+            genepoolReader)
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()
             .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
@@ -48,13 +53,16 @@ internal class UpdateCatletVMCommandHandler(
         from vmInfoConsistent in EnsureNameConsistent(vmInfo, substitutedConfig, Engine).WriteTrace()
         from vmInfoConverged in VirtualMachine.Converge(
                 vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfoConsistent,
-                substitutedConfig, metadata, command.MachineNetworkSettings, plannedStorageSettings)
+                substitutedConfig, command.MachineMetadata, command.MachineNetworkSettings,
+                plannedStorageSettings, command.ResolvedGenes.ToHashMap())
             .WriteTrace().ToAsync()
         from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, vmInfoConverged, hostInfoProvider).WriteTrace()
         select new ConvergeCatletResult
         {
+            VmId = vmInfoConverged.Value.Id,
+            MetadataId = command.MachineMetadata.Id,
             Inventory = inventory,
-            MachineMetadata = metadata,
+            Architecture = hostArchitectureProvider.Architecture,
             Timestamp = DateTimeOffset.UtcNow,
         };
 }

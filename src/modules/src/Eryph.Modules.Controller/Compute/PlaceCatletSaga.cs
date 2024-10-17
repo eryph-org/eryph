@@ -37,7 +37,11 @@ namespace Eryph.Modules.Controller.Compute
             // otherwise calculation most likely will choose same agent again resulting in a loop.
             // Currently this can not happen, as placement will always be confirmed by agent.
             return message.Confirmed
-                ? Complete(new PlaceCatletResult { AgentName = message.AgentName })
+                ? Complete(new PlaceCatletResult
+                {
+                    AgentName = message.AgentName,
+                    Architecture = message.Architecture,
+                })
                 : CalculatePlacementAndRequestVerification();
         }
 

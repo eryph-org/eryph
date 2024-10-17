@@ -14,7 +14,8 @@ namespace Eryph.Modules.Controller.Compute;
 
 internal static class StateStoreGeneExtensions
 {
-    public static Either<Error, GeneIdentifierWithType> ToGeneIdWithType(this Gene dbGene) =>
+    public static Either<Error, UniqueGeneIdentifier> ToUniqueGeneId(this Gene dbGene) =>
         from geneId in GeneIdentifier.NewEither(dbGene.GeneId)
-        select new GeneIdentifierWithType(dbGene.GeneType, geneId);
+        from architecture in GeneArchitecture.NewEither(dbGene.Architecture)
+        select new UniqueGeneIdentifier(dbGene.GeneType, geneId, architecture);
 }

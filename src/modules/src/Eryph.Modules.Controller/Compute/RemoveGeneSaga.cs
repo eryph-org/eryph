@@ -45,7 +45,7 @@ internal class RemoveGeneSaga(
 
         Data.Data.AgentName = dbGene.LastSeenAgent;
 
-        var geneId = dbGene.ToGeneIdWithType();
+        var geneId = dbGene.ToUniqueGeneId();
         if (geneId.IsLeft)
         {
             await Fail(ErrorUtils.PrintError(Error.Many(geneId.LeftToSeq())));
@@ -57,7 +57,7 @@ internal class RemoveGeneSaga(
         var isUnused = await geneInventoryQueries.IsUnusedGene(dbGene.Id);
         if (!isUnused)
         {
-            await Fail($"The gene {geneId.ValueUnsafe().GeneIdentifier.Value} is in use.");
+            await Fail($"The gene {geneId.ValueUnsafe()} is in use.");
             return;
         }
 
@@ -72,7 +72,7 @@ internal class RemoveGeneSaga(
         FailOrRun(message, async () =>
         {
             var dbGene = await geneRepository.GetBySpecAsync(
-                new GeneSpecs.GetByGeneId(Data.Data.AgentName, Data.Data.GeneId.GeneIdentifier));
+                new GeneSpecs.GetByUniqueGeneId(Data.Data.AgentName, Data.Data.GeneId));
             if (dbGene is not null)
             {
                 await geneRepository.DeleteAsync(dbGene);
@@ -85,9 +85,9 @@ internal class RemoveGeneSaga(
             }
 
             var disk = await diskRepository.GetBySpecAsync(
-                new VirtualDiskSpecs.GetByGeneId(
+                new VirtualDiskSpecs.GetByUniqueGeneId(
                     Data.Data.AgentName,
-                    Data.Data.GeneId.GeneIdentifier));
+                    Data.Data.GeneId));
             if (disk is null)
             {
                 await Complete();

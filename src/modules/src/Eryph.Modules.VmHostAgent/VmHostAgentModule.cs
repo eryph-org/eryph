@@ -112,6 +112,7 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
             container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
             container.RegisterSingleton<IHardwareIdProvider, HardwareIdProvider>();
+            container.RegisterSingleton<IHostArchitectureProvider, HostArchitectureProvider>();
 
             container.Register<IOVSPortManager, OVSPortManager>(Lifestyle.Scoped);
 

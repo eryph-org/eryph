@@ -44,6 +44,7 @@ public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture
         {
             Id = new Guid(UsedFodderGeneId),
             GeneId = "gene:acme/acme-fodder/1.0:used-food",
+            Architecture = "any",
             GeneType = GeneType.Fodder,
             LastSeenAgent = AgentName,
             LastSeen = DateTimeOffset.UtcNow,
@@ -55,6 +56,7 @@ public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture
         {
             Id = new Guid(UnusedFodderGeneId),
             GeneId = "gene:acme/acme-fodder/1.0:unused-food",
+            Architecture = "any",
             GeneType = GeneType.Fodder,
             LastSeenAgent = AgentName,
             LastSeen = DateTimeOffset.UtcNow,
@@ -66,6 +68,7 @@ public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture
         {
             Id = new Guid(UsedVolumeGeneId),
             GeneId = "gene:acme/acme-os/1.0:sda",
+            Architecture = "hyperv/amd64",
             GeneType = GeneType.Volume,
             LastSeenAgent = AgentName,
             LastSeen = DateTimeOffset.UtcNow,
@@ -77,6 +80,7 @@ public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture
         {
             Id = new Guid(UnusedVolumeGeneId),
             GeneId = "gene:acme/acme-os/1.0:sdb",
+            Architecture = "hyperv/amd64",
             GeneType = GeneType.Volume,
             LastSeenAgent = AgentName,
             LastSeen = DateTimeOffset.UtcNow,
@@ -90,10 +94,11 @@ public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture
             Genes =
             [
                 new CatletMetadataGene
-                    {
-                        MetadataId = CatletMetadataId,
-                        GeneId = "gene:acme/acme-fodder/1.0:used-food",
-                    }
+                {
+                    MetadataId = CatletMetadataId,
+                    GeneId = "gene:acme/acme-fodder/1.0:used-food",
+                    Architecture = "any",
+                }
             ],
         });
 
@@ -231,6 +236,8 @@ public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture
             result.Should().BeEmpty();
         });
     }
+
+    // TODO Add tests for gene with different architectures
 
     private async Task WithScope(Func<IGeneInventoryQueries, IStateStore, Task> func)
     {

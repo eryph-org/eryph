@@ -26,6 +26,7 @@ public static class GenePoolMockExtensions
         
         geneProviderMock.Setup(m => m.ProvideGene(
                 It.IsAny<GeneType>(),
+                It.IsAny<GeneArchitecture>(),
                 It.IsAny<GeneIdentifier>(),
                 It.IsAny<Func<string, int, Task<Unit>>>(),
                 It.IsAny<CancellationToken>()))
