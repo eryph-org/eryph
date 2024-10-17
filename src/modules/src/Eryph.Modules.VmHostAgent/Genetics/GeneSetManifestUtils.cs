@@ -24,10 +24,10 @@ internal static class GeneSetManifestUtils
                 ? Optional(manifest.CatletGene)
                 : None,
             GeneType.Volume => manifest.VolumeGenes.ToSeq()
-                .Find(x => x.Name == geneName.Value && GeneArchitecture.NewOption(x.Architecture) == architecture)
+                .Find(x => x.Name == geneName.Value && GeneArchitecture.NewOption(x.Architecture ?? "any") == architecture)
                 .Bind(x => Optional(x.Hash)),
             GeneType.Fodder => manifest.FodderGenes.ToSeq()
-                .Find(x => x.Name == geneName.Value && GeneArchitecture.NewOption(x.Architecture) == architecture)
+                .Find(x => x.Name == geneName.Value && GeneArchitecture.NewOption(x.Architecture ?? "any") == architecture)
                 .Bind(x => Optional(x.Hash)),
             _ => None
         }
@@ -45,10 +45,10 @@ internal static class GeneSetManifestUtils
             GeneType.Catlet => Seq([GeneArchitecture.NewEither("any")]),
             GeneType.Volume => manifest.VolumeGenes.ToSeq()
                 .Filter(x => x.Name == geneName.Value)
-                .Map(x => GeneArchitecture.NewEither(x.Architecture)),
+                .Map(x => GeneArchitecture.NewEither(x.Architecture ?? "any")),
             GeneType.Fodder => manifest.FodderGenes.ToSeq()
                 .Filter(x => x.Name == geneName.Value)
-                .Map(x => GeneArchitecture.NewEither(x.Architecture)),
+                .Map(x => GeneArchitecture.NewEither(x.Architecture ?? "any")),
             _ => [Error.New($"The gene type {geneType} is not sup")]
         }
         from validArchitectures in architectures.Sequence()
@@ -64,10 +64,10 @@ internal static class GeneSetManifestUtils
             Seq([GeneArchitecture.NewEither("any")]).Filter(_ => geneName == GeneName.New("catlet")),
             manifest.VolumeGenes.ToSeq()
                 .Filter(x => GeneName.NewOption(x.Name) == geneName)
-                .Map(x => GeneArchitecture.NewEither(x.Architecture)),
+                .Map(x => GeneArchitecture.NewEither(x.Architecture ?? "any")),
             manifest.FodderGenes.ToSeq()
                 .Filter(x => GeneName.NewOption(x.Name) == geneName)
-                .Map(x => GeneArchitecture.NewEither(x.Architecture))
+                .Map(x => GeneArchitecture.NewEither(x.Architecture ?? "any"))
             )
         from validArchitectures in architectures.Sequence()
             .MapLeft(e => Error.New($"The manifest of the gene set '{manifest.Geneset}' is invalid.", e))

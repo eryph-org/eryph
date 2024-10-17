@@ -158,6 +158,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics
         private async Task CopyPlain(GeneManifestData geneManifest, Stream stream, string genesetDirectory,
             CancellationToken cancel)
         {
+            // TODO support architecture directories
             var folderName = genesetDirectory;
             var genePath = GetGenePath(geneManifest.Type);
             if (!string.IsNullOrWhiteSpace(genePath))

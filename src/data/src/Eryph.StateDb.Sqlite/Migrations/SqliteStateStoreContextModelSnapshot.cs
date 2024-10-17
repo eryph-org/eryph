@@ -63,6 +63,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("GeneId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Architecture")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("MetadataId", "GeneId");
 
                     b.ToTable("MetadataGenes");
@@ -98,6 +102,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Architecture")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("GeneId")
@@ -682,6 +690,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
             modelBuilder.Entity("Eryph.StateDb.Model.VirtualDisk", b =>
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
+
+                    b.Property<string>("Architecture")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("DataStore")
                         .IsRequired()

@@ -37,8 +37,12 @@ internal class PrepareGeneCommandHandler(
     private EitherAsync<Error, Unit> HandleCommand(
         OperationTask<PrepareGeneCommand> message) =>
         from uniqueGeneId in ResolveGene(message.Command.GeneIdentifier)
-        from _ in TryAsync(() => imageRequestDispatcher.NewGeneRequestTask(
-                message, uniqueGeneId))
+        from _ in TryAsync(async () =>
+                {
+                    await imageRequestDispatcher.NewGeneRequestTask(
+                        message, uniqueGeneId);
+                    return unit;
+                })
             .ToEither()
         select unit;
 

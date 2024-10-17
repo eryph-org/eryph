@@ -39,7 +39,8 @@ internal class CreateCatletSaga(
         IHandleMessages<OperationTaskStatusEvent<PlaceCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<ResolveCatletConfigCommand>>
+        IHandleMessages<OperationTaskStatusEvent<ResolveCatletConfigCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<ResolveGenesCommand>>
 {
     protected override async Task Initiated(CreateCatletCommand message)
     {
@@ -247,6 +248,8 @@ internal class CreateCatletSaga(
         config.Correlate<OperationTaskStatusEvent<PlaceCatletCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<ResolveCatletConfigCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<ResolveGenesCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);

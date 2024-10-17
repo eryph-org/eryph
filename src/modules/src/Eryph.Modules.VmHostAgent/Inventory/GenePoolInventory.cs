@@ -80,11 +80,11 @@ internal class GenePoolInventory(
         GeneSetIdentifier geneSetId,
         GeneType geneType,
         string geneName,
-        string architecture,
+        string? architecture,
         string hash) =>
         from validGeneName in GeneName.NewEither(geneName).ToAsync()
         let geneId = new GeneIdentifier(geneSetId, validGeneName)
-        from validArchitecture in GeneArchitecture.NewEither(architecture).ToAsync()
+        from validArchitecture in GeneArchitecture.NewEither(architecture ?? "any").ToAsync()
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, validArchitecture, geneId)
         from size in genePool.GetCachedGeneSize(genePoolPath, geneType, validArchitecture, geneId)
         select size.Map(s => new GeneData
