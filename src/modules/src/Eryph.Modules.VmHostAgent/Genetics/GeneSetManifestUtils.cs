@@ -36,8 +36,8 @@ internal static class GeneSetManifestUtils
 
     public static Either<Error, Option<GeneArchitecture>> FindBestArchitecture(
         GenesetTagManifestData manifest,
-        GeneType geneType,
         GeneArchitecture architecture,
+        GeneType geneType,
         GeneName geneName) =>
         from _ in Right<Error, Unit>(unit)
         let architectures = geneType switch

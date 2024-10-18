@@ -9,7 +9,7 @@ namespace Eryph.Messages.Genes.Commands;
 
 public class PrepareGeneResponse
 {
-    public GeneIdentifierWithType RequestedGene { get; set; }
+    public UniqueGeneIdentifier RequestedGene { get; set; }
 
     public DateTimeOffset Timestamp { get; set; }
 

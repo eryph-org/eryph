@@ -19,7 +19,7 @@ using Eryph.Core.Genetics;
 
 namespace Eryph.Modules.VmHostAgent;
 
-using ArchitectureMap = HashMap<GeneIdentifier, GeneArchitecture>;
+using ArchitectureMap = HashMap<GeneIdentifierWithType, GeneArchitecture>;
 
 internal class ResolveGenesCommandHandler(
     IMessageContext messageContext,
@@ -39,8 +39,8 @@ internal class ResolveGenesCommandHandler(
         CancellationToken cancellationToken) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
-        let genePool = genePoolFactory.CreateLocal()
         let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+        let genePool = genePoolFactory.CreateLocal(genePoolPath)
         let genePoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
         from result in Handle(command, genePool, genePoolPath, cancellationToken)
         select result;
@@ -52,34 +52,35 @@ internal class ResolveGenesCommandHandler(
         CancellationToken cancellationToken) =>
         from result in command.Genes.ToSeq().Fold<EitherAsync<Error, ArchitectureMap>>(
             new ArchitectureMap(),
-            (state, geneId) => state.Bind(m => ResolveArchitecture(geneId, m, genePool, genePoolPath, cancellationToken)))
+            (state, geneId) => state.Bind(m => ResolveArchitecture(
+                geneId, command.CatletArchitecture, m, genePool, cancellationToken)))
         select new ResolveGenesCommandResponse
         {
-            ResolvedArchitectures = result.ToDictionary(),
+            ResolvedGenes = result.Map(v => new UniqueGeneIdentifier(
+                v.Key.GeneType, v.Key.GeneIdentifier, v.Value)).ToList(),
         };
 
     private static EitherAsync<Error, ArchitectureMap> ResolveArchitecture(
-        GeneIdentifier geneId,
+        GeneIdentifierWithType geneIdWithType,
+        GeneArchitecture catletArchitecture,
         ArchitectureMap resolvedArchitectures,
         ILocalGenePool genePool,
-        string genePoolPath,
         CancellationToken cancellationToken) =>
-        resolvedArchitectures.Find(geneId).Match(
+        resolvedArchitectures.Find(geneIdWithType).Match(
             Some: _ => resolvedArchitectures,
             None: () =>
-                from resolvedArchitecture in ResolveArchitecture(geneId, genePool, genePoolPath, cancellationToken)
-                select resolvedArchitectures.Add(geneId, resolvedArchitecture));
+                from resolvedArchitecture in ResolveArchitecture(geneIdWithType, catletArchitecture, genePool, cancellationToken)
+                select resolvedArchitectures.Add(geneIdWithType, resolvedArchitecture));
 
     private static EitherAsync<Error, GeneArchitecture> ResolveArchitecture(
-        GeneIdentifier geneId,
+        GeneIdentifierWithType geneIdWithType,
+        GeneArchitecture catletArchitecture,
         ILocalGenePool genePool,
-        string genePoolPath,
         CancellationToken cancellationToken) =>
-        from manifest in genePool.GetCachedGeneSet(genePoolPath, geneId.GeneSet, cancellationToken)
-        let catletArchitecture = GeneArchitecture.New("hyperv/amd64")
+        from manifest in genePool.GetCachedGeneSet(geneIdWithType.GeneIdentifier.GeneSet, cancellationToken)
         from architecture in GeneSetManifestUtils.FindBestArchitecture(
-            manifest.MetaData, catletArchitecture, geneId.GeneName).ToAsync()
+            manifest.MetaData, catletArchitecture, geneIdWithType.GeneType, geneIdWithType.GeneIdentifier.GeneName).ToAsync()
         from validArchitecture in architecture.ToEitherAsync(
-            Error.New($"The gene '{geneId}' is not compatible with the hypervisor and/or processor architecture"))
+            Error.New($"The gene '{geneIdWithType}' is not compatible with the hypervisor and/or processor architecture"))
         select validArchitecture;
 }

@@ -36,36 +36,12 @@ internal class PrepareGeneCommandHandler(
 
     private EitherAsync<Error, Unit> HandleCommand(
         OperationTask<PrepareGeneCommand> message) =>
-        from uniqueGeneId in ResolveGene(message.Command.GeneIdentifier)
         from _ in TryAsync(async () =>
                 {
                     await imageRequestDispatcher.NewGeneRequestTask(
-                        message, uniqueGeneId);
+                        message, message.Command.Gene);
                     return unit;
                 })
             .ToEither()
         select unit;
-
-    private EitherAsync<Error, UniqueGeneIdentifier> ResolveGene(
-        GeneIdentifierWithType geneIdWithType) =>
-        from hostSettings in hostSettingsProvider.GetHostSettings()
-        from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
-        let genePool = genePoolFactory.CreateLocal()
-        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
-        let genePoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
-        from architecture in ResolveArchitecture(geneIdWithType, genePool, genePoolPath, default)
-        select new UniqueGeneIdentifier(geneIdWithType.GeneType, geneIdWithType.GeneIdentifier, architecture);
-
-    private static EitherAsync<Error, GeneArchitecture> ResolveArchitecture(
-        GeneIdentifierWithType geneId,
-        ILocalGenePool genePool,
-        string genePoolPath,
-        CancellationToken cancellationToken) =>
-        from manifest in genePool.GetCachedGeneSet(genePoolPath, geneId.GeneIdentifier.GeneSet, cancellationToken)
-        let catletArchitecture = GeneArchitecture.New("hyperv/amd64")
-        from architecture in GeneSetManifestUtils.FindBestArchitecture(
-            manifest.MetaData, geneId.GeneType, catletArchitecture, geneId.GeneIdentifier.GeneName).ToAsync()
-        from validArchitecture in architecture.ToEitherAsync(
-            Error.New($"The gene '{geneId}' is not compatible with the hypervisor and/or processor architecture"))
-        select validArchitecture;
 }

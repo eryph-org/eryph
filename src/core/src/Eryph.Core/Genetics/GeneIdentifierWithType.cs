@@ -6,5 +6,5 @@ public record GeneIdentifierWithType(
     GeneType GeneType,
     GeneIdentifier GeneIdentifier)
 {
-    public override string ToString() => $"{GeneType} {GeneIdentifier}";
+    public override string ToString() => $"{GeneType.ToString().ToLowerInvariant()} {GeneIdentifier}";
 }

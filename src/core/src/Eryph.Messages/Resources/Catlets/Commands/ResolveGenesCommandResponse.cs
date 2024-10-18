@@ -10,5 +10,5 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 
 public class ResolveGenesCommandResponse
 {
-    public IReadOnlyDictionary<GeneIdentifier, GeneArchitecture> ResolvedArchitectures { get; set; }
+    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
 }

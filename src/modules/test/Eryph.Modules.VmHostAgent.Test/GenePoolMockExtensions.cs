@@ -20,31 +20,32 @@ public static class GenePoolMockExtensions
 {
     public static void SetupGenes(
         this Mock<IGeneProvider> geneProviderMock,
-        params (GeneType GeneType, GeneIdentifier GeneId)[] genes)
+        params UniqueGeneIdentifier[] genes)
     {
         var map = genes.ToHashSet();
         
         geneProviderMock.Setup(m => m.ProvideGene(
-                It.IsAny<GeneType>(),
-                It.IsAny<GeneArchitecture>(),
-                It.IsAny<GeneIdentifier>(),
+                It.IsAny<UniqueGeneIdentifier>(),
                 It.IsAny<Func<string, int, Task<Unit>>>(),
                 It.IsAny<CancellationToken>()))
-            .Returns((GeneType geneType, GeneIdentifier geneId, Func<string, int, Task<Unit>>_, CancellationToken _) => 
-                map.Contains((geneType, geneId))
+            .Returns((UniqueGeneIdentifier uniqueGeneId, Func<string, int, Task<Unit>>_, CancellationToken _) => 
+                map.Contains(uniqueGeneId)
                     ? RightAsync<Error, PrepareGeneResponse>(new PrepareGeneResponse()
                     {
-                        RequestedGene = new GeneIdentifierWithType(geneType, geneId),
+                        RequestedGene = uniqueGeneId,
                     })
                     : LeftAsync<Error, PrepareGeneResponse>(Error.New("The gene was not found.")));
     }
 
     public static void SetupGenes(
         this Mock<IGeneProvider> geneProviderMock,
-        params (GeneType GeneType, string GeneId)[] genes)
+        params (GeneType GeneType, string GeneId, string Architecture)[] genes)
     {
         var mapped = genes.ToSeq()
-            .Map(g => (g.GeneType, GeneIdentifier.New(g.GeneId)))
+            .Map(g => new UniqueGeneIdentifier(
+                g.GeneType,
+                GeneIdentifier.New(g.GeneId),
+                GeneArchitecture.New(g.Architecture)))
             .ToArray();
 
         geneProviderMock.SetupGenes(mapped);
@@ -53,7 +54,7 @@ public static class GenePoolMockExtensions
     public static void SetupGenes(
         this Mock<IGeneProvider> geneProviderMock)
     {
-        geneProviderMock.SetupGenes(Array.Empty<(GeneType, GeneIdentifier)>());
+        geneProviderMock.SetupGenes(Array.Empty<UniqueGeneIdentifier>());
     }
 
     public static void SetupGeneSets(

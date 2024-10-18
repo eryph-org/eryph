@@ -7,5 +7,5 @@ public record UniqueGeneIdentifier(
     GeneIdentifier Identifier,
     GeneArchitecture Architecture)
 {
-    public override string ToString() => $"{GeneType} {Identifier} ({Architecture})";
+    public override string ToString() => $"{GeneType.ToString().ToLowerInvariant()} {Identifier} ({Architecture})";
 }

@@ -46,7 +46,7 @@ internal class GenePoolInventory(
 
     public EitherAsync<Error, Seq<GeneData>> InventorizeGeneSet(
         GeneSetIdentifier geneSetId) =>
-        from geneSetInfo in genePool.GetCachedGeneSet(genePoolPath, geneSetId, default)
+        from geneSetInfo in genePool.GetCachedGeneSet(geneSetId, default)
         from geneSetData in notEmpty(geneSetInfo.MetaData.Reference)
             ? RightAsync<Error, Seq<GeneData>>(Seq<GeneData>())
             : InventorizeGeneSet(geneSetInfo)
@@ -86,7 +86,8 @@ internal class GenePoolInventory(
         let geneId = new GeneIdentifier(geneSetId, validGeneName)
         from validArchitecture in GeneArchitecture.NewEither(architecture ?? "any").ToAsync()
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, validArchitecture, geneId)
-        from size in genePool.GetCachedGeneSize(genePoolPath, geneType, validArchitecture, geneId)
+        let uniqueGeneId = new UniqueGeneIdentifier(geneType, geneId, validArchitecture)
+        from size in genePool.GetCachedGeneSize(uniqueGeneId)
         select size.Map(s => new GeneData
         {
             GeneType = geneType,

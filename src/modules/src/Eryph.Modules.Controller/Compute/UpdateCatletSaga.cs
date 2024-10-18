@@ -44,12 +44,14 @@ internal class UpdateCatletSaga(
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareGeneCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<ResolveCatletConfigCommand>>
+        IHandleMessages<OperationTaskStatusEvent<ResolveCatletConfigCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<ResolveGenesCommand>>
 {
     protected override async Task Initiated(UpdateCatletCommand message)
     {
         Data.Data.State = UpdateVMState.Initiated;
         Data.Data.BredConfig = message.BredConfig;
+        Data.Data.ResolvedGenes = message.ResolvedGenes;
         Data.Data.Config = message.Config;
         Data.Data.CatletId = message.Resource.Id;
 
@@ -77,7 +79,17 @@ internal class UpdateCatletSaga(
             return;
         }
 
-        if (Data.Data.BredConfig is not null)
+        var metadata = await metadataService.GetMetadata(machineInfo.MetadataId)
+            .Map(m => m.IfNoneUnsafe((CatletMetadata?)null));
+        if (metadata is null)
+        {
+            await Fail($"Catlet cannot be updated because the metadata for catlet {Data.Data.CatletId} does not exist.");
+            return;
+        }
+
+        Data.Data.Architecture = GeneArchitecture.New(metadata.Architecture);
+
+        if (Data.Data.BredConfig is not null && Data.Data.ResolvedGenes is not null)
         {
             // The catlet has already been bred. This happens when the update
             // saga is initiated by the create saga. We can skip directly to
@@ -150,6 +162,32 @@ internal class UpdateCatletSaga(
 
             Data.Data.Config = result.ValueUnsafe().Config;
             Data.Data.BredConfig = result.ValueUnsafe().BredConfig;
+
+            var geneIds = CatletGeneCollecting.CollectGenes(Data.Data.BredConfig);
+            if (geneIds.IsFail)
+            {
+                await Fail(ErrorUtils.PrintError(Error.Many(geneIds.FailToSeq())));
+                return;
+            }
+
+            await StartNewTask(new ResolveGenesCommand
+            {
+                AgentName = Data.Data.AgentName,
+                CatletArchitecture = GeneArchitecture.New(metadata.ValueUnsafe().Metadata.Architecture),
+                Genes = geneIds.SuccessToSeq().Flatten().Filter(g => g.GeneType == GeneType.Volume).ToList(),
+            });
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<ResolveGenesCommand> message)
+    {
+        if (Data.Data.State >= UpdateVMState.GenesResolved)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async (ResolveGenesCommandResponse response) =>
+        {
+            Data.Data.State = UpdateVMState.GenesResolved;
+            Data.Data.ResolvedGenes = response.ResolvedGenes;
 
             await StartPrepareGenes();
         });
@@ -293,6 +331,8 @@ internal class UpdateCatletSaga(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<ResolveCatletConfigCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<ResolveGenesCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>(
@@ -351,22 +391,9 @@ internal class UpdateCatletSaga(
 
     private async Task StartPrepareGenes()
     {
-        if (Data.Data.BredConfig is null)
-            throw new InvalidOperationException("Bred config is missing.");
-
         Data.Data.State = UpdateVMState.Resolved;
 
-        var validation = FindRequiredGenes(Data.Data.BredConfig);
-        if (validation.IsFail)
-        {
-            await Fail(ErrorUtils.PrintError(
-                Error.New("Some gene sources are invalid.",
-                    Error.Many(validation.FailToSeq()))));
-            return;
-        }
-
-        var requiredGenes = validation.SuccessToSeq().Flatten();
-        if (requiredGenes.IsEmpty)
+        if (Data.Data.ResolvedGenes!.Count == 0)
         {
             // no images required - go directly to catlet update
             Data.Data.State = UpdateVMState.GenesPrepared;
@@ -375,11 +402,11 @@ internal class UpdateCatletSaga(
             return;
         }
 
-        Data.Data.PendingGenes = requiredGenes.ToList();
-        var commands = requiredGenes.Map(id => new PrepareGeneCommand
+        Data.Data.PendingGenes = Data.Data.ResolvedGenes;
+        var commands = Data.Data.ResolvedGenes.Map(id => new PrepareGeneCommand
         {
             AgentName = Data.Data.AgentName,
-            GeneIdentifier = id,
+            Gene = id,
         });
 
         foreach (var command in commands)

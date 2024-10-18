@@ -79,8 +79,8 @@ public class ResolveCatletConfigCommandHandlerTests
             ("acme/acme-tools/latest", "acme/acme-tools/1.0"));
 
         _geneProviderMock.SetupGenes(
-            (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet"),
-            (GeneType.Catlet, "gene:acme/acme-os/1.0:catlet"));
+            (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet", "any"),
+            (GeneType.Catlet, "gene:acme/acme-os/1.0:catlet", "any"));
 
         ArrangeInventory("acme/acme-os/starter-1.0", "acme/acme-os/1.0");
 
@@ -181,8 +181,8 @@ public class ResolveCatletConfigCommandHandlerTests
             ("acme/acme-tools/1.0", "acme/acme-tools/1.0"));
 
         _geneProviderMock.SetupGenes(
-            (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet"),
-            (GeneType.Catlet, "gene:acme/acme-os/1.0:catlet"));
+            (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet", "any"),
+            (GeneType.Catlet, "gene:acme/acme-os/1.0:catlet", "any"));
 
         ArrangeInventory("acme/acme-os/starter-1.0", "acme/acme-os/1.0");
 
@@ -283,7 +283,7 @@ public class ResolveCatletConfigCommandHandlerTests
             ("acme/acme-os/starter-1.0", "acme/acme-os/starter-1.0"));
 
         _geneProviderMock.SetupGenes(
-            (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet"));
+            (GeneType.Catlet, "gene:acme/acme-os/starter-1.0:catlet", "any"));
 
         var result = await ResolveCatletConfigCommandHandler.Handle(
             new ResolveCatletConfigCommand { Config = config },
@@ -393,8 +393,8 @@ public class ResolveCatletConfigCommandHandlerTests
             ("acme/acme-os/second", "acme/acme-os/second-1.0"));
 
         _geneProviderMock.SetupGenes(
-            (GeneType.Catlet, "gene:acme/acme-os/first-1.0:catlet"),
-            (GeneType.Catlet, "gene:acme/acme-os/second-1.0:catlet"));
+            (GeneType.Catlet, "gene:acme/acme-os/first-1.0:catlet", "any"),
+            (GeneType.Catlet, "gene:acme/acme-os/second-1.0:catlet", "any"));
 
         ArrangeInventory("acme/acme-os/first-1.0", "acme/acme-os/second-1.0");
 

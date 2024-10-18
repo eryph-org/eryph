@@ -43,7 +43,7 @@ internal class InventorizeGenePoolCommandHandler(
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         let timestamp = DateTimeOffset.UtcNow
         let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
-        let genePool = genepoolFactory.CreateLocal()
+        let genePool = genepoolFactory.CreateLocal(genePoolPath)
         let genePoolInventory = genePoolInventoryFactory.Create(genePoolPath, genePool)
         from inventoryData in genePoolInventory.InventorizeGenePool()
         select new UpdateGenePoolInventoryCommand

@@ -6,6 +6,6 @@ internal interface IGenePoolFactory
 {
     IEnumerable<string> RemotePools { get; }
     IGenePool CreateNew(string name);
-    ILocalGenePool CreateLocal();
+    ILocalGenePool CreateLocal(string genePoolPath);
 
 }

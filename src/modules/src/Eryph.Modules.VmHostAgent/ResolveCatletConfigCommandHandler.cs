@@ -71,7 +71,7 @@ internal class ResolveCatletConfigCommandHandler(
         from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
         let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
         let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
-        let localGenePool = genePoolFactory.CreateLocal()
+        let localGenePool = genePoolFactory.CreateLocal(genePoolPath)
         let genePoolInventory = genePoolInventoryFactory.Create(genePoolPath, localGenePool)
         from result in Handle(command, geneProvider, genepoolReader, genePoolInventory, cancellationToken)
         select result;
@@ -136,10 +136,11 @@ internal class ResolveCatletConfigCommandHandler(
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
             .ToAsync()
         from provideResult in geneProvider.ProvideGene(
-                GeneType.Catlet,
-                // TODO we can hardcode any as catlets are not architecture specific but this should be done nicer
-                GeneArchitecture.New("any"),
-                new GeneIdentifier(resolvedId, GeneName.New("catlet")),
+                new UniqueGeneIdentifier(
+                    GeneType.Catlet,
+                    new GeneIdentifier(resolvedId, GeneName.New("catlet")),
+                    // TODO we can hardcode any as catlets are not architecture specific but this should be done nicer
+                    GeneArchitecture.New("any")),
                 (_, _) => Task.FromResult(unit),
                 default)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))

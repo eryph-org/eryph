@@ -26,7 +26,7 @@ namespace Eryph.Resources.Machines
 
         [CanBeNull] public VariableConfig[] Variables { get; set; }
 
-        [CanBeNull] public IReadOnlyDictionary<string, string> GeneArchitectures { get; set; }
+        [CanBeNull] public IReadOnlyDictionary<string, string> FodderGenes { get; set; }
 
         public bool SecureDataHidden { get; set; }
     }
