@@ -1,18 +1,16 @@
 ﻿using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
-using Eryph.GenePool.Model;
 using Eryph.Messages.Resources;
-using Eryph.Resources;
 
 namespace Eryph.Messages.Genes.Commands;
 
 [SendMessageTo(MessageRecipient.VMHostAgent)]
 public class PrepareGeneCommand : IHostAgentCommand, ICommandWithName
 {
-    public GeneIdentifierWithType GeneIdentifier { get; set; }
+    public UniqueGeneIdentifier Gene { get; set; }
 
     [PrivateIdentifier]
     public string AgentName { get; set; }
 
-    public string GetCommandName() => $"Preparing {GeneIdentifier}";
+    public string GetCommandName() => $"Preparing gene {Gene}";
 }

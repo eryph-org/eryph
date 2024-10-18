@@ -44,7 +44,7 @@ internal class UpdateConfigDriveCommandHandler(
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
             .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
         let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
-        from resolvedGenes in command.MachineMetadata.GeneArchitectures
+        from resolvedGenes in command.MachineMetadata.FodderGenes
             .Map(kvp => from geneId in GeneIdentifier.NewEither(kvp.Key)
                         from architecture in GeneArchitecture.NewEither(kvp.Value)
                         select (geneId, architecture))

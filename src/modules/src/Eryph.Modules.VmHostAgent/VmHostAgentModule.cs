@@ -118,8 +118,7 @@ namespace Eryph.Modules.VmHostAgent
 
 
             var genePoolFactory = new GenePoolFactory(container);
-       
-            genePoolFactory.Register<LocalGenePoolSource>(GenePoolConstants.Local.Name);
+            
             genePoolFactory.Register<RepositoryGenePool>(GenePoolConstants.EryphGenePool.Name);
             container.RegisterInstance<IGenePoolFactory>(genePoolFactory);
             container.RegisterSingleton<IGeneProvider, LocalFirstGeneProvider>();

@@ -12,9 +12,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics;
 public interface IGeneProvider
 {
     EitherAsync<Error, PrepareGeneResponse> ProvideGene(
-        GeneType geneType,
-        GeneArchitecture geneArchitecture,
-        GeneIdentifier geneIdentifier,
+        UniqueGeneIdentifier uniqueGeneId,
         Func<string, int, Task<Unit>> reportProgress,
         CancellationToken cancel);
 

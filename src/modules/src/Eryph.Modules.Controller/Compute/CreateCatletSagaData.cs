@@ -26,6 +26,6 @@ namespace Eryph.Modules.Controller.Compute
 
         public GeneArchitecture? Architecture { get; set; }
 
-        public IReadOnlyDictionary<GeneIdentifier, GeneArchitecture>? ResolvedGenes { get; set; }
+        public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
     }
 }

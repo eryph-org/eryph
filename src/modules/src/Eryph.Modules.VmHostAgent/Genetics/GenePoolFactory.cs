@@ -20,8 +20,9 @@ internal class GenePoolFactory(Container container) : IGenePoolFactory
         return result;
     }
 
-    ILocalGenePool IGenePoolFactory.CreateLocal() =>
-        (ILocalGenePool) _producers[GenePoolConstants.Local.Name].GetInstance();
+    ILocalGenePool IGenePoolFactory.CreateLocal(string genePoolPath) =>
+        ActivatorUtilities.CreateInstance<LocalGenePoolSource>(
+            container, GenePoolConstants.Local.Name, genePoolPath);
 
     public void Register<TImplementation>(string name)
         where TImplementation : class, IGenePool

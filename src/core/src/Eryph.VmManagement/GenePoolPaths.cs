@@ -40,6 +40,11 @@ public static class GenePoolPaths
 
     public static string GetGenePath(
         string genePoolPath,
+        UniqueGeneIdentifier uniqueGeneId) =>
+        GetGenePath(genePoolPath, uniqueGeneId.GeneType, uniqueGeneId.Architecture, uniqueGeneId.Identifier);
+
+    public static string GetGenePath(
+        string genePoolPath,
         GeneType geneType,
         GeneArchitecture geneArchitecture,
         GeneIdentifier geneId)

@@ -58,9 +58,7 @@ internal class GeneRequestRegistry(
         try
         {
             var result = await geneProvider.ProvideGene(
-                uniqueGeneId.GeneType,
-                uniqueGeneId.Architecture,
-                uniqueGeneId.Identifier,
+                uniqueGeneId,
                 (message, progress) => ReportProgress(taskMessaging, uniqueGeneId, message, progress),
                 cancel);
             await EndRequest(taskMessaging, uniqueGeneId, result);

@@ -10,27 +10,32 @@ namespace Eryph.Modules.VmHostAgent.Genetics;
 
 internal interface ILocalGenePool: IGenePool
 {
-    EitherAsync<Error, Unit> MergeGenes(GeneInfo geneInfo, GeneSetInfo geneSetInfo,
-        Func<string, int, Task<Unit>> reportProgress, CancellationToken cancel);
+    EitherAsync<Error, Unit> MergeGeneParts(
+        GeneInfo geneInfo,
+        Func<string, int, Task<Unit>> reportProgress,
+        CancellationToken cancel);
 
-    EitherAsync<Error, GeneSetInfo> CacheGeneSet(string path, GeneSetInfo geneSetInfo, CancellationToken cancel);
+    EitherAsync<Error, GeneSetInfo> CacheGeneSet(
+        GeneSetInfo geneSetInfo,
+        CancellationToken cancel);
 
-    EitherAsync<Error, GeneInfo> CacheGene(GeneInfo geneInfo, GeneSetInfo geneSetInfo, CancellationToken cancel);
+    EitherAsync<Error, GeneInfo> CacheGene(
+        GeneInfo geneInfo,
+        GeneSetInfo geneSetInfo,
+        CancellationToken cancel);
 
     EitherAsync<Error, GeneSetInfo> GetCachedGeneSet(
-        string genePoolPath,
         GeneSetIdentifier geneSetId,
         CancellationToken cancellationToken);
 
     EitherAsync<Error, Option<long>> GetCachedGeneSize(
-        string genePoolPath,
-        GeneType geneType,
-        GeneArchitecture geneArchitecture,
-        GeneIdentifier geneId);
+        UniqueGeneIdentifier uniqueGeneId);
+
+    EitherAsync<Error, string> GetGenePartPath(
+        UniqueGeneIdentifier uniqueGeneId,
+        string geneHash,
+        string genePartHash);
 
     EitherAsync<Error, Unit> RemoveCachedGene(
-        string genePoolPath,
-        GeneType geneType,
-        GeneArchitecture geneArchitecture,
-        GeneIdentifier geneId);
+        UniqueGeneIdentifier uniqueGeneId);
 }

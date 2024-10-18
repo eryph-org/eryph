@@ -133,7 +133,10 @@ internal class CreateCatletSaga(
             await StartNewTask(new ResolveGenesCommand
             {
                 AgentName = Data.Data.AgentName,
-                Genes = geneIds.SuccessToSeq().Flatten().Map(g => g.GeneIdentifier).ToList(),
+                CatletArchitecture = Data.Data.Architecture,
+                Genes = geneIds.SuccessToSeq().Flatten()
+                    .Filter(g => g.GeneType is GeneType.Fodder or GeneType.Volume)
+                    .ToList(),
             });
         });
     }
@@ -150,7 +153,7 @@ internal class CreateCatletSaga(
 
             Data.Data.State = CreateVMState.GenesResolved;
 
-            Data.Data.ResolvedGenes = response.ResolvedArchitectures;
+            Data.Data.ResolvedGenes = response.ResolvedGenes;
 
             Data.Data.MachineId = Guid.NewGuid();
 
@@ -202,9 +205,11 @@ internal class CreateCatletSaga(
                 Parent = Data.Data.Config.Parent,
                 ParentConfig = Data.Data.ParentConfig,
                 Architecture = response.Architecture.Value,
-                GeneArchitectures = Data.Data.ResolvedGenes?.ToDictionary(
-                    kvp => kvp.Key.Value,
-                    kvp => kvp.Value.Value),
+                FodderGenes = Data.Data.ResolvedGenes
+                    .Filter(g => g.GeneType is GeneType.Fodder)
+                    .ToDictionary(
+                        ugi => ugi.Identifier.Value,
+                        ugi => ugi.Architecture.Value),
             };
 
             _ = await vmDataService.AddNewVM(new Catlet
@@ -222,7 +227,8 @@ internal class CreateCatletSaga(
             {
                 Config = Data.Data.Config,
                 BredConfig = Data.Data.BredConfig,
-                CatletId = Data.Data.MachineId
+                CatletId = Data.Data.MachineId,
+                ResolvedGenes = Data.Data.ResolvedGenes,
             });
         });
     }
