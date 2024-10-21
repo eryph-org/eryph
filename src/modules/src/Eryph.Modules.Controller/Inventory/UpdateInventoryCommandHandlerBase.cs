@@ -232,7 +232,13 @@ namespace Eryph.Modules.Controller.Inventory
                         return;
                     }
 
-                    await LookupVirtualDisk(diskInfo.Parent, project, addedDisks)
+                    // The parent disk might be located in a different project. Most commonly,
+                    // this happens for parent disks which are located in the gene pool as the
+                    // gene pool is part of the default project.
+                    var parentProject = await FindProject(diskInfo.Parent.ProjectName, diskInfo.Parent.ProjectId)
+                        .IfNoneAsync(() => FindRequiredProject(EryphConstants.DefaultProjectName, null))
+                        .ConfigureAwait(false);
+                    await LookupVirtualDisk(diskInfo.Parent, parentProject, addedDisks)
                         .IfSomeAsync(parentDisk =>
                         {
                             currentDisk.Parent = parentDisk;
