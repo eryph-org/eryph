@@ -13,7 +13,7 @@ public class ResolveGenesCommand : IHostAgentCommand
 {
     public string AgentName { get; set; }
 
-    public GeneArchitecture CatletArchitecture { get; set; }
+    public Architecture CatletArchitecture { get; set; }
 
     public IReadOnlyList<GeneIdentifierWithType> Genes { get; set; }
 }

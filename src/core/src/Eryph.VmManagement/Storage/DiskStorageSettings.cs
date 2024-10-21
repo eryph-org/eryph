@@ -30,11 +30,11 @@ namespace Eryph.VmManagement.Storage
         public long? SizeBytes { get; set; }
         public long? SizeBytesCreate { get; set; }
         public Option<GeneSetIdentifier> Geneset { get; set; }
-        public Option<GeneArchitecture> Architecture { get; set; }
+        public Option<Architecture> Architecture { get; set; }
 
         public static Option<DiskStorageSettings> FromSourceString(
             VmHostAgentConfiguration vmHostAgentConfig,
-            Func<GeneIdentifier, Option<GeneArchitecture>> getArchitecture,
+            Seq<UniqueGeneIdentifier> resolvedGenes,
             string templateString)
         {
             if (!templateString.StartsWith("gene:"))
@@ -52,8 +52,8 @@ namespace Eryph.VmManagement.Storage
 
             return from geneId in GeneIdentifier.NewOption(templateString)
                    let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
-                   from architecture in getArchitecture(geneId)
-                   let geneDiskPath = GenePoolPaths.GetGenePath(genePoolPath, GeneType.Volume, architecture, geneId)
+                   from uniqueId in resolvedGenes.Find(g => g.GeneType == GeneType.Volume && g.Id == geneId)
+                   let geneDiskPath = GenePoolPaths.GetGenePath(genePoolPath, uniqueId)
                    select new DiskStorageSettings
                    {
                        StorageNames = new StorageNames()
@@ -65,7 +65,7 @@ namespace Eryph.VmManagement.Storage
                        },
                        StorageIdentifier = geneId.Value,
                        Geneset = geneId.GeneSet,
-                       Architecture = architecture,
+                       Architecture = uniqueId.Architecture,
                        Path = System.IO.Path.GetDirectoryName(geneDiskPath),
                        FileName = System.IO.Path.GetFileName(geneDiskPath),
                        Generation = 0,
@@ -107,7 +107,7 @@ namespace Eryph.VmManagement.Storage
         private static EitherAsync<Error, DiskStorageSettings> FromGeneVhdInfo(
             string genePoolPath,
             VhdInfo vhdInfo) =>
-            from geneData in GenePoolPaths.GetGeneIdFromPath(genePoolPath, vhdInfo.Path)
+            from geneData in GenePoolPaths.GetUniqueGeneIdFromPath(genePoolPath, vhdInfo.Path)
                 .ToAsync()
             select new DiskStorageSettings
             {
@@ -122,8 +122,8 @@ namespace Eryph.VmManagement.Storage
                     DataStoreName = EryphConstants.DefaultDataStoreName,
                     ProjectId = EryphConstants.DefaultProjectId,
                 },
-                StorageIdentifier = geneData.Identitier.Value,
-                Geneset = geneData.Identitier.GeneSet,
+                StorageIdentifier = geneData.Id.Value,
+                Geneset = geneData.Id.GeneSet,
                 Architecture = geneData.Architecture,
                 SizeBytes = vhdInfo.Size,
                 UsedSizeBytes = vhdInfo.FileSize,

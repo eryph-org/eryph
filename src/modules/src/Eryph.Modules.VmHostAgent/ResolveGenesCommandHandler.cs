@@ -18,7 +18,7 @@ using Rebus.Pipeline;
 
 namespace Eryph.Modules.VmHostAgent;
 
-using ArchitectureMap = HashMap<GeneIdentifierWithType, GeneArchitecture>;
+using ArchitectureMap = HashMap<GeneIdentifierWithType, Architecture>;
 
 internal class ResolveGenesCommandHandler(
     IMessageContext messageContext,
@@ -61,7 +61,7 @@ internal class ResolveGenesCommandHandler(
 
     private static EitherAsync<Error, ArchitectureMap> ResolveArchitecture(
         GeneIdentifierWithType geneIdWithType,
-        GeneArchitecture catletArchitecture,
+        Architecture catletArchitecture,
         ArchitectureMap resolvedArchitectures,
         ILocalGenePool genePool,
         CancellationToken cancellationToken) =>
@@ -71,9 +71,9 @@ internal class ResolveGenesCommandHandler(
                 from resolvedArchitecture in ResolveArchitecture(geneIdWithType, catletArchitecture, genePool, cancellationToken)
                 select resolvedArchitectures.Add(geneIdWithType, resolvedArchitecture));
 
-    private static EitherAsync<Error, GeneArchitecture> ResolveArchitecture(
+    private static EitherAsync<Error, Architecture> ResolveArchitecture(
         GeneIdentifierWithType geneIdWithType,
-        GeneArchitecture catletArchitecture,
+        Architecture catletArchitecture,
         ILocalGenePool genePool,
         CancellationToken cancellationToken) =>
         from manifest in genePool.GetCachedGeneSet(geneIdWithType.GeneIdentifier.GeneSet, cancellationToken)

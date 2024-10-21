@@ -13,7 +13,7 @@ namespace Eryph.Modules.VmHostAgent.Genetics;
 public record GenePartInfo(
     GeneType GeneType,
     GeneIdentifier GeneId,
-    GeneArchitecture Architecture,
+    Architecture Architecture,
     string PartHash,
     string? Path,
     long? Size)

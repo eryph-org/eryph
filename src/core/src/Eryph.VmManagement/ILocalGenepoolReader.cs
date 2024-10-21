@@ -11,7 +11,5 @@ public interface ILocalGenepoolReader
         GeneSetIdentifier geneSetId);
 
     public EitherAsync<Error, string> ReadGeneContent(
-        GeneType geneType,
-        GeneArchitecture geneArchitecture,
-        GeneIdentifier geneId);
+        UniqueGeneIdentifier uniqueGeneId);
 }

@@ -34,7 +34,7 @@ public class GeneSpecs
         public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier geneId)
         {
             Query.Where(x => x.LastSeenAgent == agentName
-                             && x.GeneId == geneId.Identifier.Value
+                             && x.GeneId == geneId.Id.Value
                              && x.Architecture == geneId.Architecture.Value);
         }
     }
@@ -54,7 +54,7 @@ public class GeneSpecs
     {
         public GetByUniqueGeneIds(string agentName, IList<UniqueGeneIdentifier> geneIds)
         {
-            var values = geneIds.Map(id => $"{id.Identifier.Value}|{id.Architecture.Value}").ToList();
+            var values = geneIds.Map(id => $"{id.Id.Value}|{id.Architecture.Value}").ToList();
 
             Query.Where(x => x.LastSeenAgent == agentName
                              && values.Contains(x.GeneId + "|" + x.Architecture));

@@ -14,7 +14,7 @@ public class GeneData
 
     public required GeneType GeneType { get; set; }
 
-    public required GeneArchitecture Architecture { get; set; }
+    public required Architecture Architecture { get; set; }
 
     public required long Size { get; set; }
 

@@ -25,7 +25,7 @@ public class UpdateCatletSagaData
         
     public Guid TenantId { get; set; }
 
-    public GeneArchitecture? Architecture { get; set; }
+    public Architecture? Architecture { get; set; }
 
     public IReadOnlyList<UniqueGeneIdentifier> PendingGenes { get; set; } = [];
 }

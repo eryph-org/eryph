@@ -47,7 +47,7 @@ public static class CatletFeeding
 
     public static EitherAsync<Error, CatletConfig> Feed(
         CatletConfig catletConfig,
-        HashMap<GeneIdentifier, GeneArchitecture> resolvedGenes,
+        Seq<UniqueGeneIdentifier> resolvedGenes,
         ILocalGenepoolReader genepoolReader) =>
         from allRemovedFodderKeys in catletConfig.Fodder.ToSeq()
             .Filter(f => f.Remove.GetValueOrDefault())
@@ -90,7 +90,7 @@ public static class CatletFeeding
 
     public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfig(
         FodderConfig fodderConfig,
-        HashMap<GeneIdentifier, GeneArchitecture> resolvedGenes,
+        Seq<UniqueGeneIdentifier> resolvedGenes,
         ILocalGenepoolReader genepoolReader) =>
         from geneId in Optional(fodderConfig.Source)
             .Filter(notEmpty)
@@ -107,7 +107,7 @@ public static class CatletFeeding
 
     public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
         FodderConfig fodderConfig,
-        HashMap<GeneIdentifier, GeneArchitecture> resolvedGenes,
+        Seq<UniqueGeneIdentifier> resolvedGenes,
         ILocalGenepoolReader genepoolReader) =>
         from geneId in GeneIdentifier.NewEither(fodderConfig.Source).ToAsync()
         from _ in ValidateIsResolved(geneId, genepoolReader)
@@ -116,10 +116,10 @@ public static class CatletFeeding
             .Map(FodderName.NewEither)
             .Sequence()
             .ToAsync()
-        from architecture in resolvedGenes.Find(geneId)
-            .ToEither(Error.New($"Could not find the architecture for gene '{geneId}'."))
+        from uniqueGeneId in resolvedGenes.Find(g => g.GeneType == GeneType.Fodder && g.Id == geneId)
+            .ToEither(Error.New($"The gene '{geneId}' has not been correctly resolved."))
             .ToAsync()
-        from geneContent in genepoolReader.ReadGeneContent(GeneType.Fodder, architecture, geneId)
+        from geneContent in genepoolReader.ReadGeneContent(uniqueGeneId)
         from geneFodderConfig in Try(() =>
         {
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(geneContent);

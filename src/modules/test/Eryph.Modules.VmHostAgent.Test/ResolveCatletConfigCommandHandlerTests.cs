@@ -424,7 +424,7 @@ public class ResolveCatletConfigCommandHandlerTests
                 {
                     GeneType = GeneType.Catlet,
                     Id = new GeneIdentifier(geneSetId, GeneName.New("catlet")),
-                    Architecture = GeneArchitecture.New("any"),
+                    Architecture = Architecture.New("any"),
                     Hash = "12345678",
                     Size = 42,
                 }))

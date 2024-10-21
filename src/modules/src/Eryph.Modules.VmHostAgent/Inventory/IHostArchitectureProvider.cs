@@ -9,5 +9,5 @@ namespace Eryph.Modules.VmHostAgent.Inventory;
 
 public interface IHostArchitectureProvider
 {
-    public GeneArchitecture Architecture { get; }
+    public Architecture Architecture { get; }
 }

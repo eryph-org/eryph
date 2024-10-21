@@ -91,7 +91,7 @@ internal class RepositoryGenePool(
 
             if (downloadEntry == null)
             {
-                var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Identifier.GeneSet.Value, parsedGeneId.Hash);
+                var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Id.GeneSet.Value, parsedGeneId.Hash);
 
                 var response = await geneClient.GetAsync(cancellationToken: cancel)
                                ?? throw new InvalidDataException("empty response from gene api");
@@ -136,7 +136,7 @@ internal class RepositoryGenePool(
                     return urlEntry.DownloadUri;
             }
 
-            var gene = genePoolClient.GetGeneClient(geneInfo.Id.Identifier.GeneSet.Value, geneInfo.Hash);
+            var gene = genePoolClient.GetGeneClient(geneInfo.Id.Id.GeneSet.Value, geneInfo.Hash);
             var response = await gene.GetAsync(cancellationToken: cancel)
                            ?? throw new InvalidDataException("empty response from gene api");
             urlEntry = response.DownloadUris?.FirstOrDefault(x => x.Part == genePartHash);

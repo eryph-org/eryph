@@ -38,22 +38,20 @@ public class LocalGenepoolReader(
         select reference;
 
     public EitherAsync<Error, string> ReadGeneContent(
-        GeneType geneType,
-        GeneArchitecture architecture,
-        GeneIdentifier geneId) =>
-        from _1 in guardnot(geneType is GeneType.Volume,
-                Error.New($"The gene '{geneId}' is a volume gene."))
+        UniqueGeneIdentifier uniqueGeneId) =>
+        from _1 in guardnot(uniqueGeneId.GeneType is GeneType.Volume,
+                Error.New($"The gene '{uniqueGeneId}' is a volume gene."))
             .ToEitherAsync()
-        from _2 in guard(geneType is GeneType.Catlet or GeneType.Fodder,
-            Error.New($"The gene type '{geneType}' is not supported."))
+        from _2 in guard(uniqueGeneId.GeneType is GeneType.Catlet or GeneType.Fodder,
+            Error.New($"The gene type '{uniqueGeneId}' is not supported."))
         let genePoolPath = GenePoolPaths.GetGenePoolPath(agentConfiguration)
-        let genePath = GenePoolPaths.GetGenePath(genePoolPath, geneType, architecture, geneId)
+        let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
         from fileExists in Try(() => fileSystem.FileExists(genePath))
-            .ToEither(ex => Error.New($"Could not read gene '{geneId}' from local genepool.", ex))
+            .ToEither(ex => Error.New($"Could not read gene '{uniqueGeneId}' from local genepool.", ex))
             .ToAsync()
         from _ in guard(fileExists,
-            Error.New($"Gene '{geneId}' does not exist in local genepool."))
+            Error.New($"Gene '{uniqueGeneId}' does not exist in local genepool."))
         from content in TryAsync(() => fileSystem.ReadAllTextAsync(genePath))
-            .ToEither(ex => Error.New($"Could not read gene '{geneId}' from local genepool.", ex))
+            .ToEither(ex => Error.New($"Could not read gene '{uniqueGeneId}' from local genepool.", ex))
         select content;
 }

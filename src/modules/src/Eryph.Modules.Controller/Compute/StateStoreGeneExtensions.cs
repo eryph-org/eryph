@@ -16,6 +16,6 @@ internal static class StateStoreGeneExtensions
 {
     public static Either<Error, UniqueGeneIdentifier> ToUniqueGeneId(this Gene dbGene) =>
         from geneId in GeneIdentifier.NewEither(dbGene.GeneId)
-        from architecture in GeneArchitecture.NewEither(dbGene.Architecture)
+        from architecture in Architecture.NewEither(dbGene.Architecture)
         select new UniqueGeneIdentifier(dbGene.GeneType, geneId, architecture);
 }

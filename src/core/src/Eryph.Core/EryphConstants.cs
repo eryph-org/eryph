@@ -5,6 +5,8 @@ namespace Eryph.Core
 {
     public static class EryphConstants
     {
+        public static readonly string AnyArchitecture = "any";
+
         public static readonly Guid DefaultTenantId = Guid.Parse("{C1813384-8ECB-4F17-B846-821EE515D19B}");
         public static readonly Guid DefaultProjectId = Guid.Parse("{4B4A3FCF-B5ED-4A9A-AB6E-03852752095E}");
 

@@ -12,7 +12,7 @@ namespace Eryph.Messages.Resources.Events
         [PrivateIdentifier]
         public string AgentName { get; set; }
 
-        public GeneArchitecture Architecture { get; set; }
+        public Architecture Architecture { get; set; }
 
         public bool Confirmed { get; set; }
     }

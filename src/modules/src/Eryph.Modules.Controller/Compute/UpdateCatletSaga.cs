@@ -86,7 +86,7 @@ internal class UpdateCatletSaga(
             return;
         }
 
-        Data.Data.Architecture = GeneArchitecture.New(metadata.Architecture);
+        Data.Data.Architecture = Architecture.New(metadata.Architecture);
 
         if (Data.Data.BredConfig is not null && Data.Data.ResolvedGenes is not null)
         {
@@ -172,7 +172,7 @@ internal class UpdateCatletSaga(
             await StartNewTask(new ResolveGenesCommand
             {
                 AgentName = Data.Data.AgentName,
-                CatletArchitecture = GeneArchitecture.New(metadata.ValueUnsafe().Metadata.Architecture),
+                CatletArchitecture = Architecture.New(metadata.ValueUnsafe().Metadata.Architecture),
                 Genes = geneIds.SuccessToSeq().Flatten().Filter(g => g.GeneType == GeneType.Volume).ToList(),
             });
         });
@@ -196,7 +196,7 @@ internal class UpdateCatletSaga(
 
             var resolvedFodderGenes = metadata.ValueUnsafe().Metadata.FodderGenes.ToSeq()
                 .Map(kvp => from geneId in GeneIdentifier.NewValidation(kvp.Key)
-                            from architecture in GeneArchitecture.NewValidation(kvp.Value)
+                            from architecture in Architecture.NewValidation(kvp.Value)
                             select new UniqueGeneIdentifier(GeneType.Fodder, geneId, architecture))
                 .Sequence();
             if (resolvedFodderGenes.IsFail)

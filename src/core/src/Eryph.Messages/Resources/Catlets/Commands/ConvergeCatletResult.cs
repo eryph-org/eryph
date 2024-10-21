@@ -14,6 +14,6 @@ namespace Eryph.Messages.Resources.Catlets.Commands
 
         public DateTimeOffset Timestamp { get; set; }
 
-        public GeneArchitecture Architecture { get; set; }
+        public Architecture Architecture { get; set; }
     }
 }

@@ -40,13 +40,10 @@ internal class UpdateCatletVMCommandHandler(
                 command.Config, currentStorageSettings)
             .WriteTrace()
         from _ in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
-        let resolvedGenesMap = command.ResolvedGenes
-            .Map(g => (g.Identifier, g.Architecture))
-            .ToHashMap()
         let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
         from fedConfig in CatletFeeding.Feed(
             CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
-            resolvedGenesMap,
+            command.ResolvedGenes.ToSeq(),
             genepoolReader)
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()
@@ -56,7 +53,7 @@ internal class UpdateCatletVMCommandHandler(
         from vmInfoConverged in VirtualMachine.Converge(
                 vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfoConsistent,
                 substitutedConfig, command.MachineMetadata, command.MachineNetworkSettings,
-                plannedStorageSettings, resolvedGenesMap)
+                plannedStorageSettings, command.ResolvedGenes.ToSeq())
             .WriteTrace().ToAsync()
         from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, vmInfoConverged, hostInfoProvider).WriteTrace()
         select new ConvergeCatletResult

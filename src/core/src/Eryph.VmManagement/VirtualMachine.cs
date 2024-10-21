@@ -204,7 +204,7 @@ namespace Eryph.VmManagement
             CatletMetadata metadata,
             MachineNetworkSettings[] networkSetting,
             VMStorageSettings storageSettings,
-            HashMap<GeneIdentifier, GeneArchitecture> resolvedGenes)
+            Seq<UniqueGeneIdentifier> resolvedGenes)
         {
             var convergeContext =
                 new ConvergeContext(vmHostAgentConfig, engine, reportProgress, machineConfig, metadata, storageSettings, networkSetting, hostInfo, resolvedGenes);
@@ -238,8 +238,7 @@ namespace Eryph.VmManagement
             // does not require them.
             var convergeContext = new ConvergeContext(
                 vmHostAgentConfig, engine, reportProgress, machineConfig,
-                metadata, storageSettings, [], hostInfo,
-                LanguageExt.HashMap<GeneIdentifier, GeneArchitecture>.Empty);
+                metadata, storageSettings, [], hostInfo, Empty);
 
             var convergeTasks = new ConvergeTaskBase[]
             {

@@ -4,8 +4,8 @@ namespace Eryph.Core.Genetics;
 
 public record UniqueGeneIdentifier(
     GeneType GeneType,
-    GeneIdentifier Identifier,
-    GeneArchitecture Architecture)
+    GeneIdentifier Id,
+    Architecture Architecture)
 {
-    public override string ToString() => $"{GeneType.ToString().ToLowerInvariant()} {Identifier} ({Architecture})";
+    public override string ToString() => $"{GeneType.ToString().ToLowerInvariant()} {Id} ({Architecture})";
 }

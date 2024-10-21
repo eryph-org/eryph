@@ -23,7 +23,7 @@ public static class LocalGenepoolReaderMockExtensions
 
         mock.Setup(m => m.GetGenesetReference(It.IsAny<GeneSetIdentifier>()))
             .Returns((GeneSetIdentifier source) =>
-                Right<Error, Option<GeneSetIdentifier>>(map.Find(source)));
+                RightAsync<Error, Option<GeneSetIdentifier>>(map.Find(source)));
     }
 
     public static void SetupCatletGene(
@@ -35,7 +35,8 @@ public static class LocalGenepoolReaderMockExtensions
         var validGeneId = new GeneIdentifier(validGeneSetId, GeneName.New("catlet"));
         var json = ConfigModelJsonSerializer.Serialize(catletConfig);
 
-        mock.Setup(m => m.ReadGeneContent(GeneType.Catlet, GeneArchitecture.New("any"),validGeneId))
+        mock.Setup(m => m.ReadGeneContent(new UniqueGeneIdentifier(
+                GeneType.Catlet, validGeneId, Architecture.New("any"))))
             .Returns(RightAsync<Error, string>(json));
     }
 
@@ -47,7 +48,8 @@ public static class LocalGenepoolReaderMockExtensions
         var validGeneId = GeneIdentifier.New(geneIdentifier);
         var json = ConfigModelJsonSerializer.Serialize(fodderGene);
 
-        mock.Setup(m => m.ReadGeneContent(GeneType.Fodder, GeneArchitecture.New("any"), validGeneId))
+        mock.Setup(m => m.ReadGeneContent(new UniqueGeneIdentifier(
+                GeneType.Fodder, validGeneId, Architecture.New("any"))))
             .Returns(RightAsync<Error, string>(json));
     }
 }

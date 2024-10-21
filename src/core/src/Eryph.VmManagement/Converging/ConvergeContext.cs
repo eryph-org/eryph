@@ -21,7 +21,7 @@ namespace Eryph.VmManagement.Converging
         public readonly VMHostMachineData HostInfo;
         public readonly CatletMetadata Metadata;
         public readonly MachineNetworkSettings[] NetworkSettings;
-        public readonly HashMap<GeneIdentifier, GeneArchitecture> ResolvedGenes;
+        public readonly Seq<UniqueGeneIdentifier> ResolvedGenes;
 
 
         public ConvergeContext(
@@ -33,7 +33,7 @@ namespace Eryph.VmManagement.Converging
             VMStorageSettings storageSettings, 
             MachineNetworkSettings[] networkSettings,
             VMHostMachineData hostInfo,
-            HashMap<GeneIdentifier, GeneArchitecture> resolvedGenes)
+            Seq<UniqueGeneIdentifier> resolvedGenes)
         {
             VmHostAgentConfig = vmHostAgentConfig;
             Engine = engine;

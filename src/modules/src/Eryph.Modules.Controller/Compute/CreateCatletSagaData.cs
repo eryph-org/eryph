@@ -24,7 +24,7 @@ namespace Eryph.Modules.Controller.Compute
         
         public Guid TenantId { get; set; }
 
-        public GeneArchitecture? Architecture { get; set; }
+        public Architecture? Architecture { get; set; }
 
         public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
     }

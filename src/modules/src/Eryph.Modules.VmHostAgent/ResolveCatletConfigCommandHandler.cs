@@ -26,7 +26,7 @@ namespace Eryph.Modules.VmHostAgent;
 
 using GeneSetMap = HashMap<GeneSetIdentifier, GeneSetIdentifier>;
 using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
-using ArchitectureMap = HashMap<GeneIdentifier, GeneArchitecture>;
+using ArchitectureMap = HashMap<GeneIdentifier, Architecture>;
 
 /// <summary>
 /// This command handler resolves the ancestors and referenced gene sets
@@ -140,7 +140,7 @@ internal class ResolveCatletConfigCommandHandler(
                     GeneType.Catlet,
                     new GeneIdentifier(resolvedId, GeneName.New("catlet")),
                     // TODO we can hardcode any as catlets are not architecture specific but this should be done nicer
-                    GeneArchitecture.New("any")),
+                    Architecture.New("any")),
                 (_, _) => Task.FromResult(unit),
                 default)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
@@ -189,11 +189,12 @@ internal class ResolveCatletConfigCommandHandler(
     public static EitherAsync<Error, CatletConfig> ReadCatletConfig(
         GeneSetIdentifier geneSetId,
         ILocalGenepoolReader genepoolReader) =>
-        from json in genepoolReader.ReadGeneContent(
+        from _ in RightAsync<Error, Unit>(unit)
+        let uniqueId = new UniqueGeneIdentifier(
             GeneType.Catlet,
-            // TODO should we change this? we can hardcode any as catlets are not architecture specific.
-            GeneArchitecture.New("any"),
-            new GeneIdentifier(geneSetId, GeneName.New("catlet")))
+            new GeneIdentifier(geneSetId, GeneName.New("catlet")),
+            Architecture.New(EryphConstants.AnyArchitecture))
+        from json in genepoolReader.ReadGeneContent(uniqueId)
         from config in Try(() =>
         {
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);

@@ -36,8 +36,8 @@ internal class LocalFirstGeneProvider(
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        from geneSetInfo in ProvideGeneSet(uniqueGeneId.Identifier.GeneSet, Empty, localGenePool, cancel)
-        from _1 in guard(geneSetInfo.Id == uniqueGeneId.Identifier.GeneSet,
+        from geneSetInfo in ProvideGeneSet(uniqueGeneId.Id.GeneSet, Empty, localGenePool, cancel)
+        from _1 in guard(geneSetInfo.Id == uniqueGeneId.Id.GeneSet,
             Error.New($"The gene '{uniqueGeneId}' resolved to the gene set '{geneSetInfo.Id}'. "
                 + "This code must only be called with resolved IDs."))
         from geneHash in GetGeneHash(geneSetInfo, uniqueGeneId)
@@ -52,7 +52,7 @@ internal class LocalFirstGeneProvider(
             Inventory = new GeneData()
             {
                 GeneType = uniqueGeneId.GeneType,
-                Id = uniqueGeneId.Identifier,
+                Id = uniqueGeneId.Id,
                 Architecture = uniqueGeneId.Architecture,
                 Hash = geneHash,
                 Size = validGeneSize,
@@ -77,7 +77,7 @@ internal class LocalFirstGeneProvider(
                 genesetInfo.MetaData,
                 uniqueGeneId.GeneType,
                 uniqueGeneId.Architecture,
-                uniqueGeneId.Identifier.GeneName)
+                uniqueGeneId.Id.GeneName)
             .ToEitherAsync(
             Error.New($"Could not find gene {uniqueGeneId} in geneset {genesetInfo.Id}."))
         select validHash;

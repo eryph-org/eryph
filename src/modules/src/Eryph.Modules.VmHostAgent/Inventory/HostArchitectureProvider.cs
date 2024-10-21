@@ -9,7 +9,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory;
 
 public class HostArchitectureProvider : IHostArchitectureProvider
 {
-    public GeneArchitecture Architecture =>
+    public Architecture Architecture =>
         // Currently, we only support Hyper-V on AMD64 and can hardcode the value here.
-        GeneArchitecture.New("hyperv/amd64");
+        Architecture.New("hyperv/amd64");
 }

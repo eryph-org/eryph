@@ -45,7 +45,7 @@ public static class GenePoolMockExtensions
             .Map(g => new UniqueGeneIdentifier(
                 g.GeneType,
                 GeneIdentifier.New(g.GeneId),
-                GeneArchitecture.New(g.Architecture)))
+                Architecture.New(g.Architecture)))
             .ToArray();
 
         geneProviderMock.SetupGenes(mapped);

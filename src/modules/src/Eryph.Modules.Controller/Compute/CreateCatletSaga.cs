@@ -208,7 +208,7 @@ internal class CreateCatletSaga(
                 FodderGenes = Data.Data.ResolvedGenes
                     .Filter(g => g.GeneType is GeneType.Fodder)
                     .ToDictionary(
-                        ugi => ugi.Identifier.Value,
+                        ugi => ugi.Id.Value,
                         ugi => ugi.Architecture.Value),
             };
 

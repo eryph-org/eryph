@@ -24,7 +24,7 @@ namespace Eryph.VmManagement.Test.Storage;
 public class VMDriveStorageSettingsTests
 {
     private readonly Mock<Func<string, EitherAsync<Error, Option<VhdInfo>>>> _getVhdInfoMock = new();
-    private readonly Mock<Func<GeneIdentifier, Option<GeneArchitecture>>> _getArchitecture = new();
+    private readonly Mock<Func<GeneIdentifier, Option<Architecture>>> _getArchitecture = new();
 
     private readonly VmHostAgentConfiguration _vmHostAgentConfiguration = new()
     {
@@ -81,7 +81,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, _getArchitecture.Object);
+            _getVhdInfoMock.Object, Empty);
 
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
@@ -140,7 +140,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, _getArchitecture.Object);
+            _getVhdInfoMock.Object, Empty);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -182,7 +182,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, _getArchitecture.Object);
+            _getVhdInfoMock.Object, Empty);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -220,7 +220,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, _getArchitecture.Object);
+            _getVhdInfoMock.Object, Empty);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -259,7 +259,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, _getArchitecture.Object);
+            _getVhdInfoMock.Object, Empty);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -305,7 +305,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, _getArchitecture.Object);
+            _getVhdInfoMock.Object, Empty);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -351,7 +351,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, _getArchitecture.Object);
+            _getVhdInfoMock.Object, Empty);
 
         result.Should().BeLeft().Which.Message.Should().Be("Disk size is below minimum size of the virtual disk");
     }
@@ -380,7 +380,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, _getArchitecture.Object);
+            _getVhdInfoMock.Object, Empty);
 
         result.Should().BeLeft().Which.Message.Should().Be("Disk size is below minimum size of the virtual disk");
     }
@@ -409,7 +409,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, _getArchitecture.Object);
+            _getVhdInfoMock.Object, Empty);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>

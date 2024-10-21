@@ -13,7 +13,7 @@ public class ResolveCatletConfigCommand : IHostAgentCommand
 {
     public string AgentName { get; set; }
 
-    public GeneArchitecture CatletArchitecture { get; set; }
+    public Architecture CatletArchitecture { get; set; }
 
     public CatletConfig Config { get; set; }
 }

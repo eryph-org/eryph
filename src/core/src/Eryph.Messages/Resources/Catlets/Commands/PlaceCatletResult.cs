@@ -8,6 +8,6 @@ namespace Eryph.Messages.Resources.Catlets.Commands
         [PrivateIdentifier]
         public string AgentName { get; set; }
 
-        public GeneArchitecture Architecture { get; set; }
+        public Architecture Architecture { get; set; }
     }
 }
