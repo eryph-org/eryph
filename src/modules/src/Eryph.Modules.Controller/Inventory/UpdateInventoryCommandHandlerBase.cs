@@ -232,7 +232,10 @@ namespace Eryph.Modules.Controller.Inventory
                         return;
                     }
 
-                    await LookupVirtualDisk(diskInfo.Parent, project, addedDisks)
+                    var parentProject = await FindProject(diskInfo.Parent.ProjectName, diskInfo.Parent.ProjectId)
+                        .IfNoneAsync(() => FindRequiredProject(EryphConstants.DefaultProjectName, null))
+                        .ConfigureAwait(false);
+                    await LookupVirtualDisk(diskInfo.Parent, parentProject, addedDisks)
                         .IfSomeAsync(parentDisk =>
                         {
                             currentDisk.Parent = parentDisk;
