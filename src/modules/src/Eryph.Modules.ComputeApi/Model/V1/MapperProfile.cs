@@ -74,7 +74,8 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                     var isSuperAdmin = authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole);
                     return isSuperAdmin ? s.Path : null;
                 }))
-                .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier));
+                .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier))
+                .ForMember(d => d.AttachedCatlets, o => o.MapFrom(s => s.AttachedDrives));
             CreateMap<StateDb.Model.CatletDrive, VirtualDiskAttachedCatlet>();
 
             CreateMap<StateDb.Model.Gene, Gene>()
