@@ -43,13 +43,14 @@ public static class LocalGenepoolReaderMockExtensions
     public static void SetupFodderGene(
         this Mock<ILocalGenepoolReader> mock,
         string geneIdentifier,
+        string architecture,
         FodderGeneConfig fodderGene)
     {
         var validGeneId = GeneIdentifier.New(geneIdentifier);
         var json = ConfigModelJsonSerializer.Serialize(fodderGene);
 
         mock.Setup(m => m.ReadGeneContent(new UniqueGeneIdentifier(
-                GeneType.Fodder, validGeneId, Architecture.New("any"))))
+                GeneType.Fodder, validGeneId, Architecture.New(architecture))))
             .Returns(RightAsync<Error, string>(json));
     }
 }

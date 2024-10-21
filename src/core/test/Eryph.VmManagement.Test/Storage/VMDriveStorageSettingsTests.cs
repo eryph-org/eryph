@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Core;
@@ -24,7 +23,6 @@ namespace Eryph.VmManagement.Test.Storage;
 public class VMDriveStorageSettingsTests
 {
     private readonly Mock<Func<string, EitherAsync<Error, Option<VhdInfo>>>> _getVhdInfoMock = new();
-    private readonly Mock<Func<GeneIdentifier, Option<Architecture>>> _getArchitecture = new();
 
     private readonly VmHostAgentConfiguration _vmHostAgentConfiguration = new()
     {
@@ -51,8 +49,8 @@ public class VMDriveStorageSettingsTests
     {
         var config = new CatletConfig
         {
-            Drives = new[]
-            {
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.VHD,
@@ -72,8 +70,8 @@ public class VMDriveStorageSettingsTests
                 {
                     Type = CatletDriveType.DVD,
                     Source = @"x:\dvds\disk2.iso",
-                },
-            },
+                }
+            ],
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -125,14 +123,14 @@ public class VMDriveStorageSettingsTests
     {
         var config = new CatletConfig
         {
-            Drives = new[]
-            {
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Type = driveType,
                     Name = "sda",
-                },
-            },
+                }
+            ],
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -155,34 +153,44 @@ public class VMDriveStorageSettingsTests
             });
     }
 
-    [Fact]
-    public async Task PlanDriveStorageSettings_NewDiskWithoutConfiguredSizeAndWithParent_UsesParentSize()
+    [Theory]
+    [InlineData("any", @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")]
+    [InlineData("hyperv/any", @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\sda.vhdx")]
+    [InlineData("hyperv/amd64", @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\amd64\sda.vhdx")]
+    public async Task PlanDriveStorageSettings_NewDiskWithoutConfiguredSizeAndWithParent_UsesParentSize(
+        string architecture,
+        string expectedParentPath)
     {
         var config = new CatletConfig
         {
-            Drives = new[]
-            {
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.VHD,
                     Name = "sda",
                     Source = "gene:testorg/testset/testtag:sda",
-                },
-            },
+                }
+            ],
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
-        _getVhdInfoMock.Setup(m => m(@"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx"))
+        _getVhdInfoMock.Setup(m => m(expectedParentPath))
             .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo()
             {
                 Size = 42,
             }));
 
+        var resolvedGenes = Seq1(new UniqueGeneIdentifier(
+            GeneType.Volume,
+            GeneIdentifier.New("gene:testorg/testset/testtag:sda"),
+            Architecture.New(architecture)));
+
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, Empty);
+            _getVhdInfoMock.Object, resolvedGenes);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -196,7 +204,7 @@ public class VMDriveStorageSettingsTests
                 settings.DiskSettings.SizeBytes.Should().BeNull();
                 settings.DiskSettings.SizeBytesCreate.Should().Be(42);
 
-                AssertParent(settings.DiskSettings.ParentSettings);
+                AssertParent(settings.DiskSettings.ParentSettings, expectedParentPath);
             });
     }
 
@@ -205,14 +213,14 @@ public class VMDriveStorageSettingsTests
     {
         var config = new CatletConfig
         {
-            Drives = new[]
-            {
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.VHD,
                     Name = "sda",
-                },
-            },
+                }
+            ],
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -243,15 +251,15 @@ public class VMDriveStorageSettingsTests
     {
         var config = new CatletConfig
         {
-            Drives = new[]
-            {
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.VHD,
                     Name = "sda",
                     Size = 42,
-                },
-            },
+                }
+            ],
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -277,35 +285,45 @@ public class VMDriveStorageSettingsTests
             });
     }
 
-    [Fact]
-    public async Task PlanDriveStorageSettings_NewDiskWithConfiguredSizeAndWithSmallerParent_UsesConfiguredSize()
+    [Theory]
+    [InlineData("any", @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")]
+    [InlineData("hyperv/any", @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\sda.vhdx")]
+    [InlineData("hyperv/amd64", @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\amd64\sda.vhdx")]
+    public async Task PlanDriveStorageSettings_NewDiskWithConfiguredSizeAndWithSmallerParent_UsesConfiguredSize(
+        string architecture,
+        string expectedParentPath)
     {
         var config = new CatletConfig
         {
-            Drives = new[]
-            {
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.VHD,
                     Name = "sda",
                     Source = "gene:testorg/testset/testtag:sda",
                     Size = 42,
-                },
-            },
+                }
+            ],
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
-        _getVhdInfoMock.Setup(m => m(@"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx"))
+        _getVhdInfoMock.Setup(m => m(expectedParentPath))
             .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo()
             {
                 Size = 40 * 1024L * 1024 * 1024,
             }));
 
+        var resolvedGenes = Seq1(new UniqueGeneIdentifier(
+            GeneType.Volume,
+            GeneIdentifier.New("gene:testorg/testset/testtag:sda"),
+            Architecture.New(architecture)));
+
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, Empty);
+            _getVhdInfoMock.Object, resolvedGenes);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -319,7 +337,7 @@ public class VMDriveStorageSettingsTests
                 settings.DiskSettings.SizeBytes.Should().Be(42 * 1024L * 1024 * 1024);
                 settings.DiskSettings.SizeBytesCreate.Should().Be(42 * 1024L * 1024 * 1024);
 
-                AssertParent(settings.DiskSettings.ParentSettings);
+                AssertParent(settings.DiskSettings.ParentSettings, expectedParentPath);
             });
     }
 
@@ -328,16 +346,16 @@ public class VMDriveStorageSettingsTests
     {
         var config = new CatletConfig
         {
-            Drives = new[]
-            {
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.VHD,
                     Name = "sda",
                     Source = "gene:testorg/testset/testtag:sda",
                     Size = 42,
-                },
-            },
+                }
+            ],
         };
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
@@ -349,9 +367,14 @@ public class VMDriveStorageSettingsTests
                 Size = 50 * 1024L * 1024 * 1024,
             }));
 
+        var resolvedGenes = Seq1(new UniqueGeneIdentifier(
+            GeneType.Volume,
+            GeneIdentifier.New("gene:testorg/testset/testtag:sda"),
+            Architecture.New("any")));
+
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, Empty);
+            _getVhdInfoMock.Object, resolvedGenes);
 
         result.Should().BeLeft().Which.Message.Should().Be("Disk size is below minimum size of the virtual disk");
     }
@@ -361,15 +384,15 @@ public class VMDriveStorageSettingsTests
     {
         var config = new CatletConfig
         {
-            Drives = new[]
-            {
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.VHD,
                     Name = "sda",
                     Size = 42,
-                },
-            },
+                }
+            ],
         };
 
         _getVhdInfoMock.Setup(m => m(@"x:\disks\storage-id-vm\sda.vhdx"))
@@ -390,15 +413,15 @@ public class VMDriveStorageSettingsTests
     {
         var config = new CatletConfig
         {
-            Drives = new[]
-            {
+            Drives =
+            [
                 new CatletDriveConfig
                 {
                     Type = CatletDriveType.VHD,
                     Name = "sda",
                     Size = 42,
-                },
-            },
+                }
+            ],
         };
 
         _getVhdInfoMock.Setup(m => m(@"x:\disks\storage-id-vm\sda.vhdx"))
@@ -427,118 +450,12 @@ public class VMDriveStorageSettingsTests
             });
     }
 
-    private void AssertParent(Option<DiskStorageSettings> parentSettings)
+    private void AssertParent(
+        Option<DiskStorageSettings> parentSettings,
+        string expectedParentPath)
     {
         var settings = parentSettings.Should().BeSome().Subject;
-        settings.Path.Should().Be(@"x:\disks\genepool\testorg\testset\testtag\volumes");
+        settings.Path.Should().Be(Path.GetDirectoryName(expectedParentPath));
         settings.Name.Should().Be("sda");
-    }
-
-    [Fact]
-    public async Task FromVhdPath_Resolved_Name_without_generation()
-    {
-        var path = @"x:\disks\sda_g2.vhdx";
-        var mapping = new FakeTypeMapping();
-        var psEngine = new TestPowershellEngine(mapping);
-        psEngine.GetObjectCallback = (t, command) =>
-        {
-            if(command.ToString().StartsWith("Get-VHD"))
-            {
-                if (command.ToString().Contains("sda_g2"))
-                {
-                    return new[]
-                    {
-                        psEngine.ToPsObject<object>(new VhdInfo
-                        {
-                            ParentPath = @"x:\dummy\sda_g1.vhdx",
-                            Path = path,
-                        })
-                    }.ToSeq();
-                }
-
-                if (command.ToString().Contains("sda_g1"))
-                {
-                    return new[]
-                    {
-                        psEngine.ToPsObject<object>(new VhdInfo
-                        {
-                            ParentPath = @"x:\dummy\sda.vhdx",
-                            Path = @"x:\dummy\sda_g1.vhdx",
-                        })
-                    }.ToSeq();
-                }
-
-                return new[]
-                {
-                    psEngine.ToPsObject<object>(new VhdInfo
-                    {
-                        Path = @"x:\dummy\sda.vhdx",
-                    })
-                }.ToSeq();
-
-            }
-
-            return new PowershellFailure{Message = "Unknown command"};
-        };
-
-        var result = await DiskStorageSettings.FromVhdPath(
-            psEngine, new VmHostAgentConfiguration
-            {
-                Defaults = new VmHostAgentDefaultsConfiguration
-                {
-                    Volumes = @"x:\disks\",
-                }
-            }, path);
-
-
-        var resultSettings = result.Should().BeRight().Subject;
-        resultSettings.Name.Should().Be("sda");
-        resultSettings.Generation.Should().Be(2);
-    }
-
-    [Fact]
-    public async Task FromVhdPath_genepool_disk_is_resolved()
-    {
-        var path = @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx";
-        var mapping = new FakeTypeMapping();
-        var psEngine = new TestPowershellEngine(mapping);
-        psEngine.GetObjectCallback = (t, command) =>
-        {
-            if (command.ToString().StartsWith("Get-VHD"))
-            {
-                return new[]
-                {
-                    psEngine.ToPsObject<object>(new VhdInfo
-                    {
-                        Path = path,
-                    })
-                }.ToSeq();
-            }
-
-            return new PowershellFailure { Message = "Unknown command" };
-        };
-
-        var result = await DiskStorageSettings.FromVhdPath(
-            psEngine, new VmHostAgentConfiguration
-            {
-                Defaults = new VmHostAgentDefaultsConfiguration
-                {
-                    Volumes = @"x:\disks\",
-                }
-            }, path);
-
-
-        var resultSettings = result.Should().BeRight().Subject;
-        resultSettings.Name.Should().Be("sda");
-        resultSettings.Generation.Should().Be(0);
-        resultSettings.StorageNames.ProjectName.Should().BeSome()
-            .Which.Should().Be(EryphConstants.DefaultProjectName);
-        resultSettings.StorageNames.EnvironmentName.Should().BeSome()
-            .Which.Should().Be(EryphConstants.DefaultEnvironmentName);
-        resultSettings.StorageNames.DataStoreName.Should().BeSome()
-            .Which.Should().Be(EryphConstants.DefaultDataStoreName);
-        resultSettings.StorageIdentifier.Should().BeSome().Which.Should().Be("gene:testorg/testset/testtag:sda");
-        resultSettings.Geneset.Should().BeSome()
-            .Which.Should().Be(GeneSetIdentifier.New("testorg/testset/testtag"));
     }
 }

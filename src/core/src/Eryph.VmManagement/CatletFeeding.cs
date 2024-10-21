@@ -117,7 +117,7 @@ public static class CatletFeeding
             .Sequence()
             .ToAsync()
         from uniqueGeneId in resolvedGenes.Find(g => g.GeneType == GeneType.Fodder && g.Id == geneId)
-            .ToEither(Error.New($"The gene '{geneId}' has not been correctly resolved."))
+            .ToEither(Error.New($"The gene '{geneId}' has not been correctly resolved. This should not happen."))
             .ToAsync()
         from geneContent in genepoolReader.ReadGeneContent(uniqueGeneId)
         from geneFodderConfig in Try(() =>
