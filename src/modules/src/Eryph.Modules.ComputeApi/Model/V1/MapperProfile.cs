@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using AutoMapper;
 using Eryph.ConfigModel;
@@ -72,7 +73,9 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                 {
                     var authContext = context.GetAuthContext();
                     var isSuperAdmin = authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole);
-                    return isSuperAdmin ? s.Path : null;
+                    return isSuperAdmin && !string.IsNullOrEmpty(s.Path) && !string.IsNullOrEmpty(s.FileName)
+                        ? Path.Combine(s.Path, s.FileName)
+                        : null;
                 }))
                 .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier))
                 .ForMember(d => d.AttachedCatlets, o => o.MapFrom(s => s.AttachedDrives));
