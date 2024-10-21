@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Genetics;
@@ -46,6 +47,19 @@ namespace Eryph.Modules.Controller.Compute
             if (metadata is null)
             {
                 await Fail($"Catlet config drive cannot be updated because the metadata for catlet '{catlet.Name}' ({catlet.Id}) does not exist.");
+                return;
+            }
+
+            var resolvedFodderGenes = metadata.FodderGenes.ToSeq()
+                .Map(kvp => from geneId in GeneIdentifier.NewValidation(kvp.Key)
+                            from architecture in GeneArchitecture.NewValidation(kvp.Value)
+                            select new UniqueGeneIdentifier(GeneType.Fodder, geneId, architecture))
+                .Sequence();
+            if (resolvedFodderGenes.IsFail)
+            {
+                await Fail(ErrorUtils.PrintError(Error.New(
+                    $"The metadata for catlet {message.CatletId} contains invalid fodder information",
+                    Error.Many(resolvedFodderGenes.FailToSeq()))));
                 return;
             }
 

@@ -10,7 +10,6 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
@@ -187,7 +186,34 @@ internal class UpdateCatletSaga(
         return FailOrRun(message, async (ResolveGenesCommandResponse response) =>
         {
             Data.Data.State = UpdateVMState.GenesResolved;
-            Data.Data.ResolvedGenes = response.ResolvedGenes;
+
+            var metadata = await GetCatletMetadata(Data.Data.CatletId);
+            if (metadata.IsNone)
+            {
+                await Fail($"Metadata for catlet {Data.Data.CatletId} was not found.");
+                return;
+            }
+
+            var resolvedFodderGenes = metadata.ValueUnsafe().Metadata.FodderGenes.ToSeq()
+                .Map(kvp => from geneId in GeneIdentifier.NewValidation(kvp.Key)
+                            from architecture in GeneArchitecture.NewValidation(kvp.Value)
+                            select new UniqueGeneIdentifier(GeneType.Fodder, geneId, architecture))
+                .Sequence();
+            if (resolvedFodderGenes.IsFail)
+            {
+                await Fail(ErrorUtils.PrintError(Error.New(
+                    $"The metadata for catlet {Data.Data.CatletId} contains invalid fodder information",
+                    Error.Many(resolvedFodderGenes.FailToSeq()))));
+                return;
+            }
+
+            // Combine the volumes genes which have been resolved just now with the
+            // fodder genes which have been resolved when the catlet has been created.
+            // The fodder cannot change after the catlet has been created. Hence, we
+            // must use the information from the time of creation of the catlet.
+            Data.Data.ResolvedGenes = response.ResolvedGenes
+                .Append(resolvedFodderGenes.SuccessToSeq().Flatten())
+                .ToList();
 
             await StartPrepareGenes();
         });
@@ -255,7 +281,8 @@ internal class UpdateCatletSaga(
                 AgentName = Data.Data.AgentName,
                 NewStorageId = idGenerator.CreateId(),
                 MachineMetadata = metadata.ValueUnsafe(),
-                MachineNetworkSettings = r.NetworkSettings
+                MachineNetworkSettings = r.NetworkSettings,
+                ResolvedGenes = Data.Data.ResolvedGenes,
             });
         });
     }
@@ -298,6 +325,7 @@ internal class UpdateCatletSaga(
                 VMId = response.Inventory.VMId,
                 CatletId = Data.Data.CatletId,
                 MachineMetadata = metadata.ValueUnsafe(),
+                ResolvedGenes = Data.Data.ResolvedGenes,
             });
         });
     }
@@ -351,43 +379,43 @@ internal class UpdateCatletSaga(
             .Map(l => l.Filter(c => c.GeneIdentifier.GeneName != GeneName.New("catlet")));
 
     internal static Either<Error, (CatletConfig Config, CatletConfig BredConfig)> PrepareConfigs(
-    CatletConfig config,
-    CatletMetadata metadata,
-    HashMap<GeneSetIdentifier, GeneSetIdentifier> resolvedGeneSets,
-    HashMap<GeneSetIdentifier, CatletConfig> parentConfigs) =>
-    from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(
-            config, resolvedGeneSets)
-        .MapLeft(e => Error.New("Could not resolve genes in catlet config.", e))
-    from breedingResult in CatletPedigree.Breed(
-            config, resolvedGeneSets, parentConfigs)
-        .MapLeft(e => Error.New("Could not breed the catlet.", e))
-    // After the catlet was created, the fodder and variables can no longer be changed.
-    // They are used by cloud-init and are only applied on the first startup.
-    // To avoid any unexpected behavior, we reuse the fodder and variables from
-    // the catlet metadata.
-    // In the future, we could consider to diff the fodder and variables and then
-    // display a warning to the user in case there were changes.
-    let fixedConfig = resolvedConfig.CloneWith(c =>
-    {
-        c.Fodder = metadata.Fodder.ToSeq().Map(fc => fc.Clone()).ToArray();
-        c.Variables = metadata.Variables.ToSeq().Map(vc => vc.Clone()).ToArray();
-    })
-    let fixedParentConfig = breedingResult.ParentConfig
-        .IfNone(new CatletConfig())
-        .CloneWith(c =>
+        CatletConfig config,
+        CatletMetadata metadata,
+        HashMap<GeneSetIdentifier, GeneSetIdentifier> resolvedGeneSets,
+        HashMap<GeneSetIdentifier, CatletConfig> parentConfigs) =>
+        from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(
+                config, resolvedGeneSets)
+            .MapLeft(e => Error.New("Could not resolve genes in catlet config.", e))
+        from breedingResult in CatletPedigree.Breed(
+                config, resolvedGeneSets, parentConfigs)
+            .MapLeft(e => Error.New("Could not breed the catlet.", e))
+        // After the catlet was created, the fodder and variables can no longer be changed.
+        // They are used by cloud-init and are only applied on the first startup.
+        // To avoid any unexpected behavior, we reuse the fodder and variables from
+        // the catlet metadata.
+        // In the future, we could consider to diff the fodder and variables and then
+        // display a warning to the user in case there were changes.
+        let fixedConfig = resolvedConfig.CloneWith(c =>
         {
-            c.Fodder = Optional(metadata.ParentConfig)
-                .Map(c => c.Fodder.ToSeq().Map(fc => fc.Clone()))
-                .IfNone([])
-                .ToArray();
-            c.Variables = Optional(metadata.ParentConfig)
-                .Map(c => c.Variables.ToSeq().Map(vc => vc.Clone()))
-                .IfNone([])
-                .ToArray();
+            c.Fodder = metadata.Fodder.ToSeq().Map(fc => fc.Clone()).ToArray();
+            c.Variables = metadata.Variables.ToSeq().Map(vc => vc.Clone()).ToArray();
         })
-    from bredUpdateConfig in CatletBreeding.Breed(fixedParentConfig, fixedConfig)
-        .MapLeft(e => Error.New("Could not breed the catlet.", e))
-    select (fixedConfig, bredUpdateConfig);
+        let fixedParentConfig = breedingResult.ParentConfig
+            .IfNone(new CatletConfig())
+            .CloneWith(c =>
+            {
+                c.Fodder = Optional(metadata.ParentConfig)
+                    .Map(c => c.Fodder.ToSeq().Map(fc => fc.Clone()))
+                    .IfNone([])
+                    .ToArray();
+                c.Variables = Optional(metadata.ParentConfig)
+                    .Map(c => c.Variables.ToSeq().Map(vc => vc.Clone()))
+                    .IfNone([])
+                    .ToArray();
+            })
+        from bredUpdateConfig in CatletBreeding.Breed(fixedParentConfig, fixedConfig)
+            .MapLeft(e => Error.New("Could not breed the catlet.", e))
+        select (fixedConfig, bredUpdateConfig);
 
     private async Task StartPrepareGenes()
     {

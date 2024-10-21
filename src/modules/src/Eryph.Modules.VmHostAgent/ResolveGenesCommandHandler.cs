@@ -1,21 +1,20 @@
-﻿using Dbosoft.Rebus.Operations;
-using Eryph.Messages.Resources.Catlets.Commands;
-using Rebus.Handlers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
+using Eryph.Core;
+using Eryph.Core.Genetics;
+using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.VmHostAgent.Genetics;
+using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Extensions;
+using Rebus.Handlers;
 using Rebus.Pipeline;
-using Eryph.Core;
-using Eryph.Modules.VmHostAgent.Genetics;
-using Eryph.VmManagement;
-using Eryph.ConfigModel;
-using Eryph.Core.Genetics;
 
 namespace Eryph.Modules.VmHostAgent;
 

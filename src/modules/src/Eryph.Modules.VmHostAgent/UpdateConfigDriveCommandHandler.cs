@@ -44,16 +44,12 @@ internal class UpdateConfigDriveCommandHandler(
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
             .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
         let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
-        from resolvedGenes in command.MachineMetadata.FodderGenes
-            .Map(kvp => from geneId in GeneIdentifier.NewEither(kvp.Key)
-                        from architecture in GeneArchitecture.NewEither(kvp.Value)
-                        select (geneId, architecture))
-            .Sequence()
-            .Map(s => s.ToHashMap())
-            .ToAsync()
+        let resolvedGenesMap = command.ResolvedGenes
+            .Map(g => (g.Identifier, g.Architecture))
+            .ToHashMap()
         from fedConfig in CatletFeeding.Feed(
             CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
-            resolvedGenes,
+            resolvedGenesMap,
             genepoolReader)
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()

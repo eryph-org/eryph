@@ -150,8 +150,8 @@ public static class GenePoolPaths
         let fileName = segments[^1]
         from __ in guard(Path.HasExtension(fileName), Error.New("The gene path is invalid"))
         let extension = Path.GetExtension(fileName)?.ToLowerInvariant()
-        from _3 in guard(geneType is GeneType.Fodder && extension == "json"
-                         || geneType is GeneType.Volume && extension == "vhdx",
+        from _3 in guard(geneType is GeneType.Fodder && extension == ".json"
+                         || geneType is GeneType.Volume && extension == ".vhdx",
             Error.New("The gene path is invalid"))
         from geneName in GeneName.NewEither(Path.GetFileNameWithoutExtension(fileName))
         select (geneName, architecture);
