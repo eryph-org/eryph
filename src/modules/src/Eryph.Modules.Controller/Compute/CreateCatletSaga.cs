@@ -205,7 +205,7 @@ internal class CreateCatletSaga(
                 Parent = Data.Data.Config.Parent,
                 ParentConfig = Data.Data.ParentConfig,
                 Architecture = Data.Data.Architecture!.Value,
-                FodderGenes = Data.Data.ResolvedGenes
+                ResolvedFodderGenes = Data.Data.ResolvedGenes
                     .Filter(g => g.GeneType is GeneType.Fodder)
                     .ToDictionary(
                         ugi => ugi.Id.Value,

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20241022140402_InitialCreate")]
+    [Migration("20241022161859_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -79,6 +79,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("MetadataId", "Combined");
+
+                    b.HasIndex("Combined");
 
                     b.ToTable("MetadataGenes");
                 });
@@ -758,6 +760,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.Property<long?>("UsedSizeBytes")
                         .HasColumnType("INTEGER");
+
+                    b.HasIndex("GeneCombined");
 
                     b.HasIndex("ParentId");
 

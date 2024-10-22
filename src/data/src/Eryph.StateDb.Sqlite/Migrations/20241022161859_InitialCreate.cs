@@ -657,6 +657,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 column: "TaskId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_MetadataGenes_Combined",
+                table: "MetadataGenes",
+                column: "Combined");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_CatletMetadataId",
                 table: "NetworkPorts",
                 column: "CatletMetadataId");
@@ -728,6 +733,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_TaskProgress_TaskId",
                 table: "TaskProgress",
                 column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VirtualDisks_GeneCombined",
+                table: "VirtualDisks",
+                column: "GeneCombined");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VirtualDisks_ParentId",

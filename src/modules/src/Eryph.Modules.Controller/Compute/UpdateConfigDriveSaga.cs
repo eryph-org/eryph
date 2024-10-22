@@ -50,7 +50,7 @@ namespace Eryph.Modules.Controller.Compute
                 return;
             }
 
-            var resolvedFodderGenes = metadata.FodderGenes.ToSeq()
+            var resolvedFodderGenes = metadata.ResolvedFodderGenes.ToSeq()
                 .Map(kvp => from geneId in GeneIdentifier.NewValidation(kvp.Key)
                             from architecture in Architecture.NewValidation(kvp.Value)
                             select new UniqueGeneIdentifier(GeneType.Fodder, geneId, architecture))

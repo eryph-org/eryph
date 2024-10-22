@@ -43,7 +43,7 @@ public class LocalGenepoolReader(
                 Error.New($"The gene '{uniqueGeneId}' is a volume gene."))
             .ToEitherAsync()
         from _2 in guard(uniqueGeneId.GeneType is GeneType.Catlet or GeneType.Fodder,
-            Error.New($"The gene type '{uniqueGeneId}' is not supported."))
+            Error.New($"The gene type '{uniqueGeneId.GeneType}' is not supported."))
         let genePoolPath = GenePoolPaths.GetGenePoolPath(agentConfiguration)
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
         from fileExists in Try(() => fileSystem.FileExists(genePath))

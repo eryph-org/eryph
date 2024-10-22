@@ -194,7 +194,7 @@ internal class UpdateCatletSaga(
                 return;
             }
 
-            var resolvedFodderGenes = metadata.ValueUnsafe().Metadata.FodderGenes.ToSeq()
+            var resolvedFodderGenes = metadata.ValueUnsafe().Metadata.ResolvedFodderGenes.ToSeq()
                 .Map(kvp => from geneId in GeneIdentifier.NewValidation(kvp.Key)
                             from architecture in Architecture.NewValidation(kvp.Value)
                             select new UniqueGeneIdentifier(GeneType.Fodder, geneId, architecture))

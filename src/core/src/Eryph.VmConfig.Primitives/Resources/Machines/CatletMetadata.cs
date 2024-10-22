@@ -26,7 +26,11 @@ namespace Eryph.Resources.Machines
 
         [CanBeNull] public VariableConfig[] Variables { get; set; }
 
-        [CanBeNull] public IReadOnlyDictionary<string, string> FodderGenes { get; set; }
+        /// <summary>
+        /// Contains the architectures which have been resolved for the fodder genes
+        /// when the catlet has been created.
+        /// </summary>
+        [CanBeNull] public IReadOnlyDictionary<string, string> ResolvedFodderGenes { get; set; }
 
         public bool SecureDataHidden { get; set; }
     }

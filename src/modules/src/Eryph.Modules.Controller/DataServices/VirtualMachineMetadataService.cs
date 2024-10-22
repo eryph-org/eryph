@@ -57,7 +57,7 @@ internal class VirtualMachineMetadataService : IVirtualMachineMetadataService
             entity.Metadata = JsonSerializer.Serialize(metadata);
         }
 
-        entity.Genes = metadata.FodderGenes.ToSeq()
+        entity.Genes = metadata.ResolvedFodderGenes.ToSeq()
             .Map(g => from geneId in GeneIdentifier.NewOption(g.Key)
                       from architecture in Architecture.NewOption(g.Value)
                       select new UniqueGeneIdentifier(GeneType.Fodder, geneId, architecture))

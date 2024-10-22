@@ -82,6 +82,8 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.HasKey("MetadataId", "Combined");
 
+                    b.HasIndex("Combined");
+
                     b.ToTable("MetadataGenes");
                 });
 
@@ -732,7 +734,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("GeneCombined")
-                        .HasColumnType("longtext");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("GeneName")
                         .HasColumnType("longtext");
@@ -760,6 +762,8 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<long?>("UsedSizeBytes")
                         .HasColumnType("bigint");
+
+                    b.HasIndex("GeneCombined");
 
                     b.HasIndex("ParentId");
 

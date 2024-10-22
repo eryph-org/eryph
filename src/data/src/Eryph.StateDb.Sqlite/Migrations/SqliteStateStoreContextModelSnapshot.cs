@@ -77,6 +77,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.HasKey("MetadataId", "Combined");
 
+                    b.HasIndex("Combined");
+
                     b.ToTable("MetadataGenes");
                 });
 
@@ -755,6 +757,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.Property<long?>("UsedSizeBytes")
                         .HasColumnType("INTEGER");
+
+                    b.HasIndex("GeneCombined");
 
                     b.HasIndex("ParentId");
 

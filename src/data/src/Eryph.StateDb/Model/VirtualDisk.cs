@@ -21,10 +21,16 @@ public class VirtualDisk : Disk
 
     public string? GeneArchitecture { get; set; }
 
+    /// <summary>
+    /// This property is only used optimize database queries
+    /// and should not be used directly outside of queries.
+    /// </summary>
     internal string? GeneCombined
     {
         get => StateStoreGeneExtensions.ToIndexed(GeneSet, GeneName, GeneArchitecture);
+#pragma warning disable S1144
         private set => _ = value;
+#pragma warning restore S1144
     }
 
     public bool Frozen { get; set; }

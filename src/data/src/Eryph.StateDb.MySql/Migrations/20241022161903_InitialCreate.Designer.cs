@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20241022140406_InitialCreate")]
+    [Migration("20241022161903_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -84,6 +84,8 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("longtext");
 
                     b.HasKey("MetadataId", "Combined");
+
+                    b.HasIndex("Combined");
 
                     b.ToTable("MetadataGenes");
                 });
@@ -735,7 +737,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("GeneCombined")
-                        .HasColumnType("longtext");
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("GeneName")
                         .HasColumnType("longtext");
@@ -763,6 +765,8 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<long?>("UsedSizeBytes")
                         .HasColumnType("bigint");
+
+                    b.HasIndex("GeneCombined");
 
                     b.HasIndex("ParentId");
 

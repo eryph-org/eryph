@@ -258,6 +258,9 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .Property(x => x.GeneCombined)
             .UsePropertyAccessMode(PropertyAccessMode.Property);
 
+        modelBuilder.Entity<VirtualDisk>()
+            .HasIndex(x => x.GeneCombined);
+
         modelBuilder.Entity<CatletMetadata>()
             .HasKey(x => x.Id);
 
@@ -280,6 +283,9 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
 
         modelBuilder.Entity<CatletMetadataGene>()
             .HasKey(g => new { g.MetadataId, g.Combined });
+
+        modelBuilder.Entity<CatletMetadataGene>()
+            .HasIndex(g => g.Combined);
 
         modelBuilder.Entity<CatletMetadataGene>()
             .Property(g => g.Combined)

@@ -286,7 +286,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     GeneArchitecture = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    GeneCombined = table.Column<string>(type: "longtext", nullable: true)
+                    GeneCombined = table.Column<string>(type: "varchar(255)", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     Path = table.Column<string>(type: "longtext", nullable: true)
@@ -764,6 +764,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "TaskId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_MetadataGenes_Combined",
+                table: "MetadataGenes",
+                column: "Combined");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_CatletMetadataId",
                 table: "NetworkPorts",
                 column: "CatletMetadataId");
@@ -835,6 +840,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_TaskProgress_TaskId",
                 table: "TaskProgress",
                 column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VirtualDisks_GeneCombined",
+                table: "VirtualDisks",
+                column: "GeneCombined");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VirtualDisks_ParentId",

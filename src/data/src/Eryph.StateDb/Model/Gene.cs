@@ -27,9 +27,15 @@ public class Gene
 
     public required string Hash { get; set; }
 
+    /// <summary>
+    /// This property is only used optimize database queries
+    /// and should not be used directly outside of queries.
+    /// </summary>
     internal string Combined
     {
-        get => StateStoreGeneExtensions.ToIndexed(GeneSet, Name, Architecture);
+        get => StateStoreGeneExtensions.ToIndexed(GeneSet, Name, Architecture)!;
+#pragma warning disable S1144
         private set => _ = value;
+#pragma warning restore S1144
     }
 }

@@ -204,4 +204,22 @@ public class GenePoolPathsTests
                 GeneIdentifier.New(expectedGeneId),
                 Architecture.New(expectedArchitecture)));
     }
+
+    [Theory]
+    [InlineData(@"a\b")]
+    [InlineData(@"Z:\a\b")]
+    [InlineData(@"Z:\volumes\b")]
+    [InlineData(@"Z:\volumes\genepool\a\b\c\d")]
+    [InlineData(@"Z:\volumes\genepool\acme\acme-os\1.0\invalid.json")]
+    // Catlets are never architecture-specific. Hence, the following paths are invalid.
+    [InlineData(@"Z:\volumes\genepool\acme\acme-os\1.0\hyperv\catlet.json")]
+    [InlineData(@"Z:\volumes\genepool\acme\acme-os\1.0\hyperv\amd64\catlet.json")]
+    public void GetUniqueGeneIdFromPath_InvalidPath_ReturnsError(
+        string path)
+    {
+        var result = GenePoolPaths.GetUniqueGeneIdFromPath(
+            @"Z:\volumes\genepool", path);
+
+        result.Should().BeLeft();
+    }
 }
