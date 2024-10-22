@@ -17,13 +17,13 @@ public class Architecture : EryphName<Architecture>
     {
         (Hypervisor, ProcessorArchitecture) = ValidOrThrow(
             string.Equals(value, "any", StringComparison.OrdinalIgnoreCase)
-            ? (Hypervisor.New("any"), ProcessorArchitecture.New("any"))
-            : from nonEmptyValue in Validations<Architecture>.ValidateNotEmpty(value)
-              let parts = nonEmptyValue.Split('/')
-              from _ in guard(parts.Length == 2, Error.New("The architecture is invalid."))
-              from hypervisor in Hypervisor.NewValidation(parts[0])
-              from processorArchitecture in ProcessorArchitecture.NewValidation(parts[1])
-              select (hypervisor, processorArchitecture));
+                ? (Hypervisor.New("any"), ProcessorArchitecture.New("any"))
+                : from nonEmptyValue in Validations<Architecture>.ValidateNotEmpty(value)
+                  let parts = nonEmptyValue.Split('/')
+                  from _ in guard(parts.Length == 2, Error.New("The architecture is invalid."))
+                  from hypervisor in Hypervisor.NewValidation(parts[0])
+                  from processorArchitecture in ProcessorArchitecture.NewValidation(parts[1])
+                  select (hypervisor, processorArchitecture));
     }
 
     public Architecture(

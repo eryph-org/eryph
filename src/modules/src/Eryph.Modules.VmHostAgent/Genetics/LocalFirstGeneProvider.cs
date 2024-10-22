@@ -207,7 +207,7 @@ internal class LocalFirstGeneProvider(
                         error)
                     : error;
             })
-        from cachedGeneInfo in localGenePool.CacheGene(geneInfo, genesetInfo, cancel)
+        from cachedGeneInfo in localGenePool.CacheGene(geneInfo, cancel)
             .MapLeft(e =>
             {
                 log.LogInformation(e, "Failed to cache gene {GeneId}", geneId);
@@ -235,9 +235,12 @@ internal class LocalFirstGeneProvider(
         from _ in RightAsync<Error, Unit>(unit)
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         let totalBytes = geneInfo.MetaData?.Size ?? 0
+        // When the gene has already been fetched and extracted, geneInfo.Metadata
+        // will just be null. In this case, the following code is mostly skipped
+        // as there are no gene parts to ensure.
         from genePartsWithPaths in (geneInfo.MetaData?.Parts).ToSeq()
             .Map(part => from path in localGenePool.GetGenePartPath(geneInfo.Id, geneInfo.Hash, part)
-                select (Part: part, Path: path))
+                         select (Part: part, Path: path))
             .SequenceSerial()
         let stopwatch = Stopwatch.StartNew()
         from localResult in TryAsync(async () =>

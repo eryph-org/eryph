@@ -21,7 +21,6 @@ internal interface ILocalGenePool: IGenePool
 
     EitherAsync<Error, GeneInfo> CacheGene(
         GeneInfo geneInfo,
-        GeneSetInfo geneSetInfo,
         CancellationToken cancel);
 
     EitherAsync<Error, GeneSetInfo> GetCachedGeneSet(

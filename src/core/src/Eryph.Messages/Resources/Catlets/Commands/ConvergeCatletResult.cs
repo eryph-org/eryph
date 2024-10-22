@@ -13,7 +13,5 @@ namespace Eryph.Messages.Resources.Catlets.Commands
         public VirtualMachineData Inventory { get; set; }
 
         public DateTimeOffset Timestamp { get; set; }
-
-        public Architecture Architecture { get; set; }
     }
 }

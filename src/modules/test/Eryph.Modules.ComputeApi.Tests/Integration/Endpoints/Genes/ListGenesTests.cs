@@ -79,21 +79,23 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         genes.Value.Should().SatisfyRespectively(
             gene =>
             {
-                gene!.Id.Should().Be(FodderGeneId.ToString());
-                gene!.GeneSet.Should().Be("acme/acme-fodder/1.0");
-                gene!.Name.Should().Be("test-food");
-                gene!.Hash.Should().Be("12345678");
-                gene!.GeneType.Should().Be(GeneType.Fodder);
-                gene!.Size.Should().Be(42);
+                gene.Id.Should().Be(FodderGeneId.ToString());
+                gene.GeneSet.Should().Be("acme/acme-fodder/1.0");
+                gene.Name.Should().Be("test-food");
+                gene.Architecture.Should().Be("any");
+                gene.Hash.Should().Be("12345678");
+                gene.GeneType.Should().Be(GeneType.Fodder);
+                gene.Size.Should().Be(42);
             },
             gene =>
             {
-                gene!.Id.Should().Be(VolumeGeneId.ToString());
-                gene!.GeneSet.Should().Be("acme/acme-os/1.0");
-                gene!.Name.Should().Be("sda");
-                gene!.Hash.Should().Be("abcdefgh");
-                gene!.GeneType.Should().Be(GeneType.Volume);
-                gene!.Size.Should().Be(43);
+                gene.Id.Should().Be(VolumeGeneId.ToString());
+                gene.GeneSet.Should().Be("acme/acme-os/1.0");
+                gene.Name.Should().Be("sda");
+                gene.Architecture.Should().Be("hyperv/amd64");
+                gene.Hash.Should().Be("abcdefgh");
+                gene.GeneType.Should().Be(GeneType.Volume);
+                gene.Size.Should().Be(43);
             });
     }
 }

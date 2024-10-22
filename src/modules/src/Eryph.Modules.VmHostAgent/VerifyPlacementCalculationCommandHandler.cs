@@ -25,7 +25,6 @@ public class VerifyPlacementCalculationCommandHandler(
         return bus.SendWorkflowEvent(workflowOptions,new PlacementVerificationCompletedEvent
         {
             AgentName = Environment.MachineName,
-            // We only support HyperV on AMD64 for now and hence can hardcode the value here.
             Architecture = hostArchitectureProvider.Architecture,
             Confirmed = true,
             CorrelationId = message.CorrelationId

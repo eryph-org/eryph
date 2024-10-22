@@ -139,8 +139,8 @@ internal class ResolveCatletConfigCommandHandler(
                 new UniqueGeneIdentifier(
                     GeneType.Catlet,
                     new GeneIdentifier(resolvedId, GeneName.New("catlet")),
-                    // TODO we can hardcode any as catlets are not architecture specific but this should be done nicer
-                    Architecture.New("any")),
+                    // Catlets are never architecture-specific. Hence, we hardcode any here.
+                    Architecture.New(EryphConstants.AnyArchitecture)),
                 (_, _) => Task.FromResult(unit),
                 default)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))

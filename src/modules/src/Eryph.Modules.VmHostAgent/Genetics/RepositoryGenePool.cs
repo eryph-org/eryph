@@ -59,19 +59,19 @@ internal class RepositoryGenePool(
         select client;
 
     public EitherAsync<Error, GeneSetInfo> ProvideGeneSet(
-        GeneSetIdentifier geneSetIdentifier,
+        GeneSetIdentifier geneSetId,
         CancellationToken cancel) =>
         from genePoolClient in CreateClient()
         from geneSetInfo in TryAsync(async () =>
         {
-            var genesetTagClient = genePoolClient.GetGenesetTagClient(geneSetIdentifier);
+            var genesetTagClient = genePoolClient.GetGenesetTagClient(geneSetId);
             var response = await genesetTagClient.GetForDownloadAsync(cancellationToken: cancel)
                            ?? throw new InvalidDataException("empty response from geneset api");
 
-            return new GeneSetInfo(geneSetIdentifier, "", response.Manifest, response.Genes);
+            return new GeneSetInfo(geneSetId, "", response.Manifest, response.Genes);
         }).ToEither(ex =>
         {
-            log.LogDebug(ex, "Failed to provide geneset {geneset} from gene pool {genepool}", geneSetIdentifier,
+            log.LogDebug(ex, "Failed to provide geneset {geneset} from gene pool {genepool}", geneSetId,
                 PoolName);
             return Error.New(ex);
         })
@@ -96,10 +96,12 @@ internal class RepositoryGenePool(
                 var response = await geneClient.GetAsync(cancellationToken: cancel)
                                ?? throw new InvalidDataException("empty response from gene api");
 
-                downloadEntry = new GetGeneDownloadResponse(parsedGeneId.Hash, response.Manifest,
-                    // TODO IS this correct or use readable content?
+                downloadEntry = new GetGeneDownloadResponse(
+                    parsedGeneId.Hash,
+                    response.Manifest,
                     response.Content?.Content,
-                    response.DownloadUris, response.DownloadExpires.GetValueOrDefault());
+                    response.DownloadUris,
+                    response.DownloadExpires.GetValueOrDefault());
             }
 
             return new GeneInfo(uniqueGeneId, geneHash,

@@ -44,10 +44,10 @@ internal class GeneInventoryQueries(
 
     public Task<List<Guid>> GetDisksUsingGene(
         string agentName,
-        UniqueGeneIdentifier geneId,
+        UniqueGeneIdentifier uniqueGeneId,
         CancellationToken cancellationToken = default) =>
         dbContext.VirtualDisks
-            .Where(d => d.GeneCombined == geneId.ToIndexed()
+            .Where(d => d.GeneCombined == uniqueGeneId.ToIndexed()
                         && d.LastSeenAgent == agentName)
             .SelectMany(d => d.Children)
             .Select(c => c.Id)

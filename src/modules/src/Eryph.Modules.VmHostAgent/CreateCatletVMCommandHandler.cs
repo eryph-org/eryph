@@ -26,7 +26,6 @@ namespace Eryph.Modules.VmHostAgent
     internal class CreateCatletVMCommandHandler : 
         CatletConfigCommandHandler<CreateCatletVMCommand, ConvergeCatletResult>
     {
-        private readonly IHostArchitectureProvider _hostArchitectureProvider;
         private readonly IHostInfoProvider _hostInfoProvider;
         private readonly IHostSettingsProvider _hostSettingsProvider;
         private readonly IVmHostAgentConfigurationManager _vmHostAgentConfigurationManager;
@@ -35,13 +34,11 @@ namespace Eryph.Modules.VmHostAgent
             IPowershellEngine engine,
             ITaskMessaging messaging,
             ILogger log,
-            IHostArchitectureProvider hostArchitectureProvider,
             IHostInfoProvider hostInfoProvider,
             IHostSettingsProvider hostSettingsProvider,
             IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
             : base(engine, messaging, log)
         {
-            _hostArchitectureProvider = hostArchitectureProvider;
             _hostInfoProvider = hostInfoProvider;
             _hostSettingsProvider = hostSettingsProvider;
             _vmHostAgentConfigurationManager = vmHostAgentConfigurationManager;
@@ -55,16 +52,6 @@ namespace Eryph.Modules.VmHostAgent
                 vmHostAgentConfig, LongToString(command.StorageId), command.Config, None)
             from createdVM in CreateVM(plannedStorageSettings, Engine, command.BredConfig)
             let metadataId = Guid.NewGuid()
-            let metadata = new CatletMetadata
-            {
-                Id = Guid.NewGuid(),
-                MachineId = command.NewMachineId,
-                VMId = createdVM.Value.Id,
-                Fodder = command.Config.Fodder,
-                Variables = command.Config.Variables,
-                Parent = command.Config.Parent,
-                Architecture = _hostArchitectureProvider.Architecture.Value,
-            }
             from _ in SetMetadataId(createdVM, metadataId)
             from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, createdVM, _hostInfoProvider)
             select new ConvergeCatletResult
@@ -73,7 +60,6 @@ namespace Eryph.Modules.VmHostAgent
                 MetadataId = metadataId,
                 Inventory = inventory,
                 Timestamp = DateTimeOffset.UtcNow,
-                Architecture = _hostArchitectureProvider.Architecture,
             };
 
         private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(

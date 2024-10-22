@@ -38,19 +38,6 @@ namespace Eryph.VmManagement.Storage
             string path,
             VmHostAgentConfiguration vmHostAgentConfig) =>
             FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes);
-        /*
-            GetGeneReference(vmHostAgentConfig, path).Match(
-                Some: geneIdentifier => (
-                    new StorageNames()
-                    {
-                        DataStoreName = EryphConstants.DefaultDataStoreName,
-                        EnvironmentName = EryphConstants.DefaultEnvironmentName,
-                        ProjectName = EryphConstants.DefaultProjectName,
-                        ProjectId = EryphConstants.DefaultProjectId
-                    },
-                    Some(geneIdentifier.Value)),
-                None: () => FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes));
-        */
 
         private static (StorageNames Names, Option<string> StorageIdentifier) FromPath(
             string path,

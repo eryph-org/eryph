@@ -22,7 +22,6 @@ internal class UpdateCatletVMCommandHandler(
     ILogger log,
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
-    IHostArchitectureProvider hostArchitectureProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
     : CatletConfigCommandHandler<UpdateCatletVMCommand, ConvergeCatletResult>(engine, messaging, log)
 {
@@ -61,7 +60,6 @@ internal class UpdateCatletVMCommandHandler(
             VmId = vmInfoConverged.Value.Id,
             MetadataId = command.MachineMetadata.Id,
             Inventory = inventory,
-            Architecture = hostArchitectureProvider.Architecture,
             Timestamp = DateTimeOffset.UtcNow,
         };
 }
