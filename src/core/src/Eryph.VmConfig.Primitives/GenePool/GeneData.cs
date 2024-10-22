@@ -10,11 +10,7 @@ namespace Eryph.GenePool;
 
 public class GeneData
 {
-    public required GeneIdentifier Id { get; set; }
-
-    public required GeneType GeneType { get; set; }
-
-    public required Architecture Architecture { get; set; }
+    public required UniqueGeneIdentifier Id { get; set; }
 
     public required long Size { get; set; }
 

@@ -1,5 +1,7 @@
 ﻿using System;
 using Eryph.ConfigModel;
+using Eryph.Core.Genetics;
+using JetBrains.Annotations;
 
 namespace Eryph.Resources.Disks
 {
@@ -13,9 +15,10 @@ namespace Eryph.Resources.Disks
         public Guid? ProjectId { get; set; }
         public string ProjectName { get; set; }
         public string Environment { get; set; }
-        public string Geneset { get; set; }
+        
         public Guid DiskIdentifier { get; set; }
 
+        [CanBeNull] public UniqueGeneIdentifier Gene { get; set; }
 
         public bool Frozen { get; set; }
 

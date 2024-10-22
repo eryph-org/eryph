@@ -254,6 +254,10 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasForeignKey(x => x.ParentId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<VirtualDisk>()
+            .Property(x => x.GeneCombined)
+            .UsePropertyAccessMode(PropertyAccessMode.Property);
+
         modelBuilder.Entity<CatletMetadata>()
             .HasKey(x => x.Id);
 
@@ -275,7 +279,11 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .AutoInclude();
 
         modelBuilder.Entity<CatletMetadataGene>()
-            .HasKey(g => new { g.MetadataId, g.GeneId });
+            .HasKey(g => new { g.MetadataId, g.Combined });
+
+        modelBuilder.Entity<CatletMetadataGene>()
+            .Property(g => g.Combined)
+            .UsePropertyAccessMode(PropertyAccessMode.Property);
 
         modelBuilder.Entity<ReportedNetwork>()
             .HasKey(x => x.Id);
@@ -301,7 +309,11 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .HasListConversion();
 
         modelBuilder.Entity<Gene>()
-            .HasIndex(x => new { x.LastSeenAgent, x.GeneId })
+            .Property(x => x.Combined)
+            .UsePropertyAccessMode(PropertyAccessMode.Property);
+
+        modelBuilder.Entity<Gene>()
+            .HasIndex(x => new { x.Combined, x.LastSeenAgent })
             .IsUnique();
     }
 }

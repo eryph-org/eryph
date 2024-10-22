@@ -15,9 +15,17 @@ public class VirtualDisk : Disk
     
     public Guid DiskIdentifier { get; set; }
 
-    public string? Geneset { get; set; }
+    public string? GeneSet { get; set; }
 
-    public string? Architecture { get; set; }
+    public string? GeneName { get; set; }
+
+    public string? GeneArchitecture { get; set; }
+
+    internal string? GeneCombined
+    {
+        get => StateStoreGeneExtensions.ToIndexed(GeneSet, GeneName, GeneArchitecture);
+        private set => _ = value;
+    }
 
     public bool Frozen { get; set; }
 

@@ -6,18 +6,17 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
+using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using Eryph.StateDb;
 using Eryph.StateDb.TestBase;
-using Xunit;
-using Eryph.Core;
-using System.Text.Json.Serialization;
-using System.Text.Json;
 using FluentAssertions;
+using Xunit;
+
 using ApiGene = Eryph.Modules.ComputeApi.Model.V1.Gene;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using Eryph.Modules.AspNetCore.ApiProvider;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
@@ -41,7 +40,8 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = FodderGeneId,
-            GeneId = "gene:acme/acme-fodder/1.0:test-food",
+            GeneSet = "acme/acme-fodder/1.0",
+            Name = "test-food",
             Architecture = "any",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = AgentName,
@@ -53,7 +53,8 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = VolumeGeneId,
-            GeneId = "gene:acme/acme-os/1.0:sda",
+            GeneSet = "acme/acme-os/1.0",
+            Name = "sda",
             Architecture = "hyperv/amd64",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = AgentName,

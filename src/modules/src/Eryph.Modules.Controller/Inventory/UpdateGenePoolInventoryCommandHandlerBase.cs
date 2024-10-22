@@ -30,16 +30,17 @@ internal abstract class UpdateGenePoolInventoryCommandHandlerBase(
         GeneData geneData)
     {
         var dbGene = await geneRepository.GetBySpecAsync(
-            new GeneSpecs.GetForInventory(agentName, geneData.GeneType, geneData.Id));
+            new GeneSpecs.GetForInventory(agentName, geneData.Id));
 
         if (dbGene is null)
         {
             dbGene = new Gene
             {
                 Id = Guid.NewGuid(),
-                GeneType = geneData.GeneType,
-                GeneId = geneData.Id.Value,
-                Architecture = geneData.Architecture.Value,
+                GeneType = geneData.Id.GeneType,
+                GeneSet = geneData.Id.Id.GeneSet.Value,
+                Name = geneData.Id.Id.GeneName.Value,
+                Architecture = geneData.Id.Architecture.Value,
                 Size = geneData.Size,
                 Hash = geneData.Hash,
                 LastSeen = timestamp,

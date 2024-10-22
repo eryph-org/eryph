@@ -43,32 +43,28 @@ public class DiskStorageSettingsTests
         string architecture,
         string expectedPath)
     {
-        var resolvedGenes = Seq1(new UniqueGeneIdentifier(
+        var uniqueGeneId = new UniqueGeneIdentifier(
             GeneType.Volume,
             GeneIdentifier.New("gene:acme/acme-os/1.0:sda"),
-            Architecture.New(architecture)));
+            Architecture.New(architecture));
 
         var result = DiskStorageSettings.FromSourceString(
-            _vmHostAgentConfig, resolvedGenes, "gene:acme/acme-os/1.0:sda");
+            _vmHostAgentConfig, Seq1(uniqueGeneId), "gene:acme/acme-os/1.0:sda");
 
         var resultSettings = result.Should().BeSome().Subject;
-        resultSettings.Architecture.Should().BeSome().Which.Value.Should().Be(architecture);
         resultSettings.DiskIdentifier.Should().Be(Guid.Empty);
         resultSettings.FileName.Should().Be("sda.vhdx");
         resultSettings.Generation.Should().Be(0);
         resultSettings.Name.Should().Be("sda");
         resultSettings.Path.Should().Be(expectedPath);
-        resultSettings.StorageIdentifier.Should().BeSome()
-            .Which.Should().Be("gene:acme/acme-os/1.0:sda");
+        resultSettings.StorageIdentifier.Should().BeNone();
         resultSettings.StorageNames.ProjectName.Should().BeSome()
             .Which.Should().Be(EryphConstants.DefaultDataStoreName);
         resultSettings.StorageNames.EnvironmentName.Should().BeSome()
             .Which.Should().Be(EryphConstants.DefaultEnvironmentName);
         resultSettings.StorageNames.DataStoreName.Should().BeSome()
             .Which.Should().Be(EryphConstants.DefaultDataStoreName);
-        resultSettings.Geneset.Should().BeSome()
-            .Which.Value.Should().Be("acme/acme-os/1.0");
-
+        resultSettings.Gene.Should().BeSome().Which.Should().Be(uniqueGeneId);
     }
 
     [Fact]
@@ -78,7 +74,6 @@ public class DiskStorageSettingsTests
             _vmHostAgentConfig, Empty, @"x:\prod-disks\test\test-disk.vhdx");
 
         var resultSettings = result.Should().BeSome().Subject;
-        resultSettings.Architecture.Should().BeNone();
         resultSettings.DiskIdentifier.Should().Be(Guid.Empty);
         resultSettings.FileName.Should().Be("test-disk.vhdx");
         resultSettings.Generation.Should().Be(0);
@@ -91,7 +86,7 @@ public class DiskStorageSettingsTests
             .Which.Should().Be(EryphConstants.DefaultEnvironmentName);
         resultSettings.StorageNames.DataStoreName.Should().BeSome()
             .Which.Should().Be("prod");
-        resultSettings.Geneset.Should().BeNone();
+        resultSettings.Gene.Should().BeNone();
     }
 
     [Fact]
@@ -101,7 +96,6 @@ public class DiskStorageSettingsTests
             _vmHostAgentConfig, Empty, @"x:\other-disks\test\test-disk.vhdx");
 
         var resultSettings = result.Should().BeSome().Subject;
-        resultSettings.Architecture.Should().BeNone();
         resultSettings.DiskIdentifier.Should().Be(Guid.Empty);
         resultSettings.FileName.Should().Be("test-disk.vhdx");
         resultSettings.Generation.Should().Be(0);
@@ -111,7 +105,7 @@ public class DiskStorageSettingsTests
         resultSettings.StorageNames.ProjectName.Should().BeNone();
         resultSettings.StorageNames.EnvironmentName.Should().BeNone();
         resultSettings.StorageNames.DataStoreName.Should().BeNone();
-        resultSettings.Geneset.Should().BeNone();
+        resultSettings.Gene.Should().BeNone();
     }
 
     [Fact]
@@ -160,7 +154,7 @@ public class DiskStorageSettingsTests
     [Fact]
     public async Task FromVhdPath_ValidGenepoolDisk_ReturnsSettings()
     {
-        var path = @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx";
+        var path = @"x:\disks\genepool\acme\acme-os\1.0\volumes\sda.vhdx";
         var mapping = new FakeTypeMapping();
         var psEngine = new TestPowershellEngine(mapping);
         psEngine.GetObjectCallback = (_, command) =>
@@ -187,8 +181,12 @@ public class DiskStorageSettingsTests
             .Which.Should().Be(EryphConstants.DefaultEnvironmentName);
         resultSettings.StorageNames.DataStoreName.Should().BeSome()
             .Which.Should().Be(EryphConstants.DefaultDataStoreName);
-        resultSettings.StorageIdentifier.Should().BeSome().Which.Should().Be("gene:testorg/testset/testtag:sda");
-        resultSettings.Geneset.Should().BeSome()
-            .Which.Should().Be(GeneSetIdentifier.New("testorg/testset/testtag"));
+        resultSettings.StorageIdentifier.Should().BeNone();
+        
+        var resultGeneId = resultSettings.Gene.Should().BeSome().Subject;
+        resultGeneId.GeneType.Should().Be(GeneType.Volume);
+        resultGeneId.Id.GeneSet.Should().Be(GeneSetIdentifier.New("acme/acme-os/1.0"));
+        resultGeneId.Id.GeneName.Should().Be(GeneName.New("sda"));
+        resultGeneId.Architecture.Should().Be(Architecture.New("any"));
     }
 }

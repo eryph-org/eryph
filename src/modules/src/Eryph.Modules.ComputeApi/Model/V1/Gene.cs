@@ -17,6 +17,8 @@ public class Gene
 
     public required string Name { get; set; }
 
+    public required string Architecture { get; set; }
+
     public required long Size { get; set; }
 
     public required string Hash { get; set; }

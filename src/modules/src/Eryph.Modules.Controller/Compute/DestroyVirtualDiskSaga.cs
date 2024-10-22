@@ -62,7 +62,7 @@ internal class DestroyVirtualDiskSaga(
         await stateStore.LoadCollectionAsync(virtualDisk, d => d.AttachedDrives);
         await stateStore.LoadCollectionAsync(virtualDisk, d => d.Children);
 
-        if (virtualDisk.StorageIdentifier?.StartsWith("gene:") == true
+        if (virtualDisk.GeneSet is not null
             || virtualDisk.Children.Count > 0
             || virtualDisk.AttachedDrives.Count > 0
             || virtualDisk.Frozen)

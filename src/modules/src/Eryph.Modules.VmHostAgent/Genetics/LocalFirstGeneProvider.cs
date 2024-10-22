@@ -51,9 +51,7 @@ internal class LocalFirstGeneProvider(
             RequestedGene = uniqueGeneId,
             Inventory = new GeneData()
             {
-                GeneType = uniqueGeneId.GeneType,
-                Id = uniqueGeneId.Id,
-                Architecture = uniqueGeneId.Architecture,
+                Id = uniqueGeneId,
                 Hash = geneHash,
                 Size = validGeneSize,
             },

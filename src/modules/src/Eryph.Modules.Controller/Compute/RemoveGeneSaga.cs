@@ -110,7 +110,9 @@ internal class RemoveGeneSaga(
                         Name = disk.Name,
                         FileName = disk.FileName,
                         Path = disk.Path,
-                        DiskIdentifier = disk.DiskIdentifier
+                        DiskIdentifier = disk.DiskIdentifier,
+                        Gene = disk.ToUniqueGeneId(GeneType.Volume)
+                            .IfNoneUnsafe((UniqueGeneIdentifier?)null),
                     }
                 ]
             });

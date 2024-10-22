@@ -78,13 +78,20 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                         : null;
                 }))
                 .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier))
-                .ForMember(d => d.AttachedCatlets, o => o.MapFrom(s => s.AttachedDrives));
+                .ForMember(d => d.AttachedCatlets, o => o.MapFrom(s => s.AttachedDrives))
+                .ForMember(d => d.Gene, o => o.MapFrom(s =>
+                    s.GeneSet != null && s.GeneName != null && s.GeneArchitecture !=  null
+                        ? new VirtualDiskGeneInfo()
+                        {
+                            GeneSet = s.GeneSet,
+                            GeneName = s.GeneName,
+                            Architecture = s.GeneArchitecture,
+                        }
+                        : null));
             CreateMap<StateDb.Model.CatletDrive, VirtualDiskAttachedCatlet>();
 
             CreateMap<StateDb.Model.Gene, Gene>()
-                .Include<StateDb.Model.Gene, GeneWithUsage>()
-                .ForMember(x => x.GeneSet, o => o.MapFrom(s => GeneIdentifier.New(s.GeneId).GeneSet.Value))
-                .ForMember(x => x.Name, o => o.MapFrom(s => GeneIdentifier.New(s.GeneId).GeneName.Value));
+                .Include<StateDb.Model.Gene, GeneWithUsage>();
             CreateMap<StateDb.Model.Gene, GeneWithUsage>();
         }
     }

@@ -53,37 +53,12 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
-        public sealed class GetByGeneId : Specification<VirtualDisk>, ISingleResultSpecification
-        {
-            public GetByGeneId(string agentName, GeneIdentifier geneId)
-            {
-                Query.Where(x => x.LastSeenAgent == agentName
-                                 && x.StorageIdentifier == geneId.Value);
-
-                Query.Include(x => x.Project);
-            }
-        }
-
         public sealed class GetByUniqueGeneId : Specification<VirtualDisk>, ISingleResultSpecification
         {
             public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier geneId)
             {
                 Query.Where(x => x.LastSeenAgent == agentName
-                                 && x.StorageIdentifier == geneId.Id.Value
-                                 && x.Architecture == geneId.Architecture.Value);
-
-                Query.Include(x => x.Project);
-            }
-        }
-
-        public sealed class GetByGeneIds : Specification<VirtualDisk>
-        {
-            public GetByGeneIds(string agentName, IList<GeneIdentifier> geneIds)
-            {
-                var values = geneIds.Map(id => id.Value).ToList();
-
-                Query.Where(x => x.LastSeenAgent == agentName
-                                 && values.Contains(x.StorageIdentifier!));
+                                 && x.GeneCombined == geneId.ToIndexed());
 
                 Query.Include(x => x.Project);
             }
@@ -93,10 +68,10 @@ namespace Eryph.StateDb.Specifications
         {
             public GetByUniqueGeneIds(string agentName, IList<UniqueGeneIdentifier> geneIds)
             {
-                var values = geneIds.Map(id => $"{id.Id.Value}|{id.Architecture.Value}").ToList();
+                var values = geneIds.Map(id => id.ToIndexed()).ToList();
 
                 Query.Where(x => x.LastSeenAgent == agentName
-                                 && values.Contains(x.StorageIdentifier! + "|" + x.Architecture!));
+                                 && values.Contains(x.GeneCombined!));
 
                 Query.Include(x => x.Project);
             }

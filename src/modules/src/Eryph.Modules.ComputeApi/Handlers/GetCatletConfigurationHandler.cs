@@ -77,8 +77,7 @@ internal class GetCatletConfigurationHandler(
                 // this means the drive size has not been changed and should be omitted.
                 // This check handles the case when the catlet gene in the gene pool has no
                 // disk sizes specified in the config.
-                if (drive.AttachedDisk.Parent is not null
-                    && drive.AttachedDisk.Parent.StorageIdentifier?.StartsWith("gene:") == true
+                if (drive.AttachedDisk.Parent?.GeneSet is not null
                     && drive.AttachedDisk.Parent.SizeBytes == drive.AttachedDisk.SizeBytes)
                 {
                     driveConfig.Size = null;

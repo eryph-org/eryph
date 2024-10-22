@@ -35,20 +35,25 @@ internal class GetGeneHandler(
         if (dbGene is null)
             return new NotFoundResult();
 
-        var geneId = GeneIdentifier.New(dbGene.GeneId);
+        var geneSetId = GeneSetIdentifier.New(dbGene.GeneSet);
+        var geneName = GeneName.New(dbGene.Name);
+        var geneId = new GeneIdentifier(geneSetId, geneName);
+        var architecture = Architecture.New(dbGene.Architecture);
+        var uniqueGeneId = new UniqueGeneIdentifier(
+            dbGene.GeneType, geneId, architecture);
         var result = mapper.Map<GeneWithUsage>(dbGene);
         
         if (dbGene.GeneType == GeneType.Fodder)
         {
             var catletIds = await geneInventoryQueries.GetCatletsUsingGene(
-                dbGene.LastSeenAgent, geneId, cancellationToken);
+                dbGene.LastSeenAgent, uniqueGeneId, cancellationToken);
             result.Catlets = mapper.Map<IReadOnlyList<string>>(catletIds);
         }
         
         if (dbGene.GeneType == GeneType.Volume)
         {
             var diskIds = await geneInventoryQueries.GetDisksUsingGene(
-                dbGene.LastSeenAgent, geneId, cancellationToken);
+                dbGene.LastSeenAgent, uniqueGeneId, cancellationToken);
             result.Disks = mapper.Map<IReadOnlyList<string>>(diskIds);
         }
 

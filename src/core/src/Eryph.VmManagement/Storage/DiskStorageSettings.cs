@@ -29,8 +29,8 @@ namespace Eryph.VmManagement.Storage
 
         public long? SizeBytes { get; set; }
         public long? SizeBytesCreate { get; set; }
-        public Option<GeneSetIdentifier> Geneset { get; set; }
-        public Option<Architecture> Architecture { get; set; }
+
+        public Option<UniqueGeneIdentifier> Gene { get; set; }
 
         public static Option<DiskStorageSettings> FromSourceString(
             VmHostAgentConfiguration vmHostAgentConfig,
@@ -63,9 +63,7 @@ namespace Eryph.VmManagement.Storage
                            DataStoreName = EryphConstants.DefaultDataStoreName,
                            ProjectId = EryphConstants.DefaultProjectId,
                        },
-                       StorageIdentifier = geneId.Value,
-                       Geneset = geneId.GeneSet,
-                       Architecture = uniqueId.Architecture,
+                       Gene = uniqueId,
                        Path = System.IO.Path.GetDirectoryName(geneDiskPath),
                        FileName = System.IO.Path.GetFileName(geneDiskPath),
                        Generation = 0,
@@ -107,7 +105,7 @@ namespace Eryph.VmManagement.Storage
         private static EitherAsync<Error, DiskStorageSettings> FromGeneVhdInfo(
             string genePoolPath,
             VhdInfo vhdInfo) =>
-            from geneData in GenePoolPaths.GetUniqueGeneIdFromPath(genePoolPath, vhdInfo.Path)
+            from uniqueGeneId in GenePoolPaths.GetUniqueGeneIdFromPath(genePoolPath, vhdInfo.Path)
                 .ToAsync()
             select new DiskStorageSettings
             {
@@ -116,15 +114,12 @@ namespace Eryph.VmManagement.Storage
                 FileName = System.IO.Path.GetFileName(vhdInfo.Path),
                 StorageNames = new StorageNames
                 {
-
+                    ProjectId = EryphConstants.DefaultProjectId,
                     ProjectName = EryphConstants.DefaultProjectName,
                     EnvironmentName = EryphConstants.DefaultEnvironmentName,
                     DataStoreName = EryphConstants.DefaultDataStoreName,
-                    ProjectId = EryphConstants.DefaultProjectId,
                 },
-                StorageIdentifier = geneData.Id.Value,
-                Geneset = geneData.Id.GeneSet,
-                Architecture = geneData.Architecture,
+                Gene = uniqueGeneId,
                 SizeBytes = vhdInfo.Size,
                 UsedSizeBytes = vhdInfo.FileSize,
                 DiskIdentifier = vhdInfo.DiskIdentifier,

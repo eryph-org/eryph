@@ -20,33 +20,13 @@ public class GeneSpecs
         }
     }
 
-    public sealed class GetByGeneId : Specification<Gene>, ISingleResultSpecification<Gene>
-    {
-        public GetByGeneId(string agentName, GeneIdentifier geneId)
-        {
-            Query.Where(x => x.LastSeenAgent == agentName
-                             && x.GeneId == geneId.Value);
-        }
-    }
-
     public sealed class GetByUniqueGeneId : Specification<Gene>, ISingleResultSpecification<Gene>
     {
-        public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier geneId)
+        public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier uniqueGeneId)
         {
             Query.Where(x => x.LastSeenAgent == agentName
-                             && x.GeneId == geneId.Id.Value
-                             && x.Architecture == geneId.Architecture.Value);
-        }
-    }
-
-    public sealed class GetByGeneIds : Specification<Gene>
-    {
-        public GetByGeneIds(string agentName, IList<GeneIdentifier> geneIds)
-        {
-            var values = geneIds.Map(id => id.Value).ToList();
-
-            Query.Where(x => x.LastSeenAgent == agentName
-                             && values.Contains(x.GeneId));
+                             && x.Combined == uniqueGeneId.ToIndexed()
+                             && x.Architecture == uniqueGeneId.Architecture.Value);
         }
     }
 
@@ -54,10 +34,10 @@ public class GeneSpecs
     {
         public GetByUniqueGeneIds(string agentName, IList<UniqueGeneIdentifier> geneIds)
         {
-            var values = geneIds.Map(id => $"{id.Id.Value}|{id.Architecture.Value}").ToList();
+            var values = geneIds.Map(id => id.ToIndexed()).ToList();
 
             Query.Where(x => x.LastSeenAgent == agentName
-                             && values.Contains(x.GeneId + "|" + x.Architecture));
+                             && values.Contains(x.Combined));
         }
     }
 
@@ -70,20 +50,20 @@ public class GeneSpecs
 
     public sealed class GetForInventory : Specification<Gene>, ISingleResultSpecification<Gene>
     {
-        public GetForInventory(string agentName, GeneType geneType, GeneIdentifier geneId)
+        public GetForInventory(string agentName, UniqueGeneIdentifier uniqueGeneId)
         {
             Query.Where(x => x.LastSeenAgent == agentName
-                             && x.GeneType == geneType
-                             && x.GeneId == geneId.Value);
+                             && x.GeneType == uniqueGeneId.GeneType
+                             && x.Combined == uniqueGeneId.ToIndexed());
         }
     }
 
     public sealed class GetMissing : Specification<Gene>
     {
-        public GetMissing(string agentName, IList<GeneIdentifier> geneIds)
+        public GetMissing(string agentName, IList<UniqueGeneIdentifier> geneIds)
         {
-            var values = geneIds.Map(id => id.Value).ToList();
-            Query.Where(x => x.LastSeenAgent == agentName && !values.Contains(x.GeneId));
+            var values = geneIds.Map(id => id.ToIndexed()).ToList();
+            Query.Where(x => x.LastSeenAgent == agentName && !values.Contains(x.Combined));
         }
     }
 }

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20241017162406_InitialCreate")]
+    [Migration("20241022140406_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -68,14 +68,22 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<Guid>("MetadataId")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("GeneId")
+                    b.Property<string>("Combined")
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("Architecture")
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.HasKey("MetadataId", "GeneId");
+                    b.Property<string>("GeneSet")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("MetadataId", "Combined");
 
                     b.ToTable("MetadataGenes");
                 });
@@ -116,9 +124,13 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("GeneId")
+                    b.Property<string>("Combined")
                         .IsRequired()
                         .HasColumnType("varchar(255)");
+
+                    b.Property<string>("GeneSet")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<int>("GeneType")
                         .HasColumnType("int");
@@ -134,12 +146,16 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LastSeenAgent", "GeneId")
+                    b.HasIndex("Combined", "LastSeenAgent")
                         .IsUnique();
 
                     b.ToTable("Genes");
@@ -699,9 +715,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
 
-                    b.Property<string>("Architecture")
-                        .HasColumnType("longtext");
-
                     b.Property<string>("DataStore")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -718,7 +731,16 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<bool>("Frozen")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<string>("Geneset")
+                    b.Property<string>("GeneArchitecture")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("GeneCombined")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("GeneName")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("GeneSet")
                         .HasColumnType("longtext");
 
                     b.Property<DateTimeOffset>("LastSeen")

@@ -90,9 +90,7 @@ internal class GenePoolInventory(
         from size in genePool.GetCachedGeneSize(uniqueGeneId)
         select size.Map(s => new GeneData
         {
-            GeneType = geneType,
-            Id = geneId,
-            Architecture = validArchitecture,
+            Id = uniqueGeneId,
             Hash = hash,
             Size = s,
         });

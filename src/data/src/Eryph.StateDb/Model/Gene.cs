@@ -13,7 +13,9 @@ public class Gene
 
     public required GeneType GeneType { get; set; }
 
-    public required string GeneId { get; set; }
+    public required string GeneSet { get; set; }
+
+    public required string Name { get; set; } 
 
     public required string Architecture { get; set; }
 
@@ -24,4 +26,10 @@ public class Gene
     public required long Size { get; set; }
 
     public required string Hash { get; set; }
+
+    internal string Combined
+    {
+        get => StateStoreGeneExtensions.ToIndexed(GeneSet, Name, Architecture);
+        private set => _ = value;
+    }
 }

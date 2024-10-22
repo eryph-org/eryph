@@ -45,7 +45,8 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = FodderGeneId,
-            GeneId = "gene:acme/acme-fodder/1.0:test-food",
+            GeneSet = "acme/acme-fodder/1.0",
+            Name = "test-food",
             Architecture = "any",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = AgentName,
@@ -62,7 +63,8 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
                 new CatletMetadataGene
                 {
                     MetadataId = CatletMetadataId,
-                    GeneId = "gene:acme/acme-fodder/1.0:test-food",
+                    GeneSet = "acme/acme-fodder/1.0",
+                    Name = "test-food",
                     Architecture = "any",
                 },
             ],
@@ -82,7 +84,8 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = VolumeGeneId,
-            GeneId = "gene:acme/acme-os/1.0:sda",
+            GeneSet = "acme/acme-os/1.0",
+            Name = "sda",
             Architecture = "hyperv/amd64",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = AgentName,
@@ -96,7 +99,9 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
             Id = GeneDiskId,
             Name = "sda",
             StorageIdentifier = "gene:acme/acme-os/1.0:sda",
-            Geneset = "acme/acme-os/1.0",
+            GeneSet = "acme/acme-os/1.0",
+            GeneName = "sda",
+            GeneArchitecture = "hyperv/amd64",
             LastSeenAgent = AgentName,
             ProjectId = EryphConstants.DefaultProjectId,
             Environment = EryphConstants.DefaultEnvironmentName,
@@ -143,6 +148,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         gene.Id.Should().Be(FodderGeneId.ToString());
         gene.GeneSet.Should().Be("acme/acme-fodder/1.0");
         gene.Name.Should().Be("test-food");
+        gene.Architecture.Should().Be("any");
         gene.Hash.Should().Be("12345678");
         gene.GeneType.Should().Be(GeneType.Fodder);
         gene.Size.Should().Be(42);
@@ -166,6 +172,7 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
         gene.Id.Should().Be(VolumeGeneId.ToString());
         gene.GeneSet.Should().Be("acme/acme-os/1.0");
         gene.Name.Should().Be("sda");
+        gene.Architecture.Should().Be("hyperv/amd64");
         gene.Hash.Should().Be("abcdef");
         gene.GeneType.Should().Be(GeneType.Volume);
         gene.Size.Should().Be(42);

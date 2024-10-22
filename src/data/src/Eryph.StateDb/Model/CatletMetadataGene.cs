@@ -10,7 +10,15 @@ public class CatletMetadataGene
 {
     public required Guid MetadataId {get; set; }
 
-    public required string GeneId { get; set; }
+    public required string GeneSet { get; set; }
+
+    public required string Name { get; set; }
 
     public required string Architecture { get; set; }
+
+    internal string Combined
+    {
+        get => StateStoreGeneExtensions.ToIndexed(GeneSet, Name, Architecture);
+        private set => _ = value;
+    }
 }

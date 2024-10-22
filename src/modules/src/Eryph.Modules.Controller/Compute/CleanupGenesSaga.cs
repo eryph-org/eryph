@@ -95,7 +95,9 @@ public class CleanupGenesSaga(
                     Name = d.Name,
                     FileName = d.FileName,
                     Path = d.Path,
-                    DiskIdentifier = d.DiskIdentifier
+                    DiskIdentifier = d.DiskIdentifier,
+                    Gene = d.ToUniqueGeneId(GeneType.Volume)
+                        .IfNoneUnsafe((UniqueGeneIdentifier?)null),
                 }).ToArray(),
             });
         });

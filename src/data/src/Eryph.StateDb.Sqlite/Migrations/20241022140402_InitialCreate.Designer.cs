@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20241017162402_InitialCreate")]
+    [Migration("20241022140402_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -63,14 +63,22 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid>("MetadataId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("GeneId")
+                    b.Property<string>("Combined")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Architecture")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("MetadataId", "GeneId");
+                    b.Property<string>("GeneSet")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("MetadataId", "Combined");
 
                     b.ToTable("MetadataGenes");
                 });
@@ -111,7 +119,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("GeneId")
+                    b.Property<string>("Combined")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneSet")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -129,12 +141,16 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("Size")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LastSeenAgent", "GeneId")
+                    b.HasIndex("Combined", "LastSeenAgent")
                         .IsUnique();
 
                     b.ToTable("Genes");
@@ -694,9 +710,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
 
-                    b.Property<string>("Architecture")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("DataStore")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -713,7 +726,16 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<bool>("Frozen")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Geneset")
+                    b.Property<string>("GeneArchitecture")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneCombined")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneSet")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("LastSeen")
