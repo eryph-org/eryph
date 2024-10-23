@@ -44,8 +44,8 @@ internal class LocalGenePoolSource(
             Some: _ => new GeneInfo(uniqueGeneId, geneHash, null, [], DateTimeOffset.MinValue, true),
             None: () =>
                 from _ in RightAsync<Error, Unit>(unit)
-                let genePath = GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, parsedGeneHash.Hash)
-                let cachedGeneManifestPath = Path.Combine(genePath, "gene.json")
+                from geneTempPath in GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, parsedGeneHash.Hash)
+                let cachedGeneManifestPath = Path.Combine(geneTempPath, "gene.json")
                 from manifestExists in Try(() => fileSystem.FileExists(cachedGeneManifestPath))
                     .ToEitherAsync()
                 from _2 in guard(manifestExists,
@@ -110,8 +110,8 @@ internal class LocalGenePoolSource(
             var mergedGenesInfo = await ReadGenesInfo(geneSetPath);
             return mergedGenesInfo.MergedGenes.ToSeq().Contains(geneInfo.Hash);
         }).ToEither()
-        let parts = (geneInfo.MetaData?.Parts).ToSeq().Filter(_ => isGeneMerged)
-        from _2 in parts.IsEmpty
+        let parts = (geneInfo.MetaData?.Parts).ToSeq()
+        from _2 in parts.IsEmpty || isGeneMerged
             ? RightAsync<Error, Unit>(unit)
             : from partPaths in parts
                 .Map(part => GetGenePartPath(geneInfo.Id, geneInfo.Hash, part))
@@ -143,7 +143,7 @@ internal class LocalGenePoolSource(
                   await AddMergedGene(geneSetPath, geneInfo.Hash);
                   return unit;
               }).ToEither()
-              let geneTempPath = GetGeneTempPath(genePoolPath, geneInfo.Id.Id.GeneSet, geneInfo.Hash)
+              from geneTempPath in GetGeneTempPath(genePoolPath, geneInfo.Id.Id.GeneSet, geneInfo.Hash)
               from _3 in Try(() =>
               {
                   fileSystem.DeleteDirectory(geneTempPath);
@@ -197,13 +197,12 @@ internal class LocalGenePoolSource(
         if (geneInfo.MergedWithImage)
             return geneInfo;
 
-        return from parsedGeneHash in ParseGeneHash(geneInfo.Hash).ToAsync()
+        return from geneTempPath in GetGeneTempPath(genePoolPath, geneInfo.Id.Id.GeneSet, geneInfo.Hash)
                from result in TryAsync(async () =>
                {
-                   var genePath = GetGeneTempPath(genePoolPath, geneInfo.Id.Id.GeneSet, parsedGeneHash.Hash);
-                   fileSystem.EnsureDirectoryExists(genePath);
+                   fileSystem.EnsureDirectoryExists(geneTempPath);
                
-                   await using var manifestStream = fileSystem.OpenWrite(Path.Combine(genePath, "gene.json"));
+                   await using var manifestStream = fileSystem.OpenWrite(Path.Combine(geneTempPath, "gene.json"));
                    await JsonSerializer.SerializeAsync(manifestStream, geneInfo.MetaData, cancellationToken: cancel);
                    return geneInfo with
                    {
@@ -245,9 +244,8 @@ internal class LocalGenePoolSource(
         UniqueGeneIdentifier uniqueGeneId,
         string geneHash,
         string genePartHash) =>
-        from parsedGeneHash in ParseGeneHash(geneHash).ToAsync()
         from parsedPartHash in ParseGenePartHash(genePartHash).ToAsync()
-        let geneTempPath = GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, parsedGeneHash.Hash)
+        from geneTempPath in GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, geneHash)
         let genePartPath = Path.Combine(geneTempPath, $"{parsedPartHash.Hash}.part")
         select genePartPath;
 
@@ -321,11 +319,13 @@ internal class LocalGenePoolSource(
         public string[]? MergedGenes { get; set; }
     }
 
-    private static string GetGeneTempPath(
+    private static EitherAsync<Error, string> GetGeneTempPath(
         string genePoolPath,
         GeneSetIdentifier geneSetId,
         string geneHash) =>
-        Path.Combine(
+        from parsedGeneHash in ParseGeneHash(geneHash).ToAsync()
+        let path = Path.Combine(
             GenePoolPaths.GetGeneSetPath(genePoolPath, geneSetId),
-            geneHash);
+            parsedGeneHash.Hash)
+        select path;
 }

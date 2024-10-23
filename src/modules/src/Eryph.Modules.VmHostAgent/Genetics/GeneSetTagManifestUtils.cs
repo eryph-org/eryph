@@ -1,5 +1,6 @@
 ﻿using System;
 using Eryph.ConfigModel;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.GenePool.Model;
 using LanguageExt;
@@ -57,7 +58,7 @@ internal static class GeneSetTagManifestUtils
         }
         from validGenes in genes
             .Map(g => from n in GeneName.NewEither(g.Name)
-                      from a in Architecture.NewEither(g.Architecture)
+                      from a in Architecture.NewEither(g.Architecture ?? EryphConstants.AnyArchitecture)
                       select (Name: n, Architecture: a))
             .Sequence()
             .MapLeft(e => Error.New($"The manifest of the gene set '{manifest.Geneset}' is invalid.", e))

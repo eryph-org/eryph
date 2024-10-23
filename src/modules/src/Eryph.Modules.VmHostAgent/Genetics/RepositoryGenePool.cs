@@ -130,7 +130,8 @@ internal class RepositoryGenePool(
         Func<string, int, Task<Unit>> reportProgress,
         Stopwatch stopwatch,
         CancellationToken cancel) =>
-        from parsedPartId in ParseGenePartHash(genePartHash).ToAsync()
+        from parsedGeneHash in ParseGeneHash(geneInfo.Hash).ToAsync()
+        from parsedPartHash in ParseGenePartHash(genePartHash).ToAsync()
         from genePoolClient in CreateClient()
         from genePartUrl in TryAsync(async () =>
         {
@@ -143,21 +144,21 @@ internal class RepositoryGenePool(
                     return urlEntry.DownloadUri;
             }
 
-            var gene = genePoolClient.GetGeneClient(geneInfo.Id.Id.GeneSet.Value, geneInfo.Hash);
+            var gene = genePoolClient.GetGeneClient(geneInfo.Id.Id.GeneSet.Value, parsedGeneHash.Hash);
             var response = await gene.GetAsync(cancellationToken: cancel)
                            ?? throw new InvalidDataException("empty response from gene api");
             urlEntry = response.DownloadUris?.FirstOrDefault(x => x.Part == genePartHash);
 
             if (urlEntry == null)
                 throw new InvalidDataException(
-                    $"Could not find gene part '{geneInfo.Id}/{parsedPartId.Hash}' on {PoolName}.");
+                    $"Could not find gene part '{geneInfo.Id}/{parsedPartHash.Hash}' on {PoolName}.");
 
             return urlEntry.DownloadUri;
 
         }).ToEither()
         from fileSize in TryAsync(async () =>
         {
-            var (hashAlgName, partHash) = parsedPartId;
+            var (hashAlgName, partHash) = parsedPartHash;
             var messageName = $"{geneInfo}/{partHash[..12]}";
 
             log.LogTrace("gene {Gene}, part {GenePart} url: {Url}",
