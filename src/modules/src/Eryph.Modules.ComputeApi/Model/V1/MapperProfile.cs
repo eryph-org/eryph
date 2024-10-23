@@ -79,15 +79,18 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                 }))
                 .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier))
                 .ForMember(d => d.AttachedCatlets, o => o.MapFrom(s => s.AttachedDrives))
-                .ForMember(d => d.Gene, o => o.MapFrom(s =>
-                    s.GeneSet != null && s.GeneName != null && s.GeneArchitecture !=  null
-                        ? new VirtualDiskGeneInfo()
+                .ForMember(
+                    d => d.Gene,
+                    o =>
+                    {
+                        o.PreCondition(s => s is { GeneSet: not null, GeneName: not null, GeneArchitecture: not null });
+                        o.MapFrom(s => new VirtualDiskGeneInfo()
                         {
-                            GeneSet = s.GeneSet,
-                            GeneName = s.GeneName,
-                            Architecture = s.GeneArchitecture,
-                        }
-                        : null));
+                            GeneSet = s.GeneSet!,
+                            GeneName = s.GeneName!,
+                            Architecture = s.GeneArchitecture!,
+                        });
+                    });
             CreateMap<StateDb.Model.CatletDrive, VirtualDiskAttachedCatlet>();
 
             CreateMap<StateDb.Model.Gene, Gene>()

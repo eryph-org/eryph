@@ -60,7 +60,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid>("MetadataId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Combined")
+                    b.Property<string>("UniqueGeneIndex")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Architecture")
@@ -75,9 +75,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("MetadataId", "Combined");
+                    b.HasKey("MetadataId", "UniqueGeneIndex");
 
-                    b.HasIndex("Combined");
+                    b.HasIndex("UniqueGeneIndex");
 
                     b.ToTable("MetadataGenes");
                 });
@@ -118,10 +118,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Combined")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("GeneSet")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -147,9 +143,13 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<long>("Size")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("UniqueGeneIndex")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Combined", "LastSeenAgent")
+                    b.HasIndex("UniqueGeneIndex", "LastSeenAgent")
                         .IsUnique();
 
                     b.ToTable("Genes");
@@ -728,9 +728,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("GeneArchitecture")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("GeneCombined")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("GeneName")
                         .HasColumnType("TEXT");
 
@@ -755,12 +752,15 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UniqueGeneIndex")
+                        .HasColumnType("TEXT");
+
                     b.Property<long?>("UsedSizeBytes")
                         .HasColumnType("INTEGER");
 
-                    b.HasIndex("GeneCombined");
-
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("UniqueGeneIndex");
 
                     b.ToTable("VirtualDisks");
                 });

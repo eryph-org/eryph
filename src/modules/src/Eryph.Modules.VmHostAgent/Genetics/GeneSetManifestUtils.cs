@@ -5,7 +5,6 @@ using Eryph.GenePool.Model;
 using LanguageExt;
 using LanguageExt.Common;
 using static LanguageExt.Prelude;
-using static LanguageExt.Seq;
 using GeneType = Eryph.Core.Genetics.GeneType;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;
@@ -53,31 +52,10 @@ internal static class GeneSetManifestUtils
         }
         from validArchitectures in architectures.Sequence()
             .MapLeft(e => Error.New($"The manifest of the gene set '{manifest.Geneset}' is invalid.", e))
-        select FindBestArchitecture(architecture, validArchitectures);
-
-    public static Either<Error, Option<Architecture>> FindBestArchitecture(
-        GenesetTagManifestData manifest,
-        Architecture catletArchitecture,
-        GeneName geneName) =>
-        from _ in Right<Error, Unit>(unit)
-        let architectures = append(
-            Seq([Architecture.NewEither("any")]).Filter(_ => geneName == GeneName.New("catlet")),
-            manifest.VolumeGenes.ToSeq()
-                .Filter(x => GeneName.NewOption(x.Name) == geneName)
-                .Map(x => Architecture.NewEither(x.Architecture ?? "any")),
-            manifest.FodderGenes.ToSeq()
-                .Filter(x => GeneName.NewOption(x.Name) == geneName)
-                .Map(x => Architecture.NewEither(x.Architecture ?? "any"))
-            )
-        from validArchitectures in architectures.Sequence()
-            .MapLeft(e => Error.New($"The manifest of the gene set '{manifest.Geneset}' is invalid.", e))
-        select FindBestArchitecture(catletArchitecture, validArchitectures);
-
-    private static Option<Architecture> FindBestArchitecture(
-        Architecture architecture,
-        Seq<Architecture> geneArchitectures) =>
-        geneArchitectures.Find(ga => ga == architecture)
-        | geneArchitectures.Find(ga =>
-            ga.Hypervisor == architecture.Hypervisor && ga.ProcessorArchitecture == ProcessorArchitecture.New("any"))
-        | geneArchitectures.Find(ga => ga.IsAny);
+        let bestArchitecture = validArchitectures.Find(ga => ga == architecture)
+                               | validArchitectures.Find(ga =>
+                                   ga.Hypervisor == architecture.Hypervisor
+                                   && ga.ProcessorArchitecture == ProcessorArchitecture.New("any"))
+                               | validArchitectures.Find(ga => ga.IsAny)
+        select bestArchitecture;
 }

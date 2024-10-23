@@ -31,9 +31,11 @@ public class Gene
     /// This property is only used optimize database queries
     /// and should not be used directly outside of queries.
     /// </summary>
-    internal string Combined
+    internal string UniqueGeneIndex
     {
-        get => StateStoreGeneExtensions.ToIndexed(GeneSet, Name, Architecture)!;
+        get => StateStoreGeneExtensions.ToUniqueGeneIndex(GeneSet, Name, Architecture)!;
+        // The setter is only defined so EF Core persists the property to the
+        // database (for indexing). It does not update the property.
 #pragma warning disable S1144
         private set => _ = value;
 #pragma warning restore S1144

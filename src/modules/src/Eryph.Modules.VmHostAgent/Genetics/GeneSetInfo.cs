@@ -8,6 +8,5 @@ namespace Eryph.Modules.VmHostAgent.Genetics;
 
 public record GeneSetInfo(
     GeneSetIdentifier Id,
-    string LocalPath,
     GenesetTagManifestData MetaData,
     GetGeneDownloadResponse[] GeneDownloadInfo);

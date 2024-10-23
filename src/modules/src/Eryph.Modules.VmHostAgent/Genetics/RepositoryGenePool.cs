@@ -65,10 +65,14 @@ internal class RepositoryGenePool(
         from geneSetInfo in TryAsync(async () =>
         {
             var genesetTagClient = genePoolClient.GetGenesetTagClient(geneSetId);
-            var response = await genesetTagClient.GetForDownloadAsync(cancellationToken: cancel)
-                           ?? throw new InvalidDataException("empty response from geneset api");
+            var response = await genesetTagClient.GetForDownloadAsync(cancellationToken: cancel);
+            if (response is null)
+                throw Error.New("The response from the gene pool API is empty.");
+            
+            if (response.Manifest is null)
+                throw Error.New("The gene set manifest is missing in the response of the gene pool API.");
 
-            return new GeneSetInfo(geneSetId, "", response.Manifest, response.Genes);
+            return new GeneSetInfo(geneSetId, response.Manifest, response.Genes ?? []);
         }).ToEither(ex =>
         {
             log.LogDebug(ex, "Failed to provide geneset {geneset} from gene pool {genepool}", geneSetId,
@@ -86,15 +90,18 @@ internal class RepositoryGenePool(
         from genePoolClient in CreateClient()
         from geneInfo in TryAsync(async () =>
         {
-            var downloadEntry = geneSetInfo.GeneDownloadInfo.FirstOrDefault(x =>
-                x.Gene == parsedGeneId.Hash);
+            var downloadEntry = geneSetInfo.GeneDownloadInfo.FirstOrDefault(x => x.Gene == parsedGeneId.Hash);
 
             if (downloadEntry == null)
             {
                 var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Id.GeneSet.Value, parsedGeneId.Hash);
 
-                var response = await geneClient.GetAsync(cancellationToken: cancel)
-                               ?? throw new InvalidDataException("empty response from gene api");
+                var response = await geneClient.GetAsync(cancellationToken: cancel);
+                if (response is null)
+                    throw Error.New("The response from the gene pool API is empty.");
+                
+                if (response.Manifest is null)
+                    throw Error.New("The gene manifest is missing in the response of the gene pool API.");
 
                 downloadEntry = new GetGeneDownloadResponse(
                     parsedGeneId.Hash,
@@ -104,10 +111,8 @@ internal class RepositoryGenePool(
                     response.DownloadExpires.GetValueOrDefault());
             }
 
-            return new GeneInfo(uniqueGeneId, geneHash,
-                downloadEntry.Manifest,
-                downloadEntry.DownloadUris, downloadEntry.DownloadExpires,
-                null, false);
+            return new GeneInfo(uniqueGeneId, geneHash, downloadEntry.Manifest,
+                downloadEntry.DownloadUris, downloadEntry.DownloadExpires, false);
 
         }).ToEither(ex =>
         {

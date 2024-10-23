@@ -136,7 +136,7 @@ internal class GeneDecompression(
         return bufferSize;
     }
 
-    private async Task CopyPlain(
+    private static async Task CopyPlain(
         Stream source,
         Stream target,
         long totalSize,

@@ -17,6 +17,7 @@ namespace Eryph.VmManagement;
 public static class GenePoolPaths
 {
     private const string GeneSetManifestFileName = "geneset-tag.json";
+    private const string InvalidGenePathError = "The gene path is invalid.";
 
     public static string GetGenePoolPath(
         VmHostAgentConfiguration vmHostAgentConfig) =>
@@ -115,7 +116,7 @@ public static class GenePoolPaths
         from containedPath in PathUtils.GetContainedPath(genePoolPath, genePath)
             .ToEither(Error.New("The gene path is not located in the gene pool."))
         let parts = containedPath.Split(Path.DirectorySeparatorChar)
-        from _3 in guard(parts.Length is >= 4 and <= 7, Error.New("The gene path is invalid."))
+        from _3 in guard(parts.Length is >= 4 and <= 7, Error.New(InvalidGenePathError))
         from organizationName in OrganizationName.NewEither(parts[0])
         from geneSetName in GeneSetName.NewEither(parts[1])
         from tagName in TagName.NewEither(parts[2])
@@ -125,7 +126,7 @@ public static class GenePoolPaths
             "catlet.json" => Right<Error, GeneType>(GeneType.Catlet),
             "volumes" => Right(GeneType.Volume),
             "fodder" => Right(GeneType.Fodder),
-            _ => Error.New("The gene path is invalid.")
+            _ => Error.New(InvalidGenePathError)
         }
         from uniqueGeneId in geneType switch
         {
@@ -134,7 +135,7 @@ public static class GenePoolPaths
                 new GeneIdentifier(geneSetId, GeneName.New("catlet")),
                 Architecture.New("any")),
             GeneType.Volume or GeneType.Fodder => GetUniqueGeneIdFromSegments(geneType, geneSetId, parts[4..]),
-            _ => Error.New("The gene path is invalid.")
+            _ => Error.New(InvalidGenePathError)
         }
         select uniqueGeneId;
 
@@ -142,12 +143,12 @@ public static class GenePoolPaths
         GeneType geneType,
         GeneSetIdentifier geneSetId,
         string[] segments) =>
-        from _ in guard(segments.Length is >= 1 and <= 3, Error.New("The gene path is invalid"))
+        from _ in guard(segments.Length is >= 1 and <= 3, Error.New(InvalidGenePathError))
             .ToEither()
         from architecture in GetArchitectureFromPathSegments(segments[..^1])
-            .MapLeft(e => Error.New("The gene path is invalid", e))
+            .MapLeft(e => Error.New(InvalidGenePathError, e))
         let fileName = segments[^1]
-        from __ in guard(Path.HasExtension(fileName), Error.New("The gene path is invalid"))
+        from __ in guard(Path.HasExtension(fileName), Error.New(InvalidGenePathError))
         let extension = Path.GetExtension(fileName)?.ToLowerInvariant()
         from _3 in guard(geneType is GeneType.Fodder && extension == ".json"
                          || geneType is GeneType.Volume && extension == ".vhdx",

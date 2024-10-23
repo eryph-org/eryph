@@ -46,10 +46,10 @@ public static class StateStoreGeneExtensions
                let geneId = new GeneIdentifier(validGeneSetId, validGeneName)
                select new UniqueGeneIdentifier(geneType, geneId, validArchitecture);
 
-    public static string ToIndexed(this UniqueGeneIdentifier geneId) =>
+    public static string ToUniqueGeneIndex(this UniqueGeneIdentifier geneId) =>
         $"{geneId.Id.GeneSet}|{geneId.Id.GeneName}|{geneId.Architecture}";
 
-    internal static string? ToIndexed(string? geneSet, string? name, string? architecture) =>
+    internal static string? ToUniqueGeneIndex(string? geneSet, string? name, string? architecture) =>
         geneSet is not null && name is not null && architecture is not null
             ? $"{geneSet}|{name}|{architecture}"
             : null;

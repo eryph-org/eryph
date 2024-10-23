@@ -36,7 +36,7 @@ internal class GeneInventoryQueries(
         dbContext.Catlets
             .Where(c => c.AgentName == agentName
                         && dbContext.MetadataGenes
-                            .Any(mg => mg.Combined == uniqueGeneId.ToIndexed()
+                            .Any(mg => mg.UniqueGeneIndex == uniqueGeneId.ToUniqueGeneIndex()
                                        && c.MetadataId == mg.MetadataId))
             .Select(c => c.Id)
             .Distinct()
@@ -47,7 +47,7 @@ internal class GeneInventoryQueries(
         UniqueGeneIdentifier uniqueGeneId,
         CancellationToken cancellationToken = default) =>
         dbContext.VirtualDisks
-            .Where(d => d.GeneCombined == uniqueGeneId.ToIndexed()
+            .Where(d => d.UniqueGeneIndex == uniqueGeneId.ToUniqueGeneIndex()
                         && d.LastSeenAgent == agentName)
             .SelectMany(d => d.Children)
             .Select(c => c.Id)
@@ -57,10 +57,10 @@ internal class GeneInventoryQueries(
     private IQueryable<Gene> CreateUnusedGenesQuery() =>
         from gene in dbContext.Genes
         where gene.GeneType != GeneType.Volume
-              || !dbContext.VirtualDisks.Any(d => d.GeneCombined == gene.Combined
+              || !dbContext.VirtualDisks.Any(d => d.UniqueGeneIndex == gene.UniqueGeneIndex
                                                   && d.LastSeenAgent == gene.LastSeenAgent
                                                   && (d.AttachedDrives.Count != 0 || d.Children.Count != 0))
         where gene.GeneType != GeneType.Fodder
-              || !dbContext.MetadataGenes.Any(mg => mg.Combined == gene.Combined)
+              || !dbContext.MetadataGenes.Any(mg => mg.UniqueGeneIndex == gene.UniqueGeneIndex)
         select gene;
 }

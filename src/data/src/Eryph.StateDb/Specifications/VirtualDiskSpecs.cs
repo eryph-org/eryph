@@ -58,7 +58,7 @@ namespace Eryph.StateDb.Specifications
             public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier geneId)
             {
                 Query.Where(x => x.LastSeenAgent == agentName
-                                 && x.GeneCombined == geneId.ToIndexed());
+                                 && x.UniqueGeneIndex == geneId.ToUniqueGeneIndex());
 
                 Query.Include(x => x.Project);
             }
@@ -68,10 +68,10 @@ namespace Eryph.StateDb.Specifications
         {
             public GetByUniqueGeneIds(string agentName, IList<UniqueGeneIdentifier> geneIds)
             {
-                var values = geneIds.Map(id => id.ToIndexed()).ToList();
+                var values = geneIds.Map(id => id.ToUniqueGeneIndex()).ToList();
 
                 Query.Where(x => x.LastSeenAgent == agentName
-                                 && values.Contains(x.GeneCombined!));
+                                 && values.Contains(x.UniqueGeneIndex!));
 
                 Query.Include(x => x.Project);
             }

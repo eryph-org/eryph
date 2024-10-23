@@ -8,16 +8,10 @@ namespace Eryph.Core
     {
         bool FileExists(string filePath);
         bool DirectoryExists(string path);
-        byte[] ReadAllBytes(string filePath);
-
-        void WriteAllBytes(string filePath, byte[] data);
-        string ReadText(string filePath);
 
         Task<string> ReadAllTextAsync(string path);
 
         Task WriteAllTextAsync(string path, string text);
-
-        void WriteText(string filePath, string data);
 
         void FileDelete(string filePath);
 

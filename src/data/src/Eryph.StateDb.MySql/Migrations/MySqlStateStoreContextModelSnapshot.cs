@@ -65,7 +65,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<Guid>("MetadataId")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("Combined")
+                    b.Property<string>("UniqueGeneIndex")
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("Architecture")
@@ -80,9 +80,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.HasKey("MetadataId", "Combined");
+                    b.HasKey("MetadataId", "UniqueGeneIndex");
 
-                    b.HasIndex("Combined");
+                    b.HasIndex("UniqueGeneIndex");
 
                     b.ToTable("MetadataGenes");
                 });
@@ -123,10 +123,6 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("Combined")
-                        .IsRequired()
-                        .HasColumnType("varchar(255)");
-
                     b.Property<string>("GeneSet")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -152,9 +148,13 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("UniqueGeneIndex")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Combined", "LastSeenAgent")
+                    b.HasIndex("UniqueGeneIndex", "LastSeenAgent")
                         .IsUnique();
 
                     b.ToTable("Genes");
@@ -733,9 +733,6 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("GeneArchitecture")
                         .HasColumnType("longtext");
 
-                    b.Property<string>("GeneCombined")
-                        .HasColumnType("varchar(255)");
-
                     b.Property<string>("GeneName")
                         .HasColumnType("longtext");
 
@@ -760,12 +757,15 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("UniqueGeneIndex")
+                        .HasColumnType("varchar(255)");
+
                     b.Property<long?>("UsedSizeBytes")
                         .HasColumnType("bigint");
 
-                    b.HasIndex("GeneCombined");
-
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("UniqueGeneIndex");
 
                     b.ToTable("VirtualDisks");
                 });

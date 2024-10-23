@@ -19,7 +19,6 @@ using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
-using GeneType = Eryph.Core.Genetics.GeneType;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;
 
@@ -43,7 +42,7 @@ internal class LocalGenePoolSource(
         from genesInfo in TryAsync(() => ReadGenesInfo(geneSetPath)).ToEither()
         from geneInfo in genesInfo.MergedGenes.ToSeq().Find(h => h == geneHash).Match(
             Some: h => new GeneInfo(uniqueGeneId, geneHash, null,
-                [], DateTimeOffset.MinValue, null, true),
+                [], DateTimeOffset.MinValue, true),
             None: () =>
                 from _ in RightAsync<Error, Unit>(unit)
                 let genePath = GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, parsedGeneHash.Hash)
@@ -52,22 +51,22 @@ internal class LocalGenePoolSource(
                     .ToEitherAsync()
                 from _2 in guard(manifestExists,
                     Error.New($"The gene '{uniqueGeneId}' is not available on the local gene pool."))
-                from manifestJson in Try(() =>
+                from manifestJson in TryAsync(async () =>
                 {
                     using var hashAlg = CreateHashAlgorithm(parsedGeneHash.HashAlg);
 
-                    var manifestJsonData = fileSystem.ReadText(cachedGeneManifestPath);
+                    var manifestJsonData = await fileSystem.ReadAllTextAsync(cachedGeneManifestPath);
                     var hashString = GetHashString(hashAlg.ComputeHash(Encoding.UTF8.GetBytes(manifestJsonData)));
                     if (hashString == parsedGeneHash.Hash)
                         return manifestJsonData;
                     
                     fileSystem.FileDelete(cachedGeneManifestPath);
                     throw new VerificationException($"Failed to verify the hash of the manifest of '{uniqueGeneId}'");
-                }).ToEitherAsync()
+                }).ToEither()
                 from manifestData in Try(() => JsonSerializer.Deserialize<GeneManifestData>(manifestJson))
                     .ToEitherAsync()
                 select new GeneInfo(uniqueGeneId, parsedGeneHash.Hash,
-                    manifestData, [], DateTimeOffset.MinValue, genePath, false))
+                    manifestData, [], DateTimeOffset.MinValue, false))
         select geneInfo;
 
     public EitherAsync<Error, long> RetrieveGenePart(
@@ -105,26 +104,24 @@ internal class LocalGenePoolSource(
     public EitherAsync<Error, Unit> MergeGeneParts(
         GeneInfo geneInfo,
         Func<string, int, Task<Unit>> reportProgress,
-        CancellationToken cancel)
-    {
-        return TryAsync(async () =>
+        CancellationToken cancel) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneInfo.Id.Id.GeneSet)
+        from isGeneMerged in TryAsync(async () =>
         {
-            var geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneInfo.Id.Id.GeneSet);
             var mergedGenesInfo = await ReadGenesInfo(geneSetPath);
+            return mergedGenesInfo.MergedGenes.ToSeq().Contains(geneInfo.Hash);
+        }).ToEither()
+        let parts = (geneInfo.MetaData?.Parts).ToSeq().Filter(_ => isGeneMerged)
+        from partPaths in parts
+            .Map(part => GetGenePartPath(geneInfo.Id, geneInfo.Hash, part))
+            .SequenceSerial()
+        from _2 in TryAsync(async () =>
+        {
+            var streams = partPaths
+                .Map(fileSystem.OpenRead)
+                .ToList();
 
-            var mergedGenes = mergedGenesInfo.MergedGenes ?? [];
-
-            if (mergedGenes.Contains(geneInfo.Hash) || geneInfo.LocalPath == null)
-                return Unit.Default;
-
-            var parts = geneInfo.MetaData?.Parts ?? [];
-
-            var streams = parts.Map(part =>
-            {
-                var partHash = part.Split(':').Last();
-                var path = Path.Combine(geneInfo.LocalPath, $"{partHash}.part");
-                return fileSystem.OpenRead(path);
-            }).ToArray();
             try
             {
                 await using var multiStream = new MultiStream(streams);
@@ -139,24 +136,26 @@ internal class LocalGenePoolSource(
                 }
             }
 
-            mergedGenesInfo = await ReadGenesInfo(geneSetPath);
-            mergedGenesInfo.MergedGenes = mergedGenesInfo.MergedGenes
-                .Append([geneInfo.Hash])
-                .ToArray();
-            await WriteGenesInfo(geneSetPath, mergedGenesInfo);
-
-            fileSystem.DeleteDirectory(geneInfo.LocalPath);
-
             return unit;
-        }).ToEither();
-    }
+        }).ToEither()
+        from _3 in TryAsync(async () =>
+        {
+            await AddMergedGene(geneSetPath, geneInfo.Hash);
+            return unit;
+        }).ToEither()
+        let geneTempPath = GetGeneTempPath(genePoolPath, geneInfo.Id.Id.GeneSet, geneInfo.Hash)
+        from _4 in Try(() =>
+        {
+            fileSystem.DeleteDirectory(geneTempPath);
+            return unit;
+        }).ToEitherAsync()
+        select unit;
 
     public EitherAsync<Error, GeneSetInfo> ProvideGeneSet(
         GeneSetIdentifier geneSetId,
         CancellationToken cancel) =>
         TryAsync(async () =>
         {
-            var geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneSetId);
             var geneSetManifestPath = GenePoolPaths.GetGeneSetManifestPath(genePoolPath, geneSetId);
             if (!fileSystem.FileExists(geneSetManifestPath))
                 return await LeftAsync<Error, GeneSetInfo>(Error.New(
@@ -167,7 +166,7 @@ internal class LocalGenePoolSource(
                 await JsonSerializer.DeserializeAsync<GenesetTagManifestData>(manifestStream,
                     cancellationToken: cancel);
 
-            return Right<Error, GeneSetInfo>(new GeneSetInfo(geneSetId, geneSetPath, manifest, []));
+            return Right<Error, GeneSetInfo>(new GeneSetInfo(geneSetId, manifest, []));
 
         })
         .ToEither()
@@ -185,10 +184,7 @@ internal class LocalGenePoolSource(
             
             await using var manifestStream = fileSystem.OpenWrite(geneSetManifestPath);
             await JsonSerializer.SerializeAsync(manifestStream, geneSetInfo.MetaData, cancellationToken: cancel);
-            return geneSetInfo with
-            {
-                LocalPath = geneSetPath
-            };
+            return geneSetInfo;
 
         }).ToEither();
     }
@@ -210,7 +206,6 @@ internal class LocalGenePoolSource(
                    await JsonSerializer.SerializeAsync(manifestStream, geneInfo.MetaData, cancellationToken: cancel);
                    return geneInfo with
                    {
-                       LocalPath = genePath,
                        MergedWithImage = false
                    };
                
@@ -222,7 +217,6 @@ internal class LocalGenePoolSource(
         GeneSetIdentifier geneSetId,
         CancellationToken cancellationToken) =>
         from _ in RightAsync<Error, Unit>(unit)
-        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, geneSetId)
         let manifestPath = GenePoolPaths.GetGeneSetManifestPath(genePoolPath, geneSetId)
         from manifestExists in Try(() => fileSystem.FileExists(manifestPath))
             .ToEitherAsync()
@@ -233,7 +227,7 @@ internal class LocalGenePoolSource(
             return await JsonSerializer.DeserializeAsync<GenesetTagManifestData>(manifestStream,
                     cancellationToken: cancellationToken);
         }).ToEither()
-        select new GeneSetInfo(geneSetId, geneSetPath, manifest, []);
+        select new GeneSetInfo(geneSetId, manifest, []);
 
     public EitherAsync<Error, Option<long>> GetCachedGeneSize(
         UniqueGeneIdentifier uniqueGeneId) =>
@@ -289,6 +283,14 @@ internal class LocalGenePoolSource(
             return unit;
         }).ToEither()
         select unit;
+
+    private async Task<string> AddMergedGene(string geneSetPath, string geneHash)
+    {
+        var genesInfo = await ReadGenesInfo(geneSetPath);
+        genesInfo.MergedGenes = [..genesInfo.MergedGenes ?? [], geneHash];
+        await WriteGenesInfo(geneSetPath, genesInfo);
+        return geneHash;
+    }
 
     private async Task<GenesInfo> RemoveMergedGene(string geneSetPath, string geneHash)
     {
