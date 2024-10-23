@@ -17,34 +17,6 @@ namespace Eryph.Modules.Controller.Tests.Compute;
 public class UpdateCatletSagaTests
 {
     [Fact]
-    public void FindRequiredGenes_InformationalParentSource_ReturnsGenesWithoutInformationalParents()
-    {
-        var config = new CatletConfig
-        {
-            Fodder =
-            [
-                new FodderConfig
-                {
-                    Source = "gene:acme/acme-tools/1.0:test-fodder"
-                },
-                new FodderConfig
-                {
-                    Source = "gene:acme/acme-os/1.0:catlet"
-                }
-            ]
-        };
-
-        var result = UpdateCatletSaga.FindRequiredGenes(config);
-
-        result.Should().BeSuccess().Which.Should().SatisfyRespectively(
-            geneId =>
-            {
-                geneId.GeneIdentifier.Should().Be(GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder"));
-                geneId.GeneType.Should().Be(GeneType.Fodder);
-            });
-    }
-
-    [Fact]
     public void PrepareGenes_ValidConfigs_UsesFodderAndVariablesFromMetadata()
     {
         var metaData = new CatletMetadata

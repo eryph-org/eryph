@@ -12,15 +12,15 @@
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Hosting" Version="1.0.0-rc.8" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.6.1" />
-    <PackageReference Include="Eryph.GenePool.Client" Version="0.2.1-ci.1" />
-    <PackageReference Include="Eryph.GenePool.Client.Authentication" Version="0.2.1-ci.1" />
+    <PackageReference Include="Eryph.GenePool.Client" Version="0.2.1-ci.48" />
+    <PackageReference Include="Eryph.GenePool.Client.Authentication" Version="0.2.1-ci.48" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Joveler.Compression.XZ" Version="4.2.2" />
     <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="21.0.2" />
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,6 @@
-﻿using Eryph.ConfigModel.Catlets;
+﻿using Eryph.ConfigModel;
+using Eryph.ConfigModel.Catlets;
+using Eryph.Core.Genetics;
 using Eryph.Resources.Disks;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Data.Core;
@@ -9,14 +11,9 @@ using Xunit;
 
 namespace Eryph.VmManagement.Test
 {
-    public class ConvergeDriveTests : IClassFixture<ConvergeFixture>
+    public class ConvergeDriveTests
     {
-        private readonly ConvergeFixture _fixture;
-
-        public ConvergeDriveTests(ConvergeFixture fixture)
-        {
-            _fixture = fixture;
-        }
+        private readonly ConvergeFixture _fixture = new();
 
         [Theory]
         [InlineData(null, 40, 40)]
@@ -207,13 +204,26 @@ namespace Eryph.VmManagement.Test
             }
         }
 
-        [Fact]
-        public async Task Converges_new_disk_with_genepool_parent()
+        [Theory]
+        [InlineData("any", @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")]
+        [InlineData("hyperv/any", @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\sda.vhdx")]
+        [InlineData("hyperv/amd64", @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\amd64\sda.vhdx")]
+        public async Task Converges_new_disk_with_genepool_parent(
+            string architecture,
+            string expectedParentPath)
         {
             _fixture.Config.Drives = new[]
             {
                 new CatletDriveConfig { Name = "sda", Source = "gene:testorg/testset/testtag:sda" }
             };
+
+            _fixture.ResolvedGenes =
+            [
+                new UniqueGeneIdentifier(
+                    GeneType.Volume,
+                    GeneIdentifier.New("gene:testorg/testset/testtag:sda"),
+                    Architecture.New(architecture)),
+            ];
 
             _fixture.StorageSettings = _fixture.StorageSettings with
             {
@@ -288,7 +298,7 @@ namespace Eryph.VmManagement.Test
             newVhdCommand.Should().NotBeNull();
             newVhdCommand!.ShouldBeCommand("New-VHD")
                 .ShouldBeParam("Path", @"x:\disks\abc\sda_g1.vhdx")
-                .ShouldBeParam("ParentPath", @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")
+                .ShouldBeParam("ParentPath", expectedParentPath)
                 .ShouldBeFlag("Differencing")
                 .ShouldBeParam("SizeBytes", 1073741824);
 
@@ -305,9 +315,34 @@ namespace Eryph.VmManagement.Test
         }
 
         [Theory]
-        [InlineData(CatletDriveType.SharedVHD)]
-        [InlineData(CatletDriveType.VHDSet)]
-        public async Task Converges_new_set_or_shared_disk_with_genepool_parent(CatletDriveType driveType)
+        [InlineData(
+            CatletDriveType.SharedVHD,
+            "any",
+            @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")]
+        [InlineData(
+            CatletDriveType.SharedVHD,
+            "hyperv/any",
+            @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\sda.vhdx")]
+        [InlineData(
+            CatletDriveType.SharedVHD,
+            "hyperv/amd64",
+            @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\amd64\sda.vhdx")]
+        [InlineData(
+            CatletDriveType.VHDSet,
+            "any",
+            @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")]
+        [InlineData(
+            CatletDriveType.VHDSet,
+            "hyperv/any",
+            @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\sda.vhdx")]
+        [InlineData(
+            CatletDriveType.VHDSet,
+            "hyperv/amd64",
+            @"x:\disks\genepool\testorg\testset\testtag\volumes\hyperv\amd64\sda.vhdx")]
+        public async Task Converges_new_set_or_shared_disk_with_genepool_parent(
+            CatletDriveType driveType,
+            string architecture,
+            string expectedParentPath)
         {
             _fixture.Config.Drives = new[]
             {
@@ -317,6 +352,15 @@ namespace Eryph.VmManagement.Test
                     Type =driveType
                 }
             };
+
+            _fixture.ResolvedGenes =
+            [
+                new UniqueGeneIdentifier(
+                    GeneType.Volume,
+                    GeneIdentifier.New("gene:testorg/testset/testtag:sda"),
+                    Architecture.New(architecture)),
+            ];
+
             _fixture.StorageSettings = _fixture.StorageSettings with
             {
                 DefaultVhdPath = @"x:\disks\abc",
@@ -393,7 +437,7 @@ namespace Eryph.VmManagement.Test
 
             copyCommand.Should().NotBeNull();
             copyCommand!.ShouldBeCommand("Copy-Item")
-                .ShouldBeArgument(@"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx")
+                .ShouldBeArgument(expectedParentPath)
                 .ShouldBeArgument(@"x:\disks\abc\sda.vhdx");
 
             setVhdCommand.Should().NotBeNull();

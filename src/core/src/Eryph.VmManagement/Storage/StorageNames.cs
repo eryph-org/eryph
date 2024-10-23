@@ -37,17 +37,7 @@ namespace Eryph.VmManagement.Storage
         public static (StorageNames Names, Option<string> StorageIdentifier) FromVhdPath(
             string path,
             VmHostAgentConfiguration vmHostAgentConfig) =>
-            GetGeneReference(vmHostAgentConfig, path).Match(
-                Some: geneIdentifier => (
-                    new StorageNames()
-                    {
-                        DataStoreName = EryphConstants.DefaultDataStoreName,
-                        EnvironmentName = EryphConstants.DefaultEnvironmentName,
-                        ProjectName = EryphConstants.DefaultProjectName,
-                        ProjectId = EryphConstants.DefaultProjectId
-                    },
-                    Some(geneIdentifier.Value)),
-                None: () => FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes));
+            FromPath(path, vmHostAgentConfig, defaults => defaults.Volumes);
 
         private static (StorageNames Names, Option<string> StorageIdentifier) FromPath(
             string path,
@@ -116,20 +106,6 @@ namespace Eryph.VmManagement.Storage
             return from paths in ResolveStorageBasePaths(vmHostAgentConfig).ToAsync()
                    select paths.VhdPath;
         }
-
-        private static Option<GeneIdentifier> GetGeneReference(
-            VmHostAgentConfiguration vmHostAgentConfig,
-            string vhdPath) =>
-            from genePath in PathUtils.GetContainedPath(GenePoolPaths.GetGenePoolPath(vmHostAgentConfig), vhdPath)
-            let geneDirectory = Path.GetDirectoryName(genePath)
-            let genePathParts = geneDirectory.Split(Path.DirectorySeparatorChar)
-            where genePathParts.Length == 4
-            where string.Equals(genePathParts[3], "volumes", StringComparison.OrdinalIgnoreCase)
-            let geneFileName = Path.GetFileNameWithoutExtension(genePath)
-            from geneIdentifier in GeneIdentifier.NewOption(
-                $"gene:{genePathParts[0]}/{genePathParts[1]}/{genePathParts[2]}:{geneFileName}")
-            select geneIdentifier;
-        
 
         private Either<Error, (string VmPath, string VhdPath)> ResolveStorageBasePaths(
             VmHostAgentConfiguration vmHostAgentConfig)

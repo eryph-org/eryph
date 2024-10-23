@@ -26,6 +26,7 @@ namespace Eryph.Modules.VmHostAgent;
 
 using GeneSetMap = HashMap<GeneSetIdentifier, GeneSetIdentifier>;
 using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
+using ArchitectureMap = HashMap<GeneIdentifier, Architecture>;
 
 /// <summary>
 /// This command handler resolves the ancestors and referenced gene sets
@@ -51,6 +52,7 @@ using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 internal class ResolveCatletConfigCommandHandler(
     IMessageContext messageContext,
     ITaskMessaging messaging,
+    IFileSystemService fileSystem,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigManager,
     IGeneProvider geneProvider,
@@ -67,9 +69,9 @@ internal class ResolveCatletConfigCommandHandler(
         CancellationToken cancellationToken) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
-        let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
+        let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
         let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
-        let localGenePool = genePoolFactory.CreateLocal()
+        let localGenePool = genePoolFactory.CreateLocal(genePoolPath)
         let genePoolInventory = genePoolInventoryFactory.Create(genePoolPath, localGenePool)
         from result in Handle(command, geneProvider, genepoolReader, genePoolInventory, cancellationToken)
         select result;
@@ -134,12 +136,15 @@ internal class ResolveCatletConfigCommandHandler(
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
             .ToAsync()
         from provideResult in geneProvider.ProvideGene(
-                GeneType.Catlet,
-                new GeneIdentifier(resolvedId, GeneName.New("catlet")),
+                new UniqueGeneIdentifier(
+                    GeneType.Catlet,
+                    new GeneIdentifier(resolvedId, GeneName.New("catlet")),
+                    // Catlets are never architecture-specific. Hence, we hardcode any here.
+                    Architecture.New(EryphConstants.AnyArchitecture)),
                 (_, _) => Task.FromResult(unit),
                 default)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
-        from config in ReadCatletConfig(resolvedId, genepoolReader).ToAsync()
+        from config in ReadCatletConfig(resolvedId, genepoolReader)
         from resolveResult in ResolveGeneSets(config, resolvedGeneSets, geneProvider, cancellationToken)
             .MapLeft(e => CreateError(updatedVisitedAncestors, e))
         from parentsResult in ResolveParent(config.Parent, resolveResult, resolvedCatlets,
@@ -181,16 +186,20 @@ internal class ResolveCatletConfigCommandHandler(
             .MapLeft(e => Error.New($"Could not resolve the gene set tag '{geneSetId}'.", e))
         select resolved;
 
-    public static Either<Error, CatletConfig> ReadCatletConfig(
+    public static EitherAsync<Error, CatletConfig> ReadCatletConfig(
         GeneSetIdentifier geneSetId,
         ILocalGenepoolReader genepoolReader) =>
-        from json in genepoolReader.ReadGeneContent(
-            GeneType.Catlet, new GeneIdentifier(geneSetId, GeneName.New("catlet")))
+        from _ in RightAsync<Error, Unit>(unit)
+        let uniqueId = new UniqueGeneIdentifier(
+            GeneType.Catlet,
+            new GeneIdentifier(geneSetId, GeneName.New("catlet")),
+            Architecture.New(EryphConstants.AnyArchitecture))
+        from json in genepoolReader.ReadGeneContent(uniqueId)
         from config in Try(() =>
         {
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);
             return CatletConfigDictionaryConverter.Convert(configDictionary);
-        }).ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'.", Error.New(ex)))
+        }).ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'.", Error.New(ex))).ToAsync()
         select config;
 
     private static Error CreateError(

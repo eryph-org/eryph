@@ -17,11 +17,14 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     GeneType = table.Column<int>(type: "INTEGER", nullable: false),
-                    GeneId = table.Column<string>(type: "TEXT", nullable: false),
+                    GeneSet = table.Column<string>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Architecture = table.Column<string>(type: "TEXT", nullable: false),
                     LastSeen = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastSeenAgent = table.Column<string>(type: "TEXT", nullable: false),
                     Size = table.Column<long>(type: "INTEGER", nullable: false),
-                    Hash = table.Column<string>(type: "TEXT", nullable: false)
+                    Hash = table.Column<string>(type: "TEXT", nullable: false),
+                    UniqueGeneIndex = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -71,11 +74,14 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 columns: table => new
                 {
                     MetadataId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    GeneId = table.Column<string>(type: "TEXT", nullable: false)
+                    UniqueGeneIndex = table.Column<string>(type: "TEXT", nullable: false),
+                    GeneSet = table.Column<string>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Architecture = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MetadataGenes", x => new { x.MetadataId, x.GeneId });
+                    table.PrimaryKey("PK_MetadataGenes", x => new { x.MetadataId, x.UniqueGeneIndex });
                     table.ForeignKey(
                         name: "FK_MetadataGenes_Metadata_MetadataId",
                         column: x => x.MetadataId,
@@ -235,7 +241,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     Environment = table.Column<string>(type: "TEXT", nullable: false),
                     StorageIdentifier = table.Column<string>(type: "TEXT", nullable: true),
                     DiskIdentifier = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Geneset = table.Column<string>(type: "TEXT", nullable: true),
                     Frozen = table.Column<bool>(type: "INTEGER", nullable: false),
                     Path = table.Column<string>(type: "TEXT", nullable: true),
                     FileName = table.Column<string>(type: "TEXT", nullable: true),
@@ -244,6 +249,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ParentId = table.Column<Guid>(type: "TEXT", nullable: true),
                     LastSeen = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastSeenAgent = table.Column<string>(type: "TEXT", nullable: true),
+                    GeneSet = table.Column<string>(type: "TEXT", nullable: true),
+                    GeneName = table.Column<string>(type: "TEXT", nullable: true),
+                    GeneArchitecture = table.Column<string>(type: "TEXT", nullable: true),
+                    UniqueGeneIndex = table.Column<string>(type: "TEXT", nullable: true),
                     DataStore = table.Column<string>(type: "TEXT", nullable: false),
                     DiskType = table.Column<int>(type: "INTEGER", nullable: false)
                 },
@@ -611,9 +620,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Genes_LastSeenAgent_GeneId",
+                name: "IX_Genes_UniqueGeneIndex_LastSeenAgent",
                 table: "Genes",
-                columns: new[] { "LastSeenAgent", "GeneId" },
+                columns: new[] { "UniqueGeneIndex", "LastSeenAgent" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -646,6 +655,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_Logs_TaskId",
                 table: "Logs",
                 column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MetadataGenes_UniqueGeneIndex",
+                table: "MetadataGenes",
+                column: "UniqueGeneIndex");
 
             migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_CatletMetadataId",
@@ -729,6 +743,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 name: "IX_VirtualDisks_ProjectId",
                 table: "VirtualDisks",
                 column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VirtualDisks_UniqueGeneIndex",
+                table: "VirtualDisks",
+                column: "UniqueGeneIndex");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VirtualNetworks_ProjectId",

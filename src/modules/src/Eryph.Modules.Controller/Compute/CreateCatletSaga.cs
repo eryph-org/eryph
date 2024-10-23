@@ -39,7 +39,8 @@ internal class CreateCatletSaga(
         IHandleMessages<OperationTaskStatusEvent<PlaceCatletCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<ResolveCatletConfigCommand>>
+        IHandleMessages<OperationTaskStatusEvent<ResolveCatletConfigCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<ResolveGenesCommand>>
 {
     protected override async Task Initiated(CreateCatletCommand message)
     {
@@ -79,6 +80,7 @@ internal class CreateCatletSaga(
         {
             Data.Data.State = CreateVMState.Placed;
             Data.Data.AgentName = response.AgentName;
+            Data.Data.Architecture = response.Architecture;
 
             await StartNewTask(new ResolveCatletConfigCommand()
             {
@@ -120,6 +122,41 @@ internal class CreateCatletSaga(
             Data.Data.Config = result.ValueUnsafe().Config;
             Data.Data.BredConfig = result.ValueUnsafe().BredConfig;
             Data.Data.ParentConfig = result.ValueUnsafe().ParentConfig.IfNoneUnsafe((CatletConfig?)null);
+
+            var geneIds = CatletGeneCollecting.CollectGenes(Data.Data.BredConfig);
+            if (geneIds.IsFail)
+            {
+                await Fail(ErrorUtils.PrintError(Error.Many(geneIds.FailToSeq())));
+                return;
+            }
+
+            await StartNewTask(new ResolveGenesCommand
+            {
+                AgentName = Data.Data.AgentName,
+                CatletArchitecture = Data.Data.Architecture,
+                Genes = geneIds.SuccessToSeq().Flatten()
+                    .Filter(g => g.GeneType is GeneType.Fodder or GeneType.Volume)
+                    // Skip genes which have parent catlet as the informational source
+                    .Filter(g => g.GeneIdentifier.GeneName != GeneName.New("catlet"))
+                    .ToList(),
+            });
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<ResolveGenesCommand> message)
+    {
+        if (Data.Data.State >= CreateVMState.GenesResolved)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async (ResolveGenesCommandResponse response) =>
+        {
+            if (Data.Data.Config is null)
+                throw new InvalidOperationException("Config is missing.");
+
+            Data.Data.State = CreateVMState.GenesResolved;
+
+            Data.Data.ResolvedGenes = response.ResolvedGenes;
+
             Data.Data.MachineId = Guid.NewGuid();
 
             await StartNewTask(new CreateCatletVMCommand
@@ -160,7 +197,22 @@ internal class CreateCatletSaga(
             if (project == null)
                 throw new InvalidOperationException($"Project '{projectName}' not found.");
 
-            response.MachineMetadata.ParentConfig = Data.Data.ParentConfig;
+            var catletMetadata = new Resources.Machines.CatletMetadata
+            {
+                Id = response.MetadataId,
+                MachineId = Data.Data.MachineId,
+                VMId = response.VmId,
+                Fodder = Data.Data.Config!.Fodder,
+                Variables = Data.Data.Config.Variables,
+                Parent = Data.Data.Config.Parent,
+                ParentConfig = Data.Data.ParentConfig,
+                Architecture = Data.Data.Architecture!.Value,
+                ResolvedFodderGenes = Data.Data.ResolvedGenes
+                    .Filter(g => g.GeneType is GeneType.Fodder)
+                    .ToDictionary(
+                        ugi => ugi.Id.Value,
+                        ugi => ugi.Architecture.Value),
+            };
 
             _ = await vmDataService.AddNewVM(new Catlet
             {
@@ -171,13 +223,14 @@ internal class CreateCatletSaga(
                 Name = response.Inventory.Name,
                 Environment = environmentName.Value,
                 DataStore = datastoreName.Value,
-            }, response.MachineMetadata);
+            }, catletMetadata);
 
             await StartNewTask(new UpdateCatletCommand
             {
                 Config = Data.Data.Config,
                 BredConfig = Data.Data.BredConfig,
-                CatletId = Data.Data.MachineId
+                CatletId = Data.Data.MachineId,
+                ResolvedGenes = Data.Data.ResolvedGenes,
             });
         });
     }
@@ -203,6 +256,8 @@ internal class CreateCatletSaga(
         config.Correlate<OperationTaskStatusEvent<PlaceCatletCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<ResolveCatletConfigCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<ResolveGenesCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);

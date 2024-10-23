@@ -18,21 +18,6 @@ namespace Eryph.Core
             return Directory.Exists(path);
         }
 
-        public void WriteAllBytes(string filePath, byte[] data)
-        {
-            File.WriteAllBytes(filePath, data);
-        }
-
-        public byte[] ReadAllBytes(string filePath)
-        {
-            return FileExists(filePath) ? File.ReadAllBytes(filePath) : new byte[0];
-        }
-
-        public string ReadText(string filePath)
-        {
-            return FileExists(filePath) ? File.ReadAllText(filePath) : "";
-        }
-
         public Task<string> ReadAllTextAsync(string path)
         {
             return File.ReadAllTextAsync(path);
@@ -41,11 +26,6 @@ namespace Eryph.Core
         public Task WriteAllTextAsync(string path, string text)
         {
             return File.WriteAllTextAsync(path, text);
-        }
-
-        public void WriteText(string filePath, string data)
-        { 
-            File.WriteAllText(filePath, data);
         }
 
         public void FileDelete(string filePath)

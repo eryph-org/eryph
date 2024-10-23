@@ -11,5 +11,5 @@ public class CleanupGenesSagaData
 {
     public string AgentName { get; set; } = null!;
 
-    public IList<GeneIdentifierWithType> GeneIds { get; set; } = [];
+    public IList<UniqueGeneIdentifier> GeneIds { get; set; } = [];
 }

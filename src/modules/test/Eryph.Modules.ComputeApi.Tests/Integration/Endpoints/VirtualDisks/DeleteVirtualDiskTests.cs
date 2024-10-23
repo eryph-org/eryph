@@ -148,7 +148,9 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
                     ProjectId = EryphConstants.DefaultProjectId,
                     Environment = EryphConstants.DefaultEnvironmentName,
                     DataStore = EryphConstants.DefaultDataStoreName,
-                    StorageIdentifier = "gene:dbosoft/test-os/20000101:sda"
+                    GeneSet = "dbosoft/test-os/20000101",
+                    GeneName = "sda",
+                    GeneArchitecture = "hyperv/amd64",
                 });
             await stateStore.SaveChangesAsync();
         });

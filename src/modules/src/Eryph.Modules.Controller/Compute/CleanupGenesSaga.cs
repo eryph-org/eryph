@@ -44,7 +44,7 @@ public class CleanupGenesSaga(
         }
 
         var geneIds = unusedGenes.ToSeq()
-            .Map(dbGene => dbGene.ToGeneIdWithType())
+            .Map(dbGene => dbGene.ParseUniqueGeneId())
             .Sequence();
         if (geneIds.IsLeft)
         {
@@ -65,14 +65,13 @@ public class CleanupGenesSaga(
         FailOrRun(message, async () =>
         {
             var dbGenes = await geneRepository.ListAsync(
-                new GeneSpecs.GetByGeneIds(
+                new GeneSpecs.GetByUniqueGeneIds(
                     Data.Data.AgentName,
-                    Data.Data.GeneIds.Map(i => i.GeneIdentifier).ToList()));
+                    Data.Data.GeneIds));
             await geneRepository.DeleteRangeAsync(dbGenes);
 
             var volumeGenes = Data.Data.GeneIds
                 .Filter(g => g.GeneType == GeneType.Volume)
-                .Map(i => i.GeneIdentifier)
                 .ToList();
             if (volumeGenes.Count == 0)
             {
@@ -81,7 +80,7 @@ public class CleanupGenesSaga(
             }
 
             var disks = await diskRepository.ListAsync(
-                new VirtualDiskSpecs.GetByGeneIds(Data.Data.AgentName, volumeGenes));
+                new VirtualDiskSpecs.GetByUniqueGeneIds(Data.Data.AgentName, volumeGenes));
             await StartNewTask(new CheckDisksExistsCommand
             {
                 AgentName = Data.Data.AgentName,
@@ -96,7 +95,9 @@ public class CleanupGenesSaga(
                     Name = d.Name,
                     FileName = d.FileName,
                     Path = d.Path,
-                    DiskIdentifier = d.DiskIdentifier
+                    DiskIdentifier = d.DiskIdentifier,
+                    Gene = d.ToUniqueGeneId(GeneType.Volume)
+                        .IfNoneUnsafe((UniqueGeneIdentifier?)null),
                 }).ToArray(),
             });
         });

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core.Genetics;
 using Eryph.Resources;
 using Eryph.Resources.Machines;
 
@@ -15,6 +17,8 @@ public class UpdateCatletConfigDriveCommand : IVMCommand, IHasResource
     public Guid VMId { get; set; }
 
     public CatletMetadata MachineMetadata { get; set; }
+
+    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
 
     public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

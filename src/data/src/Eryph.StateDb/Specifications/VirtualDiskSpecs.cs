@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Ardalis.Specification;
 using Eryph.ConfigModel;
+using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 
@@ -52,25 +53,25 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
-        public sealed class GetByGeneId : Specification<VirtualDisk>, ISingleResultSpecification
+        public sealed class GetByUniqueGeneId : Specification<VirtualDisk>, ISingleResultSpecification
         {
-            public GetByGeneId(string agentName, GeneIdentifier geneId)
+            public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier geneId)
             {
                 Query.Where(x => x.LastSeenAgent == agentName
-                                 && x.StorageIdentifier == geneId.Value);
+                                 && x.UniqueGeneIndex == geneId.ToUniqueGeneIndex());
 
                 Query.Include(x => x.Project);
             }
         }
 
-        public sealed class GetByGeneIds : Specification<VirtualDisk>
+        public sealed class GetByUniqueGeneIds : Specification<VirtualDisk>
         {
-            public GetByGeneIds(string agentName, IList<GeneIdentifier> geneIds)
+            public GetByUniqueGeneIds(string agentName, IList<UniqueGeneIdentifier> geneIds)
             {
-                var values = geneIds.Map(id => id.Value).ToList();
+                var values = geneIds.Map(id => id.ToUniqueGeneIndex()).ToList();
 
                 Query.Where(x => x.LastSeenAgent == agentName
-                                 && values.Contains(x.StorageIdentifier!));
+                                 && values.Contains(x.UniqueGeneIndex!));
 
                 Query.Include(x => x.Project);
             }

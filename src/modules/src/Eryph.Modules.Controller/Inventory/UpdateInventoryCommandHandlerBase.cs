@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Disks;
 using Eryph.ModuleCore;
@@ -161,7 +162,9 @@ namespace Eryph.Modules.Controller.Inventory
                         Name = d.Name,
                         FileName = d.FileName,
                         Path = d.Path,
-                        DiskIdentifier = d.DiskIdentifier
+                        DiskIdentifier = d.DiskIdentifier,
+                        Gene = d.ToUniqueGeneId(GeneType.Volume)
+                            .IfNoneUnsafe((UniqueGeneIdentifier?)null),
                     }).ToArray()
                 });
         }
@@ -197,11 +200,13 @@ namespace Eryph.Modules.Controller.Inventory
                             DiskIdentifier = diskInfo.DiskIdentifier,
                             DataStore = diskInfo.DataStore,
                             Environment = diskInfo.Environment,
-                            Geneset = diskInfo.Geneset,
                             StorageIdentifier = diskInfo.StorageIdentifier,
                             Project = project,
                             FileName = diskInfo.FileName,
-                            Path = diskInfo.Path.ToLowerInvariant()
+                            Path = diskInfo.Path.ToLowerInvariant(),
+                            GeneSet = diskInfo.Gene?.Id.GeneSet.Value,
+                            GeneName = diskInfo.Gene?.Id.GeneName.Value,
+                            GeneArchitecture = diskInfo.Gene?.Architecture.Value
                         };
                         d = await _vhdDataService.AddNewVHD(d).ConfigureAwait(false);
                         addedDisks.Add(d);

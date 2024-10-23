@@ -18,6 +18,8 @@ public class VirtualDisk
         
     public required string Environment { get; set; }
 
+    public VirtualDiskGeneInfo? Gene { get; set; }
+
     /// <summary>
     /// The file system path of the virtual disk. This information
     /// is only available to administrators.

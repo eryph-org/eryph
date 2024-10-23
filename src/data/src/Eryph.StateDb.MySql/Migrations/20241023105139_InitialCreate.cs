@@ -20,13 +20,19 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     GeneType = table.Column<int>(type: "int", nullable: false),
-                    GeneId = table.Column<string>(type: "varchar(255)", nullable: false)
+                    GeneSet = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Architecture = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     LastSeenAgent = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Size = table.Column<long>(type: "bigint", nullable: false),
                     Hash = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    UniqueGeneIndex = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
@@ -83,12 +89,18 @@ namespace Eryph.StateDb.MySql.Migrations
                 columns: table => new
                 {
                     MetadataId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    GeneId = table.Column<string>(type: "varchar(255)", nullable: false)
+                    UniqueGeneIndex = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    GeneSet = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Name = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Architecture = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MetadataGenes", x => new { x.MetadataId, x.GeneId });
+                    table.PrimaryKey("PK_MetadataGenes", x => new { x.MetadataId, x.UniqueGeneIndex });
                     table.ForeignKey(
                         name: "FK_MetadataGenes_Metadata_MetadataId",
                         column: x => x.MetadataId,
@@ -268,8 +280,6 @@ namespace Eryph.StateDb.MySql.Migrations
                     StorageIdentifier = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     DiskIdentifier = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Geneset = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
                     Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     Path = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -280,6 +290,14 @@ namespace Eryph.StateDb.MySql.Migrations
                     ParentId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     LastSeenAgent = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    GeneSet = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    GeneName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    GeneArchitecture = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    UniqueGeneIndex = table.Column<string>(type: "varchar(255)", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     DataStore = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -709,9 +727,9 @@ namespace Eryph.StateDb.MySql.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Genes_LastSeenAgent_GeneId",
+                name: "IX_Genes_UniqueGeneIndex_LastSeenAgent",
                 table: "Genes",
-                columns: new[] { "LastSeenAgent", "GeneId" },
+                columns: new[] { "UniqueGeneIndex", "LastSeenAgent" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -744,6 +762,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_Logs_TaskId",
                 table: "Logs",
                 column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MetadataGenes_UniqueGeneIndex",
+                table: "MetadataGenes",
+                column: "UniqueGeneIndex");
 
             migrationBuilder.CreateIndex(
                 name: "IX_NetworkPorts_CatletMetadataId",
@@ -827,6 +850,11 @@ namespace Eryph.StateDb.MySql.Migrations
                 name: "IX_VirtualDisks_ProjectId",
                 table: "VirtualDisks",
                 column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VirtualDisks_UniqueGeneIndex",
+                table: "VirtualDisks",
+                column: "UniqueGeneIndex");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VirtualNetworks_ProjectId",

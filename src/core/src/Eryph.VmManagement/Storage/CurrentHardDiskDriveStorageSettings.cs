@@ -43,15 +43,15 @@ namespace Eryph.VmManagement.Storage
                 let snapshotPath = snapshotInfo.SnapshotVhd.Map(vhd => vhd.Value.Path)
                 // The actual VHD might not exist (e.g. if it was deleted in the filesystem)
                 from diskSettings in vhdPath
-                    .Map(p =>DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, p))
+                    .Map(p => DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, p))
                     .Sequence()
                 select
                     new CurrentHardDiskDriveStorageSettings
                     {
                         Type = CatletDriveType.VHD,
                         AttachPath = snapshotPath | vhdPath | hdInfo.Path,
-                        Frozen = diskSettings.Bind(d => d.StorageIdentifier).IsNone
-                                 || !diskSettings.Bind<bool>(d => d.StorageNames.IsValid).IfNone(false)
+                        Frozen = !diskSettings.Map(d => d.StorageIdentifier.IsSome || d.Gene.IsSome).IfNone(false)
+                                 || !diskSettings.Map(d => d.StorageNames.IsValid).IfNone(false)
                                  || snapshotPath.IsSome,
                         AttachedVMId = hdInfo.Id,
                         ControllerNumber = hdInfo.ControllerNumber,

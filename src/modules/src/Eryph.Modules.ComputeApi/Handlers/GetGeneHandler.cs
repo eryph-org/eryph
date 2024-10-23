@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using AutoMapper;
-using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.ComputeApi.Model.V1;
@@ -35,20 +34,20 @@ internal class GetGeneHandler(
         if (dbGene is null)
             return new NotFoundResult();
 
-        var geneId = GeneIdentifier.New(dbGene.GeneId);
+        var uniqueGeneId = dbGene.ToUniqueGeneId();
         var result = mapper.Map<GeneWithUsage>(dbGene);
         
         if (dbGene.GeneType == GeneType.Fodder)
         {
             var catletIds = await geneInventoryQueries.GetCatletsUsingGene(
-                dbGene.LastSeenAgent, geneId, cancellationToken);
+                dbGene.LastSeenAgent, uniqueGeneId, cancellationToken);
             result.Catlets = mapper.Map<IReadOnlyList<string>>(catletIds);
         }
         
         if (dbGene.GeneType == GeneType.Volume)
         {
             var diskIds = await geneInventoryQueries.GetDisksUsingGene(
-                dbGene.LastSeenAgent, geneId, cancellationToken);
+                dbGene.LastSeenAgent, uniqueGeneId, cancellationToken);
             result.Disks = mapper.Map<IReadOnlyList<string>>(diskIds);
         }
 

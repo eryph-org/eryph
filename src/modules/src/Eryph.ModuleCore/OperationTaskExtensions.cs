@@ -21,7 +21,16 @@ public static class OperationTaskExtensions
             RightAsync: ret => ret is Unit 
                 ? messaging.CompleteTask(message) 
                 : messaging.CompleteTask(message, ret));
+    }
 
+    public static Task<Unit> FailOrContinue(
+        this EitherAsync<Error, Unit> either,
+        ITaskMessaging messaging,
+        IOperationTaskMessage message)
+    {
+        return either.MatchAsync(
+            LeftAsync: l => messaging.FailTask(message, l),
+            RightAsync: _ => Task.FromResult(Prelude.unit));
     }
 
     public static Task FailTask(

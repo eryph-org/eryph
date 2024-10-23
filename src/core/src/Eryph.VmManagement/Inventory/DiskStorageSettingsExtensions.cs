@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Resources.Disks;
 using Eryph.VmManagement.Storage;
 
@@ -21,9 +22,9 @@ public static class DiskStorageSettingsExtensions
         Environment = settings.StorageNames.EnvironmentName.IfNone(EryphConstants.DefaultEnvironmentName),
         DataStore = settings.StorageNames.DataStoreName.IfNone(EryphConstants.DefaultDataStoreName),
         StorageIdentifier = settings.StorageIdentifier.IfNoneUnsafe((string)null),
-        Frozen = settings.StorageIdentifier.Match(Some: _ => false, None: () => true),
+        Frozen = settings.Gene.IsNone && settings.StorageIdentifier.IsNone,
         Parent = settings.ParentSettings.Map(ps => ps.CreateDiskInfo()).IfNoneUnsafe((DiskInfo)null),
-        Geneset = settings.Geneset.Map(s => s.Value).IfNoneUnsafe((string)null),
+        Gene = settings.Gene.IfNoneUnsafe((UniqueGeneIdentifier)null),
         Path = settings.Path,
         FileName = settings.FileName,
         SizeBytes = settings.SizeBytes,

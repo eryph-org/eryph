@@ -6,11 +6,7 @@ using Eryph.GenePool.Model.Responses;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;
 
-public record GeneSetInfo(GeneSetIdentifier Id, string LocalPath, GenesetTagManifestData MetaData,
-    GetGeneDownloadResponse[] GeneDownloadInfo)
-{
-    public readonly GeneSetIdentifier Id = Id;
-    public readonly string LocalPath = LocalPath;
-    public readonly GenesetTagManifestData MetaData = MetaData;
-    public readonly GetGeneDownloadResponse[] GeneDownloadInfo = GeneDownloadInfo;
-}
+public record GeneSetInfo(
+    GeneSetIdentifier Id,
+    GenesetTagManifestData MetaData,
+    GetGeneDownloadResponse[] GeneDownloadInfo);

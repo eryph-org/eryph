@@ -6,18 +6,17 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Testing;
+using Eryph.Core;
 using Eryph.Core.Genetics;
+using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.StateDb.Model;
 using Eryph.StateDb;
 using Eryph.StateDb.TestBase;
-using Xunit;
-using Eryph.Core;
-using System.Text.Json.Serialization;
-using System.Text.Json;
 using FluentAssertions;
+using Xunit;
+
 using ApiGene = Eryph.Modules.ComputeApi.Model.V1.Gene;
-using Eryph.Modules.AspNetCore.ApiProvider.Model;
-using Eryph.Modules.AspNetCore.ApiProvider;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
@@ -41,7 +40,9 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = FodderGeneId,
-            GeneId = "gene:acme/acme-fodder/1.0:test-food",
+            GeneSet = "acme/acme-fodder/1.0",
+            Name = "test-food",
+            Architecture = "any",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = AgentName,
             Hash = "12345678",
@@ -52,7 +53,9 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         await stateStore.For<Gene>().AddAsync(new Gene
         {
             Id = VolumeGeneId,
-            GeneId = "gene:acme/acme-os/1.0:sda",
+            GeneSet = "acme/acme-os/1.0",
+            Name = "sda",
+            Architecture = "hyperv/amd64",
             LastSeen = DateTimeOffset.UtcNow,
             LastSeenAgent = AgentName,
             Hash = "abcdefgh",
@@ -76,21 +79,23 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
         genes.Value.Should().SatisfyRespectively(
             gene =>
             {
-                gene!.Id.Should().Be(FodderGeneId.ToString());
-                gene!.GeneSet.Should().Be("acme/acme-fodder/1.0");
-                gene!.Name.Should().Be("test-food");
-                gene!.Hash.Should().Be("12345678");
-                gene!.GeneType.Should().Be(GeneType.Fodder);
-                gene!.Size.Should().Be(42);
+                gene.Id.Should().Be(FodderGeneId.ToString());
+                gene.GeneSet.Should().Be("acme/acme-fodder/1.0");
+                gene.Name.Should().Be("test-food");
+                gene.Architecture.Should().Be("any");
+                gene.Hash.Should().Be("12345678");
+                gene.GeneType.Should().Be(GeneType.Fodder);
+                gene.Size.Should().Be(42);
             },
             gene =>
             {
-                gene!.Id.Should().Be(VolumeGeneId.ToString());
-                gene!.GeneSet.Should().Be("acme/acme-os/1.0");
-                gene!.Name.Should().Be("sda");
-                gene!.Hash.Should().Be("abcdefgh");
-                gene!.GeneType.Should().Be(GeneType.Volume);
-                gene!.Size.Should().Be(43);
+                gene.Id.Should().Be(VolumeGeneId.ToString());
+                gene.GeneSet.Should().Be("acme/acme-os/1.0");
+                gene.Name.Should().Be("sda");
+                gene.Architecture.Should().Be("hyperv/amd64");
+                gene.Hash.Should().Be("abcdefgh");
+                gene.GeneType.Should().Be(GeneType.Volume);
+                gene.Size.Should().Be(43);
             });
     }
 }

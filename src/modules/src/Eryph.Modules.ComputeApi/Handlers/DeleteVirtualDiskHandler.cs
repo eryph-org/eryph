@@ -35,7 +35,7 @@ internal class DeleteVirtualDiskHandler(
 {
     protected override ActionResult? ValidateRequest(VirtualDisk model)
     {
-        if (model.StorageIdentifier?.StartsWith("gene:") == true)
+        if (model.GeneSet is not null)
             return Problem(
                 statusCode: StatusCodes.Status400BadRequest,
                 detail: "The disk belongs to the gene pool and cannot be deleted.");

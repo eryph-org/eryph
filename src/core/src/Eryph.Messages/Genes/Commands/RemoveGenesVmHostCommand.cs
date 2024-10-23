@@ -12,7 +12,7 @@ namespace Eryph.Messages.Genes.Commands;
 [SendMessageTo(MessageRecipient.VMHostAgent)]
 public class RemoveGenesVmHostCommand : IHostAgentCommand
 {
-    public List<GeneIdentifierWithType> Genes { get; set; }
+    public IReadOnlyList<UniqueGeneIdentifier> Genes { get; set; }
 
     [PrivateIdentifier]
     public string AgentName { get; set; }

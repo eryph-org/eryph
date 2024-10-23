@@ -39,7 +39,9 @@ public class RemoveVirtualDiskCommandHandler(
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         from storageSettings in DiskStorageSettings.FromVhdPath(
             powershellEngine, vmHostAgentConfig, Path.Combine(path, fileName))
-        from _ in storageSettings.StorageIdentifier.IsSome && storageSettings.StorageNames.IsValid
+        from _1 in guard(storageSettings.Gene.IsNone,
+            Error.New("The disk is part of the gene pool and cannot be deleted directly. Remove the gene instead."))
+        from _2 in storageSettings.StorageIdentifier.IsSome && storageSettings.StorageNames.IsValid
             ? Try(() => DeleteFiles(path, fileName))
                 .ToEither(ex => Error.New("Could not delete disk files.", Error.New(ex)))
                 .ToAsync()
