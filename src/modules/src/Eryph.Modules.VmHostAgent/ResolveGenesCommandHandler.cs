@@ -80,6 +80,6 @@ internal class ResolveGenesCommandHandler(
         from architecture in GeneSetTagManifestUtils.FindBestArchitecture(
             manifest.MetaData, catletArchitecture, geneIdWithType.GeneType, geneIdWithType.GeneIdentifier.GeneName).ToAsync()
         from validArchitecture in architecture.ToEitherAsync(
-            Error.New($"The gene '{geneIdWithType}' is not compatible with the hypervisor and/or processor architecture"))
+            Error.New($"The gene '{geneIdWithType}' is not compatible with the hypervisor and/or processor architecture."))
         select validArchitecture;
 }

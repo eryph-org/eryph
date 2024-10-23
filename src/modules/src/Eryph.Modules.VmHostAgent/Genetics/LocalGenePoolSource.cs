@@ -44,7 +44,7 @@ internal class LocalGenePoolSource(
             Some: _ => new GeneInfo(uniqueGeneId, geneHash, null, [], DateTimeOffset.MinValue, true),
             None: () =>
                 from _ in RightAsync<Error, Unit>(unit)
-                from geneTempPath in GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, parsedGeneHash.Hash)
+                from geneTempPath in GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, geneHash)
                 let cachedGeneManifestPath = Path.Combine(geneTempPath, "gene.json")
                 from manifestExists in Try(() => fileSystem.FileExists(cachedGeneManifestPath))
                     .ToEitherAsync()

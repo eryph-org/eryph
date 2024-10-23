@@ -173,7 +173,9 @@ internal class UpdateCatletSaga(
             {
                 AgentName = Data.Data.AgentName,
                 CatletArchitecture = Architecture.New(metadata.ValueUnsafe().Metadata.Architecture),
-                Genes = geneIds.SuccessToSeq().Flatten().Filter(g => g.GeneType == GeneType.Volume).ToList(),
+                Genes = geneIds.SuccessToSeq().Flatten()
+                    .Filter(g => g.GeneType == GeneType.Volume)
+                    .ToList(),
             });
         });
     }
@@ -358,11 +360,6 @@ internal class UpdateCatletSaga(
         config.Correlate<OperationTaskStatusEvent<UpdateNetworksCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
-
-    internal static Validation<Error, Seq<GeneIdentifierWithType>> FindRequiredGenes(
-        CatletConfig catletConfig) =>
-        CatletGeneCollecting.CollectGenes(catletConfig)
-            .Map(l => l.Filter(c => c.GeneIdentifier.GeneName != GeneName.New("catlet")));
 
     internal static Either<Error, (CatletConfig Config, CatletConfig BredConfig)> PrepareConfigs(
         CatletConfig config,

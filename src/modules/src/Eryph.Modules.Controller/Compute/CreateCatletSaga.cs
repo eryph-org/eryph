@@ -136,6 +136,8 @@ internal class CreateCatletSaga(
                 CatletArchitecture = Data.Data.Architecture,
                 Genes = geneIds.SuccessToSeq().Flatten()
                     .Filter(g => g.GeneType is GeneType.Fodder or GeneType.Volume)
+                    // Skip genes which have parent catlet as the informational source
+                    .Filter(g => g.GeneIdentifier.GeneName != GeneName.New("catlet"))
                     .ToList(),
             });
         });
