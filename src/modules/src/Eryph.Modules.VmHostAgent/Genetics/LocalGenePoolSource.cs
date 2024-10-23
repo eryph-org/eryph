@@ -41,8 +41,7 @@ internal class LocalGenePoolSource(
         let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
         from genesInfo in TryAsync(() => ReadGenesInfo(geneSetPath)).ToEither()
         from geneInfo in genesInfo.MergedGenes.ToSeq().Find(h => h == geneHash).Match(
-            Some: h => new GeneInfo(uniqueGeneId, geneHash, null,
-                [], DateTimeOffset.MinValue, true),
+            Some: _ => new GeneInfo(uniqueGeneId, geneHash, null, [], DateTimeOffset.MinValue, true),
             None: () =>
                 from _ in RightAsync<Error, Unit>(unit)
                 let genePath = GetGeneTempPath(genePoolPath, uniqueGeneId.Id.GeneSet, parsedGeneHash.Hash)
@@ -65,8 +64,7 @@ internal class LocalGenePoolSource(
                 }).ToEither()
                 from manifestData in Try(() => JsonSerializer.Deserialize<GeneManifestData>(manifestJson))
                     .ToEitherAsync()
-                select new GeneInfo(uniqueGeneId, parsedGeneHash.Hash,
-                    manifestData, [], DateTimeOffset.MinValue, false))
+                select new GeneInfo(uniqueGeneId, geneHash, manifestData, [], DateTimeOffset.MinValue, false))
         select geneInfo;
 
     public EitherAsync<Error, long> RetrieveGenePart(
