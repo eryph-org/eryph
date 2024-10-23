@@ -87,7 +87,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                         o.MapFrom(s => new VirtualDiskGeneInfo()
                         {
                             GeneSet = s.GeneSet!,
-                            GeneName = s.GeneName!,
+                            Name = s.GeneName!,
                             Architecture = s.GeneArchitecture!,
                         });
                     });
