@@ -199,7 +199,7 @@ internal class ResolveCatletConfigCommandHandler(
         {
             var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);
             return CatletConfigDictionaryConverter.Convert(configDictionary);
-        }).ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'.", ex)).ToAsync()
+        }).ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'.", Error.New(ex))).ToAsync()
         select config;
 
     private static Error CreateError(

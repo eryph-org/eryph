@@ -282,7 +282,7 @@ public abstract class StateStoreContext(DbContextOptions options) : DbContext(op
             .AutoInclude();
 
         modelBuilder.Entity<CatletMetadataGene>()
-            .HasKey(g => new { g.MetadataId, Combined = g.UniqueGeneIndex });
+            .HasKey(g => new { g.MetadataId, g.UniqueGeneIndex });
 
         modelBuilder.Entity<CatletMetadataGene>()
             .HasIndex(g => g.UniqueGeneIndex);

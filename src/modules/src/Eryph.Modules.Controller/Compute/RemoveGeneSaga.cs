@@ -45,7 +45,7 @@ internal class RemoveGeneSaga(
 
         Data.Data.AgentName = dbGene.LastSeenAgent;
 
-        var geneId = dbGene.ToUniqueGeneId();
+        var geneId = dbGene.ParseUniqueGeneId();
         if (geneId.IsLeft)
         {
             await Fail(ErrorUtils.PrintError(Error.Many(geneId.LeftToSeq())));

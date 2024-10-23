@@ -44,7 +44,7 @@ public class CleanupGenesSaga(
         }
 
         var geneIds = unusedGenes.ToSeq()
-            .Map(dbGene => dbGene.ToUniqueGeneId())
+            .Map(dbGene => dbGene.ParseUniqueGeneId())
             .Sequence();
         if (geneIds.IsLeft)
         {

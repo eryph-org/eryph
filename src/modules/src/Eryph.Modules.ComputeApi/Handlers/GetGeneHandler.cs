@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.Specification;
 using AutoMapper;
-using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.ComputeApi.Model.V1;
@@ -35,12 +34,7 @@ internal class GetGeneHandler(
         if (dbGene is null)
             return new NotFoundResult();
 
-        var geneSetId = GeneSetIdentifier.New(dbGene.GeneSet);
-        var geneName = GeneName.New(dbGene.Name);
-        var geneId = new GeneIdentifier(geneSetId, geneName);
-        var architecture = Architecture.New(dbGene.Architecture);
-        var uniqueGeneId = new UniqueGeneIdentifier(
-            dbGene.GeneType, geneId, architecture);
+        var uniqueGeneId = dbGene.ToUniqueGeneId();
         var result = mapper.Map<GeneWithUsage>(dbGene);
         
         if (dbGene.GeneType == GeneType.Fodder)

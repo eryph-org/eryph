@@ -71,11 +71,11 @@ internal class LocalFirstGeneProvider(
     private static EitherAsync<Error, string> GetGeneHash(
         GeneSetInfo genesetInfo,
         UniqueGeneIdentifier uniqueGeneId) =>
-        from validHash in GeneSetManifestUtils.FindGeneHash(
+        from validHash in GeneSetTagManifestUtils.FindGeneHash(
                 genesetInfo.MetaData,
                 uniqueGeneId.GeneType,
-                uniqueGeneId.Architecture,
-                uniqueGeneId.Id.GeneName)
+                uniqueGeneId.Id.GeneName,
+                uniqueGeneId.Architecture)
             .ToEitherAsync(
             Error.New($"Could not find gene {uniqueGeneId} in geneset {genesetInfo.Id}."))
         select validHash;

@@ -77,7 +77,7 @@ internal class ResolveGenesCommandHandler(
         ILocalGenePool genePool,
         CancellationToken cancellationToken) =>
         from manifest in genePool.GetCachedGeneSet(geneIdWithType.GeneIdentifier.GeneSet, cancellationToken)
-        from architecture in GeneSetManifestUtils.FindBestArchitecture(
+        from architecture in GeneSetTagManifestUtils.FindBestArchitecture(
             manifest.MetaData, catletArchitecture, geneIdWithType.GeneType, geneIdWithType.GeneIdentifier.GeneName).ToAsync()
         from validArchitecture in architecture.ToEitherAsync(
             Error.New($"The gene '{geneIdWithType}' is not compatible with the hypervisor and/or processor architecture"))

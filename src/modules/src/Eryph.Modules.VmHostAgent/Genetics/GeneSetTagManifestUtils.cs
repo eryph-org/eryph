@@ -9,13 +9,13 @@ using GeneType = Eryph.Core.Genetics.GeneType;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;
 
-internal static class GeneSetManifestUtils
+internal static class GeneSetTagManifestUtils
 {
     public static Option<string> FindGeneHash(
         GenesetTagManifestData manifest,
         GeneType geneType,
-        Architecture architecture,
-        GeneName geneName) =>
+        GeneName geneName,
+        Architecture architecture) =>
         from _ in Some(unit)
         let hash = geneType switch
         {
@@ -23,10 +23,12 @@ internal static class GeneSetManifestUtils
                 ? Optional(manifest.CatletGene)
                 : None,
             GeneType.Volume => manifest.VolumeGenes.ToSeq()
-                .Find(x => x.Name == geneName.Value && Architecture.NewOption(x.Architecture ?? "any") == architecture)
+                .Find(x => GeneName.NewOption(x.Name) == geneName
+                           && Architecture.NewOption(x.Architecture ?? "any") == architecture)
                 .Bind(x => Optional(x.Hash)),
             GeneType.Fodder => manifest.FodderGenes.ToSeq()
-                .Find(x => x.Name == geneName.Value && Architecture.NewOption(x.Architecture ?? "any") == architecture)
+                .Find(x => GeneName.NewOption(x.Name) == geneName
+                           && Architecture.NewOption(x.Architecture ?? "any") == architecture)
                 .Bind(x => Optional(x.Hash)),
             _ => None
         }
@@ -38,24 +40,34 @@ internal static class GeneSetManifestUtils
         Architecture architecture,
         GeneType geneType,
         GeneName geneName) =>
-        from _ in Right<Error, Unit>(unit)
-        let architectures = geneType switch
+        from _ in guard(geneType is GeneType.Catlet or GeneType.Fodder or GeneType.Volume,
+                Error.New($"The gene type '{geneType}' is not supported."))
+            .ToEither()
+        let genes = geneType switch
         {
-            GeneType.Catlet => Seq([Architecture.NewEither("any")]),
+            GeneType.Catlet => Optional(manifest.CatletGene)
+                .Filter(notEmpty)
+                .Map(_ => (Name: "catlet", Architecture: "any"))
+                .ToSeq(),
             GeneType.Volume => manifest.VolumeGenes.ToSeq()
-                .Filter(x => x.Name == geneName.Value)
-                .Map(x => Architecture.NewEither(x.Architecture ?? "any")),
+                .Map(x => (x.Name, x.Architecture)),
             GeneType.Fodder => manifest.FodderGenes.ToSeq()
-                .Filter(x => x.Name == geneName.Value)
-                .Map(x => Architecture.NewEither(x.Architecture ?? "any")),
-            _ => [Error.New($"The gene type {geneType} is not sup")]
+                .Map(x => (x.Name, x.Architecture)),
+            _ => Empty
         }
-        from validArchitectures in architectures.Sequence()
+        from validGenes in genes
+            .Map(g => from n in GeneName.NewEither(g.Name)
+                      from a in Architecture.NewEither(g.Architecture)
+                      select (Name: n, Architecture: a))
+            .Sequence()
             .MapLeft(e => Error.New($"The manifest of the gene set '{manifest.Geneset}' is invalid.", e))
-        let bestArchitecture = validArchitectures.Find(ga => ga == architecture)
-                               | validArchitectures.Find(ga =>
+        let filteredArchitectures = validGenes
+            .Filter(g => g.Name == geneName)
+            .Map(g => g.Architecture)
+        let bestArchitecture = filteredArchitectures.Find(ga => ga == architecture)
+                               | filteredArchitectures.Find(ga =>
                                    ga.Hypervisor == architecture.Hypervisor
                                    && ga.ProcessorArchitecture == ProcessorArchitecture.New("any"))
-                               | validArchitectures.Find(ga => ga.IsAny)
+                               | filteredArchitectures.Find(ga => ga.IsAny)
         select bestArchitecture;
 }

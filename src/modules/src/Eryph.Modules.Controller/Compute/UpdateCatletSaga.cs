@@ -144,7 +144,7 @@ internal class UpdateCatletSaga(
             var metadata = await GetCatletMetadata(Data.Data.CatletId);
             if (metadata.IsNone)
             {
-                await Fail($"Metadata for catlet {Data.Data.CatletId} was not found.");
+                await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
                 return;
             }
 
@@ -190,7 +190,7 @@ internal class UpdateCatletSaga(
             var metadata = await GetCatletMetadata(Data.Data.CatletId);
             if (metadata.IsNone)
             {
-                await Fail($"Metadata for catlet {Data.Data.CatletId} was not found.");
+                await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
                 return;
             }
 
@@ -259,28 +259,21 @@ internal class UpdateCatletSaga(
     {
         return FailOrRun(message, async (UpdateCatletNetworksCommandResponse r) =>
         {
-            var catlet = await vmDataService.GetVM(Data.Data.CatletId);
-            if (catlet.IsNone)
-            {
-                await Fail($"Could not find catlet with ID {Data.Data.CatletId}.");
-                return;
-            }
-
-            var metadata = await metadataService.GetMetadata(catlet.ValueUnsafe().MetadataId);
+            var metadata = await GetCatletMetadata(Data.Data.CatletId);
             if (metadata.IsNone)
             {
-                await Fail($"Could not find metadata of catlet with ID {Data.Data.CatletId}.");
+                await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
                 return;
             }
 
             await StartNewTask(new UpdateCatletVMCommand
             {
                 CatletId = Data.Data.CatletId,
-                VMId = catlet.ValueUnsafe().VMId,
+                VMId = metadata.ValueUnsafe().Catlet.VMId,
                 Config = Data.Data.BredConfig,
                 AgentName = Data.Data.AgentName,
                 NewStorageId = idGenerator.CreateId(),
-                MachineMetadata = metadata.ValueUnsafe(),
+                MachineMetadata = metadata.ValueUnsafe().Metadata,
                 MachineNetworkSettings = r.NetworkSettings,
                 ResolvedGenes = Data.Data.ResolvedGenes,
             });
@@ -305,17 +298,10 @@ internal class UpdateCatletSaga(
                 Timestamp = response.Timestamp,
             });
 
-            var catlet = await vmDataService.GetVM(Data.Data.CatletId);
-            if (catlet.IsNone)
-            {
-                await Fail($"Could not find catlet with ID {Data.Data.CatletId}.");
-                return;
-            }
-
-            var metadata = await metadataService.GetMetadata(catlet.ValueUnsafe().MetadataId);
+            var metadata = await GetCatletMetadata(Data.Data.CatletId);
             if (metadata.IsNone)
             {
-                await Fail($"Could not find metadata of catlet with ID {Data.Data.CatletId}.");
+                await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
                 return;
             }
 
@@ -324,7 +310,7 @@ internal class UpdateCatletSaga(
                 Config = Data.Data.BredConfig,
                 VMId = response.Inventory.VMId,
                 CatletId = Data.Data.CatletId,
-                MachineMetadata = metadata.ValueUnsafe(),
+                MachineMetadata = metadata.ValueUnsafe().Metadata,
                 ResolvedGenes = Data.Data.ResolvedGenes,
             });
         });

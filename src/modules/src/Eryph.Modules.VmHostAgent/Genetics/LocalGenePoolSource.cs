@@ -113,42 +113,45 @@ internal class LocalGenePoolSource(
             return mergedGenesInfo.MergedGenes.ToSeq().Contains(geneInfo.Hash);
         }).ToEither()
         let parts = (geneInfo.MetaData?.Parts).ToSeq().Filter(_ => isGeneMerged)
-        from partPaths in parts
-            .Map(part => GetGenePartPath(geneInfo.Id, geneInfo.Hash, part))
-            .SequenceSerial()
-        from _2 in TryAsync(async () =>
-        {
-            var streams = partPaths
-                .Map(fileSystem.OpenRead)
-                .ToList();
-
-            try
-            {
-                await using var multiStream = new MultiStream(streams);
-                var decompression = new GeneDecompression(geneInfo, fileSystem, log, reportProgress);
-                await decompression.Decompress(multiStream, genePoolPath, cancel);
-            }
-            finally
-            {
-                foreach (var stream in streams)
-                {
-                    await stream.DisposeAsync();
-                }
-            }
-
-            return unit;
-        }).ToEither()
-        from _3 in TryAsync(async () =>
-        {
-            await AddMergedGene(geneSetPath, geneInfo.Hash);
-            return unit;
-        }).ToEither()
-        let geneTempPath = GetGeneTempPath(genePoolPath, geneInfo.Id.Id.GeneSet, geneInfo.Hash)
-        from _4 in Try(() =>
-        {
-            fileSystem.DeleteDirectory(geneTempPath);
-            return unit;
-        }).ToEitherAsync()
+        from _2 in parts.IsEmpty
+            ? RightAsync<Error, Unit>(unit)
+            : from partPaths in parts
+                .Map(part => GetGenePartPath(geneInfo.Id, geneInfo.Hash, part))
+                .SequenceSerial()
+              from _1 in TryAsync(async () =>
+              {
+                  var streams = partPaths
+                      .Map(fileSystem.OpenRead)
+                      .ToList();
+              
+                  try
+                  {
+                      await using var multiStream = new MultiStream(streams);
+                      var decompression = new GeneDecompression(geneInfo, fileSystem, log, reportProgress);
+                      await decompression.Decompress(multiStream, genePoolPath, cancel);
+                  }
+                  finally
+                  {
+                      foreach (var stream in streams)
+                      {
+                          await stream.DisposeAsync();
+                      }
+                  }
+              
+                  return unit;
+              }).ToEither()
+              from _2 in TryAsync(async () =>
+              {
+                  await AddMergedGene(geneSetPath, geneInfo.Hash);
+                  return unit;
+              }).ToEither()
+              let geneTempPath = GetGeneTempPath(genePoolPath, geneInfo.Id.Id.GeneSet, geneInfo.Hash)
+              from _3 in Try(() =>
+              {
+                  fileSystem.DeleteDirectory(geneTempPath);
+                  return unit;
+              }).ToEitherAsync()
+              select unit
         select unit;
 
     public EitherAsync<Error, GeneSetInfo> ProvideGeneSet(
@@ -262,8 +265,8 @@ internal class LocalGenePoolSource(
             var manifestJson = await fileSystem.ReadAllTextAsync(manifestPath);
             var manifest = JsonSerializer.Deserialize<GenesetTagManifestData>(manifestJson);
 
-            var geneHash = GeneSetManifestUtils.FindGeneHash(
-                manifest, uniqueGeneId.GeneType, uniqueGeneId.Architecture, uniqueGeneId.Id.GeneName);
+            var geneHash = GeneSetTagManifestUtils.FindGeneHash(
+                manifest, uniqueGeneId.GeneType, uniqueGeneId.Id.GeneName, uniqueGeneId.Architecture);
             if (geneHash.IsNone)
                 return unit;
 

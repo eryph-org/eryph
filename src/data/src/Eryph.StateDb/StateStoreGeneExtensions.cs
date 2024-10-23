@@ -15,7 +15,12 @@ namespace Eryph.StateDb;
 
 public static class StateStoreGeneExtensions
 {
-    public static Either<Error, UniqueGeneIdentifier> ToUniqueGeneId(this Gene dbGene) =>
+    public static UniqueGeneIdentifier ToUniqueGeneId(this Gene dbGene) =>
+        ParseUniqueGeneId(dbGene)
+            .IfLeft(e => e.ToException().Rethrow<UniqueGeneIdentifier>());
+
+    public static Either<Error, UniqueGeneIdentifier> ParseUniqueGeneId(
+        this Gene dbGene) =>
         from geneSetId in GeneSetIdentifier.NewEither(dbGene.GeneSet)
         from geneName in GeneName.NewEither(dbGene.Name)
         from architecture in Architecture.NewEither(dbGene.Architecture)
