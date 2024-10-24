@@ -85,7 +85,7 @@ internal class UninstallCommands
                 })
                 from _3 in Eff(() =>
                 {
-                    certStore.RemoveFromMyStore(publicKey);
+                    certStore.RemoveFromRootStore(publicKey);
                     return unit;
                 })
                 select unit,
