@@ -805,6 +805,10 @@ internal static class Program
                         UninstallCommands.RemoveNetworking(),
                         loggerFactory);
 
+                    UninstallCommands.RemoveCertificatesAndKeys().Run()
+                        .IfFail(e => Log.Logger.Warning(e,
+                            "The cleanup of the certificates failed. Please remove any leftover certificates from the Windows certificate store."));
+
                     if (Directory.Exists(dataDir) && deleteAppData)
                     {
                         try

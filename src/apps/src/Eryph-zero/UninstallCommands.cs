@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Modules.VmHostAgent.Networks;
+using Eryph.Security.Cryptography;
 using LanguageExt;
 
 using static LanguageExt.Prelude;
@@ -56,5 +58,42 @@ internal class UninstallCommands
         from _1 in logInformation<UninstallCommands>("Removing Hyper-V switch extension...")
         from _2 in uninstallDriver()
         from _3 in removeAllDriverPackages()
+        select unit;
+
+    public static Eff<Unit> RemoveCertificatesAndKeys() =>
+        from _ in Seq(
+                "eryph-zero-tls-key",
+                "eryph-identity-token-encryption-key",
+                "eryph-identity-token-signing-key")
+            .Map(RemoveCertificateAndKey)
+            .Sequence()
+        select unit;
+
+    private static Eff<Unit> RemoveCertificateAndKey(string keyName) =>
+        from _1 in SuccessEff(unit)
+        let keyStore = new WindowsCertificateKeyService()
+        let certStore = new WindowsCertificateStoreService()
+        from keyPair in Eff(() => Optional(keyStore.GetPersistedRsaKey(keyName)))
+        from _2 in keyPair.Match(
+            Some: kp =>
+                from _1 in SuccessEff(unit)
+                from publicKey in Eff(() => new PublicKey(kp))
+                from _2 in Eff(() =>
+                {
+                    certStore.RemoveFromMyStore(publicKey);
+                    return unit;
+                })
+                from _3 in Eff(() =>
+                {
+                    certStore.RemoveFromMyStore(publicKey);
+                    return unit;
+                })
+                select unit,
+            None: () => SuccessEff(unit))
+        from _3 in Eff(() =>
+        {
+            keyStore.DeletePersistedKey(keyName);
+            return unit;
+        })
         select unit;
 }
