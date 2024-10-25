@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Data;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
@@ -20,6 +21,7 @@ namespace Eryph.Modules.VmHostAgent.Inventory
 
         private ManagementEventWatcher _networkWatcher;
         private ManagementEventWatcher _statusWatcher;
+        private ManagementEventWatcher _vmWatcher;
         private readonly Timer _upTimeTimer;
 
         private const int UpTimeCheckSeconds= 60;
@@ -43,41 +45,43 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _networkWatcher?.Dispose();
-            _networkWatcher = null;
-
             _statusWatcher?.Dispose();
-            _statusWatcher = null;
+            _vmWatcher?.Dispose();
 
             _upTimeTimer.Change(Timeout.Infinite, 0);
             return Task.CompletedTask;
         }
 
-
-
         public void StartWatching()
         {
             _log.LogDebug("Starting WMI Watcher");
-            var scope = new ManagementScope(@"\\.\root\virtualization\v2");
 
-            var query =
+            var scope = new ManagementScope(@"\root\virtualization\v2");
+
+
+            _networkWatcher = new ManagementEventWatcher(
+                scope,
                 new WqlEventQuery(
-                    "Select * from __InstanceModificationEvent WITHIN 10 WHERE TargetInstance ISA 'MSVM_GuestNetworkAdapterConfiguration'");
-
-            _networkWatcher = new ManagementEventWatcher(scope, query);
+                "Select * from __InstanceModificationEvent WITHIN 10 WHERE TargetInstance ISA 'MSVM_GuestNetworkAdapterConfiguration'"));
             _networkWatcher.EventArrived += _networkWatcher_EventArrived;
             _networkWatcher.Start();
 
-            query =
-                new WqlEventQuery(
-                    "Select * from __InstanceModificationEvent within 3 where TargetInstance ISA 'MSVM_ComputerSystem' and TargetInstance.EnabledState <> PreviousInstance.EnabledState");
 
-            _statusWatcher = new ManagementEventWatcher(scope, query);
+            _statusWatcher = new ManagementEventWatcher(scope, new WqlEventQuery(
+                "Select * from __InstanceModificationEvent within 3 where TargetInstance ISA 'MSVM_ComputerSystem' and TargetInstance.EnabledState <> PreviousInstance.EnabledState"));
             _statusWatcher.EventArrived += StatusWatcherOnEventArrived;
             _statusWatcher.Start();
 
+            _vmWatcher = new ManagementEventWatcher(
+                scope,
+                new WqlEventQuery(
+                    "__InstanceModificationEvent",
+                    TimeSpan.FromSeconds(10),
+                    "TargetInstance ISA 'Msvm_ComputerSystem'"));
+            _vmWatcher.EventArrived += _vmWatcher_EventArrived;
+            _vmWatcher.Start();
+
             _upTimeTimer.Change(TimeSpan.FromSeconds(UpTimeCheckSeconds), TimeSpan.Zero);
-
-
         }
 
         private void UpTimeCheck(object? state)
@@ -159,11 +163,57 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             });
         }
 
-        private static ManagementBaseObject GetTargetInstance(EventArrivedEventArgs e)
+
+
+        private void _vmWatcher_EventArrived(object sender, EventArrivedEventArgs e)
         {
-            return e.NewEvent.GetPropertyValue("TargetInstance") as ManagementBaseObject;
+            _log.LogTrace("vm change event arrived: {EventMof}", e.NewEvent.GetText(TextFormat.Mof));
+            var targetInstance = GetTargetInstance(e);
+            var vmId = GetVmId(targetInstance);
+
+            // Skip the event when the VM is still being modified, i.e. the operational
+            // status is in service. The inventory only needs to update when the change is
+            // completed. Also, a lot of changes complete rather quickly. Hence, this
+            // check limits the number of events which are raised in short succession.
+            if (targetInstance["OperationalStatus"] is not ushort[] operationalStatus
+                || operationalStatus.Length < 1
+                || operationalStatus[0] == (ushort)VMComputerSystemOperationalStatus.InService)
+            {
+                return;
+            }
+
+            _log.LogTrace("Sending event...");
+            _bus.SendLocal(new VirtualMachineChangedEvent
+            {
+                VmId = vmId,
+            });
         }
 
-    }
 
+        private static ManagementBaseObject GetTargetInstance(EventArrivedEventArgs e)
+        {
+            return (ManagementBaseObject)e.NewEvent["TargetInstance"];
+        }
+
+        private static Guid GetVmId(ManagementBaseObject instance)
+        {
+            if (instance["CreationClassName"] is "Msvm_ComputerSystem")
+            {
+                if (instance["name"] is not string name || !Guid.TryParse(name, out var vmId))
+                    throw new ArgumentException(
+                        "The management object does not contain a valid VM ID",
+                        nameof(instance));
+
+                return vmId;
+            }
+
+
+            var adapterId = instance.GetPropertyValue("InstanceID") as string;
+            var pathParts = adapterId?.Split('\\');
+            if (pathParts is not { Length: 3 })
+                throw new InvalidOperationException("Invalid adapter id");
+
+            return Guid.Parse(pathParts[1]);
+        }
+    }
 }
