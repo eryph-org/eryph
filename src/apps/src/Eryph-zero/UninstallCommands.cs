@@ -76,14 +76,13 @@ internal class UninstallCommands
         from keyPair in Eff(() => Optional(keyStore.GetPersistedRsaKey(keyName)))
         from _2 in keyPair.Match(
             Some: kp =>
-                from _1 in SuccessEff(unit)
                 from publicKey in Eff(() => new PublicKey(kp))
-                from _2 in Eff(() =>
+                from _1 in Eff(() =>
                 {
                     certStore.RemoveFromMyStore(publicKey);
                     return unit;
                 })
-                from _3 in Eff(() =>
+                from _2 in Eff(() =>
                 {
                     certStore.RemoveFromRootStore(publicKey);
                     return unit;
