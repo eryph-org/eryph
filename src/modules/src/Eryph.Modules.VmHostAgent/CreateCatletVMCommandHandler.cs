@@ -5,6 +5,7 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
@@ -50,21 +51,14 @@ namespace Eryph.Modules.VmHostAgent
             from plannedStorageSettings in VMStorageSettings.Plan(
                 vmHostAgentConfig, LongToString(command.StorageId), command.Config, None)
             from createdVM in CreateVM(plannedStorageSettings, Engine, command.BredConfig)
-            let metadata = new CatletMetadata
-            {
-                Id = Guid.NewGuid(),
-                MachineId = command.NewMachineId,
-                VMId = createdVM.Value.Id,
-                Fodder = command.Config.Fodder,
-                Variables = command.Config.Variables,
-                Parent = command.Config.Parent,
-            }
-            from _ in SetMetadataId(createdVM, metadata.Id)
+            let metadataId = Guid.NewGuid()
+            from _ in SetMetadataId(createdVM, metadataId)
             from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, createdVM, _hostInfoProvider)
             select new ConvergeCatletResult
             {
+                VmId = createdVM.Value.Id,
+                MetadataId = metadataId,
                 Inventory = inventory,
-                MachineMetadata = metadata,
                 Timestamp = DateTimeOffset.UtcNow,
             };
 

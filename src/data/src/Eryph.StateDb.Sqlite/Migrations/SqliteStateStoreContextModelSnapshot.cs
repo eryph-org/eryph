@@ -60,10 +60,24 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid>("MetadataId")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("GeneId")
+                    b.Property<string>("UniqueGeneIndex")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("MetadataId", "GeneId");
+                    b.Property<string>("Architecture")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneSet")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("MetadataId", "UniqueGeneIndex");
+
+                    b.HasIndex("UniqueGeneIndex");
 
                     b.ToTable("MetadataGenes");
                 });
@@ -100,7 +114,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("GeneId")
+                    b.Property<string>("Architecture")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneSet")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -118,12 +136,20 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("Size")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("UniqueGeneIndex")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("LastSeenAgent", "GeneId")
+                    b.HasIndex("UniqueGeneIndex", "LastSeenAgent")
                         .IsUnique();
 
                     b.ToTable("Genes");
@@ -699,7 +725,13 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<bool>("Frozen")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Geneset")
+                    b.Property<string>("GeneArchitecture")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeneSet")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("LastSeen")
@@ -720,10 +752,15 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UniqueGeneIndex")
+                        .HasColumnType("TEXT");
+
                     b.Property<long?>("UsedSizeBytes")
                         .HasColumnType("INTEGER");
 
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("UniqueGeneIndex");
 
                     b.ToTable("VirtualDisks");
                 });

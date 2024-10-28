@@ -6,5 +6,5 @@ namespace Eryph.Modules.VmHostAgent.Genetics;
 
 public interface IGeneRequestDispatcher
 {
-    ValueTask NewGeneRequestTask(IOperationTaskMessage message, GeneIdentifierWithType geneIdWithType);
+    ValueTask NewGeneRequestTask(IOperationTaskMessage message, UniqueGeneIdentifier uniqueGeneId);
 }

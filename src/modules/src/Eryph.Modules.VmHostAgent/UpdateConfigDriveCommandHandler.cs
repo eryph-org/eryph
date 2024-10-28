@@ -1,7 +1,9 @@
-﻿using Dbosoft.Rebus.Operations;
+﻿using System.IO.Abstractions;
+using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
@@ -24,6 +26,7 @@ internal class UpdateConfigDriveCommandHandler(
     IPowershellEngine engine,
     ITaskMessaging messaging,
     ILogger log,
+    IFileSystemService fileSystem,
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
@@ -37,21 +40,21 @@ internal class UpdateConfigDriveCommandHandler(
         let vmId = command.VMId
         from vmList in GetVmInfo(vmId, Engine)
         from vmInfo in EnsureSingleEntry(vmList, vmId)
-        from metadata in EnsureMetadata(command.MachineMetadata, vmInfo).WriteTrace().ToAsync()
+        from metadata in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
             .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
-        let genepoolReader = new LocalGenepoolReader(vmHostAgentConfig)
+        let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
         from fedConfig in CatletFeeding.Feed(
-            CatletFeeding.FeedSystemVariables(command.Config, metadata),
+            CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
+            command.ResolvedGenes.ToSeq(),
             genepoolReader)
-        .ToAsync()
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()
             .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
             .ToAsync()
         from vmInfoConverged in VirtualMachine.ConvergeConfigDrive(
                 vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfo,
-                substitutedConfig, metadata, currentStorageSettings)
+                substitutedConfig, command.MachineMetadata, currentStorageSettings)
             .WriteTrace().ToAsync()
         select Unit.Default;
 }

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
+using Eryph.Core.Genetics;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
@@ -56,15 +57,18 @@ internal class VirtualMachineMetadataService : IVirtualMachineMetadataService
             entity.Metadata = JsonSerializer.Serialize(metadata);
         }
 
-        entity.Genes = metadata.Fodder.ToSeq()
-            .Append(Prelude.Optional(metadata.ParentConfig).ToSeq().Map(p => p.Fodder.ToSeq()))
-            .Map(f => GeneIdentifier.NewOption(f.Source))
+        entity.Genes = metadata.ResolvedFodderGenes.ToSeq()
+            .Map(g => from geneId in GeneIdentifier.NewOption(g.Key)
+                      from architecture in Architecture.NewOption(g.Value)
+                      select new UniqueGeneIdentifier(GeneType.Fodder, geneId, architecture))
             .Somes()
             .Distinct()
             .Map(g => new CatletMetadataGene
             {
                 MetadataId = metadata.Id,
-                GeneId = g.Value,
+                GeneSet = g.Id.GeneSet.Value,
+                Name = g.Id.GeneName.Value,
+                Architecture = g.Architecture.Value,
             })
             .ToList();
 

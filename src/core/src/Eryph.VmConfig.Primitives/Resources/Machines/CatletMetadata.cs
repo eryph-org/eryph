@@ -16,6 +16,8 @@ namespace Eryph.Resources.Machines
         public Guid VMId { get; set; }
         public Guid MachineId { get; set; }
 
+        public string Architecture { get; set; }
+
         [CanBeNull] public string Parent { get; set; }
 
         [CanBeNull] public CatletConfig ParentConfig { get; set; }
@@ -23,6 +25,12 @@ namespace Eryph.Resources.Machines
         [CanBeNull] public FodderConfig[] Fodder { get; set; }
 
         [CanBeNull] public VariableConfig[] Variables { get; set; }
+
+        /// <summary>
+        /// Contains the architectures which have been resolved for the fodder genes
+        /// when the catlet has been created.
+        /// </summary>
+        [CanBeNull] public IReadOnlyDictionary<string, string> ResolvedFodderGenes { get; set; }
 
         public bool SecureDataHidden { get; set; }
     }

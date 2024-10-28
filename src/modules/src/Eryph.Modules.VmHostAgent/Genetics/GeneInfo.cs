@@ -1,27 +1,25 @@
 ﻿using System;
-using Eryph.ConfigModel;
+using Eryph.Core.Genetics;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
 
 namespace Eryph.Modules.VmHostAgent.Genetics;
 
-public record GeneInfo(GeneIdentifier GeneId, string Hash, string HashAlg, 
+/// <summary>
+/// Contains information about a gene.
+/// </summary>
+/// <param name="Hash">
+/// The hash which uniquely identifies the gene. This value
+/// includes the algorithm identifier and looks like this:
+/// <c>sha1:abcd...</c>
+/// </param>
+public record GeneInfo(
+    UniqueGeneIdentifier Id,
+    string Hash,
     GeneManifestData? MetaData,
     GenePartDownloadUri[]? DownloadUris,
     DateTimeOffset DownloadExpires,
-    string? LocalPath, bool MergedWithImage)
+    bool MergedWithImage)
 {
-    public readonly GeneIdentifier GeneId = GeneId;
-    public readonly string Hash = Hash;
-    public readonly string HashAlg = HashAlg;
-    public readonly string? LocalPath = LocalPath;
-    public readonly GeneManifestData? MetaData = MetaData;
-    public readonly bool MergedWithImage = MergedWithImage;
-    public readonly GenePartDownloadUri[]? DownloadUris = DownloadUris;
-    public readonly DateTimeOffset DownloadExpires = DownloadExpires;
-
-    public override string ToString()
-    {
-        return GeneId.ToString();
-    }
+    public override string ToString() => Id.ToString();
 }

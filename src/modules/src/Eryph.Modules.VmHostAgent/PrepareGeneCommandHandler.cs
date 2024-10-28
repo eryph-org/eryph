@@ -1,41 +1,35 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Modules.VmHostAgent.Genetics;
 using JetBrains.Annotations;
-using Microsoft.Extensions.Logging;
+using LanguageExt;
+using LanguageExt.Common;
 using Rebus.Handlers;
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent;
 
 [UsedImplicitly]
-public class PrepareGeneCommandHandler : IHandleMessages<
-    OperationTask<PrepareGeneCommand>>
+internal class PrepareGeneCommandHandler(
+    ITaskMessaging messaging,
+    IGeneRequestDispatcher imageRequestDispatcher)
+    : IHandleMessages<OperationTask<PrepareGeneCommand>>
 {
-    private readonly ITaskMessaging _messaging;
-    private readonly ILogger _log;
-    private readonly IGeneRequestDispatcher _imageRequestDispatcher;
+    public Task Handle(OperationTask<PrepareGeneCommand> message) =>
+        HandleCommand(message)
+            .FailOrContinue(messaging, message);
 
-    public PrepareGeneCommandHandler(ITaskMessaging messaging, ILogger log,
-        IGeneRequestDispatcher imageRequestDispatcher)
-    {
-        _messaging = messaging;
-        _log = log;
-        _imageRequestDispatcher = imageRequestDispatcher;
-    }
-
-    public async Task Handle(OperationTask<PrepareGeneCommand> message)
-    {
-        try
-        {
-            await _imageRequestDispatcher.NewGeneRequestTask(
-                message, message.Command.GeneIdentifier);
-        }
-        catch (Exception ex)
-        {
-            _log.LogError(ex, $"Command '{nameof(PrepareGeneCommand)}' failed.");
-            await _messaging.FailTask(message, ex.Message);
-        }
-    }
+    private EitherAsync<Error, Unit> HandleCommand(
+        OperationTask<PrepareGeneCommand> message) =>
+        from _ in TryAsync(async () =>
+                {
+                    await imageRequestDispatcher.NewGeneRequestTask(
+                        message, message.Command.Gene);
+                    return unit;
+                })
+            .ToEither()
+        select unit;
 }

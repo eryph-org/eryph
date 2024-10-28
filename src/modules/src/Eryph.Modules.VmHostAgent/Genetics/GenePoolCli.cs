@@ -97,7 +97,7 @@ public static class GenePoolCli<RT> where RT : struct,
         {
             var response = await client.GetOrganizationClient(orgName)
                 // TODO Remove Org.Read permission when the /me endpoint is available
-                .CreateApiKeyAsync(apiKeyName, ["Geneset.Read", "Org.Read"], cancelToken);
+                .CreateApiKeyAsync(apiKeyName, ["Geneset.Read", "Org.Read"], cancellationToken: cancelToken);
             return Optional(response);
         }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, Option<ApiKeySecretResponse>>(e)))
         from _1 in stopSpinner
@@ -153,7 +153,7 @@ public static class GenePoolCli<RT> where RT : struct,
                     HardwareId = hardwareId,
                 });
             var response = await client.GetApiKeyClient(apiKey.Organization, apiKey.Id)
-                .GetAsync(cancelToken);
+                .GetAsync(cancellationToken: cancelToken);
 
             return response;
         }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, ApiKeyResponse>(e)))
@@ -190,7 +190,7 @@ public static class GenePoolCli<RT> where RT : struct,
         from _1 in Aff(async () =>
         {
             await client.GetApiKeyClient(apiKey.Organization, apiKey.Id)
-                .DeleteAsync(cancelToken);
+                .DeleteAsync(cancellationToken: cancelToken);
             return unit;
         }) | @catch(e => stopSpinner.Bind(_ => FailAff<RT, Unit>(e)))
         from _2 in stopSpinner

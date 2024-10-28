@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
+using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Core;
@@ -27,10 +29,12 @@ namespace Eryph.VmManagement.Storage
 
         public long? SizeBytes { get; set; }
         public long? SizeBytesCreate { get; set; }
-        public Option<GeneSetIdentifier> Geneset { get; set; }
+
+        public Option<UniqueGeneIdentifier> Gene { get; set; }
 
         public static Option<DiskStorageSettings> FromSourceString(
             VmHostAgentConfiguration vmHostAgentConfig,
+            Seq<UniqueGeneIdentifier> resolvedGenes,
             string templateString)
         {
             if (!templateString.StartsWith("gene:"))
@@ -48,12 +52,18 @@ namespace Eryph.VmManagement.Storage
 
             return from geneId in GeneIdentifier.NewOption(templateString)
                    let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
-                   let geneDiskPath = GenePoolPaths.GetGenePath(genePoolPath, GeneType.Volume, geneId)
-                   let namesAndId = StorageNames.FromVhdPath(geneDiskPath, vmHostAgentConfig)
+                   from uniqueId in resolvedGenes.Find(g => g.GeneType == GeneType.Volume && g.Id == geneId)
+                   let geneDiskPath = GenePoolPaths.GetGenePath(genePoolPath, uniqueId)
                    select new DiskStorageSettings
                    {
-                       StorageNames = namesAndId.Names,
-                       StorageIdentifier = namesAndId.StorageIdentifier,
+                       StorageNames = new StorageNames()
+                       {
+                           ProjectName = EryphConstants.DefaultProjectName,
+                           EnvironmentName = EryphConstants.DefaultEnvironmentName,
+                           DataStoreName = EryphConstants.DefaultDataStoreName,
+                           ProjectId = EryphConstants.DefaultProjectId,
+                       },
+                       Gene = uniqueId,
                        Path = System.IO.Path.GetDirectoryName(geneDiskPath),
                        FileName = System.IO.Path.GetFileName(geneDiskPath),
                        Generation = 0,
@@ -68,28 +78,53 @@ namespace Eryph.VmManagement.Storage
             from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path).ToAsync().ToError()
             from vhdInfo in optionalVhdInfo.ToEitherAsync(Error.New(
                 $"Could not read VHD {path}"))
-            let nameAndId = StorageNames.FromVhdPath(vhdInfo.Value.Path,
-                vmHostAgentConfig)
-            let parentPath = Optional(vhdInfo.Value.ParentPath).Filter(notEmpty)
-            from parentSettings in parentPath.Map(p => FromVhdPath(engine, vmHostAgentConfig, p))
-                .Sequence()
-            let generation = parentSettings.Map(p => p.Generation).IfNone(-1) + 1
-            select
-                new DiskStorageSettings
+            let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+            let vhdPath = vhdInfo.Value.Path
+            from result in GenePoolPaths.IsPathInGenePool(genePoolPath, vhdPath)
+                ? FromGeneVhdInfo(genePoolPath, vhdInfo.Value)
+                : from _ in RightAsync<Error, Unit>(unit)
+                  let nameAndId = StorageNames.FromVhdPath(vhdPath, vmHostAgentConfig)
+                  let parentPath = Optional(vhdInfo.Value.ParentPath).Filter(notEmpty)
+                  from parentSettings in parentPath.Map(p => FromVhdPath(engine, vmHostAgentConfig, p)).Sequence()
+                  let generation = parentSettings.Map(p => p.Generation).IfNone(-1) + 1
+                  select new DiskStorageSettings
+                  {
+                      Path = System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
+                      Name = GetNameWithoutGeneration(vhdInfo.Value.Path, generation),
+                      FileName = System.IO.Path.GetFileName(vhdInfo.Value.Path),
+                      StorageNames = nameAndId.Names,
+                      StorageIdentifier = nameAndId.StorageIdentifier,
+                      SizeBytes = vhdInfo.Value.Size,
+                      UsedSizeBytes = vhdInfo.Value.FileSize,
+                      DiskIdentifier = vhdInfo.Value.DiskIdentifier,
+                      Generation = generation,
+                      ParentSettings = parentSettings
+                  }
+            select result;
+
+        private static EitherAsync<Error, DiskStorageSettings> FromGeneVhdInfo(
+            string genePoolPath,
+            VhdInfo vhdInfo) =>
+            from uniqueGeneId in GenePoolPaths.GetUniqueGeneIdFromPath(genePoolPath, vhdInfo.Path)
+                .ToAsync()
+            select new DiskStorageSettings
+            {
+                Path = System.IO.Path.GetDirectoryName(vhdInfo.Path),
+                Name = System.IO.Path.GetFileNameWithoutExtension(vhdInfo.Path),
+                FileName = System.IO.Path.GetFileName(vhdInfo.Path),
+                StorageNames = new StorageNames
                 {
-                    Path = System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
-                    Name = GetNameWithoutGeneration(vhdInfo.Value.Path, generation),
-                    FileName = System.IO.Path.GetFileName(vhdInfo.Value.Path),
-                    StorageNames = nameAndId.Names,
-                    StorageIdentifier = nameAndId.StorageIdentifier,
-                    Geneset = nameAndId.StorageIdentifier.Bind(GeneIdentifier.NewOption).Map(g => g.GeneSet),
-                    SizeBytes = vhdInfo.Value.Size,
-                    UsedSizeBytes = vhdInfo.Value.FileSize,
-                    DiskIdentifier = vhdInfo.Value.DiskIdentifier,
-                    Generation = generation,
-                    ParentSettings = parentSettings
-                };
-        
+                    ProjectId = EryphConstants.DefaultProjectId,
+                    ProjectName = EryphConstants.DefaultProjectName,
+                    EnvironmentName = EryphConstants.DefaultEnvironmentName,
+                    DataStoreName = EryphConstants.DefaultDataStoreName,
+                },
+                Gene = uniqueGeneId,
+                SizeBytes = vhdInfo.Size,
+                UsedSizeBytes = vhdInfo.FileSize,
+                DiskIdentifier = vhdInfo.DiskIdentifier,
+                Generation = 0,
+            };
 
         private static string GetNameWithoutGeneration(string path, int generation)
         {

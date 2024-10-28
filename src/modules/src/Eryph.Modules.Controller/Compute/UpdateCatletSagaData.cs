@@ -15,6 +15,8 @@ public class UpdateCatletSagaData
 
     public CatletConfig? BredConfig { get; set; }
 
+    public IReadOnlyList<UniqueGeneIdentifier>? ResolvedGenes { get; set; }
+
     public Guid CatletId { get; set; }
         
     public string? AgentName { get; set; }
@@ -23,5 +25,7 @@ public class UpdateCatletSagaData
         
     public Guid TenantId { get; set; }
 
-    public List<GeneIdentifierWithType> PendingGenes { get; set; } = [];
+    public Architecture? Architecture { get; set; }
+
+    public IReadOnlyList<UniqueGeneIdentifier> PendingGenes { get; set; } = [];
 }

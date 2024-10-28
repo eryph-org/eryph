@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
+using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
 
 namespace Eryph.StateDb;
@@ -21,11 +22,11 @@ public interface IGeneInventoryQueries
 
     Task<List<Guid>> GetCatletsUsingGene(
         string agentName,
-        GeneIdentifier geneId,
+        UniqueGeneIdentifier uniqueGeneId,
         CancellationToken cancellationToken = default);
 
     Task<List<Guid>> GetDisksUsingGene(
         string agentName,
-        GeneIdentifier geneId,
+        UniqueGeneIdentifier uniqueGeneId,
         CancellationToken cancellationToken = default);
 }

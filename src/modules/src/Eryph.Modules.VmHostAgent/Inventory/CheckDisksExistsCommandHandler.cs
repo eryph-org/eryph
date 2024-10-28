@@ -66,6 +66,7 @@ public class CheckDisksExistsCommandHandler(
         from storageSettings in DiskStorageSettings.FromVhdPath(psEngine, vmHostAgentConfig, fullPath)
         select storageSettings.DiskIdentifier != toCheck.DiskIdentifier
                || storageSettings.StorageIdentifier != Optional(toCheck.StorageIdentifier)
+               || storageSettings.Gene != Optional(toCheck.Gene)
                // check if storage names are different if they could be detected
                // otherwise saved data was auto assigned to default project and environment
                || storageSettings.StorageNames is { IsValid: true }

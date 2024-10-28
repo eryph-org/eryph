@@ -36,9 +36,9 @@ internal class RemoveGenesVmHostCommandHandler(
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
         let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
-        let genePool = genePoolFactory.CreateLocal()
+        let genePool = genePoolFactory.CreateLocal(genePoolPath)
         from _ in command.Genes.ToSeq()
-            .Map(gene => genePool.RemoveCachedGene(genePoolPath, gene.GeneType, gene.GeneIdentifier))
+            .Map(genePool.RemoveCachedGene)
             .SequenceSerial()
         select unit;
 }

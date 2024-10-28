@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;
@@ -21,10 +23,11 @@ namespace Eryph.VmManagement.Storage
             VmHostAgentConfiguration vmHostAgentConfig,
             CatletConfig config,
             VMStorageSettings storageSettings,
-            Func<string, EitherAsync<Error, Option<VhdInfo>>> getVhdInfo)
+            Func<string, EitherAsync<Error, Option<VhdInfo>>> getVhdInfo,
+            Seq<UniqueGeneIdentifier> resolvedGenes)
         {
             return config.Drives.ToSeq()
-                .Map((index, c) => FromDriveConfig(vmHostAgentConfig, storageSettings, c, getVhdInfo, index))
+                .Map((index, c) => FromDriveConfig(vmHostAgentConfig, storageSettings, c, getVhdInfo, resolvedGenes, index))
                 .ToSeq().SequenceSerial();
         }
 
@@ -33,6 +36,7 @@ namespace Eryph.VmManagement.Storage
             VMStorageSettings storageSettings,
             CatletDriveConfig driveConfig,
             Func<string, EitherAsync<Error, Option<VhdInfo>>> getVhdInfo,
+            Seq<UniqueGeneIdentifier> resolvedGenes,
             int index)
         {
             //currently this will not be configurable, but keep it here at least as constant
@@ -53,7 +57,7 @@ namespace Eryph.VmManagement.Storage
                 },
                 CatletDriveType.VHD or CatletDriveType.SharedVHD or CatletDriveType.VHDSet =>
                     FromVhdDriveConfig(vmHostAgentConfig, storageSettings, driveConfig,
-                        getVhdInfo, controllerNumber, controllerLocation),
+                        getVhdInfo, resolvedGenes, controllerNumber, controllerLocation),
                 _ => LeftAsync<Error, VMDriveStorageSettings>(Error.New(
                     $"The drive type {driveConfig.Type} is not supported")),
             };
@@ -64,6 +68,7 @@ namespace Eryph.VmManagement.Storage
             VMStorageSettings storageSettings,
             CatletDriveConfig driveConfig,
             Func<string, EitherAsync<Error, Option<VhdInfo>>> getVhdInfo,
+            Seq<UniqueGeneIdentifier> resolvedGenes,
             int controllerNumber,
             int controllerLocation)
         {
@@ -83,7 +88,7 @@ namespace Eryph.VmManagement.Storage
                 from parentOptions in match(
                     Optional(driveConfig.Source).Filter(notEmpty),
                     Some: src =>
-                        from dss in DiskStorageSettings.FromSourceString(vmHostAgentConfig, src)
+                        from dss in DiskStorageSettings.FromSourceString(vmHostAgentConfig, resolvedGenes, src)
                             .ToEitherAsync(Error.New("The catlet drive source is invalid"))
                         select Some(dss),
                     None: () => RightAsync<Error, Option<DiskStorageSettings>>(None))

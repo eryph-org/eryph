@@ -20,23 +20,21 @@ public class GeneSpecs
         }
     }
 
-    public sealed class GetByGeneId : Specification<Gene>, ISingleResultSpecification<Gene>
+    public sealed class GetByUniqueGeneId : Specification<Gene>, ISingleResultSpecification<Gene>
     {
-        public GetByGeneId(string agentName, GeneIdentifier geneId)
+        public GetByUniqueGeneId(string agentName, UniqueGeneIdentifier uniqueGeneId)
         {
             Query.Where(x => x.LastSeenAgent == agentName
-                             && x.GeneId == geneId.Value);
+                             && x.UniqueGeneIndex == uniqueGeneId.ToUniqueGeneIndex());
         }
     }
 
-    public sealed class GetByGeneIds : Specification<Gene>
+    public sealed class GetByUniqueGeneIds : Specification<Gene>
     {
-        public GetByGeneIds(string agentName, IList<GeneIdentifier> geneIds)
+        public GetByUniqueGeneIds(string agentName, IList<UniqueGeneIdentifier> geneIds)
         {
-            var values = geneIds.Map(id => id.Value).ToList();
-
-            Query.Where(x => x.LastSeenAgent == agentName
-                             && values.Contains(x.GeneId));
+            var values = geneIds.Map(id => id.ToUniqueGeneIndex()).ToList();
+            Query.Where(x => x.LastSeenAgent == agentName && values.Contains(x.UniqueGeneIndex));
         }
     }
 
@@ -49,20 +47,20 @@ public class GeneSpecs
 
     public sealed class GetForInventory : Specification<Gene>, ISingleResultSpecification<Gene>
     {
-        public GetForInventory(string agentName, GeneType geneType, GeneIdentifier geneId)
+        public GetForInventory(string agentName, UniqueGeneIdentifier uniqueGeneId)
         {
             Query.Where(x => x.LastSeenAgent == agentName
-                             && x.GeneType == geneType
-                             && x.GeneId == geneId.Value);
+                             && x.GeneType == uniqueGeneId.GeneType
+                             && x.UniqueGeneIndex == uniqueGeneId.ToUniqueGeneIndex());
         }
     }
 
     public sealed class GetMissing : Specification<Gene>
     {
-        public GetMissing(string agentName, IList<GeneIdentifier> geneIds)
+        public GetMissing(string agentName, IList<UniqueGeneIdentifier> geneIds)
         {
-            var values = geneIds.Map(id => id.Value).ToList();
-            Query.Where(x => x.LastSeenAgent == agentName && !values.Contains(x.GeneId));
+            var values = geneIds.Map(id => id.ToUniqueGeneIndex()).ToList();
+            Query.Where(x => x.LastSeenAgent == agentName && !values.Contains(x.UniqueGeneIndex));
         }
     }
 }

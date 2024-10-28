@@ -33,8 +33,8 @@ public class WindowsCertificateGeneratorTests
         certificate.HasPrivateKey.Should().BeTrue();
         certificate.Subject.Should().Be("CN=test");
         certificate.Issuer.Should().Be("CN=test");
-        certificate.NotBefore.Should().BeCloseTo(DateTime.Now.AddDays(-1), TimeSpan.FromMinutes(10));
-        certificate.NotAfter.Should().BeCloseTo(DateTime.Now.AddDays(10), TimeSpan.FromMinutes(10));
+        certificate.NotBefore.ToUniversalTime().Should().BeCloseTo(DateTime.UtcNow.AddDays(-1), TimeSpan.FromMinutes(10));
+        certificate.NotAfter.ToUniversalTime().Should().BeCloseTo(DateTime.UtcNow.AddDays(10), TimeSpan.FromMinutes(10));
         certificate.SerialNumber.Should().NotBeEmpty();
 
         certificate.Extensions.Should().SatisfyRespectively(
