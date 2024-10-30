@@ -516,7 +516,7 @@ public class CatletBreedingTests
                     Name = "cfg",
                     Type = "type1",
                     Content = "contenta",
-                    FileName = "filenamea"
+                    Filename = "filenamea"
                 }
             ]
         };
@@ -532,7 +532,7 @@ public class CatletBreedingTests
                     Name = "cfg",
                     Type = "type2",
                     Content = "contentb",
-                    FileName = "filenameb"
+                    Filename = "filenameb"
                 }
             ]
         };
@@ -545,7 +545,7 @@ public class CatletBreedingTests
             {
                 fodder.Type.Should().Be("type2");
                 fodder.Content.Should().Be("contentb");
-                fodder.FileName.Should().Be("filenameb");
+                fodder.Filename.Should().Be("filenameb");
             });
     }
 
@@ -562,7 +562,7 @@ public class CatletBreedingTests
                     Name = "cfg",
                     Type = "type1",
                     Content = "contenta",
-                    FileName = "filenamea"
+                    Filename = "filenamea"
                 }
             ]
         };
