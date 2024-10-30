@@ -14,9 +14,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.8" />
-    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.6.2-PullRequest0096.33" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.6.2-PullRequest0096.33" />
-    <PackageReference Include="Eryph.ConfigModel.Networks.Json" Version="0.6.2-PullRequest0096.33" />
+    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.6.2-PullRequest0096.34" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.6.2-PullRequest0096.34" />
+    <PackageReference Include="Eryph.ConfigModel.Networks.Json" Version="0.6.2-PullRequest0096.34" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
