@@ -368,12 +368,9 @@ internal class GetCatletConfigurationHandler(
                                                             && config.Memory?.Minimum.GetValueOrDefault() == 0)
             config.Memory = null;
 
-
-        var configString = ConfigModelJsonSerializer.Serialize(config);
-
         var result = new CatletConfiguration
         {
-            Configuration = JsonSerializer.Deserialize<JsonElement>(configString)
+            Configuration = CatletConfigJsonSerializer.SerializeToElement(config),
         };
 
         return result;

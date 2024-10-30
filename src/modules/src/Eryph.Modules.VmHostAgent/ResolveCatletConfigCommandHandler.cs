@@ -195,11 +195,9 @@ internal class ResolveCatletConfigCommandHandler(
             new GeneIdentifier(geneSetId, GeneName.New("catlet")),
             Architecture.New(EryphConstants.AnyArchitecture))
         from json in genepoolReader.ReadGeneContent(uniqueId)
-        from config in Try(() =>
-        {
-            var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);
-            return CatletConfigDictionaryConverter.Convert(configDictionary);
-        }).ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'.", Error.New(ex))).ToAsync()
+        from config in Try(() => CatletConfigJsonSerializer.Deserialize(json))
+            .ToEither(ex => Error.New($"Could not deserialize catlet config '{geneSetId}'.", Error.New(ex)))
+            .ToAsync()
         select config;
 
     private static Error CreateError(

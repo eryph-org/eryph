@@ -40,8 +40,8 @@ internal class VirtualNetworkSeeder : SeederBase
 
     protected override async Task SeedAsync(Guid entityId, string json, CancellationToken cancellationToken = default)
     {
-        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);
-        if (configDictionary == null)
+        var config = ProjectNetworksConfigJsonSerializer.Deserialize(json);
+        if (config == null)
             throw new SeederException($"The network configuration for project {entityId} is invalid");
 
         var project = await _stateStore.For<Project>().GetBySpecAsync(
@@ -56,7 +56,6 @@ internal class VirtualNetworkSeeder : SeederBase
         if (existingNetworks.Any())
             return;
 
-        var config = ProjectNetworksConfigDictionaryConverter.Convert(configDictionary);
         var normalizedConfig = _configValidator.NormalizeConfig(config);
 
         var providerConfig = await _networkProviderManager.GetCurrentConfiguration()

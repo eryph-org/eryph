@@ -33,7 +33,7 @@ public static class LocalGenepoolReaderMockExtensions
     {
         var validGeneSetId = GeneSetIdentifier.New(geneSetIdentifier);
         var validGeneId = new GeneIdentifier(validGeneSetId, GeneName.New("catlet"));
-        var json = ConfigModelJsonSerializer.Serialize(catletConfig);
+        var json = CatletConfigJsonSerializer.Serialize(catletConfig);
 
         mock.Setup(m => m.ReadGeneContent(new UniqueGeneIdentifier(
                 GeneType.Catlet, validGeneId, Architecture.New("any"))))
@@ -47,7 +47,7 @@ public static class LocalGenepoolReaderMockExtensions
         FodderGeneConfig fodderGene)
     {
         var validGeneId = GeneIdentifier.New(geneIdentifier);
-        var json = ConfigModelJsonSerializer.Serialize(fodderGene);
+        var json = FodderGeneConfigJsonSerializer.Serialize(fodderGene);
 
         mock.Setup(m => m.ReadGeneContent(new UniqueGeneIdentifier(
                 GeneType.Fodder, validGeneId, Architecture.New(architecture))))

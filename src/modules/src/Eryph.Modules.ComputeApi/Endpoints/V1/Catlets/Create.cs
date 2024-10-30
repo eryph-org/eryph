@@ -31,8 +31,7 @@ public class Create(
 {
     protected override object CreateOperationMessage(NewCatletRequest request)
     {
-        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(request.Configuration);
-        var config = CatletConfigDictionaryConverter.Convert(configDictionary);
+        var config = CatletConfigJsonSerializer.Deserialize(request.Configuration);
 
         return new CreateCatletCommand
         { 

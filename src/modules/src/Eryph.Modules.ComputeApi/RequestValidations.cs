@@ -11,7 +11,7 @@ using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
 using JetBrains.Annotations;
 using LanguageExt;
-
+using LanguageExt.Common;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi;
@@ -21,31 +21,16 @@ public static class RequestValidations
     public static Validation<ValidationIssue, CatletConfig> ValidateCatletConfig(
         JsonElement jsonElement,
         string path) =>
-        from configDictionary in TryOption(() => ConfigModelJsonSerializer.DeserializeToDictionary(jsonElement))
-            .ToValidation(ex => new ValidationIssue(path, ex.Message))
-        from validConfigDictionary in configDictionary
-            .ToValidation(CreateMissingConfigIssue(path))
-        from config in TryOption(() => CatletConfigDictionaryConverter.Convert(validConfigDictionary))
-            .ToValidation(ex => new ValidationIssue(path, ex.Message))
-        from validConfig in config
-            .ToValidation(CreateMissingConfigIssue(path))
-        from _ in CatletConfigValidations.ValidateCatletConfig(validConfig, path)
-        select validConfig;
+        from config in Try(() => CatletConfigJsonSerializer.Deserialize(jsonElement))
+            .ToValidation(ex => new ValidationIssue(path, $"The configuration is invalid: {ex.Message}"))
+        from _ in CatletConfigValidations.ValidateCatletConfig(config, path)
+        select config;
 
     public static Validation<ValidationIssue, ProjectNetworksConfig> ValidateProjectNetworkConfig(
         JsonElement jsonElement,
         string path) =>
-        from configDictionary in TryOption(() => ConfigModelJsonSerializer.DeserializeToDictionary(jsonElement))
-            .ToValidation(ex => new ValidationIssue(path, ex.Message))
-        from validConfigDictionary in configDictionary
-            .ToValidation(CreateMissingConfigIssue(path))
-        from config in TryOption(() => ProjectNetworksConfigDictionaryConverter.Convert(validConfigDictionary))
-            .ToValidation(ex => new ValidationIssue(path, ex.Message))
-        from validConfig in config
-            .ToValidation(CreateMissingConfigIssue(path))
-        from _ in ComplexValidations.ValidateProperty(validConfig, r => r.Project, ProjectName.NewValidation, path)
-        select validConfig;
-
-    private static ValidationIssue CreateMissingConfigIssue(string path) =>
-        new (path, "The configuration is missing.");
+        from config in Try(() => ProjectNetworksConfigJsonSerializer.Deserialize(jsonElement)).
+            ToValidation(ex => new ValidationIssue(path, $"The configuration is invalid: {ex.Message}"))
+        from _ in ComplexValidations.ValidateProperty(config, r => r.Project, ProjectName.NewValidation, path)
+        select config;
 }

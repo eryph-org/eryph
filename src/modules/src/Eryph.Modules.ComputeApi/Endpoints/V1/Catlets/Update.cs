@@ -25,10 +25,7 @@ public class Update(
 {
     protected override object CreateOperationMessage(Catlet model, UpdateCatletRequest request )
     {
-        var jsonString = request.Body.Configuration.GetRawText();
-
-        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(jsonString);
-        var config = CatletConfigDictionaryConverter.Convert(configDictionary);
+        var config = CatletConfigJsonSerializer.Deserialize(request.Body.Configuration);
 
         return new UpdateCatletCommand
         {
