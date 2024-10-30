@@ -8,7 +8,7 @@
     </DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.6.2-PullRequest0096.34" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.6.2-PullRequest0096.36" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
