@@ -32,10 +32,7 @@ public class Update(
         if (!Guid.TryParse(request.ProjectId, out var projectId))
             throw new ArgumentException("The project ID is invalid.", nameof(request));
 
-        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(request.Body.Configuration)
-            ?? throw new ArgumentException("The configuration is missing", nameof(request));
-
-        var config = ProjectNetworksConfigDictionaryConverter.Convert(configDictionary);
+        var config = ProjectNetworksConfigJsonSerializer.Deserialize(request.Body.Configuration);
 
         return new CreateNetworksCommand
         { 

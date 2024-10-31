@@ -65,7 +65,7 @@ internal class VirtualNetworkChangeHandler : IChangeHandler<VirtualNetworkChange
     private string PrepareNetworksConfig(Project project, List<VirtualNetwork> networks)
     {
         var networkConfig = networks.ToNetworksConfig(project.Name);
-        return ConfigModelJsonSerializer.Serialize(networkConfig);
+        return ProjectNetworksConfigJsonSerializer.Serialize(networkConfig);
     }
 
     private string PreparePortsConfig(List<VirtualNetwork> networks)

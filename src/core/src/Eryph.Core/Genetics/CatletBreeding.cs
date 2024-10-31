@@ -204,7 +204,7 @@ public static class CatletBreeding
         Source = child.Source,
 
         Content = child.Content ?? parent.Content,
-        FileName = child.FileName ?? parent.FileName,
+        Filename = child.Filename ?? parent.Filename,
         Remove = child.Remove ?? parent.Remove,
         Secret = child.Secret ?? parent.Secret,
         Type = child.Type ?? parent.Type,

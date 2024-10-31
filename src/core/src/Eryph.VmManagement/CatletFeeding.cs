@@ -120,12 +120,8 @@ public static class CatletFeeding
             .ToEither(Error.New($"The gene '{geneId}' has not been correctly resolved. This should not happen."))
             .ToAsync()
         from geneContent in genepoolReader.ReadGeneContent(uniqueGeneId)
-        from geneFodderConfig in Try(() =>
-        {
-            var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(geneContent);
-            return FodderGeneConfigDictionaryConverter.Convert(configDictionary);
-
-        }).ToEither(Error.New).ToAsync()
+        from geneFodderConfig in Try(() => FodderGeneConfigJsonSerializer.Deserialize(geneContent))
+            .ToEither(Error.New).ToAsync()
         from geneFodderWithName in geneFodderConfig.Fodder.ToSeq()
             .Map(f => from n in FodderName.NewEither(f.Name)
                       select (Name: n, Config: f))

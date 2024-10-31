@@ -528,8 +528,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             ChangeTrackingConfig.ProjectNetworksConfigPath,
             $"{ProjectId}.json");
         var json = await MockFileSystem.File.ReadAllTextAsync(path, Encoding.UTF8);
-        var configDictionary = ConfigModelJsonSerializer.DeserializeToDictionary(json);
-        return ProjectNetworksConfigDictionaryConverter.Convert(configDictionary!);
+        return ProjectNetworksConfigJsonSerializer.Deserialize(json);
     }
 
     private async Task<CatletNetworkPortsConfigModel> ReadPortsConfig()

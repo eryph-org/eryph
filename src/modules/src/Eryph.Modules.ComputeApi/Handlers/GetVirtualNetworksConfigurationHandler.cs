@@ -41,11 +41,9 @@ internal class GetVirtualNetworksConfigurationHandler(
 
         var projectConfig = networks.ToNetworksConfig(project.Name);
 
-        var configString = ConfigModelJsonSerializer.Serialize(projectConfig);
-
         var result = new VirtualNetworkConfiguration()
         {
-            Configuration = JsonSerializer.Deserialize<JsonElement>(configString)
+            Configuration = ProjectNetworksConfigJsonSerializer.SerializeToElement(projectConfig),
         };
 
         return result;
