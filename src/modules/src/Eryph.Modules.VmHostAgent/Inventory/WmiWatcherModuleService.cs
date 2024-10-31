@@ -6,10 +6,13 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
+using LanguageExt;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Transport;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Inventory
 {
@@ -220,9 +223,31 @@ namespace Eryph.Modules.VmHostAgent.Inventory
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void OnVmChanged(object sender, EventArrivedEventArgs e)
-        {
+        private void OnVmChanged(object sender, EventArrivedEventArgs e) =>
+            GetVmId(e).IfSome(vmId =>
+            {
+                _bus.SendLocal(new VirtualMachineChangedEvent
+                {
+                    VmId = vmId,
+                });
+            });
+        
 
-        }
+        // TODO add proper error handling
+        private static Option<Guid> GetVmId(EventArrivedEventArgs e) =>
+            from _ in Some(unit)
+            let targetInstance = (ManagementBaseObject)e.NewEvent["TargetInstance"]
+            from vmId in targetInstance.ClassPath.ClassName == "Msvm_ComputerSystem"
+                // Msvm_ComputerSystem can be either the host or a VM. For VMs, the name
+                // contains the Guid which identifies the VM.
+                ? from vmId in parseGuid(targetInstance["Name"] as string)
+                  select vmId
+                : from _ in Some(unit)
+                  let instanceId = (string)targetInstance["InstanceID"]
+                  let parts = instanceId.Split('\\')
+                  from idPart in parts.Length == 3 ? Some(parts[1]) : None
+                  from vmId in parseGuid(idPart)
+                  select vmId
+            select vmId;
     }
 }
