@@ -67,8 +67,12 @@ namespace Eryph.Modules.VmHostAgent.Inventory
             _networkWatcher.Start();
 
 
-            _statusWatcher = new ManagementEventWatcher(scope, new WqlEventQuery(
-                "Select * from __InstanceModificationEvent within 3 where TargetInstance ISA 'MSVM_ComputerSystem' and TargetInstance.EnabledState <> PreviousInstance.EnabledState"));
+            _statusWatcher = new ManagementEventWatcher(
+                scope,
+                new WqlEventQuery(
+                "__InstanceModificationEvent",
+                    TimeSpan.FromSeconds(3),
+                    "TargetInstance ISA 'Msvm_ComputerSystem' and TargetInstance.EnabledState <> PreviousInstance.EnabledState"));
             _statusWatcher.EventArrived += StatusWatcherOnEventArrived;
             _statusWatcher.Start();
 
@@ -155,12 +159,6 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                 return;
 
             var vmId = Guid.Parse(pathParts[1]);
-
-            _bus.SendLocal(new GuestNetworkAdapterChangedEvent
-            {
-                VmId = vmId,
-                AdapterId = adapterId,
-            });
         }
 
 
@@ -214,6 +212,17 @@ namespace Eryph.Modules.VmHostAgent.Inventory
                 throw new InvalidOperationException("Invalid adapter id");
 
             return Guid.Parse(pathParts[1]);
+        }
+
+        /// <summary>
+        /// This method handles events which are raised when a Hyper-V VM is changed.
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void OnVmChanged(object sender, EventArrivedEventArgs e)
+        {
+
         }
     }
 }
