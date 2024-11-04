@@ -69,6 +69,7 @@ namespace Eryph.VmManagement.Inventory
                             AdapterName = a.Value.Name,
                             VirtualSwitchName = connectedAdapter.Value.SwitchName,
                             VirtualSwitchId = connectedAdapter.Value.SwitchId,
+                            MacAddress = connectedAdapter.Value.MacAddress,
                         };
                         return res;
                     }).ToArray(),
