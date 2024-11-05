@@ -56,11 +56,7 @@ namespace Eryph.Modules.VmHostAgent
             services.Configure<HostOptions>(
                 opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 
-
-            services.AddHttpClient(GenePoolConstants.EryphGenePool.Name, cfg =>
-            {
-                cfg.BaseAddress = GenePoolConstants.EryphGenePool.CdnEndpoint;
-            })
+            services.AddHttpClient(GenePoolConstants.PartClientName)
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
                 .AddPolicyHandler(GetRetryPolicy());
         }
@@ -119,7 +115,7 @@ namespace Eryph.Modules.VmHostAgent
 
             var genePoolFactory = new GenePoolFactory(container);
             
-            genePoolFactory.Register<RepositoryGenePool>(GenePoolConstants.EryphGenePool.Name);
+            genePoolFactory.Register<RepositoryGenePool>(serviceProvider.GetRequiredService<GenepoolSettings>());
             container.RegisterInstance<IGenePoolFactory>(genePoolFactory);
             container.RegisterSingleton<IGeneProvider, LocalFirstGeneProvider>();
             container.RegisterSingleton<IGeneRequestDispatcher, GeneRequestRegistry>();
@@ -156,10 +152,7 @@ namespace Eryph.Modules.VmHostAgent
 
             return HttpPolicyExtensions
                 .HandleTransientHttpError()
-                .Or<HttpRequestException>(ex =>
-                {
-                    return true;
-                })
+                .Or<HttpRequestException>(ex => true)
                 .WaitAndRetryAsync(6, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2,
                     retryAttempt)));
         }

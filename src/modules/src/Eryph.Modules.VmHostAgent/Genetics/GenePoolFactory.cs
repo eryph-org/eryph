@@ -24,14 +24,14 @@ internal class GenePoolFactory(Container container) : IGenePoolFactory
         ActivatorUtilities.CreateInstance<LocalGenePoolSource>(
             container, GenePoolConstants.Local.Name, genePoolPath);
 
-    public void Register<TImplementation>(string name)
+    public void Register<TImplementation>(GenepoolSettings settings)
         where TImplementation : class, IGenePool
     {
         var producer = Lifestyle.Transient
             .CreateProducer<IGenePool>(
-                () => ActivatorUtilities.CreateInstance<TImplementation>(container, name),
+                () => ActivatorUtilities.CreateInstance<TImplementation>(container, settings),
                 container);
 
-        _producers.Add(name, producer);
+        _producers.Add(settings.Name, producer);
     }
 }

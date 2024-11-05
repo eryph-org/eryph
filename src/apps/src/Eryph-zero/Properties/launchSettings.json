@@ -4,7 +4,8 @@
       "commandName": "Project",
       "commandLineArgs": "run",
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development"
+        "DOTNET_ENVIRONMENT": "Development",
+        "ERYPH_GENEPOOL_AUTHORITY": "staging_off"
       },
       "remoteDebugEnabled": true
     },
@@ -58,7 +59,7 @@
     },
     "login": {
       "commandName": "Project",
-      "commandLineArgs": "login",
+      "commandLineArgs": "genepool login",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },
@@ -66,7 +67,7 @@
     },
     "logout": {
       "commandName": "Project",
-      "commandLineArgs": "logout",
+      "commandLineArgs": "genepool logout",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },

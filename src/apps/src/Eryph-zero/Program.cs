@@ -43,7 +43,6 @@ using Serilog.Events;
 using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
 using Serilog.Templates;
-using Serilog.Templates.Themes;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 using Spectre.Console;
@@ -61,9 +60,24 @@ namespace Eryph.Runtime.Zero;
 
 internal static class Program
 {
+    private static GenepoolSettings _genepoolSettings = GenePoolConstants.ProductionGenepool;
+
     private static async Task<int> Main(string[] args)
     {
-        IdentityModelEventSource.ShowPII = true; 
+        IdentityModelEventSource.ShowPII = true;
+
+        // we use environment variables here as it is only used for testing and packer is using same variables
+        var stagingAuthority = Environment.GetEnvironmentVariable("ERYPH_GENEPOOL_AUTHORITY") == "staging";
+
+        if (stagingAuthority)
+        {
+            _genepoolSettings = GenePoolConstants.StagingGenepool;
+            var overwriteGenepoolApi = Environment.GetEnvironmentVariable("ERYPH_GENEPOOL_API");
+            if(!string.IsNullOrWhiteSpace(overwriteGenepoolApi))
+                _genepoolSettings = _genepoolSettings with { ApiEndpoint = new Uri(overwriteGenepoolApi) };
+
+        }
+
 
         var rootCommand = new RootCommand();
         var debugWaitOption = new System.CommandLine.Option<bool>(name: "--debuggerWait",
@@ -134,20 +148,21 @@ internal static class Program
             nonInteractiveOption, noCurrentConfigCheckOption);
         agentSettingsCommand.AddCommand(importAgentSettingsCommand);
 
-        var loginCommand = new Command("login");
-        rootCommand.AddCommand(loginCommand);
-        loginCommand.SetHandler(Login);
-
-        var logoutCommand = new Command("logout");
-        rootCommand.AddCommand(logoutCommand);
-        logoutCommand.SetHandler(Logout);
-
         var genePoolCommand = new Command("genepool");
         rootCommand.AddCommand(genePoolCommand);
 
         var genePoolInfoCommand = new Command("info");
         genePoolCommand.AddCommand(genePoolInfoCommand);
-        genePoolInfoCommand.SetHandler(GetGenePoolInfo);
+        genePoolInfoCommand.SetHandler(() => GetGenePoolInfo(_genepoolSettings));
+
+        var loginCommand = new Command("login");
+        genePoolCommand.AddCommand(loginCommand);
+        loginCommand.SetHandler(() => Login(_genepoolSettings));
+
+        var logoutCommand = new Command("logout");
+        genePoolCommand.AddCommand(logoutCommand);
+        logoutCommand.SetHandler(() => Logout(_genepoolSettings));
+
 
         var networksCommand = new Command("networks");
         rootCommand.AddCommand(networksCommand);
@@ -300,6 +315,7 @@ internal static class Program
                     .AddComputeApiModule()
                     .AddIdentityModule(container)
                     .ConfigureServices(c => c.AddSingleton(_ => container.GetInstance<IEndpointResolver>()))
+                    .ConfigureServices(c => c.AddSingleton(_genepoolSettings))
                     .ConfigureHostOptions(cfg => cfg.ShutdownTimeout = new TimeSpan(0, 0, 15))
                     // The logger must not be disposed here as it is injected into multiple modules.
                     // Serilog requires a single logger instance for synchronization.
@@ -916,27 +932,27 @@ internal static class Program
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static Task<int> Login() =>
+    private static Task<int> Login(GenepoolSettings genepoolSettings) =>
         RunAsAdmin(
             from _ in unitEff
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
-            from __ in GenePoolCli<SimpleConsoleRuntime>.login(genePoolApiStore)
+            from __ in GenePoolCli<SimpleConsoleRuntime>.login(genePoolApiStore, genepoolSettings)
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static Task<int> GetGenePoolInfo() =>
+    private static Task<int> GetGenePoolInfo(GenepoolSettings genepoolSettings) =>
         RunAsAdmin(
             from _ in unitEff
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
-            from __ in GenePoolCli<SimpleConsoleRuntime>.getApiKeyStatus(genePoolApiStore)
+            from __ in GenePoolCli<SimpleConsoleRuntime>.getApiKeyStatus(genePoolApiStore, genepoolSettings)
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static Task<int> Logout() =>
+    private static Task<int> Logout(GenepoolSettings genepoolSettings) =>
         RunAsAdmin(
             from _ in unitEff
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
-            from __ in GenePoolCli<SimpleConsoleRuntime>.logout(genePoolApiStore)
+            from __ in GenePoolCli<SimpleConsoleRuntime>.logout(genePoolApiStore, genepoolSettings)
             select unit,
             SimpleConsoleRuntime.New());
 
