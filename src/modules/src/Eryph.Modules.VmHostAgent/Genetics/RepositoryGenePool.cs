@@ -30,12 +30,12 @@ internal class RepositoryGenePool(
     IGenePoolApiKeyStore keyStore,
     IApplicationInfoProvider applicationInfo,
     IHardwareIdProvider hardwareIdProvider,
-    string poolName)
+    GenepoolSettings genepoolSettings)
     : GenePoolBase, IGenePool
 {
     private const int BufferSize = 65536;
 
-    public string PoolName => poolName;
+    public string PoolName => genepoolSettings.Name;
 
     private EitherAsync<Error, GenePoolClient> CreateClient() =>
         from apiKey in keyStore.GetApiKey(PoolName)
@@ -49,11 +49,11 @@ internal class RepositoryGenePool(
         }
         from client in Try(() => apiKey.Match(
                 Some: key => new GenePoolClient(
-                    GenePoolConstants.EryphGenePool.ApiEndpoint,
+                    genepoolSettings.ApiEndpoint,
                     new ApiKeyCredential(key.Secret),
                     clientOptions),
                 None: () => new GenePoolClient(
-                    GenePoolConstants.EryphGenePool.ApiEndpoint,
+                    genepoolSettings.ApiEndpoint,
                     clientOptions)))
             .ToEither(ex => Error.New("Could not create the gene pool API client.", ex)).ToAsync()
         select client;
@@ -164,7 +164,7 @@ internal class RepositoryGenePool(
             log.LogTrace("gene {Gene}, part {GenePart} url: {Url}",
                 geneInfo, genePartHash, genePartUrl);
 
-            using var httpClient = httpClientFactory.CreateClient();
+            using var httpClient = httpClientFactory.CreateClient(GenePoolConstants.PartClientName);
             var response = await httpClient.GetAsync(genePartUrl, HttpCompletionOption.ResponseHeadersRead, cancel);
 
             if (response.StatusCode == HttpStatusCode.NotFound)

@@ -4,7 +4,8 @@
       "commandName": "Project",
       "commandLineArgs": "run",
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "Development"
+        "DOTNET_ENVIRONMENT": "Development",
+        "ERYPH_GENEPOOL_AUTHORITY": "staging_off"
       },
       "remoteDebugEnabled": true
     },

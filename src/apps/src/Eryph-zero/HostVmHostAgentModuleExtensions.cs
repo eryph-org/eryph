@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.Modules.VmHostAgent;
+using Eryph.Modules.VmHostAgent.Genetics;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 
