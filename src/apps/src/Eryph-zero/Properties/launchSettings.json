@@ -59,7 +59,7 @@
     },
     "login": {
       "commandName": "Project",
-      "commandLineArgs": "login",
+      "commandLineArgs": "genepool login",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },
@@ -67,7 +67,7 @@
     },
     "logout": {
       "commandName": "Project",
-      "commandLineArgs": "logout",
+      "commandLineArgs": "genepool logout",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       },
