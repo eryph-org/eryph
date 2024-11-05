@@ -7,7 +7,7 @@ public static class GenePoolConstants
         public static readonly string Name = "local";
     }
 
-    public static string PartClientName = "gene_part_client";
+    public const string PartClientName = "gene_part_client";
 
     public static GenepoolSettings ProductionGenepool => new (
         "eryph-genepool",
