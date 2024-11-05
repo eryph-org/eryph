@@ -122,7 +122,8 @@ public static class GenePoolCli<RT> where RT : struct,
                         .AddColumn()
                         .AddRow(new Text("Key ID:"), new Text(response.Id))
                         .AddRow(new Text("Key Name:"), new Text(response.DisplayName ?? ""))
-                        .AddRow(new Text("Organisation:"), new Text(response.GenepoolOrgs?.FirstOrDefault()?.Name ?? ""))))
+                        .AddRow(new Text(response.GenepoolOrgs?.Length != 1 ? "Organizations:": "Organization:"), 
+                            new Text(string.Join(',',(response.GenepoolOrgs ?? []).Select(x=>x.Name))))))
                 select unit,
             None: () =>
                 from _ in AnsiConsole<RT>.writeLine("The gene pool API key is invalid.")
@@ -231,5 +232,5 @@ public static class GenePoolCli<RT> where RT : struct,
             .AddColumn()
             .AddRow(new Text("Key ID:"), new Text(apiKey.Id))
             .AddRow(new Text("Key Name:"), new Text(apiKey.Name))
-            .AddRow(new Text("Organisation:"), new Text(apiKey.Organization));
+            .AddRow(new Text("Organization:"), new Text(apiKey.Organization));
 }
