@@ -22,18 +22,18 @@ namespace Eryph.Modules.Controller.Tests.Networks
     public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
     {
         // ReSharper disable InconsistentNaming
-        private const string ProjectA = "96bbd6d7-01f9-4001-8c86-3fba75baa1b5";
-        private const string NetworkA_Default = "cb58fe00-3f64-4b66-b58e-23fb15df3cac";
+        private const string ProjectAId = "96bbd6d7-01f9-4001-8c86-3fba75baa1b5";
+        private const string ProjectA_NetworkId = "cb58fe00-3f64-4b66-b58e-23fb15df3cac";
         private const string NetworkA_Default_Subnet = "ed6697cd-836f-4da7-914b-b09ed1567934";
         private const string NetworkA_Other_Subnet = "29fb8b37-4779-427a-bc5c-9a5eccffd5e2";
 
-        private const string ProjectB = "75c27daf-77c8-4b98-a072-a4706dceb422";
+        private const string ProjectBId = "75c27daf-77c8-4b98-a072-a4706dceb422";
         private const string NetworkB_Default = "a0ce4b1a-03e6-413b-a048-567079b49b28";
         private const string NetworkB_Env2_Default = "29408ed0-f876-4879-9faa-deb519d1df0a";
         private const string NetworkB_Default_Subnet = "ac451fa5-3364-4593-aa4d-14f95529fd54";
         private const string NetworkB_Env2_Subnet = "91a25d95-f417-482d-9264-e4179f61e379";
 
-        private const string CatletMetadata = "15e2b061-c625-4469-9fe7-7c455058fcc0";
+        private const string CatletMetadataId = "15e2b061-c625-4469-9fe7-7c455058fcc0";
         // ReSharper restore InconsistentNaming
 
 
@@ -49,14 +49,20 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
         
         [Theory]
-        [InlineData(ProjectA, NetworkA_Default_Subnet, "default", null, null, null)]
-        [InlineData(ProjectA, NetworkA_Other_Subnet, "default", "default", "other", null)]
-        [InlineData(ProjectB, NetworkB_Default_Subnet, "default", "default", "default", "other")]
-        [InlineData(ProjectB, NetworkB_Default_Subnet, "default", null, null, null)]
-        [InlineData(ProjectB, NetworkB_Env2_Subnet, "env2", null, null, null)]
-        [InlineData(ProjectA, NetworkA_Default_Subnet, "env2", null, null, null)]
-        public async Task Adds_catlet_network_port_to_expected_pool(string projectIdString, string subnetIdString, 
-            string environment, string? network, string? subnet, string? pool)
+        [InlineData(ProjectAId, ProjectA_NetworkId, "default", null, null, null, "192.0.2.1")]
+        [InlineData(ProjectAId, ProjectA_NetworkId, "default", "default", "other", null, "192.0.2.17")]
+        [InlineData(ProjectAId, ProjectA_NetworkId, "env2", null, null, null, "192.0.2.1")]
+        [InlineData(ProjectBId, NetworkB_Default, "default", null, null, null, "192.0.2.33")]
+        [InlineData(ProjectBId, NetworkB_Default, "default", "default", "default", "other", "192.0.2.49")]
+        [InlineData(ProjectBId, NetworkB_Env2_Default, "env2", null, null, null, "192.0.2.65")]
+        public async Task Adds_catlet_network_port_to_expected_pool(
+            string projectId,
+            string networkId, 
+            string environment,
+            string? network,
+            string? subnet,
+            string? pool,
+            string expectedIpAddress)
         {
             var networkConfig = new CatletNetworkConfig()
             {
@@ -70,81 +76,91 @@ namespace Eryph.Modules.Controller.Tests.Networks
                     : null,
             };
 
-            var catletPort = new CatletNetworkPort
+            await WithScope(async (ipManager, _, stateStore) =>
             {
-                Id = Guid.NewGuid(),
-                Name = "test-catlet-port",
-                CatletMetadataId = Guid.Parse(CatletMetadata),
-            };
-            var projectId = Guid.Parse(projectIdString);
-            var subnetId = Guid.Parse(subnetIdString);
+                var catletPort = new CatletNetworkPort
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "test-catlet-port",
+                    NetworkId = Guid.Parse(networkId),
+                    CatletMetadataId = Guid.Parse(CatletMetadataId),
+                };
+                await stateStore.For<CatletNetworkPort>().AddAsync(catletPort);
 
-            ArrangeAcquireIp(subnetId, pool ?? "default", "192.168.2.1");
-
-            await WithScope(async (ipManager, _) =>
-            {
-                var result = await ipManager.ConfigurePortIps(projectId,
+                var result = await ipManager.ConfigurePortIps(
+                    Guid.Parse(projectId),
                     environment, catletPort, networkConfig,
                     CancellationToken.None);
 
                 result.Should().BeRight().Which.Should().SatisfyRespectively(
-                    ipAddress => ipAddress.ToString().Should().Be("192.168.2.1"));
+                    ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
             });
 
             _ipPoolManagerMock.Verify();
         }
 
+        // TODO Parameterize for different subnets
         [Fact]
         public async Task Deletes_Invalid_Port()
         {
-            var projectId = Guid.Parse(ProjectA);
+            var projectId = Guid.Parse(ProjectAId);
             var networkConfig = new CatletNetworkConfig()
             {
                 Name = "default"
             };
-            
-            var catletPort = new CatletNetworkPort
+
+            var catletPortId = Guid.NewGuid();
+            var ipAssignmentId = Guid.Empty;
+            await WithScope(async (_, ipPoolManager, stateStore) =>
             {
-                Id = Guid.NewGuid(),
-                Name = "test-catlet-port",
-                NetworkId = Guid.Parse(NetworkA_Default_Subnet),
-                CatletMetadataId = Guid.Parse(CatletMetadata),
-                IpAssignments =
-                [
-                    new IpPoolAssignment()
-                    {
-                        SubnetId = Guid.Parse(NetworkA_Default_Subnet),
-                        Pool = new IpPool
-                        {
-                            SubnetId = Guid.Parse(NetworkA_Default_Subnet),
-                            Name = "other"
-                        },
-                    }
-                ]
-            };
+                var ipAssignmentResult = ipPoolManager.AcquireIp(
+                    Guid.Parse(NetworkA_Other_Subnet),
+                    EryphConstants.DefaultIpPoolName);
+                var ipAssignment = ipAssignmentResult.Should().BeRight().Subject;
+                ipAssignmentId = ipAssignment.Id;
 
-            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
-                .UseSqlite(_connection)
-                .Options;
+                var catletPort = new CatletNetworkPort
+                {
+                    Id = catletPortId,
+                    Name = "test-catlet-port",
+                    NetworkId = Guid.Parse(ProjectA_NetworkId),
+                    CatletMetadataId = Guid.Parse(CatletMetadataId),
+                    IpAssignments = [ipAssignment],
+                };
+                
+                await stateStore.For<CatletNetworkPort>().AddAsync(catletPort);
+                await stateStore.SaveChangesAsync();
+            });
 
-            await using var context = new SqliteStateStoreContext(contextOptions);
-            var ipManager = await SetupPortTest(context, catletPort);
-            var stateStore = new StateStore(context);
-            var port = await stateStore.Read<CatletNetworkPort>()
-                .GetByIdAsync(catletPort.Id, CancellationToken.None);
-            port!.IpAssignments.Should().HaveCount(1);
+            await WithScope(async (catletIpManager, _, stateStore) =>
+            {
+                var catletPort = await stateStore.Read<CatletNetworkPort>()
+                    .GetByIdAsync(catletPortId);
+                catletPort.Should().NotBeNull();
+                await stateStore.LoadCollectionAsync(catletPort!, p => p.IpAssignments);
+                catletPort!.IpAssignments.Should().SatisfyRespectively(
+                    ipAssignment => ipAssignment.Id.Should().Be(ipAssignmentId));
 
-            var result = await ipManager.ConfigurePortIps(projectId,
-                "default", catletPort, networkConfig,
-                CancellationToken.None);
+                var result = await catletIpManager.ConfigurePortIps(projectId,
+                    "default", catletPort, networkConfig,
+                    CancellationToken.None);
 
-            result.Should().BeRight();
+                result.Should().BeRight().Which.Should().SatisfyRespectively(
+                    ipAddress => ipAddress.ToString().Should().Be("192.0.2.1"));
 
-            await context.SaveChangesAsync();
-            port = await stateStore.Read<CatletNetworkPort>()
-                .GetByIdAsync(catletPort.Id, CancellationToken.None);
+                await stateStore.SaveChangesAsync();
+            });
 
-            port!.IpAssignments.Should().BeNullOrEmpty();
+            await WithScope(async (_, _, stateStore) =>
+            {
+                var catletPort = await stateStore.Read<CatletNetworkPort>()
+                    .GetByIdAsync(catletPortId);
+                catletPort.Should().NotBeNull();
+                await stateStore.LoadCollectionAsync(catletPort!, p => p.IpAssignments);
+
+                catletPort!.IpAssignments.Should().SatisfyRespectively(
+                    ipAssignment => ipAssignment.IpAddress.Should().Be("192.0.2.1"));
+            });
         }
 
         [Fact]
@@ -156,188 +172,72 @@ namespace Eryph.Modules.Controller.Tests.Networks
         [Fact]
         public async Task Keeps_Valid_Port()
         {
-            var projectId = Guid.Parse(ProjectA);
+            var projectId = Guid.Parse(ProjectAId);
             var networkConfig = new CatletNetworkConfig()
             {
                 Name = "default"
             };
 
-            var catletPort = new CatletNetworkPort
+            var catletPortId = Guid.NewGuid();
+            var ipAssignmentId = Guid.Empty;
+            await WithScope(async (_, ipPoolManager, stateStore) =>
             {
-                Id = Guid.NewGuid(),
-                Name = "test-catlet-port",
-                NetworkId = Guid.Parse(NetworkA_Default_Subnet),
-                CatletMetadataId = Guid.Parse(CatletMetadata),
-                IpAssignments = new List<IpAssignment>
+                var ipAssignmentResult = ipPoolManager.AcquireIp(
+                    Guid.Parse(NetworkA_Default_Subnet),
+                    EryphConstants.DefaultIpPoolName);
+                var ipAssignment = ipAssignmentResult.Should().BeRight().Subject;
+                ipAssignmentId = ipAssignment.Id;
+
+                var catletPort = new CatletNetworkPort
                 {
-                    new IpPoolAssignment()
-                    {
-                        SubnetId = Guid.Parse(NetworkA_Default_Subnet),
-                        IpAddress = "192.168.2.10",
-                        Pool = new IpPool
-                        {
-                            SubnetId = Guid.Parse(NetworkA_Default_Subnet),
-                            Name = "default"
-                        },
-                    }
-                }
-            };
+                    Id = catletPortId,
+                    Name = "test-catlet-port",
+                    NetworkId = Guid.Parse(ProjectA_NetworkId),
+                    CatletMetadataId = Guid.Parse(CatletMetadataId),
+                    IpAssignments = [ipAssignment]
+                };
 
-            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
-                .UseSqlite(_connection)
-                .Options;
-
-            await using var context = new SqliteStateStoreContext(contextOptions);
-            var ipManager = await SetupPortTest(context, catletPort);
-            var stateStore = new StateStore(context);
-            var port = await stateStore.Read<CatletNetworkPort>()
-                .GetByIdAsync(catletPort.Id, CancellationToken.None);
-            port!.IpAssignments.Should().HaveCount(1);
-
-            var result = await ipManager.ConfigurePortIps(projectId,
-                "default", catletPort, networkConfig,
-                CancellationToken.None);
-
-            result.Should().BeRight().Subject.Should().HaveCount(1)
-                .And.Subject.First().ToString().Should().Be("192.168.2.10");
-
-        }
-
-        private async Task<CatletIpManager> SetupPortTest(StateStoreContext context, CatletNetworkPort catletPort)
-        {
-            var subnetId = Guid.Parse(NetworkA_Default_Subnet);
-
-            await context.Database.EnsureCreatedAsync();
-            var stateStore = new StateStore(context);
-            var networkRepo = stateStore.For<VirtualNetwork>();
-            var network = CreateNetworks().First();
-            network.NetworkPorts = new List<VirtualNetworkPort>
-            {
-                catletPort
-            };
-            await networkRepo.AddAsync(network);
-
-            await stateStore.For<CatletMetadata>().AddAsync(new()
-            {
-                Id = Guid.Parse(CatletMetadata),
+                await stateStore.For<CatletNetworkPort>().AddAsync(catletPort);
+                await stateStore.SaveChangesAsync();
             });
 
-            await context.SaveChangesAsync();
+            await WithScope(async (catletIpManager, _, stateStore) =>
+            {
+                var catletPort = await stateStore.For<CatletNetworkPort>()
+                    .GetByIdAsync(catletPortId);
+                await stateStore.LoadCollectionAsync(catletPort!, p => p.IpAssignments);
+                catletPort!.IpAssignments.Should().SatisfyRespectively(
+                    ipAssignment => ipAssignment.Id.Should().Be(ipAssignmentId));
 
-            var poolManager = new Mock<IIpPoolManager>();
-            poolManager.Setup(x => x.AcquireIp(subnetId, "default",
-                    It.IsAny<CancellationToken>()))
-                .Returns(Prelude.RightAsync<Error, IpPoolAssignment>(new IpPoolAssignment
-                {
-                    IpAddress = "192.168.2.1"
-                }));
+                var result = await catletIpManager.ConfigurePortIps(projectId,
+                    "default", catletPort, networkConfig,
+                    CancellationToken.None);
 
-            var ipManager = new CatletIpManager(stateStore, poolManager.Object);
-            return ipManager;
+                result.Should().BeRight().Which.Should().SatisfyRespectively(
+                    ipAddress => ipAddress.ToString().Should().Be("192.0.2.1"));
+                
+                await stateStore.SaveChangesAsync();
+            });
+
+            await WithScope(async (_, _, stateStore) =>
+            {
+                var catletPort = await stateStore.Read<CatletNetworkPort>()
+                    .GetByIdAsync(catletPortId);
+                catletPort.Should().NotBeNull();
+                await stateStore.LoadCollectionAsync(catletPort!, p => p.IpAssignments);
+
+                catletPort!.IpAssignments.Should().SatisfyRespectively(
+                    ipAssignment => ipAssignment.Id.Should().Be(ipAssignmentId));
+            });
         }
 
-
-
-        private static IEnumerable<VirtualNetwork> CreateNetworks()
-        {
-            var tenant = new Tenant
-            {
-                Id = Guid.NewGuid(),
-            };
-
-            var projectA = new Project
-            {
-                Id = Guid.Parse(ProjectA),
-                Name = "projectA",
-                Tenant = tenant
-            };
-
-            var projectB = new Project
-            {
-                Id = Guid.Parse(ProjectB),
-                Name = "projectB",
-                Tenant = tenant
-            };
-
-            return new[]
-            {
-                new VirtualNetwork
-                {
-                    Id = Guid.Parse(NetworkA_Default),
-                    Project = projectA,
-                    Name = "default",
-                    Environment = "default",
-                    ResourceType = ResourceType.VirtualNetwork,
-                    Subnets = new[]
-                    {
-                        new VirtualNetworkSubnet
-                        {
-                            Id = Guid.Parse(NetworkA_Default_Subnet),
-                            Name = "default"
-                        },
-                        new VirtualNetworkSubnet
-                        {
-                            Id = Guid.Parse(NetworkA_Other_Subnet),
-                            Name = "other"
-                        }
-                    }.ToList()
-                },
-                new VirtualNetwork
-                {
-                    Id = Guid.Parse(NetworkB_Default),
-                    Project = projectB,
-                    Name = "default",
-                    Environment = "default",
-                    ResourceType = ResourceType.VirtualNetwork,
-                    Subnets = new[]
-                    {
-                        new VirtualNetworkSubnet
-                        {
-                            Id = Guid.Parse(NetworkB_Default_Subnet),
-                            Name = "default",
-                            IpPools = new List<IpPool>(new []
-                            {
-                                new IpPool
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Name = "default",
-                                },
-                                new IpPool
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Name = "other",
-                                }
-                            })
-                        },
-                    }.ToList(),
-
-                },
-                new VirtualNetwork
-                {
-                    Id = Guid.Parse(NetworkB_Env2_Default),
-                    Project = projectB,
-                    Name = "default",
-                    Environment = "env2",
-                    ResourceType = ResourceType.VirtualNetwork,
-                    Subnets = new[]
-                    {
-                        new VirtualNetworkSubnet
-                        {
-                            Id = Guid.Parse(NetworkB_Env2_Subnet),
-                            Name = "default"
-                        },
-                    }.ToList(),
-
-                }
-            };
-        }
-
-        private async Task WithScope(Func<ICatletIpManager, IStateStore, Task> func)
+        private async Task WithScope(Func<ICatletIpManager, IIpPoolManager, IStateStore, Task> func)
         {
             await using var scope = CreateScope();
             var catletIpManager = scope.GetInstance<ICatletIpManager>();
+            var ipPoolManager = scope.GetInstance<IIpPoolManager>();
             var stateStore = scope.GetInstance<IStateStore>();
-            await func(catletIpManager, stateStore);
+            await func(catletIpManager, ipPoolManager, stateStore);
         }
 
         private void ArrangeAcquireIp(Guid subnetId, string poolName, string ipAddress)
@@ -353,7 +253,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
         protected override void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
-            options.Container.RegisterInstance(_ipPoolManagerMock.Object);
+            options.Container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
             options.Container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
         }
 
@@ -361,9 +261,14 @@ namespace Eryph.Modules.Controller.Tests.Networks
         {
             await SeedDefaultTenantAndProject();
 
+            await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
+            {
+                Id = Guid.Parse(CatletMetadataId),
+            });
+
             var projectA = new Project()
             {
-                Id = Guid.Parse(ProjectA),
+                Id = Guid.Parse(ProjectAId),
                 Name = "project-a",
                 TenantId = EryphConstants.DefaultTenantId,
             };
@@ -371,7 +276,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
             var projectB = new Project()
             {
-                Id = Guid.Parse(ProjectB),
+                Id = Guid.Parse(ProjectBId),
                 Name = "project-b",
                 TenantId = EryphConstants.DefaultTenantId,
             };
@@ -379,22 +284,46 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
             var projectADefaultEnvNetwork = new VirtualNetwork
             {
-                Id = Guid.Parse(NetworkA_Default),
+                Id = Guid.Parse(ProjectA_NetworkId),
                 Project = projectA,
-                Name = "default",
-                Environment = "default",
+                Name = EryphConstants.DefaultNetworkName,
+                Environment = EryphConstants.DefaultEnvironmentName,
                 ResourceType = ResourceType.VirtualNetwork,
                 Subnets =
                 [
                     new VirtualNetworkSubnet
                     {
                         Id = Guid.Parse(NetworkA_Default_Subnet),
-                        Name = "default"
+                        Name = EryphConstants.DefaultSubnetName,
+                        IpPools =
+                        [
+                            new IpPool()
+                            {
+                                Id = Guid.NewGuid(),
+                                Name = EryphConstants.DefaultIpPoolName,
+                                IpNetwork = "192.0.2.0/28",
+                                FirstIp = "192.0.2.1",
+                                NextIp = "192.0.2.1",
+                                LastIp = "192.0.2.11",
+                            }
+                        ],
                     },
                     new VirtualNetworkSubnet
                     {
                         Id = Guid.Parse(NetworkA_Other_Subnet),
-                        Name = "other"
+                        Name = "other",
+                        IpPools =
+                        [
+                            new IpPool()
+                            {
+                                Id = Guid.NewGuid(),
+                                Name = EryphConstants.DefaultIpPoolName,
+                                IpNetwork = "192.0.2.16/28",
+                                FirstIp = "192.0.2.17",
+                                NextIp = "192.0.2.17",
+                                LastIp = "192.0.2.27",
+                            }
+                        ],
                     },
                 ],
             };
@@ -419,11 +348,19 @@ namespace Eryph.Modules.Controller.Tests.Networks
                             {
                                 Id = Guid.NewGuid(),
                                 Name = "default",
+                                IpNetwork = "192.0.2.32/28",
+                                FirstIp = "192.0.2.33",
+                                NextIp = "192.0.2.33",
+                                LastIp = "192.0.2.43",
                             },
                             new IpPool
                             {
                                 Id = Guid.NewGuid(),
                                 Name = "other",
+                                IpNetwork = "192.0.2.48/28",
+                                FirstIp = "192.0.2.49",
+                                NextIp = "192.0.2.49",
+                                LastIp = "192.0.2.59",
                             },
                         ],
                     },
@@ -443,7 +380,19 @@ namespace Eryph.Modules.Controller.Tests.Networks
                     new VirtualNetworkSubnet
                     {
                         Id = Guid.Parse(NetworkB_Env2_Subnet),
-                        Name = "default"
+                        Name = "default",
+                        IpPools =
+                        [
+                            new IpPool()
+                            {
+                                Id = Guid.NewGuid(),
+                                Name = EryphConstants.DefaultIpPoolName,
+                                IpNetwork = "192.0.2.64/28",
+                                FirstIp = "192.0.2.65",
+                                NextIp = "192.0.2.65",
+                                LastIp = "192.0.2.75",
+                            }
+                        ],
                     },
                 ],
             };
