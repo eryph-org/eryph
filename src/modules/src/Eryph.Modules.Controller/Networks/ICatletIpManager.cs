@@ -11,8 +11,10 @@ namespace Eryph.Modules.Controller.Networks
     public interface ICatletIpManager
     {
         public EitherAsync<Error, IPAddress[]> ConfigurePortIps(
-            Guid projectId, string environment, CatletNetworkPort port,
-            CatletNetworkConfig[] networkConfigs, CancellationToken cancellationToken);
-
+            Guid projectId,
+            string environment,
+            CatletNetworkPort port,
+            CatletNetworkConfig networkConfig,
+            CancellationToken cancellationToken);
     }
 }

@@ -1,9 +1,11 @@
 ﻿using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.Modules.Controller.Networks;
 using Eryph.Resources;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Sqlite;
+using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using LanguageExt;
@@ -11,16 +13,31 @@ using LanguageExt.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
 using Xunit;
 
 namespace Eryph.Modules.Controller.Tests.Networks
 {
-    public sealed class CatletIpManagerTests : IDisposable
+    public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
     {
-        public void Dispose()
-        {
-            _connection.Dispose();
-        }
+        // ReSharper disable InconsistentNaming
+        private const string ProjectA = "96bbd6d7-01f9-4001-8c86-3fba75baa1b5";
+        private const string NetworkA_Default = "cb58fe00-3f64-4b66-b58e-23fb15df3cac";
+        private const string NetworkA_Default_Subnet = "ed6697cd-836f-4da7-914b-b09ed1567934";
+        private const string NetworkA_Other_Subnet = "29fb8b37-4779-427a-bc5c-9a5eccffd5e2";
+
+        private const string ProjectB = "75c27daf-77c8-4b98-a072-a4706dceb422";
+        private const string NetworkB_Default = "a0ce4b1a-03e6-413b-a048-567079b49b28";
+        private const string NetworkB_Env2_Default = "29408ed0-f876-4879-9faa-deb519d1df0a";
+        private const string NetworkB_Default_Subnet = "ac451fa5-3364-4593-aa4d-14f95529fd54";
+        private const string NetworkB_Env2_Subnet = "91a25d95-f417-482d-9264-e4179f61e379";
+
+        private const string CatletMetadata = "15e2b061-c625-4469-9fe7-7c455058fcc0";
+        // ReSharper restore InconsistentNaming
+
+
+        private readonly Mock<IIpPoolManager> _ipPoolManagerMock = new();
 
         private readonly SqliteConnection _connection;
 
@@ -41,17 +58,17 @@ namespace Eryph.Modules.Controller.Tests.Networks
         public async Task Adds_catlet_network_port_to_expected_pool(string projectIdString, string subnetIdString, 
             string environment, string? network, string? subnet, string? pool)
         {
-            var networkConfig = new CatletNetworkConfig();
-            if (network != null)
+            var networkConfig = new CatletNetworkConfig()
             {
-                networkConfig.Name = network;
-                if (subnet != null || pool!= null)
-                    networkConfig.SubnetV4 = new CatletSubnetConfig
+                Name = network,
+                SubnetV4 = subnet != null || pool != null
+                    ? new CatletSubnetConfig
                     {
                         Name = subnet ?? "default",
                         IpPool = pool
-                    };
-            }
+                    }
+                    : null,
+            };
 
             var catletPort = new CatletNetworkPort
             {
@@ -62,47 +79,19 @@ namespace Eryph.Modules.Controller.Tests.Networks
             var projectId = Guid.Parse(projectIdString);
             var subnetId = Guid.Parse(subnetIdString);
 
-            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
-                .UseSqlite(_connection)
-                .Options;
+            ArrangeAcquireIp(subnetId, pool ?? "default", "192.168.2.1");
 
-            await using var context = new SqliteStateStoreContext(contextOptions);
-            var stateStore = new StateStore(context);
-            await context.Database.EnsureCreatedAsync();
-
-            var networkRepo = stateStore.For<VirtualNetwork>();
-            foreach (var virtualNetwork in CreateNetworks())
+            await WithScope(async (ipManager, _) =>
             {
-                await networkRepo.AddAsync(virtualNetwork);
-            }
-
-            await context.SaveChangesAsync();
-
-            var poolManager = new Mock<IIpPoolManager>();
-            poolManager.Setup(x => x.AcquireIp(subnetId,
-                    pool ?? "default", It.IsAny<CancellationToken>()))
-                .Returns(Prelude.RightAsync<Error, IpPoolAssignment>(new IpPoolAssignment
-                {
-                    IpAddress = "192.168.2.1"
-                }))
-                .Verifiable();
-
-            try
-            {
-                var ipManager = new CatletIpManager(stateStore, poolManager.Object);
                 var result = await ipManager.ConfigurePortIps(projectId,
-                    environment, catletPort, new[] { networkConfig },
+                    environment, catletPort, networkConfig,
                     CancellationToken.None);
 
-                var addresses = result.Should().BeRight().Subject;
-                addresses.Should().HaveCount(1);
-                addresses[0].ToString().Should().Be("192.168.2.1");
-            }
-            finally
-            {
-                poolManager.Verify();
-            }
+                result.Should().BeRight().Which.Should().SatisfyRespectively(
+                    ipAddress => ipAddress.ToString().Should().Be("192.168.2.1"));
+            });
 
+            _ipPoolManagerMock.Verify();
         }
 
         [Fact]
@@ -120,8 +109,8 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 Name = "test-catlet-port",
                 NetworkId = Guid.Parse(NetworkA_Default_Subnet),
                 CatletMetadataId = Guid.Parse(CatletMetadata),
-                IpAssignments = new List<IpAssignment>
-                {
+                IpAssignments =
+                [
                     new IpPoolAssignment()
                     {
                         SubnetId = Guid.Parse(NetworkA_Default_Subnet),
@@ -131,7 +120,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
                             Name = "other"
                         },
                     }
-                }
+                ]
             };
 
             var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
@@ -146,7 +135,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             port!.IpAssignments.Should().HaveCount(1);
 
             var result = await ipManager.ConfigurePortIps(projectId,
-                "default", catletPort, new[] { networkConfig },
+                "default", catletPort, networkConfig,
                 CancellationToken.None);
 
             result.Should().BeRight();
@@ -156,6 +145,12 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 .GetByIdAsync(catletPort.Id, CancellationToken.None);
 
             port!.IpAssignments.Should().BeNullOrEmpty();
+        }
+
+        [Fact]
+        public async Task ExistingAssignmentInDifferentEnvironment_RemovesOldAssignment()
+        {
+            
         }
 
         [Fact]
@@ -200,7 +195,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             port!.IpAssignments.Should().HaveCount(1);
 
             var result = await ipManager.ConfigurePortIps(projectId,
-                "default", catletPort, new[] { networkConfig },
+                "default", catletPort, networkConfig,
                 CancellationToken.None);
 
             result.Should().BeRight().Subject.Should().HaveCount(1)
@@ -241,20 +236,6 @@ namespace Eryph.Modules.Controller.Tests.Networks
             return ipManager;
         }
 
-        // ReSharper disable InconsistentNaming
-        private const string ProjectA = "{96BBD6D7-01F9-4001-8C86-3FBA75BAA1B5}";
-        private const string NetworkA_Default = "{CB58FE00-3F64-4B66-B58E-23FB15DF3CAC}";
-        private const string NetworkA_Default_Subnet = "{ED6697CD-836F-4DA7-914B-B09ED1567934}";
-        private const string NetworkA_Other_Subnet = "{29FB8B37-4779-427A-BC5C-9A5ECCFFD5E2}";
-
-        private const string ProjectB = "{75C27DAF-77C8-4B98-A072-A4706DCEB422}";
-        private const string NetworkB_Default = "{A0CE4B1A-03E6-413B-A048-567079B49B28}";
-        private const string NetworkB_Env2_Default = "{29408ED0-F876-4879-9FAA-DEB519D1DF0A}";
-        private const string NetworkB_Default_Subnet = "{AC451FA5-3364-4593-AA4D-14F95529FD54}";
-        private const string NetworkB_Env2_Subnet = "{91A25D95-F417-482D-9264-E4179F61E379}";
-
-        private const string CatletMetadata = "{15E2B061-C625-4469-9FE7-7C455058FCC0}";
-        // ReSharper restore InconsistentNaming
 
 
         private static IEnumerable<VirtualNetwork> CreateNetworks()
@@ -349,6 +330,124 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
                 }
             };
+        }
+
+        private async Task WithScope(Func<ICatletIpManager, IStateStore, Task> func)
+        {
+            await using var scope = CreateScope();
+            var catletIpManager = scope.GetInstance<ICatletIpManager>();
+            var stateStore = scope.GetInstance<IStateStore>();
+            await func(catletIpManager, stateStore);
+        }
+
+        private void ArrangeAcquireIp(Guid subnetId, string poolName, string ipAddress)
+        {
+            _ipPoolManagerMock
+                .Setup(x => x.AcquireIp(subnetId, poolName, It.IsAny<CancellationToken>()))
+                .Returns(Prelude.RightAsync<Error, IpPoolAssignment>(new IpPoolAssignment
+                {
+                    IpAddress = ipAddress
+                }))
+                .Verifiable();
+        }
+
+        protected override void AddSimpleInjector(SimpleInjectorAddOptions options)
+        {
+            options.Container.RegisterInstance(_ipPoolManagerMock.Object);
+            options.Container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
+        }
+
+        protected override async Task SeedAsync(IStateStore stateStore)
+        {
+            await SeedDefaultTenantAndProject();
+
+            var projectA = new Project()
+            {
+                Id = Guid.Parse(ProjectA),
+                Name = "project-a",
+                TenantId = EryphConstants.DefaultTenantId,
+            };
+            await stateStore.For<Project>().AddAsync(projectA);
+
+            var projectB = new Project()
+            {
+                Id = Guid.Parse(ProjectB),
+                Name = "project-b",
+                TenantId = EryphConstants.DefaultTenantId,
+            };
+            await stateStore.For<Project>().AddAsync(projectB);
+
+            var projectADefaultEnvNetwork = new VirtualNetwork
+            {
+                Id = Guid.Parse(NetworkA_Default),
+                Project = projectA,
+                Name = "default",
+                Environment = "default",
+                ResourceType = ResourceType.VirtualNetwork,
+                Subnets =
+                [
+                    new VirtualNetworkSubnet
+                    {
+                        Id = Guid.Parse(NetworkA_Default_Subnet),
+                        Name = "default"
+                    },
+                    new VirtualNetworkSubnet
+                    {
+                        Id = Guid.Parse(NetworkA_Other_Subnet),
+                        Name = "other"
+                    },
+                ],
+            };
+            await stateStore.For<VirtualNetwork>().AddAsync(projectADefaultEnvNetwork);
+
+            var projectBDefaultEnvNetwork = new VirtualNetwork
+            {
+                Id = Guid.Parse(NetworkB_Default),
+                Project = projectB,
+                Name = "default",
+                Environment = "default",
+                ResourceType = ResourceType.VirtualNetwork,
+                Subnets =
+                [
+                    new VirtualNetworkSubnet
+                    {
+                        Id = Guid.Parse(NetworkB_Default_Subnet),
+                        Name = "default",
+                        IpPools =
+                        [
+                            new IpPool
+                            {
+                                Id = Guid.NewGuid(),
+                                Name = "default",
+                            },
+                            new IpPool
+                            {
+                                Id = Guid.NewGuid(),
+                                Name = "other",
+                            },
+                        ],
+                    },
+                ],
+            };
+            await stateStore.For<VirtualNetwork>().AddAsync(projectBDefaultEnvNetwork);
+            
+            var projectBOtherEnvNetwork = new VirtualNetwork
+            {
+                Id = Guid.Parse(NetworkB_Env2_Default),
+                Project = projectB,
+                Name = "default",
+                Environment = "env2",
+                ResourceType = ResourceType.VirtualNetwork,
+                Subnets =
+                [
+                    new VirtualNetworkSubnet
+                    {
+                        Id = Guid.Parse(NetworkB_Env2_Subnet),
+                        Name = "default"
+                    },
+                ],
+            };
+            await stateStore.For<VirtualNetwork>().AddAsync(projectBOtherEnvNetwork);
         }
     }
 }

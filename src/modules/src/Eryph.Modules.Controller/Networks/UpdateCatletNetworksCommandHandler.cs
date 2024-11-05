@@ -90,7 +90,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
         let isFlatNetwork = networkProvider.Type == NetworkProviderType.Flat
 
-        let c1 = new CancellationTokenSource(5000)
+        let c1 = new CancellationTokenSource(500000)
 
         from networkPort in GetOrAddAdapterPort(
             network, command.CatletId, catletMetadataId, networkConfig.AdapterName,
@@ -119,7 +119,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
             : _ipManager.ConfigurePortIps(
                 command.ProjectId,
                 command.Config.Environment ?? "default", networkPort,
-                command.Config.Networks,
+                networkConfig,
                 c3.Token)
 
         from floatingIps in isFlatNetwork
