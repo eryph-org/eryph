@@ -14,7 +14,7 @@ Beta downloads require an invitation code. If you have not yet received an invit
 
 ### Install with Command Prompt (cmd.exe)
 
-Run the following command:
+Run the following command in an **elevated** (as Admin) command prompt:
 
 ``` cmd
 @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "[System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/eryph-org/eryph/main/src/apps/src/Eryph-zero/install.ps1'))"
@@ -22,14 +22,14 @@ Run the following command:
 
 ### Install with PowerShell
 
-Run the following command:
+Run the following command in an **elevated** (as Admin) powershell:
 
 ``` ps
 Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/eryph-org/eryph/main/src/apps/src/Eryph-zero/install.ps1'))
 ```
 
 ### Install with Options
-To provide additional options the installation you have to use powershell.
+To provide additional options to the installation you have to use powershell.
 
 ``` ps
 iex "& { $(irm https://raw.githubusercontent.com/eryph-org/eryph/main/src/apps/src/Eryph-zero/install.ps1) } [YOUR OPTIONS] "
