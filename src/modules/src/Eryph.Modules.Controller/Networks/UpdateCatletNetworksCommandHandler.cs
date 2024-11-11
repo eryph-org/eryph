@@ -92,6 +92,9 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
         let c1 = new CancellationTokenSource(500000)
 
+        // TODO update assignment of port to network when the network changed in the config
+        // TODO delete ports which are no longer configured
+
         from networkPort in GetOrAddAdapterPort(
             network, command.CatletId, catletMetadataId, networkConfig.AdapterName,
             command.Config.Hostname ?? command.Config.Name, c1.Token)
