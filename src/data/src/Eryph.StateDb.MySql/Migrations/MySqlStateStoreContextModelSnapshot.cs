@@ -241,6 +241,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("varchar(21)");
 
                     b.Property<string>("MacAddress")
+                        .IsRequired()
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("Name")

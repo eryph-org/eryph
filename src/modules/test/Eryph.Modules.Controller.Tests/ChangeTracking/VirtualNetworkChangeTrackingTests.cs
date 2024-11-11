@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -107,6 +108,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             await stateStore.For<CatletNetworkPort>().AddAsync(new CatletNetworkPort()
             {
                 Name = "new-catlet-port",
+                MacAddress = "00:00:00:00:00:02",
                 CatletMetadataId = CatletMetadataId,
                 NetworkId = VirtualNetworkId,
             });
@@ -124,6 +126,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             {
                 CatletMetadataId = CatletMetadataId,
                 Name = "new-catlet-port",
+                MacAddress = "00:00:00:00:00:02",
                 VirtualNetworkName = "virtual-test-network",
                 EnvironmentName = "test-environment",
                 FloatingNetworkPort = null,
@@ -495,6 +498,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
         {
             Id = FloatingPortId,
             Name = "test-floating-port",
+            MacAddress = "00:00:00:00:00:10",
             ProviderName = "test-provider",
             SubnetName = "provider-test-subnet",
             PoolName = "provider-test-pool",

@@ -35,18 +35,6 @@ namespace Eryph.Modules.Controller.Tests.Networks
 
         private const string CatletMetadataId = "15e2b061-c625-4469-9fe7-7c455058fcc0";
         // ReSharper restore InconsistentNaming
-
-
-        private readonly Mock<IIpPoolManager> _ipPoolManagerMock = new();
-
-        private readonly SqliteConnection _connection;
-
-        public CatletIpManagerTests()
-        {
-            _connection = new SqliteConnection("Filename=:memory:");
-            _connection.Open();
-        }
-
         
         [Theory]
         [InlineData(ProjectAId, ProjectA_NetworkId, "default", null, null, null, "192.0.2.1")]
@@ -82,6 +70,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 {
                     Id = Guid.NewGuid(),
                     Name = "test-catlet-port",
+                    MacAddress = "00:00:00:00:00:01",
                     NetworkId = Guid.Parse(networkId),
                     CatletMetadataId = Guid.Parse(CatletMetadataId),
                 };
@@ -95,8 +84,6 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 result.Should().BeRight().Which.Should().SatisfyRespectively(
                     ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
             });
-
-            _ipPoolManagerMock.Verify();
         }
 
         // TODO Parameterize for different subnets
@@ -123,6 +110,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 {
                     Id = catletPortId,
                     Name = "test-catlet-port",
+                    MacAddress = "00:00:00:00:00:01",
                     NetworkId = Guid.Parse(ProjectA_NetworkId),
                     CatletMetadataId = Guid.Parse(CatletMetadataId),
                     IpAssignments = [ipAssignment],
@@ -192,6 +180,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 {
                     Id = catletPortId,
                     Name = "test-catlet-port",
+                    MacAddress = "00:00:00:00:00:01",
                     NetworkId = Guid.Parse(ProjectA_NetworkId),
                     CatletMetadataId = Guid.Parse(CatletMetadataId),
                     IpAssignments = [ipAssignment]
@@ -240,19 +229,10 @@ namespace Eryph.Modules.Controller.Tests.Networks
             await func(catletIpManager, ipPoolManager, stateStore);
         }
 
-        private void ArrangeAcquireIp(Guid subnetId, string poolName, string ipAddress)
-        {
-            _ipPoolManagerMock
-                .Setup(x => x.AcquireIp(subnetId, poolName, It.IsAny<CancellationToken>()))
-                .Returns(Prelude.RightAsync<Error, IpPoolAssignment>(new IpPoolAssignment
-                {
-                    IpAddress = ipAddress
-                }))
-                .Verifiable();
-        }
-
         protected override void AddSimpleInjector(SimpleInjectorAddOptions options)
         {
+            // Use the proper IpPoolManager instead of a mock as the code quite
+            // interdependent as it modifies the same EF Core entities.
             options.Container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
             options.Container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
         }

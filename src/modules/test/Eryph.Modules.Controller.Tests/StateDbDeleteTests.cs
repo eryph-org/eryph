@@ -85,6 +85,7 @@ public abstract class StateDbDeleteTests(IDatabaseFixture databaseFixture) : Sta
             {
                 Id = FloatingPortId,
                 Name = "test-floating-port",
+                MacAddress = "00:00:00:00:00:10",
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",

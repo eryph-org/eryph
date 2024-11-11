@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20241023105139_InitialCreate")]
+    [Migration("20241111192857_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -244,6 +244,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("varchar(21)");
 
                     b.Property<string>("MacAddress")
+                        .IsRequired()
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("Name")

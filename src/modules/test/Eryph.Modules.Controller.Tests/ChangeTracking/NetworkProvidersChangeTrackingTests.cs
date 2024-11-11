@@ -94,6 +94,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
             await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort()
             {
                 Name = "new-floating-port",
+                MacAddress = "00:00:00:00:00:02",
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
@@ -110,6 +111,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
             new FloatingNetworkPortConfigModel()
             {
                 Name = "new-floating-port",
+                MacAddress = "00:00:00:00:00:02",
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
