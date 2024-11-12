@@ -22,22 +22,4 @@ public abstract class BaseIpManager
 
         return Unit.Default;
     }
-
-    protected static Option<IpAssignment> CheckAssignmentExist(
-        IEnumerable<IpAssignment> validAssignments,
-        Subnet subnet, string poolName)
-    {
-        return validAssignments.Find(x => x.Subnet.Id == subnet.Id)
-            .Bind(s =>
-            {
-                if (s is not IpPoolAssignment poolAssignment)
-                    return s;
-
-                return poolAssignment.Pool.Name == poolName
-                    ? s
-                    : Option<IpAssignment>.None;
-            });
-    }
-
-
 }
