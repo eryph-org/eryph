@@ -36,7 +36,7 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
     [InlineData(DefaultProjectId, "default", DefaultNetworkId, "default", "default", "second-pool", "10.0.1.12")]
     [InlineData(DefaultProjectId, "default", DefaultNetworkId, "default", "second-subnet", "default", "10.1.0.12")]
     [InlineData(DefaultProjectId, "default", SecondNetworkId, "second-network", "default", "default", "10.5.0.12")]
-    [InlineData(DefaultProjectId, "second-environment", DefaultNetworkId, "default", "default", "default", "10.10.0.12")]
+    [InlineData(DefaultProjectId, "second-environment", SecondEnvironmentNetworkId, "default", "default", "default", "10.10.0.12")]
     // When the environment does not have a dedicated network, we should fall back to the default network
     [InlineData(DefaultProjectId, "environment-without-network", DefaultNetworkId, null, null, null, "10.0.0.12")]
     [InlineData(DefaultProjectId, "environment-without-network", DefaultNetworkId, "default", "default", "default", "10.0.0.12")]
@@ -68,19 +68,22 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
 
         await WithScope(async (ipManager, _, stateStore) =>
         {
+            var network = await stateStore.For<VirtualNetwork>()
+                .GetByIdAsync(Guid.Parse(networkId));
+            network.Should().NotBeNull();
+
             var catletPort = new CatletNetworkPort
             {
                 Id = CatletPortId,
                 Name = "test-catlet-port",
                 MacAddress = "00:00:00:00:00:01",
-                NetworkId = Guid.Parse(networkId),
+                Network = network!,
                 CatletMetadataId = Guid.Parse(CatletMetadataId),
             };
             await stateStore.For<CatletNetworkPort>().AddAsync(catletPort);
 
             var result = await ipManager.ConfigurePortIps(
-                Guid.Parse(projectId),
-                environment, catletPort, networkConfig,
+                network!, catletPort, networkConfig,
                 CancellationToken.None);
 
             result.Should().BeRight().Which.Should().SatisfyRespectively(
@@ -116,7 +119,7 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
     [InlineData(DefaultProjectId, "environment-without-network", SecondNetworkId, SecondNetworkSubnetId, "second-network", "default", "default", "10.5.0.12")]
     [InlineData(SecondProjectId, "default", SecondProjectNetworkId, SecondProjectSubnetId, null, null, null, "10.100.0.12")]
     [InlineData(SecondProjectId, "default", SecondProjectNetworkId, SecondProjectSubnetId, "default", "default", "default", "10.100.0.12")]
-    public async Task ConfigureFloatingPortIps_AssignmentIsValid_AssignmentIsNotChanged(
+    public async Task ConfigurePortIps_AssignmentIsValid_AssignmentIsNotChanged(
         string projectId,
         string environment,
         string networkId,
@@ -162,12 +165,15 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
 
         await WithScope(async (catletIpManager, _, stateStore) =>
         {
-            var catletPort = await stateStore.Read<CatletNetworkPort>()
+            var catletPort = await stateStore.For<CatletNetworkPort>()
                 .GetByIdAsync(CatletPortId);
             catletPort.Should().NotBeNull();
+            var network = await stateStore.For<VirtualNetwork>()
+                .GetByIdAsync(Guid.Parse(networkId));
+            network.Should().NotBeNull();
 
             var result = await catletIpManager.ConfigurePortIps(
-                Guid.Parse(projectId), environment, catletPort!, networkConfig,
+                network!, catletPort!, networkConfig,
                 CancellationToken.None);
 
             result.Should().BeRight().Which.Should().SatisfyRespectively(
@@ -190,19 +196,20 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
     }
 
     [Theory]
-    [InlineData(DefaultProjectId, "default", "default", "default", "second-pool", "10.0.1.12")]
-    [InlineData(DefaultProjectId, "default", "default", "second-subnet", "default", "10.1.0.12")]
-    [InlineData(DefaultProjectId, "default", "second-network", "default", "default", "10.5.0.12")]
-    [InlineData(DefaultProjectId, "second-environment", "default", "default", "default", "10.10.0.12")]
+    [InlineData(DefaultProjectId, "default", DefaultNetworkId, "default", "default", "second-pool", "10.0.1.12")]
+    [InlineData(DefaultProjectId, "default", DefaultNetworkId, "default", "second-subnet", "default", "10.1.0.12")]
+    [InlineData(DefaultProjectId, "default", SecondNetworkId, "second-network", "default", "default", "10.5.0.12")]
+    [InlineData(DefaultProjectId, "second-environment", SecondEnvironmentNetworkId, "default", "default", "default", "10.10.0.12")]
     // When the environment does not have a dedicated network, we should fall back to the default network
-    [InlineData(DefaultProjectId, "environment-without-network", "default", "default", "second-pool", "10.0.1.12")]
-    [InlineData(DefaultProjectId, "environment-without-network", "default", "second-subnet", "default", "10.1.0.12")]
-    [InlineData(DefaultProjectId, "environment-without-network", "second-network", "default", "default", "10.5.0.12")]
-    [InlineData(SecondProjectId, "default", null, null, null, "10.100.0.12")]
-    [InlineData(SecondProjectId, "default", "default", "default", "default", "10.100.0.12")]
+    [InlineData(DefaultProjectId, "environment-without-network", DefaultNetworkId, "default", "default", "second-pool", "10.0.1.12")]
+    [InlineData(DefaultProjectId, "environment-without-network", DefaultNetworkId, "default", "second-subnet", "default", "10.1.0.12")]
+    [InlineData(DefaultProjectId, "environment-without-network", SecondNetworkId, "second-network", "default", "default", "10.5.0.12")]
+    [InlineData(SecondProjectId, "default", SecondProjectNetworkId, null, null, null, "10.100.0.12")]
+    [InlineData(SecondProjectId, "default", SecondProjectNetworkId, "default", "default", "default", "10.100.0.12")]
     public async Task ConfigurePortIps_AssignmentIsInvalid_AssignmentIsChanged(
         string projectId,
         string environment,
+        string networkId,
         string? networkName,
         string? subnetName,
         string? poolName,
@@ -249,8 +256,12 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
                 .GetByIdAsync(CatletPortId);
             catletPort.Should().NotBeNull();
 
+            var network = await stateStore.Read<VirtualNetwork>()
+                .GetByIdAsync(Guid.Parse(networkId));
+            network.Should().NotBeNull();
+
             var result = await catletIpManager.ConfigurePortIps(
-                Guid.Parse(projectId), environment, catletPort!, networkConfig,
+                network!, catletPort!, networkConfig,
                 CancellationToken.None);
 
             result.Should().BeRight().Which.Should().SatisfyRespectively(

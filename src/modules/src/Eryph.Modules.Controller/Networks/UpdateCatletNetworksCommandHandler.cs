@@ -62,6 +62,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
         UpdateCatletNetworksCommand command) =>
         from catletResult in _stateStore.For<Catlet>().IO.GetByIdAsync(command.CatletId)
         from catlet in catletResult.ToEitherAsync(Error.New($"Catlet {command.CatletId} not found."))
+        // TODO delete ports which are no longer configured
         from settings in command.Config.Networks
             .ToSeq()
             .Map(cfg => UpdateNetwork(catlet.MetadataId, command, cfg))
@@ -73,16 +74,22 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
         Guid catletMetadataId,
         UpdateCatletNetworksCommand command,
         CatletNetworkConfig networkConfig) =>
-        from environmentName in EnvironmentName.NewEither(command.Config.Environment)
+        from environmentName in EnvironmentName.NewEither(
+                Optional(command.Config.Environment)
+                    .Filter(notEmpty)
+                    .IfNone(EryphConstants.DefaultEnvironmentName))
             .ToAsync()
-        from networkName in EryphNetworkName.NewEither(networkConfig.Name)
+        from networkName in EryphNetworkName.NewEither(
+                Optional(networkConfig.Name)
+                    .Filter(notEmpty)
+                    .IfNone(EryphConstants.DefaultNetworkName))
             .ToAsync()
-        from network in _stateStore.Read<VirtualNetwork>().IO.GetBySpecAsync(
+        from network in _stateStore.For<VirtualNetwork>().IO.GetBySpecAsync(
             new VirtualNetworkSpecs.GetByName(command.ProjectId, networkName.Value, environmentName.Value))
         // It is optional to have an environment specific network. Therefore,
         // we fall back to the network in the default environment.
         from validNetwork in network.IsNone && environmentName != EnvironmentName.New(EryphConstants.DefaultEnvironmentName)
-            ? _stateStore.Read<VirtualNetwork>().IO.GetBySpecAsync(
+            ? _stateStore.For<VirtualNetwork>().IO.GetBySpecAsync(
                     new VirtualNetworkSpecs.GetByName(command.ProjectId, networkName.Value, EryphConstants.DefaultEnvironmentName))
                 .Bind(fr => fr.ToEitherAsync(Error.New($"Network '{networkName}' not found in environment '{environmentName}' and default environment.")))
             : network.ToEitherAsync(Error.New($"Network '{networkName}' not found in environment '{environmentName}'."))
@@ -100,8 +107,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
             .Bind(x => Optional(x.MacAddress))
         let c1 = new CancellationTokenSource(500000)
 
-        // TODO update assignment of port to network when the network changed in the config
-        // TODO delete ports which are no longer configured
+        
 
         from networkPort in AddOrUpdateAdapterPort(
             validNetwork, command.CatletId, catletMetadataId, networkConfig.AdapterName,
@@ -109,21 +115,27 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
         let c2 = new CancellationTokenSource()
 
+        let providerSubnetName = validNetwork.Subnets
+
         from floatingPort in isFlatNetwork
-            ? RightAsync<Error, Option<FloatingNetworkPort>>(Option<FloatingNetworkPort>.None)
-            : UpdateFloatingPort(
-                    networkPort, Option<string>.None,
-                    "default", "default",
-                    "default", c2.Token)
+            ? from _ in Optional(networkPort.FloatingPort)
+                .Map(fp => _stateStore.For<FloatingNetworkPort>().IO.DeleteAsync(fp))
+                .Sequence()
+              select Option<FloatingNetworkPort>.None
+            : from providerPort in _stateStore.For<ProviderRouterPort>().IO.GetBySpecAsync(
+                new ProviderRouterPortSpecs.GetByNetworkId(validNetwork.Id))
+              from validProviderPort in providerPort.ToEitherAsync(
+                    Error.New($"The overlay network '{validNetwork.Name}' has no provider port."))
+              from fp in UpdateFloatingPort(
+                    networkPort, networkProvider.Name, validProviderPort.SubnetName, validProviderPort.PoolName, c2.Token)
                 .ToAsync()
-                .Map(Option<FloatingNetworkPort>.Some)
+              select Some(fp)
 
         let c3 = new CancellationTokenSource()
         from ips in isFlatNetwork
             ? RightAsync<Error, IPAddress[]>([])
             : _ipManager.ConfigurePortIps(
-                command.ProjectId,
-                command.Config.Environment ?? "default", networkPort,
+                validNetwork, networkPort,
                 networkConfig,
                 c3.Token)
 
@@ -169,6 +181,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                             {
                                 p.AddressName = addressName;
                                 p.MacAddress = MacAddresses.FormatMacAddress(macAddress);
+                                p.Network = network;
                             })
                            select p,
                 None: () => from _ in RightAsync<Error, Unit>(unit)
@@ -178,7 +191,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                         CatletMetadataId = catletMetadataId,
                         Name = portName,
                         MacAddress = MacAddresses.FormatMacAddress(macAddress),
-                        NetworkId = network.Id,
+                        Network = network,
                         AddressName = addressName,
                         IpAssignments = [],
                     }
@@ -190,7 +203,6 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
     private async Task<Either<Error, FloatingNetworkPort>> UpdateFloatingPort(
         CatletNetworkPort adapterPort,
-        Option<string> portName,
         string providerName,
         string providerSubnetName,
         string providerPoolName,
@@ -205,9 +217,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                 providerSubnetName || floatingPort.PoolName != providerPoolName)
             {
                 adapterPort.FloatingPort = null;
-
-                if (portName.IsNone) // not a named port, then remove
-                    await _stateStore.For<FloatingNetworkPort>().DeleteAsync(floatingPort, cancellationToken);
+                await _stateStore.For<FloatingNetworkPort>().DeleteAsync(floatingPort, cancellationToken);
             }
 
         }
@@ -218,7 +228,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
         var port = new FloatingNetworkPort
         {
             Id = Guid.NewGuid(),
-            Name = portName.IfNone(adapterPort.Name),
+            Name = adapterPort.Name,
             ProviderName = providerName,
             SubnetName = providerSubnetName,
             PoolName = providerPoolName,
@@ -229,6 +239,11 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
         return await _stateStore.For<FloatingNetworkPort>().AddAsync(port, cancellationToken);
     }
+
+    // TODO Remove port and attached floating port if necessary
+    private EitherAsync<Error, Unit> RemovePort() => Error.New("not implemented");
+
+    private EitherAsync<Error, Unit> RemoveFloatingPort() => Error.New("not implemented");
 
     private static string GetPortName(Guid catletId, string adapterName) =>
         $"{catletId}_{adapterName}";
