@@ -10,8 +10,8 @@
   <ItemGroup>
     <!--
     Suppress advisories for System.Private.Uri which is provided by the runtime packages.
-	The advisories are a false positive in our case as we target .NET 8.
-	This should be removed once the tooling in the dotnet SDK is fixed.
+    The advisories are a false positive in our case as we target .NET 8.
+    This should be removed once the tooling in the dotnet SDK is fixed.
     See https://github.com/dotnet/sdk/issues/42651#issuecomment-2372410311.
     -->
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-5f2m-466j-3848" />
