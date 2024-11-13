@@ -27,40 +27,29 @@ namespace Eryph.Modules.Controller.Networks;
 
 #pragma warning restore 1998
 [UsedImplicitly]
-public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<UpdateCatletNetworksCommand>>
+public class UpdateCatletNetworksCommandHandler(
+    ITaskMessaging messaging,
+    ICatletIpManager ipManager,
+    IStateStore stateStore,
+    INetworkProviderManager providerManager,
+    IProviderIpManager providerIpManager)
+    : IHandleMessages<OperationTask<UpdateCatletNetworksCommand>>
 {
-    private readonly ITaskMessaging _messaging;
-    private readonly IStateStore _stateStore;
-    private readonly ICatletIpManager _ipManager;
-    private readonly IProviderIpManager _providerIpManager;
-    private readonly INetworkProviderManager _providerManager;
-
-
-    public UpdateCatletNetworksCommandHandler(ITaskMessaging messaging, ICatletIpManager ipManager, 
-        IStateStore stateStore, INetworkProviderManager providerManager, IProviderIpManager providerIpManager)
-    {
-        _messaging = messaging;
-        _ipManager = ipManager;
-        _stateStore = stateStore;
-        _providerManager = providerManager;
-        _providerIpManager = providerIpManager;
-    }
-
     public async Task Handle(OperationTask<UpdateCatletNetworksCommand> message)
     {
-        await _messaging.ProgressMessage(message, "Updating Catlet network settings");
+        await messaging.ProgressMessage(message, "Updating Catlet network settings");
 
         await UpdateNetworks(message.Command)
             .Map(settings => new UpdateCatletNetworksCommandResponse
             {
                 NetworkSettings = settings.ToArray()
             })
-            .FailOrComplete(_messaging, message);
+            .FailOrComplete(messaging, message);
     }
 
-    private EitherAsync<Error, Seq<MachineNetworkSettings>> UpdateNetworks(
+    public EitherAsync<Error, Seq<MachineNetworkSettings>> UpdateNetworks(
         UpdateCatletNetworksCommand command) =>
-        from catletResult in _stateStore.For<Catlet>().IO.GetByIdAsync(command.CatletId)
+        from catletResult in stateStore.For<Catlet>().IO.GetByIdAsync(command.CatletId)
         from catlet in catletResult.ToEitherAsync(Error.New($"Catlet {command.CatletId} not found."))
         // TODO delete ports which are no longer configured
         from settings in command.Config.Networks
@@ -84,17 +73,17 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                     .Filter(notEmpty)
                     .IfNone(EryphConstants.DefaultNetworkName))
             .ToAsync()
-        from network in _stateStore.For<VirtualNetwork>().IO.GetBySpecAsync(
+        from network in stateStore.For<VirtualNetwork>().IO.GetBySpecAsync(
             new VirtualNetworkSpecs.GetByName(command.ProjectId, networkName.Value, environmentName.Value))
         // It is optional to have an environment specific network. Therefore,
         // we fall back to the network in the default environment.
         from validNetwork in network.IsNone && environmentName != EnvironmentName.New(EryphConstants.DefaultEnvironmentName)
-            ? _stateStore.For<VirtualNetwork>().IO.GetBySpecAsync(
+            ? stateStore.For<VirtualNetwork>().IO.GetBySpecAsync(
                     new VirtualNetworkSpecs.GetByName(command.ProjectId, networkName.Value, EryphConstants.DefaultEnvironmentName))
                 .Bind(fr => fr.ToEitherAsync(Error.New($"Network '{networkName}' not found in environment '{environmentName}' and default environment.")))
             : network.ToEitherAsync(Error.New($"Network '{networkName}' not found in environment '{environmentName}'."))
 
-        from networkProviders in _providerManager.GetCurrentConfiguration()
+        from networkProviders in providerManager.GetCurrentConfiguration()
         from networkProvider in networkProviders.NetworkProviders.Find(x => x.Name == validNetwork.NetworkProvider)
             .ToEither(Error.New($"network provider {validNetwork.NetworkProvider} not found."))
             .ToAsync()
@@ -119,10 +108,10 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
         from floatingPort in isFlatNetwork
             ? from _ in Optional(networkPort.FloatingPort)
-                .Map(fp => _stateStore.For<FloatingNetworkPort>().IO.DeleteAsync(fp))
+                .Map(fp => stateStore.For<FloatingNetworkPort>().IO.DeleteAsync(fp))
                 .Sequence()
               select Option<FloatingNetworkPort>.None
-            : from providerPort in _stateStore.For<ProviderRouterPort>().IO.GetBySpecAsync(
+            : from providerPort in stateStore.For<ProviderRouterPort>().IO.GetBySpecAsync(
                 new ProviderRouterPortSpecs.GetByNetworkId(validNetwork.Id))
               from validProviderPort in providerPort.ToEitherAsync(
                     Error.New($"The overlay network '{validNetwork.Name}' has no provider port."))
@@ -134,7 +123,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
         let c3 = new CancellationTokenSource()
         from ips in isFlatNetwork
             ? RightAsync<Error, IPAddress[]>([])
-            : _ipManager.ConfigurePortIps(
+            : ipManager.ConfigurePortIps(
                 validNetwork, networkPort,
                 networkConfig,
                 c3.Token)
@@ -143,7 +132,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
             ? RightAsync<Error, IPAddress[]>([])
             : floatingPort.ToEither(Error.New("floating port is missing"))
                 .ToAsync()
-                .Bind(p => _providerIpManager.ConfigureFloatingPortIps(networkProvider.Name, p, c3.Token))
+                .Bind(p => providerIpManager.ConfigureFloatingPortIps(networkProvider.Name, p, c3.Token))
 
         select new MachineNetworkSettings
         {
@@ -173,7 +162,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
         let macAddress = fixedMacAddress
             .Filter(notEmpty)
             .IfNone(() => MacAddresses.GenerateMacAddress(portName))
-        from existingPort in _stateStore.For<CatletNetworkPort>().IO.GetBySpecAsync(
+        from existingPort in stateStore.For<CatletNetworkPort>().IO.GetBySpecAsync(
                 new NetworkPortSpecs.GetByNetworkAndNameForCatlet(network.Id, portName), cancellationToken)
         from updatedPort in existingPort.Match(
                 Some: p => from _ in RightAsync<Error, Unit>(unit)
@@ -195,7 +184,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                         AddressName = addressName,
                         IpAssignments = [],
                     }
-                    from addedPort in _stateStore.For<CatletNetworkPort>().IO.AddAsync(newPort, cancellationToken)
+                    from addedPort in stateStore.For<CatletNetworkPort>().IO.AddAsync(newPort, cancellationToken)
                             select addedPort)
         select updatedPort;
 
@@ -208,7 +197,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
         string providerPoolName,
         CancellationToken cancellationToken)
     {
-        await _stateStore.LoadPropertyAsync(adapterPort, x => x.FloatingPort, cancellationToken);
+        await stateStore.LoadPropertyAsync(adapterPort, x => x.FloatingPort, cancellationToken);
 
         if (adapterPort.FloatingPort != null)
         {
@@ -217,7 +206,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
                 providerSubnetName || floatingPort.PoolName != providerPoolName)
             {
                 adapterPort.FloatingPort = null;
-                await _stateStore.For<FloatingNetworkPort>().DeleteAsync(floatingPort, cancellationToken);
+                await stateStore.For<FloatingNetworkPort>().DeleteAsync(floatingPort, cancellationToken);
             }
 
         }
@@ -237,7 +226,7 @@ public class UpdateCatletNetworksCommandHandler : IHandleMessages<OperationTask<
 
         adapterPort.FloatingPort = port;
 
-        return await _stateStore.For<FloatingNetworkPort>().AddAsync(port, cancellationToken);
+        return await stateStore.For<FloatingNetworkPort>().AddAsync(port, cancellationToken);
     }
 
     // TODO Remove port and attached floating port if necessary
