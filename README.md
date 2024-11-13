@@ -1,5 +1,5 @@
 # eryph
-Turn your Windows desktops and servers into a local cloud.
+Turn your Windows desktops and servers into a local cloud.  
 Experience the evolution of virtual machines: With eryph, you don't just manage VMs - you breed catlets!
 
 ## Description
