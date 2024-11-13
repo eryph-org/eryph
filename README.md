@@ -22,7 +22,7 @@ Therefore you have to enable the use of unsigned drivers on your dev machine.
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/eryph-org/eryph-org/tags). 
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/eryph-org/eryph/tags). 
 
 ## License
 
