@@ -19,13 +19,13 @@ namespace Eryph.Modules.Controller.Networks;
 internal class ProviderIpManager(
     IStateStore stateStore,
     IIpPoolManager poolManager)
-    : BaseIpManager(stateStore, poolManager), IProviderIpManager
+    : IProviderIpManager
 {
     public EitherAsync<Error, Seq<IPAddress>> ConfigureFloatingPortIps(
         string providerName,
         FloatingNetworkPort port) =>
-        from ipAssignments in _stateStore.For<IpAssignment>().IO.ListAsync(
-            new IPAssignmentSpecs.GetByPort(port.Id))
+        from ipAssignments in stateStore.For<IpAssignment>().IO.ListAsync(
+            new IPAssignmentSpecs.GetByPortWithPoolAndSubnet(port.Id))
         let validDirectAssignments = ipAssignments
             .Filter(a => a is not IpPoolAssignment && IsValidAssignment(a, providerName, port.SubnetName))
         let validPoolAssignments = ipAssignments
@@ -33,7 +33,7 @@ internal class ProviderIpManager(
             .Filter(a => IsValidPoolAssignment(a, providerName, port.SubnetName, port.PoolName))
         let invalidAssignments = ipAssignments.Except(validDirectAssignments).Except(validPoolAssignments)
         from _ in invalidAssignments
-            .Map(a => _stateStore.For<IpAssignment>().IO.DeleteAsync(a))
+            .Map(a => stateStore.For<IpAssignment>().IO.DeleteAsync(a))
             .SequenceSerial()
         from newAssignment in validPoolAssignments.IsEmpty
             ? from assignment in CreateAssignment(port, providerName, port.SubnetName, port.PoolName)
@@ -48,12 +48,12 @@ internal class ProviderIpManager(
         string providerName,
         string subnetName,
         string ipPoolName) =>
-        from subnet in _stateStore.Read<ProviderSubnet>().IO.GetBySpecAsync(
+        from subnet in stateStore.Read<ProviderSubnet>().IO.GetBySpecAsync(
             new SubnetSpecs.GetByProviderName(providerName, subnetName))
         from validSubnet in subnet.ToEitherAsync(
             Error.New($"Subnet {subnetName} not found for provider {providerName}."))
-        from assignment in _poolManager.AcquireIp(validSubnet.Id, ipPoolName)
-        let _ = UpdatePortAssignment(port, assignment)
+        from assignment in poolManager.AcquireIp(validSubnet.Id, ipPoolName)
+        let _ = fun(() => { assignment.NetworkPort = port; })()
         select assignment;
 
     private static bool IsValidAssignment(

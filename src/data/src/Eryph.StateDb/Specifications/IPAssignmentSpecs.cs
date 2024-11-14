@@ -10,6 +10,14 @@ public static class IPAssignmentSpecs
     {
         public GetByPort(Guid portId)
         {
+            Query.Where(x => x.NetworkPortId == portId);
+        }
+    }
+
+    public sealed class GetByPortWithPoolAndSubnet : Specification<IpAssignment>
+    {
+        public GetByPortWithPoolAndSubnet(Guid portId)
+        {
             Query.Where(x => x.NetworkPortId == portId)
                 .Include(a => ((IpPoolAssignment)a).Pool)
                 .Include(p => p.Subnet)

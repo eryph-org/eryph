@@ -566,7 +566,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
                         new CatletNetworkPort()
                         {
                             Name = "test-catlet-port",
-                            MacAddress = "42:00:42:00:00:1ß",
+                            MacAddress = "42:00:42:00:00:10",
                             CatletMetadataId = firstCatletMetadata.Id,
                         },
                         new ProviderRouterPort()

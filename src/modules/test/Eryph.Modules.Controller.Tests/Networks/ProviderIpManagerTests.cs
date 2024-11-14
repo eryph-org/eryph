@@ -168,7 +168,7 @@ public class ProviderIpManagerTests : InMemoryStateDbTestBase
 
         await WithScope(async (providerIpManager, _, stateStore) =>
         {
-            var floatingPort = await stateStore.Read<FloatingNetworkPort>()
+            var floatingPort = await stateStore.For<FloatingNetworkPort>()
                 .GetByIdAsync(FloatingPortId);
             floatingPort.Should().NotBeNull();
 

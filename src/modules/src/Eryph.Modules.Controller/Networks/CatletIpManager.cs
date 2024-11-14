@@ -19,7 +19,7 @@ namespace Eryph.Modules.Controller.Networks;
 public class CatletIpManager(
     IStateStore stateStore,
     IIpPoolManager poolManager)
-    : BaseIpManager(stateStore, poolManager), ICatletIpManager
+    : ICatletIpManager
 {
     public EitherAsync<Error, Seq<IPAddress>> ConfigurePortIps(
         VirtualNetwork network,
@@ -30,8 +30,8 @@ public class CatletIpManager(
             .IfNone(EryphConstants.DefaultSubnetName)
         let ipPoolName = Optional(networkConfig.SubnetV4?.IpPool)
             .IfNone(EryphConstants.DefaultIpPoolName)
-        from ipAssignments in _stateStore.For<IpAssignment>().IO.ListAsync(
-            new IPAssignmentSpecs.GetByPort(port.Id))
+        from ipAssignments in stateStore.For<IpAssignment>().IO.ListAsync(
+            new IPAssignmentSpecs.GetByPortWithPoolAndSubnet(port.Id))
         let validDirectAssignments = ipAssignments
             .Filter(a => a is not IpPoolAssignment && IsValidAssignment(a, network, subnetName))
         let validPoolAssignments = ipAssignments
@@ -39,7 +39,7 @@ public class CatletIpManager(
             .Filter(a => IsValidPoolAssignment(a, network, subnetName, ipPoolName))
         let invalidAssignments = ipAssignments.Except(validDirectAssignments).Except(validPoolAssignments)
         from __ in invalidAssignments
-            .Map(a => _stateStore.For<IpAssignment>().IO.DeleteAsync(a))
+            .Map(a => stateStore.For<IpAssignment>().IO.DeleteAsync(a))
             .SequenceSerial()
         from newAssignment in validPoolAssignments.IsEmpty
             ? from assignment in CreateAssignment(network, port, subnetName, ipPoolName)
@@ -54,17 +54,13 @@ public class CatletIpManager(
         CatletNetworkPort port,
         string subnetName,
         string ipPoolName) =>
-        from subnet in _stateStore.Read<VirtualNetworkSubnet>().IO.GetBySpecAsync(
+        from subnet in stateStore.Read<VirtualNetworkSubnet>().IO.GetBySpecAsync(
             new SubnetSpecs.GetByNetwork(network.Id, subnetName))
         from validSubnet in subnet.ToEitherAsync(
             Error.New($"Environment {network.Environment}: Subnet {subnetName} not found in network {network.Name}."))
-        from assignment in _poolManager.AcquireIp(validSubnet.Id, ipPoolName)
-        let _ = UpdatePortAssignment(port, assignment)
+        from assignment in poolManager.AcquireIp(validSubnet.Id, ipPoolName)
+        let _ = fun(() => { assignment.NetworkPort = port; })()
         select assignment;
-
-
-    // TODO Check environment match
-    // TODO Check IP address is valid
 
     private static bool IsValidAssignment(
         IpAssignment assignment,

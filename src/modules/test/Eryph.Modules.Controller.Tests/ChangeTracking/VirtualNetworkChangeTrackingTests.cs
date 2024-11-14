@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Mail;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
 using Eryph.Configuration.Model;

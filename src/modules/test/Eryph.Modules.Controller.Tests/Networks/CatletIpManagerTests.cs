@@ -195,11 +195,11 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
 
         await WithScope(async (catletIpManager, _, stateStore) =>
         {
-            var catletPort = await stateStore.Read<CatletNetworkPort>()
+            var catletPort = await stateStore.For<CatletNetworkPort>()
                 .GetByIdAsync(CatletPortId);
             catletPort.Should().NotBeNull();
 
-            var network = await stateStore.Read<VirtualNetwork>()
+            var network = await stateStore.For<VirtualNetwork>()
                 .GetByIdAsync(Guid.Parse(DefaultNetworkId));
             network.Should().NotBeNull();
 
