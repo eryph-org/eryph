@@ -17,7 +17,6 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
 using LanguageExt;
-using LanguageExt.ClassInstances;
 using LanguageExt.Common;
 using Rebus.Handlers;
 
@@ -25,7 +24,6 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
 
-#pragma warning restore 1998
 [UsedImplicitly]
 public class UpdateCatletNetworksCommandHandler(
     ITaskMessaging messaging,
@@ -141,10 +139,14 @@ public class UpdateCatletNetworksCommandHandler(
             AdapterName = networkConfig.AdapterName,
             PortName = networkPort.Name,
             MacAddress = networkPort.MacAddress,
-            AddressesV4 = string.Join(',', ips.Where(x => x.AddressFamily == AddressFamily.InterNetwork)),
+            AddressesV4 = ips.Filter(x => x.AddressFamily == AddressFamily.InterNetwork)
+                .Map(ip => ip.ToString())
+                .ToList(),
             FloatingAddressV4 = floatingIps.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork)
                 ?.ToString(),
-            AddressesV6 = string.Join(',', ips.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6)),
+            AddressesV6 = ips.Filter(x => x.AddressFamily == AddressFamily.InterNetworkV6)
+                .Map(ip => ip.ToString())
+                .ToList(),
             FloatingAddressV6 = floatingIps.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6)
                 ?.ToString(),
         };

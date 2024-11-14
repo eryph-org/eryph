@@ -32,6 +32,9 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
     private const string SecondNetworkId = "e480a020-57d0-4443-a973-57aa0c95872e";
     private const string SecondNetworkSubnetId = "27ec11a4-5d6a-47da-9f9f-eb7486db38ea";
 
+    private const string ThirdNetworkId = "9016fa5b-e0c7-4626-b1ba-6dc21902d04f";
+    private const string ThirdNetworkSubnetId = "106fa5c1-8cf1-4ccd-915a-f9dc230cc299";
+
     private const string SecondEnvironmentNetworkId = "81a139e5-ab61-4fe3-b81f-59c11a665d22";
     private const string SecondEnvironmentSubnetId = "dc807357-50e7-4263-8298-0c97ff69f4cf";
 
@@ -46,25 +49,72 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
     private readonly Mock<ITaskMessaging> _taskMessingMock = new();
     private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
 
-
-
-    [Fact]
-    public async Task UpdateNetworks_CatletIsAddedToOverlayNetwork_CreatesCorrectNetworkConfig()
+    [Theory]
+    [InlineData(DefaultProjectId, "default", null, null, null,
+        DefaultNetworkId, "default", "default", "10.0.0.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "default", "default", "default", "default",
+        DefaultNetworkId, "default", "default", "10.0.0.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "default", "default", "default", "second-pool",
+        DefaultNetworkId, "default", "default", "10.0.1.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "default", "default", "second-subnet", "default",
+        DefaultNetworkId, "default", "default", "10.1.0.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "default", "second-network", "default", "default",
+        SecondNetworkId, "default", "second-provider-pool", "10.5.0.12", "10.249.248.22")]
+    [InlineData(DefaultProjectId, "default", "third-network", "default", "default",
+        ThirdNetworkId, "second-provider-subnet", "default", "10.6.0.12", "10.249.249.12")]
+    [InlineData(DefaultProjectId, "second-environment", "default", "default", "default",
+        SecondEnvironmentNetworkId, "default", "default", "10.10.0.12", "10.249.248.12")]
+    // When the environment does not have a dedicated network, we should fall back to the default network
+    [InlineData(DefaultProjectId, "environment-without-network", null, null, null,
+        DefaultNetworkId, "default", "default", "10.0.0.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "environment-without-network", "default", "default", "default",
+        DefaultNetworkId, "default", "default", "10.0.0.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "environment-without-network", "default", "default", "second-pool",
+        DefaultNetworkId, "default", "default", "10.0.1.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "environment-without-network", "default", "second-subnet", "default",
+        DefaultNetworkId, "default", "default", "10.1.0.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "environment-without-network", "second-network", "default", "default",
+        SecondNetworkId, "default", "second-provider-pool", "10.5.0.12", "10.249.248.22")]
+    [InlineData(DefaultProjectId, "environment-without-network", "third-network", "default", "default",
+        ThirdNetworkId, "second-provider-subnet", "default", "10.6.0.12", "10.249.249.12")]
+    [InlineData(SecondProjectId, "default", null, null, null,
+        SecondProjectNetworkId, "default", "default", "10.100.0.12", "10.249.248.12")]
+    [InlineData(SecondProjectId, "default", "default", "default", "default",
+        SecondProjectNetworkId, "default", "default", "10.100.0.12", "10.249.248.12")]
+    public async Task UpdateNetworks_CatletIsAddedToOverlayNetwork_CreatesCorrectNetworkConfig(
+        string projectId,
+        string environment,
+        string? networkName,
+        string? subnetName,
+        string? poolName,
+        string expectedNetworkId,
+        string expectedProviderSubnet,
+        string expectedProviderPool,
+        string expectedIp,
+        string expectedFloatingIp)
     {
-        await ArrangeCatlet(DefaultProjectId);
+        await ArrangeCatlet(projectId);
 
         var command = new UpdateCatletNetworksCommand
         {
-            
             CatletId = Guid.Parse(CatletId),
-            ProjectId = Guid.Parse(DefaultProjectId),
+            ProjectId = Guid.Parse(projectId),
             Config = new CatletConfig
             {
+                Environment = environment,
                 Networks = 
                 [
                     new CatletNetworkConfig
                     {
                         AdapterName = "eth0",
+                        Name = networkName,
+                        SubnetV4 = subnetName is not null || poolName is not null
+                            ? new CatletSubnetConfig
+                            {
+                                Name = subnetName,
+                                IpPool = poolName,
+                            }
+                            : null,
                     }
                 ]
             },
@@ -80,6 +130,11 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                     settings.NetworkProviderName.Should().Be("default");
                     settings.AdapterName.Should().Be("eth0");
                     settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.NetworkName.Should().Be(networkName);
+                    settings.AddressesV4.Should().Equal(expectedIp);
+                    settings.FloatingAddressV4.Should().Be(expectedFloatingIp);
+                    settings.AddressesV6.Should().BeEmpty();
+                    settings.FloatingAddressV6.Should().BeNull();
                 });
 
             await stateStore.SaveChangesAsync();
@@ -87,8 +142,21 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
 
         await WithScope(async (_, stateStore) =>
         {
-            var assignmentCount = await stateStore.For<IpAssignment>().CountAsync();
-            assignmentCount.Should().Be(2);
+            var catletPorts = await stateStore.For<CatletNetworkPort>().ListAsync();
+            var catletPort = catletPorts.Should().ContainSingle().Subject;
+            catletPort.CatletMetadataId.Should().Be(Guid.Parse(CatletMetadataId));
+            catletPort.NetworkId.Should().Be(Guid.Parse(expectedNetworkId));
+
+            var floatingPorts = await stateStore.For<FloatingNetworkPort>().ListAsync();
+            var floatingPort = floatingPorts.Should().ContainSingle().Subject;
+            floatingPort.ProviderName.Should().Be("default");
+            floatingPort.SubnetName.Should().Be(expectedProviderSubnet);
+            floatingPort.PoolName.Should().Be(expectedProviderPool);
+            
+            var assignments = await stateStore.For<IpAssignment>().ListAsync();
+            assignments.Should().Satisfy(
+                assignment => assignment.IpAddress == expectedIp,
+                assignment => assignment.IpAddress == expectedFloatingIp);
         });
     }
 
@@ -303,9 +371,9 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                 [
                     new ProviderRouterPort
                     {
-                        Name = "default",
+                        Name = "provider",
                         ProviderName = EryphConstants.DefaultProviderName,
-                        SubnetName = "second-provider-subnet",
+                        SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = EryphConstants.DefaultIpPoolName,
                         MacAddress = "00:00:00:01:00:01",
                     }
@@ -345,11 +413,53 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                 [
                     new ProviderRouterPort
                     {
-                        Name = "default",
+                        Name = "provider",
+                        ProviderName = EryphConstants.DefaultProviderName,
+                        SubnetName = EryphConstants.DefaultSubnetName,
+                        PoolName = "second-provider-pool",
+                        MacAddress = "00:00:00:01:00:02",
+                    }
+                ]
+            });
+
+        await stateStore.For<VirtualNetwork>().AddAsync(
+            new VirtualNetwork
+            {
+                Id = Guid.Parse(ThirdNetworkId),
+                ProjectId = EryphConstants.DefaultProjectId,
+                Name = "third-network",
+                Environment = EryphConstants.DefaultEnvironmentName,
+                NetworkProvider = EryphConstants.DefaultProviderName,
+                Subnets =
+                [
+                    new VirtualNetworkSubnet
+                    {
+                        Id = Guid.Parse(ThirdNetworkSubnetId),
+                        Name = EryphConstants.DefaultSubnetName,
+                        IpNetwork = "10.5.0.0/16",
+                        IpPools =
+                        [
+                            new IpPool()
+                            {
+                                Id = Guid.NewGuid(),
+                                Name = EryphConstants.DefaultIpPoolName,
+                                IpNetwork = "10.6.0.0/16",
+                                FirstIp = "10.6.0.10",
+                                NextIp = "10.6.0.12",
+                                LastIp = "10.6.0.19",
+                            }
+                        ],
+                    },
+                ],
+                NetworkPorts =
+                [
+                    new ProviderRouterPort
+                    {
+                        Name = "provider",
                         ProviderName = EryphConstants.DefaultProviderName,
                         SubnetName = "second-provider-subnet",
                         PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "00:00:00:01:00:02",
+                        MacAddress = "00:00:00:01:00:03",
                     }
                 ]
             });
@@ -387,11 +497,11 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                 [
                     new ProviderRouterPort
                     {
-                        Name = "default",
+                        Name = "provider",
                         ProviderName = EryphConstants.DefaultProviderName,
                         SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "00:00:00:01:00:03",
+                        MacAddress = "00:00:00:01:00:04",
                     }
                 ]
             });
@@ -429,11 +539,11 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                 [
                     new ProviderRouterPort
                     {
-                        Name = "default",
+                        Name = "provider",
                         ProviderName = EryphConstants.DefaultProviderName,
                         SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "00:00:00:01:00:04",
+                        MacAddress = "00:00:00:01:00:05",
                     }
                 ]
             });
