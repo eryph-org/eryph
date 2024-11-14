@@ -21,12 +21,11 @@ internal class ProviderIpManager(
     IIpPoolManager poolManager)
     : BaseIpManager(stateStore, poolManager), IProviderIpManager
 {
-    public EitherAsync<Error, IPAddress[]> ConfigureFloatingPortIps(
+    public EitherAsync<Error, Seq<IPAddress>> ConfigureFloatingPortIps(
         string providerName,
-        FloatingNetworkPort port,
-        CancellationToken cancellationToken) =>
+        FloatingNetworkPort port) =>
         from ipAssignments in _stateStore.For<IpAssignment>().IO.ListAsync(
-            new IPAssignmentSpecs.GetByPort(port.Id), cancellationToken)
+            new IPAssignmentSpecs.GetByPort(port.Id))
         let validDirectAssignments = ipAssignments
             .Filter(a => a is not IpPoolAssignment && IsValidAssignment(a, providerName, port.SubnetName))
         let validPoolAssignments = ipAssignments
@@ -37,25 +36,23 @@ internal class ProviderIpManager(
             .Map(a => _stateStore.For<IpAssignment>().IO.DeleteAsync(a))
             .SequenceSerial()
         from newAssignment in validPoolAssignments.IsEmpty
-            ? from assignment in CreateAssignment(port, providerName, port.SubnetName, port.PoolName, cancellationToken)
+            ? from assignment in CreateAssignment(port, providerName, port.SubnetName, port.PoolName)
             select Some(assignment)
             : RightAsync<Error, Option<IpPoolAssignment>>(None)
         select validPoolAssignments.Append(newAssignment).Append(validDirectAssignments)
             .Map(a => IPAddress.Parse(a.IpAddress!))
-            .ToArray();
+            .ToSeq();
 
     private EitherAsync<Error, IpPoolAssignment> CreateAssignment(
         FloatingNetworkPort port,
         string providerName,
         string subnetName,
-        string ipPoolName,
-        CancellationToken cancellationToken) =>
+        string ipPoolName) =>
         from subnet in _stateStore.Read<ProviderSubnet>().IO.GetBySpecAsync(
-            new SubnetSpecs.GetByProviderName(providerName, subnetName),
-            cancellationToken)
+            new SubnetSpecs.GetByProviderName(providerName, subnetName))
         from validSubnet in subnet.ToEitherAsync(
             Error.New($"Subnet {subnetName} not found for provider {providerName}."))
-        from assignment in _poolManager.AcquireIp(validSubnet.Id, ipPoolName, cancellationToken)
+        from assignment in _poolManager.AcquireIp(validSubnet.Id, ipPoolName)
         let _ = UpdatePortAssignment(port, assignment)
         select assignment;
 

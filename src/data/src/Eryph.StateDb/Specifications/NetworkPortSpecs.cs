@@ -23,15 +23,4 @@ public static class NetworkPortSpecs
         }
 
     }
-
-    // TODO fix my naming
-    public sealed class GetByNetworkAndNameForCatlet : Specification<CatletNetworkPort>, ISingleResultSpecification
-    {
-        public GetByNetworkAndNameForCatlet(Guid networkId, string name)
-        {
-            Query.Where(x => x.NetworkId == networkId && x.Name == name);
-        }
-
-    }
-
 }

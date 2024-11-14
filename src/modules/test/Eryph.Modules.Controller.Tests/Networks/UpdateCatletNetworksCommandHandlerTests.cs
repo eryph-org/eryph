@@ -239,6 +239,44 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
     }
 
     [Fact]
+    public async Task UpdateNetworks_CatletHasHostName_HostnameIsUsed()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Hostname = "test-catlet",
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                    }
+                ],
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+            result.Should().BeRight();
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (_, stateStore) =>
+        {
+            var catletPorts = await stateStore.For<CatletNetworkPort>().ListAsync();
+            var catletPort = catletPorts.Should().ContainSingle().Subject;
+            catletPort.CatletMetadataId.Should().Be(Guid.Parse(CatletMetadataId));
+            catletPort.AddressName.Should().Be("test-catlet");
+        });
+    }
+
+    [Fact]
     public async Task UpdateNetworks_MoveCatletFromFlatNetworkToOverlayNetwork_CreatesCorrectNetworkConfig()
     {
         var command = new UpdateCatletNetworksCommand
@@ -299,7 +337,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
             result.Should().BeRight().Which.Should().SatisfyRespectively(
                 settings =>
                 {
-                    settings.NetworkProviderName.Should().Be("flat-provider");
+                    settings.NetworkProviderName.Should().Be("default");
                     settings.AdapterName.Should().Be("eth0");
                     settings.PortName.Should().Be($"{CatletId}_eth0");
                     settings.NetworkName.Should().Be("default");

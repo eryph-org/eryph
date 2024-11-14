@@ -10,9 +10,8 @@ namespace Eryph.Modules.Controller.Networks;
 
 public interface ICatletIpManager
 {
-    public EitherAsync<Error, IPAddress[]> ConfigurePortIps(
+    public EitherAsync<Error, Seq<IPAddress>> ConfigurePortIps(
         VirtualNetwork network,
         CatletNetworkPort port,
-        CatletNetworkConfig networkConfig,
-        CancellationToken cancellationToken);
+        CatletNetworkConfig networkConfig);
 }

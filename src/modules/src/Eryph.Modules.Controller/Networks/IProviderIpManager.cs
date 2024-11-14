@@ -8,8 +8,7 @@ namespace Eryph.Modules.Controller.Networks;
 
 public interface IProviderIpManager
 {
-    public EitherAsync<Error, IPAddress[]> ConfigureFloatingPortIps(
+    public EitherAsync<Error, Seq<IPAddress>> ConfigureFloatingPortIps(
         string providerName,
-        FloatingNetworkPort port,
-        CancellationToken cancellationToken);
+        FloatingNetworkPort port);
 }

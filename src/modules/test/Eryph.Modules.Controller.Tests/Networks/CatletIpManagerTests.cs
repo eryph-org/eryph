@@ -83,8 +83,7 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
             await stateStore.For<CatletNetworkPort>().AddAsync(catletPort);
 
             var result = await ipManager.ConfigurePortIps(
-                network!, catletPort, networkConfig,
-                CancellationToken.None);
+                network!, catletPort, networkConfig);
 
             result.Should().BeRight().Which.Should().SatisfyRespectively(
                 ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
@@ -173,8 +172,7 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
             network.Should().NotBeNull();
 
             var result = await catletIpManager.ConfigurePortIps(
-                network!, catletPort!, networkConfig,
-                CancellationToken.None);
+                network!, catletPort!, networkConfig);
 
             result.Should().BeRight().Which.Should().SatisfyRespectively(
                 ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
@@ -261,8 +259,7 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
             network.Should().NotBeNull();
 
             var result = await catletIpManager.ConfigurePortIps(
-                network!, catletPort!, networkConfig,
-                CancellationToken.None);
+                network!, catletPort!, networkConfig);
 
             result.Should().BeRight().Which.Should().SatisfyRespectively(
                 ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));

@@ -46,9 +46,7 @@ public class ProviderIpManagerTests : InMemoryStateDbTestBase
             await stateStore.For<FloatingNetworkPort>().AddAsync(floatingPort);
 
             var result = await providerIpManager.ConfigureFloatingPortIps(
-                providerName,
-                floatingPort,
-                default);
+                providerName, floatingPort);
 
             result.Should().BeRight().Which.Should().SatisfyRespectively(
                 ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
@@ -113,7 +111,7 @@ public class ProviderIpManagerTests : InMemoryStateDbTestBase
             floatingPort.Should().NotBeNull();
 
             var result = await providerIpManager.ConfigureFloatingPortIps(
-                providerName, floatingPort!, default);
+                providerName, floatingPort!);
 
             result.Should().BeRight().Which.Should().SatisfyRespectively(
                 ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
@@ -179,7 +177,7 @@ public class ProviderIpManagerTests : InMemoryStateDbTestBase
             floatingPort.PoolName = poolName;
 
             var result = await providerIpManager.ConfigureFloatingPortIps(
-                providerName, floatingPort, default);
+                providerName, floatingPort);
 
             result.Should().BeRight().Which.Should().SatisfyRespectively(
                 ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
