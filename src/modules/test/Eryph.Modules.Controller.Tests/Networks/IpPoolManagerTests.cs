@@ -235,7 +235,7 @@ public class IpPoolManagerTests : InMemoryStateDbTestBase
             {
                 Id = NetworkPortId,
                 Name = "test-catlet-port",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:02",
                 CatletMetadataId = CatletMetadataId,
                 NetworkId = NetworkId,
             });

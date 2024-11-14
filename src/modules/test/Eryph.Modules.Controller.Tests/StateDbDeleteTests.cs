@@ -85,7 +85,7 @@ public abstract class StateDbDeleteTests(IDatabaseFixture databaseFixture) : Sta
             {
                 Id = FloatingPortId,
                 Name = "test-floating-port",
-                MacAddress = "00:00:00:00:00:10",
+                MacAddress = "42:00:42:00:00:10",
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
@@ -98,7 +98,7 @@ public abstract class StateDbDeleteTests(IDatabaseFixture databaseFixture) : Sta
                 CatletMetadataId = CatletMetadataId,
                 NetworkId = VirtualNetworkId,
                 FloatingPortId = FloatingPortId,
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 IpAssignments =
                 [
                     new IpPoolAssignment()
@@ -159,7 +159,7 @@ public abstract class StateDbDeleteTests(IDatabaseFixture databaseFixture) : Sta
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 IpAssignments =
                 [
                     new IpPoolAssignment()

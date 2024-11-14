@@ -116,7 +116,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             var routerPort = new NetworkRouterPort()
             {
                 Name = "default",
-                MacAddress = "00:00:00:00:10:10",
+                MacAddress = "42:00:42:00:10:10",
                 IpAssignments = new List<IpAssignment>
                 {
                     new IpPoolAssignment
@@ -153,7 +153,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
                     new ProviderRouterPort()
                     {
                         Name = "test-provider-port",
-                        MacAddress = "00:00:00:00:00:10",
+                        MacAddress = "42:00:42:00:00:10",
                         SubnetName = "test-provider-subnet",
                         PoolName = "test-provider-pool",
                     },
@@ -245,7 +245,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             var routerPort = new NetworkRouterPort()
             {
                 Name = "default",
-                MacAddress = "00:00:00:00:00:10",
+                MacAddress = "42:00:42:00:00:10",
                 IpAssignments = new List<IpAssignment>
                 {
                     new IpPoolAssignment

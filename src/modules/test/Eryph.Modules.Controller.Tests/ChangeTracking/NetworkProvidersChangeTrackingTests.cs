@@ -40,7 +40,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 IpAssignments =
                 [
                     new IpAssignmentConfigModel()
@@ -94,7 +94,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
             await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort()
             {
                 Name = "new-floating-port",
-                MacAddress = "00:00:00:00:00:02",
+                MacAddress = "42:00:42:00:00:02",
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
@@ -111,7 +111,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
             new FloatingNetworkPortConfigModel()
             {
                 Name = "new-floating-port",
-                MacAddress = "00:00:00:00:00:02",
+                MacAddress = "42:00:42:00:00:02",
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
@@ -127,14 +127,14 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
         await WithHostScope(async stateStore =>
         {
             var floatingPort = await stateStore.For<FloatingNetworkPort>().GetByIdAsync(FloatingPortId);
-            floatingPort!.MacAddress = "00:00:00:00:00:02";
+            floatingPort!.MacAddress = "42:00:42:00:00:02";
 
             await stateStore.SaveChangesAsync();
         });
 
         _savedProvidersConfig.Should().BeEquivalentTo(GetProvidersConfig());
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.FloatingPorts[0].MacAddress = "00:00:00:00:00:02";
+        _expectedPortsConfig.FloatingPorts[0].MacAddress = "42:00:42:00:00:02";
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 
@@ -247,7 +247,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 IpAssignments =
                 [
                     new IpPoolAssignment()

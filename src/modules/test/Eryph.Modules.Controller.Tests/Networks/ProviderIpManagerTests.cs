@@ -38,7 +38,7 @@ public class ProviderIpManagerTests : InMemoryStateDbTestBase
             {
                 Id = FloatingPortId,
                 Name = "test-floating-port",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 ProviderName = providerName,
                 SubnetName = subnetName,
                 PoolName = poolName,
@@ -96,7 +96,7 @@ public class ProviderIpManagerTests : InMemoryStateDbTestBase
             {
                 Id = FloatingPortId,
                 Name = "test-floating-port",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 ProviderName = providerName,
                 SubnetName = subnetName,
                 PoolName = poolName,
@@ -158,7 +158,7 @@ public class ProviderIpManagerTests : InMemoryStateDbTestBase
             {
                 Id = FloatingPortId,
                 Name = "test-floating-port",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 ProviderName = "default",
                 SubnetName = "default",
                 PoolName = "default",

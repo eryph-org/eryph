@@ -47,12 +47,10 @@ public class UpdateCatletNetworksCommandHandler(
 
     public EitherAsync<Error, Seq<MachineNetworkSettings>> UpdateNetworks(
         UpdateCatletNetworksCommand command) =>
-        from catletResult in stateStore.For<Catlet>().IO.GetByIdAsync(command.CatletId)
-        from catlet in catletResult.ToEitherAsync(Error.New($"Catlet {command.CatletId} not found."))
         // TODO delete ports which are no longer configured
         from settings in command.Config.Networks
             .ToSeq()
-            .Map(cfg => UpdateNetwork(catlet.MetadataId, command, cfg))
+            .Map(cfg => UpdateNetwork(command.CatletMetadataId, command, cfg))
             .SequenceSerial()
         select settings;
 

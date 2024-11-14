@@ -65,8 +65,6 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
     [InlineData(DefaultProjectId, "second-environment", "default", "default", "default",
         SecondEnvironmentNetworkId, "default", "default", "10.10.0.12", "10.249.248.12")]
     // When the environment does not have a dedicated network, we should fall back to the default network
-    [InlineData(DefaultProjectId, "environment-without-network", null, null, null,
-        DefaultNetworkId, "default", "default", "10.0.0.12", "10.249.248.12")]
     [InlineData(DefaultProjectId, "environment-without-network", "default", "default", "default",
         DefaultNetworkId, "default", "default", "10.0.0.12", "10.249.248.12")]
     [InlineData(DefaultProjectId, "environment-without-network", "default", "default", "second-pool",
@@ -77,8 +75,6 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
         SecondNetworkId, "default", "second-provider-pool", "10.5.0.12", "10.249.248.22")]
     [InlineData(DefaultProjectId, "environment-without-network", "third-network", "default", "default",
         ThirdNetworkId, "second-provider-subnet", "default", "10.6.0.12", "10.249.249.12")]
-    [InlineData(SecondProjectId, "default", null, null, null,
-        SecondProjectNetworkId, "default", "default", "10.100.0.12", "10.249.248.12")]
     [InlineData(SecondProjectId, "default", "default", "default", "default",
         SecondProjectNetworkId, "default", "default", "10.100.0.12", "10.249.248.12")]
     public async Task UpdateNetworks_CatletIsAddedToOverlayNetwork_CreatesCorrectNetworkConfig(
@@ -93,11 +89,10 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
         string expectedIp,
         string expectedFloatingIp)
     {
-        await ArrangeCatlet(projectId);
-
         var command = new UpdateCatletNetworksCommand
         {
             CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
             ProjectId = Guid.Parse(projectId),
             Config = new CatletConfig
             {
@@ -123,7 +118,6 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
         await WithScope(async (handler, stateStore) =>
         {
             var result = await handler.UpdateNetworks(command);
-
             result.Should().BeRight().Which.Should().SatisfyRespectively(
                 settings =>
                 {
@@ -140,6 +134,446 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
             await stateStore.SaveChangesAsync();
         });
 
+        await ShouldBeOverlayNetworkInDatabase(
+            expectedNetworkId,
+            expectedProviderSubnet, expectedProviderPool,
+            expectedIp, expectedFloatingIp);
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_CatletIsAddedToFlatNetwork_CreatesCorrectNetworkConfig()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "flat-network",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                settings =>
+                {
+                    settings.NetworkProviderName.Should().Be("flat-provider");
+                    settings.AdapterName.Should().Be("eth0");
+                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.NetworkName.Should().Be("flat-network");
+                    settings.AddressesV4.Should().BeEmpty();
+                    settings.FloatingAddressV4.Should().BeNull();
+                    settings.AddressesV6.Should().BeEmpty();
+                    settings.FloatingAddressV6.Should().BeNull();
+                });
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await ShouldBeFlatNetworkInDatabase();
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_CatletHasFixedMacAddress_FixedMacAddressIsUsed()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                NetworkAdapters =
+                [
+                    new CatletNetworkAdapterConfig
+                    {
+                        Name = "eth0",
+                        MacAddress = "420042004202",
+                    }
+                ],
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "flat-network",
+                    }
+                ],
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                settings =>
+                {
+                    settings.AdapterName.Should().Be("eth0");
+                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.MacAddress.Should().Be("42:00:42:00:42:02");
+                });
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (_, stateStore) =>
+        {
+            var catletPorts = await stateStore.For<CatletNetworkPort>().ListAsync();
+            var catletPort = catletPorts.Should().ContainSingle().Subject;
+            catletPort.CatletMetadataId.Should().Be(Guid.Parse(CatletMetadataId));
+            catletPort.MacAddress.Should().Be("42:00:42:00:42:02");
+        });
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_MoveCatletFromFlatNetworkToOverlayNetwork_CreatesCorrectNetworkConfig()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "flat-network",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+            result.Should().BeRight();
+            await stateStore.SaveChangesAsync();
+        });
+
+        await ShouldBeFlatNetworkInDatabase();
+
+        var updatedConfigCommand = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "default",
+                        SubnetV4 =  new CatletSubnetConfig
+                        {
+                            Name = "default",
+                            IpPool = "default",
+                        },
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(updatedConfigCommand);
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                settings =>
+                {
+                    settings.NetworkProviderName.Should().Be("flat-provider");
+                    settings.AdapterName.Should().Be("eth0");
+                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.NetworkName.Should().Be("default");
+                    settings.AddressesV4.Should().Equal("10.0.0.12");
+                    settings.FloatingAddressV4.Should().Be("10.249.248.12");
+                    settings.AddressesV6.Should().BeEmpty();
+                    settings.FloatingAddressV6.Should().BeNull();
+                });
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await ShouldBeOverlayNetworkInDatabase(
+            DefaultNetworkId,
+            "default", "default",
+            "10.0.0.12", "10.249.248.12");
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_MoveCatletFromOverlayNetworkToFlatNetwork_CreatesCorrectNetworkConfig()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+            result.Should().BeRight();
+            await stateStore.SaveChangesAsync();
+        });
+
+        await ShouldBeOverlayNetworkInDatabase(
+            DefaultNetworkId,
+            "default", "default",
+            "10.0.0.12", "10.249.248.12");
+
+        var updatedConfigCommand = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "flat-network",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(updatedConfigCommand);
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                settings =>
+                {
+                    settings.NetworkProviderName.Should().Be("flat-provider");
+                    settings.AdapterName.Should().Be("eth0");
+                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.NetworkName.Should().Be("flat-network");
+                    settings.AddressesV4.Should().BeEmpty();
+                    settings.FloatingAddressV4.Should().BeNull();
+                    settings.AddressesV6.Should().BeEmpty();
+                    settings.FloatingAddressV6.Should().BeNull();
+                });
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await ShouldBeFlatNetworkInDatabase();
+    }
+
+    [Theory]
+    [InlineData(DefaultProjectId, "default", "default", "default", "second-pool",
+        DefaultNetworkId, "default", "default", "10.0.1.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "default", "default", "second-subnet", "default",
+        DefaultNetworkId, "default", "default", "10.1.0.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "default", "second-network", "default", "default",
+        SecondNetworkId, "default", "second-provider-pool", "10.5.0.12", "10.249.248.22")]
+    [InlineData(DefaultProjectId, "default", "third-network", "default", "default",
+        ThirdNetworkId, "second-provider-subnet", "default", "10.6.0.12", "10.249.249.12")]
+    [InlineData(DefaultProjectId, "second-environment", "default", "default", "default",
+        SecondEnvironmentNetworkId, "default", "default", "10.10.0.12", "10.249.248.12")]
+    // When the environment does not have a dedicated network, we should fall back to the default network
+    [InlineData(DefaultProjectId, "environment-without-network", "default", "default", "second-pool",
+        DefaultNetworkId, "default", "default", "10.0.1.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "environment-without-network", "default", "second-subnet", "default",
+        DefaultNetworkId, "default", "default", "10.1.0.12", "10.249.248.12")]
+    [InlineData(DefaultProjectId, "environment-without-network", "second-network", "default", "default",
+        SecondNetworkId, "default", "second-provider-pool", "10.5.0.12", "10.249.248.22")]
+    [InlineData(DefaultProjectId, "environment-without-network", "third-network", "default", "default",
+        ThirdNetworkId, "second-provider-subnet", "default", "10.6.0.12", "10.249.249.12")]
+    [InlineData(SecondProjectId, "default", "default", "default", "default",
+        SecondProjectNetworkId, "default", "default", "10.100.0.12", "10.249.248.12")]
+    public async Task UpdateNetworks_CatletIsMovedBetweenOverlayNetworks_CreatesCorrectNetworkConfig(
+        string projectId,
+        string environment,
+        string? networkName,
+        string? subnetName,
+        string? poolName,
+        string expectedNetworkId,
+        string expectedProviderSubnet,
+        string expectedProviderPool,
+        string expectedIp,
+        string expectedFloatingIp)
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+            result.Should().BeRight();
+            await stateStore.SaveChangesAsync();
+        });
+
+        await ShouldBeOverlayNetworkInDatabase(
+            DefaultNetworkId,
+            "default", "default",
+            "10.0.0.12", "10.249.248.12");
+
+        var updatedConfigCommand = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(projectId),
+            Config = new CatletConfig
+            {
+                Environment = environment,
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = networkName,
+                        SubnetV4 = new CatletSubnetConfig
+                        {
+                            Name = subnetName,
+                            IpPool = poolName,
+                        }
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(updatedConfigCommand);
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                settings =>
+                {
+                    settings.NetworkProviderName.Should().Be("default");
+                    settings.AdapterName.Should().Be("eth0");
+                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.NetworkName.Should().Be(networkName);
+                    settings.AddressesV4.Should().Equal(expectedIp);
+                    settings.FloatingAddressV4.Should().Be(expectedFloatingIp);
+                    settings.AddressesV6.Should().BeEmpty();
+                    settings.FloatingAddressV6.Should().BeNull();
+                });
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await ShouldBeOverlayNetworkInDatabase(
+            expectedNetworkId,
+            expectedProviderSubnet, expectedProviderPool,
+            expectedIp, expectedFloatingIp);
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_NetworkIsRemovedFromCatlet_PortsAreDeleted()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+            result.Should().BeRight();
+            await stateStore.SaveChangesAsync();
+        });
+
+        await ShouldBeOverlayNetworkInDatabase(
+            DefaultNetworkId,
+            "default", "default",
+            "10.0.0.12", "10.249.248.12");
+
+        var updatedConfigCommand = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Networks = [],
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(updatedConfigCommand);
+            result.Should().BeRight().Which.Should().BeEmpty();
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (_, stateStore) =>
+        {
+            var catletPorts = await stateStore.For<CatletNetworkPort>().ListAsync();
+            catletPorts.Should().BeEmpty();
+
+            var floatingPorts = await stateStore.For<FloatingNetworkPort>().ListAsync();
+            floatingPorts.Should().BeEmpty();
+
+            var assignments = await stateStore.For<IpAssignment>().ListAsync();
+            assignments.Should().BeEmpty();
+        });
+    }
+
+    private async Task ShouldBeOverlayNetworkInDatabase(
+        string expectedNetworkId,
+        string expectedProviderSubnet,
+        string expectedProviderPool,
+        string expectedIp,
+        string expectedFloatingIp)
+    {
         await WithScope(async (_, stateStore) =>
         {
             var catletPorts = await stateStore.For<CatletNetworkPort>().ListAsync();
@@ -152,7 +586,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
             floatingPort.ProviderName.Should().Be("default");
             floatingPort.SubnetName.Should().Be(expectedProviderSubnet);
             floatingPort.PoolName.Should().Be(expectedProviderPool);
-            
+
             var assignments = await stateStore.For<IpAssignment>().ListAsync();
             assignments.Should().Satisfy(
                 assignment => assignment.IpAddress == expectedIp,
@@ -160,23 +594,22 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
         });
     }
 
-    // TODO Verify flat network creates a port
-    // TODO Verify that the floating port and IP assignment were removed
-
-    [Fact]
-    public async Task UpdateNetworks_SwitchFromFlatToOverlay_CreatesCorrectNetworkConfig()
+    private async Task ShouldBeFlatNetworkInDatabase()
     {
-        // TODO Verify that the floating port and IP assignment are created
-    }
+        await WithScope(async (_, stateStore) =>
+        {
+            var catletPorts = await stateStore.For<CatletNetworkPort>().ListAsync();
+            var catletPort = catletPorts.Should().ContainSingle().Subject;
+            catletPort.CatletMetadataId.Should().Be(Guid.Parse(CatletMetadataId));
+            catletPort.NetworkId.Should().Be(Guid.Parse(FlatNetworkId));
 
-    [Fact]
-    public async Task UpdateNetworks_RemoveNetwork_CreatesCorrectNetworkConfig()
-    {
-        // TODO Verify that the port and assignment were deleted
-    }
+            var floatingPorts = await stateStore.For<FloatingNetworkPort>().ListAsync();
+            floatingPorts.Should().BeEmpty();
 
-    // TODO test change of project
-    // TODO test change of environment
+            var assignments = await stateStore.For<IpAssignment>().ListAsync();
+            assignments.Should().BeEmpty();
+        });
+    }
 
     private async Task WithScope(Func<UpdateCatletNetworksCommandHandler, IStateStore, Task> func)
     {
@@ -184,24 +617,6 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
         var handler = scope.GetInstance<UpdateCatletNetworksCommandHandler>();
         var stateStore = scope.GetInstance<IStateStore>();
         await func(handler, stateStore);
-    }
-
-    private async Task ArrangeCatlet(string projectId)
-    {
-        await WithScope(async (_, stateStore) =>
-        {
-            await stateStore.For<Catlet>().AddAsync(new Catlet
-            {
-                Id = Guid.Parse(CatletId),
-                ProjectId = Guid.Parse(projectId),
-                MetadataId = Guid.Parse(CatletMetadataId),
-                Name = "test-catlet",
-                Environment = "default",
-                DataStore = "default",
-            });
-
-            await stateStore.SaveChangesAsync();
-        });
     }
 
     protected override void AddSimpleInjector(SimpleInjectorAddOptions options)
@@ -375,7 +790,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                         ProviderName = EryphConstants.DefaultProviderName,
                         SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "00:00:00:01:00:01",
+                        MacAddress = "42:00:42:00:00:01",
                     }
                 ],
             });
@@ -417,7 +832,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                         ProviderName = EryphConstants.DefaultProviderName,
                         SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = "second-provider-pool",
-                        MacAddress = "00:00:00:01:00:02",
+                        MacAddress = "42:00:42:00:00:02",
                     }
                 ]
             });
@@ -459,7 +874,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                         ProviderName = EryphConstants.DefaultProviderName,
                         SubnetName = "second-provider-subnet",
                         PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "00:00:00:01:00:03",
+                        MacAddress = "42:00:42:00:00:03",
                     }
                 ]
             });
@@ -501,7 +916,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                         ProviderName = EryphConstants.DefaultProviderName,
                         SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "00:00:00:01:00:04",
+                        MacAddress = "42:00:42:00:00:04",
                     }
                 ]
             });
@@ -543,7 +958,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                         ProviderName = EryphConstants.DefaultProviderName,
                         SubnetName = EryphConstants.DefaultSubnetName,
                         PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "00:00:00:01:00:05",
+                        MacAddress = "42:00:42:00:00:05",
                     }
                 ]
             });

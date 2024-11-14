@@ -80,7 +80,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
                 Name = "test-catlet-port",
                 VirtualNetworkName = "virtual-test-network",
                 EnvironmentName = "test-environment",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 FloatingNetworkPort = new()
                 {
                     Name = "test-floating-port",
@@ -108,7 +108,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             await stateStore.For<CatletNetworkPort>().AddAsync(new CatletNetworkPort()
             {
                 Name = "new-catlet-port",
-                MacAddress = "00:00:00:00:00:02",
+                MacAddress = "42:00:42:00:00:02",
                 CatletMetadataId = CatletMetadataId,
                 NetworkId = VirtualNetworkId,
             });
@@ -126,7 +126,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             {
                 CatletMetadataId = CatletMetadataId,
                 Name = "new-catlet-port",
-                MacAddress = "00:00:00:00:00:02",
+                MacAddress = "42:00:42:00:00:02",
                 VirtualNetworkName = "virtual-test-network",
                 EnvironmentName = "test-environment",
                 FloatingNetworkPort = null,
@@ -143,7 +143,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
         {
             var catletPort = await stateStore.For<CatletNetworkPort>().GetByIdAsync(CatletPortId);
             catletPort!.AddressName = "test";
-            catletPort!.MacAddress = "00:00:00:00:00:02";
+            catletPort!.MacAddress = "42:00:42:00:00:02";
 
             await stateStore.SaveChangesAsync();
         });
@@ -152,7 +152,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
         _expectedPortsConfig.CatletNetworkPorts[0].AddressName = "test";
-        _expectedPortsConfig.CatletNetworkPorts[0].MacAddress = "00:00:00:00:00:02";
+        _expectedPortsConfig.CatletNetworkPorts[0].MacAddress = "42:00:42:00:00:02";
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 
@@ -498,7 +498,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
         {
             Id = FloatingPortId,
             Name = "test-floating-port",
-            MacAddress = "00:00:00:00:00:10",
+            MacAddress = "42:00:42:00:00:10",
             ProviderName = "test-provider",
             SubnetName = "provider-test-subnet",
             PoolName = "provider-test-pool",
@@ -511,7 +511,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             CatletMetadataId = CatletMetadataId,
             NetworkId = VirtualNetworkId,
             FloatingPortId = FloatingPortId,
-            MacAddress = "00:00:00:00:00:01",
+            MacAddress = "42:00:42:00:00:01",
             IpAssignments =
             [
                 new IpPoolAssignment()

@@ -76,7 +76,7 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
             {
                 Id = CatletPortId,
                 Name = "test-catlet-port",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 Network = network!,
                 CatletMetadataId = Guid.Parse(CatletMetadataId),
             };
@@ -141,7 +141,7 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
             {
                 Id = CatletPortId,
                 Name = "test-catlet-port",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 NetworkId = Guid.Parse(networkId),
                 CatletMetadataId = Guid.Parse(CatletMetadataId),
                 IpAssignments = [ipAssignment],
@@ -228,7 +228,7 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
             {
                 Id = CatletPortId,
                 Name = "test-catlet-port",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 NetworkId = Guid.Parse(DefaultNetworkId),
                 CatletMetadataId = Guid.Parse(CatletMetadataId),
                 IpAssignments = [ipAssignment],
