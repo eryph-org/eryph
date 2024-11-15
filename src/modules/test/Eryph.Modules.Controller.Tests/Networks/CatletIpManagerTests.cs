@@ -224,8 +224,6 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
                 });
         });
     }
-        
-    // TODO Add negative test
 
     private async Task WithScope(Func<ICatletIpManager, IIpPoolManager, IStateStore, Task> func)
     {
@@ -238,8 +236,8 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
 
     protected override void AddSimpleInjector(SimpleInjectorAddOptions options)
     {
-        // Use the proper IpPoolManager instead of a mock as the code quite
-        // interdependent as it modifies the same EF Core entities.
+        // Use the proper IpPoolManager instead of a mock. The code is
+        // quite interdependent as it modifies the same EF Core entities.
         options.Container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
         options.Container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
     }

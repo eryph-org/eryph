@@ -662,7 +662,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
         options.Container.RegisterInstance(_taskMessingMock.Object);
         options.Container.RegisterInstance(_networkProviderManagerMock.Object);
 
-        // Use the proper managers instead of mocks as the code quite
+        // Use the proper managers instead of mocks.The code is quite
         // interdependent as it modifies the same EF Core entities.
         options.Container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
         options.Container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
@@ -756,13 +756,12 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
             Id = Guid.Parse(CatletMetadataId),
         });
 
-        var projectB = new Project()
+        await stateStore.For<Project>().AddAsync(new Project()
         {
             Id = Guid.Parse(SecondProjectId),
             Name = "second-project",
             TenantId = EryphConstants.DefaultTenantId,
-        };
-        await stateStore.For<Project>().AddAsync(projectB);
+        });
 
         await stateStore.For<VirtualNetwork>().AddAsync(
             new VirtualNetwork

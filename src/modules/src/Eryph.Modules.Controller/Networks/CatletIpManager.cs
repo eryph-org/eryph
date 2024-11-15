@@ -3,7 +3,6 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.StateDb;
@@ -54,7 +53,7 @@ public class CatletIpManager(
         CatletNetworkPort port,
         string subnetName,
         string ipPoolName) =>
-        from subnet in stateStore.Read<VirtualNetworkSubnet>().IO.GetBySpecAsync(
+        from subnet in stateStore.For<VirtualNetworkSubnet>().IO.GetBySpecAsync(
             new SubnetSpecs.GetByNetwork(network.Id, subnetName))
         from validSubnet in subnet.ToEitherAsync(
             Error.New($"Environment {network.Environment}: Subnet {subnetName} not found in network {network.Name}."))

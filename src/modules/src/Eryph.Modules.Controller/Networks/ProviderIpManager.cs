@@ -3,9 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ConfigModel;
-using Eryph.Core;
-using Eryph.Core.Network;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -37,7 +34,7 @@ internal class ProviderIpManager(
             .SequenceSerial()
         from newAssignment in validPoolAssignments.IsEmpty
             ? from assignment in CreateAssignment(port, providerName, port.SubnetName, port.PoolName)
-            select Some(assignment)
+              select Some(assignment)
             : RightAsync<Error, Option<IpPoolAssignment>>(None)
         select validPoolAssignments.Append(newAssignment).Append(validDirectAssignments)
             .Map(a => IPAddress.Parse(a.IpAddress!))
@@ -48,7 +45,7 @@ internal class ProviderIpManager(
         string providerName,
         string subnetName,
         string ipPoolName) =>
-        from subnet in stateStore.Read<ProviderSubnet>().IO.GetBySpecAsync(
+        from subnet in stateStore.For<ProviderSubnet>().IO.GetBySpecAsync(
             new SubnetSpecs.GetByProviderName(providerName, subnetName))
         from validSubnet in subnet.ToEitherAsync(
             Error.New($"Subnet {subnetName} not found for provider {providerName}."))

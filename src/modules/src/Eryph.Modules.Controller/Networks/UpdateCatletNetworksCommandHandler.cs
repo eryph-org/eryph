@@ -52,7 +52,8 @@ public class UpdateCatletNetworksCommandHandler(
             .Map(cfg => GetPortName(command.CatletId, cfg.AdapterName))
         from unusedPorts in stateStore.For<CatletNetworkPort>().IO.ListAsync(
             new CatletNetworkPortSpecs.GetUnused(command.CatletMetadataId, usedPortNames))
-        from __ in unusedPorts.Map(RemovePort)
+        from __ in unusedPorts
+            .Map(RemovePort)
             .SequenceSerial()
         from settings in command.Config.Networks
             .ToSeq()
@@ -105,9 +106,9 @@ public class UpdateCatletNetworksCommandHandler(
         from ips in isFlatNetwork
             ? from existingAssignments in stateStore.For<IpAssignment>().IO.ListAsync(
                   new IPAssignmentSpecs.GetByPort(networkPort.Id))
-              from _ in existingAssignments.Match(
-                  Empty: () => RightAsync<Error, Unit>(unit),
-                  Seq: a => stateStore.For<IpAssignment>().IO.DeleteRangeAsync(a))
+              from _ in existingAssignments
+                  .Map(a => stateStore.For<IpAssignment>().IO.DeleteAsync(a))
+                  .SequenceSerial()
               select Seq<IPAddress>()
             : ipManager.ConfigurePortIps(validNetwork, networkPort, networkConfig)
 
@@ -115,7 +116,7 @@ public class UpdateCatletNetworksCommandHandler(
             ? from _ in Optional(networkPort.FloatingPort)
                   .Map(fp => stateStore.For<FloatingNetworkPort>().IO.DeleteAsync(fp))
                   .Sequence()
-              select Option<Seq<IPAddress>>.None
+              select Seq<IPAddress>()
             : from providerPort in stateStore.For<ProviderRouterPort>().IO.GetBySpecAsync(
                   new ProviderRouterPortSpecs.GetByNetworkId(validNetwork.Id))
               from validProviderPort in providerPort.ToEitherAsync(
@@ -124,7 +125,7 @@ public class UpdateCatletNetworksCommandHandler(
               let providerPoolName = validProviderPort.PoolName
               from fp in UpdateFloatingPort(networkPort, networkProvider.Name, providerSubnetName, providerPoolName)
               from ips in providerIpManager.ConfigureFloatingPortIps(networkProvider.Name, fp)
-              select Some(ips)
+              select ips
 
         select new MachineNetworkSettings
         {
@@ -136,14 +137,14 @@ public class UpdateCatletNetworksCommandHandler(
             AddressesV4 = ips.Filter(x => x.AddressFamily == AddressFamily.InterNetwork)
                 .Map(ip => ip.ToString())
                 .ToList(),
-            FloatingAddressV4 = floatingIps.ToSeq().Flatten()
+            FloatingAddressV4 = floatingIps
                 .Find(ip => ip.AddressFamily == AddressFamily.InterNetwork)
                 .Map(ip => ip.ToString())
                 .IfNoneUnsafe((string?)null),
             AddressesV6 = ips.Filter(x => x.AddressFamily == AddressFamily.InterNetworkV6)
                 .Map(ip => ip.ToString())
                 .ToList(),
-            FloatingAddressV6 = floatingIps.ToSeq().Flatten()
+            FloatingAddressV6 = floatingIps
                 .Find(ip => ip.AddressFamily == AddressFamily.InterNetworkV6)
                 .Map(ip => ip.ToString())
                 .IfNoneUnsafe((string?)null),

@@ -66,8 +66,6 @@ public class ProviderIpManagerTests : InMemoryStateDbTestBase
         });
     }
 
-    // TODO add negative tests
-
     [Theory]
     [InlineData("default", DefaultSubnetId, "default", "default", "10.0.0.12")]
     [InlineData("default", DefaultSubnetId, "default", "second-pool", "10.0.1.12")]
@@ -210,8 +208,8 @@ public class ProviderIpManagerTests : InMemoryStateDbTestBase
 
     protected override void AddSimpleInjector(SimpleInjectorAddOptions options)
     {
-        // Use the proper IpPoolManager instead of a mock as the code quite
-        // interdependent as it modifies the same EF Core entities.
+        // Use the proper IpPoolManager instead of a mock. The code is
+        // quite interdependent as it modifies the same EF Core entities.
         options.Container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
         options.Container.Register<IProviderIpManager, ProviderIpManager>(Lifestyle.Scoped);
     }
