@@ -657,6 +657,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid?>("HostId")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("LastSeen")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastSeenStatus")
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("MaximumMemory")
                         .HasColumnType("INTEGER");
 
@@ -677,9 +683,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("StatusTimestamp")
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("TEXT");

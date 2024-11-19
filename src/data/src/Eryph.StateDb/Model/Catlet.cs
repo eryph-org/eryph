@@ -7,9 +7,22 @@ public class Catlet : Resource
 {
     public string? AgentName { get; set; }
 
+    /// <summary>
+    /// The last time the catlet has been inventoried.
+    /// </summary>
+    public DateTimeOffset LastSeen { get; set; }
+
     public CatletStatus Status { get; set; }
 
-    public DateTime StatusTimestamp { get; set; }
+    /// <summary>
+    /// The last time the <see cref="Status"/>> of the catlet has been observed.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="Status"/> can be updated independently of the
+    /// inventory of the catlet. Hence, we track the observation time
+    /// of the status separately as well.
+    /// </remarks>
+    public DateTimeOffset LastSeenStatus { get; set; }
 
     public CatletType CatletType { get; set; }
 

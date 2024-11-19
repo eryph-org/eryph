@@ -27,12 +27,12 @@ internal class CatletStateChangedEventHandler : IHandleMessages<VMStateChangedEv
             return;
 
         // ignore old events
-        if(catlet.StatusTimestamp > message.Timestamp) 
+        if(catlet.LastSeenStatus > message.Timestamp) 
             return;
 
         catlet.Status = MapVmStatusToCatletStatus(message.Status);
         // TODO Fix me
-        catlet.StatusTimestamp = message.Timestamp.UtcDateTime;
+        catlet.LastSeenStatus = message.Timestamp.UtcDateTime;
         if (catlet.Status == CatletStatus.Stopped)
         {
             catlet.UpTime = TimeSpan.Zero;

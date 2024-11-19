@@ -662,6 +662,12 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<Guid?>("HostId")
                         .HasColumnType("char(36)");
 
+                    b.Property<DateTimeOffset>("LastSeen")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTimeOffset>("LastSeenStatus")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<long>("MaximumMemory")
                         .HasColumnType("bigint");
 
@@ -682,9 +688,6 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
-
-                    b.Property<DateTime>("StatusTimestamp")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("longtext");
