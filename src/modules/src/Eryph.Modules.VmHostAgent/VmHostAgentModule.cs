@@ -27,6 +27,7 @@ using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Extensions.Http;
+using Quartz;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
@@ -59,6 +60,22 @@ namespace Eryph.Modules.VmHostAgent
             services.AddHttpClient(GenePoolConstants.PartClientName)
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
                 .AddPolicyHandler(GetRetryPolicy());
+
+            services.AddQuartz(q =>
+            {
+                q.AddJob<WmiVmUptimeCheckJob>(
+                    j => j.WithIdentity("uptime-check-job")
+                        .DisallowConcurrentExecution());
+
+                q.AddTrigger(t =>
+                {
+                    t.WithIdentity("uptime-check-trigger")
+                        .ForJob("uptime-check-job")
+                        .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromMinutes(1)).RepeatForever())
+                        .StartNow();
+                });
+            });
+            services.AddQuartzHostedService();
         }
 
         [UsedImplicitly]

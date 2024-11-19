@@ -58,7 +58,7 @@ internal sealed class WmiWatcherModuleService : IHostedService, IDisposable
     {
         _log.LogDebug("Starting WMI Watcher");
 
-        _upTimeTimer.Change(TimeSpan.FromSeconds(UpTimeCheckSeconds), TimeSpan.Zero);
+        //_upTimeTimer.Change(TimeSpan.FromSeconds(UpTimeCheckSeconds), TimeSpan.Zero);
     }
 
     private void UpTimeCheck(object? state)
