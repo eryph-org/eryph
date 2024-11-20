@@ -14,5 +14,5 @@ public class VirtualNetwork
 
     public required string ProviderName { get; set; }
 
-    public required string IpNetwork { get; set; }
+    public string? IpNetwork { get; set; }
 }
