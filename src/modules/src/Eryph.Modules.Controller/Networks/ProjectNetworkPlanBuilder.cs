@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using Dbosoft.OVN;
+using Dbosoft.OVN.Model.OVN;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.StateDb;
@@ -49,7 +50,7 @@ internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProvider
             let dnsNames = dnsInfo.Select(info => info.CatletMetadataId).ToArray()
 
             let p1 = AddProjectRouterAndPorts(networkPlan, networks)
-            let p2 = AddExternalNetSwitches(p1, providerSubnets, overLayProviders)
+            from p2 in AddExternalNetSwitches(p1, providerSubnets, overLayProviders)
             let p3 = AddProviderRouterPorts(p2, providerRouterPorts)
             let p4 = AddNetworksAsSwitches(p3, networks, dnsNames)
             let p5 = AddSubnetsAsDhcpOptions(p4, networks)
@@ -169,18 +170,50 @@ internal class ProjectNetworkPlanBuilder(INetworkProviderManager networkProvider
 
     }
 
-    private static NetworkPlan AddExternalNetSwitches(NetworkPlan networkPlan, 
-        Seq<ProviderSubnetInfo> subnets, Seq<NetworkProvider> overlayProviders)
+    private static EitherAsync<Error, NetworkPlan> AddExternalNetSwitches(
+        NetworkPlan networkPlan,
+        Seq<ProviderSubnetInfo> subnets,
+        Seq<NetworkProvider> overlayProviders) =>
+        from plans in subnets.Map(x => x.Subnet.ProviderName).Distinct()
+            .Map(providerName => AddExternalNetSwitch(networkPlan, providerName, overlayProviders))
+            .SequenceSerial()
+        select JoinPlans(plans, networkPlan);
+
+    private static EitherAsync<Error, NetworkPlan> AddExternalNetSwitch(
+        NetworkPlan networkPlan,
+        string providerName,
+        Seq<NetworkProvider> overlayProvider) =>
+        from provider in overlayProvider.Find(x => x.Name == providerName)
+            .ToEitherAsync(Error.New($"Network provider {providerName} not found."))
+        let switchName = $"externalNet-{networkPlan.Id}-{provider.Name}"
+        let p1 = networkPlan.AddSwitch(switchName)
+        let p2 = AddExternalNetworkPortUnique(
+            p1, switchName, provider.Name, provider.BridgeName, provider.Vlan)
+        select p2;
+
+    private static NetworkPlan AddExternalNetworkPortUnique(
+        NetworkPlan plan,
+        string switchName,
+        string externalNetwork,
+        string bridgeName,
+        int? tag)
     {
-        return (from providerNames in subnets.Select(x => x.Subnet.ProviderName).Distinct()
-            from provider in overlayProviders.Where(p => providerNames.Contains(p.Name))
-            let p1 = networkPlan.AddSwitch($"externalNet-{networkPlan.Id}-{provider.Name}")
-            let p2 = p1.AddExternalNetworkPort($"externalNet-{networkPlan.Id}-{provider.Name}",
-                provider.Name, provider.Vlan)
+        var name = $"SN-{switchName}-{externalNetwork}-{bridgeName}";
 
-            select p2).Apply(s => JoinPlans(s, networkPlan));
+        return plan with
+        {
+            PlannedSwitchPorts =
+            plan.PlannedSwitchPorts.Add(name, new PlannedSwitchPort(switchName)
+            {
+                Name = name,
+                Type = "localnet",
+                Options = new Dictionary<string, string> { { "network_name", externalNetwork } }.ToMap(),
+                Addresses = new[] { "unknown" }.ToSeq(),
+                ExternalIds = new Dictionary<string, string> { { "network_plan", plan.Id } }.ToMap(),
+                Tag = tag
+            })
+        };
     }
-
 
     private static NetworkPlan AddNetworksAsSwitches(NetworkPlan networkPlan, Seq<VirtualNetwork> networks, 
         string[] dnsNames) =>
