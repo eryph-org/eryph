@@ -264,7 +264,7 @@ public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
                     {
                         Id = Guid.Parse(DefaultSubnetId),
                         Name = EryphConstants.DefaultSubnetName,
-                        IpNetwork = "10.0.0.0/16",
+                        IpNetwork = "10.0.0.0/15",
                         IpPools =
                         [
                             new IpPool()

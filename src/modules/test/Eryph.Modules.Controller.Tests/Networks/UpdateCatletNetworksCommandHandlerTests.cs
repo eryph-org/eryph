@@ -662,7 +662,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
         options.Container.RegisterInstance(_taskMessingMock.Object);
         options.Container.RegisterInstance(_networkProviderManagerMock.Object);
 
-        // Use the proper managers instead of mocks.The code is quite
+        // Use the proper managers instead of mocks. The code is quite
         // interdependent as it modifies the same EF Core entities.
         options.Container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
         options.Container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
@@ -777,7 +777,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                     {
                         Id = Guid.Parse(DefaultSubnetId),
                         Name = EryphConstants.DefaultSubnetName,
-                        IpNetwork = "10.0.0.0/16",
+                        IpNetwork = "10.0.0.0/15",
                         IpPools =
                         [
                             new IpPool()
@@ -840,6 +840,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                 Name = "second-network",
                 Environment = EryphConstants.DefaultEnvironmentName,
                 NetworkProvider = EryphConstants.DefaultProviderName,
+                IpNetwork = "10.5.0.0/16",
                 Subnets =
                 [
                     new VirtualNetworkSubnet
@@ -882,6 +883,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                 Name = "third-network",
                 Environment = EryphConstants.DefaultEnvironmentName,
                 NetworkProvider = EryphConstants.DefaultProviderName,
+                IpNetwork = "10.6.0.0/16",
                 Subnets =
                 [
                     new VirtualNetworkSubnet
@@ -924,6 +926,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                 Name = EryphConstants.DefaultNetworkName,
                 Environment = "second-environment",
                 NetworkProvider = EryphConstants.DefaultProviderName,
+                IpNetwork = "10.10.0.0/16",
                 Subnets =
                 [
                     new VirtualNetworkSubnet
@@ -966,6 +969,7 @@ public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
                 Name = EryphConstants.DefaultNetworkName,
                 Environment = EryphConstants.DefaultEnvironmentName,
                 NetworkProvider = EryphConstants.DefaultProviderName,
+                IpNetwork = "10.200.0.0/16",
                 Subnets =
                 [
                     new VirtualNetworkSubnet
