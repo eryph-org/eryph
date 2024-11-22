@@ -86,7 +86,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 }
             };
 
-            var realizer = new NetworkConfigRealizer(stateStore.Object, logger);
+            var realizer = new NetworkConfigRealizer(stateStore.Object, Mock.Of<IIpPoolManager>(), logger);
             await realizer.UpdateNetwork(projectId, networkConfig, networkProviderConfig);
 
             addedNetworks.Should().HaveCount(1);
@@ -227,7 +227,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 }
             };
 
-            var realizer = new NetworkConfigRealizer(stateStore.Object, logger);
+            var realizer = new NetworkConfigRealizer(stateStore.Object, Mock.Of<IIpPoolManager>(), logger);
             await realizer.UpdateNetwork(projectId, networkConfig, networkProviderConfig);
 
             network.Subnets![0].IpPools![0].FirstIp.Should().Be("10.0.0.50");
@@ -353,7 +353,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
                 }
             };
 
-            var realizer = new NetworkConfigRealizer(stateStore.Object, logger);
+            var realizer = new NetworkConfigRealizer(stateStore.Object, Mock.Of<IIpPoolManager>(), logger);
             await realizer.UpdateNetwork(projectId, networkConfig, networkProviderConfig);
 
             network.Subnets.Should().HaveCount(0);

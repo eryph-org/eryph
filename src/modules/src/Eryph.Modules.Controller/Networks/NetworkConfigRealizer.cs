@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
+using Dbosoft.Rebus;
 using Eryph.ConfigModel.Networks;
 using Eryph.Core;
 using Eryph.Core.Network;
@@ -11,21 +13,18 @@ using Eryph.ModuleCore.Networks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
+using LanguageExt;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.Modules.Controller.Networks;
 
-public class NetworkConfigRealizer : INetworkConfigRealizer
+public class NetworkConfigRealizer(
+    IStateStore stateStore,
+    IIpPoolManager ipPoolManager,
+    ILogger log)
+    : INetworkConfigRealizer
 {
-    private readonly IStateStore _stateStore;
-    private readonly ILogger _log;
-
-    public NetworkConfigRealizer(IStateStore stateStore, ILogger log)
-    {
-        _stateStore = stateStore;
-        _log = log;
-    }
-
     private static string GetEnvironmentName(string? environment, string network)
     {
         return environment == null 
@@ -35,7 +34,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
     public async Task UpdateNetwork(Guid projectId, ProjectNetworksConfig config, NetworkProvidersConfiguration providerConfig)
     {
-        var savedNetworks = await _stateStore
+        var savedNetworks = await stateStore
             .For<VirtualNetwork>()
             .ListAsync(new VirtualNetworkSpecs.GetForProjectConfig(projectId));
 
@@ -43,14 +42,14 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
         var networkConfigs = config.Networks?.Where(x=>x.Name!= null).ToArray() ?? Array.Empty<NetworkConfig>();
         foreach (var networkConfig in networkConfigs)
         {
-            if(networkConfig.Name == null)
+            if (networkConfig.Name == null)
                 continue;
 
             var networkEnvName = GetEnvironmentName(networkConfig.Environment, networkConfig.Name);
             var savedNetwork = savedNetworks.Find(x => GetEnvironmentName(x.Environment, x.Name) == networkEnvName);
             if (savedNetwork == null)
             {
-                _log.LogDebug("Environment {env}: network {network} not found. Creating new network.",
+                log.LogDebug("Environment {env}: network {network} not found. Creating new network.",
                     networkConfig.Environment ?? "default", networkConfig.Name);
                 var newNetwork = new VirtualNetwork
                 {
@@ -63,7 +62,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                 };
 
                 savedNetworks.Add(newNetwork);
-                await _stateStore.For<VirtualNetwork>().AddAsync(newNetwork);
+                await stateStore.For<VirtualNetwork>().AddAsync(newNetwork);
             }
 
             foundNames.Add(networkEnvName);
@@ -72,14 +71,14 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
         var removeNetworks = savedNetworks.Where(x => !foundNames.Contains(GetEnvironmentName(x.Environment,x.Name))).ToArray();
         if (removeNetworks.Any())
-            _log.LogDebug("Removing networks: {@removedNetworks}", (object)removeNetworks);
+            log.LogDebug("Removing networks: {@removedNetworks}", (object)removeNetworks);
 
-        await _stateStore.For<VirtualNetwork>().DeleteRangeAsync(removeNetworks);
+        await stateStore.For<VirtualNetwork>().DeleteRangeAsync(removeNetworks);
 
         // second pass - update of new or existing records
         foreach (var networkConfig in networkConfigs.DistinctBy(x => GetEnvironmentName(x.Environment,x.Name!)))
         {
-            if(networkConfig.Name == null) // can't happen
+            if (networkConfig.Name == null) // can't happen
                 continue;
 
             var networkEnvName = GetEnvironmentName(networkConfig.Environment, networkConfig.Name);
@@ -89,7 +88,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
             var providerSubnet = networkConfig.Provider?.Subnet ?? "default";
             var providerIpPool = networkConfig.Provider?.IpPool ?? "default";
 
-            _log.LogDebug("Environment {env}: Updating network {network}", savedNetwork.Environment ?? "default", savedNetwork.Name);
+            log.LogDebug("Environment {env}: Updating network {network}", savedNetwork.Environment ?? "default", savedNetwork.Name);
 
             var networkProvider = providerConfig.NetworkProviders.FirstOrDefault(x => x.Name == providerName) 
                                   ?? throw new InconsistentNetworkConfigException($"Network provider {providerName} not found.");
@@ -108,14 +107,14 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                     if (port is NetworkRouterPort or ProviderRouterPort)
                         savedNetwork.NetworkPorts.Remove(port);
 
-                    await _stateStore.LoadCollectionAsync(port, x => x.IpAssignments);
+                    await stateStore.LoadCollectionAsync(port, x => x.IpAssignments);
                     port.IpAssignments.Clear();
                 }
 
                 continue;
             }
 
-            if(string.IsNullOrWhiteSpace(networkConfig.Address))
+            if (string.IsNullOrWhiteSpace(networkConfig.Address))
                 throw new InconsistentNetworkConfigException($"Network '{networkConfig.Name}': Network address not set.");
 
             var networkAddress = IPNetwork2.Parse(networkConfig.Address);
@@ -126,9 +125,9 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
             //remove all ports if more than one
             if (providerPorts.Length > 1)
             {
-                _log.LogWarning("Found invalid provider port count ({count} provider ports) for {network}. Removing all provider ports.", providerPorts.Length, savedNetwork.Name);
+                log.LogWarning("Found invalid provider port count ({count} provider ports) for {network}. Removing all provider ports.", providerPorts.Length, savedNetwork.Name);
 
-                await _stateStore.For<ProviderRouterPort>().DeleteRangeAsync(providerPorts);
+                await stateStore.For<ProviderRouterPort>().DeleteRangeAsync(providerPorts);
                 providerPorts = Array.Empty<ProviderRouterPort>();
             }
 
@@ -139,7 +138,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                     providerPort.SubnetName != providerSubnet ||
                     providerPort.PoolName != providerIpPool)
                 {
-                    _log.LogInformation("Network {network}: network provider settings changed.", savedNetwork.Name);
+                    log.LogInformation("Network {network}: network provider settings changed.", savedNetwork.Name);
 
                     savedNetwork.NetworkPorts.Remove(providerPort);
                     providerPort = null;
@@ -148,7 +147,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
             if (providerPort == null)
             {
-                savedNetwork.NetworkPorts.Add(new ProviderRouterPort()
+                providerPort = new ProviderRouterPort()
                 {
                     Name = "provider",
                     SubnetName = providerSubnet,
@@ -156,7 +155,16 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                     MacAddress = MacAddresses.FormatMacAddress(
                         MacAddresses.GenerateMacAddress(Guid.NewGuid().ToString())),
                     ProviderName = providerName,
-                });
+                    IpAssignments = [],
+                };
+
+                savedNetwork.NetworkPorts.Add(providerPort);
+            }
+
+            if (providerPort.IpAssignments.Count == 0)
+            {
+                var ipAssignment = await AcquireProviderIp(providerName, providerSubnet, providerIpPool);
+                providerPort.IpAssignments.Add(ipAssignment);
             }
 
             var routerPorts = savedNetwork.NetworkPorts
@@ -165,9 +173,9 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
             //remove all ports if more then one
             if (routerPorts.Length > 1)
             {
-                _log.LogWarning("Found invalid router port count ({count} router ports) for {network}. Removing all router ports.", routerPorts.Length, savedNetwork.Name);
+                log.LogWarning("Found invalid router port count ({count} router ports) for {network}. Removing all router ports.", routerPorts.Length, savedNetwork.Name);
 
-                await _stateStore.For<NetworkRouterPort>().DeleteRangeAsync(routerPorts);
+                await stateStore.For<NetworkRouterPort>().DeleteRangeAsync(routerPorts);
                 routerPorts = Array.Empty<NetworkRouterPort>();
             }
 
@@ -182,14 +190,14 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
             if (routerPort != null)
             {
-                await _stateStore.LoadCollectionAsync(routerPort, x => x.IpAssignments);
+                await stateStore.LoadCollectionAsync(routerPort, x => x.IpAssignments);
                 var ipAssignment = routerPort.IpAssignments.FirstOrDefault();
 
                 if (ipAssignment == null ||
                     !IPAddress.TryParse(ipAssignment.IpAddress, out var ipAddress) ||
                     !networkAddress.Contains(ipAddress))
                 {
-                    _log.LogInformation("Environment {env}, Network {network}: network router ip assignment changed to {ipAddress}.",
+                    log.LogInformation("Environment {env}, Network {network}: network router ip assignment changed to {ipAddress}.",
                         savedNetwork.Environment ?? "default", savedNetwork.Name, networkAddress.FirstUsable);
 
                     savedNetwork.NetworkPorts.Remove(routerPort);
@@ -259,7 +267,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                                                                            subnetConfig.Name);
                 if (savedSubnet == null)
                 {
-                    _log.LogDebug("subnet {network}/{subnet} not found. Creating new subnet.", networkConfig.Name, subnetConfig.Name);
+                    log.LogDebug("subnet {network}/{subnet} not found. Creating new subnet.", networkConfig.Name, subnetConfig.Name);
 
                     savedNetwork.Subnets.Add(new VirtualNetworkSubnet
                     {
@@ -274,16 +282,16 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                 .Where(x => !foundNames.Contains(x.Name)).ToArray();
 
             if (removeSubnets.Any())
-                _log.LogDebug("Removing subnets: {@removeSubnets}", (object)removeSubnets);
+                log.LogDebug("Removing subnets: {@removeSubnets}", (object)removeSubnets);
 
-            await _stateStore.For<VirtualNetworkSubnet>().DeleteRangeAsync(removeSubnets);
+            await stateStore.For<VirtualNetworkSubnet>().DeleteRangeAsync(removeSubnets);
 
             foreach (var subnetConfig in networkConfig.Subnets.DistinctBy(x => x.Name).ToArray())
             {
                 var savedSubnet = savedNetwork.Subnets.FirstOrDefault(x => x.Name == subnetConfig.Name)
                                   ?? throw new InconsistentNetworkConfigException($"Subnet {subnetConfig} not found in network {savedNetwork.Name}");
 
-                _log.LogDebug("Updating subnet {network}/{subnet}", savedNetwork.Name, savedSubnet.Name);
+                log.LogDebug("Updating subnet {network}/{subnet}", savedNetwork.Name, savedSubnet.Name);
 
                 savedSubnet.DhcpLeaseTime = 3600;
                 savedSubnet.MTU = subnetConfig.Mtu.GetValueOrDefault() == 0 ? 1400 : subnetConfig.Mtu.GetValueOrDefault();
@@ -321,7 +329,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                     // change of ip pool is allowed if validation has passed (enough space in pool or unused)
                     if (savedIpPool != null)
                     {
-                        _log.LogDebug("Updating ip pool {network}/{subnet}/{pool}", savedNetwork.Name,
+                        log.LogDebug("Updating ip pool {network}/{subnet}/{pool}", savedNetwork.Name,
                             savedSubnet.Name, savedIpPool.Name);
 
                         savedIpPool.IpNetwork = savedSubnet.IpNetwork;
@@ -336,7 +344,7 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
 
                     if (savedIpPool == null)
                     {
-                        _log.LogDebug("creating new ip pool {network}/{subnet}/{pool}", savedNetwork.Name,
+                        log.LogDebug("creating new ip pool {network}/{subnet}/{pool}", savedNetwork.Name,
                             savedSubnet.Name, ipPoolConfig.Name);
 
                         savedSubnet.IpPools.Add(new IpPool
@@ -351,10 +359,31 @@ public class NetworkConfigRealizer : INetworkConfigRealizer
                 }
 
                 var removeIpPools = savedSubnet.IpPools.Where(x => !foundNames.Contains(x.Name));
-                await _stateStore.For<IpPool>().DeleteRangeAsync(removeIpPools);
+                await stateStore.For<IpPool>().DeleteRangeAsync(removeIpPools);
             }
         }
-
     }
 
+    private async Task<IpPoolAssignment> AcquireProviderIp(
+        string providerName,
+        string subnetName,
+        string poolName)
+    {
+        var providerSubnet = await stateStore.Read<ProviderSubnet>().GetBySpecAsync(
+            new ProviderSubnetSpecs.GetByName(providerName, subnetName));
+        if (providerSubnet is null)
+        {
+            throw new InconsistentNetworkConfigException(
+                $"Subnet {subnetName} of provider {providerName} not found.");
+        }
+        
+        var result = await ipPoolManager.AcquireIp(providerSubnet.Id, poolName);
+        if (result.IsLeft)
+        {
+            throw new InconsistentNetworkConfigException(
+                $"Failed to configure IP for provider {providerName}: {result.LeftToSeq().Head.Message}");
+        }
+
+        return result.ValueUnsafe();
+    }
 }

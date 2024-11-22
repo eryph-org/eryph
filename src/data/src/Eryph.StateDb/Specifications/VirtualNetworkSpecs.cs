@@ -20,7 +20,7 @@ public static class VirtualNetworkSpecs
         public GetForProjectConfig(Guid projectId)
         {
             Query.Where(x => x.ProjectId == projectId)
-                .Include(x => x.NetworkPorts)
+                .Include(x => x.NetworkPorts).ThenInclude(x => x.IpAssignments)
                 .Include(x => x.Subnets)
                 .Include(x => x.RouterPort).ThenInclude(x => x!.FloatingPort)
                 .Include(x => x.Subnets)
