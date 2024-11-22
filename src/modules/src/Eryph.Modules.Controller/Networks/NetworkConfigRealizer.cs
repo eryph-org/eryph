@@ -50,12 +50,13 @@ public class NetworkConfigRealizer(
             if (savedNetwork == null)
             {
                 log.LogDebug("Environment {env}: network {network} not found. Creating new network.",
-                    networkConfig.Environment ?? "default", networkConfig.Name);
+                    networkConfig.Environment ?? EryphConstants.DefaultEnvironmentName,
+                    networkConfig.Name);
                 var newNetwork = new VirtualNetwork
                 {
                     Id = Guid.NewGuid(),
                     ProjectId = projectId,
-                    Environment = networkConfig.Environment,
+                    Environment = networkConfig.Environment ?? EryphConstants.DefaultEnvironmentName,
                     Name = networkConfig.Name,
                     Subnets = new List<VirtualNetworkSubnet>(),
                     NetworkPorts = new List<VirtualNetworkPort>(),

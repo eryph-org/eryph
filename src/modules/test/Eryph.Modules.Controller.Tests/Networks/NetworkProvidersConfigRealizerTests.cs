@@ -195,6 +195,8 @@ public class NetworkProvidersConfigRealizerTests(
         });
     }
 
+    // TODO Add test keeps existing subnet and IP pool when updating
+
     private async Task WithScope(Func<INetworkProvidersConfigRealizer, IStateStore, Task> func)
     {
         await using var scope = CreateScope();
