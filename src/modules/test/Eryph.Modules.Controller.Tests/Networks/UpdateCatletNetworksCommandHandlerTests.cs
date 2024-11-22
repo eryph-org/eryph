@@ -17,10 +17,13 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Networks;
 
-public class UpdateCatletNetworksCommandHandlerTests : InMemoryStateDbTestBase
+public class UpdateCatletNetworksCommandHandlerTests(
+    ITestOutputHelper outputHelper)
+    : InMemoryStateDbTestBase(outputHelper)
 {
     private const string DefaultProjectId = "4b4a3fcf-b5ed-4a9a-ab6e-03852752095e";
     private const string SecondProjectId = "75c27daf-77c8-4b98-a072-a4706dceb422";

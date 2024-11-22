@@ -9,10 +9,13 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
 using SimpleInjector.Integration.ServiceCollection;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Networks;
 
-public class NetworkProvidersConfigRealizerTests : InMemoryStateDbTestBase
+public class NetworkProvidersConfigRealizerTests(
+    ITestOutputHelper outputHelper)
+    : InMemoryStateDbTestBase(outputHelper)
 {
     private readonly NetworkProvidersConfiguration _config = new()
     {

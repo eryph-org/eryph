@@ -11,6 +11,7 @@ using Eryph.Core;
 using FluentAssertions;
 using System.Net;
 using Eryph.Messages.Genes.Commands;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
@@ -18,7 +19,10 @@ public class CleanupGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModul
 {
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
-    public CleanupGenesTests(WebModuleFactory<ComputeApiModule> factory)
+    public CleanupGenesTests(
+        ITestOutputHelper outputHelper,
+        WebModuleFactory<ComputeApiModule> factory)
+        : base(outputHelper)
     {
         _factory = factory.WithApiHost(ConfigureDatabase);
     }

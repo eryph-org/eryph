@@ -13,6 +13,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Projects;
 
@@ -22,7 +23,10 @@ public class CreateProjectTests : InMemoryStateDbTestBase,
     private static readonly Guid UserId = Guid.NewGuid();
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
-    public CreateProjectTests(WebModuleFactory<ComputeApiModule> factory)
+    public CreateProjectTests(
+        ITestOutputHelper outputHelper,
+        WebModuleFactory<ComputeApiModule> factory)
+        : base(outputHelper)
     {
         _factory = factory.WithApiHost(ConfigureDatabase);
     }

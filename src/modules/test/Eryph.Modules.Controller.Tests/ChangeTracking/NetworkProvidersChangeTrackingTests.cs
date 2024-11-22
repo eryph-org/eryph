@@ -11,19 +11,23 @@ using LanguageExt;
 using LanguageExt.Common;
 using Moq;
 using SimpleInjector.Integration.ServiceCollection;
-
+using Xunit.Abstractions;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
 [Trait("Category", "Docker")]
 [Collection(nameof(MySqlDatabaseCollection))]
-public class MySqlNetworkProvidersChangeTrackingTests(MySqlFixture databaseFixture)
-    : NetworkProvidersChangeTrackingTests(databaseFixture);
+public class MySqlNetworkProvidersChangeTrackingTests(
+    MySqlFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : NetworkProvidersChangeTrackingTests(databaseFixture, outputHelper);
 
 [Collection(nameof(SqliteDatabaseCollection))]
-public class SqliteNetworkProvidersChangeTrackingTests(SqliteFixture databaseFixture)
-    : NetworkProvidersChangeTrackingTests(databaseFixture);
+public class SqliteNetworkProvidersChangeTrackingTests(
+    SqliteFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : NetworkProvidersChangeTrackingTests(databaseFixture, outputHelper);
 
 public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBase
 {
@@ -56,7 +60,10 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
 
     private NetworkProvidersConfiguration? _savedProvidersConfig;
 
-    protected NetworkProvidersChangeTrackingTests(IDatabaseFixture databaseFixture) : base(databaseFixture)
+    protected NetworkProvidersChangeTrackingTests(
+        IDatabaseFixture databaseFixture,
+        ITestOutputHelper outputHelper)
+        : base(databaseFixture, outputHelper)
     {
         MockNetworkProviderManager.Setup(m => m.GetCurrentConfiguration())
             .Returns(RightAsync<Error, NetworkProvidersConfiguration>(GetProvidersConfig()));

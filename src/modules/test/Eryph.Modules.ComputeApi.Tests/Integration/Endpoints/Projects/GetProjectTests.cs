@@ -11,6 +11,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 using ApiProject = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Project;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Projects;
@@ -21,7 +22,10 @@ public class GetProjectTests : InMemoryStateDbTestBase,
     private static readonly Guid UserId = Guid.NewGuid();
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
-    public GetProjectTests(WebModuleFactory<ComputeApiModule> factory)
+    public GetProjectTests(
+        ITestOutputHelper outputHelper,
+        WebModuleFactory<ComputeApiModule> factory)
+        : base(outputHelper)
     {
         _factory = factory.WithApiHost(ConfigureDatabase);
     }

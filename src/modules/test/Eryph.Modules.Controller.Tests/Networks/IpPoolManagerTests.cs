@@ -11,10 +11,13 @@ using Eryph.StateDb.Specifications;
 using Eryph.StateDb.TestBase;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Networks;
 
-public class IpPoolManagerTests : InMemoryStateDbTestBase
+public class IpPoolManagerTests(
+    ITestOutputHelper outputHelper)
+    : InMemoryStateDbTestBase(outputHelper)
 {
     private static readonly Guid NetworkId = Guid.NewGuid();
     private static readonly Guid SubnetId = Guid.NewGuid();

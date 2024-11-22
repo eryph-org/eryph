@@ -10,20 +10,27 @@ using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
 [Trait("Category", "Docker")]
 [Collection(nameof(MySqlDatabaseCollection))]
-public class MySqlVirtualNetworkChangeTrackingTests(MySqlFixture databaseFixture)
-    : VirtualNetworkChangeTrackingTests(databaseFixture);
+public class MySqlVirtualNetworkChangeTrackingTests(
+    MySqlFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : VirtualNetworkChangeTrackingTests(databaseFixture, outputHelper);
 
 [Collection(nameof(SqliteDatabaseCollection))]
-public class SqliteVirtualNetworkChangeTrackingTests(SqliteFixture databaseFixture)
-    : VirtualNetworkChangeTrackingTests(databaseFixture);
+public class SqliteVirtualNetworkChangeTrackingTests(
+    SqliteFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : VirtualNetworkChangeTrackingTests(databaseFixture, outputHelper);
 
-public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databaseFixture)
-    : ChangeTrackingTestBase(databaseFixture)
+public abstract class VirtualNetworkChangeTrackingTests(
+    IDatabaseFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : ChangeTrackingTestBase(databaseFixture, outputHelper)
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid VirtualNetworkId = Guid.NewGuid();

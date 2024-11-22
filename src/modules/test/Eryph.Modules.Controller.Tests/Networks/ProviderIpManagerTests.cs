@@ -10,10 +10,13 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
 using SimpleInjector.Integration.ServiceCollection;
 using SimpleInjector;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Networks;
 
-public class ProviderIpManagerTests : InMemoryStateDbTestBase
+public class ProviderIpManagerTests(
+    ITestOutputHelper outputHelper)
+    : InMemoryStateDbTestBase(outputHelper)
 {
     private const string DefaultSubnetId = "00bbb738-9b76-4b52-8c9a-89fcb2516f66";
     private const string SecondSubnetId = "edd1c7e0-c8e5-4679-b98d-f7672914d5f7";

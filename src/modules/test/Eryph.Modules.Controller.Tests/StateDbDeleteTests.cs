@@ -5,24 +5,32 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using Eryph.StateDb.TestBase;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests;
 
 [Trait("Category", "Docker")]
 [Collection(nameof(MySqlDatabaseCollection))]
-public class MySqlStateDbTests(MySqlFixture databaseFixture)
-    : StateDbDeleteTests(databaseFixture);
+public class MySqlStateDbTests(
+    ITestOutputHelper outputHelper,
+    MySqlFixture databaseFixture)
+    : StateDbDeleteTests(outputHelper, databaseFixture);
 
 [Collection(nameof(SqliteDatabaseCollection))]
-public class SqliteStateDbTests(SqliteFixture databaseFixture)
-    : StateDbDeleteTests(databaseFixture);
+public class SqliteStateDbTests(
+    ITestOutputHelper outputHelper,
+    SqliteFixture databaseFixture)
+    : StateDbDeleteTests(outputHelper, databaseFixture);
 
 /// <summary>
 /// This test verifies that deletes cascade as expected in the state database.
 /// The default behavior can differ significantly depending on the used DBMS
 /// and the inheritance strategy (TPH, TPC).
 /// </summary>
-public abstract class StateDbDeleteTests(IDatabaseFixture databaseFixture) : StateDbTestBase(databaseFixture)
+public abstract class StateDbDeleteTests(
+    ITestOutputHelper outputHelper,
+    IDatabaseFixture databaseFixture
+    ) : StateDbTestBase(databaseFixture, outputHelper)
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid VirtualNetworkId = Guid.NewGuid();

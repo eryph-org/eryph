@@ -16,7 +16,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
-
+using Xunit.Abstractions;
 using ApiGene = Eryph.Modules.ComputeApi.Model.V1.GeneWithUsage;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
@@ -33,7 +33,10 @@ public class GetGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFact
     private static readonly Guid DiskId = Guid.NewGuid();
     private static readonly Guid GeneDiskId = Guid.NewGuid();
 
-    public GetGeneTests(WebModuleFactory<ComputeApiModule> factory)
+    public GetGeneTests(
+        ITestOutputHelper outputHelper,
+        WebModuleFactory<ComputeApiModule> factory)
+        : base(outputHelper)
     {
         _factory = factory.WithApiHost(ConfigureDatabase);
     }

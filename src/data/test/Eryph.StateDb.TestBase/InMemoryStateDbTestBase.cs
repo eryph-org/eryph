@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Eryph.StateDb.TestBase;
 
@@ -16,4 +17,5 @@ namespace Eryph.StateDb.TestBase;
 /// for every test as the fixture does not do anything besides
 /// providing the connection string.
 /// </remarks>
-public class InMemoryStateDbTestBase() : StateDbTestBase(new SqliteFixture());
+public class InMemoryStateDbTestBase(ITestOutputHelper outputHelper)
+    : StateDbTestBase(new SqliteFixture(), outputHelper);

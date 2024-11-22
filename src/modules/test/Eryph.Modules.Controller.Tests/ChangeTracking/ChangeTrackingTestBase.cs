@@ -11,11 +11,14 @@ using Microsoft.Extensions.Hosting;
 using Moq;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
-public abstract class ChangeTrackingTestBase(IDatabaseFixture databaseFixture)
-    : StateDbTestBase(databaseFixture)
+public abstract class ChangeTrackingTestBase(
+    IDatabaseFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : StateDbTestBase(databaseFixture, outputHelper)
 {
     protected readonly MockFileSystem MockFileSystem = new();
     protected readonly Mock<INetworkProviderManager> MockNetworkProviderManager = new();

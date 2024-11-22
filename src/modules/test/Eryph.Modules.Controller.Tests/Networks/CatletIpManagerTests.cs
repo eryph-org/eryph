@@ -6,10 +6,13 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Networks;
 
-public sealed class CatletIpManagerTests : InMemoryStateDbTestBase
+public sealed class CatletIpManagerTests(
+    ITestOutputHelper outputHelper)
+    : InMemoryStateDbTestBase(outputHelper)
 {
     private const string DefaultNetworkId = "cb58fe00-3f64-4b66-b58e-23fb15df3cac";
     private const string DefaultSubnetId = "ed6697cd-836f-4da7-914b-b09ed1567934";

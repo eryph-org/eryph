@@ -11,6 +11,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 using ApiOperation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Operations;
@@ -27,7 +28,10 @@ public class GetOperationTest : InMemoryStateDbTestBase,
 
     private readonly WebModuleFactory<ComputeApiModule> _factory;
 
-    public GetOperationTest(WebModuleFactory<ComputeApiModule> factory)
+    public GetOperationTest(
+        ITestOutputHelper outputHelper,
+        WebModuleFactory<ComputeApiModule> factory)
+        : base(outputHelper)
     {
         _factory = factory.WithApiHost(ConfigureDatabase);
     }
