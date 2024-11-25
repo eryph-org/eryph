@@ -123,6 +123,43 @@ namespace Eryph.Modules.VmHostAgent.Test
         }
 
         [Fact]
+        public async Task GenerateChanges_invalid_NetNat_recreates_NetNat()
+        {
+            static HostState CreateHostStateWithMultipleSwitches()
+            {
+                var hostState = CreateHostState();
+                return hostState with
+                {
+                    NetNat = Prelude.Seq(
+                    [
+                        ..hostState.NetNat,
+                        new NetNat()
+                        {
+                            Name = "eryph_default_default",
+                            InternalIPInterfaceAddressPrefix = "10.249.248.0/28",
+                        }
+                    ]),
+                };
+            }
+
+            var runtime = TestRuntime.New();
+            var hostState = CreateHostStateWithMultipleSwitches();
+            AddMocks(runtime, hostState);
+
+            var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+                .Bind(c => generateChanges(hostState, c))
+                .Run(runtime);
+
+            var operations = res.Should().BeSuccess().Which.Operations;
+            operations.Should().SatisfyRespectively(
+                op => op.Operation.Should().Be(NetworkChangeOperation.AddBridge),
+                op => op.Operation.Should().Be(NetworkChangeOperation.RemoveNetNat),
+                op => op.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
+                op => op.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
+                op => op.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
+        }
+
+        [Fact]
         public async Task Sync_Before_new_config_happy_path()
         {
             var runtime = TestRuntime.New();
@@ -214,7 +251,7 @@ namespace Eryph.Modules.VmHostAgent.Test
             generatedText.Iter(_testOutput.WriteLine);
 
             generatedText.Should().HaveCount(22);
-            generatedText[4].Should().Be("- Add host NAT for provider '{0}'");
+            generatedText[4].Should().Be("- Add host NAT for provider '{0}' with prefix '{1}'");
             generatedText[17].Should().Be("rollback of: Add bridge '{0}'");
 
         }
@@ -450,7 +487,7 @@ namespace Eryph.Modules.VmHostAgent.Test
                     It.IsAny<IPAddress>(), It.IsAny<IPNetwork2>()))
                 .Returns(Prelude.unitAff);
 
-            hostCommandsMock.Setup(x => x.AddNetNat("eryph_default",
+            hostCommandsMock.Setup(x => x.AddNetNat("eryph_default_default",
                     It.IsAny<IPNetwork2>()))
                 .Returns(Prelude.unitAff);
 
