@@ -257,6 +257,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
                 Name = "new-network",
                 ProjectId = ProjectId,
                 Environment = EryphConstants.DefaultEnvironmentName,
+                NetworkProvider = EryphConstants.DefaultProviderName,
                 IpNetwork = "10.1.0.0/20",
             };
             await stateStore.For<VirtualNetwork>().AddAsync(network);
@@ -474,6 +475,7 @@ public abstract class VirtualNetworkChangeTrackingTests(
             Id = VirtualNetworkId,
             Name = "virtual-test-network",
             Environment = "test-environment",
+            NetworkProvider = EryphConstants.DefaultProviderName,
             ProjectId = ProjectId,
             Subnets =
             [

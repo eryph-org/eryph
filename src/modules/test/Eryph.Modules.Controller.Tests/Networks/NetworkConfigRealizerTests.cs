@@ -274,6 +274,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
             Id = new Guid(),
             Name = "test",
             Environment = EryphConstants.DefaultEnvironmentName,
+            NetworkProvider = EryphConstants.DefaultProviderName,
             Subnets = new List<VirtualNetworkSubnet>
             {
                 new()
@@ -403,6 +404,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
             Id = new Guid(),
             Name = "test",
             Environment = EryphConstants.DefaultEnvironmentName,
+            NetworkProvider = EryphConstants.DefaultProviderName,
             Subnets = new List<VirtualNetworkSubnet>
             {
                 new()

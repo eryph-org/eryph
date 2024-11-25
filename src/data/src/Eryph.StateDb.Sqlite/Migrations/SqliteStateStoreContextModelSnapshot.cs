@@ -15,7 +15,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.4");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.11");
 
             modelBuilder.Entity("Eryph.StateDb.Model.CatletDrive", b =>
                 {
@@ -183,7 +183,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.ToTable("IpAssignment");
 
-                    b.HasDiscriminator<string>("Discriminator").HasValue("IpAssignment");
+                    b.HasDiscriminator().HasValue("IpAssignment");
 
                     b.UseTphMappingStrategy();
                 });
@@ -253,7 +253,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.ToTable("NetworkPorts");
 
-                    b.HasDiscriminator<string>("Discriminator").HasValue("NetworkPort");
+                    b.HasDiscriminator().HasValue("NetworkPort");
 
                     b.UseTphMappingStrategy();
                 });
@@ -540,7 +540,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.ToTable("Subnet");
 
-                    b.HasDiscriminator<string>("Discriminator").HasValue("Subnet");
+                    b.HasDiscriminator().HasValue("Subnet");
 
                     b.UseTphMappingStrategy();
                 });
@@ -774,6 +774,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("NetworkProvider")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.ToTable("VirtualNetworks");

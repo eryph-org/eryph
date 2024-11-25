@@ -261,6 +261,7 @@ public sealed class CatletIpManagerTests(
                 ProjectId = EryphConstants.DefaultProjectId,
                 Name = EryphConstants.DefaultNetworkName,
                 Environment = EryphConstants.DefaultEnvironmentName,
+                NetworkProvider = EryphConstants.DefaultProviderName,
                 Subnets =
                 [
                     new VirtualNetworkSubnet

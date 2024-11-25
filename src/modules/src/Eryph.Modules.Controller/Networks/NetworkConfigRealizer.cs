@@ -58,6 +58,7 @@ public class NetworkConfigRealizer(
                     ProjectId = projectId,
                     Environment = networkConfig.Environment ?? EryphConstants.DefaultEnvironmentName,
                     Name = networkConfig.Name,
+                    NetworkProvider = networkConfig.Provider?.Name ?? EryphConstants.DefaultProviderName,
                     Subnets = new List<VirtualNetworkSubnet>(),
                     NetworkPorts = new List<VirtualNetworkPort>(),
                 };

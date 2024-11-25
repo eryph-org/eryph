@@ -65,6 +65,7 @@ public abstract class StateDbDeleteTests(
                 Id = VirtualNetworkId,
                 Name = "virtual-test-network",
                 Environment = "test-environment",
+                NetworkProvider = EryphConstants.DefaultProviderName,
                 ProjectId = ProjectId,
                 Subnets =
                 [

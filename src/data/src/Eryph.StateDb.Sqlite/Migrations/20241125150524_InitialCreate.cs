@@ -282,7 +282,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Environment = table.Column<string>(type: "TEXT", nullable: false),
-                    NetworkProvider = table.Column<string>(type: "TEXT", nullable: true),
+                    NetworkProvider = table.Column<string>(type: "TEXT", nullable: false),
                     IpNetwork = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>

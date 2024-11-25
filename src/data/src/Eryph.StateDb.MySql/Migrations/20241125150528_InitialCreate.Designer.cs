@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20241111192857_InitialCreate")]
+    [Migration("20241125150528_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace Eryph.StateDb.MySql.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.4")
+                .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -191,7 +191,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.ToTable("IpAssignment");
 
-                    b.HasDiscriminator<string>("Discriminator").HasValue("IpAssignment");
+                    b.HasDiscriminator().HasValue("IpAssignment");
 
                     b.UseTphMappingStrategy();
                 });
@@ -261,7 +261,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.ToTable("NetworkPorts");
 
-                    b.HasDiscriminator<string>("Discriminator").HasValue("NetworkPort");
+                    b.HasDiscriminator().HasValue("NetworkPort");
 
                     b.UseTphMappingStrategy();
                 });
@@ -548,7 +548,7 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.ToTable("Subnet");
 
-                    b.HasDiscriminator<string>("Discriminator").HasValue("Subnet");
+                    b.HasDiscriminator().HasValue("Subnet");
 
                     b.UseTphMappingStrategy();
                 });
@@ -782,6 +782,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("NetworkProvider")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.ToTable("VirtualNetworks");

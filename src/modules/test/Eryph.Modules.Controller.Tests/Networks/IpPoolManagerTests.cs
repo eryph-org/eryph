@@ -205,6 +205,7 @@ public class IpPoolManagerTests(
                 Name = "test-network",
                 ProjectId = EryphConstants.DefaultProjectId,
                 Environment = EryphConstants.DefaultEnvironmentName,
+                NetworkProvider = EryphConstants.DefaultProviderName,
                 Subnets =
                 [
                     new VirtualNetworkSubnet()
