@@ -16,7 +16,6 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.Controller.Networks;
 
 internal class ProjectNetworkPlanBuilder(
-    INetworkProviderManager networkProviderManager,
     IStateStore stateStore)
     : IProjectNetworkPlanBuilder
 {
@@ -29,36 +28,36 @@ internal class ProjectNetworkPlanBuilder(
 
     private sealed record CatletDnsInfo(string CatletMetadataId, Map<string, string> Addresses);
 
-    public EitherAsync<Error, NetworkPlan> GenerateNetworkPlan(Guid projectId, CancellationToken cancellationToken)
-    {
-        var networkPlan = new NetworkPlan(projectId.ToString());
+    public EitherAsync<Error, NetworkPlan> GenerateNetworkPlan(
+        Guid projectId,
+        NetworkProvidersConfiguration providerConfig) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let networkPlan = new NetworkPlan(projectId.ToString())
+        let overLayProviders =
+            providerConfig.NetworkProviders
+                .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
+                .ToSeq()
 
-        return from providerConfig in networkProviderManager.GetCurrentConfiguration()
-            let overLayProviders =
-                providerConfig.NetworkProviders
-                    .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
-                    .ToSeq()
+        from networks in GetAllOverlayNetworks(projectId, overLayProviders)
 
-            from networks in GetAllOverlayNetworks(projectId, overLayProviders, cancellationToken)
+        from providerSubnets in GetProviderSubnets(overLayProviders, networks)
+        from providerRouterPorts in GetProviderRouterPorts(networks, providerSubnets)
 
-            from providerSubnets in GetProviderSubnets(overLayProviders, networks, cancellationToken)
-            from providerRouterPorts in GetProviderRouterPorts(networks, providerSubnets)
+        let catletPorts = FindPortsOfType<CatletNetworkPort>(networks)
+        from floatingPorts in GetFloatingPorts(catletPorts, providerSubnets)
+        let dnsInfo = MapCatletPortsToDnsInfos(catletPorts)
+        let dnsNames = dnsInfo.Select(info => info.CatletMetadataId).ToArray()
 
-            let catletPorts = FindPortsOfType<CatletNetworkPort>(networks)
-            from floatingPorts in GetFloatingPorts(catletPorts, providerSubnets)
-            let dnsInfo = MapCatletPortsToDnsInfos(catletPorts)
-            let dnsNames = dnsInfo.Select(info => info.CatletMetadataId).ToArray()
-
-            let p1 = AddProjectRouterAndPorts(networkPlan, networks)
-            from p2 in AddExternalNetSwitches(p1, providerSubnets, overLayProviders)
-            from p3 in AddProviderRouterPorts(p2, providerRouterPorts)
-            let p4 = AddNetworksAsSwitches(p3, networks, dnsNames)
-            let p5 = AddSubnetsAsDhcpOptions(p4, networks)
-            let p6 = AddCatletPorts(p5, catletPorts)
-            let p7 = AddFloatingPorts(p6, floatingPorts)
-            let p8 = AddDnsNames(p7, dnsInfo)
-            select p8;
-    }
+        let p1 = AddProjectRouterAndPorts(networkPlan, networks)
+        from p2 in AddExternalNetSwitches(p1, providerSubnets, overLayProviders)
+        from p3 in AddProviderRouterPorts(p2, providerRouterPorts)
+        let p4 = AddNetworksAsSwitches(p3, networks, dnsNames)
+        let p5 = AddSubnetsAsDhcpOptions(p4, networks)
+        let p6 = AddCatletPorts(p5, catletPorts)
+        let p7 = AddFloatingPorts(p6, floatingPorts)
+        let p8 = AddDnsNames(p7, dnsInfo)
+        select p8;
+    
 
     private EitherAsync<Error, Seq<ProviderRouterPortInfo>> GetProviderRouterPorts(
         Seq<VirtualNetwork> networks,
@@ -93,7 +92,8 @@ internal class ProjectNetworkPlanBuilder(
 
 
     private EitherAsync<Error, Seq<ProviderSubnetInfo>> GetProviderSubnets(
-        IEnumerable<NetworkProvider> overLayProviders, Seq<VirtualNetwork> networks, CancellationToken cancellationToken)
+        IEnumerable<NetworkProvider> overLayProviders,
+        Seq<VirtualNetwork> networks)
     {
         return networks.Map(
                 network => network.NetworkPorts.Filter(x => x is ProviderRouterPort)
@@ -111,7 +111,7 @@ internal class ProjectNetworkPlanBuilder(
             .Bind(rs => 
                 //get all provider configurations and filter for configured providers
                 stateStore.For<ProviderSubnet>().IO
-                .ListAsync(new NetplanBuilderSpecs.GetAllProviderSubnets(), cancellationToken)
+                .ListAsync(new NetplanBuilderSpecs.GetAllProviderSubnets())
                 .Map(all => all.Where(a =>
                     rs.Any(r => r.NetworkProvider == a.ProviderName && r.SubnetName == a.Name)))
                 .Map(subnets =>
@@ -124,12 +124,12 @@ internal class ProjectNetworkPlanBuilder(
 
     }
 
-    private EitherAsync<Error, Seq<VirtualNetwork>> GetAllOverlayNetworks(Guid projectId,
-        Seq<NetworkProvider> overLayProviders, CancellationToken cancellationToken) =>
+    private EitherAsync<Error, Seq<VirtualNetwork>> GetAllOverlayNetworks(
+        Guid projectId,
+        Seq<NetworkProvider> overLayProviders) =>
         stateStore.For<VirtualNetwork>().IO
-            .ListAsync(new NetplanBuilderSpecs.GetAllNetworks(projectId), cancellationToken)
-            .Map(s =>
-                s.Filter(x => overLayProviders.Any(p => p.Name == x.NetworkProvider)));
+            .ListAsync(new NetplanBuilderSpecs.GetAllNetworks(projectId))
+            .Map(s => s.Filter(x => overLayProviders.Any(p => p.Name == x.NetworkProvider)));
 
 
     private static EitherAsync<Error, NetworkPlan> AddProviderRouterPorts(

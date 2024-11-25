@@ -20,6 +20,8 @@ using Rebus.Bus;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.Controller.Networks;
 
 internal class NetworkSyncService : INetworkSyncService
@@ -38,116 +40,120 @@ internal class NetworkSyncService : INetworkSyncService
         _log = log;
     }
 
-    public EitherAsync<Error, Unit> SyncNetworks(CancellationToken cancellationToken)
-    {
-        async Task<Unit> SyncNetworksAsync(NetworkProvidersConfiguration providersConfiguration)
-        {
-            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
-            var realizer = scope.GetInstance<INetworkConfigRealizer>();
-            var stateStore = scope.GetInstance<IStateStore>();
+    public EitherAsync<Error, Unit> SyncNetworks(CancellationToken cancellationToken) =>
+        from providerConfig in _providerManager.GetCurrentConfiguration()
+        from _ in SyncNetworks(providerConfig, cancellationToken)
+            .Run().Map(fin => fin.ToEither()).AsTask().ToAsync()
+        select Unit.Default;
 
-            var projects = await stateStore.Read<Project>().ListAsync(new ProjectSpecs.GetAll(), cancellationToken);
+    private Aff<Unit> SyncNetworks(
+        NetworkProvidersConfiguration providersConfiguration,
+        CancellationToken cancellationToken) =>
+        from _1 in RealizeProviderNetworks(providersConfiguration)
+        from _2 in RealizeProjectNetworks(providersConfiguration)
+        from neighbors in ApplyNetworkPlans(providersConfiguration)
+        from _4 in use(
+            Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+            scope =>
+                from _ in unitAff
+                let bus = scope.GetInstance<IBus>()
+                from __ in Aff(async () => await bus.Advanced.Topics.Publish(
+                    $"broadcast_{QueueNames.VMHostAgent}",
+                    new NetworkNeighborsUpdateRequestedEvent
+                    {
+                        UpdatedAddresses = neighbors.ToArray()
+                    })
+                    .ToUnit())
+                select unit)
+        select unit;
 
-            foreach (var project in projects)
-            {
-                try
+    private Aff<Unit> RealizeProviderNetworks(
+        NetworkProvidersConfiguration providerConfig) =>
+        use(Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+            scope =>
+                from _ in unitAff
+                let configRealizer = scope.GetInstance<INetworkProvidersConfigRealizer>()
+                from __ in Aff(async () => await configRealizer.RealizeConfigAsync(providerConfig, default).ToUnit())
+                select unit);
+
+    private Aff<Unit> RealizeProjectNetworks(
+        NetworkProvidersConfiguration providerConfig) =>
+        from projects in use(
+            Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+            scope =>
+                from _ in unitAff
+                let stateStore = scope.GetInstance<IStateStore>()
+                from projects in stateStore.Read<Project>().IO.ListAsync().ToAff(e => e)
+                select projects)
+        from _s in projects
+            .Map(p => RealizeProjectNetworks(p, providerConfig)
+                .IfFail(e =>
                 {
-                    var networks = await stateStore.For<VirtualNetwork>()
-                    .ListAsync(new VirtualNetworkSpecs.GetForProjectConfig(project.Id), cancellationToken);
+                    _log.LogError(e, "Failed to save network changes for project {ProjectName} ({ProjectId})",
+                        p.Name, p.Id);
+                    return unit;
+                }))
+            .SequenceSerial()
+        select unit;
 
-                    var projectConfig = networks.ToNetworksConfig(project.Name);
-                    await realizer.UpdateNetwork(project.Id, projectConfig, providersConfiguration);
-                    await stateStore.SaveChangesAsync(cancellationToken);
-                }
-                catch (Exception ex)
+    private Aff<Unit> RealizeProjectNetworks(
+        Project project,
+        NetworkProvidersConfiguration providerConfig) =>
+        use(Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+            scope =>
+                from _ in unitAff
+                let stateStore = scope.GetInstance<IStateStore>()
+                from networks in stateStore.For<VirtualNetwork>().IO.ListAsync(
+                        new VirtualNetworkSpecs.GetForProjectConfig(project.Id))
+                    .ToAff(e => e)
+                from config in Eff(() => networks.ToNetworksConfig(project.Name))
+                let realizer = scope.GetInstance<INetworkConfigRealizer>()
+                from __ in Aff(async () => await realizer.UpdateNetwork(project.Id, config, providerConfig).ToUnit())
+                from ___ in Aff(async () => await stateStore.SaveChangesAsync().ToUnit())
+                select unit);
+
+    private Aff<Seq<NetworkNeighborRecord>> ApplyNetworkPlans(
+        NetworkProvidersConfiguration providerConfig) =>
+        from projects in use(
+            Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+            scope =>
+                from _ in unitAff
+                let stateStore = scope.GetInstance<IStateStore>()
+                from projects in stateStore.Read<Project>().IO.ListAsync().ToAff(e => e)
+                select projects)
+        from neighbors in projects
+            .Map(p => ApplyNetworkPlan(p.Id, providerConfig)
+                .IfFail(e =>
                 {
-                    _log.LogError(ex, "Failed to save network changes for project {projectId} ({projectName})", project.Id, project.Name);
-                }
+                    _log.LogError(e, "Failed to apply network plan for project {ProjectName}({ProjectId})",
+                        p.Name, p.Id);
+                    return Seq<NetworkNeighborRecord>();
+                }))
+            .SequenceSerial()
+        select neighbors.Flatten();
 
-            }
-
-            return Unit.Default;
-
-        }
-
-        return from providerConfig in _providerManager.GetCurrentConfiguration()
-            from sync in Prelude.TryAsync(() => SyncNetworksAsync(providerConfig)).ToEither()
-            from realize in RealizeProviderNetworks(cancellationToken)
-            select Unit.Default;
-    }
-
-    public EitherAsync<Error, Unit> RealizeProviderNetworks(CancellationToken cancellationToken)
-    {
-        async Task<Unit> RealizeProviderNetworksAsync()
-        {
-            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
-
-            var configRealizer = scope.GetInstance<INetworkProvidersConfigRealizer>();
-
-            var stateStore = scope.GetInstance<IStateStore>();
-            var providerManager = scope.GetInstance<INetworkProviderManager>();
-
-            var bus = _container.GetInstance<IBus>();
-
-            var config = await providerManager.GetCurrentConfiguration()
-                .IfLeft(e => e.ToException().Rethrow<NetworkProvidersConfiguration>());
-
-            await configRealizer.RealizeConfigAsync(config, cancellationToken);
-
-            var projects = await stateStore.For<Project>().ListAsync(cancellationToken);
-            
-            var updatedNetworkNeighbors = new List<NetworkNeighborRecord>();
-            foreach (var project in projects)
-            {
-                var result = await UpdateProjectNetworkPlan(project.Id);
-                result.IfLeft(l =>
-                {
-                    _log.LogError(l.ToException(),
-                        "Failed to apply network plan for project {ProjectName}({ProjectId})",
-                        project.Name, project.Id);
-                });
-                result.IfRight(updatedNetworkNeighbors.AddRange);
-            }
-
-            await stateStore.SaveChangesAsync(cancellationToken);
-
-            await bus.Advanced.Topics.Publish(
-                $"broadcast_{QueueNames.VMHostAgent}",
-                new NetworkNeighborsUpdateRequestedEvent
-                {
-                    UpdatedAddresses = updatedNetworkNeighbors.ToArray()
-                });
-
-            return Unit.Default;
-        }
-
-        return Prelude.TryAsync(RealizeProviderNetworksAsync).ToEither();
-    }
-
-
-    private EitherAsync<Error, NetworkNeighborRecord[]> UpdateProjectNetworkPlan(Guid projectId)
-    {
-        var sysEnv = _container.GetInstance<ISysEnvironment>();
-        var ovnSettings = _container.GetInstance<IOVNSettings>();
-        var planBuilder = _container.GetInstance<IProjectNetworkPlanBuilder>();
-        var logger = _container.GetInstance<ILogger>();
-
-        var networkPlanRealizer = new NetworkPlanRealizer(
-            new OVNControlTool(sysEnv, ovnSettings.NorthDBConnection),
-            logger);
-
-        return from networkPlan in planBuilder.GenerateNetworkPlan(projectId, CancellationToken.None)
-               from appliedNetworkPlan in networkPlanRealizer.ApplyNetworkPlan(networkPlan)
-               let updatedNetworkNeighbors = appliedNetworkPlan.PlannedNATRules.Values
-                   .Map(port => new NetworkNeighborRecord
-                   {
-                       IpAddress = port.ExternalIP,
-                       MacAddress = port.ExternalMAC
-                   }).ToArray()
-               select updatedNetworkNeighbors;
-    }
-
-
+    private Aff<Seq<NetworkNeighborRecord>> ApplyNetworkPlan(
+        Guid projectId,
+        NetworkProvidersConfiguration providerConfig) =>
+        use(Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+            scope =>
+                from _ in unitAff
+                let sysEnv = scope.GetInstance<ISysEnvironment>()
+                let ovnSettings = scope.GetInstance<IOVNSettings>()
+                let planBuilder = scope.GetInstance<IProjectNetworkPlanBuilder>()
+                let logger = scope.GetInstance<ILogger>()
+                let networkPlanRealizer = new NetworkPlanRealizer(
+                    new OVNControlTool(sysEnv, ovnSettings.NorthDBConnection),
+                    logger)
+                from networkPlan in planBuilder.GenerateNetworkPlan(projectId, providerConfig).ToAff(e => e)
+                from appliedNetworkPlan in networkPlanRealizer.ApplyNetworkPlan(networkPlan).ToAff(e => e)
+                let updatedNetworkNeighbors = appliedNetworkPlan.PlannedNATRules.Values
+                    .Map(port => new NetworkNeighborRecord
+                    {
+                        IpAddress = port.ExternalIP,
+                        MacAddress = port.ExternalMAC
+                    }).ToSeq()
+                select updatedNetworkNeighbors);
 
     public EitherAsync<Error, string[]> ValidateChanges(NetworkProvider[] networkProviders)
     {

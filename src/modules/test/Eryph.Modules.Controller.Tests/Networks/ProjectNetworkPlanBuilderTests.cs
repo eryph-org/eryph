@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.ConfigModel.Networks;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.Controller.Networks;
@@ -16,6 +17,7 @@ using Moq;
 using SimpleInjector.Integration.ServiceCollection;
 using SimpleInjector;
 using Xunit.Abstractions;
+using System.Linq.Expressions;
 
 
 namespace Eryph.Modules.Controller.Tests.Networks;
@@ -47,18 +49,76 @@ public class ProjectNetworkPlanBuilderTests(
 
     private const string CatletMetadataId = "15e2b061-c625-4469-9fe7-7c455058fcc0";
 
-    private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
+    private readonly NetworkProvidersConfiguration _networkProvidersConfig = new()
+    {
+        NetworkProviders =
+        [
+            new NetworkProvider
+            {
+                Name = "default",
+                TypeString = "nat_overlay",
+                BridgeName = "br-nat",
+                Subnets =
+                [
+                    new NetworkProviderSubnet
+                    {
+                        Name = "default",
+                        Network = "10.249.248.0/22",
+                        Gateway = "10.249.248.1",
+                        IpPools =
+                        [
+                            new NetworkProviderIpPool
+                            {
+                                Name = "default",
+                                FirstIp = "10.249.248.10",
+                                NextIp = "10.249.248.10",
+                                LastIp = "10.249.251.241",
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    };
 
     [Fact]
-    public async Task BuildPLan()
+    public async Task GenerateNetworkPlan_DefaultConfig_GeneratesValidNetworkPlan()
     {
+        await using(var scope = CreateScope())
+        {
+            var providerConfigRealizer = scope.GetInstance<INetworkProvidersConfigRealizer>();
+            await providerConfigRealizer.RealizeConfigAsync(_networkProvidersConfig, default);
+
+            var networkConfig = new ProjectNetworksConfig()
+            {
+                Networks =
+                [
+                    new NetworkConfig()
+                    {
+                        Name = EryphConstants.DefaultNetworkName,
+                        Address = "10.0.100.0/24",
+                    },
+                ],
+            };
+
+            var configRealizer = scope.GetInstance<INetworkConfigRealizer>();
+            await configRealizer.UpdateNetwork(EryphConstants.DefaultProjectId, networkConfig, _networkProvidersConfig);
+
+            var stateStore = scope.GetInstance<IStateStore>();
+            await stateStore.SaveChangesAsync();
+        }
+
         await WithScope(async (builder, _) =>
         {
-            var result = await builder.GenerateNetworkPlan(Guid.Parse(DefaultProjectId), default);
+            var result = await builder.GenerateNetworkPlan(
+                Guid.Parse(DefaultProjectId),
+                _networkProvidersConfig);
 
             var networkPlan = result.Should().BeRight().Subject;
 
-            networkPlan.Id.Should().Be($"project-{DefaultProjectId}");
+            networkPlan.Id.Should().Be(DefaultProjectId);
+            networkPlan.PlannedSwitchPorts.ToDictionary().Should().ContainKey(
+                $"SN-externalNet-{networkPlan.Id}-default-default-br-nat");
         });
     }
 
@@ -72,432 +132,15 @@ public class ProjectNetworkPlanBuilderTests(
 
     protected override void AddSimpleInjector(SimpleInjectorAddOptions options)
     {
-        options.Container.RegisterInstance(_networkProviderManagerMock.Object);
-
-        // Use the proper manager instead of a mock. The code is quite
-        // interdependent as it modifies the same EF Core entities.
         options.Container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
+        options.Container.Register<INetworkConfigRealizer, NetworkConfigRealizer>(Lifestyle.Scoped);
+        options.Container.Register<INetworkProvidersConfigRealizer, NetworkProvidersConfigRealizer>(Lifestyle.Scoped);
 
         options.Container.Register<ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
-    }
-
-    public override async Task InitializeAsync()
-    {
-        await base.InitializeAsync();
-
-        var networkProvidersConfig = new NetworkProvidersConfiguration
-        {
-            NetworkProviders =
-            [
-                new NetworkProvider
-                {
-                    Name = "default",
-                    TypeString = "nat_overlay",
-                    BridgeName = "br-nat",
-                    Subnets =
-                    [
-                        new NetworkProviderSubnet
-                        {
-                            Name = "default",
-                            Network = "10.249.248.0/24",
-                            Gateway = "10.249.248.1",
-                            IpPools =
-                            [
-                                new NetworkProviderIpPool
-                                {
-                                    Name = "default",
-                                    FirstIp = "10.249.248.10",
-                                    NextIp = "10.249.248.12",
-                                    LastIp = "10.249.248.19"
-                                },
-                                new NetworkProviderIpPool
-                                {
-                                    Name = "second-provider-pool",
-                                    FirstIp = "10.249.248.20",
-                                    NextIp = "10.249.248.22",
-                                    LastIp = "10.249.248.29"
-                                },
-                            ],
-                        },
-                        new NetworkProviderSubnet
-                        {
-                            Name = "second-provider-subnet",
-                            Network = "10.249.249.0/24",
-                            Gateway = "10.249.249.1",
-                            IpPools =
-                            [
-                                new NetworkProviderIpPool
-                                {
-                                    Name = "default",
-                                    FirstIp = "10.249.249.10",
-                                    NextIp = "10.249.249.12",
-                                    LastIp = "10.249.249.19"
-                                },
-                            ],
-                        },
-                    ],
-                },
-                new NetworkProvider
-                {
-                    Name = "second-overlay-provider",
-                    TypeString = "overlay",
-                    BridgeName = "br-second-nat",
-                    Subnets =
-                    [
-                        new NetworkProviderSubnet
-                        {
-                            Name = "default",
-                            Network = "10.249.248.0/24",
-                            Gateway = "10.249.248.1",
-                            IpPools =
-                            [
-                                new NetworkProviderIpPool
-                                {
-                                    Name = "default",
-                                    FirstIp = "10.249.248.10",
-                                    NextIp = "10.249.248.12",
-                                    LastIp = "10.249.248.19"
-                                },
-                                new NetworkProviderIpPool
-                                {
-                                    Name = "second-provider-pool",
-                                    FirstIp = "10.249.248.20",
-                                    NextIp = "10.249.248.22",
-                                    LastIp = "10.249.248.29"
-                                },
-                            ],
-                        },
-                    ],
-                },
-                new NetworkProvider
-                {
-                    Name = "flat-provider",
-                    TypeString = "flat",
-                },
-            ]
-        };
-
-        _networkProviderManagerMock
-            .Setup(m => m.GetCurrentConfiguration())
-            .Returns(Prelude.RightAsync<Error, NetworkProvidersConfiguration>(
-                networkProvidersConfig));
-
-        await WithScope(async (_, stateStore) =>
-        {
-            var configRealizer = new NetworkProvidersConfigRealizer(stateStore);
-            await configRealizer.RealizeConfigAsync(networkProvidersConfig, default);
-        });
     }
 
     protected override async Task SeedAsync(IStateStore stateStore)
     {
         await SeedDefaultTenantAndProject();
-
-        await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
-        {
-            Id = Guid.Parse(CatletMetadataId),
-        });
-
-        await stateStore.For<Project>().AddAsync(new Project()
-        {
-            Id = Guid.Parse(SecondProjectId),
-            Name = "second-project",
-            TenantId = EryphConstants.DefaultTenantId,
-        });
-
-        await stateStore.For<VirtualNetwork>().AddAsync(
-            new VirtualNetwork
-            {
-                Id = Guid.Parse(DefaultNetworkId),
-                ProjectId = EryphConstants.DefaultProjectId,
-                Name = EryphConstants.DefaultNetworkName,
-                Environment = EryphConstants.DefaultEnvironmentName,
-                NetworkProvider = EryphConstants.DefaultProviderName,
-                IpNetwork = "10.0.0.0/15",
-                Subnets =
-                [
-                    new VirtualNetworkSubnet
-                    {
-                        Id = Guid.Parse(DefaultSubnetId),
-                        Name = EryphConstants.DefaultSubnetName,
-                        IpNetwork = "10.0.0.0/16",
-                        IpPools =
-                        [
-                            new IpPool()
-                            {
-                                Id = Guid.NewGuid(),
-                                Name = EryphConstants.DefaultIpPoolName,
-                                IpNetwork = "10.0.0.0/16",
-                                FirstIp = "10.0.0.10",
-                                NextIp = "10.0.0.12",
-                                LastIp = "10.0.0.19",
-                            },
-                            new IpPool()
-                            {
-                                Id = Guid.NewGuid(),
-                                Name = "second-pool",
-                                IpNetwork = "10.0.0.0/16",
-                                FirstIp = "10.0.1.10",
-                                NextIp = "10.0.1.12",
-                                LastIp = "10.0.1.19",
-                            }
-                        ],
-                    },
-                    new VirtualNetworkSubnet
-                    {
-                        Id = Guid.Parse(SecondSubnetId),
-                        Name = "second-subnet",
-                        IpNetwork = "10.1.0.0/16",
-                        IpPools =
-                        [
-                            new IpPool()
-                            {
-                                Id = Guid.NewGuid(),
-                                Name = EryphConstants.DefaultIpPoolName,
-                                IpNetwork = "10.1.0.0/16",
-                                FirstIp = "10.1.0.10",
-                                NextIp = "10.1.0.12",
-                                LastIp = "10.1.0.19",
-                            }
-                        ],
-                    },
-                ],
-                NetworkPorts =
-                [
-                    new ProviderRouterPort
-                    {
-                        Name = "provider",
-                        ProviderName = EryphConstants.DefaultProviderName,
-                        SubnetName = EryphConstants.DefaultSubnetName,
-                        PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "42:00:42:00:00:01",
-                    }
-                ],
-            });
-
-        await stateStore.For<VirtualNetwork>().AddAsync(
-            new VirtualNetwork
-            {
-                Id = Guid.Parse(SecondNetworkId),
-                ProjectId = EryphConstants.DefaultProjectId,
-                Name = "second-network",
-                Environment = EryphConstants.DefaultEnvironmentName,
-                NetworkProvider = EryphConstants.DefaultProviderName,
-                IpNetwork = "10.5.0.0/16",
-                Subnets =
-                [
-                    new VirtualNetworkSubnet
-                    {
-                        Id = Guid.Parse(SecondNetworkSubnetId),
-                        Name = EryphConstants.DefaultSubnetName,
-                        IpNetwork = "10.5.0.0/16",
-                        IpPools =
-                        [
-                            new IpPool()
-                            {
-                                Id = Guid.NewGuid(),
-                                Name = EryphConstants.DefaultIpPoolName,
-                                IpNetwork = "10.5.0.0/16",
-                                FirstIp = "10.5.0.10",
-                                NextIp = "10.5.0.12",
-                                LastIp = "10.5.0.19",
-                            }
-                        ],
-                    },
-                ],
-                NetworkPorts =
-                [
-                    new ProviderRouterPort
-                    {
-                        Name = "provider",
-                        ProviderName = EryphConstants.DefaultProviderName,
-                        SubnetName = EryphConstants.DefaultSubnetName,
-                        PoolName = "second-provider-pool",
-                        MacAddress = "42:00:42:00:00:02",
-                    }
-                ]
-            });
-
-        await stateStore.For<VirtualNetwork>().AddAsync(
-            new VirtualNetwork
-            {
-                Id = Guid.Parse(ThirdNetworkId),
-                ProjectId = EryphConstants.DefaultProjectId,
-                Name = "third-network",
-                Environment = EryphConstants.DefaultEnvironmentName,
-                NetworkProvider = EryphConstants.DefaultProviderName,
-                IpNetwork = "10.6.0.0/16",
-                Subnets =
-                [
-                    new VirtualNetworkSubnet
-                    {
-                        Id = Guid.Parse(ThirdNetworkSubnetId),
-                        Name = EryphConstants.DefaultSubnetName,
-                        IpNetwork = "10.6.0.0/16",
-                        IpPools =
-                        [
-                            new IpPool()
-                            {
-                                Id = Guid.NewGuid(),
-                                Name = EryphConstants.DefaultIpPoolName,
-                                IpNetwork = "10.6.0.0/16",
-                                FirstIp = "10.6.0.10",
-                                NextIp = "10.6.0.12",
-                                LastIp = "10.6.0.19",
-                            }
-                        ],
-                    },
-                ],
-                NetworkPorts =
-                [
-                    new ProviderRouterPort
-                    {
-                        Name = "provider",
-                        ProviderName = EryphConstants.DefaultProviderName,
-                        SubnetName = "second-provider-subnet",
-                        PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "42:00:42:00:00:03",
-                    }
-                ]
-            });
-
-        await stateStore.For<VirtualNetwork>().AddAsync(
-            new VirtualNetwork
-            {
-                Id = Guid.Parse(SecondEnvironmentNetworkId),
-                ProjectId = EryphConstants.DefaultProjectId,
-                Name = EryphConstants.DefaultNetworkName,
-                Environment = "second-environment",
-                NetworkProvider = EryphConstants.DefaultProviderName,
-                IpNetwork = "10.10.0.0/16",
-                Subnets =
-                [
-                    new VirtualNetworkSubnet
-                    {
-                        Id = Guid.Parse(SecondEnvironmentSubnetId),
-                        Name = EryphConstants.DefaultSubnetName,
-                        IpNetwork = "10.10.0.0/16",
-                        IpPools =
-                        [
-                            new IpPool()
-                            {
-                                Id = Guid.NewGuid(),
-                                Name = EryphConstants.DefaultIpPoolName,
-                                IpNetwork = "10.10.0.0/16",
-                                FirstIp = "10.10.0.10",
-                                NextIp = "10.10.0.12",
-                                LastIp = "10.10.0.19",
-                            }
-                        ],
-                    },
-                ],
-                NetworkPorts =
-                [
-                    new ProviderRouterPort
-                    {
-                        Name = "provider",
-                        ProviderName = EryphConstants.DefaultProviderName,
-                        SubnetName = EryphConstants.DefaultSubnetName,
-                        PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "42:00:42:00:00:04",
-                    }
-                ]
-            });
-
-        await stateStore.For<VirtualNetwork>().AddAsync(
-            new VirtualNetwork
-            {
-                Id = Guid.NewGuid(),
-                ProjectId = EryphConstants.DefaultProjectId,
-                Name = "second-provider",
-                Environment = EryphConstants.DefaultEnvironmentName,
-                NetworkProvider = "second-overlay-provider",
-                IpNetwork = "10.200.0.0/16",
-                Subnets =
-                [
-                    new VirtualNetworkSubnet
-                    {
-                        Id = Guid.NewGuid(),
-                        Name = EryphConstants.DefaultSubnetName,
-                        IpNetwork = "10.200.0.0/16",
-                        IpPools =
-                        [
-                            new IpPool()
-                            {
-                                Id = Guid.NewGuid(),
-                                Name = EryphConstants.DefaultIpPoolName,
-                                IpNetwork = "10.200.0.0/16",
-                                FirstIp = "10.200.0.10",
-                                NextIp = "10.200.0.12",
-                                LastIp = "10.200.0.19",
-                            }
-                        ],
-                    },
-                ],
-                NetworkPorts =
-                [
-                    new ProviderRouterPort
-                    {
-                        Name = "provider",
-                        ProviderName = "second-overlay-provider",
-                        SubnetName = EryphConstants.DefaultSubnetName,
-                        PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "42:00:42:00:00:06",
-                    }
-                ]
-            });
-
-        await stateStore.For<VirtualNetwork>().AddAsync(
-            new VirtualNetwork
-            {
-                Id = Guid.Parse(SecondProjectNetworkId),
-                ProjectId = Guid.Parse(SecondProjectId),
-                Name = EryphConstants.DefaultNetworkName,
-                Environment = EryphConstants.DefaultEnvironmentName,
-                NetworkProvider = EryphConstants.DefaultProviderName,
-                IpNetwork = "10.100.0.0/16",
-                Subnets =
-                [
-                    new VirtualNetworkSubnet
-                    {
-                        Id = Guid.Parse(SecondProjectSubnetId),
-                        Name = EryphConstants.DefaultSubnetName,
-                        IpNetwork = "10.100.0.0/16",
-                        IpPools =
-                        [
-                            new IpPool()
-                            {
-                                Id = Guid.NewGuid(),
-                                Name = EryphConstants.DefaultIpPoolName,
-                                IpNetwork = "10.100.0.0/16",
-                                FirstIp = "10.100.0.10",
-                                NextIp = "10.100.0.12",
-                                LastIp = "10.100.0.19",
-                            }
-                        ],
-                    },
-                ],
-                NetworkPorts =
-                [
-                    new ProviderRouterPort
-                    {
-                        Name = "provider",
-                        ProviderName = EryphConstants.DefaultProviderName,
-                        SubnetName = EryphConstants.DefaultSubnetName,
-                        PoolName = EryphConstants.DefaultIpPoolName,
-                        MacAddress = "42:00:42:00:00:05",
-                    }
-                ]
-            });
-
-        await stateStore.For<VirtualNetwork>().AddAsync(
-            new VirtualNetwork
-            {
-                Id = Guid.Parse(FlatNetworkId),
-                ProjectId = Guid.Parse(DefaultProjectId),
-                Name = "flat-network",
-                Environment = EryphConstants.DefaultEnvironmentName,
-                NetworkProvider = "flat-provider",
-            });
     }
 }

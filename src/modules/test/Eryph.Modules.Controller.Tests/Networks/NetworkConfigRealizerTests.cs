@@ -569,6 +569,4 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 .ThenInclude(x => x.IpPools);
         }
     }
-
-
 }
