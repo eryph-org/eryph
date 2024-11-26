@@ -49,7 +49,7 @@ public class NetworkConfigRealizer(
             var savedNetwork = savedNetworks.Find(x => GetEnvironmentName(x.Environment, x.Name) == networkEnvName);
             if (savedNetwork == null)
             {
-                log.LogDebug("Environment {env}: network {network} not found. Creating new network.",
+                log.LogDebug("Environment {Environment}: network {Network} not found. Creating new network.",
                     networkConfig.Environment ?? EryphConstants.DefaultEnvironmentName,
                     networkConfig.Name);
                 var newNetwork = new VirtualNetwork
@@ -86,11 +86,11 @@ public class NetworkConfigRealizer(
             var networkEnvName = GetEnvironmentName(networkConfig.Environment, networkConfig.Name);
             var savedNetwork = savedNetworks.First(x => GetEnvironmentName(x.Environment, x.Name) == networkEnvName);
 
-            var providerName = networkConfig.Provider?.Name ?? "default";
-            var providerSubnet = networkConfig.Provider?.Subnet ?? "default";
-            var providerIpPool = networkConfig.Provider?.IpPool ?? "default";
+            var providerName = networkConfig.Provider?.Name ?? EryphConstants.DefaultProviderName;
+            var providerSubnet = networkConfig.Provider?.Subnet ?? EryphConstants.DefaultSubnetName;
+            var providerIpPool = networkConfig.Provider?.IpPool ?? EryphConstants.DefaultIpPoolName;
 
-            log.LogDebug("Environment {env}: Updating network {network}", savedNetwork.Environment ?? "default", savedNetwork.Name);
+            log.LogDebug("Environment {Environment}: Updating network {Network}", savedNetwork.Environment, savedNetwork.Name);
 
             var networkProvider = providerConfig.NetworkProviders.FirstOrDefault(x => x.Name == providerName) 
                                   ?? throw new InconsistentNetworkConfigException($"Network provider {providerName} not found.");
@@ -200,7 +200,7 @@ public class NetworkConfigRealizer(
                     !networkAddress.Contains(ipAddress))
                 {
                     log.LogInformation("Environment {env}, Network {network}: network router ip assignment changed to {ipAddress}.",
-                        savedNetwork.Environment ?? "default", savedNetwork.Name, networkAddress.FirstUsable);
+                        savedNetwork.Environment, savedNetwork.Name, networkAddress.FirstUsable);
 
                     savedNetwork.NetworkPorts.Remove(routerPort);
                     routerPort = null;

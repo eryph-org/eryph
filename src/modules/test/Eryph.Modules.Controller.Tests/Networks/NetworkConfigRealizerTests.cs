@@ -100,8 +100,6 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
         ]
     };
 
-    private readonly ITestOutputHelper _testOutput = outputHelper;
-
     [Theory]
     [InlineData("default", "default", "default", "10.249.248.12")]
     [InlineData("default", "default", "second-provider-pool", "10.249.248.22")]
@@ -184,8 +182,6 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 network =>
                 {
                     network.Name.Should().Be("test");
-
-                    // TODO Is this correct or do we want to have a provider port?
                     network.Subnets.Should().BeEmpty();
                     network.NetworkPorts.Should().BeEmpty();
                 });
@@ -361,8 +357,6 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
                 network =>
                 {
                     network.Name.Should().Be("test");
-
-                    // TODO Is this correct or do we want to have a provider port?
                     network.Subnets.Should().BeEmpty();
                     network.NetworkPorts.Should().BeEmpty();
                 });

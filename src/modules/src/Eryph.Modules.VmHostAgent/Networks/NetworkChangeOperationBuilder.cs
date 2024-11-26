@@ -371,7 +371,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<NewBridge> newBridges) =>
         from _ in unitAff
         from result in use(
-            Eff(fun(() => _logger.BeginScope("Method: {method}", nameof(RemoveInvalidNats)))).ToAff(),
+            Eff(fun(() => _logger.BeginScope("Method: {method}", nameof(RemoveInvalidNats)))),
             _ => netNat.Filter(n => n.Name.StartsWith("eryph_"))
                 .Map(n => RemoveInvalidNat(n, newConfig, newBridges))
                 .SequenceSerial())

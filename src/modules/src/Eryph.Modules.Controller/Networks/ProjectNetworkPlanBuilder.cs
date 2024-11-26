@@ -91,7 +91,7 @@ internal class ProjectNetworkPlanBuilder(
 
 
     private EitherAsync<Error, Seq<ProviderSubnetInfo>> GetProviderSubnets(
-        IEnumerable<NetworkProvider> overLayProviders,
+        Seq<NetworkProvider> overLayProviders,
         Seq<VirtualNetwork> networks)
     {
         return networks.Map(
@@ -114,7 +114,6 @@ internal class ProjectNetworkPlanBuilder(
                 .Map(all => all.Where(a =>
                     rs.Any(r => r.NetworkProvider == a.ProviderName && r.SubnetName == a.Name)))
                 .Map(subnets =>
-
                     //map subnets to ProviderSubnetInfo and add config
                     subnets.Map(subnet => new ProviderSubnetInfo(
                         subnet,
@@ -195,6 +194,8 @@ internal class ProjectNetworkPlanBuilder(
         string bridgeName,
         int? tag)
     {
+        // Include the bridge name in the port name. This ensures that the patch port
+        // of OVN network is always connected to the correct bridge.
         var name = $"SN-{switchName}-{externalNetwork}-{bridgeName}";
 
         return plan with
