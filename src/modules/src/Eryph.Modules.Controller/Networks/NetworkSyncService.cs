@@ -39,20 +39,18 @@ internal class NetworkSyncService(
         NetworkProvidersConfiguration providersConfiguration) =>
         from _1 in RealizeProviderNetworks(providersConfiguration)
         from _2 in RealizeProjectNetworks(providersConfiguration)
-        from neighbors in ApplyNetworkPlans(providersConfiguration)
-        from _4 in use(
-            Eff(() => AsyncScopedLifestyle.BeginScope(container)),
-            scope =>
-                from _ in unitAff
-                let bus = scope.GetInstance<IBus>()
-                from __ in Aff(async () => await bus.Advanced.Topics.Publish(
-                    $"broadcast_{QueueNames.VMHostAgent}",
-                    new NetworkNeighborsUpdateRequestedEvent
-                    {
-                        UpdatedAddresses = neighbors.ToArray()
-                    })
-                    .ToUnit())
-                select unit)
+        from applyResult in ApplyNetworkPlans(providersConfiguration)
+        from updateResult in UpdateNetworkNeighbors(applyResult.Neighbors)
+            .Map(_ => Option<Error>.None)
+            .IfFail(e => Error.New("Failed to update network neighbors.", e))
+        // The application of the networks plans and the update of the network
+        // neighbors is best-effort. We try to do as much as possible before
+        // raising an error to ensure that as much as possible of the networking
+        // keeps working.
+        from _ in applyResult.Error.Append(updateResult.ToSeq()).Match(
+            Empty: () => unitAff,
+            Seq: errors => FailAff<Unit>(
+                Error.New("Failed to apply network plans for projects.", Error.Many(errors))))
         select unit;
 
     private Aff<Unit> RealizeProviderNetworks(
@@ -99,7 +97,7 @@ internal class NetworkSyncService(
                 from ___ in Aff(async () => await stateStore.SaveChangesAsync().ToUnit())
                 select unit);
 
-    private Aff<Seq<NetworkNeighborRecord>> ApplyNetworkPlans(
+    private Aff<(Seq<NetworkNeighborRecord> Neighbors, Seq<Error> Error)> ApplyNetworkPlans(
         NetworkProvidersConfiguration providerConfig) =>
         from projects in use(
             Eff(() => AsyncScopedLifestyle.BeginScope(container)),
@@ -115,10 +113,9 @@ internal class NetworkSyncService(
                     Seq<NetworkNeighborRecord>(),
                     Error.New($"Failed to apply network plan for project {p.Name}({p.Id}).", e))))
             .SequenceSerial()
-        from _ in results.Map(r => r.Error).Somes().Match(
-            Empty: () => unitAff,
-            Seq: errors => FailAff<Unit>(Error.New("Failed to apply network plans for projects.", Error.Many(errors))))
-        select results.Map(r => r.Neighbors).Flatten();
+        let neighbors = results.Map(r => r.Neighbors).Flatten()
+        let error = results.Map(r => r.Error).Somes()
+        select (neighbors, error);
 
     private Aff<Seq<NetworkNeighborRecord>> ApplyNetworkPlan(
         Guid projectId,
@@ -142,6 +139,21 @@ internal class NetworkSyncService(
                         MacAddress = port.ExternalMAC
                     }).ToSeq()
                 select updatedNetworkNeighbors);
+
+    private Aff<Unit> UpdateNetworkNeighbors(
+        Seq<NetworkNeighborRecord> neighbors) =>
+        use(Eff(() => AsyncScopedLifestyle.BeginScope(container)),
+            scope =>
+                from _ in unitAff
+                let bus = scope.GetInstance<IBus>()
+                from __ in Aff(async () => await bus.Advanced.Topics.Publish(
+                        $"broadcast_{QueueNames.VMHostAgent}",
+                        new NetworkNeighborsUpdateRequestedEvent
+                        {
+                            UpdatedAddresses = neighbors.ToArray()
+                        })
+                    .ToUnit())
+                select unit);
 
     public EitherAsync<Error, string[]> ValidateChanges(NetworkProvider[] networkProviders)
     {
