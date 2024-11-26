@@ -86,15 +86,24 @@ internal class NetworkSyncService(
         NetworkProvidersConfiguration providerConfig) =>
         use(Eff(() => AsyncScopedLifestyle.BeginScope(container)),
             scope =>
-                from _ in unitAff
+                from _1 in unitAff
                 let stateStore = scope.GetInstance<IStateStore>()
+                let ipManager = scope.GetInstance<IProviderIpManager>()
                 from networks in stateStore.For<VirtualNetwork>().IO.ListAsync(
-                        new VirtualNetworkSpecs.GetForProjectConfig(project.Id))
+                        new VirtualNetworkSpecs.GetForNetworkSync(project.Id))
                     .ToAff(e => e)
                 from config in Eff(() => networks.ToNetworksConfig(project.Name))
                 let realizer = scope.GetInstance<INetworkConfigRealizer>()
-                from __ in Aff(async () => await realizer.UpdateNetwork(project.Id, config, providerConfig).ToUnit())
-                from ___ in Aff(async () => await stateStore.SaveChangesAsync().ToUnit())
+                from _2 in Aff(async () => await realizer.UpdateNetwork(project.Id, config, providerConfig).ToUnit())
+                // Configure any missing floating IPs. Some floating IPs might have been
+                // removed when the network provider configuration was updated.
+                from _3 in networks.SelectMany(n => n.NetworkPorts, (n, p) => (Provider: n.NetworkProvider, Port: p))
+                    .Map(t => from fp in Optional(t.Port.FloatingPort)
+                              select (t.Provider, Port:  fp))
+                    .Somes()
+                    .Map(t => ipManager.ConfigureFloatingPortIps(t.Provider, t.Port).ToAff(e => e))
+                    .SequenceSerial()
+                from _4 in Aff(async () => await stateStore.SaveChangesAsync().ToUnit())
                 select unit);
 
     private Aff<(Seq<NetworkNeighborRecord> Neighbors, Seq<Error> Error)> ApplyNetworkPlans(
