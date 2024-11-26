@@ -8,10 +8,8 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Messages.Resources.Networks.Commands;
-using Eryph.StateDb;
 using JetBrains.Annotations;
 using LanguageExt;
-using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 
@@ -26,7 +24,6 @@ public class UpdateProjectNetworkPlanCommandHandler(
     ILogger logger,
     INetworkProviderManager networkProviderManager,
     IProjectNetworkPlanBuilder planBuilder,
-    IStateStore stateStore,
     ITaskMessaging messaging)
     : IHandleMessages<OperationTask<UpdateProjectNetworkPlanCommand>>
 {
@@ -45,7 +42,7 @@ public class UpdateProjectNetworkPlanCommandHandler(
         from appliedPlan in use(
             Eff(() => new CancellationTokenSource(TimeSpan.FromMinutes(5))),
             cancelSource =>
-                from _ in SuccessAff<Unit>(unit)
+                from _ in SuccessAff(unit)
                 let networkPlanRealizer = new NetworkPlanRealizer(
                     new OVNControlTool(sysEnvironment, ovnSettings.NorthDBConnection),
                     logger)

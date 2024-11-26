@@ -24,36 +24,24 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
 
-internal class NetworkSyncService : INetworkSyncService
+internal class NetworkSyncService(
+    Container container,
+    INetworkProviderManager providerManager)
+    : INetworkSyncService
 {
-    private readonly Container _container;
-    private readonly INetworkProviderManager _providerManager;
-    private readonly ILogger _log;
-
-    public NetworkSyncService(
-        Container container,
-        INetworkProviderManager providerManager,
-        ILogger log)
-    {
-        _container = container;
-        _providerManager = providerManager;
-        _log = log;
-    }
-
     public EitherAsync<Error, Unit> SyncNetworks(CancellationToken cancellationToken) =>
-        from providerConfig in _providerManager.GetCurrentConfiguration()
-        from _ in SyncNetworks(providerConfig, cancellationToken)
+        from providerConfig in providerManager.GetCurrentConfiguration()
+        from _ in SyncNetworks(providerConfig)
             .Run().Map(fin => fin.ToEither()).AsTask().ToAsync()
         select Unit.Default;
 
     private Aff<Unit> SyncNetworks(
-        NetworkProvidersConfiguration providersConfiguration,
-        CancellationToken cancellationToken) =>
+        NetworkProvidersConfiguration providersConfiguration) =>
         from _1 in RealizeProviderNetworks(providersConfiguration)
         from _2 in RealizeProjectNetworks(providersConfiguration)
         from neighbors in ApplyNetworkPlans(providersConfiguration)
         from _4 in use(
-            Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+            Eff(() => AsyncScopedLifestyle.BeginScope(container)),
             scope =>
                 from _ in unitAff
                 let bus = scope.GetInstance<IBus>()
@@ -69,7 +57,7 @@ internal class NetworkSyncService : INetworkSyncService
 
     private Aff<Unit> RealizeProviderNetworks(
         NetworkProvidersConfiguration providerConfig) =>
-        use(Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+        use(Eff(() => AsyncScopedLifestyle.BeginScope(container)),
             scope =>
                 from _ in unitAff
                 let configRealizer = scope.GetInstance<INetworkProvidersConfigRealizer>()
@@ -79,27 +67,26 @@ internal class NetworkSyncService : INetworkSyncService
     private Aff<Unit> RealizeProjectNetworks(
         NetworkProvidersConfiguration providerConfig) =>
         from projects in use(
-            Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+            Eff(() => AsyncScopedLifestyle.BeginScope(container)),
             scope =>
                 from _ in unitAff
                 let stateStore = scope.GetInstance<IStateStore>()
                 from projects in stateStore.Read<Project>().IO.ListAsync().ToAff(e => e)
                 select projects)
-        from _s in projects
+        from errors in projects
             .Map(p => RealizeProjectNetworks(p, providerConfig)
-                .IfFail(e =>
-                {
-                    _log.LogError(e, "Failed to save network changes for project {ProjectName} ({ProjectId})",
-                        p.Name, p.Id);
-                    return unit;
-                }))
+                .Map(_ => Option<Error>.None)
+                .IfFail(e => Error.New($"Failed to save network changes for project {p.Name}({p.Id}).", e)))
             .SequenceSerial()
+        from _ in errors.Somes().Match(
+            Empty: () => unitAff,
+            Seq: errors => FailAff<Unit>(Error.New("Failed to save network changes for projects.", Error.Many(errors))))
         select unit;
 
     private Aff<Unit> RealizeProjectNetworks(
         Project project,
         NetworkProvidersConfiguration providerConfig) =>
-        use(Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+        use(Eff(() => AsyncScopedLifestyle.BeginScope(container)),
             scope =>
                 from _ in unitAff
                 let stateStore = scope.GetInstance<IStateStore>()
@@ -115,27 +102,28 @@ internal class NetworkSyncService : INetworkSyncService
     private Aff<Seq<NetworkNeighborRecord>> ApplyNetworkPlans(
         NetworkProvidersConfiguration providerConfig) =>
         from projects in use(
-            Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+            Eff(() => AsyncScopedLifestyle.BeginScope(container)),
             scope =>
                 from _ in unitAff
                 let stateStore = scope.GetInstance<IStateStore>()
                 from projects in stateStore.Read<Project>().IO.ListAsync().ToAff(e => e)
                 select projects)
-        from neighbors in projects
+        from results in projects
             .Map(p => ApplyNetworkPlan(p.Id, providerConfig)
-                .IfFail(e =>
-                {
-                    _log.LogError(e, "Failed to apply network plan for project {ProjectName}({ProjectId})",
-                        p.Name, p.Id);
-                    return Seq<NetworkNeighborRecord>();
-                }))
+                .Map(r => (Neighbors: r, Error: Option<Error>.None))
+                .IfFail(e => (
+                    Seq<NetworkNeighborRecord>(),
+                    Error.New($"Failed to apply network plan for project {p.Name}({p.Id}).", e))))
             .SequenceSerial()
-        select neighbors.Flatten();
+        from _ in results.Map(r => r.Error).Somes().Match(
+            Empty: () => unitAff,
+            Seq: errors => FailAff<Unit>(Error.New("Failed to apply network plans for projects.", Error.Many(errors))))
+        select results.Map(r => r.Neighbors).Flatten();
 
     private Aff<Seq<NetworkNeighborRecord>> ApplyNetworkPlan(
         Guid projectId,
         NetworkProvidersConfiguration providerConfig) =>
-        use(Eff(() => AsyncScopedLifestyle.BeginScope(_container)),
+        use(Eff(() => AsyncScopedLifestyle.BeginScope(container)),
             scope =>
                 from _ in unitAff
                 let sysEnv = scope.GetInstance<ISysEnvironment>()
@@ -159,7 +147,7 @@ internal class NetworkSyncService : INetworkSyncService
     {
         async Task<string[]> ValidateChangesAsync()
         {
-            await using var scope = AsyncScopedLifestyle.BeginScope(_container);
+            await using var scope = AsyncScopedLifestyle.BeginScope(container);
             var validationService = scope.GetInstance<INetworkConfigValidator>();
             var stateStore = scope.GetInstance<IStateStore>();
 

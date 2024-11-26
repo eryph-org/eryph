@@ -5,12 +5,12 @@ using System.Net;
 using System.Threading;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Model.OVN;
-using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
@@ -19,7 +19,6 @@ internal class ProjectNetworkPlanBuilder(
     IStateStore stateStore)
     : IProjectNetworkPlanBuilder
 {
-
     private sealed record FloatingPortInfo(FloatingNetworkPort Port);
 
     private sealed record ProviderRouterPortInfo(ProviderRouterPort Port, VirtualNetwork Network, ProviderSubnetInfo Subnet);
@@ -142,17 +141,20 @@ internal class ProjectNetworkPlanBuilder(
     private static EitherAsync<Error, NetworkPlan> AddProviderRouterPort(
         NetworkPlan networkPlan,
         ProviderRouterPortInfo portInfo) =>
+        from _ in RightAsync<Error,Unit>(unit)
+        let providerName = portInfo.Subnet.Subnet.ProviderName
+        let subnetName = portInfo.Subnet.Subnet.Name
         from externalIpAssignment in portInfo.Port.IpAssignments
             .ToSeq().HeadOrNone()
-            .ToEitherAsync(Error.New($"The provider port for provider '' has no IP Address assigned."))
-        from externalNetwork in Try(() => IPNetwork2.Parse(portInfo.Subnet.Subnet.IpNetwork))
-            .ToEither(_ => Error.New($"The provider port for provider '' has an invalid IP Network assigned."))
-            .ToAsync()
+            .ToEitherAsync(Error.New($"The port for provider '{providerName}' has no IP Address assigned."))
         from parsedExternalIp in Try(() => IPAddress.Parse(externalIpAssignment.IpAddress))
-            .ToEither(_ => Error.New($"The provider port for provider '' has an invalid IP Address assigned."))
+            .ToEither(_ => Error.New($"The port for provider '{providerName}' has an invalid IP Address assigned."))
+            .ToAsync()
+        from externalNetwork in Try(() => IPNetwork2.Parse(portInfo.Subnet.Subnet.IpNetwork))
+            .ToEither(_ => Error.New($"The subnet '{subnetName}' of the provider '{providerName}' has an invalid IP Network assigned."))
             .ToAsync()
         from gatewayIp in Try(() => IPAddress.Parse(portInfo.Subnet.Config.Gateway))
-            .ToEither(_ => Error.New($"The provider port for provider '' has an invalid gateway IP Address assigned."))
+            .ToEither(_ => Error.New($"The subnet '{subnetName}' of the provider '{providerName}' has an invalid gateway IP Address assigned."))
             .ToAsync()
         let updatedPlan = networkPlan
             .AddRouterPort($"externalNet-{networkPlan.Id}-{portInfo.Network.NetworkProvider}",
