@@ -104,8 +104,8 @@ public class NetworkProvidersConfigRealizer : INetworkProvidersConfigRealizer
 
     private IList<IpPoolAssignment> FindInvalidAssignments(IpPool pool)
     {
-        var firstIpNo = IPNetwork2.ToBigInteger(IPAddress.Parse(pool.FirstIp));
-        var lastIpNo = IPNetwork2.ToBigInteger(IPAddress.Parse(pool.LastIp));
+        var firstIpNo = IPNetwork2.ToBigInteger(IPAddress.Parse(pool.FirstIp!));
+        var lastIpNo = IPNetwork2.ToBigInteger(IPAddress.Parse(pool.LastIp!));
 
         return pool.IpAssignments
             .Filter(x =>

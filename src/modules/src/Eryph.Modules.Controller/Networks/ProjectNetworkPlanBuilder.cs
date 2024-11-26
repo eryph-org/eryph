@@ -195,7 +195,7 @@ internal class ProjectNetworkPlanBuilder(
         int? tag)
     {
         // Include the bridge name in the port name. This ensures that the patch port
-        // of OVN network is always connected to the correct bridge.
+        // of the OVN network is always connected to the correct bridge.
         var name = $"SN-{switchName}-{externalNetwork}-{bridgeName}";
 
         return plan with
