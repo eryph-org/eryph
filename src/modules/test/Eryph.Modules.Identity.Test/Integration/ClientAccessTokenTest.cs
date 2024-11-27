@@ -19,6 +19,7 @@ using Xunit.Abstractions;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using Dbosoft.Hosuto.Modules.Testing;
+using OpenIddict.Abstractions;
 
 namespace Eryph.Modules.Identity.Test.Integration;
 
@@ -32,35 +33,35 @@ public class ClientAccessTokenTest(
     [Fact]
     public async Task Valid_Client_Gets_Access_Token_from_key()
     {
-        Assert.NotNull(await GetClientAccessToken(TestClientData.KeyFileString1, TestClientData.CertificateString1));
+        var token = await GetClientAccessToken(TestClientData.KeyFileString1, TestClientData.CertificateString1);
+
+        token.Should().NotBeNullOrEmpty();
     }
 
     [Fact]
     public async Task Valid_Client_Gets_Access_Token_from_shared_key()
     {
-        Assert.NotNull(await GetSharedKeyAccessToken("1234", "1234"));
+        var token = await GetSharedKeyAccessToken("1234", "1234");
+
+        token.Should().NotBeNullOrEmpty();
     }
 
     [Fact]
     public async Task Client_Gets_No_Access_Token_from_other_shared_key()
     {
+        var act = () => GetSharedKeyAccessToken("1234", "12345");
 
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
-            await GetSharedKeyAccessToken("1234", "12345"));
-
-        ex.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-
+        (await act.Should().ThrowAsync<HttpRequestException>())
+            .Which.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
     public async Task Client_Gets_No_Access_Token_from_other_key()
     {
+        var act = () => GetClientAccessToken(TestClientData.KeyFileString1, TestClientData.CertificateString2);
 
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
-            await GetClientAccessToken(TestClientData.KeyFileString2, TestClientData.CertificateString1));
-
-        ex.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-
+        (await act.Should().ThrowAsync<AccessTokenException>())
+            .WithMessage("Could not retrieve an access token. The server responded with Unauthorized.");
     }
 
     private async Task<string> GetClientAccessToken(string keyString, string certString)
@@ -79,19 +80,30 @@ public class ClientAccessTokenTest(
                 {
                     var container = ctx.Services.GetRequiredService<Container>();
                     using var scope = AsyncScopedLifestyle.BeginScope(container);
+                    
+                    var scopeManager = scope.GetInstance<IOpenIddictScopeManager>();
+                    scopeManager.CreateAsync(new OpenIddictScopeDescriptor
+                    {
+                        Name = "test_scope",
+                        Resources = { "test_audience" }
+                    }).GetAwaiter().GetResult();
+
                     var clientService = scope.GetRequiredService<IClientService>();
                     clientService.Add(new ClientApplicationDescriptor
                     {
                         ClientId = "test-client",
                         Certificate = certString,
-                        Scopes = { "compute_api" }
+                        Scopes = { "test_scope" }
                     }, false, CancellationToken.None).GetAwaiter().GetResult();
                 });
             })
             .CreateDefaultClient();
             
         var response = await httpClient.GetClientAccessToken(
-            "test-client", rsaParameters, ["compute_api"]);
+            new Uri(httpClient.BaseAddress + "connect/token"),
+            "test-client",
+            rsaParameters,
+            ["test_scope"]);
         return response.AccessToken;
     }
 

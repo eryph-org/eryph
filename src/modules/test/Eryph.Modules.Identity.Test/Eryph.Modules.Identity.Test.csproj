@@ -7,7 +7,7 @@
     <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="1.2.0" />
     <PackageReference Include="Dbosoft.Hosuto.Testing.AspNetCore" Version="1.2.0" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
-    <PackageReference Include="Eryph.IdentityModel" Version="0.5.2-PullRequest0034.2" />
+    <PackageReference Include="Eryph.IdentityModel" Version="0.6.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
