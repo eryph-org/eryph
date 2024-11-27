@@ -24,6 +24,7 @@ internal class CatletUpTimeChangedEventHandler(
     {
         return vmDataService.GetByVMId(message.VmId).IfSomeAsync(vm =>
         {
+            // TODO Add lock
             vm.UpTime = message.UpTime;
 
             return metadataService.GetMetadata(vm.MetadataId).IfSomeAsync(async metaData =>

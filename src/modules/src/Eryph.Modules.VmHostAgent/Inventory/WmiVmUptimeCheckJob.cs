@@ -9,7 +9,6 @@ using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using LanguageExt.Common;
-using Microsoft.Extensions.Logging;
 using Quartz;
 using Rebus.Bus;
 using SimpleInjector;
@@ -18,9 +17,7 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Inventory;
 
-internal class WmiVmUptimeCheckJob(
-    ILogger<WmiVmUptimeCheckJob> logger,
-    Container container) : IJob
+internal class WmiVmUptimeCheckJob(Container container) : IJob
 {
     private readonly IBus _bus = container.GetInstance<IBus>();
     private readonly WorkflowOptions _workflowOptions = container.GetInstance<WorkflowOptions>();
@@ -34,7 +31,7 @@ internal class WmiVmUptimeCheckJob(
         // the cloud-init configs.
         using var vmSearcher = new ManagementObjectSearcher(
             new ManagementScope(@"root\virtualization\v2"),
-            new ObjectQuery("SELECT Name,OnTimeInMilliseconds FROM MSVM_ComputerSystem where OnTimeInMilliseconds <> NULL AND OnTimeInMilliseconds < 3600000"));
+            new ObjectQuery("SELECT Name,OnTimeInMilliseconds FROM Msvm_ComputerSystem where OnTimeInMilliseconds <> NULL AND OnTimeInMilliseconds < 3600000"));
 
         using var collection = vmSearcher.Get();
         

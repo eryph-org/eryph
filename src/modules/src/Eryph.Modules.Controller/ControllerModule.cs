@@ -25,6 +25,7 @@ using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Quartz;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
@@ -51,6 +52,27 @@ namespace Eryph.Modules.Controller
                 .Bind(_changeTrackingConfig);
         }
 
+        [UsedImplicitly]
+        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        {
+            services.AddQuartz(q =>
+            {
+                q.AddJob<InventoryTimerJob>(
+                    j => j.WithIdentity("inventory-timer-job")
+                        .DisallowConcurrentExecution());
+
+                q.AddTrigger(t =>
+                {
+                    t.WithIdentity("inventory-timer-job-trigger")
+                        .ForJob("inventory-timer-job")
+                        .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromMinutes(10)).RepeatForever())
+                        .StartNow();
+                });
+            });
+            services.AddQuartzHostedService();
+        }
+
+        [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.RegisterSingleton<IFileSystem, FileSystem>();
@@ -125,7 +147,6 @@ namespace Eryph.Modules.Controller
 
             options.AddStartupHandler<SyncNetworksHandler>();
             options.AddStartupHandler<StartBusModuleHandler>();
-            options.AddHostedService<InventoryTimerService>();
             options.AddLogging();
         }
 
