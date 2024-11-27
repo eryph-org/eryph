@@ -28,7 +28,7 @@ public class Catlet : Resource
 
     public ICollection<ReportedNetwork> ReportedNetworks { get; set; } = null!;
 
-    public TimeSpan? UpTime { get; set; }
+    public TimeSpan UpTime { get; set; }
 
     public Guid VMId { get; set; }
 

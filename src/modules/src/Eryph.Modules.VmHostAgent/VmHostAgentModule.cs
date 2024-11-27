@@ -83,7 +83,6 @@ namespace Eryph.Modules.VmHostAgent
         {
             options.AddHostedService<SyncService>();
             options.AddHostedService<OVSChassisService>();
-            options.AddHostedService<WmiWatcherModuleService>();
             options.AddHostedService<GeneticsRequestWatcherService>();
             options.AddStartupHandler<StartBusModuleHandler>();
             options.AddHostedService<VmChangeWatcherService>();

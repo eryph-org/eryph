@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Events;
+using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using LanguageExt.Common;
@@ -31,28 +32,36 @@ internal class WmiVmUptimeCheckJob(Container container) : IJob
         // the cloud-init configs.
         using var vmSearcher = new ManagementObjectSearcher(
             new ManagementScope(@"root\virtualization\v2"),
-            new ObjectQuery("SELECT Name,OnTimeInMilliseconds FROM Msvm_ComputerSystem where OnTimeInMilliseconds <> NULL AND OnTimeInMilliseconds < 3600000"));
+            new ObjectQuery("SELECT Name, EnabledState, OtherEnabledState, HealthState, OnTimeInMilliseconds"
+                            + "FROM Msvm_ComputerSystem"
+                            + "WHERE OnTimeInMilliseconds <> NULL AND OnTimeInMilliseconds < 3600000"));
 
+        var timestamp = DateTimeOffset.UtcNow;
         using var collection = vmSearcher.Get();
         
         var vms = collection.Cast<ManagementBaseObject>().ToList().ToSeq();
-        _ = await SendMessages(vms).RunUnit();
+        _ = await SendMessages(vms, timestamp).RunUnit();
     }
 
-    private Aff<Unit> SendMessages(Seq<ManagementBaseObject> vms) =>
-        from _ in vms.Map(SendMessage).SequenceSerial()
+    private Aff<Unit> SendMessages(
+        Seq<ManagementBaseObject> vms,
+        DateTimeOffset timestamp) =>
+        from _ in vms.Map(vm  => SendMessage(vm, timestamp)).SequenceSerial()
         select unit;
 
-    private Aff<Unit> SendMessage(ManagementBaseObject vm) =>
+    private Aff<Unit> SendMessage(
+        ManagementBaseObject vm,
+        DateTimeOffset timestamp) =>
         from vmId in WmiMsvmUtils.GetVmId(vm)
-        from uptimeMilliseconds in WmiUtils.GetPropertyValue<ulong>(vm, "OnTimeInMilliseconds")
-        from uptime in Eff(() => TimeSpan.FromMilliseconds(uptimeMilliseconds))
-            .MapFail(_ => Error.New($"The value {uptimeMilliseconds} is not a valid uptime."))
+        from vmState in WmiMsvmUtils.GetVmState(vm)
+        from upTime in WmiMsvmUtils.GetVmUpTime(vm)
         from _ in vmId
-            .Map(id => new CatletUpTimeChangedEvent
+            .Map(id => new CatletStatusChangedEvent
             {
                 VmId = id,
-                UpTime = uptime,
+                Status = InventoryConverter.MapVmInfoStatusToVmStatus(vmState),
+                UpTime = upTime,
+                Timestamp = timestamp,
             })
             .Map(message => Aff(async () =>
             {

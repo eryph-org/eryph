@@ -687,7 +687,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("TEXT");
 
-                    b.Property<TimeSpan?>("UpTime")
+                    b.Property<TimeSpan>("UpTime")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("VMId")

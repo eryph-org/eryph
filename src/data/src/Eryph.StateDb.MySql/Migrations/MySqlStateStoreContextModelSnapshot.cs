@@ -692,7 +692,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("longtext");
 
-                    b.Property<TimeSpan?>("UpTime")
+                    b.Property<TimeSpan>("UpTime")
                         .HasColumnType("time(6)");
 
                     b.Property<Guid>("VMId")

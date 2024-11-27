@@ -310,7 +310,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     LastSeenStatus = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CatletType = table.Column<int>(type: "INTEGER", nullable: false),
-                    UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: true),
+                    UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: false),
                     VMId = table.Column<Guid>(type: "TEXT", nullable: false),
                     MetadataId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Path = table.Column<string>(type: "TEXT", nullable: true),

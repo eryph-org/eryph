@@ -355,37 +355,37 @@ namespace Eryph.Modules.Controller.Inventory
                 
                 select new Catlet
                 {
-                Id = machineId,
-                Project = project,
-                ProjectId = project.Id,
-                VMId = vmInfo.VMId,
-                Name = vmInfo.Name,
-                Status = MapVmStatusToMachineStatus(vmInfo.Status),
-                Host = hostMachine,
-                AgentName = hostMachine.Name,
-                DataStore = vmInfo.DataStore,
-                Environment = vmInfo.Environment,
-                Path = vmInfo.VMPath,
-                Frozen = vmInfo.Frozen,
-                StorageIdentifier = vmInfo.StorageIdentifier,
-                MetadataId = vmInfo.MetadataId,
-                UpTime = vmInfo.UpTime,
-                CpuCount = vmInfo.Cpu?.Count ?? 0,
-                StartupMemory = vmInfo.Memory?.Startup ?? 0,
-                MinimumMemory = vmInfo.Memory?.Minimum ?? 0,
-                MaximumMemory = vmInfo.Memory?.Startup ?? 0,
-                Features = MapFeatures(vmInfo),
-                SecureBootTemplate = vmInfo.Firmware?.SecureBootTemplate,
-                NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new CatletNetworkAdapter
-                {
-                    Id = a.Id,
-                    CatletId = machineId,
-                    Name = a.AdapterName,
-                    SwitchName = a.VirtualSwitchName
-                }).ToList(),
-                Drives = drives,
-                ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(machineId) ?? Array.Empty<ReportedNetwork>()).ToList()
-            };
+                    Id = machineId,
+                    Project = project,
+                    ProjectId = project.Id,
+                    VMId = vmInfo.VMId,
+                    Name = vmInfo.Name,
+                    Status = vmInfo.Status.ToCatletStatus(),
+                    Host = hostMachine,
+                    AgentName = hostMachine.Name,
+                    DataStore = vmInfo.DataStore,
+                    Environment = vmInfo.Environment,
+                    Path = vmInfo.VMPath,
+                    Frozen = vmInfo.Frozen,
+                    StorageIdentifier = vmInfo.StorageIdentifier,
+                    MetadataId = vmInfo.MetadataId,
+                    UpTime = vmInfo.UpTime,
+                    CpuCount = vmInfo.Cpu?.Count ?? 0,
+                    StartupMemory = vmInfo.Memory?.Startup ?? 0,
+                    MinimumMemory = vmInfo.Memory?.Minimum ?? 0,
+                    MaximumMemory = vmInfo.Memory?.Startup ?? 0,
+                    Features = MapFeatures(vmInfo),
+                    SecureBootTemplate = vmInfo.Firmware?.SecureBootTemplate,
+                    NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new CatletNetworkAdapter
+                    {
+                        Id = a.Id,
+                        CatletId = machineId,
+                        Name = a.AdapterName,
+                        SwitchName = a.VirtualSwitchName
+                    }).ToList(),
+                    Drives = drives,
+                    ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(machineId) ?? Array.Empty<ReportedNetwork>()).ToList()
+                };
         }
 
         private static ISet<CatletFeature> MapFeatures(VirtualMachineData vmInfo)
@@ -401,24 +401,5 @@ namespace Eryph.Modules.Controller.Inventory
 
             return features;
         }
-
-        private static CatletStatus MapVmStatusToMachineStatus(VmStatus status)
-        {
-            switch (status)
-            {
-                case VmStatus.Stopped:
-                    return CatletStatus.Stopped;
-                case VmStatus.Running:
-                    return CatletStatus.Running;
-                case VmStatus.Pending:
-                    return CatletStatus.Pending;
-                case VmStatus.Error:
-                    return CatletStatus.Error;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(status), status, null);
-            }
-        }
-
     }
 }

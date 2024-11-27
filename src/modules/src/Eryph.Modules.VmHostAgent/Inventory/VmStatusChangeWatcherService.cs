@@ -5,6 +5,7 @@ using System.Management;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
@@ -35,8 +36,6 @@ internal class VmStatusChangeWatcherService(
             TimeSpan.FromSeconds(3),
             "TargetInstance ISA 'Msvm_ComputerSystem' and TargetInstance.EnabledState <> PreviousInstance.EnabledState"))
 {
-    private readonly ILogger _log = log;
-
     protected override Aff<Unit> OnEventArrived(ManagementBaseObject wmiEvent) =>
         from targetInstance in GetTargetInstance(wmiEvent)
         from creationTime in GetCreationTime(wmiEvent)
@@ -50,14 +49,13 @@ internal class VmStatusChangeWatcherService(
         Guid vmId,
         DateTimeOffset creationTime,
         ManagementBaseObject targetInstance) =>
-        from enabledState in GetPropertyValue<ushort>(targetInstance, "EnabledState")
-        from otherEnabledState in GetPropertyValue<string>(targetInstance, "OtherEnabledState")
-        from healthState in GetPropertyValue<ushort>(targetInstance, "HealthState")
-        let vmState = StateConverter.ConvertVMState(enabledState, otherEnabledState, healthState)
+        from vmState in GetVmState(targetInstance)
+        from upTime in GetVmUpTime(targetInstance)
         let message = new VirtualMachineStateChangedEvent
         {
             VmId = vmId,
             State = vmState,
+            UpTime = upTime,
             Timestamp = creationTime,
         }
         from _ in Aff(async () =>

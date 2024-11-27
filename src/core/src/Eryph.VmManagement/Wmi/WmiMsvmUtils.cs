@@ -4,6 +4,7 @@ using System.Linq;
 using System.Management;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.VmManagement.Data;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -36,4 +37,23 @@ public static class WmiMsvmUtils
                 Error.New($"WMI objects of type {managementObject.ClassPath.ClassName} are not supported."))
         }
         select vmId;
+
+    public static Eff<VirtualMachineState> GetVmState(
+        ManagementBaseObject managementObject) =>
+        from enabledState in GetPropertyValue<ushort>(managementObject, "EnabledState")
+        from otherEnabledState in GetPropertyValue<string>(managementObject, "OtherEnabledState")
+        from healthState in GetPropertyValue<ushort>(managementObject, "HealthState")
+        let vmState = StateConverter.ConvertVMState(enabledState, otherEnabledState, healthState)
+        select vmState;
+
+    public static Eff<TimeSpan> GetVmUpTime(
+        ManagementBaseObject managementObject) =>
+        from upTimeMilliseconds in GetOptionalPropertyValue<ulong>(
+            managementObject, "OnTimeInMilliseconds")
+        from uptime in upTimeMilliseconds
+            .Map(t => Eff(() => TimeSpan.FromMilliseconds(t))
+                .MapFail(_ => Error.New($"The value '{t}' is not a valid VM uptime.")))
+            .Sequence()
+        select uptime.IfNone(TimeSpan.Zero);
+
 }
