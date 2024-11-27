@@ -59,6 +59,8 @@ namespace Eryph.Modules.Controller
             container.Register<IRebusUnitOfWork, StateStoreDbUnitOfWork>(Lifestyle.Scoped);
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
 
+            container.Register<IDistributedLockManager, DistributedLockManager>(Lifestyle.Scoped);
+
             container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
             container.RegisterConditional<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped, _ => true);
             container.RegisterConditional<IOperationTaskDispatcher, EryphTaskDispatcher>(Lifestyle.Scoped, _ => true);

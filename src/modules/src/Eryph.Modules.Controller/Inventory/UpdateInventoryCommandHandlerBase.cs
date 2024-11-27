@@ -18,6 +18,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
+using Medallion.Threading;
 using Rebus.Messages;
 using Rebus.Pipeline;
 
@@ -29,16 +30,21 @@ namespace Eryph.Modules.Controller.Inventory
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IVirtualDiskDataService _vhdDataService;
 
+        private readonly IDistributedLockManager _lockManager;
         protected readonly IVirtualMachineMetadataService MetadataService;
         protected readonly IStateStore StateStore;
         private readonly IMessageContext _messageContext;
 
         protected UpdateInventoryCommandHandlerBase(
-            IVirtualMachineMetadataService metadataService, IOperationDispatcher dispatcher,
+            IDistributedLockManager lockManager,
+            IVirtualMachineMetadataService metadataService,
+            IOperationDispatcher dispatcher,
             IVirtualMachineDataService vmDataService, 
             IVirtualDiskDataService vhdDataService,
-            IStateStore stateStore, IMessageContext messageContext)
+            IStateStore stateStore,
+            IMessageContext messageContext)
         {
+            _lockManager = lockManager;
             MetadataService = metadataService;
             _dispatcher = dispatcher;
             _vmDataService = vmDataService;
@@ -47,15 +53,25 @@ namespace Eryph.Modules.Controller.Inventory
             _messageContext = messageContext;
         }
 
-
-
         protected async Task UpdateVMs(
             DateTimeOffset timestamp,
-            IEnumerable<VirtualMachineData> vmList, CatletFarm hostMachine)
+            IEnumerable<VirtualMachineData> vmList,
+            CatletFarm hostMachine)
         {
             var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
             var diskInfos = vms.SelectMany(x => x.Drives.Select(d => d.Disk)).ToList();
-            
+
+            // Acquire all necessary locks in the beginning to minimize the potential for deadlocks.
+            foreach (var vhdId in diskInfos.Map(d => d.Id).OrderBy(g => g))
+            {
+                await _lockManager.AcquireVhdLock(vhdId);
+            }
+
+            foreach (var vmId in vms.Select(x => x.VMId).OrderBy(g => g))
+            {
+                await _lockManager.AcquireVmLock(vmId);
+            }
+
             var addedDisks = await ResolveAndUpdateDisks(diskInfos, timestamp, hostMachine)
                 .ConfigureAwait(false);
 

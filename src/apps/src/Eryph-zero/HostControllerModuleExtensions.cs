@@ -1,9 +1,13 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Controller;
+using Eryph.Runtime.Zero.Configuration;
 using Eryph.StateDb.Sqlite;
+using Medallion.Threading;
+using Medallion.Threading.FileSystem;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
@@ -52,6 +56,10 @@ namespace Eryph.Runtime.Zero
 
                     container.UseInMemoryBus(context.ModulesHostServices);
                     container.UseOvn(context.ModulesHostServices);
+
+                    container.RegisterInstance<IDistributedLockProvider>(
+                        new FileDistributedSynchronizationProvider(
+                            new DirectoryInfo(ZeroConfig.GetLocksConfigPath())));
                 };
             }
         }
