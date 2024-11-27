@@ -32,8 +32,8 @@ internal class WmiVmUptimeCheckJob(Container container) : IJob
         // the cloud-init configs.
         using var vmSearcher = new ManagementObjectSearcher(
             new ManagementScope(@"root\virtualization\v2"),
-            new ObjectQuery("SELECT Name, EnabledState, OtherEnabledState, HealthState, OnTimeInMilliseconds"
-                            + "FROM Msvm_ComputerSystem"
+            new ObjectQuery("SELECT Name, EnabledState, OtherEnabledState, HealthState, OnTimeInMilliseconds "
+                            + "FROM Msvm_ComputerSystem "
                             + "WHERE OnTimeInMilliseconds <> NULL AND OnTimeInMilliseconds < 3600000"));
 
         var timestamp = DateTimeOffset.UtcNow;

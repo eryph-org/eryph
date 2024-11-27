@@ -55,5 +55,4 @@ public static class WmiMsvmUtils
                 .MapFail(_ => Error.New($"The value '{t}' is not a valid VM uptime.")))
             .Sequence()
         select uptime.IfNone(TimeSpan.Zero);
-
 }
