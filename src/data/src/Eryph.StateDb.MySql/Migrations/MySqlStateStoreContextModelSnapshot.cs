@@ -96,13 +96,11 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("MacAddress")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("NetworkProviderName")
                         .HasColumnType("longtext");
 
                     b.Property<string>("SwitchName")

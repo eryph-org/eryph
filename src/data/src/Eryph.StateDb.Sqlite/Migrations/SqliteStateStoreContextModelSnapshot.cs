@@ -91,13 +91,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MacAddress")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("NetworkProviderName")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SwitchName")
