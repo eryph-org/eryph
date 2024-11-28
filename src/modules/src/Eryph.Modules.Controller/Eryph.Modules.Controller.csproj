@@ -9,12 +9,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
+    <ProjectReference Include="..\..\..\infrastructure\src\Eryph.DistributedLock\Eryph.DistributedLock.csproj" />
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
     <ProjectReference Include="..\..\..\data\src\Eryph.StateDb\Eryph.StateDb.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.8" />
-    <PackageReference Include="DistributedLock.Core" Version="1.0.7" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.7.0" />
     <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.7.0" />
     <PackageReference Include="Eryph.ConfigModel.Networks.Json" Version="0.7.0" />

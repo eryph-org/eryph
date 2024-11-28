@@ -41,7 +41,7 @@ public static class WmiMsvmUtils
     public static Eff<VirtualMachineState> GetVmState(
         ManagementBaseObject managementObject) =>
         from enabledState in GetPropertyValue<ushort>(managementObject, "EnabledState")
-        from otherEnabledState in GetPropertyValue<string>(managementObject, "OtherEnabledState")
+        from otherEnabledState in GetOptionalPropertyValue<string>(managementObject, "OtherEnabledState")
         from healthState in GetPropertyValue<ushort>(managementObject, "HealthState")
         let vmState = StateConverter.ConvertVMState(enabledState, otherEnabledState, healthState)
         select vmState;

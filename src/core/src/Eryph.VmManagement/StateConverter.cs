@@ -1,5 +1,6 @@
 ﻿using System;
 using Eryph.VmManagement.Data;
+using LanguageExt;
 
 namespace Eryph.VmManagement
 {
@@ -51,7 +52,9 @@ namespace Eryph.VmManagement
             return vmState;
         }
 
-        public static VirtualMachineState ConvertVMState(ushort enabledStateNumber, string otherEnabledState,
+        public static VirtualMachineState ConvertVMState(
+            ushort enabledStateNumber,
+            Option<string> otherEnabledState,
             ushort healthStateNumber)
         {
             var computerState = (VMComputerSystemState) enabledStateNumber;
@@ -67,17 +70,17 @@ namespace Eryph.VmManagement
             return state;
         }
 
-        internal static VMComputerSystemState ConvertVMOtherState(string otherState)
-        {
-            if (string.Equals(otherState, "Quiescing", StringComparison.OrdinalIgnoreCase))
-                return VMComputerSystemState.Pausing;
-            if (string.Equals(otherState, "Resuming", StringComparison.OrdinalIgnoreCase))
-                return VMComputerSystemState.Resuming;
-            if (string.Equals(otherState, "Saving", StringComparison.OrdinalIgnoreCase))
-                return VMComputerSystemState.Saving;
-            return string.Equals(otherState, "FastSaving", StringComparison.OrdinalIgnoreCase)
-                ? VMComputerSystemState.FastSaving
-                : VMComputerSystemState.Unknown;
-        }
+        internal static VMComputerSystemState ConvertVMOtherState(
+            Option<string> otherState) =>
+            otherState.Match(
+                s => s switch
+                {
+                    _ when string.Equals(s, "Quiescing", StringComparison.OrdinalIgnoreCase) => VMComputerSystemState.Pausing,
+                    _ when string.Equals(s, "Resuming", StringComparison.OrdinalIgnoreCase) => VMComputerSystemState.Resuming,
+                    _ when string.Equals(s, "Saving", StringComparison.OrdinalIgnoreCase) => VMComputerSystemState.Saving,
+                    _ when string.Equals(s, "FastSaving", StringComparison.OrdinalIgnoreCase) => VMComputerSystemState.FastSaving,
+                    _ => VMComputerSystemState.Unknown
+                },
+                () => VMComputerSystemState.Unknown);
     }
 }

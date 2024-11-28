@@ -17,15 +17,15 @@ using Rebus.Pipeline;
 namespace Eryph.Modules.Controller.Inventory;
 
 [UsedImplicitly]
-internal class CatletStatusChangedEventHandler(
-    IDistributedLockManager lockManager,
+internal class CatletStateChangedEventHandler(
+    IInventoryLockManager lockManager,
     IOperationDispatcher opDispatcher,
     IVirtualMachineMetadataService metadataService,
     IVirtualMachineDataService vmDataService,
     IMessageContext messageContext)
-    : IHandleMessages<CatletStatusChangedEvent>
+    : IHandleMessages<CatletStateChangedEvent>
 {
-    public async Task Handle(CatletStatusChangedEvent message)
+    public async Task Handle(CatletStateChangedEvent message)
     {
         await lockManager.AcquireVmLock(message.VmId);
 

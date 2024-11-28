@@ -56,7 +56,7 @@ internal class WmiVmUptimeCheckJob(Container container) : IJob
         from vmState in WmiMsvmUtils.GetVmState(vm)
         from upTime in WmiMsvmUtils.GetVmUpTime(vm)
         from _ in vmId
-            .Map(id => new CatletStatusChangedEvent
+            .Map(id => new CatletStateChangedEvent
             {
                 VmId = id,
                 Status = InventoryConverter.MapVmInfoStatusToVmStatus(vmState),

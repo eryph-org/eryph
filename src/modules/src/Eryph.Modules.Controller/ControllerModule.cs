@@ -8,6 +8,7 @@ using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Configuration;
 using Eryph.Core;
+using Eryph.DistributedLock;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Configuration;
 using Eryph.ModuleCore.Startup;
@@ -81,7 +82,8 @@ namespace Eryph.Modules.Controller
             container.Register<IRebusUnitOfWork, StateStoreDbUnitOfWork>(Lifestyle.Scoped);
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
 
-            container.Register<IDistributedLockManager, DistributedLockManager>(Lifestyle.Scoped);
+            container.Register<IInventoryLockManager, InventoryLockManager>(Lifestyle.Scoped);
+            container.Register<IDistributedLockScopeHolder, DistributedLockScopeHolder>(Lifestyle.Scoped);
 
             container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
             container.RegisterConditional<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped, _ => true);

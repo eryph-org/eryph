@@ -17,7 +17,7 @@ internal class UpdateVMInventoryCommandHandler
     private readonly IVMHostMachineDataService _vmHostDataService;
 
     public UpdateVMInventoryCommandHandler(
-        IDistributedLockManager lockManager,
+        IInventoryLockManager lockManager,
         IVirtualMachineMetadataService metadataService,
         IOperationDispatcher dispatcher,
         IMessageContext messageContext,

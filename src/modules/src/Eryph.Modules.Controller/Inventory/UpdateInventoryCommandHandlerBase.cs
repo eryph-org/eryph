@@ -30,13 +30,13 @@ namespace Eryph.Modules.Controller.Inventory
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IVirtualDiskDataService _vhdDataService;
 
-        private readonly IDistributedLockManager _lockManager;
+        private readonly IInventoryLockManager _lockManager;
         protected readonly IVirtualMachineMetadataService MetadataService;
         protected readonly IStateStore StateStore;
         private readonly IMessageContext _messageContext;
 
         protected UpdateInventoryCommandHandlerBase(
-            IDistributedLockManager lockManager,
+            IInventoryLockManager lockManager,
             IVirtualMachineMetadataService metadataService,
             IOperationDispatcher dispatcher,
             IVirtualMachineDataService vmDataService, 
@@ -381,7 +381,8 @@ namespace Eryph.Modules.Controller.Inventory
                         Id = a.Id,
                         CatletId = machineId,
                         Name = a.AdapterName,
-                        SwitchName = a.VirtualSwitchName
+                        SwitchName = a.VirtualSwitchName,
+                        MacAddress = a.MacAddress,
                     }).ToList(),
                     Drives = drives,
                     ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(machineId) ?? Array.Empty<ReportedNetwork>()).ToList()

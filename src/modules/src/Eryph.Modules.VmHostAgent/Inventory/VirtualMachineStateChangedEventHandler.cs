@@ -13,7 +13,7 @@ internal class VirtualMachineStateChangedEventHandler(
     : IHandleMessages<VirtualMachineStateChangedEvent>
 {
     public Task Handle(VirtualMachineStateChangedEvent message) =>
-        bus.SendWorkflowEvent(workflowOptions, new CatletStatusChangedEvent
+        bus.SendWorkflowEvent(workflowOptions, new CatletStateChangedEvent
         {
             VmId = message.VmId,
             Status = InventoryConverter.MapVmInfoStatusToVmStatus(message.State),

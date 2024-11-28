@@ -8,7 +8,7 @@ using Eryph.Resources.Machines;
 namespace Eryph.Messages.Resources.Catlets.Events;
 
 [SubscribesMessage(MessageSubscriber.Controllers)]
-public class CatletStatusChangedEvent
+public class CatletStateChangedEvent
 {
     public Guid VmId { get; set; }
 
