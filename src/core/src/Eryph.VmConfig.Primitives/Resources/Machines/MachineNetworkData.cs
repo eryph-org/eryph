@@ -4,8 +4,9 @@ namespace Eryph.Resources.Machines
 {
     public class MachineNetworkData
     {
-
+        // TODO Remove this. It is neither used nor populated
         public string NetworkProviderName { get; set; }
+        
         public string PortName { get; set; }
 
         [PrivateIdentifier]

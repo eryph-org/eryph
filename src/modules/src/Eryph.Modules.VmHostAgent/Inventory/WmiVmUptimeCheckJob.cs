@@ -39,6 +39,7 @@ internal class WmiVmUptimeCheckJob(Container container) : IJob
         var timestamp = DateTimeOffset.UtcNow;
         using var collection = vmSearcher.Get();
         
+        // TODO Dispose management objects properly
         var vms = collection.Cast<ManagementBaseObject>().ToList().ToSeq();
         _ = await SendMessages(vms, timestamp).RunUnit();
     }

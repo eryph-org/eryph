@@ -21,6 +21,7 @@ public readonly struct LiveWmiIO : WmiIO
 
     public Seq<HashMap<string, Option<object>>> ExecuteQuery(string path, string query)
     {
+        // TODO Fix me dispose management objects properly
         var scope = new ManagementScope(path);
         scope.Connect();
 

@@ -129,6 +129,7 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterSingleton<IHostArchitectureProvider, HostArchitectureProvider>();
 
             container.Register<IOVSPortManager, OVSPortManager>(Lifestyle.Scoped);
+            container.Register<IHyperVOvsPortManager>(() => new HyperVOvsPortManager(), Lifestyle.Scoped);
 
 
             var genePoolFactory = new GenePoolFactory(container);

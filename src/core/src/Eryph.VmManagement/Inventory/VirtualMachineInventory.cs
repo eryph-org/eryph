@@ -42,8 +42,9 @@ namespace Eryph.VmManagement.Inventory
                from cpuData in GetCpuData(vmInfo)
                from memoryData in GetMemoryData(vmInfo)
                from firmwareData in GetFirmwareData(vmInfo)
+               from networks in VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vm.GetList(x => x.NetworkAdapters))
                select new VirtualMachineData
-                {
+               {
                     VMId = vm.Value.Id,
                     MetadataId = GetMetadataId(vm),
                     Status = InventoryConverter.MapVmInfoStatusToVmStatus(vm.Value.State),
@@ -73,8 +74,8 @@ namespace Eryph.VmManagement.Inventory
                         };
                         return res;
                     }).ToArray(),
-                    Networks = VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vm.GetList(x=>x.NetworkAdapters))
-                }).ToEither();
+                    Networks = networks.ToArray(),
+               }).ToEither();
         }
 
         private EitherAsync<Error, VirtualMachineCpuData> GetCpuData(TypedPsObject<VirtualMachineInfo> vmInfo)

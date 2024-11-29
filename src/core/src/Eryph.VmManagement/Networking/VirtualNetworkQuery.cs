@@ -4,57 +4,51 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Net;
+using Dbosoft.OVN;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Networking;
+using LanguageExt;
+using LanguageExt.Common;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Networking;
 
 public static class VirtualNetworkQuery
 {
-    public static MachineNetworkData[] GetNetworksByAdapters(VMHostMachineData hostInfo,
-        IEnumerable<TypedPsObject<VirtualMachineDeviceInfo>> networkAdapters)
-    {
-        return GetNetworksByAdapters(hostInfo,
-                networkAdapters.Select(x=>x.Cast<VMNetworkAdapter>().Value));
-    }
+    public static EitherAsync<Error, Seq<MachineNetworkData>> GetNetworksByAdapters(
+        VMHostMachineData hostInfo,
+        Seq<TypedPsObject<VirtualMachineDeviceInfo>> networkAdapters) =>
+        GetNetworksByAdapters(
+            hostInfo,
+            networkAdapters.Map(x => x.Cast<VMNetworkAdapter>().Value));
 
-    public static IEnumerable<string> FindOvsPortNames(IEnumerable<VMNetworkAdapter> networkAdapters)
-    {
-        var scope = new ManagementScope(@"\\.\root\virtualization\v2");
+    public static EitherAsync<Error, Seq<MachineNetworkData>> GetNetworksByAdapters(
+        VMHostMachineData hostInfo,
+        Seq<VMNetworkAdapter> networkAdapters) =>
+        use(() => new HyperVOvsPortManager(),
+                portManager => GetNetworksByAdapters(hostInfo, networkAdapters, portManager)
+                    .ToEither())
+            .ToAsync();
 
-        foreach (var networkAdapter in networkAdapters)
+    private static EitherAsync<Error, Seq<MachineNetworkData>> GetNetworksByAdapters(
+        VMHostMachineData hostInfo,
+        Seq<VMNetworkAdapter> networkAdapters,
+        IHyperVOvsPortManager portManager) =>
+        networkAdapters.Map(adapter => GetNetworkByAdapter(hostInfo, adapter, portManager))
+            .SequenceSerial(); 
+
+    private static EitherAsync<Error, MachineNetworkData> GetNetworkByAdapter(
+        VMHostMachineData hostInfo,
+        VMNetworkAdapter networkAdapter,
+        IHyperVOvsPortManager portManager) =>
+        from portName in portManager.GetPortName(networkAdapter.Id)
+        from networkData in Try(() =>
         {
-            var portId = networkAdapter.Id.Replace("\\", "\\\\");
-
-            using var portSettingsObj = new ManagementObject();
-            portSettingsObj.Path = new ManagementPath(scope.Path +
-                                                      $":Msvm_EthernetPortAllocationSettingData.InstanceID=\"{portId}\"");
-
-            string adapterPortName = null;
-
-            try
-            {
-                portSettingsObj.Get();
-                adapterPortName = portSettingsObj.GetPropertyValue("ElementName") as string;
-            }
-            catch (ManagementException)
-            {
-                // expected if not found
-            }
-
-            yield return adapterPortName;
-        }
-    }
-
-    public static MachineNetworkData[] GetNetworksByAdapters(VMHostMachineData hostInfo,
-        IEnumerable<VMNetworkAdapter> networkAdapters)
-    {
-        var scope = new ManagementScope(@"\\.\root\virtualization\v2");
-        var resultList = new List<MachineNetworkData>();
-
-        foreach (var networkAdapter in networkAdapters)
-        {
+            // TODO Properly implement this query including disposal
+            var scope = new ManagementScope(@"\\.\root\virtualization\v2");
             var guestNetworkId = networkAdapter.Id.Replace("Microsoft:", "Microsoft:GuestNetwork\\")
                 .Replace("\\", "\\\\");
 
@@ -69,40 +63,26 @@ public static class VirtualNetworkQuery
             portSettingsObj.Path = new ManagementPath(scope.Path +
                                                       $":Msvm_EthernetPortAllocationSettingData.InstanceID=\"{portId}\"");
 
-            string adapterPortName = null;
-
-            try
-            {
-                portSettingsObj.Get();
-                adapterPortName = portSettingsObj.GetPropertyValue("ElementName") as string;
-            }
-            catch (ManagementException)
-            {
-                // expected if not found
-            }
-
-            var networkProvider = hostInfo.FindNetworkProvider(networkAdapter.SwitchId, adapterPortName);
-
             var info = new MachineNetworkData
             {
-                NetworkProviderName = networkProvider?.Name,
-                PortName = adapterPortName,
+                NetworkProviderName = null,
+                PortName = portName.IfNoneUnsafe((string)null),
                 AdapterName = networkAdapter.Name,
                 IPAddresses = ObjectToStringArray(guestAdapterObj.GetPropertyValue("IPAddresses")),
                 DefaultGateways = ObjectToStringArray(guestAdapterObj.GetPropertyValue("DefaultGateways")),
                 DnsServers = ObjectToStringArray(guestAdapterObj.GetPropertyValue("DNSServers")),
-                DhcpEnabled = (bool) guestAdapterObj.GetPropertyValue("DHCPEnabled")
+                DhcpEnabled = (bool)guestAdapterObj.GetPropertyValue("DHCPEnabled")
             };
             info.Subnets = AddressesAndSubnetsToSubnets(info.IPAddresses,
                 ObjectToStringArray(guestAdapterObj.GetPropertyValue("Subnets"))).ToArray();
 
-            resultList.Add(info);
-        }
+            return info;
+        }).ToEither(ex => Error.New($"Failed to query network information for adapter '{networkAdapter.Id}'.", Error.New(ex)))
+            .ToAsync()
+        select networkData;
 
-        return resultList.ToArray();
-    }
-
-    private static IEnumerable<string> AddressesAndSubnetsToSubnets(IReadOnlyList<string> ipAddresses,
+    private static IEnumerable<string> AddressesAndSubnetsToSubnets(
+        IReadOnlyList<string> ipAddresses,
         IReadOnlyList<string> netmasks)
     {
         for (var i = 0; i < ipAddresses.Count; i++)
@@ -130,8 +110,6 @@ public static class VirtualNetworkQuery
     {
         if (value != null && value is IEnumerable enumerable) return enumerable.Cast<string>().ToArray();
 
-        return Array.Empty<string>();
+        return [];
     }
-
-
 }
