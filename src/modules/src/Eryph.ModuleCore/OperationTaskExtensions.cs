@@ -4,12 +4,37 @@ using Eryph.Core;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 // ReSharper disable once CheckNamespace
 namespace Dbosoft.Rebus.Operations;
 
 #pragma warning restore 1998
 public static class OperationTaskExtensions
 {
+    public static async Task<Unit> FailOrComplete<TRet>(
+        this Aff<TRet> aff,
+        ITaskMessaging messaging,
+        IOperationTaskMessage message)
+        where TRet : notnull
+    {
+        var result = await aff.Run();
+        await result.FailOrComplete(messaging, message);
+        return unit;
+    }
+
+    public static Task<Unit> FailOrComplete<TRet>(
+        this Fin<TRet> fin,
+        ITaskMessaging messaging,
+        IOperationTaskMessage message)
+        where TRet : notnull =>
+        fin.Match(
+            Succ: ret => ret is Unit
+                ? messaging.CompleteTask(message).ToUnit()
+                : messaging.CompleteTask(message, ret).ToUnit(),
+            Fail: error => messaging.FailTask(message, error).ToUnit());
+
+
     public static Task<Unit> FailOrComplete<TRet>(
         this EitherAsync<Error, TRet> either,
         ITaskMessaging messaging,

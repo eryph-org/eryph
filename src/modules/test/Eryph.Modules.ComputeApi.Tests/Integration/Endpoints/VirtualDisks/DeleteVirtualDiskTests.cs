@@ -15,6 +15,7 @@ using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;
 
@@ -23,7 +24,10 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
     private readonly WebModuleFactory<ComputeApiModule> _factory;
     private static readonly Guid DiskId = Guid.NewGuid();
 
-    public DeleteVirtualDiskTests(WebModuleFactory<ComputeApiModule> factory)
+    public DeleteVirtualDiskTests(
+        ITestOutputHelper outputHelper,
+        WebModuleFactory<ComputeApiModule> factory)
+        : base(outputHelper)
     {
         _factory = factory.WithApiHost(ConfigureDatabase);
     }

@@ -10,10 +10,12 @@ using Eryph.StateDb.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 using SimpleInjector.Lifestyles;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Eryph.StateDb.TestBase;
 
@@ -30,7 +32,9 @@ public abstract class StateDbTestBase : IAsyncLifetime
     private readonly ServiceProvider _provider;
     private readonly Container _container;
 
-    protected StateDbTestBase(IDatabaseFixture databaseFixture)
+    protected StateDbTestBase(
+        IDatabaseFixture databaseFixture,
+        ITestOutputHelper outputHelper)
     {
         _databaseFixture = databaseFixture;
         _dbConnection = _databaseFixture.GetConnectionString($"test_{DateTime.UtcNow.Ticks}");
@@ -39,7 +43,7 @@ public abstract class StateDbTestBase : IAsyncLifetime
         var services = new ServiceCollection();
         services.AddSimpleInjector(_container, options =>
         {
-            options.Services.AddLogging();
+            options.Services.AddLogging(loggingBuilder => loggingBuilder.AddXUnit(outputHelper));
             ConfigureDatabase(options.Container);
             RegisterStateStore(options);
             options.AddLogging();

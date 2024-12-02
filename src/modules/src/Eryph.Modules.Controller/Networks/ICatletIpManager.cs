@@ -6,13 +6,12 @@ using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.Modules.Controller.Networks
-{
-    public interface ICatletIpManager
-    {
-        public EitherAsync<Error, IPAddress[]> ConfigurePortIps(
-            Guid projectId, string environment, CatletNetworkPort port,
-            CatletNetworkConfig[] networkConfigs, CancellationToken cancellationToken);
+namespace Eryph.Modules.Controller.Networks;
 
-    }
+public interface ICatletIpManager
+{
+    public EitherAsync<Error, Seq<IPAddress>> ConfigurePortIps(
+        VirtualNetwork network,
+        CatletNetworkPort port,
+        CatletNetworkConfig networkConfig);
 }

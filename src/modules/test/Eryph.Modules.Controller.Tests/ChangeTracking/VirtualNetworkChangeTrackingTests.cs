@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Eryph.ConfigModel.Json;
 using Eryph.ConfigModel.Networks;
 using Eryph.Configuration.Model;
@@ -12,20 +10,27 @@ using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
 [Trait("Category", "Docker")]
 [Collection(nameof(MySqlDatabaseCollection))]
-public class MySqlVirtualNetworkChangeTrackingTests(MySqlFixture databaseFixture)
-    : VirtualNetworkChangeTrackingTests(databaseFixture);
+public class MySqlVirtualNetworkChangeTrackingTests(
+    MySqlFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : VirtualNetworkChangeTrackingTests(databaseFixture, outputHelper);
 
 [Collection(nameof(SqliteDatabaseCollection))]
-public class SqliteVirtualNetworkChangeTrackingTests(SqliteFixture databaseFixture)
-    : VirtualNetworkChangeTrackingTests(databaseFixture);
+public class SqliteVirtualNetworkChangeTrackingTests(
+    SqliteFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : VirtualNetworkChangeTrackingTests(databaseFixture, outputHelper);
 
-public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databaseFixture)
-    : ChangeTrackingTestBase(databaseFixture)
+public abstract class VirtualNetworkChangeTrackingTests(
+    IDatabaseFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : ChangeTrackingTestBase(databaseFixture, outputHelper)
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid VirtualNetworkId = Guid.NewGuid();
@@ -79,7 +84,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
                 Name = "test-catlet-port",
                 VirtualNetworkName = "virtual-test-network",
                 EnvironmentName = "test-environment",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 FloatingNetworkPort = new()
                 {
                     Name = "test-floating-port",
@@ -107,6 +112,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             await stateStore.For<CatletNetworkPort>().AddAsync(new CatletNetworkPort()
             {
                 Name = "new-catlet-port",
+                MacAddress = "42:00:42:00:00:02",
                 CatletMetadataId = CatletMetadataId,
                 NetworkId = VirtualNetworkId,
             });
@@ -124,6 +130,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             {
                 CatletMetadataId = CatletMetadataId,
                 Name = "new-catlet-port",
+                MacAddress = "42:00:42:00:00:02",
                 VirtualNetworkName = "virtual-test-network",
                 EnvironmentName = "test-environment",
                 FloatingNetworkPort = null,
@@ -140,7 +147,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
         {
             var catletPort = await stateStore.For<CatletNetworkPort>().GetByIdAsync(CatletPortId);
             catletPort!.AddressName = "test";
-            catletPort!.MacAddress = "00:00:00:00:00:02";
+            catletPort!.MacAddress = "42:00:42:00:00:02";
 
             await stateStore.SaveChangesAsync();
         });
@@ -149,7 +156,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
         networksConfig.Should().BeEquivalentTo(_expectedNetworksConfig);
         var portsConfig = await ReadPortsConfig();
         _expectedPortsConfig.CatletNetworkPorts[0].AddressName = "test";
-        _expectedPortsConfig.CatletNetworkPorts[0].MacAddress = "00:00:00:00:00:02";
+        _expectedPortsConfig.CatletNetworkPorts[0].MacAddress = "42:00:42:00:00:02";
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 
@@ -250,6 +257,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
                 Name = "new-network",
                 ProjectId = ProjectId,
                 Environment = EryphConstants.DefaultEnvironmentName,
+                NetworkProvider = EryphConstants.DefaultProviderName,
                 IpNetwork = "10.1.0.0/20",
             };
             await stateStore.For<VirtualNetwork>().AddAsync(network);
@@ -467,6 +475,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             Id = VirtualNetworkId,
             Name = "virtual-test-network",
             Environment = "test-environment",
+            NetworkProvider = EryphConstants.DefaultProviderName,
             ProjectId = ProjectId,
             Subnets =
             [
@@ -495,6 +504,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
         {
             Id = FloatingPortId,
             Name = "test-floating-port",
+            MacAddress = "42:00:42:00:00:10",
             ProviderName = "test-provider",
             SubnetName = "provider-test-subnet",
             PoolName = "provider-test-pool",
@@ -507,7 +517,7 @@ public abstract class VirtualNetworkChangeTrackingTests(IDatabaseFixture databas
             CatletMetadataId = CatletMetadataId,
             NetworkId = VirtualNetworkId,
             FloatingPortId = FloatingPortId,
-            MacAddress = "00:00:00:00:00:01",
+            MacAddress = "42:00:42:00:00:01",
             IpAssignments =
             [
                 new IpPoolAssignment()

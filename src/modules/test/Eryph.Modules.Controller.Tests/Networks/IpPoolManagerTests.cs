@@ -11,10 +11,13 @@ using Eryph.StateDb.Specifications;
 using Eryph.StateDb.TestBase;
 using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.Networks;
 
-public class IpPoolManagerTests : InMemoryStateDbTestBase
+public class IpPoolManagerTests(
+    ITestOutputHelper outputHelper)
+    : InMemoryStateDbTestBase(outputHelper)
 {
     private static readonly Guid NetworkId = Guid.NewGuid();
     private static readonly Guid SubnetId = Guid.NewGuid();
@@ -202,6 +205,7 @@ public class IpPoolManagerTests : InMemoryStateDbTestBase
                 Name = "test-network",
                 ProjectId = EryphConstants.DefaultProjectId,
                 Environment = EryphConstants.DefaultEnvironmentName,
+                NetworkProvider = EryphConstants.DefaultProviderName,
                 Subnets =
                 [
                     new VirtualNetworkSubnet()
@@ -235,6 +239,7 @@ public class IpPoolManagerTests : InMemoryStateDbTestBase
             {
                 Id = NetworkPortId,
                 Name = "test-catlet-port",
+                MacAddress = "42:00:42:00:00:02",
                 CatletMetadataId = CatletMetadataId,
                 NetworkId = NetworkId,
             });

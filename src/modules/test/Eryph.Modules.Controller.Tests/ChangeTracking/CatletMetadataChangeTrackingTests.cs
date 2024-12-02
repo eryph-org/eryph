@@ -7,20 +7,27 @@ using System.Threading.Tasks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
 [Trait("Category", "Docker")]
 [Collection(nameof(MySqlDatabaseCollection))]
-public class MySqlCatletMetadataChangeTrackingTests(MySqlFixture databaseFixture)
-    : CatletMetadataChangeTrackingTests(databaseFixture);
+public class MySqlCatletMetadataChangeTrackingTests(
+    MySqlFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : CatletMetadataChangeTrackingTests(databaseFixture, outputHelper);
 
 [Collection(nameof(SqliteDatabaseCollection))]
-public class SqliteCatletMetadataChangeTrackingTests(SqliteFixture databaseFixture)
-    : CatletMetadataChangeTrackingTests(databaseFixture);
+public class SqliteCatletMetadataChangeTrackingTests(
+    SqliteFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : CatletMetadataChangeTrackingTests(databaseFixture, outputHelper);
 
-public abstract class CatletMetadataChangeTrackingTests(IDatabaseFixture databaseFixture)
-    : ChangeTrackingTestBase(databaseFixture)
+public abstract class CatletMetadataChangeTrackingTests(
+    IDatabaseFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : ChangeTrackingTestBase(databaseFixture, outputHelper)
 {
     private static readonly Guid MetadataId = Guid.NewGuid();
     private static readonly Guid VmId = Guid.NewGuid();

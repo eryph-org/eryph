@@ -32,11 +32,4 @@ internal class NetworkSyncServiceBridgeService : INetworkSyncService
             .GetInstance<INetworkSyncService>()
             .ValidateChanges(networkProviders);
     }
-
-    public EitherAsync<Error, Unit> RealizeProviderNetworks(CancellationToken cancellationToken)
-    {
-        return _controllerModule.Services.GetRequiredService<Container>()
-            .GetInstance<INetworkSyncService>()
-            .RealizeProviderNetworks(cancellationToken);
-    }
 }

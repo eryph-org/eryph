@@ -11,19 +11,23 @@ using LanguageExt;
 using LanguageExt.Common;
 using Moq;
 using SimpleInjector.Integration.ServiceCollection;
-
+using Xunit.Abstractions;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
 [Trait("Category", "Docker")]
 [Collection(nameof(MySqlDatabaseCollection))]
-public class MySqlNetworkProvidersChangeTrackingTests(MySqlFixture databaseFixture)
-    : NetworkProvidersChangeTrackingTests(databaseFixture);
+public class MySqlNetworkProvidersChangeTrackingTests(
+    MySqlFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : NetworkProvidersChangeTrackingTests(databaseFixture, outputHelper);
 
 [Collection(nameof(SqliteDatabaseCollection))]
-public class SqliteNetworkProvidersChangeTrackingTests(SqliteFixture databaseFixture)
-    : NetworkProvidersChangeTrackingTests(databaseFixture);
+public class SqliteNetworkProvidersChangeTrackingTests(
+    SqliteFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : NetworkProvidersChangeTrackingTests(databaseFixture, outputHelper);
 
 public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBase
 {
@@ -40,7 +44,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 IpAssignments =
                 [
                     new IpAssignmentConfigModel()
@@ -56,7 +60,10 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
 
     private NetworkProvidersConfiguration? _savedProvidersConfig;
 
-    protected NetworkProvidersChangeTrackingTests(IDatabaseFixture databaseFixture) : base(databaseFixture)
+    protected NetworkProvidersChangeTrackingTests(
+        IDatabaseFixture databaseFixture,
+        ITestOutputHelper outputHelper)
+        : base(databaseFixture, outputHelper)
     {
         MockNetworkProviderManager.Setup(m => m.GetCurrentConfiguration())
             .Returns(RightAsync<Error, NetworkProvidersConfiguration>(GetProvidersConfig()));
@@ -94,6 +101,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
             await stateStore.For<FloatingNetworkPort>().AddAsync(new FloatingNetworkPort()
             {
                 Name = "new-floating-port",
+                MacAddress = "42:00:42:00:00:02",
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
@@ -110,6 +118,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
             new FloatingNetworkPortConfigModel()
             {
                 Name = "new-floating-port",
+                MacAddress = "42:00:42:00:00:02",
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
@@ -125,14 +134,14 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
         await WithHostScope(async stateStore =>
         {
             var floatingPort = await stateStore.For<FloatingNetworkPort>().GetByIdAsync(FloatingPortId);
-            floatingPort!.MacAddress = "00:00:00:00:00:02";
+            floatingPort!.MacAddress = "42:00:42:00:00:02";
 
             await stateStore.SaveChangesAsync();
         });
 
         _savedProvidersConfig.Should().BeEquivalentTo(GetProvidersConfig());
         var portsConfig = await ReadPortsConfig();
-        _expectedPortsConfig.FloatingPorts[0].MacAddress = "00:00:00:00:00:02";
+        _expectedPortsConfig.FloatingPorts[0].MacAddress = "42:00:42:00:00:02";
         portsConfig.Should().BeEquivalentTo(_expectedPortsConfig);
     }
 
@@ -245,7 +254,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
                 ProviderName = "test-provider",
                 SubnetName = "provider-test-subnet",
                 PoolName = "provider-test-pool",
-                MacAddress = "00:00:00:00:00:01",
+                MacAddress = "42:00:42:00:00:01",
                 IpAssignments =
                 [
                     new IpPoolAssignment()

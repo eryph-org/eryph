@@ -5,20 +5,27 @@ using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.Controller.Tests.ChangeTracking;
 
 [Trait("Category", "Docker")]
 [Collection(nameof(MySqlDatabaseCollection))]
-public class MySqlProjectChangeTrackingTests(MySqlFixture databaseFixture)
-    : ProjectChangeTrackingTests(databaseFixture);
+public class MySqlProjectChangeTrackingTests(
+    MySqlFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : ProjectChangeTrackingTests(databaseFixture, outputHelper);
 
 [Collection(nameof(SqliteDatabaseCollection))]
-public class SqliteProjectChangeTrackingTests(SqliteFixture databaseFixture)
-    : ProjectChangeTrackingTests(databaseFixture);
+public class SqliteProjectChangeTrackingTests(
+    SqliteFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : ProjectChangeTrackingTests(databaseFixture, outputHelper);
 
-public abstract class ProjectChangeTrackingTests(IDatabaseFixture databaseFixture)
-    : ChangeTrackingTestBase(databaseFixture)
+public abstract class ProjectChangeTrackingTests(
+    IDatabaseFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : ChangeTrackingTestBase(databaseFixture, outputHelper)
 {
     private static readonly Guid ProjectId = Guid.NewGuid();
     private static readonly Guid AssignmentId = Guid.NewGuid();

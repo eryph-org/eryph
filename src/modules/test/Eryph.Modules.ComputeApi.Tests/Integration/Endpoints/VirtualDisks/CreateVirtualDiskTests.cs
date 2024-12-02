@@ -15,6 +15,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;
 
@@ -28,7 +29,10 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
     private const string EnvironmentName = "test-environment";
     private const string StoreName = "test-store";
 
-    public CreateVirtualDiskTests(WebModuleFactory<ComputeApiModule> factory)
+    public CreateVirtualDiskTests(
+        ITestOutputHelper outputHelper,
+        WebModuleFactory<ComputeApiModule> factory)
+        : base(outputHelper)
     {
         _factory = factory.WithApiHost(ConfigureDatabase);
     }

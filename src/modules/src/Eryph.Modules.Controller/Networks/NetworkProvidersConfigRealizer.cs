@@ -5,6 +5,7 @@ using Eryph.StateDb;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -62,12 +63,19 @@ public class NetworkProvidersConfigRealizer : INetworkProvidersConfigRealizer
                 foreach (var ipPool in subnet.IpPools)
                 {
                     var ipPoolEntity = subnetEntity.IpPools.FirstOrDefault(x =>
-                        x.Name == ipPool.Name && x.FirstIp == ipPool.FirstIp && x.LastIp == ipPool.LastIp &&
-                        x.IpNetwork == subnetEntity.IpNetwork);
+                        x.Name == ipPool.Name && x.IpNetwork == subnetEntity.IpNetwork);
 
                     if (ipPoolEntity != null)
                     {
                         foundIpPools.Add(ipPoolEntity);
+
+                        ipPoolEntity.FirstIp = ipPool.FirstIp;
+                        ipPoolEntity.NextIp = ipPool.NextIp ?? ipPool.FirstIp;
+                        ipPoolEntity.LastIp = ipPool.LastIp;
+
+                        var invalidAssignments = FindInvalidAssignments(ipPoolEntity);
+                        await _stateStore.For<IpPoolAssignment>().DeleteRangeAsync(
+                            invalidAssignments, cancellationToken);
                     }
                     else
                     {
@@ -92,5 +100,19 @@ public class NetworkProvidersConfigRealizer : INetworkProvidersConfigRealizer
         await _stateStore.For<IpPool>().DeleteRangeAsync(removePools, cancellationToken);
         await _stateStore.For<ProviderSubnet>().DeleteRangeAsync(removeSubnets, cancellationToken);
         await _stateStore.For<ProviderSubnet>().SaveChangesAsync(cancellationToken);
+    }
+
+    private IList<IpPoolAssignment> FindInvalidAssignments(IpPool pool)
+    {
+        var firstIpNo = IPNetwork2.ToBigInteger(IPAddress.Parse(pool.FirstIp!));
+        var lastIpNo = IPNetwork2.ToBigInteger(IPAddress.Parse(pool.LastIp!));
+
+        return pool.IpAssignments
+            .Filter(x =>
+            {
+                var assignedIpNo = IPNetwork2.ToBigInteger(IPAddress.Parse(x.IpAddress!));
+                return assignedIpNo < firstIpNo || assignedIpNo > lastIpNo;
+            })
+            .ToList();
     }
 }

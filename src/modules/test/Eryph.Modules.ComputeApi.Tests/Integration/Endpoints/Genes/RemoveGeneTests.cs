@@ -1,22 +1,19 @@
-﻿using Dbosoft.Hosuto.Modules.Testing;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Net;
+using System.Threading.Tasks;
+using Dbosoft.Hosuto.Modules.Testing;
+using Eryph.Core;
+using Eryph.Messages.Genes.Commands;
 using Eryph.StateDb.Model;
 using Eryph.StateDb;
 using Eryph.StateDb.TestBase;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http.Json;
-using System.Text;
-using System.Threading.Tasks;
 using Eryph.Core.Genetics;
-using Xunit;
-using Eryph.Core;
-using System.Text.Json.Serialization;
-using System.Text.Json;
-using Eryph.Messages.Resources.Catlets.Commands;
 using FluentAssertions;
-using System.Net;
-using Eryph.Messages.Genes.Commands;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
@@ -25,7 +22,10 @@ public class RemoveGeneTests : InMemoryStateDbTestBase, IClassFixture<WebModuleF
     private readonly WebModuleFactory<ComputeApiModule> _factory;
     private static readonly Guid GeneId = Guid.NewGuid();
 
-    public RemoveGeneTests(WebModuleFactory<ComputeApiModule> factory)
+    public RemoveGeneTests(
+        ITestOutputHelper outputHelper,
+        WebModuleFactory<ComputeApiModule> factory)
+        : base(outputHelper)
     {
         _factory = factory.WithApiHost(ConfigureDatabase);
     }

@@ -17,6 +17,7 @@ using FluentAssertions;
 using Xunit;
 
 using ApiGene = Eryph.Modules.ComputeApi.Model.V1.Gene;
+using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.Genes;
 
@@ -28,7 +29,10 @@ public class ListGenesTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFa
     private static readonly Guid FodderGeneId = new("77e1e6e5-3ede-4c21-ac09-fdc943e64f1d");
     private static readonly Guid VolumeGeneId = new("bcba0b8c-4ea8-4036-aaa9-b20d80931712");
 
-    public ListGenesTests(WebModuleFactory<ComputeApiModule> factory)
+    public ListGenesTests(
+        ITestOutputHelper outputHelper,
+        WebModuleFactory<ComputeApiModule> factory)
+        : base(outputHelper)
     {
         _factory = factory.WithApiHost(ConfigureDatabase);
     }

@@ -17,4 +17,12 @@ public static class ProviderSubnetSpecs
             Query.Include(s => s.IpPools);
         }
     }
+
+    public sealed class GetByName : Specification<ProviderSubnet>, ISingleResultSpecification
+    {
+        public GetByName(string providerName, string subnetName)
+        {
+            Query.Where(s => s.ProviderName == providerName && s.Name == subnetName);
+        }
+    }
 }

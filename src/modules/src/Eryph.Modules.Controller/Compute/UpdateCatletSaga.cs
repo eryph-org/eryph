@@ -249,9 +249,18 @@ internal class UpdateCatletSaga(
     private async Task StartUpdateCatlet()
     {
         Data.Data.State = UpdateVMState.GenesPrepared;
+
+        var metadata = await GetCatletMetadata(Data.Data.CatletId);
+        if (metadata.IsNone)
+        {
+            await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
+            return;
+        }
+
         await StartNewTask(new UpdateCatletNetworksCommand
         {
             CatletId = Data.Data.CatletId,
+            CatletMetadataId = metadata.ValueUnsafe().Metadata.Id,
             Config = Data.Data.BredConfig,
             ProjectId = Data.Data.ProjectId
         });

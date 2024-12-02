@@ -566,11 +566,13 @@ namespace Eryph.Modules.Controller.Tests.Networks
                         new CatletNetworkPort()
                         {
                             Name = "test-catlet-port",
+                            MacAddress = "42:00:42:00:00:10",
                             CatletMetadataId = firstCatletMetadata.Id,
                         },
                         new ProviderRouterPort()
                         {
                             Name = "provider",
+                            MacAddress = "42:00:42:00:00:01",
                             ProviderName = "default",
                             PoolName = "default",
                             SubnetName = "default"
@@ -632,12 +634,14 @@ namespace Eryph.Modules.Controller.Tests.Networks
                         new CatletNetworkPort()
                         {
                             Id = catletNetworkPortId,
+                            MacAddress = "42:00:42:00:10:02",
                             Name = "test-catlet-port",
                             CatletMetadataId = secondCatletMetadata.Id,
                         },
                         new ProviderRouterPort()
                         {
                             Name = "provider",
+                            MacAddress = "42:00:42:00:10:01",
                             ProviderName = "default",
                             PoolName = "default",
                             SubnetName = "default"

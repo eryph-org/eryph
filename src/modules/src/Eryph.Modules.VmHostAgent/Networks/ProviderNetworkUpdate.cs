@@ -145,8 +145,8 @@ public static class ProviderNetworkUpdate<RT>
         from updateBridgePorts in changeBuilder.UpdateBridgePorts(
             newConfig, createdBridges, ovsBridges3)
 
-            // remove no longer needed network nat(s) 
-        from uRemoveNat in changeBuilder.RemoveUnusedNat(
+        // remove NATs which are no longer needed or need to be recreated
+        from removedNats in changeBuilder.RemoveInvalidNats(
             hostState.NetNat, newConfig, newBridges)
 
         // remove any adapter on nat overlays (happens if type is changed to nat_overlay)
@@ -155,9 +155,9 @@ public static class ProviderNetworkUpdate<RT>
 
         // configure ip settings and nat for nat_overlay adapters
         from uNatAdapter in changeBuilder.ConfigureNatAdapters(
-            newConfig, hostState.NetNat, createdBridges, newBridges)
+            newConfig, hostState.NetNat, createdBridges, newBridges, removedNats)
 
-            // create ports for adapters in overlay bridges
+        // create ports for adapters in overlay bridges
         from uCreatePorts in changeBuilder.CreateOverlayAdapterPorts(
             newConfig, ovsBridges4)
 

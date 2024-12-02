@@ -365,59 +365,42 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         }
     }
 
-    public Aff<RT, Unit> RemoveUnusedNat(
+    public Aff<RT, Seq<string>> RemoveInvalidNats(
         Seq<NetNat> netNat,
         NetworkProvidersConfiguration newConfig,
-        Seq<NewBridge> newBridges)
-    {
-        using (_logger.BeginScope("Method: {method}", nameof(RemoveUnusedNat)))
-        {
+        Seq<NewBridge> newBridges) =>
+        from _ in unitAff
+        from result in use(
+            Eff(fun(() => _logger.BeginScope("Method: {method}", nameof(RemoveInvalidNats)))),
+            _ => netNat.Filter(n => n.Name.StartsWith("eryph_"))
+                .Map(n => RemoveInvalidNat(n, newConfig, newBridges))
+                .SequenceSerial())
+        // Force enumeration
+        select result.Somes().ToArray().ToSeq();
 
-            foreach (var nat in netNat.Filter(x => x.Name.StartsWith("eryph_")))
-            {
-                _logger.LogTrace("Checking host nat {nat}", nat.Name);
+    private Aff<RT, Option<string>> RemoveInvalidNat(
+        NetNat nat,
+        NetworkProvidersConfiguration newConfig,
+        Seq<NewBridge> newBridges) =>
+        from _ in unitAff
+        let providerConfig = newConfig.NetworkProviders
+            .Find(p => GetNetNatName(p.Name) == nat.Name && p.Type == NetworkProviderType.NatOverLay)
+        // When the prefix of the NetNat is invalid, we will just recreate the NetNat.
+        let natPrefix = Try(() => IPNetwork2.Parse(nat.InternalIPInterfaceAddressPrefix))
+            .ToOption()
+        let bridge = providerConfig.Bind(p => newBridges.Find(b => b.BridgeName == p.BridgeName))
+        let isNatValid = bridge.Map(b => b.Network == natPrefix).IfNone(false)
+        from result in isNatValid
+            ? SuccessAff(Option<string>.None)
+            : from _1 in unitAff
+              from _2 in Eff(fun(() => _logger.LogDebug("Removing invalid host NAT '{Nat}'", nat.Name)))
+              let _3 = AddOperation(
+                  () => default(RT).HostNetworkCommands.Bind(c => c.RemoveNetNat(nat.Name)),
+                  NetworkChangeOperation.RemoveNetNat,
+                  nat.Name)
+              select Some(nat.Name)
+        select result;
 
-
-                var providerName = nat.Name["eryph_".Length..];
-                newConfig.NetworkProviders.Find(x =>
-                        x.Name == providerName && x.Type == NetworkProviderType.NatOverLay)
-                    .Match(
-                        None: () =>
-                        {
-                            _logger.LogDebug("Removing invalid host nat {nat}", nat.Name);
-
-                            AddOperation(
-                                () => default(RT).HostNetworkCommands.Bind(c => c
-                                    .RemoveNetNat(nat.Name)),
-                                NetworkChangeOperation.RemoveNetNat, nat.Name);
-
-                            netNat = netNat.Filter(x => x.Name != nat.Name);
-                        },
-                        Some: provider =>
-                        {
-                            var network = IPNetwork2.Parse(nat.InternalIPInterfaceAddressPrefix);
-
-                            newBridges.Find(x => x.BridgeName == provider.BridgeName).IfSome(bridge =>
-                            {
-                                if (!network.Equals(bridge.Network))
-                                {
-                                    _logger.LogDebug("Removing invalid host nat {nat}", nat.Name);
-
-                                    AddOperation(
-                                        () => default(RT).HostNetworkCommands.Bind(c => c
-                                            .RemoveNetNat(nat.Name)), NetworkChangeOperation.RemoveNetNat);
-
-                                    netNat = netNat.Filter(x => x.Name != nat.Name);
-                                }
-                            });
-
-                        }
-                    );
-            }
-
-            return unitAff;
-        }
-    }
 
     public Aff<RT, OVSBridgeInfo> RemoveAdapterPortsOnNatOverlays(
         NetworkProvidersConfiguration newConfig,
@@ -467,7 +450,8 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         NetworkProvidersConfiguration newConfig,
         Seq<NetNat> netNat,
         Seq<string> createdBridges,
-        Seq<NewBridge> newBridges)
+        Seq<NewBridge> newBridges,
+        Seq<string> removedNats)
     {
         using (_logger.BeginScope("Method: {method}", nameof(ConfigureNatAdapters)))
         {
@@ -481,6 +465,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                               .Find(x => x.BridgeName == networkProvider.BridgeName)
 
                           let isNewCreatedBridge = createdBridges.Contains(newBridge.BridgeName)
+                          let newNatName = GetNetNatName(networkProvider.Name)
 
                           select from updateBridgeAdapter in !isNewCreatedBridge
                                   ? c.GetAdapterIpV4Address(newBridge.BridgeName)
@@ -515,16 +500,28 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                                          newBridge.BridgeName)
                                      : unit
 
-                                 let __ = netNat.Find(n => n.Name == $"eryph_{networkProvider.Name}")
+                                 let __ = netNat.Find(n => n.Name == newNatName)
                                      .IfNone(() =>
                                      {
                                          AddOperation(
                                              () => default(RT).HostNetworkCommands.Bind(cc => cc
-                                                 .AddNetNat($"eryph_{networkProvider.Name}", newBridge.Network)),
+                                                 .AddNetNat(newNatName, newBridge.Network)),
                                              _ => true,
                                              () => default(RT).HostNetworkCommands.Bind(cc => cc
-                                                 .RemoveNetNat($"eryph_{networkProvider.Name}")),
-                                             NetworkChangeOperation.AddNetNat, newBridge.Network);
+                                                 .RemoveNetNat(newNatName)),
+                                             NetworkChangeOperation.AddNetNat, newNatName, newBridge.Network);
+                                     })
+
+                                 let ___ = removedNats.Find(n => n == newNatName)
+                                     .IfSome(_ =>
+                                     {
+                                         AddOperation(
+                                             () => default(RT).HostNetworkCommands.Bind(cc => cc
+                                                 .AddNetNat(newNatName, newBridge.Network)),
+                                             _ => true,
+                                             () => default(RT).HostNetworkCommands.Bind(cc => cc
+                                                 .RemoveNetNat(newNatName)),
+                                             NetworkChangeOperation.AddNetNat, newNatName, newBridge.Network);
                                      })
 
                                  select unit;
@@ -747,6 +744,11 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         }
     }
 
+    private static string GetNetNatName(string providerName)
+        // The pattern for the NetNat name should be "eryph_{providerName}_{subnetName}".
+        // At the moment, we only support a single provider subnet which must be named
+        // 'default'. Hence, we hardcode the subnet part for now.
+        => $"eryph_{providerName}_default";
 
     public NetworkChanges<RT> Build()
     {

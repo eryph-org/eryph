@@ -23,6 +23,4 @@ public static class NetworkPortSpecs
         }
 
     }
-
-
 }

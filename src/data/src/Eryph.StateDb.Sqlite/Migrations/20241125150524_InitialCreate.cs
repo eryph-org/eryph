@@ -282,7 +282,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Environment = table.Column<string>(type: "TEXT", nullable: false),
-                    NetworkProvider = table.Column<string>(type: "TEXT", nullable: true),
+                    NetworkProvider = table.Column<string>(type: "TEXT", nullable: false),
                     IpNetwork = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
@@ -395,7 +395,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     ProviderName = table.Column<string>(type: "TEXT", nullable: true),
-                    MacAddress = table.Column<string>(type: "TEXT", nullable: true),
+                    MacAddress = table.Column<string>(type: "TEXT", nullable: false),
                     AddressName = table.Column<string>(type: "TEXT", nullable: true),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Discriminator = table.Column<string>(type: "TEXT", maxLength: 21, nullable: false),

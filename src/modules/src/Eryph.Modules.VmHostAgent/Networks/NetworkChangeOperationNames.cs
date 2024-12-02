@@ -22,7 +22,7 @@ public class NetworkChangeOperationNames
                 NetworkChangeOperation.RemoveBridge => "Remove bridge '{0}'",
                 NetworkChangeOperation.RemoveUnusedBridge => "Remove unused bridge '{0}'",
                 NetworkChangeOperation.AddBridge => "Add bridge '{0}'",
-                NetworkChangeOperation.AddNetNat => "Add host NAT for provider '{0}'",
+                NetworkChangeOperation.AddNetNat => "Add host NAT for provider '{0}' with prefix '{1}'",
                 NetworkChangeOperation.RemoveNetNat => "Remove host NAT for provider {0}",
                 NetworkChangeOperation.RemoveAdapterPort => "Remove adapter '{0}' from bridge '{1}'",
                 NetworkChangeOperation.AddAdapterPort => "Add adapter '{0}' to bridge '{1}'",

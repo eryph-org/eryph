@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Ardalis.Specification;
 using Eryph.StateDb.Model;
 using System;
+using LanguageExt;
 
 namespace Eryph.StateDb.Specifications;
 
@@ -38,6 +39,26 @@ public sealed class CatletNetworkPortSpecs
         public GetByName(Guid networkId, string name)
         {
             Query.Where(p => p.Network.Id == networkId && p.Name == name);
+        }
+    }
+
+    public sealed class GetUnused : Specification<CatletNetworkPort>
+    {
+        public GetUnused(Guid catletMetadataId, Seq<string> usedPortNames)
+        {
+            var values = usedPortNames.ToArray();
+            Query.Where(p => p.CatletMetadataId == catletMetadataId
+                             && !values.Contains(p.Name))
+                .Include(p => p.FloatingPort!);
+        }
+    }
+
+    public sealed class GetByCatletMetadataIdAndName : Specification<CatletNetworkPort>, ISingleResultSpecification
+    {
+        public GetByCatletMetadataIdAndName(Guid catletMetadataId, string name)
+        {
+            Query.Where(p => p.CatletMetadataId == catletMetadataId && p.Name == name)
+                .Include(p => p.FloatingPort!);
         }
     }
 }

@@ -12,7 +12,7 @@ public class VirtualNetwork : Resource
         ResourceType = ResourceType.VirtualNetwork;
     }
 
-    public string? NetworkProvider { get; set; }
+    public required string NetworkProvider { get; set; }
 
     public string? IpNetwork { get; set; }
     

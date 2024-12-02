@@ -12,8 +12,8 @@ public static class NetplanBuilderSpecs
     {
         public GetAllProviderSubnets()
         {
-            Query
-                .Include(x => x.IpPools);
+            Query.Include(x => x.IpPools)
+                .ThenInclude(p => p.IpAssignments);
 
         }
     }

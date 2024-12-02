@@ -8,20 +8,27 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.TestBase;
+using Xunit.Abstractions;
 
 namespace Eryph.StateDb.Tests;
 
 [Trait("Category", "Docker")]
 [Collection(nameof(MySqlDatabaseCollection))]
-public class MySqlGeneInventoryQueriesTests(MySqlFixture databaseFixture)
-    : GeneInventoryQueriesTests(databaseFixture);
+public class MySqlGeneInventoryQueriesTests(
+    MySqlFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : GeneInventoryQueriesTests(databaseFixture, outputHelper);
 
 [Collection(nameof(SqliteDatabaseCollection))]
-public class SqliteGeneInventoryQueriesTests(SqliteFixture databaseFixture)
-    : GeneInventoryQueriesTests(databaseFixture);
+public class SqliteGeneInventoryQueriesTests(
+    SqliteFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : GeneInventoryQueriesTests(databaseFixture, outputHelper);
 
-public abstract class GeneInventoryQueriesTests(IDatabaseFixture databaseFixture)
-    : StateDbTestBase(databaseFixture)
+public abstract class GeneInventoryQueriesTests(
+    IDatabaseFixture databaseFixture,
+    ITestOutputHelper outputHelper)
+    : StateDbTestBase(databaseFixture, outputHelper)
 {
     private const string AgentName = "testhost";
 

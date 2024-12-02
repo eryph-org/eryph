@@ -76,7 +76,6 @@ namespace Eryph.VmManagement.Converging
                     var physicalNetworkSettings = new
                     {
                         type = "physical",
-                        id = adapter.Value.Name,
                         name = adapter.Value.Name,
                         mac_address = macFormatted,
                         subnets = (Context.Config.Networks?.Filter(x=>x.AdapterName == adapter.Value.Name) 

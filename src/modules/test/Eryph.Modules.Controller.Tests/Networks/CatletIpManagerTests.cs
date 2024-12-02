@@ -1,354 +1,315 @@
 ﻿using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.Modules.Controller.Networks;
-using Eryph.Resources;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using Eryph.StateDb.Sqlite;
-using FluentAssertions;
-using FluentAssertions.LanguageExt;
-using LanguageExt;
-using LanguageExt.Common;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Moq;
-using Xunit;
+using Eryph.StateDb.TestBase;
+using SimpleInjector;
+using SimpleInjector.Integration.ServiceCollection;
+using Xunit.Abstractions;
 
-namespace Eryph.Modules.Controller.Tests.Networks
+namespace Eryph.Modules.Controller.Tests.Networks;
+
+public sealed class CatletIpManagerTests(
+    ITestOutputHelper outputHelper)
+    : InMemoryStateDbTestBase(outputHelper)
 {
-    public sealed class CatletIpManagerTests : IDisposable
+    private const string DefaultNetworkId = "cb58fe00-3f64-4b66-b58e-23fb15df3cac";
+    private const string DefaultSubnetId = "ed6697cd-836f-4da7-914b-b09ed1567934";
+    private const string SecondSubnetId = "4f976208-613a-40d4-a284-d32cbd4a1b8e";
+
+    private const string CatletMetadataId = "15e2b061-c625-4469-9fe7-7c455058fcc0";
+    private static readonly Guid CatletPortId = Guid.NewGuid();
+
+    [Theory]
+    [InlineData(null, null, "10.0.0.12")]
+    [InlineData("default", "default", "10.0.0.12")]
+    [InlineData("default", "second-pool", "10.0.1.12")]
+    [InlineData("second-subnet", "default", "10.1.0.12")]
+    public async Task ConfigurePortIps_NewPortIsAdded_AssignmentIsCreated(
+        string? subnetName,
+        string? poolName,
+        string expectedIpAddress)
     {
-        public void Dispose()
+        var networkConfig = new CatletNetworkConfig()
         {
-            _connection.Dispose();
-        }
-
-        private readonly SqliteConnection _connection;
-
-        public CatletIpManagerTests()
-        {
-            _connection = new SqliteConnection("Filename=:memory:");
-            _connection.Open();
-        }
-
-        
-        [Theory]
-        [InlineData(ProjectA, NetworkA_Default_Subnet, "default", null, null, null)]
-        [InlineData(ProjectA, NetworkA_Other_Subnet, "default", "default", "other", null)]
-        [InlineData(ProjectB, NetworkB_Default_Subnet, "default", "default", "default", "other")]
-        [InlineData(ProjectB, NetworkB_Default_Subnet, "default", null, null, null)]
-        [InlineData(ProjectB, NetworkB_Env2_Subnet, "env2", null, null, null)]
-        [InlineData(ProjectA, NetworkA_Default_Subnet, "env2", null, null, null)]
-        public async Task Adds_catlet_network_port_to_expected_pool(string projectIdString, string subnetIdString, 
-            string environment, string? network, string? subnet, string? pool)
-        {
-            var networkConfig = new CatletNetworkConfig();
-            if (network != null)
-            {
-                networkConfig.Name = network;
-                if (subnet != null || pool!= null)
-                    networkConfig.SubnetV4 = new CatletSubnetConfig
-                    {
-                        Name = subnet ?? "default",
-                        IpPool = pool
-                    };
-            }
-
-            var catletPort = new CatletNetworkPort
-            {
-                Id = Guid.NewGuid(),
-                Name = "test-catlet-port",
-                CatletMetadataId = Guid.Parse(CatletMetadata),
-            };
-            var projectId = Guid.Parse(projectIdString);
-            var subnetId = Guid.Parse(subnetIdString);
-
-            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
-                .UseSqlite(_connection)
-                .Options;
-
-            await using var context = new SqliteStateStoreContext(contextOptions);
-            var stateStore = new StateStore(context);
-            await context.Database.EnsureCreatedAsync();
-
-            var networkRepo = stateStore.For<VirtualNetwork>();
-            foreach (var virtualNetwork in CreateNetworks())
-            {
-                await networkRepo.AddAsync(virtualNetwork);
-            }
-
-            await context.SaveChangesAsync();
-
-            var poolManager = new Mock<IIpPoolManager>();
-            poolManager.Setup(x => x.AcquireIp(subnetId,
-                    pool ?? "default", It.IsAny<CancellationToken>()))
-                .Returns(Prelude.RightAsync<Error, IpPoolAssignment>(new IpPoolAssignment
+            SubnetV4 = subnetName != null || poolName != null
+                ? new CatletSubnetConfig
                 {
-                    IpAddress = "192.168.2.1"
-                }))
-                .Verifiable();
-
-            try
-            {
-                var ipManager = new CatletIpManager(stateStore, poolManager.Object);
-                var result = await ipManager.ConfigurePortIps(projectId,
-                    environment, catletPort, new[] { networkConfig },
-                    CancellationToken.None);
-
-                var addresses = result.Should().BeRight().Subject;
-                addresses.Should().HaveCount(1);
-                addresses[0].ToString().Should().Be("192.168.2.1");
-            }
-            finally
-            {
-                poolManager.Verify();
-            }
-
-        }
-
-        [Fact]
-        public async Task Deletes_Invalid_Port()
-        {
-            var projectId = Guid.Parse(ProjectA);
-            var networkConfig = new CatletNetworkConfig()
-            {
-                Name = "default"
-            };
-            
-            var catletPort = new CatletNetworkPort
-            {
-                Id = Guid.NewGuid(),
-                Name = "test-catlet-port",
-                NetworkId = Guid.Parse(NetworkA_Default_Subnet),
-                CatletMetadataId = Guid.Parse(CatletMetadata),
-                IpAssignments = new List<IpAssignment>
-                {
-                    new IpPoolAssignment()
-                    {
-                        SubnetId = Guid.Parse(NetworkA_Default_Subnet),
-                        Pool = new IpPool
-                        {
-                            SubnetId = Guid.Parse(NetworkA_Default_Subnet),
-                            Name = "other"
-                        },
-                    }
+                    Name = subnetName,
+                    IpPool = poolName
                 }
-            };
+                : null,
+        };
 
-            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
-                .UseSqlite(_connection)
-                .Options;
-
-            await using var context = new SqliteStateStoreContext(contextOptions);
-            var ipManager = await SetupPortTest(context, catletPort);
-            var stateStore = new StateStore(context);
-            var port = await stateStore.Read<CatletNetworkPort>()
-                .GetByIdAsync(catletPort.Id, CancellationToken.None);
-            port!.IpAssignments.Should().HaveCount(1);
-
-            var result = await ipManager.ConfigurePortIps(projectId,
-                "default", catletPort, new[] { networkConfig },
-                CancellationToken.None);
-
-            result.Should().BeRight();
-
-            await context.SaveChangesAsync();
-            port = await stateStore.Read<CatletNetworkPort>()
-                .GetByIdAsync(catletPort.Id, CancellationToken.None);
-
-            port!.IpAssignments.Should().BeNullOrEmpty();
-        }
-
-        [Fact]
-        public async Task Keeps_Valid_Port()
+        await WithScope(async (ipManager, _, stateStore) =>
         {
-            var projectId = Guid.Parse(ProjectA);
-            var networkConfig = new CatletNetworkConfig()
-            {
-                Name = "default"
-            };
+            var network = await stateStore.For<VirtualNetwork>()
+                .GetByIdAsync(Guid.Parse(DefaultNetworkId));
+            network.Should().NotBeNull();
 
             var catletPort = new CatletNetworkPort
             {
-                Id = Guid.NewGuid(),
+                Id = CatletPortId,
                 Name = "test-catlet-port",
-                NetworkId = Guid.Parse(NetworkA_Default_Subnet),
-                CatletMetadataId = Guid.Parse(CatletMetadata),
-                IpAssignments = new List<IpAssignment>
+                MacAddress = "42:00:42:00:00:01",
+                Network = network!,
+                CatletMetadataId = Guid.Parse(CatletMetadataId),
+            };
+            await stateStore.For<CatletNetworkPort>().AddAsync(catletPort);
+
+            var result = await ipManager.ConfigurePortIps(
+                network!, catletPort, networkConfig);
+
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (_, _, stateStore) =>
+        {
+            var ipAssignments = await stateStore.For<IpAssignment>().ListAsync();
+            ipAssignments.Should().SatisfyRespectively(
+                ipAssignment =>
                 {
-                    new IpPoolAssignment()
-                    {
-                        SubnetId = Guid.Parse(NetworkA_Default_Subnet),
-                        IpAddress = "192.168.2.10",
-                        Pool = new IpPool
-                        {
-                            SubnetId = Guid.Parse(NetworkA_Default_Subnet),
-                            Name = "default"
-                        },
-                    }
+                    ipAssignment.NetworkPortId.Should().Be(CatletPortId);
+                    ipAssignment.IpAddress.Should().Be(expectedIpAddress);
+                });
+        });
+    }
+
+    [Theory]
+    [InlineData(DefaultSubnetId, null, null, "10.0.0.12")]
+    [InlineData(DefaultSubnetId, "default", "default", "10.0.0.12")]
+    [InlineData(DefaultSubnetId, "default", "second-pool", "10.0.1.12")]
+    [InlineData(SecondSubnetId, "second-subnet", "default", "10.1.0.12")]
+    public async Task ConfigurePortIps_AssignmentIsValid_AssignmentIsNotChanged(
+        string subnetId,
+        string? subnetName,
+        string? poolName,
+        string expectedIpAddress)
+    {
+        var ipAssignmentId = Guid.Empty;
+        await WithScope(async (_, ipPoolManager, stateStore) =>
+        {
+            var ipAssignmentResult = ipPoolManager.AcquireIp(
+                Guid.Parse(subnetId), poolName ?? EryphConstants.DefaultIpPoolName);
+            var ipAssignment = ipAssignmentResult.Should().BeRight().Subject;
+            ipAssignmentId = ipAssignment.Id;
+
+            var catletPort = new CatletNetworkPort
+            {
+                Id = CatletPortId,
+                Name = "test-catlet-port",
+                MacAddress = "42:00:42:00:00:01",
+                NetworkId = Guid.Parse(DefaultNetworkId),
+                CatletMetadataId = Guid.Parse(CatletMetadataId),
+                IpAssignments = [ipAssignment],
+            };
+
+            await stateStore.For<CatletNetworkPort>().AddAsync(catletPort);
+            await stateStore.SaveChangesAsync();
+        });
+
+        var networkConfig = new CatletNetworkConfig()
+        {
+            SubnetV4 = subnetName != null || poolName != null
+                ? new CatletSubnetConfig
+                {
+                    Name = subnetName,
+                    IpPool = poolName
                 }
-            };
+                : null,
+        };
 
-            var contextOptions = new DbContextOptionsBuilder<SqliteStateStoreContext>()
-                .UseSqlite(_connection)
-                .Options;
-
-            await using var context = new SqliteStateStoreContext(contextOptions);
-            var ipManager = await SetupPortTest(context, catletPort);
-            var stateStore = new StateStore(context);
-            var port = await stateStore.Read<CatletNetworkPort>()
-                .GetByIdAsync(catletPort.Id, CancellationToken.None);
-            port!.IpAssignments.Should().HaveCount(1);
-
-            var result = await ipManager.ConfigurePortIps(projectId,
-                "default", catletPort, new[] { networkConfig },
-                CancellationToken.None);
-
-            result.Should().BeRight().Subject.Should().HaveCount(1)
-                .And.Subject.First().ToString().Should().Be("192.168.2.10");
-
-        }
-
-        private async Task<CatletIpManager> SetupPortTest(StateStoreContext context, CatletNetworkPort catletPort)
+        await WithScope(async (catletIpManager, _, stateStore) =>
         {
-            var subnetId = Guid.Parse(NetworkA_Default_Subnet);
+            var catletPort = await stateStore.For<CatletNetworkPort>()
+                .GetByIdAsync(CatletPortId);
+            catletPort.Should().NotBeNull();
+            var network = await stateStore.For<VirtualNetwork>()
+                .GetByIdAsync(Guid.Parse(DefaultNetworkId));
+            network.Should().NotBeNull();
 
-            await context.Database.EnsureCreatedAsync();
-            var stateStore = new StateStore(context);
-            var networkRepo = stateStore.For<VirtualNetwork>();
-            var network = CreateNetworks().First();
-            network.NetworkPorts = new List<VirtualNetworkPort>
-            {
-                catletPort
-            };
-            await networkRepo.AddAsync(network);
+            var result = await catletIpManager.ConfigurePortIps(
+                network!, catletPort!, networkConfig);
 
-            await stateStore.For<CatletMetadata>().AddAsync(new()
-            {
-                Id = Guid.Parse(CatletMetadata),
-            });
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
 
-            await context.SaveChangesAsync();
+            await stateStore.SaveChangesAsync();
+        });
 
-            var poolManager = new Mock<IIpPoolManager>();
-            poolManager.Setup(x => x.AcquireIp(subnetId, "default",
-                    It.IsAny<CancellationToken>()))
-                .Returns(Prelude.RightAsync<Error, IpPoolAssignment>(new IpPoolAssignment
-                {
-                    IpAddress = "192.168.2.1"
-                }));
-
-            var ipManager = new CatletIpManager(stateStore, poolManager.Object);
-            return ipManager;
-        }
-
-        // ReSharper disable InconsistentNaming
-        private const string ProjectA = "{96BBD6D7-01F9-4001-8C86-3FBA75BAA1B5}";
-        private const string NetworkA_Default = "{CB58FE00-3F64-4B66-B58E-23FB15DF3CAC}";
-        private const string NetworkA_Default_Subnet = "{ED6697CD-836F-4DA7-914B-B09ED1567934}";
-        private const string NetworkA_Other_Subnet = "{29FB8B37-4779-427A-BC5C-9A5ECCFFD5E2}";
-
-        private const string ProjectB = "{75C27DAF-77C8-4B98-A072-A4706DCEB422}";
-        private const string NetworkB_Default = "{A0CE4B1A-03E6-413B-A048-567079B49B28}";
-        private const string NetworkB_Env2_Default = "{29408ED0-F876-4879-9FAA-DEB519D1DF0A}";
-        private const string NetworkB_Default_Subnet = "{AC451FA5-3364-4593-AA4D-14F95529FD54}";
-        private const string NetworkB_Env2_Subnet = "{91A25D95-F417-482D-9264-E4179F61E379}";
-
-        private const string CatletMetadata = "{15E2B061-C625-4469-9FE7-7C455058FCC0}";
-        // ReSharper restore InconsistentNaming
-
-
-        private static IEnumerable<VirtualNetwork> CreateNetworks()
+        await WithScope(async (_, _, stateStore) =>
         {
-            var tenant = new Tenant
-            {
-                Id = Guid.NewGuid(),
-            };
-
-            var projectA = new Project
-            {
-                Id = Guid.Parse(ProjectA),
-                Name = "projectA",
-                Tenant = tenant
-            };
-
-            var projectB = new Project
-            {
-                Id = Guid.Parse(ProjectB),
-                Name = "projectB",
-                Tenant = tenant
-            };
-
-            return new[]
-            {
-                new VirtualNetwork
+            var ipAssignments = await stateStore.For<IpAssignment>().ListAsync();
+            ipAssignments.Should().SatisfyRespectively(
+                ipAssignment =>
                 {
-                    Id = Guid.Parse(NetworkA_Default),
-                    Project = projectA,
-                    Name = "default",
-                    Environment = "default",
-                    ResourceType = ResourceType.VirtualNetwork,
-                    Subnets = new[]
-                    {
-                        new VirtualNetworkSubnet
-                        {
-                            Id = Guid.Parse(NetworkA_Default_Subnet),
-                            Name = "default"
-                        },
-                        new VirtualNetworkSubnet
-                        {
-                            Id = Guid.Parse(NetworkA_Other_Subnet),
-                            Name = "other"
-                        }
-                    }.ToList()
-                },
-                new VirtualNetwork
+                    ipAssignment.NetworkPortId.Should().Be(CatletPortId);
+                    ipAssignment.Id.Should().Be(ipAssignmentId);
+                    ipAssignment.IpAddress.Should().Be(expectedIpAddress);
+                });
+        });
+    }
+
+    [Theory]
+    [InlineData("default", "second-pool", "10.0.1.12")]
+    [InlineData("second-subnet", "default", "10.1.0.12")]
+    public async Task ConfigurePortIps_AssignmentIsInvalid_AssignmentIsChanged(
+        string? subnetName,
+        string? poolName,
+        string expectedIpAddress)
+    {
+        var ipAssignmentId = Guid.Empty;
+        await WithScope(async (_, ipPoolManager, stateStore) =>
+        {
+            var ipAssignmentResult = ipPoolManager.AcquireIp(
+                Guid.Parse(DefaultSubnetId),
+                EryphConstants.DefaultIpPoolName);
+            var ipAssignment = ipAssignmentResult.Should().BeRight().Subject;
+            ipAssignmentId = ipAssignment.Id;
+
+            var catletPort = new CatletNetworkPort
+            {
+                Id = CatletPortId,
+                Name = "test-catlet-port",
+                MacAddress = "42:00:42:00:00:01",
+                NetworkId = Guid.Parse(DefaultNetworkId),
+                CatletMetadataId = Guid.Parse(CatletMetadataId),
+                IpAssignments = [ipAssignment],
+            };
+
+            await stateStore.For<CatletNetworkPort>().AddAsync(catletPort);
+            await stateStore.SaveChangesAsync();
+        });
+
+        var networkConfig = new CatletNetworkConfig()
+        {
+            SubnetV4 = subnetName != null || poolName != null
+                ? new CatletSubnetConfig
                 {
-                    Id = Guid.Parse(NetworkB_Default),
-                    Project = projectB,
-                    Name = "default",
-                    Environment = "default",
-                    ResourceType = ResourceType.VirtualNetwork,
-                    Subnets = new[]
+                    Name = subnetName,
+                    IpPool = poolName
+                }
+                : null,
+        };
+
+        await WithScope(async (catletIpManager, _, stateStore) =>
+        {
+            var catletPort = await stateStore.For<CatletNetworkPort>()
+                .GetByIdAsync(CatletPortId);
+            catletPort.Should().NotBeNull();
+
+            var network = await stateStore.For<VirtualNetwork>()
+                .GetByIdAsync(Guid.Parse(DefaultNetworkId));
+            network.Should().NotBeNull();
+
+            var result = await catletIpManager.ConfigurePortIps(
+                network!, catletPort!, networkConfig);
+
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                ipAddress => ipAddress.ToString().Should().Be(expectedIpAddress));
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await WithScope(async (_, _, stateStore) =>
+        {
+            var ipAssignments = await stateStore.For<IpAssignment>().ListAsync();
+            ipAssignments.Should().SatisfyRespectively(
+                ipAssignment =>
+                {
+                    ipAssignment.NetworkPortId.Should().Be(CatletPortId);
+                    ipAssignment.Id.Should().NotBe(ipAssignmentId);
+                    ipAssignment.IpAddress.Should().Be(expectedIpAddress);
+                });
+        });
+    }
+
+    private async Task WithScope(Func<ICatletIpManager, IIpPoolManager, IStateStore, Task> func)
+    {
+        await using var scope = CreateScope();
+        var catletIpManager = scope.GetInstance<ICatletIpManager>();
+        var ipPoolManager = scope.GetInstance<IIpPoolManager>();
+        var stateStore = scope.GetInstance<IStateStore>();
+        await func(catletIpManager, ipPoolManager, stateStore);
+    }
+
+    protected override void AddSimpleInjector(SimpleInjectorAddOptions options)
+    {
+        // Use the proper IpPoolManager instead of a mock. The code is
+        // quite interdependent as it modifies the same EF Core entities.
+        options.Container.Register<IIpPoolManager, IpPoolManager>(Lifestyle.Scoped);
+        options.Container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);
+    }
+
+    protected override async Task SeedAsync(IStateStore stateStore)
+    {
+        await SeedDefaultTenantAndProject();
+
+        await stateStore.For<CatletMetadata>().AddAsync(new CatletMetadata
+        {
+            Id = Guid.Parse(CatletMetadataId),
+        });
+
+        await stateStore.For<VirtualNetwork>().AddAsync(
+            new VirtualNetwork
+            {
+                Id = Guid.Parse(DefaultNetworkId),
+                ProjectId = EryphConstants.DefaultProjectId,
+                Name = EryphConstants.DefaultNetworkName,
+                Environment = EryphConstants.DefaultEnvironmentName,
+                NetworkProvider = EryphConstants.DefaultProviderName,
+                Subnets =
+                [
+                    new VirtualNetworkSubnet
                     {
-                        new VirtualNetworkSubnet
-                        {
-                            Id = Guid.Parse(NetworkB_Default_Subnet),
-                            Name = "default",
-                            IpPools = new List<IpPool>(new []
+                        Id = Guid.Parse(DefaultSubnetId),
+                        Name = EryphConstants.DefaultSubnetName,
+                        IpNetwork = "10.0.0.0/15",
+                        IpPools =
+                        [
+                            new IpPool()
                             {
-                                new IpPool
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Name = "default",
-                                },
-                                new IpPool
-                                {
-                                    Id = Guid.NewGuid(),
-                                    Name = "other",
-                                }
-                            })
-                        },
-                    }.ToList(),
-
-                },
-                new VirtualNetwork
-                {
-                    Id = Guid.Parse(NetworkB_Env2_Default),
-                    Project = projectB,
-                    Name = "default",
-                    Environment = "env2",
-                    ResourceType = ResourceType.VirtualNetwork,
-                    Subnets = new[]
+                                Id = Guid.NewGuid(),
+                                Name = EryphConstants.DefaultIpPoolName,
+                                IpNetwork = "10.0.0.0/16",
+                                FirstIp = "10.0.0.10",
+                                NextIp = "10.0.0.12",
+                                LastIp = "10.0.0.19",
+                            },
+                            new IpPool()
+                            {
+                                Id = Guid.NewGuid(),
+                                Name = "second-pool",
+                                IpNetwork = "10.0.0.0/16",
+                                FirstIp = "10.0.1.10",
+                                NextIp = "10.0.1.12",
+                                LastIp = "10.0.1.19",
+                            }
+                        ],
+                    },
+                    new VirtualNetworkSubnet
                     {
-                        new VirtualNetworkSubnet
-                        {
-                            Id = Guid.Parse(NetworkB_Env2_Subnet),
-                            Name = "default"
-                        },
-                    }.ToList(),
-
-                }
-            };
-        }
+                        Id = Guid.Parse(SecondSubnetId),
+                        Name = "second-subnet",
+                        IpNetwork = "10.1.0.0/16",
+                        IpPools =
+                        [
+                            new IpPool()
+                            {
+                                Id = Guid.NewGuid(),
+                                Name = EryphConstants.DefaultIpPoolName,
+                                IpNetwork = "10.1.0.0/16",
+                                FirstIp = "10.1.0.10",
+                                NextIp = "10.1.0.12",
+                                LastIp = "10.1.0.19",
+                            }
+                        ],
+                    },
+                ],
+            });
     }
 }

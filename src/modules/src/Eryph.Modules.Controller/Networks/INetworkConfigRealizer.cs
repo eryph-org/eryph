@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Networks;
 using Eryph.Core.Network;
 
