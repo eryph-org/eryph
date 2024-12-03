@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20241203120814_InitialCreate")]
+    [Migration("20241203154216_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -483,6 +483,12 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<string>("IpV6Subnets")
                         .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("MacAddress")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PortName")
                         .HasColumnType("longtext");
 
                     b.HasKey("Id");

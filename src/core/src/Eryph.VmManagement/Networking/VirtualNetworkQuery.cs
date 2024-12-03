@@ -64,9 +64,12 @@ public static class VirtualNetworkQuery
 
             var info = new MachineNetworkData
             {
-                NetworkProviderName = null,
                 PortName = portName,
                 AdapterName = networkAdapter.Name,
+                MacAddress = Optional(networkAdapter.MacAddress)
+                    // Hyper-V returns all zeros when a dynamic MAC address has not been assigned yet.s
+                    .Filter(a => a != "000000000000")
+                    .IfNoneUnsafe((string)null),
                 IPAddresses = ObjectToStringArray(guestAdapterObj.GetPropertyValue("IPAddresses")),
                 DefaultGateways = ObjectToStringArray(guestAdapterObj.GetPropertyValue("DefaultGateways")),
                 DnsServers = ObjectToStringArray(guestAdapterObj.GetPropertyValue("DNSServers")),

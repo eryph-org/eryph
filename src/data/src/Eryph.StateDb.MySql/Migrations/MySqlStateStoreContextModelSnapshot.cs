@@ -482,6 +482,12 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("MacAddress")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PortName")
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CatletId");

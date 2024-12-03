@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
+using Dbosoft.OVN.Windows;
 using Eryph.App;
 using Eryph.AnsiConsole.Sys;
 using Eryph.ModuleCore;
@@ -444,7 +445,7 @@ internal static class Program
                 var backupDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                     "eryph", "zero", "private.old");
                 var loggerFactory = new SerilogLoggerFactory(Log.Logger);
-                var sysEnv = new SystemEnvironment(loggerFactory);
+                var sysEnv = new WindowsSystemEnvironment(loggerFactory);
                 var serviceManager = sysEnv.GetServiceManager("eryph-zero");
 
                 var backupCreated = false;
@@ -724,7 +725,7 @@ internal static class Program
                     "openvswitch");
 
                 var loggerFactory = new SerilogLoggerFactory(Log.Logger);
-                var sysEnv = new SystemEnvironment(loggerFactory);
+                var sysEnv = new WindowsSystemEnvironment(loggerFactory);
                 var serviceManager = sysEnv.GetServiceManager("eryph-zero");
                 var syncClient = new SyncClient();
                 try

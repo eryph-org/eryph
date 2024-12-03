@@ -517,6 +517,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MacAddress = table.Column<string>(type: "TEXT", nullable: true),
+                    PortName = table.Column<string>(type: "TEXT", nullable: true),
                     IpV4Addresses = table.Column<string>(type: "TEXT", nullable: false),
                     IpV6Addresses = table.Column<string>(type: "TEXT", nullable: false),
                     IPv4DefaultGateway = table.Column<string>(type: "TEXT", nullable: true),

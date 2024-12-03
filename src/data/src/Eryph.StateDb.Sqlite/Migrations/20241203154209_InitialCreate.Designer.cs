@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20241203120811_InitialCreate")]
+    [Migration("20241203154209_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -478,6 +478,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
 
                     b.Property<string>("IpV6Subnets")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MacAddress")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PortName")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

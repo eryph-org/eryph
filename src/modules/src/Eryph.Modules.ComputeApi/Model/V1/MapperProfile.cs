@@ -35,7 +35,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                         .Map(x => x.DnsServersV4!).ToList();
 
                     var reportedNetwork = src.Catlet.ReportedNetworks
-                        .FirstOrDefault(x => x.IpV4Addresses.SequenceEqual(ipV4Addresses));
+                        .FirstOrDefault(x => x.PortName == src.Port.Name);
 
                     FloatingNetworkPort? floatingPort = null;
                     if (src.Port.FloatingPort != null)
