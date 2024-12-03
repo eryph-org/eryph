@@ -6,7 +6,8 @@
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive" Version="1.0.0-rc.12" />
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.NoCloud" Version="1.0.0-rc.12" />
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.WindowsImaging" Version="1.0.0-rc.12" />
-    <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-PullRequest0033.6" />
+    <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-PullRequest0033.10" />
+    <PackageReference Include="Dbosoft.OVN.Windows" Version="1.0.0-PullRequest0033.10" />
     <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.7.0" />
     <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.7.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">

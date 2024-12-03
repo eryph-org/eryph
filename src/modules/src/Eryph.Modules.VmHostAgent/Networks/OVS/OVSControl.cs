@@ -4,21 +4,17 @@ using System.Threading;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Model;
 using Dbosoft.OVN.OSCommands.OVS;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 
 namespace Eryph.Modules.VmHostAgent.Networks.OVS;
 
-public class OVSControl : OVSControlTool, IOVSControl
+public class OVSControl(
+    ISystemEnvironment systemEnvironment)
+    : OVSControlTool(systemEnvironment, LocalOVSConnection), IOVSControl
 {
     private static readonly OvsDbConnection LocalOVSConnection
         = new(new OvsFile("/var/run/openvswitch", "db.sock"));
-
-    public OVSControl([NotNull] ISysEnvironment sysEnv) : base(sysEnv, LocalOVSConnection)
-    {
-
-    }
 
     public EitherAsync<Error, OVSTableRecord>  GetOVSTable(CancellationToken cancellationToken)
     {

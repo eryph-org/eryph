@@ -19,7 +19,7 @@ namespace Eryph.Modules.VmHostAgent;
 
 public class OVSChassisService : IHostedService
 {
-    private readonly ISysEnvironment _sysEnvironment;
+    private readonly ISystemEnvironment _systemEnvironment;
     private readonly IAgentControlService _controlService;
     private readonly IOVSService<OVNChassisNode> _ovnChassisNode;
     private readonly IOVSService<OVSDbNode> _ovsDbNode;
@@ -28,7 +28,7 @@ public class OVSChassisService : IHostedService
     private readonly ILogger _logger;
 
     public OVSChassisService(
-        ISysEnvironment sysEnvironment,
+        ISystemEnvironment systemEnvironment,
         ILogger<OVSChassisService> logger,
         IAgentControlService controlService, 
         IOVSService<OVNChassisNode> ovnChassisNode, 
@@ -36,7 +36,7 @@ public class OVSChassisService : IHostedService
         IOVSService<OVSSwitchNode> ovsVSwitchNode, 
         IServiceProvider serviceProvider)
     {
-        _sysEnvironment = sysEnvironment;
+        _systemEnvironment = systemEnvironment;
         this._controlService = controlService;
         _ovnChassisNode = ovnChassisNode;
         _ovsDbNode = ovsDbNode;
@@ -109,9 +109,11 @@ public class OVSChassisService : IHostedService
             {
                 try
                 {
-                    var extensionEnabled = _sysEnvironment.GetOvsExtensionManager().IsExtensionEnabled();
+                    var extensionEnabled = await _systemEnvironment
+                        .GetOvsExtensionManager()
+                        .IsExtensionEnabled();
 
-                    if (!extensionEnabled)
+                    if (!extensionEnabled.IfLeft(false))
                     {
                         await Task.Delay(2000);
                         continue;

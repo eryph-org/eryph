@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Drawing.Text;
 using System.Threading.Tasks;
-using Dbosoft.OVN;
-using Eryph.ConfigModel.Catlets;
+using Dbosoft.OVN.Windows;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;

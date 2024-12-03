@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.OVN;
+using Dbosoft.OVN.Windows;
 using Eryph.Core;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
@@ -20,7 +21,7 @@ class OVSPortManager(
     IHyperVOvsPortManager portManager,
     IPowershellEngine engine,
     ILogger log,
-    ISysEnvironment sysEnvironment)
+    ISystemEnvironment sysEnvironment)
     : IOVSPortManager
 {
     public EitherAsync<Error, Unit> SyncPorts(
@@ -41,10 +42,9 @@ class OVSPortManager(
         from portNames in adapters
             .Map(a => portManager.GetPortName(a.Id))
             .SequenceSerial()
-        let validPortNames = portNames.Somes()
         from _ in change is VMPortChange.Add
-            ? AddPorts(vmInfo.Value.Id, validPortNames).ToAsync()
-            : RemovePorts(validPortNames).ToAsync()
+            ? AddPorts(vmInfo.Value.Id, portNames).ToAsync()
+            : RemovePorts(portNames).ToAsync()
         select unit;
 
     public EitherAsync<Error, Unit> SyncPorts(Guid vmId, VMPortChange change)

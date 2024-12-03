@@ -1,37 +1,24 @@
 ﻿using System.Runtime.InteropServices;
 using Dbosoft.OVN;
+using Dbosoft.OVN.Windows;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.Runtime.Zero;
 
-public class EryphOVSEnvironment : SystemEnvironment
+public class EryphOVSEnvironment(
+    IEryphOvsPathProvider runPathProvider,
+    ILoggerFactory loggerFactory)
+    : WindowsSystemEnvironment(loggerFactory)
 {
-    private readonly IEryphOvsPathProvider _runPathProvider;
+    public override IFileSystem FileSystem => new EryphOvsFileSystem(runPathProvider);
 
-    public EryphOVSEnvironment(IEryphOvsPathProvider runPathProvider, ILoggerFactory loggerFactory) : base(
-        loggerFactory)
+    private class EryphOvsFileSystem(
+        IEryphOvsPathProvider runPathProvider)
+        : DefaultFileSystem(OSPlatform.Windows)
     {
-        _runPathProvider = runPathProvider;
-    }
-
-    public override IFileSystem FileSystem => new EryphOVsFileSystem(_runPathProvider);
-
-
-    private class EryphOVsFileSystem : DefaultFileSystem
-    {
-        private readonly IEryphOvsPathProvider _runPathProvider;
-
-        public EryphOVsFileSystem(IEryphOvsPathProvider runPathProvider) : base(OSPlatform.Windows)
-        {
-            _runPathProvider = runPathProvider;
-        }
-
-        protected override string FindBasePath(string pathRoot)
-        {
-            if (!pathRoot.StartsWith("usr")) return base.FindBasePath(pathRoot);
-
-            return _runPathProvider.OvsRunPath;
-
-        }
+        protected override string FindBasePath(string pathRoot) =>
+            pathRoot.StartsWith("usr")
+                ? base.FindBasePath(pathRoot)
+                : runPathProvider.OvsRunPath;
     }
 }

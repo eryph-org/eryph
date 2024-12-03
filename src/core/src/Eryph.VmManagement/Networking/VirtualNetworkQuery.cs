@@ -4,11 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management;
 using System.Net;
-using Dbosoft.OVN;
+using Dbosoft.OVN.Windows;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
-using Eryph.VmManagement.Networking;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -66,7 +65,7 @@ public static class VirtualNetworkQuery
             var info = new MachineNetworkData
             {
                 NetworkProviderName = null,
-                PortName = portName.IfNoneUnsafe((string)null),
+                PortName = portName,
                 AdapterName = networkAdapter.Name,
                 IPAddresses = ObjectToStringArray(guestAdapterObj.GetPropertyValue("IPAddresses")),
                 DefaultGateways = ObjectToStringArray(guestAdapterObj.GetPropertyValue("DefaultGateways")),
