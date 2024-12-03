@@ -62,7 +62,7 @@ namespace Eryph.Modules.Controller.Inventory
             var diskInfos = vms.SelectMany(x => x.Drives.Select(d => d.Disk)).ToList();
 
             // Acquire all necessary locks in the beginning to minimize the potential for deadlocks.
-            foreach (var vhdId in diskInfos.Map(d => d.Id).OrderBy(g => g))
+            foreach (var vhdId in diskInfos.Map(d => d.DiskIdentifier).Order())
             {
                 await _lockManager.AcquireVhdLock(vhdId);
             }

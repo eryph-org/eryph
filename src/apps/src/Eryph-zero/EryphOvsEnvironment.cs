@@ -5,14 +5,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Eryph.Runtime.Zero;
 
-public class EryphOVSEnvironment(
+public class EryphOvsEnvironment(
     IEryphOvsPathProvider runPathProvider,
     ILoggerFactory loggerFactory)
     : WindowsSystemEnvironment(loggerFactory)
 {
     public override IFileSystem FileSystem => new EryphOvsFileSystem(runPathProvider);
 
-    private class EryphOvsFileSystem(
+    private sealed class EryphOvsFileSystem(
         IEryphOvsPathProvider runPathProvider)
         : DefaultFileSystem(OSPlatform.Windows)
     {

@@ -81,7 +81,7 @@ namespace Eryph.Runtime.Zero
                 "Ovn:Logging:File:Level") ?? OvsLogLevel.Off;
             container.RegisterInstance<IOVNSettings>(ovnSettings);
             container.RegisterInstance<IOvsSettings>(ovnSettings);
-            container.RegisterSingleton<ISystemEnvironment, EryphOVSEnvironment>();
+            container.RegisterSingleton<ISystemEnvironment, EryphOvsEnvironment>();
 
             return container;
         }

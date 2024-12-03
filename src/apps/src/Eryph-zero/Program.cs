@@ -761,7 +761,7 @@ internal static class Program
 
                     if (ovsPath != null)
                     {
-                        var ovsEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsPath), loggerFactory);
+                        var ovsEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsPath), loggerFactory);
                         var ovsControl = new OVSControl(ovsEnv);
                         await using var ovsDbNode = new OVSDbNode(ovsEnv, new LocalOVSWithOVNSettings(), loggerFactory);
                         await using var ovsVSwitchNode = new OVSSwitchNode(ovsEnv, new LocalOVSWithOVNSettings(), loggerFactory);
@@ -979,7 +979,7 @@ internal static class Program
         using var nullLoggerFactory = new NullLoggerFactory();
         using var psEngine = new PowershellEngine(nullLoggerFactory.CreateLogger(""));
         var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
-        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
+        var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 
         return await RunAsAdmin(
             from configString in ReadInput(inFile)
@@ -1009,7 +1009,7 @@ internal static class Program
         using var nullLoggerFactory = new NullLoggerFactory();
         using var psEngine = new PowershellEngine(nullLoggerFactory.CreateLogger(""));
         var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
-        var sysEnv = new EryphOVSEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
+        var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 
         return await RunAsAdmin(
             from _ in writeLine("Going to sync network state with the current configuration...")
