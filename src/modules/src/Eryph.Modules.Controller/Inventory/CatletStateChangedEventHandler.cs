@@ -8,7 +8,6 @@ using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Rebus;
 using Eryph.Resources.Machines;
-using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
@@ -53,7 +52,6 @@ internal class CatletStateChangedEventHandler(
 
         var metadataResult = await metadataService.GetMetadata(catlet.MetadataId);
         if (metadataResult.IsNone)
-            // TODO should this be a fail?
             return;
 
         var metadata = metadataResult.ValueUnsafe();
