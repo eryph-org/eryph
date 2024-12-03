@@ -12,10 +12,12 @@ namespace Eryph.VmManagement.Sys;
 
 public static class WmiQueries<RT> where RT: struct, HasWmi<RT>
 {
-    public static Eff<RT, Seq<(string Name, bool IsInstalled )>> getFeatures() =>
+    public static Eff<RT, Seq<(string Name, bool IsInstalled)>> getFeatures() =>
         from queryResult in Wmi<RT>.executeQuery(
             @"\Root\CIMv2",
-            "SELECT Name, InstallState FROM Win32_OptionalFeature")
+            Seq("Name", "InstallState"),
+            "Win32_OptionalFeature",
+            None)
         let features = queryResult.Map(f =>
             from name in f.Find("Name")
                 .Flatten()
@@ -31,7 +33,9 @@ public static class WmiQueries<RT> where RT: struct, HasWmi<RT>
     public static Eff<RT, (string DataRootPath, string VhdPath)> getHyperVDefaultPaths() =>
         from queryResult in Wmi<RT>.executeQuery(
             @"\Root\Virtualization\v2",
-            "SELECT DefaultExternalDataRoot, DefaultVirtualHardDiskPath FROM Msvm_VirtualSystemManagementServiceSettingData")
+            Seq("DefaultExternalDataRoot", "DefaultVirtualHardDiskPath"),
+            "Msvm_VirtualSystemManagementServiceSettingData",
+            None)
         from settings in queryResult.HeadOrNone()
             .ToEff(Error.New("Failed to query for Hyper-V host settings."))
         from dataRootPath in settings.Find("DefaultExternalDataRoot")

@@ -17,7 +17,9 @@ public static class HardwareIdQueries<RT> where RT : struct, HasRegistry<RT>, Ha
     public static Eff<RT, Guid> readSmBiosUuid() =>
         from queryResult in Wmi<RT>.executeQuery(
             @"\root\CIMv2",
-            "SELECT UUID FROM Win32_ComputerSystemProduct")
+            Seq1("UUID"),
+            "Win32_ComputerSystemProduct",
+            None)
         from product in queryResult.HeadOrNone()
             .ToEff(Error.New("Failed to query Win32_ComputerSystemProduct."))
         from guid in product.Find("UUID")

@@ -11,6 +11,10 @@ namespace Eryph.VmManagement.Sys;
 public static class Wmi<RT> where RT: struct, HasWmi<RT>
 {
     public static Eff<RT, Seq<HashMap<string, Option<object>>>> executeQuery(
-        string path, string query) =>
-        default(RT).WmiEff.Map(wmi => wmi.ExecuteQuery(path, query));
+        string scope,
+        Seq<string> properties,
+        string className,
+        Option<string> whereClause) =>
+        default(RT).WmiEff.Bind(wmi =>
+            wmi.ExecuteQuery(scope, properties, className, whereClause));
 }

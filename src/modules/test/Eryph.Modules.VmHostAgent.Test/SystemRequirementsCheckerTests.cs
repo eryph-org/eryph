@@ -9,6 +9,7 @@ using Eryph.VmManagement.Sys;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using LanguageExt;
+using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -41,21 +42,25 @@ public class SystemRequirementsCheckerTests
     {
         _wmiMock.Setup(wmi => wmi.ExecuteQuery(
                 @"\Root\CIMv2",
-                "SELECT Name, InstallState FROM Win32_OptionalFeature"))
-            .Returns(Seq(
+                Seq("Name", "InstallState"),
+                "Win32_OptionalFeature",
+                None))
+            .Returns(SuccessEff(Seq(
                 HashMap(("Name", Optional<object>("Microsoft-Hyper-V")),
                     ("InstallState", Optional<object>(1u))),
                 HashMap(("Name", Optional<object>("Microsoft-Hyper-V-Management-PowerShell")),
                     ("InstallState", Optional<object>(1u)))
-            ));
+            )));
 
         _wmiMock.Setup(wmi => wmi.ExecuteQuery(
                 @"\Root\Virtualization\v2",
-                "SELECT DefaultExternalDataRoot, DefaultVirtualHardDiskPath FROM Msvm_VirtualSystemManagementServiceSettingData"))
-            .Returns(Seq1(HashMap(
+                Seq("DefaultExternalDataRoot", "DefaultVirtualHardDiskPath"),
+                "Msvm_VirtualSystemManagementServiceSettingData",
+                None))
+            .Returns(SuccessEff(Seq1(HashMap(
                     ("DefaultExternalDataRoot", Optional<object>(@"X:\disks")),
                     ("DefaultVirtualHardDiskPath", Optional<object>(@"X:\vms"))
-            )));
+            ))));
 
         var result = await ensureHyperV(isService).Run(_runtime);
 
@@ -68,13 +73,15 @@ public class SystemRequirementsCheckerTests
     {
         _wmiMock.Setup(wmi => wmi.ExecuteQuery(
                 @"\Root\CIMv2",
-                "SELECT Name, InstallState FROM Win32_OptionalFeature"))
-            .Returns(Seq(
+                Seq("Name", "InstallState"),
+                "Win32_OptionalFeature",
+                None))
+            .Returns(SuccessEff(Seq(
                 HashMap(("Name", Optional<object>("Microsoft-Hyper-V")),
                     ("InstallState", Optional<object>(3u))),
                 HashMap(("Name", Optional<object>("Microsoft-Hyper-V-Management-PowerShell")),
                     ("InstallState", Optional<object>(3u)))
-            ));
+            )));
 
         var result = await ensureHyperV(isService).Run(_runtime);
 
@@ -87,23 +94,27 @@ public class SystemRequirementsCheckerTests
     {
         _wmiMock.SetupSequence(wmi => wmi.ExecuteQuery(
                 @"\Root\CIMv2",
-                "SELECT Name, InstallState FROM Win32_OptionalFeature"))
+                Seq("Name", "InstallState"),
+                "Win32_OptionalFeature",
+                None))
             .Throws(new ManagementException("error"))
-            .Returns(Seq(
+            .Returns(SuccessEff(Seq(
                 HashMap(("Name", Optional<object>("Microsoft-Hyper-V")),
                     ("InstallState", Optional<object>(1u))),
                 HashMap(("Name", Optional<object>("Microsoft-Hyper-V-Management-PowerShell")),
                     ("InstallState", Optional<object>(1u)))
-            ));
+            )));
 
         _wmiMock.SetupSequence(wmi => wmi.ExecuteQuery(
                 @"\Root\Virtualization\v2",
-                "SELECT DefaultExternalDataRoot, DefaultVirtualHardDiskPath FROM Msvm_VirtualSystemManagementServiceSettingData"))
+                Seq("DefaultExternalDataRoot", "DefaultVirtualHardDiskPath"),
+                "Msvm_VirtualSystemManagementServiceSettingData",
+                None))
             .Throws(new ManagementException("error"))
-            .Returns(Seq1(HashMap(
+            .Returns(SuccessEff(Seq1(HashMap(
                 ("DefaultExternalDataRoot", Optional<object>(@"X:\disks")),
                 ("DefaultVirtualHardDiskPath", Optional<object>(@"X:\vms"))
-            )));
+            ))));
 
         var result = await ensureHyperV(true).Run(_runtime);
 
@@ -115,23 +126,27 @@ public class SystemRequirementsCheckerTests
     {
         _wmiMock.SetupSequence(wmi => wmi.ExecuteQuery(
                 @"\Root\CIMv2",
-                "SELECT Name, InstallState FROM Win32_OptionalFeature"))
-            .Returns(Seq<HashMap<string, Option<object>>>())
-            .Returns(Seq(
+                Seq("Name", "InstallState"),
+                "Win32_OptionalFeature",
+                None))
+            .Returns(SuccessEff(Seq<HashMap<string, Option<object>>>()))
+            .Returns(SuccessEff(Seq(
                 HashMap(("Name", Optional<object>("Microsoft-Hyper-V")),
                     ("InstallState", Optional<object>(1u))),
                 HashMap(("Name", Optional<object>("Microsoft-Hyper-V-Management-PowerShell")),
                     ("InstallState", Optional<object>(1u)))
-            ));
+            )));
 
         _wmiMock.SetupSequence(wmi => wmi.ExecuteQuery(
                 @"\Root\Virtualization\v2",
-                "SELECT DefaultExternalDataRoot, DefaultVirtualHardDiskPath FROM Msvm_VirtualSystemManagementServiceSettingData"))
-            .Returns(Seq<HashMap<string, Option<object>>>())
-            .Returns(Seq1(HashMap(
+                Seq("DefaultExternalDataRoot", "DefaultVirtualHardDiskPath"),
+                "Msvm_VirtualSystemManagementServiceSettingData",
+                None))
+            .Returns(SuccessEff(Seq<HashMap<string, Option<object>>>()))
+            .Returns(SuccessEff(Seq1(HashMap(
                 ("DefaultExternalDataRoot", Optional<object>(@"X:\disks")),
                 ("DefaultVirtualHardDiskPath", Optional<object>(@"X:\vms"))
-            )));
+            ))));
 
         var result = await ensureHyperV(true).Run(_runtime);
 
