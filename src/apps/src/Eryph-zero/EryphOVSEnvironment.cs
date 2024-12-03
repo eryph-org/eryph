@@ -17,7 +17,7 @@ public class EryphOVSEnvironment(
         : DefaultFileSystem(OSPlatform.Windows)
     {
         protected override string FindBasePath(string pathRoot) =>
-            pathRoot.StartsWith("usr")
+            !pathRoot.StartsWith("usr")
                 ? base.FindBasePath(pathRoot)
                 : runPathProvider.OvsRunPath;
     }

@@ -9,6 +9,7 @@ using Medallion.Threading;
 
 namespace Eryph.DistributedLock;
 
+/// <inheritdoc cref="IDistributedLockScopeHolder"/>>
 public sealed class DistributedLockScopeHolder(
     IDistributedLockProvider lockProvider)
     : IDistributedLockScopeHolder
@@ -28,10 +29,6 @@ public sealed class DistributedLockScopeHolder(
     private readonly ConcurrentDictionary<string, string> _lockNames = new();
     private readonly SemaphoreSlim _semaphore = new(1);
     private int _disposed;
-
-    // The locks of this manager protect updates ot the state database.
-    // If such an update takes longer than 3 minutes, something is severely wrong.
-    private static readonly TimeSpan Timeout = TimeSpan.FromMinutes(3);
 
     public async ValueTask AcquireLock(string name, TimeSpan timeOut)
     {

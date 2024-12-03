@@ -37,7 +37,7 @@ public class OVSChassisService : IHostedService
         IServiceProvider serviceProvider)
     {
         _systemEnvironment = systemEnvironment;
-        this._controlService = controlService;
+        _controlService = controlService;
         _ovnChassisNode = ovnChassisNode;
         _ovsDbNode = ovsDbNode;
         _ovsVSwitchNode = ovsVSwitchNode;

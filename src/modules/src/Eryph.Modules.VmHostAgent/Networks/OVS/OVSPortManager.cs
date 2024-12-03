@@ -68,7 +68,6 @@ class OVSPortManager(
 
         while (!cancelToken.IsCancellationRequested && portsRequired.Count > 0)
         {
-
             foreach (var portName in portsRequired.AsParallel())
             {
                 try
@@ -111,16 +110,15 @@ class OVSPortManager(
                 {
 
                 }
-
-                if (portsRequired.Count > 0)
-                    await Task.Delay(1000, cancelToken.Token);
             }
+
+            if (portsRequired.Count > 0)
+                await Task.Delay(1000, cancelToken.Token);
         }
 
         return portsRequired.Count == 0
             ? Unit.Default
             : Error.New($"Failed to add all ports of VM {vmId} to OVS.");
-
     }
 
     private async Task<Either<Error, Unit>> RemovePorts(Seq<string> portNames)
