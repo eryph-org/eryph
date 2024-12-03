@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20241203154209_InitialCreate")]
+    [Migration("20241203163008_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -667,7 +667,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("LastSeenStatus")
+                    b.Property<DateTime>("LastSeenState")
                         .HasColumnType("TEXT");
 
                     b.Property<long>("MaximumMemory")

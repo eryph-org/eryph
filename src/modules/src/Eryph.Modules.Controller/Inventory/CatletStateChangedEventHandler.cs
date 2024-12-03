@@ -11,6 +11,7 @@ using Eryph.Resources.Machines;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using LanguageExt.UnsafeValueAccess;
+using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Rebus.Pipeline;
 
@@ -22,7 +23,8 @@ internal class CatletStateChangedEventHandler(
     IOperationDispatcher opDispatcher,
     IVirtualMachineMetadataService metadataService,
     IVirtualMachineDataService vmDataService,
-    IMessageContext messageContext)
+    IMessageContext messageContext,
+    ILogger logger)
     : IHandleMessages<CatletStateChangedEvent>
 {
     public async Task Handle(CatletStateChangedEvent message)
@@ -34,11 +36,16 @@ internal class CatletStateChangedEventHandler(
             return;
 
         var catlet = catletResult.ValueUnsafe();
-        if (catlet.LastSeenStatus < message.Timestamp)
+        if (catlet.LastSeenState < message.Timestamp)
         {
             catlet.UpTime = message.Status is VmStatus.Stopped ? TimeSpan.Zero : message.UpTime;
             catlet.Status = message.Status.ToCatletStatus();
-            catlet.LastSeenStatus = message.Timestamp;
+            catlet.LastSeenState = message.Timestamp;
+        }
+        else
+        {
+            logger.LogDebug("Skipping state update for catlet {CatletId} with timestamp {Timestamp}. Most recent state information is dated {LastSeen}.",
+                catlet.Id, message.Timestamp, catlet.LastSeenState);
         }
 
         if (message.UpTime.TotalMinutes < 15)

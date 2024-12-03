@@ -226,6 +226,10 @@ internal class CreateCatletSaga(
                 Name = response.Inventory.Name,
                 Environment = environmentName.Value,
                 DataStore = datastoreName.Value,
+                // Ensure that any inventory updates are applied as the
+                // information which we save right now is incomplete.
+                LastSeen = DateTimeOffset.MinValue,
+                LastSeenState = DateTimeOffset.MinValue,
             }, catletMetadata);
 
             await StartNewTask(new UpdateCatletCommand

@@ -308,7 +308,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     AgentName = table.Column<string>(type: "TEXT", nullable: true),
                     LastSeen = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    LastSeenStatus = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastSeenState = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CatletType = table.Column<int>(type: "INTEGER", nullable: false),
                     UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: false),
                     VMId = table.Column<Guid>(type: "TEXT", nullable: false),

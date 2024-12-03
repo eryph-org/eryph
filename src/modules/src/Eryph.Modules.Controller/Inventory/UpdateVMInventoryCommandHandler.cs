@@ -4,6 +4,7 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Rebus.Pipeline;
 
@@ -24,8 +25,16 @@ internal class UpdateVMInventoryCommandHandler
         IVirtualMachineDataService vmDataService,
         IVirtualDiskDataService vhdDataService,
         IVMHostMachineDataService vmHostDataService,
-        IStateStore stateStore) :
-        base(lockManager, metadataService, dispatcher, vmDataService, vhdDataService, stateStore, messageContext)
+        IStateStore stateStore,
+        ILogger logger) :
+        base(lockManager,
+            metadataService,
+            dispatcher,
+            vmDataService,
+            vhdDataService,
+            stateStore,
+            messageContext,
+            logger)
     {
         _vmHostDataService = vmHostDataService;
     }

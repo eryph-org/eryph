@@ -15,14 +15,15 @@ public class Catlet : Resource
     public CatletStatus Status { get; set; }
 
     /// <summary>
-    /// The last time the <see cref="Status"/>> of the catlet has been observed.
+    /// The last time the <see cref="Status"/> and <see cref="UpTime"/>
+    /// of the catlet have been observed.
     /// </summary>
     /// <remarks>
-    /// The <see cref="Status"/> can be updated independently of the
-    /// inventory of the catlet. Hence, we track the observation time
-    /// of the status separately as well.
+    /// The <see cref="Status"/> and <see cref="UpTime"/> can be updated
+    /// independently of the inventory of the catlet. Hence, we track the
+    /// observation time of the status separately as well.
     /// </remarks>
-    public DateTimeOffset LastSeenStatus { get; set; }
+    public DateTimeOffset LastSeenState { get; set; }
 
     public CatletType CatletType { get; set; }
 

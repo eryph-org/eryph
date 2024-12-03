@@ -669,7 +669,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<DateTimeOffset>("LastSeen")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTimeOffset>("LastSeenStatus")
+                    b.Property<DateTimeOffset>("LastSeenState")
                         .HasColumnType("datetime(6)");
 
                     b.Property<long>("MaximumMemory")

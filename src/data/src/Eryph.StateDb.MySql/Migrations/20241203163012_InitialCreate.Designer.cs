@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20241203154216_InitialCreate")]
+    [Migration("20241203163012_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -672,7 +672,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<DateTimeOffset>("LastSeen")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTimeOffset>("LastSeenStatus")
+                    b.Property<DateTimeOffset>("LastSeenState")
                         .HasColumnType("datetime(6)");
 
                     b.Property<long>("MaximumMemory")

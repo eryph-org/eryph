@@ -664,7 +664,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("LastSeenStatus")
+                    b.Property<DateTime>("LastSeenState")
                         .HasColumnType("TEXT");
 
                     b.Property<long>("MaximumMemory")

@@ -19,6 +19,7 @@ using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
 using Medallion.Threading;
+using Microsoft.Extensions.Logging;
 using Rebus.Messages;
 using Rebus.Pipeline;
 
@@ -34,6 +35,7 @@ namespace Eryph.Modules.Controller.Inventory
         protected readonly IVirtualMachineMetadataService MetadataService;
         protected readonly IStateStore StateStore;
         private readonly IMessageContext _messageContext;
+        private readonly ILogger _logger;
 
         protected UpdateInventoryCommandHandlerBase(
             IInventoryLockManager lockManager,
@@ -42,7 +44,8 @@ namespace Eryph.Modules.Controller.Inventory
             IVirtualMachineDataService vmDataService, 
             IVirtualDiskDataService vhdDataService,
             IStateStore stateStore,
-            IMessageContext messageContext)
+            IMessageContext messageContext,
+            ILogger logger)
         {
             _lockManager = lockManager;
             MetadataService = metadataService;
@@ -51,6 +54,7 @@ namespace Eryph.Modules.Controller.Inventory
             _vhdDataService = vhdDataService;
             StateStore = stateStore;
             _messageContext = messageContext;
+            _logger = logger;
         }
 
         protected async Task UpdateVMs(
@@ -86,7 +90,7 @@ namespace Eryph.Modules.Controller.Inventory
                     var optionalMachine = (await _vmDataService.GetVM(metadata.MachineId).ConfigureAwait(false));
                     var project = await FindRequiredProject(vmInfo.ProjectName, vmInfo.ProjectId).ConfigureAwait(false);
 
-                    //machine not found or metadata is assigned to new VM - a new VM resource will be created)
+                    //machine not found or metadata is assigned to new VM - a new VM resource will be created
                     if (optionalMachine.IsNone || metadata.VMId != vmInfo.VMId)
                     {
                         // create new metadata for machines that have been imported
@@ -124,6 +128,15 @@ namespace Eryph.Modules.Controller.Inventory
 
                     await optionalMachine.IfSomeAsync(async existingMachine =>
                     {
+                        if (existingMachine.LastSeen >= timestamp)
+                        {
+                            _logger.LogDebug("Skipping inventory update for catlet {CatletId} with timestamp {Timestamp}. Most recent information is dated {LastSeen}.",
+                                existingMachine.Id, timestamp, existingMachine.LastSeen);
+                            return;
+                        }
+                        
+                        existingMachine.LastSeen = timestamp;
+
                         await StateStore.LoadPropertyAsync(existingMachine, x=> x.Project).ConfigureAwait(false);
 
                         Debug.Assert(existingMachine.Project != null);
@@ -136,7 +149,6 @@ namespace Eryph.Modules.Controller.Inventory
                         var newMachine = await VirtualMachineInfoToCatlet(vmInfo,
                             hostMachine, existingMachine.Id, existingMachine.Project, addedDisks).ConfigureAwait(false);
                         existingMachine.Name = newMachine.Name;
-                        existingMachine.Status = newMachine.Status;
                         existingMachine.Host = hostMachine;
                         existingMachine.AgentName = newMachine.AgentName;
                         existingMachine.Frozen = newMachine.Frozen;
@@ -153,6 +165,17 @@ namespace Eryph.Modules.Controller.Inventory
                         existingMachine.StartupMemory = newMachine.StartupMemory;
                         existingMachine.Features = newMachine.Features;
                         existingMachine.SecureBootTemplate = newMachine.SecureBootTemplate;
+
+                        if (existingMachine.LastSeenState >= timestamp)
+                        {
+                            _logger.LogDebug("Skipping state update for catlet {CatletId} with timestamp {Timestamp}. Most recent state information is dated {LastSeen}.",
+                                existingMachine.Id, timestamp, existingMachine.LastSeenState);
+                            return;
+                        }
+
+                        existingMachine.LastSeenState = timestamp;
+                        existingMachine.Status = newMachine.Status;
+                        existingMachine.UpTime = newMachine.UpTime;
                     }).ConfigureAwait(false);
                 }).ConfigureAwait(false);
             }
@@ -369,7 +392,7 @@ namespace Eryph.Modules.Controller.Inventory
                     Frozen = vmInfo.Frozen,
                     StorageIdentifier = vmInfo.StorageIdentifier,
                     MetadataId = vmInfo.MetadataId,
-                    UpTime = vmInfo.UpTime,
+                    UpTime = vmInfo.Status is VmStatus.Stopped ? TimeSpan.Zero : vmInfo.UpTime,
                     CpuCount = vmInfo.Cpu?.Count ?? 0,
                     StartupMemory = vmInfo.Memory?.Startup ?? 0,
                     MinimumMemory = vmInfo.Memory?.Minimum ?? 0,

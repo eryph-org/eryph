@@ -8,6 +8,7 @@ using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Rebus.Pipeline;
 
@@ -22,7 +23,8 @@ internal class UpdateVMHostInventoryCommandHandler(
     IVirtualMachineDataService vmDataService,
     IVirtualDiskDataService vhdDataService,
     IVMHostMachineDataService vmHostDataService,
-    IStateStore stateStore)
+    IStateStore stateStore,
+    ILogger logger)
     : UpdateInventoryCommandHandlerBase(
             lockManager,
             metadataService,
@@ -30,7 +32,8 @@ internal class UpdateVMHostInventoryCommandHandler(
             vmDataService,
             vhdDataService,
             stateStore,
-            messageContext),
+            messageContext,
+            logger),
         IHandleMessages<UpdateVMHostInventoryCommand>
 {
     public async Task Handle(UpdateVMHostInventoryCommand message)
