@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Management;
 using System.Text;
@@ -38,14 +39,20 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
         from convertedEvent in ConvertEvent(
             wmiEvent,
             Seq("__CLASS", "Name", "EnabledState", "OtherEnabledState", "HealthState", "OnTimeInMilliseconds"))
-        let targetInstance = convertedEvent.TargetInstance
-        from vmId in GetVmId(targetInstance)
-        from message in vmId
-            .Map(id => CreateMessage(id, convertedEvent))
-            .Sequence()
+        from message in OnEventArrived(convertedEvent)
         select message.Map(m => (object)m);
 
-    private Aff<VirtualMachineStateChangedEvent> CreateMessage(
+    internal static Aff<Option<VirtualMachineStateChangedEvent>> OnEventArrived(
+        WmiEvent wmiEvent) =>
+        from _ in SuccessAff(unit)
+        let targetInstance = wmiEvent.TargetInstance
+        from vmId in GetVmId(targetInstance)
+        from message in vmId
+            .Map(id => CreateMessage(id, wmiEvent))
+            .Sequence()
+        select message;
+
+    private static Aff<VirtualMachineStateChangedEvent> CreateMessage(
         Guid vmId,
         WmiEvent wmiEvent) =>
         from vmState in GetVmState(wmiEvent.TargetInstance)

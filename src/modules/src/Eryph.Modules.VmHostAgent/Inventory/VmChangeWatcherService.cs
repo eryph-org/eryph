@@ -4,6 +4,7 @@ using System.Linq;
 using System.Management;
 using System.Text;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -26,16 +27,23 @@ internal class VmChangeWatcherService(IBus bus, ILogger log)
         new ManagementScope(@"root\virtualization\v2"),
         new WqlEventQuery(
             "__InstanceModificationEvent",
-            TimeSpan.FromSeconds(10),
+            TimeSpan.FromSeconds(1),
             "TargetInstance ISA 'Msvm_ComputerSystem' OR TargetInstance ISA 'Msvm_GuestNetworkAdapterConfiguration'"))
 {
     private readonly ILogger _log = log;
 
-    protected override Aff<Option<object>> OnEventArrived(ManagementBaseObject wmiEvent) =>
+    protected override Aff<Option<object>> OnEventArrived(
+        ManagementBaseObject wmiEvent) =>
         from convertedEvent in ConvertEvent(
             wmiEvent,
             Seq("__CLASS", "Name", "InstanceID", "OperationalStatus"))
-        let targetInstance = convertedEvent.TargetInstance
+        from message in OnEventArrived(convertedEvent)
+        select message.Map(m => (object)m);
+
+    internal static Aff<Option<VirtualMachineChangedEvent>> OnEventArrived(
+        WmiEvent wmiEvent) =>
+        from _ in SuccessAff(unit)
+        let targetInstance = wmiEvent.TargetInstance
         from className in getRequiredValue<string>(targetInstance, "__CLASS")
         // Skip the event when the VM is still being modified, i.e. the operational
         // status is InService. The inventory only needs to update when the change is
@@ -45,18 +53,13 @@ internal class VmChangeWatcherService(IBus bus, ILogger log)
         // changes quicker.
         from skipEvent in className == "Msvm_ComputerSystem"
             ? from operationalStatus in getRequiredValue<ushort[]>(
-                  targetInstance, "OperationalStatus")
-              from firstStatus in operationalStatus.HeadOrNone()
-                  .ToEff(Error.New("The operational status of the VM is invalid."))
-              select firstStatus == (ushort)VMComputerSystemOperationalStatus.InService
+                targetInstance, "OperationalStatus")
+            from firstStatus in operationalStatus.HeadOrNone()
+                .ToEff(Error.New("The operational status of the VM is invalid."))
+            select firstStatus == (ushort)VMComputerSystemOperationalStatus.InService
             : SuccessEff(false)
-        let ___ = fun(() =>
-        {
-            if (skipEvent)
-                _log.LogWarning("Skipping event");
-        })
         from vmId in GetVmId(targetInstance)
         let message = vmId.Filter(_ => !skipEvent)
-            .Map<object>(id => new VirtualMachineChangedEvent { VmId = id })
+            .Map(id => new VirtualMachineChangedEvent { VmId = id })
         select message;
 }

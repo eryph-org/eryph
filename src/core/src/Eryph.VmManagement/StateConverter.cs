@@ -70,6 +70,7 @@ namespace Eryph.VmManagement
             return state;
         }
 
+        // TODO is this needed? According to the docs, OtherState should not be used.
         internal static VMComputerSystemState ConvertVMOtherState(
             Option<string> otherState) =>
             otherState.Match(
