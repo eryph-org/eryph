@@ -40,9 +40,10 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
             Seq("__CLASS", "Name", "EnabledState", "OtherEnabledState", "HealthState", "OnTimeInMilliseconds"))
         let targetInstance = convertedEvent.TargetInstance
         from vmId in GetVmId(targetInstance)
-        let message = vmId
-            .Map<object>(id => CreateMessage(id, convertedEvent))
-        select message;
+        from message in vmId
+            .Map(id => CreateMessage(id, convertedEvent))
+            .Sequence()
+        select message.Map(m => (object)m);
 
     private Aff<VirtualMachineStateChangedEvent> CreateMessage(
         Guid vmId,

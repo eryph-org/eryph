@@ -2,11 +2,13 @@
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.VmManagement.Inventory;
+using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
 
 namespace Eryph.Modules.VmHostAgent.Inventory;
 
+[UsedImplicitly]
 internal class VirtualMachineStateChangedEventHandler(
     IBus bus,
     WorkflowOptions workflowOptions)
