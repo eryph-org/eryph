@@ -5,10 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core.Sys;
 using Eryph.VmManagement.Sys;
+using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
+using static Eryph.VmManagement.Wmi.WmiUtils;
 
 namespace Eryph.VmManagement.Inventory;
 
@@ -22,14 +24,16 @@ public static class HardwareIdQueries<RT> where RT : struct, HasRegistry<RT>, Ha
             None)
         from product in queryResult.HeadOrNone()
             .ToEff(Error.New("Failed to query Win32_ComputerSystemProduct."))
-        from guid in product.Find("UUID")
-            .Flatten()
-            .Bind(v => Optional(v as string))
-            .Bind(parseGuid)
-            // According to SMBIOS specification, both all 0s and all 1s (0xFF)
-            // indicate that the UUID is not set.
-            .Filter(g => g != Guid.Empty && g != Guid.Parse("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"))
-            .ToEff(Error.New("The found SMBIOS UUID is not a valid GUID."))
+        from guid in getSmBiosUuid(product)
+        select guid;
+
+    private static Eff<RT, Guid> getSmBiosUuid(WmiObject wmiObject) =>
+        from uuidValue in getRequiredValue<string>(wmiObject, "UUID")
+            .MapFail(e => Error.New("WMI did not return the SMBIOS UUID."))
+        from guid in parseGuid(uuidValue)
+            .ToEff("The found SMBIOS UUID is not a valid GUID.")
+        from _ in guard(guid != Guid.Empty && guid != Guid.Parse("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"),
+            Error.New("The SMBIOS UUID is not set."))
         select guid;
 
     public static Eff<RT, Guid> readCryptographyGuid() =>

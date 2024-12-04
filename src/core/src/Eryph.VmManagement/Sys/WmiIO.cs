@@ -4,15 +4,16 @@ using System.Linq;
 using System.Management;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.VmManagement.Wmi;
 using LanguageExt;
-using LanguageExt.Common;
+
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Sys;
 
 public interface WmiIO
 {
-    public Eff<Seq<HashMap<string, Option<object>>>> ExecuteQuery(
+    public Fin<Seq<WmiObject>> ExecuteQuery(
         string scope,
         Seq<string> properties,
         string className,
@@ -23,7 +24,7 @@ public readonly struct LiveWmiIO : WmiIO
 {
     public static readonly WmiIO Default = new LiveWmiIO();
 
-    public Eff<Seq<HashMap<string, Option<object>>>> ExecuteQuery(
+    public Fin<Seq<WmiObject>> ExecuteQuery(
         string scope,
         Seq<string> properties,
         string className,
@@ -31,14 +32,14 @@ public readonly struct LiveWmiIO : WmiIO
     {
         using var searcher = new ManagementObjectSearcher(
             new ManagementScope(scope),
-            new ObjectQuery($"SELECT {string.Join(',', properties)} "
+            new ObjectQuery($"SELECT {string.Join(", ", properties)} "
                 + $"FROM {className}"
                 + whereClause.Map(c => $" WHERE {c}").IfNone("")));
         using var collection = searcher.Get();
-        var managementObjects= collection.Cast<ManagementBaseObject>().ToList();
+        var managementObjects = collection.Cast<ManagementBaseObject>().ToSeq();
         try
         {
-            return ConvertObjects(managementObjects.ToSeq(), properties);
+            return ConvertObjects(managementObjects, properties).Run();
         }
         finally
         {
@@ -54,34 +55,10 @@ public readonly struct LiveWmiIO : WmiIO
         }
     }
 
-    private static Eff<Seq<HashMap<string, Option<object>>>> ConvertObjects(
+    private static Eff<Seq<WmiObject>> ConvertObjects(
         Seq<ManagementBaseObject> managementObjects,
         Seq<string> properties) =>
         managementObjects
-            .Map(o => ConvertObject(o, properties))
+            .Map(o => WmiUtils.convertObject(o, properties))
             .Sequence();
-
-    private static Eff<HashMap<string, Option<object>>> ConvertObject(
-        ManagementBaseObject managementObject,
-        Seq<string> properties) =>
-        from values in properties
-            .Map(p => from value in ConvertProperty(managementObject, p)
-                      select (p, value))
-            .Sequence()
-        select values.ToHashMap();
-
-    private static Eff<Option<object>> ConvertProperty(
-        ManagementBaseObject managementObject,
-        string property) =>
-        from _ in SuccessEff(unit)
-        let propertyDataCollection = property.StartsWith("__")
-            ? managementObject.SystemProperties
-            : managementObject.Properties
-        from propertyData in propertyDataCollection
-            .Cast<PropertyData>()
-            .Find(p => p.Name == property)
-            .ToEff(Error.New($"The property '{property}' was not found."))
-        from __ in guardnot(propertyData.Type == CimType.Object,
-            Error.New($"The property '{property}' contains a WMI object. These are not supported by this query engine."))
-        select Optional(propertyData.Value);
 }

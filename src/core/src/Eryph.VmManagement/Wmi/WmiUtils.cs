@@ -13,55 +13,81 @@ namespace Eryph.VmManagement.Wmi;
 
 public static class WmiUtils
 {
-    public static Eff<T> GetPropertyValue<T>(
-        ManagementBaseObject mo,
+    public static Eff<WmiObject> convertObject(
+        ManagementBaseObject managementObject,
+        Seq<string> properties) =>
+        from propertyData in properties
+            .Map(p => findPropertyData(managementObject, p))
+            .Sequence()
+        let validPropertyData = propertyData.Somes()
+        from values in validPropertyData
+            .Map(convertProperty)
+            .Sequence()
+        select new WmiObject(values.ToHashMap());
+
+    private static Eff<(string, Option<object>)> convertProperty(
+        PropertyData propertyData) =>
+        from __ in guardnot(propertyData.Type == CimType.Object,
+                Error.New($"The property '{propertyData.Name}' contains a WMI object."))
+            .ToEff()
+        select (propertyData.Name, Optional(propertyData.Value));
+
+
+    public static Eff<T> getRequiredValue<T>(
+        WmiObject mo,
         string propertyName) =>
-        from property in FindProperty(mo, propertyName)
-        from value in Optional(property.Value)
+        from optionalValue in findProperty(mo, propertyName)
+        from value in optionalValue
             .ToEff(Error.New($"The property '{propertyName} is null."))
-        from convertedValue in ConvertValue<T>(propertyName, value)
+        from convertedValue in convertValue<T>(propertyName, value)
         select convertedValue;
 
-    public static Eff<Option<T>> GetOptionalPropertyValue<T>(
-        ManagementBaseObject mo,
+    public static Eff<Option<T>> getValue<T>(
+        WmiObject wmiObject,
         string propertyName) =>
-        from property in FindProperty(mo, propertyName)
-        from convertedValue in Optional(property.Value)
-            .Map(v => ConvertValue<T>(propertyName, v))
+        from optionalValue in findProperty(wmiObject, propertyName)
+        from convertedValue in optionalValue
+            .Map(v => convertValue<T>(propertyName, v))
             .Sequence()
         select convertedValue;
 
-    private static Eff<PropertyData> FindProperty(
+    private static Eff<Option<PropertyData>> findPropertyData(
         ManagementBaseObject managementObject,
         string propertyName) =>
-        from properties in Eff(() => managementObject.Properties.Cast<PropertyData>().ToSeq())
-        from property in properties.Find(p => p.Name == propertyName)
+        from _ in SuccessEff(unit)
+        let propertyDataCollection = propertyName.StartsWith("__")
+            ? managementObject.SystemProperties
+            : managementObject.Properties
+        from properties in Eff(() => propertyDataCollection.Cast<PropertyData>().ToSeq())
+        let property = properties.Find(p => p.Name == propertyName)
+        select property;
+
+    private static Eff<Option<object>> findProperty(
+        WmiObject wmiObject,
+        string propertyName) =>
+        from property in wmiObject.Properties.Find(propertyName)
             .ToEff(Error.New($"The property '{propertyName}' does not exist in the WMI object."))
         select property;
 
-    private static Eff<T> ConvertValue<T>(
+    private static Eff<T> convertValue<T>(
         string propertyName,
         object value) =>
         from _ in unitEff
-        let result = typeof(T).IsEnum
-            ? ConvertToEnum<T>(value)
-            : Eff(() => (T)value).MapFail(_ => Error.New($"The value '{value}' is not of type {nameof(T)}."))
-        from convertedValue in result
-            .MapFail(e => Error.New($"The value '{value}' of property '{propertyName}' is invalid."))
-        select convertedValue;
-
-    private static Eff<T> ConvertToEnum<T>(
-        object value) =>
-        from _ in guard(typeof(T).IsEnum,
-                Error.New("Cannot convert value to a type which is not an enum."))
-            .ToEff()
-        from enumValue in value switch
+        let result = typeof(T).IsEnum switch
         {
-            string s => Eff(() => (T)Enum.Parse(typeof(T), s, true))
-                .MapFail(_ => Error.New($"The value '{s}' is not valid for {nameof(T)}.")),
-            { } v when Enum.IsDefined(typeof(T), v) => Eff(() => (T)Enum.ToObject(typeof(T), v))
-                .MapFail(_ => Error.New($"The value '{s}' is not valid for {nameof(T)}.")),
-            _ => FailEff<T>(Error.New($"The value '{s}' is not valid for {nameof(T)}."))
+            true => value switch
+            {
+                string s => Eff(() => (T)Enum.Parse(typeof(T), s, true))
+                    .MapFail(_ => Error.New($"The value '{s}' is not valid for {nameof(T)}.")),
+                { } v when Enum.IsDefined(typeof(T), v) => Eff(() => (T)Enum.ToObject(typeof(T), v))
+                    .MapFail(_ => Error.New($"The value '{s}' is not valid for {nameof(T)}.")),
+                _ => FailEff<T>(Error.New($"The value '{s}' is not valid for {nameof(T)}."))
+            },
+            false => value is T
+                ? Eff(() => (T)value)
+                : FailEff<T>(Error.New($"The value '{value}' is not of type {nameof(T)}."))
         }
-        select enumValue;
+        from convertedValue in result
+            .MapFail(e => Error.New($"The value '{value}' of property '{propertyName}' is invalid.", e))
+        select convertedValue;
 }

@@ -87,7 +87,7 @@ namespace Eryph.Modules.VmHostAgent
             options.AddHostedService<GeneticsRequestWatcherService>();
             options.AddStartupHandler<StartBusModuleHandler>();
             options.AddHostedService<VmChangeWatcherService>();
-            options.AddHostedService<VmStatusChangeWatcherService>();
+            options.AddHostedService<VmStateChangeWatcherService>();
             options.AddLogging();
         }
 
