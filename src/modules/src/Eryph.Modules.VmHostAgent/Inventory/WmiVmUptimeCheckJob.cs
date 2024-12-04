@@ -52,7 +52,7 @@ internal static class WmiVmUptimeCheckJob<RT> where RT : struct, HasWmi<RT>
         // the cloud-init configs.
         from changedVms in Wmi<RT>.executeQuery(
             @"root\virtualization\v2",
-            Seq("Name", "EnabledState", "OtherEnabledState", "HealthState", "OnTimeInMilliseconds"),
+            Seq("__CLASS", "Name", "EnabledState", "OtherEnabledState", "HealthState", "OnTimeInMilliseconds"),
             "Msvm_ComputerSystem",
             Some("OnTimeInMilliseconds <> NULL AND OnTimeInMilliseconds < 3600000"))
         from messages in changedVms
