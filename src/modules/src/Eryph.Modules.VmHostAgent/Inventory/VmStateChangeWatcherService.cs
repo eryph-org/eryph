@@ -7,6 +7,7 @@ using System.Management;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
@@ -55,12 +56,12 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
     private static Aff<VirtualMachineStateChangedEvent> CreateMessage(
         Guid vmId,
         WmiEvent wmiEvent) =>
-        from vmState in GetVmState(wmiEvent.TargetInstance)
+        from vmState in getVmState(wmiEvent.TargetInstance)
         from upTime in GetVmUpTime(wmiEvent.TargetInstance)
         let message = new VirtualMachineStateChangedEvent
         {
             VmId = vmId,
-            State = vmState,
+            State = vmState.ToNullable(),
             UpTime = upTime,
             Timestamp = wmiEvent.Created,
         }

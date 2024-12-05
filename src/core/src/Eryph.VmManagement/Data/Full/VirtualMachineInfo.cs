@@ -79,7 +79,7 @@ namespace Eryph.VmManagement.Data.Full
         public TimeSpan Uptime { get; init; }
 
 
-        //public VirtualMachineOperationalStatus[] OperationalStatus { get; init; }
+        public VirtualMachineOperationalStatus[] OperationalStatus { get; init; }
 
 
         //public VirtualMachineOperationalStatus? PrimaryOperationalStatus

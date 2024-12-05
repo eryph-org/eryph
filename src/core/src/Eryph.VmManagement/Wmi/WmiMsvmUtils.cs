@@ -51,13 +51,26 @@ public static class WmiMsvmUtils
         }
         select vmId;
 
-    public static Eff<VirtualMachineState> GetVmState(
+    public static Eff<Option<VirtualMachineState>> getVmState(
         WmiObject managementObject) =>
         from enabledState in getRequiredValue<ushort>(managementObject, "EnabledState")
+        let convertedEnabledState = convert<MsvmComputerSystemEnabledState>(enabledState)
         from otherEnabledState in getValue<string>(managementObject, "OtherEnabledState")
         from healthState in getRequiredValue<ushort>(managementObject, "HealthState")
-        let vmState = StateConverter.ConvertVMState(enabledState, otherEnabledState, healthState)
+        let convertedHealthState = convert<MsvmComputerSystemHealthState>(healthState)
+        let vmState = StateConverter.ConvertVMState(convertedEnabledState, otherEnabledState, convertedHealthState)
         select vmState;
+
+    public static Eff<Option<VirtualMachineOperationalStatus>> getOperationalStatus(
+        WmiObject wmiObject) =>
+        from operationalStatus in getRequiredValue<ushort[]>(wmiObject, "OperationalStatus")
+        let primaryStatus = operationalStatus.Length >= 1
+            ? convert<VirtualMachineOperationalStatus>(operationalStatus[0])
+            : None
+        let secondaryStatus = operationalStatus.Length >= 2
+            ? convert<VirtualMachineOperationalStatus>(operationalStatus[1])
+            : None
+        select OperationalStatusConverter.Convert(primaryStatus, secondaryStatus);
 
     public static Eff<TimeSpan> GetVmUpTime(
         WmiObject managementObject) =>
@@ -68,4 +81,9 @@ public static class WmiMsvmUtils
                 .MapFail(_ => Error.New($"The value '{t}' is not a valid VM uptime.")))
             .Sequence()
         select uptime.IfNone(TimeSpan.Zero);
+
+    private static Option<T> convert<T>(ushort value) where T : struct, Enum =>
+        Optional(value)
+            .Filter(v => Enum.IsDefined(typeof(T),v))
+            .Map(v => (T)Enum.ToObject(typeof(T), v));
 }

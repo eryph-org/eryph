@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
-using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Resources.Machines;
@@ -11,78 +13,88 @@ using Eryph.VmManagement.Inventory;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace Eryph.Modules.VmHostAgent.Inventory
+using static LanguageExt.Prelude;
+
+namespace Eryph.Modules.VmHostAgent.Inventory;
+
+[UsedImplicitly]
+internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log,
+    WorkflowOptions workflowOptions,
+    IHostInfoProvider hostInfoProvider,
+    IHostSettingsProvider hostSettingsProvider,
+    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
+    : IHandleMessages<InventoryRequestedEvent>
 {
-    [UsedImplicitly]
-    internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log,
-            WorkflowOptions workflowOptions,
-            IHostInfoProvider hostInfoProvider,
-            IHostSettingsProvider hostSettingsProvider,
-            IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
-        : IHandleMessages<InventoryRequestedEvent>
+    public async Task Handle(InventoryRequestedEvent message)
     {
-        public Task Handle(InventoryRequestedEvent message)
-        {
-            return engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
-                    .AddCommand("get-vm")).ToError()
-                .BindAsync(VmsToInventory)
-                .ToAsync()
-                .MatchAsync(
-                    RightAsync: c => bus.Advanced.Routing.Send(workflowOptions.OperationsDestination, c),
-                    Left: l =>
-                    {
-                        log.LogError(l.Message);
-                    }
-                );
-        }
+        var result = await InventoryAllVms().Run();
 
+        result.IfFail(e => { log.LogError(e, "The inventory has failed."); });
+        if (result.IsFail)
+            return;
 
-        private Task<Either<Error, UpdateVMHostInventoryCommand>> VmsToInventory(
-            Seq<TypedPsObject<VirtualMachineInfo>> vms)
-        {
-            return  
-                (from hostInventory in hostInfoProvider.GetHostInfoAsync(true) 
-                 let timestamp = DateTimeOffset.UtcNow
-                 from hostSettings in hostSettingsProvider.GetHostSettings()
-                 from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-                 let inventory = new VirtualMachineInventory(engine, vmHostAgentConfig, hostInfoProvider)
-                 from vmInventory in InventorizeAllVms(inventory, vms).ToAsync()
-                select new UpdateVMHostInventoryCommand
-                {
-                    HostInventory = hostInventory,
-                    VMInventory = vmInventory.ToList(),
-                    Timestamp = timestamp
-                }).ToEither();
-        }
-
-        private Task<Either<Error, IEnumerable<VirtualMachineData>>> InventorizeAllVms(
-            VirtualMachineInventory inventory,
-            Seq<TypedPsObject<VirtualMachineInfo>> vms)
-        {
-            return
-                vms.Map(vm => inventory.InventorizeVM(vm)
-                        .ToAsync().Match(
-                            Right: Prelude.Some,
-                            Left: l =>
-                            {
-                                log.LogError(
-                                    "Inventory of virtual machine '{VMName}' (Id:{VmId}) failed. Error: {failure}",
-                                    vm.Value.Name, vm.Value.Id, l.Message);
-                                return Prelude.None;
-                            })
-
-                    )
-                    .TraverseParallel(l => l.AsEnumerable())
-                    .Map(seq => seq.Flatten())
-                    .Map(Prelude.Right<Error, IEnumerable<VirtualMachineData>>);
-
-        }
+        await bus.Advanced.Routing.Send(workflowOptions.OperationsDestination, result.ToOption().ValueUnsafe());
     }
+
+    private Aff<UpdateVMHostInventoryCommand> InventoryAllVms() =>
+        from _ in SuccessAff(unit)
+        let timestamp = DateTimeOffset.UtcNow
+        let psCommand = PsCommandBuilder.Create().AddCommand("Get-VM")
+        from vmInfos in engine.GetObjectsAsync<VirtualMachineInfo>(
+                PsCommandBuilder.Create().AddCommand("Get-VM"))
+            .ToAff()
+        from validVmInfos in vmInfos.Map(CanBeInventoried)
+            .Sequence().ToAff()
+            .Map(s => s.Somes())
+        from hostInventory in hostInfoProvider.GetHostInfoAsync(true).ToAff(identity)
+        from hostSettings in hostSettingsProvider.GetHostSettings().ToAff(identity)
+        from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+            .ToAff(identity)
+        let inventory = new VirtualMachineInventory(engine, vmHostAgentConfig, hostInfoProvider)
+        from vmData in validVmInfos
+            .Map(vmInfo => InventoryVm(inventory, vmInfo))
+            .SequenceParallel()
+        select new UpdateVMHostInventoryCommand
+        {
+            HostInventory = hostInventory,
+            VMInventory = vmData.Somes().ToList(),
+            Timestamp = timestamp
+        };
+
+    private Aff<Option<VirtualMachineData>> InventoryVm(
+        VirtualMachineInventory inventory,
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from vmData in inventory.InventorizeVM(vmInfo).ToAsync().ToAff(identity).Map(Some)
+                       | @catch(e =>
+                       {
+                           log.LogError(e, "Inventory of virtual machine '{VmName}' (Id:{VmId}) failed.",
+                               vmInfo.Value.Name, vmInfo.Value.Id);
+                           return SuccessAff(Option<VirtualMachineData>.None);
+                       })
+        select vmData;
+
+    private Eff<Option<TypedPsObject<VirtualMachineInfo>>> CanBeInventoried(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from vmInfoValue in Eff(() => Some(vmInfo.Value))
+                            | @catch(e =>
+                            {
+                                log.LogError(e, "Failed to extract VM information from Powershell response");
+                                return SuccessEff(Option<VirtualMachineInfo>.None);
+                            })
+        let operationalStatus = vmInfoValue.Bind(v => OperationalStatusConverter.Convert(v.OperationalStatus))
+        let state = vmInfoValue.Map(v => v.State)
+        let canBeInventoried = VmStateUtils.canBeInventoried(state, operationalStatus)
+        // When Powershell data is invalid, we already logged that above. Also,
+        // we do not have any ID which we could log in that case.
+        let _ = vmInfoValue.Filter(_ => !canBeInventoried).IfSome(v =>
+        {
+            log.LogInformation("Skipping inventory of VM {VmId} because of its status: {State}, {OperationalStatus}.",
+                v.Id, state, operationalStatus);
+        })
+        select canBeInventoried ? Some(vmInfo) : None;
 }

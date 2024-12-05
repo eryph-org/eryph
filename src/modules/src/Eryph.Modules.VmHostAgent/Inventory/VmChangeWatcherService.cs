@@ -14,6 +14,7 @@ using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiUtils;
 using static Eryph.VmManagement.Wmi.WmiMsvmUtils;
 using static Eryph.VmManagement.Wmi.WmiEventUtils;
+using Eryph.VmManagement.Inventory;
 
 namespace Eryph.Modules.VmHostAgent.Inventory;
 
@@ -30,8 +31,6 @@ internal class VmChangeWatcherService(IBus bus, ILogger log)
             TimeSpan.FromSeconds(1),
             "TargetInstance ISA 'Msvm_ComputerSystem' OR TargetInstance ISA 'Msvm_GuestNetworkAdapterConfiguration'"))
 {
-    private readonly ILogger _log = log;
-
     protected override Aff<Option<object>> OnEventArrived(
         ManagementBaseObject wmiEvent) =>
         from convertedEvent in ConvertEvent(
@@ -44,22 +43,28 @@ internal class VmChangeWatcherService(IBus bus, ILogger log)
         WmiEvent wmiEvent) =>
         from _ in SuccessAff(unit)
         let targetInstance = wmiEvent.TargetInstance
-        from className in getRequiredValue<string>(targetInstance, "__CLASS")
-        // Skip the event when the VM is still being modified, i.e. the operational
-        // status is InService. The inventory only needs to update when the change is
-        // completed. Additionally, a lot of changes can complete rather quickly. Hence,
-        // this check limits the number of events which are raised in short succession.
-        // There is a separate watcher for the VM status which will propagate status
-        // changes quicker.
-        from skipEvent in className == "Msvm_ComputerSystem"
-            ? from operationalStatus in getRequiredValue<ushort[]>(
-                targetInstance, "OperationalStatus")
-            from firstStatus in operationalStatus.HeadOrNone()
-                .ToEff(Error.New("The operational status of the VM is invalid."))
-            select firstStatus == (ushort)VMComputerSystemOperationalStatus.InService
-            : SuccessEff(false)
         from vmId in GetVmId(targetInstance)
-        let message = vmId.Filter(_ => !skipEvent)
-            .Map(id => new VirtualMachineChangedEvent { VmId = id })
+        from message in vmId.Match(
+            Some: id => OnEventArrived(wmiEvent, id),
+            None: () => SuccessAff(Option<VirtualMachineChangedEvent>.None))
         select message;
+
+    private static Aff<Option<VirtualMachineChangedEvent>> OnEventArrived(
+        WmiEvent wmiEvent,
+        Guid vmId) =>
+        from _ in SuccessAff(unit)
+        let targetInstance = wmiEvent.TargetInstance
+        from className in getRequiredValue<string>(targetInstance, "__CLASS")
+        from canBeInventoried in className == "Msvm_ComputerSystem"
+            ? from state in getVmState(targetInstance)
+              from operationalStatus in getOperationalStatus(targetInstance)
+              // We check here if the VM can be inventoried based on the state information.
+              // This way, we avoid raising too many events. The state information might change
+              // rapidly while Hyper-V applies changes.
+              let canBeInventoried = VmStateUtils.canBeInventoried(state, operationalStatus)
+              select canBeInventoried
+            : SuccessEff(true)
+        select canBeInventoried
+            ? Some(new VirtualMachineChangedEvent { VmId = vmId })
+            : None;
 }

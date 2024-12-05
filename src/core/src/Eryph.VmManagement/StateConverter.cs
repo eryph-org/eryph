@@ -1,87 +1,85 @@
 ﻿using System;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Wmi;
 using LanguageExt;
 
-namespace Eryph.VmManagement
+using static LanguageExt.Prelude;
+
+namespace Eryph.VmManagement;
+
+public static class StateConverter
 {
-    public static class StateConverter
-    {
-        public static VirtualMachineState GetCriticalState(VirtualMachineState state)
+    /// <summary>
+    /// Converts the given state information to a <see cref="VirtualMachineState"/>.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="VirtualMachineState"/> enum represents the state information
+    /// returned by the <c>Get-VM</c> Cmdlet. WMI returns the state information in
+    /// three different values. In this method, we convert the WMI state information
+    /// as good as we can. Unfortunately, the documentation is incomplete and in some
+    /// places even inconsistent.
+    /// </remarks>
+    internal static Option<VirtualMachineState> ConvertVMState(
+        Option<MsvmComputerSystemEnabledState> enabledState,
+        Option<string> otherEnabledState,
+        Option<MsvmComputerSystemHealthState> healthState) =>
+        from validEnabledState in enabledState
+        from convertedState in validEnabledState switch
         {
-            var vmState = state;
-            switch (state)
-            {
-                case VirtualMachineState.Running:
-                    vmState = VirtualMachineState.RunningCritical;
-                    break;
-                case VirtualMachineState.Off:
-                    vmState = VirtualMachineState.OffCritical;
-                    break;
-                case VirtualMachineState.Stopping:
-                    vmState = VirtualMachineState.StoppingCritical;
-                    break;
-                case VirtualMachineState.Saved:
-                    vmState = VirtualMachineState.SavedCritical;
-                    break;
-                case VirtualMachineState.Paused:
-                    vmState = VirtualMachineState.PausedCritical;
-                    break;
-                case VirtualMachineState.Starting:
-                    vmState = VirtualMachineState.StartingCritical;
-                    break;
-                case VirtualMachineState.Reset:
-                    vmState = VirtualMachineState.ResetCritical;
-                    break;
-                case VirtualMachineState.Saving:
-                    vmState = VirtualMachineState.SavingCritical;
-                    break;
-                case VirtualMachineState.Pausing:
-                    vmState = VirtualMachineState.PausingCritical;
-                    break;
-                case VirtualMachineState.Resuming:
-                    vmState = VirtualMachineState.ResumingCritical;
-                    break;
-                case VirtualMachineState.FastSaved:
-                    vmState = VirtualMachineState.FastSavedCritical;
-                    break;
-                case VirtualMachineState.FastSaving:
-                    vmState = VirtualMachineState.FastSavingCritical;
-                    break;
-            }
-
-            return vmState;
+            MsvmComputerSystemEnabledState.Other =>
+                otherEnabledState.Bind(convertOtherState),
+            _ => convert(validEnabledState)
         }
+        let isCritical = healthState.Map(s => s != MsvmComputerSystemHealthState.Ok)
+            .IfNone(true)
+        select isCritical ? toCritical(convertedState) : convertedState;
 
-        public static VirtualMachineState ConvertVMState(
-            ushort enabledStateNumber,
-            Option<string> otherEnabledState,
-            ushort healthStateNumber)
+    private static Option<VirtualMachineState> convert(
+        MsvmComputerSystemEnabledState state) =>
+        state switch
         {
-            var computerState = (VMComputerSystemState) enabledStateNumber;
-            if (computerState == VMComputerSystemState.Other)
-                computerState = ConvertVMOtherState(otherEnabledState);
+            MsvmComputerSystemEnabledState.Enabled => VirtualMachineState.Running,
+            MsvmComputerSystemEnabledState.Disabled => VirtualMachineState.Off,
+            MsvmComputerSystemEnabledState.ShuttingDown => VirtualMachineState.Stopping,
+            MsvmComputerSystemEnabledState.Quiesce => VirtualMachineState.Paused,
+            MsvmComputerSystemEnabledState.Starting => VirtualMachineState.Starting,
+            MsvmComputerSystemEnabledState.Paused => VirtualMachineState.Paused,
+            MsvmComputerSystemEnabledState.Suspended => VirtualMachineState.Saved,
+            MsvmComputerSystemEnabledState.Starting2 => VirtualMachineState.Starting,
+            MsvmComputerSystemEnabledState.Saving => VirtualMachineState.Saving,
+            MsvmComputerSystemEnabledState.Stopping => VirtualMachineState.Stopping,
+            MsvmComputerSystemEnabledState.Pausing => VirtualMachineState.Pausing,
+            MsvmComputerSystemEnabledState.Resuming => VirtualMachineState.Resuming,
+            _ => None,
+        };
 
-            var state = (VirtualMachineState) computerState;
+    private static VirtualMachineState toCritical(
+        VirtualMachineState state) =>
+        state switch
+        {
+            VirtualMachineState.Running => VirtualMachineState.RunningCritical,
+            VirtualMachineState.Off => VirtualMachineState.OffCritical,
+            VirtualMachineState.Stopping => VirtualMachineState.StoppingCritical,
+            VirtualMachineState.Saved => VirtualMachineState.SavedCritical,
+            VirtualMachineState.Paused => VirtualMachineState.PausedCritical,
+            VirtualMachineState.Starting => VirtualMachineState.StartingCritical,
+            VirtualMachineState.Reset => VirtualMachineState.ResetCritical,
+            VirtualMachineState.Saving => VirtualMachineState.SavingCritical,
+            VirtualMachineState.Pausing => VirtualMachineState.PausingCritical,
+            VirtualMachineState.Resuming => VirtualMachineState.ResumingCritical,
+            VirtualMachineState.FastSaved => VirtualMachineState.FastSavedCritical,
+            VirtualMachineState.FastSaving => VirtualMachineState.FastSavingCritical,
+            _ => state
+        };
 
-            var healthState = (VMComputerSystemHealthState) healthStateNumber;
-            if (healthState != VMComputerSystemHealthState.Ok)
-                state = GetCriticalState(state);
-
-            return state;
-        }
-
-        // TODO is this needed? According to the docs, OtherState should not be used.
-        internal static VMComputerSystemState ConvertVMOtherState(
-            Option<string> otherState) =>
-            otherState.Match(
-                s => s switch
-                {
-                    _ when string.Equals(s, "Quiescing", StringComparison.OrdinalIgnoreCase) => VMComputerSystemState.Pausing,
-                    _ when string.Equals(s, "Resuming", StringComparison.OrdinalIgnoreCase) => VMComputerSystemState.Resuming,
-                    _ when string.Equals(s, "Saving", StringComparison.OrdinalIgnoreCase) => VMComputerSystemState.Saving,
-                    _ when string.Equals(s, "FastSaving", StringComparison.OrdinalIgnoreCase) => VMComputerSystemState.FastSaving,
-                    _ => VMComputerSystemState.Unknown
-                },
-                () => VMComputerSystemState.Unknown);
-    }
+    internal static Option<VirtualMachineState> convertOtherState(
+        string otherState) => 
+        otherState switch
+        {
+            _ when string.Equals(otherState, "Quiescing", StringComparison.OrdinalIgnoreCase) => VirtualMachineState.Pausing,
+            _ when string.Equals(otherState, "Resuming", StringComparison.OrdinalIgnoreCase) => VirtualMachineState.Resuming,
+            _ when string.Equals(otherState, "Saving", StringComparison.OrdinalIgnoreCase) => VirtualMachineState.Saving,
+            _ when string.Equals(otherState, "FastSaving", StringComparison.OrdinalIgnoreCase) => VirtualMachineState.FastSaving,
+            _ => None,
+        };
 }
