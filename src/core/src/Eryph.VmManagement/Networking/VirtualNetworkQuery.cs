@@ -8,9 +8,12 @@ using Dbosoft.OVN.Windows;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static Eryph.Core.Prelude;
+using static Eryph.VmManagement.Wmi.WmiUtils;
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Networking;
@@ -42,6 +45,10 @@ public static class VirtualNetworkQuery
         VMNetworkAdapter networkAdapter,
         IHyperVOvsPortManager portManager) =>
         from portName in portManager.GetConfiguredPortName(networkAdapter.Id)
+        from foo in VirtualNetworkQuery<WmiRuntime>
+            .GetNetworkByAdapter(networkAdapter, portName)
+            .Run(WmiRuntime.New()).ToEither().ToAsync()
+
         from networkData in Try(() =>
         {
             // TODO Properly implement this query including disposal
@@ -106,4 +113,55 @@ public static class VirtualNetworkQuery
 
         return [];
     }
+}
+
+public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
+{
+    public static Eff<RT, MachineNetworkData> GetNetworkByAdapter(
+        VMNetworkAdapter adapter,
+        Option<string> portName) =>
+        from _ in SuccessEff<RT, Unit>(unit)
+        let guestNetworkId = adapter.Id.Replace("Microsoft:", @"Microsoft:GuestNetwork\")
+        from wmiObjects in Wmi<RT>.executeQuery(
+            @"root\virtualization\v2",
+            Seq("DefaultGateways", "DHCPEnabled", "DNSServers", "IPAddresses", "Subnets"),
+            "Msvm_GuestNetworkAdapterConfiguration",
+            $"InstanceID = '{guestNetworkId.Replace(@"\", @"\\")}%'")
+        from guestNetworkData in wmiObjects.HeadOrNone()
+            .ToEff(Error.New("No network information has been returned."))
+        from defaultGateways in getRequiredValue<string[]>(guestNetworkData, "DefaultGateways")
+        from dnsServers in getRequiredValue<string[]>(guestNetworkData, "DNSServers")
+        from dhcpEnabled in getRequiredValue<bool>(guestNetworkData, "DHCPEnabled")
+        from ipAddresses in getRequiredValue<string[]>(guestNetworkData, "IPAddresses")
+        from netmasks in getRequiredValue<string[]>(guestNetworkData, "Subnets")
+        select new MachineNetworkData();
+
+    // TODO use zip
+    /*
+    private static Eff<Seq<string>> convertSubnets(
+        Seq<string> ipAddresses,
+        Seq<string> netmasks) =>
+        from subnets in ipAddresses
+            .Zip((LanguageExt.Seq<>.Empty))
+            .Map((i, ipAddress) => convertSubnet(ipAddress, netmasks.Skip(i).HeadOrNone()))
+            .ToSeq()
+            .Sequence()
+        select subnets;
+
+    private static Eff<string> convertSubnet(
+        string ipAddress,
+        Option<string> netmask) =>
+        from validNetmask in netmask
+            .ToEff(Error.New($"Netmask for IP address {ipAddress} is missing."))
+        from subnet in validNetmask switch
+        {
+            _ when validNetmask.StartsWith("/") => parseIPNetwork2(ipAddress + validNetmask)
+                .ToEff(Error.New($"The subnet '{ipAddress + validNetmask}' is invalid.")),
+            _ when validNetmask.IndexOf('.') == -1 => parseIPNetwork2($"{ipAddress}/{validNetmask}")
+                .ToEff(Error.New($"The subnet '{ipAddress}/{validNetmask}' is invalid.")),
+            _ => parseIPNetwork2(ipAddress, validNetmask)
+                .ToEff(Error.New($"IP Address '{ipAddress}' with netmask '{validNetmask}' is not a valid subnet.s")),
+        }
+        select subnet.ToString();
+    */
 }
