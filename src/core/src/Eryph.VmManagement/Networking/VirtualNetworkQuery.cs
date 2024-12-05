@@ -28,22 +28,20 @@ public static class VirtualNetworkQuery
         VMHostMachineData hostInfo,
         Seq<VMNetworkAdapter> networkAdapters) =>
         use(() => new HyperVOvsPortManager(),
-                portManager => GetNetworksByAdapters(hostInfo, networkAdapters, portManager)
+                portManager => GetNetworksByAdapters(networkAdapters, portManager)
                     .ToEither())
             .ToAsync();
 
     private static EitherAsync<Error, Seq<MachineNetworkData>> GetNetworksByAdapters(
-        VMHostMachineData hostInfo,
         Seq<VMNetworkAdapter> networkAdapters,
         IHyperVOvsPortManager portManager) =>
-        networkAdapters.Map(adapter => GetNetworkByAdapter(hostInfo, adapter, portManager))
+        networkAdapters.Map(adapter => GetNetworkByAdapter(adapter, portManager))
             .SequenceSerial(); 
 
     private static EitherAsync<Error, MachineNetworkData> GetNetworkByAdapter(
-        VMHostMachineData hostInfo,
         VMNetworkAdapter networkAdapter,
         IHyperVOvsPortManager portManager) =>
-        from portName in portManager.GetPortName(networkAdapter.Id)
+        from portName in portManager.GetConfiguredPortName(networkAdapter.Id)
         from networkData in Try(() =>
         {
             // TODO Properly implement this query including disposal
@@ -51,23 +49,17 @@ public static class VirtualNetworkQuery
             var guestNetworkId = networkAdapter.Id.Replace("Microsoft:", "Microsoft:GuestNetwork\\")
                 .Replace("\\", "\\\\");
 
-            var portId = networkAdapter.Id.Replace("\\", "\\\\");
-
             using var guestAdapterObj = new ManagementObject();
             guestAdapterObj.Path = new ManagementPath(scope.Path +
                                                       $":Msvm_GuestNetworkAdapterConfiguration.InstanceID=\"{guestNetworkId}\"");
             guestAdapterObj.Get();
 
-            using var portSettingsObj = new ManagementObject();
-            portSettingsObj.Path = new ManagementPath(scope.Path +
-                                                      $":Msvm_EthernetPortAllocationSettingData.InstanceID=\"{portId}\"");
-
             var info = new MachineNetworkData
             {
-                PortName = portName,
+                PortName = portName.IfNoneUnsafe((string)null),
                 AdapterName = networkAdapter.Name,
                 MacAddress = Optional(networkAdapter.MacAddress)
-                    // Hyper-V returns all zeros when a dynamic MAC address has not been assigned yet.s
+                    // Hyper-V returns all zeros when a dynamic MAC address has not been assigned yet.
                     .Filter(a => a != "000000000000")
                     .IfNoneUnsafe((string)null),
                 IPAddresses = ObjectToStringArray(guestAdapterObj.GetPropertyValue("IPAddresses")),

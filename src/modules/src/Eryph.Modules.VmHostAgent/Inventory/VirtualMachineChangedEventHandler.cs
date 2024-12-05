@@ -55,9 +55,7 @@ internal class VirtualMachineChangedEventHandler(
             .ToAff()
         from vmInfo in vmInfos.HeadOrNone()
             .ToAff(Error.New($"The VM with ID {vmId} was not found"))
-        from vmData in inventory.InventorizeVM(vmInfo)
-            .ToAsync()
-            .ToAff(identity)
+        from vmData in inventory.InventorizeVM(vmInfo).ToAff(identity)
         select new UpdateInventoryCommand
         {
             AgentName = Environment.MachineName,

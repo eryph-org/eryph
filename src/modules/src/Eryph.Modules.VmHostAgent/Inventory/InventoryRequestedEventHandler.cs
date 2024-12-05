@@ -69,7 +69,7 @@ internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine
     private Aff<Option<VirtualMachineData>> InventoryVm(
         VirtualMachineInventory inventory,
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
-        from vmData in inventory.InventorizeVM(vmInfo).ToAsync().ToAff(identity).Map(Some)
+        from vmData in inventory.InventorizeVM(vmInfo).ToAff(identity).Map(Some)
                        | @catch(e =>
                        {
                            log.LogError(e, "Inventory of virtual machine '{VmName}' (Id:{VmId}) failed.",

@@ -5,7 +5,7 @@ namespace Eryph.Resources.Machines;
 
 public class MachineNetworkData
 {
-    public string PortName { get; set; }
+    [CanBeNull] public string PortName { get; set; }
 
     [PrivateIdentifier]
     public string AdapterName { get; set; }

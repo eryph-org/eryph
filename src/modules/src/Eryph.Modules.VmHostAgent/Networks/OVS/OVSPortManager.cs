@@ -40,6 +40,8 @@ class OVSPortManager(
             .Map(a => a.Value)
             .Filter(a => a.SwitchName == EryphConstants.OverlaySwitchName)
         from portNames in adapters
+            // Do not use GetConfiguredPortName() as we need to be backwards
+            // compatible with older port names.
             .Map(a => portManager.GetPortName(a.Id))
             .SequenceSerial()
         from _ in change is VMPortChange.Add

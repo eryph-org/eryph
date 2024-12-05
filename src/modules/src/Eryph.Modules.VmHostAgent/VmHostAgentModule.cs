@@ -86,6 +86,8 @@ namespace Eryph.Modules.VmHostAgent
             options.AddHostedService<OVSChassisService>();
             options.AddHostedService<GeneticsRequestWatcherService>();
             options.AddStartupHandler<StartBusModuleHandler>();
+            // Remove this hosted service to avoid triggering the inventory
+            // based on WMI events.
             options.AddHostedService<VmChangeWatcherService>();
             options.AddHostedService<VmStateChangeWatcherService>();
             options.AddLogging();
