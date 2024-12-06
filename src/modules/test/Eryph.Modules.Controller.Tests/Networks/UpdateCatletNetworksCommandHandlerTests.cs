@@ -126,7 +126,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 {
                     settings.NetworkProviderName.Should().Be("default");
                     settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
                     settings.NetworkName.Should().Be(networkName);
                     settings.AddressesV4.Should().Equal(expectedIp);
                     settings.FloatingAddressV4.Should().Be(expectedFloatingIp);
@@ -174,7 +174,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 {
                     settings.NetworkProviderName.Should().Be("flat-provider");
                     settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
                     settings.NetworkName.Should().Be("flat-network");
                     settings.AddressesV4.Should().BeEmpty();
                     settings.FloatingAddressV4.Should().BeNull();
@@ -225,7 +225,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 settings =>
                 {
                     settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
                     settings.MacAddress.Should().Be("42:00:42:00:42:02");
                 });
 
@@ -342,7 +342,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 {
                     settings.NetworkProviderName.Should().Be("default");
                     settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
                     settings.NetworkName.Should().Be("default");
                     settings.AddressesV4.Should().Equal("10.0.0.12");
                     settings.FloatingAddressV4.Should().Be("10.249.248.12");
@@ -418,7 +418,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 {
                     settings.NetworkProviderName.Should().Be("flat-provider");
                     settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
                     settings.NetworkName.Should().Be("flat-network");
                     settings.AddressesV4.Should().BeEmpty();
                     settings.FloatingAddressV4.Should().BeNull();
@@ -527,7 +527,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 {
                     settings.NetworkProviderName.Should().Be("default");
                     settings.AdapterName.Should().Be("eth0");
-                    settings.PortName.Should().Be($"{CatletId}_eth0");
+                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
                     settings.NetworkName.Should().Be(networkName);
                     settings.AddressesV4.Should().Equal(expectedIp);
                     settings.FloatingAddressV4.Should().Be(expectedFloatingIp);

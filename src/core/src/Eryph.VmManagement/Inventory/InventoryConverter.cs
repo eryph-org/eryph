@@ -6,7 +6,8 @@ namespace Eryph.VmManagement.Inventory
 {
     public static class InventoryConverter
     {
-        public static VmStatus MapVmInfoStatusToVmStatus(VirtualMachineState valueState)
+        // TODO Fix the mapping
+        public static VmStatus MapVmInfoStatusToVmStatus(VirtualMachineState? valueState)
         {
             switch (valueState)
             {
@@ -64,6 +65,8 @@ namespace Eryph.VmManagement.Inventory
                     return VmStatus.Stopped;
                 case VirtualMachineState.FastSavingCritical:
                     return VmStatus.Stopped;
+                case null:
+                    return VmStatus.Error;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(valueState), valueState, null);
             }

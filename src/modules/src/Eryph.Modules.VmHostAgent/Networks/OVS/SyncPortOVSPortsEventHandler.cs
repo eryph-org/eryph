@@ -9,17 +9,11 @@ using Rebus.Handlers;
 namespace Eryph.Modules.VmHostAgent.Networks.OVS;
 
 [UsedImplicitly]
-internal class SyncPortOVSPortsEventHandler : IHandleMessages<VirtualMachineStateChangedEvent>
+internal class SyncPortOVSPortsEventHandler(
+    IOVSPortManager ovsPortManager,
+    ILogger log)
+    : IHandleMessages<VirtualMachineStateChangedEvent>
 {
-    private readonly IOVSPortManager _ovsPortManager;
-    private readonly ILogger _log;
-
-    public SyncPortOVSPortsEventHandler(IOVSPortManager ovsPortManager, ILogger log)
-    {
-        _ovsPortManager = ovsPortManager;
-        _log = log;
-    }
-
     public async Task Handle(VirtualMachineStateChangedEvent message)
     {
         var change = message.State switch
@@ -51,11 +45,15 @@ internal class SyncPortOVSPortsEventHandler : IHandleMessages<VirtualMachineStat
             VirtualMachineState.ResumingCritical => VMPortChange.Add,
             VirtualMachineState.FastSavedCritical => VMPortChange.Nothing,
             VirtualMachineState.FastSavingCritical => VMPortChange.Remove,
-            _ => throw new ArgumentOutOfRangeException()
+            _ => throw new ArgumentException(
+                $"The virtual machine state {message.State} is not supported",
+                nameof(message))
         };
 
-        await _ovsPortManager.SyncPorts(message.VmId, change)
-            .IfLeft(l => { _log.LogError(l.Message); }).ConfigureAwait(false);
+        await ovsPortManager.SyncPorts(message.VmId, change)
+            .IfLeft(error => log.LogError(
+                error,
+                "Failed to sync the network ports of the VM {VmId} after it changed to state {VmState}",
+                message.VmId, message.State));
     }
-
 }

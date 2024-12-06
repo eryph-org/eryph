@@ -1,60 +1,80 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
+using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Catlets.Events;
+using Eryph.ModuleCore;
+using Eryph.Modules.Controller.DataServices;
+using Eryph.Rebus;
 using Eryph.Resources.Machines;
-using Eryph.StateDb;
-using Eryph.StateDb.Model;
-using Microsoft.EntityFrameworkCore;
+using JetBrains.Annotations;
+using LanguageExt.UnsafeValueAccess;
+using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
+using Rebus.Pipeline;
 
-namespace Eryph.Modules.Controller.Inventory
+namespace Eryph.Modules.Controller.Inventory;
+
+[UsedImplicitly]
+internal class CatletStateChangedEventHandler(
+    IInventoryLockManager lockManager,
+    IOperationDispatcher opDispatcher,
+    IVirtualMachineMetadataService metadataService,
+    IVirtualMachineDataService vmDataService,
+    IMessageContext messageContext,
+    ILogger logger)
+    : IHandleMessages<CatletStateChangedEvent>
 {
-    internal class CatletStateChangedEventHandler : IHandleMessages<VMStateChangedEvent>
+    public async Task Handle(CatletStateChangedEvent message)
     {
-        private readonly StateStoreContext _stateStoreContext;
+        await lockManager.AcquireVmLock(message.VmId);
 
-        public CatletStateChangedEventHandler(StateStoreContext stateStoreContext)
+        var catletResult = await vmDataService.GetByVMId(message.VmId);
+        if (catletResult.IsNone)
+            return;
+
+        var catlet = catletResult.ValueUnsafe();
+        if (catlet.LastSeenState < message.Timestamp)
         {
-            _stateStoreContext = stateStoreContext;
+            catlet.UpTime = message.Status is VmStatus.Stopped ? TimeSpan.Zero : message.UpTime;
+            catlet.Status = message.Status.ToCatletStatus();
+            catlet.LastSeenState = message.Timestamp;
+        }
+        else
+        {
+            logger.LogDebug("Skipping state update for catlet {CatletId} with timestamp {Timestamp}. Most recent state information is dated {LastSeen}.",
+                catlet.Id, message.Timestamp, catlet.LastSeenState);
         }
 
-        public async Task Handle(VMStateChangedEvent message)
-        {
-            var catlet = await _stateStoreContext.Catlets.FirstOrDefaultAsync(x=> x.VMId == message.VmId);
+        if (message.UpTime.TotalMinutes < 15)
+            return;
 
-            if (catlet == null)
-                return;
+        var metadataResult = await metadataService.GetMetadata(catlet.MetadataId);
+        if (metadataResult.IsNone)
+            return;
 
-            // ignore old events
-            if(catlet.StatusTimestamp > message.TimeStamp) 
-                return;
+        var metadata = metadataResult.ValueUnsafe();
+        
+        if (metadata.SecureDataHidden)
+            return;
 
-            catlet.Status = MapVmStatusToCatletStatus(message.Status);
-            catlet.StatusTimestamp = message.TimeStamp;
-            if (catlet.Status == CatletStatus.Stopped)
+        var anySensitive = metadata.Fodder.ToSeq().Exists(
+                               f => f.Secret.GetValueOrDefault()
+                                    || f.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault()))
+                           || metadata.Variables.ToSeq().Exists(v => v.Secret.GetValueOrDefault());
+        if (!anySensitive)
+            return;
+        
+        metadata.SecureDataHidden = true;
+        await metadataService.SaveMetadata(metadata);
+
+        await opDispatcher.StartNew(
+            catlet.Project.Id,
+            messageContext.GetTraceId(),
+            new UpdateConfigDriveCommand
             {
-                catlet.UpTime = TimeSpan.Zero;
-            }
-
-            //uow will commit
-
-        }
-
-        private static CatletStatus MapVmStatusToCatletStatus(VmStatus status)
-        {
-            switch (status)
-            {
-                case VmStatus.Stopped:
-                    return CatletStatus.Stopped;
-                case VmStatus.Pending:
-                    return CatletStatus.Pending;
-                case VmStatus.Error:
-                    return CatletStatus.Error;
-                case VmStatus.Running:
-                    return CatletStatus.Running;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(status), status, null);
-            }
-        }
+                CatletId = catlet.Id
+            });
     }
 }

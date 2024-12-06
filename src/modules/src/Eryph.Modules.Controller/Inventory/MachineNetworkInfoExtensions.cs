@@ -16,6 +16,8 @@ internal static class MachineNetworkInfoExtensions
         return networkInfos?.Select(mn => new ReportedNetwork
         {
             CatletId = machineId,
+            MacAddress = mn.MacAddress,
+            PortName = mn.PortName,
             DnsServerAddresses = mn.DnsServers,
             IpV4Addresses = mn.IPAddresses.Select(IPAddress.Parse)
                 .Where(n => n.AddressFamily == AddressFamily.InterNetwork)

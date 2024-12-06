@@ -11,6 +11,7 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Disks;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Modules.Controller.Inventory;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using JetBrains.Annotations;
@@ -28,6 +29,7 @@ internal class CreateVirtualDiskSaga(
     IWorkflow workflow,
     IStateStore stateStore,
     IStorageManagementAgentLocator agentLocator,
+    IInventoryLockManager lockManager,
     IVirtualDiskDataService dataService)
     : OperationTaskWorkflowSaga<CreateVirtualDiskCommand, EryphSagaData<CreateVirtualDiskSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<CreateVirtualDiskVMCommand>>
@@ -60,6 +62,8 @@ internal class CreateVirtualDiskSaga(
     {
         return FailOrRun(message, async (CreateVirtualDiskVMCommandResponse response) =>
         {
+            await lockManager.AcquireVhdLock(response.DiskInfo.DiskIdentifier);
+
             await dataService.AddNewVHD(new VirtualDisk()
             {
                 ProjectId = Data.Data.ProjectId,

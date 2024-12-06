@@ -14,6 +14,5 @@ public class StartBusModuleHandler(
     public async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         await OperationsSetup.SubscribeEvents(bus, workflowOptions);
-        await bus.Advanced.Topics.Subscribe("vm_events");
     }
 }

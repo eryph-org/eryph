@@ -19,7 +19,7 @@ namespace Eryph.Modules.Controller.Networks;
 
 [UsedImplicitly]
 public class UpdateProjectNetworkPlanCommandHandler(
-    ISysEnvironment sysEnvironment,
+    ISystemEnvironment systemEnvironment,
     IOVNSettings ovnSettings,
     ILogger logger,
     INetworkProviderManager networkProviderManager,
@@ -44,7 +44,7 @@ public class UpdateProjectNetworkPlanCommandHandler(
             cancelSource =>
                 from _ in SuccessAff(unit)
                 let networkPlanRealizer = new NetworkPlanRealizer(
-                    new OVNControlTool(sysEnvironment, ovnSettings.NorthDBConnection),
+                    new OVNControlTool(systemEnvironment, ovnSettings.NorthDBConnection),
                     logger)
                 from appliedPlan in networkPlanRealizer.ApplyNetworkPlan(networkPlan, cancelSource.Token).ToAff(e => e)
                 select appliedPlan)
