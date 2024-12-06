@@ -12,7 +12,6 @@ using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
 using JetBrains.Annotations;
 using LanguageExt;
-using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
@@ -48,15 +47,13 @@ internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine
         from vmInfos in engine.GetObjectsAsync<VirtualMachineInfo>(
                 PsCommandBuilder.Create().AddCommand("Get-VM"))
             .ToAff()
-        from validVmInfos in vmInfos.Map(CanBeInventoried)
-            .Sequence().ToAff()
-            .Map(s => s.Somes())
+        let inventorizableVmInfos = vmInfos.Filter(IsInventorizable)
         from hostInventory in hostInfoProvider.GetHostInfoAsync(true).ToAff(identity)
         from hostSettings in hostSettingsProvider.GetHostSettings().ToAff(identity)
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
             .ToAff(identity)
         let inventory = new VirtualMachineInventory(engine, vmHostAgentConfig, hostInfoProvider)
-        from vmData in validVmInfos
+        from vmData in inventorizableVmInfos
             .Map(vmInfo => InventoryVm(inventory, vmInfo))
             .SequenceParallel()
         select new UpdateVMHostInventoryCommand
@@ -72,29 +69,24 @@ internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine
         from vmData in inventory.InventorizeVM(vmInfo).ToAff(identity).Map(Some)
                        | @catch(e =>
                        {
-                           log.LogError(e, "Inventory of virtual machine '{VmName}' (Id:{VmId}) failed.",
+                           log.LogError(e, "Inventory of virtual machine '{VmName}' (Id:{VmId}) failed",
                                vmInfo.Value.Name, vmInfo.Value.Id);
                            return SuccessAff(Option<VirtualMachineData>.None);
                        })
         select vmData;
 
-    private Eff<Option<TypedPsObject<VirtualMachineInfo>>> CanBeInventoried(
-        TypedPsObject<VirtualMachineInfo> vmInfo) =>
-        from vmInfoValue in Eff(() => Some(vmInfo.Value))
-                            | @catch(e =>
-                            {
-                                log.LogError(e, "Failed to extract VM information from Powershell response");
-                                return SuccessEff(Option<VirtualMachineInfo>.None);
-                            })
-        let operationalStatus = vmInfoValue.Bind(v => OperationalStatusConverter.Convert(v.OperationalStatus))
-        let state = vmInfoValue.Map(v => v.State)
-        let canBeInventoried = VmStateUtils.canBeInventoried(state, operationalStatus)
-        // When Powershell data is invalid, we already logged that above. Also,
-        // we do not have any ID which we could log in that case.
-        let _ = vmInfoValue.Filter(_ => !canBeInventoried).IfSome(v =>
+    private bool IsInventorizable(TypedPsObject<VirtualMachineInfo> vmInfo)
+    {
+        var operationalStatus = OperationalStatusConverter.Convert(vmInfo.Value.OperationalStatus);
+        var state = vmInfo.Value.State;
+        var isInventorizable = VmStateUtils.isInventorizable(state, operationalStatus);
+        
+        if (!isInventorizable)
         {
-            log.LogInformation("Skipping inventory of VM {VmId} because of its status: {State}, {OperationalStatus}.",
-                v.Id, state, operationalStatus);
-        })
-        select canBeInventoried ? Some(vmInfo) : None;
+            log.LogInformation("Skipping inventory of VM {VmId} because of its status: {State}, {OperationalStatus}",
+                vmInfo.Value.Id, state, operationalStatus);
+        }
+
+        return isInventorizable;
+    }
 }

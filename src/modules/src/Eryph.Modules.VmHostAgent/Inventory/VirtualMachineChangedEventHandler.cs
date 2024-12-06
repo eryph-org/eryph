@@ -35,13 +35,16 @@ internal class VirtualMachineChangedEventHandler(
     {
         var result = await Handle(message.VmId).Run();
 
-        result.Match(
-            Succ: c => bus.Advanced.Routing.Send(workflowOptions.OperationsDestination, c),
-            Fail: e => logger.LogError(e, "Inventory of VM {VmId} failed", message.VmId));
+        result.IfFail(e => { logger.LogError(e, "Inventory of VM {VmId} failed", message.VmId); });
+        if (result.IsFail)
+            return;
+
+        await result.ToOption().Flatten()
+            .IfSomeAsync(c => bus.Advanced.Routing.Send(workflowOptions.OperationsDestination, c));
     }
 
-    private Aff<UpdateInventoryCommand> Handle(Guid vmId) =>
-        from _ in SuccessEff(unit)
+    private Aff<Option<UpdateInventoryCommand>> Handle(Guid vmId) =>
+        from _ in SuccessAff(unit)
         let timestamp = DateTimeOffset.UtcNow
         from hostSettings in hostSettingsProvider.GetHostSettings()
             .ToAff(identity)
@@ -54,12 +57,30 @@ internal class VirtualMachineChangedEventHandler(
         from vmInfos in powershellEngine.GetObjectsAsync<VirtualMachineInfo>(getVmCommand)
             .ToAff()
         from vmInfo in vmInfos.HeadOrNone()
-            .ToAff(Error.New($"The VM with ID {vmId} was not found"))
-        from vmData in inventory.InventorizeVM(vmInfo).ToAff(identity)
-        select new UpdateInventoryCommand
+            .ToAff(Error.New($"The VM with ID {vmId} was not found."))
+        let inventorizableVmInfo = Optional(vmInfo).Filter(IsInventorizable)
+        from vmData in inventorizableVmInfo
+            .Map(vm => inventory.InventorizeVM(vm).ToAff(identity))
+            .Sequence()
+        select vmData.Map(data => new UpdateInventoryCommand
         {
             AgentName = Environment.MachineName,
             Timestamp = timestamp,
-            Inventory = [vmData],
-        };
+            Inventory = [data],
+        });
+
+    private bool IsInventorizable(TypedPsObject<VirtualMachineInfo> vmInfo)
+    {
+        var operationalStatus = OperationalStatusConverter.Convert(vmInfo.Value.OperationalStatus);
+        var state = vmInfo.Value.State;
+        var isInventorizable = VmStateUtils.isInventorizable(state, operationalStatus);
+
+        if (!isInventorizable)
+        {
+            logger.LogInformation("Skipping inventory of VM {VmId} because of its status: {State}, {OperationalStatus}",
+                vmInfo.Value.Id, state, operationalStatus);
+        }
+
+        return isInventorizable;
+    }
 }

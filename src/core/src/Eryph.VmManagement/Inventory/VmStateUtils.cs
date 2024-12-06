@@ -17,7 +17,7 @@ public static class VmStateUtils
     /// being changed by Hyper-V or are in an error state where Hyper-V
     /// will not report useful information.
     /// </remarks>
-    public static bool canBeInventoried(
+    public static bool isInventorizable(
         Option<VirtualMachineState> state,
         Option<VirtualMachineOperationalStatus> operationalStatus) =>
         operationalStatus

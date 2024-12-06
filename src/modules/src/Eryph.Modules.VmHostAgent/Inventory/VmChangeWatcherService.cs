@@ -61,7 +61,7 @@ internal class VmChangeWatcherService(IBus bus, ILogger log)
               // We check here if the VM can be inventoried based on the state information.
               // This way, we avoid raising too many events. The state information might change
               // rapidly while Hyper-V applies changes.
-              let canBeInventoried = VmStateUtils.canBeInventoried(state, operationalStatus)
+              let canBeInventoried = VmStateUtils.isInventorizable(state, operationalStatus)
               select canBeInventoried
             : SuccessEff(true)
         select canBeInventoried
