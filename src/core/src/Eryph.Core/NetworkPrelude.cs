@@ -5,7 +5,7 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Core;
 
-public static class Prelude
+public static class NetworkPrelude
 {
     public static Option<IPNetwork2> parseIPNetwork2(
         string network) =>

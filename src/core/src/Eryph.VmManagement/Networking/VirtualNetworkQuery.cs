@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Management;
-using System.Net;
-using Dbosoft.OVN.Windows;
+﻿using Dbosoft.OVN.Windows;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -12,7 +6,7 @@ using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
 
-using static Eryph.Core.Prelude;
+using static Eryph.Core.NetworkPrelude;
 using static Eryph.VmManagement.Wmi.WmiUtils;
 using static LanguageExt.Prelude;
 
@@ -39,85 +33,23 @@ public static class VirtualNetworkQuery
         Seq<VMNetworkAdapter> networkAdapters,
         IHyperVOvsPortManager portManager) =>
         networkAdapters.Map(adapter => GetNetworkByAdapter(adapter, portManager))
-            .SequenceSerial(); 
+            .SequenceSerial();
 
     private static EitherAsync<Error, MachineNetworkData> GetNetworkByAdapter(
         VMNetworkAdapter networkAdapter,
         IHyperVOvsPortManager portManager) =>
         from portName in portManager.GetConfiguredPortName(networkAdapter.Id)
-        from foo in VirtualNetworkQuery<WmiRuntime>
-            .GetNetworkByAdapter(networkAdapter, portName)
+        from networkData in VirtualNetworkQuery<WmiRuntime>
+            .getNetworkByAdapter(networkAdapter, portName)
+            .MapFail(e => Error.New($"Failed to query network information for adapter '{networkAdapter.Id}'.", e))
             .Run(WmiRuntime.New()).ToEither().ToAsync()
-
-        from networkData in Try(() =>
-        {
-            // TODO Properly implement this query including disposal
-            var scope = new ManagementScope(@"\\.\root\virtualization\v2");
-            var guestNetworkId = networkAdapter.Id.Replace("Microsoft:", "Microsoft:GuestNetwork\\")
-                .Replace("\\", "\\\\");
-
-            using var guestAdapterObj = new ManagementObject();
-            guestAdapterObj.Path = new ManagementPath(scope.Path +
-                                                      $":Msvm_GuestNetworkAdapterConfiguration.InstanceID=\"{guestNetworkId}\"");
-            guestAdapterObj.Get();
-
-            var info = new MachineNetworkData
-            {
-                PortName = portName.IfNoneUnsafe((string)null),
-                AdapterName = networkAdapter.Name,
-                MacAddress = Optional(networkAdapter.MacAddress)
-                    // Hyper-V returns all zeros when a dynamic MAC address has not been assigned yet.
-                    .Filter(a => a != "000000000000")
-                    .IfNoneUnsafe((string)null),
-                IPAddresses = ObjectToStringArray(guestAdapterObj.GetPropertyValue("IPAddresses")),
-                DefaultGateways = ObjectToStringArray(guestAdapterObj.GetPropertyValue("DefaultGateways")),
-                DnsServers = ObjectToStringArray(guestAdapterObj.GetPropertyValue("DNSServers")),
-                DhcpEnabled = (bool)guestAdapterObj.GetPropertyValue("DHCPEnabled")
-            };
-            info.Subnets = AddressesAndSubnetsToSubnets(info.IPAddresses,
-                ObjectToStringArray(guestAdapterObj.GetPropertyValue("Subnets"))).ToArray();
-
-            return info;
-        }).ToEither(ex => Error.New($"Failed to query network information for adapter '{networkAdapter.Id}'.", Error.New(ex)))
-            .ToAsync()
         select networkData;
-
-    private static IEnumerable<string> AddressesAndSubnetsToSubnets(
-        IReadOnlyList<string> ipAddresses,
-        IReadOnlyList<string> netmasks)
-    {
-        for (var i = 0; i < ipAddresses.Count; i++)
-        {
-            var address = ipAddresses[i];
-            var netmask = netmasks[i];
-            if (netmask.StartsWith("/"))
-            {
-                yield return IPNetwork2.Parse(address + netmask).ToString();
-            }
-            else
-            {
-                if (netmask.IndexOf('.') == -1)
-                    yield return IPNetwork2.Parse($"{address}/{netmask}").ToString();
-                else
-                {
-                    yield return IPNetwork2.Parse(address, netmask).ToString();
-                }
-            }
-
-        }
-    }
-
-    private static string[] ObjectToStringArray(object value)
-    {
-        if (value != null && value is IEnumerable enumerable) return enumerable.Cast<string>().ToArray();
-
-        return [];
-    }
 }
+
 
 public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
 {
-    public static Eff<RT, MachineNetworkData> GetNetworkByAdapter(
+    public static Eff<RT, MachineNetworkData> getNetworkByAdapter(
         VMNetworkAdapter adapter,
         Option<string> portName) =>
         from _ in SuccessEff<RT, Unit>(unit)
@@ -134,34 +66,45 @@ public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
         from dhcpEnabled in getRequiredValue<bool>(guestNetworkData, "DHCPEnabled")
         from ipAddresses in getRequiredValue<string[]>(guestNetworkData, "IPAddresses")
         from netmasks in getRequiredValue<string[]>(guestNetworkData, "Subnets")
-        select new MachineNetworkData();
+        from subnets in convertSubnets(ipAddresses.ToSeq(), netmasks.ToSeq())
+        select new MachineNetworkData
+        {
+            PortName = portName.IfNoneUnsafe((string)null),
+            AdapterName = adapter.Name,
+            MacAddress = Optional(adapter.MacAddress)
+                // Hyper-V returns all zeros when a dynamic MAC address has not been assigned yet.
+                .Filter(a => a != "000000000000")
+                .IfNoneUnsafe((string)null),
+            IPAddresses = ipAddresses,
+            DefaultGateways = defaultGateways,
+            DnsServers = dnsServers,
+            DhcpEnabled = dhcpEnabled,
+            Subnets = subnets.ToArray()
+        };
 
-    // TODO use zip
-    /*
     private static Eff<Seq<string>> convertSubnets(
         Seq<string> ipAddresses,
         Seq<string> netmasks) =>
-        from subnets in ipAddresses
-            .Zip((LanguageExt.Seq<>.Empty))
-            .Map((i, ipAddress) => convertSubnet(ipAddress, netmasks.Skip(i).HeadOrNone()))
+        from _ in guard(ipAddresses.Count == netmasks.Count,
+                Error.New("The number of IP addresses and netmasks do not match."))
+            .ToEff()
+        from subnets in ipAddresses.Zip(netmasks)
+            .Map(t => convertSubnet(t.Left, t.Right))
             .ToSeq()
             .Sequence()
         select subnets;
 
     private static Eff<string> convertSubnet(
         string ipAddress,
-        Option<string> netmask) =>
-        from validNetmask in netmask
-            .ToEff(Error.New($"Netmask for IP address {ipAddress} is missing."))
-        from subnet in validNetmask switch
+        string netmask) =>
+        from subnet in netmask switch
         {
-            _ when validNetmask.StartsWith("/") => parseIPNetwork2(ipAddress + validNetmask)
-                .ToEff(Error.New($"The subnet '{ipAddress + validNetmask}' is invalid.")),
-            _ when validNetmask.IndexOf('.') == -1 => parseIPNetwork2($"{ipAddress}/{validNetmask}")
-                .ToEff(Error.New($"The subnet '{ipAddress}/{validNetmask}' is invalid.")),
-            _ => parseIPNetwork2(ipAddress, validNetmask)
-                .ToEff(Error.New($"IP Address '{ipAddress}' with netmask '{validNetmask}' is not a valid subnet.s")),
+            _ when netmask.StartsWith("/") => parseIPNetwork2(ipAddress + netmask)
+                .ToEff(Error.New($"The subnet '{ipAddress + netmask}' is invalid.")),
+            _ when netmask.IndexOf('.') == -1 => parseIPNetwork2($"{ipAddress}/{netmask}")
+                .ToEff(Error.New($"The subnet '{ipAddress}/{netmask}' is invalid.")),
+            _ => parseIPNetwork2(ipAddress, netmask)
+                .ToEff(Error.New($"IP Address '{ipAddress}' with netmask '{netmask}' is not a valid subnet.s")),
         }
         select subnet.ToString();
-    */
 }
