@@ -9,13 +9,19 @@ using Medallion.Threading;
 
 namespace Eryph.DistributedLock;
 
-/// <inheritdoc cref="IDistributedLockScopeHolder"/>>
+/// <inheritdoc cref="IDistributedLockScopeHolder"/>
+/// <remarks>
+/// Normally, this class should only be used by single thread.
+/// However, the implementation is thread-safe to ensure that
+/// all locks are released even if the class is used by
+/// multiple threads.
+/// </remarks>
 public sealed class DistributedLockScopeHolder(
     IDistributedLockProvider lockProvider)
     : IDistributedLockScopeHolder
 {
     /// <summary>
-    /// Contains the handles for the locks which have been acquired.
+    /// Contains the handles of the locks which have been acquired.
     /// </summary>
     /// <remarks>
     /// The handles are stored in a stack to ensure that they are released

@@ -32,6 +32,8 @@ public static class HardwareIdQueries<RT> where RT : struct, HasRegistry<RT>, Ha
             .MapFail(e => Error.New("WMI did not return the SMBIOS UUID."))
         from guid in parseGuid(uuidValue)
             .ToEff("The found SMBIOS UUID is not a valid GUID.")
+        // According to SMBIOS specification, both all 0s and all 1s (0xFF)
+        // indicate that the UUID is not set.
         from _ in guard(guid != Guid.Empty && guid != Guid.Parse("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"),
             Error.New("The SMBIOS UUID is not set."))
         select guid;

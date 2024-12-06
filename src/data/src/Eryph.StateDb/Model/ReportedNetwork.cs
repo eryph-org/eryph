@@ -26,7 +26,7 @@ public class ReportedNetwork
     /// VM has not been started yet. Eryph always assigns MAC
     /// addresses statically. Hence, <see langword="null"/> should
     /// only occur for adapters which have been added or modified
-    /// outside Eryph.
+    /// outside eryph.
     /// </remarks>
     public string? MacAddress { get; set; }
 
@@ -34,7 +34,7 @@ public class ReportedNetwork
     /// The OVS port name of the Hyper-V network adapter for which the
     /// network has been reported. The name contains the <c>ovs_</c>
     /// prefix. Can be <see langword="null"/> when the OVS Port name
-    /// has not explicitly been set.
+    /// has not been set explicitly.
     /// </summary>
     /// <remarks>
     /// All network adapters which are managed by eryph should have a

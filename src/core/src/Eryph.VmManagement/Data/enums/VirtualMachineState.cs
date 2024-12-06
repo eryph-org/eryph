@@ -2,13 +2,13 @@
 
 /// <summary>
 /// The values for <c>State</c> as returned by the
-/// Powershell Cmdlet <c>Get-VM</c>.
+/// <c>Get-VM</c> Powershell Cmdlet.
 /// </summary>
 /// <remarks>
 /// The numerical values of the corresponding Powershell
-/// might be different depending on the Windows version.
-/// Hence, the enum must be mapped by name which fortunately
-/// is the default behavior of AutoMapper.
+/// enum values are different depending on the Windows version.
+/// Hence, the enum must be mapped by name which is the default
+/// behavior of AutoMapper.
 /// </remarks>
 public enum VirtualMachineState
 {

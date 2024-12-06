@@ -25,7 +25,7 @@ public static class WmiQueries<RT> where RT: struct, HasWmi<RT>
                 from installState in getRequiredValue<uint>(f, "InstallState")
                 let isInstalled = installState == 1
                 select Some((Name: name, IsInstalled: isInstalled)))
-            // Ignore results for which could not parsed in case WMI returns invalid data.
+            // Ignore results which could not parsed in case WMI returns invalid data.
             .Map(r => r.IfFail(_ => None))
             .Sequence()
         select features.Somes();

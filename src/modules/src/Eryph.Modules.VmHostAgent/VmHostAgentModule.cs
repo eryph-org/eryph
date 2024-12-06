@@ -70,7 +70,7 @@ namespace Eryph.Modules.VmHostAgent
 
                 q.AddTrigger(t =>
                 {
-                    t.WithIdentity("uptime-check-trigger")
+                    t.WithIdentity("uptime-check-job-trigger")
                         .ForJob("uptime-check-job")
                         .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromMinutes(1)).RepeatForever())
                         .StartNow();

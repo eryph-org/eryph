@@ -20,8 +20,8 @@ public class Catlet : Resource
     /// </summary>
     /// <remarks>
     /// The <see cref="Status"/> and <see cref="UpTime"/> can be updated
-    /// independently of the inventory of the catlet. Hence, we track the
-    /// observation time of the status separately as well.
+    /// independently of the inventory of the catlet. Hence, we track their
+    /// observation time separately as well.
     /// </remarks>
     public DateTimeOffset LastSeenState { get; set; }
 
