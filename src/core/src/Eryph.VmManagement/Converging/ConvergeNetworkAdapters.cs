@@ -42,7 +42,6 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
                     });
 
             })
-
             .Map(e => e.ToAsync())
             .BindT(c => NetworkAdapter(c, vmInfo, portManager).ToAsync())
             .TraverseSerial(l => l)

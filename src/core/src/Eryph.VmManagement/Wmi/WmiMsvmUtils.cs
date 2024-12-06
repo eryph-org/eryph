@@ -65,10 +65,10 @@ public static class WmiMsvmUtils
         WmiObject wmiObject) =>
         from operationalStatus in getRequiredValue<ushort[]>(wmiObject, "OperationalStatus")
         let primaryStatus = operationalStatus.Length >= 1
-            ? convert<VirtualMachineOperationalStatus>(operationalStatus[0])
+            ? convert<MsvmComputerSystemOperationalStatus>(operationalStatus[0])
             : None
         let secondaryStatus = operationalStatus.Length >= 2
-            ? convert<VirtualMachineOperationalStatus>(operationalStatus[1])
+            ? convert<MsvmComputerSystemOperationalStatus>(operationalStatus[1])
             : None
         select OperationalStatusConverter.Convert(primaryStatus, secondaryStatus);
 

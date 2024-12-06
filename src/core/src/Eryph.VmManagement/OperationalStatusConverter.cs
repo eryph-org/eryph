@@ -1,5 +1,6 @@
 ﻿using System;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Wmi;
 using LanguageExt;
 
 using static LanguageExt.Prelude;
@@ -32,4 +33,49 @@ public static class OperationalStatusConverter
         // status have distinct values but the Hyper-V Cmdlets use the
         // same enum.
         secondaryStatus | primaryStatus;
+
+    public static Option<VirtualMachineOperationalStatus> Convert(
+        Option<MsvmComputerSystemOperationalStatus> primaryStatus,
+        Option<MsvmComputerSystemOperationalStatus> secondaryStatus) =>
+        Convert(Convert(secondaryStatus), Convert(primaryStatus));
+
+    private static Option<VirtualMachineOperationalStatus> Convert(
+        Option<MsvmComputerSystemOperationalStatus> status) =>
+        status.Bind(Convert);
+
+    private static Option<VirtualMachineOperationalStatus> Convert(
+        MsvmComputerSystemOperationalStatus status) =>
+        status switch
+        {
+            MsvmComputerSystemOperationalStatus.Ok => VirtualMachineOperationalStatus.Ok,
+            MsvmComputerSystemOperationalStatus.Degraded => VirtualMachineOperationalStatus.Degraded,
+            MsvmComputerSystemOperationalStatus.PredictiveFailure => VirtualMachineOperationalStatus.PredictiveFailure,
+            MsvmComputerSystemOperationalStatus.InService => VirtualMachineOperationalStatus.InService,
+            MsvmComputerSystemOperationalStatus.Dormant => VirtualMachineOperationalStatus.Dormant,
+            MsvmComputerSystemOperationalStatus.SupportingEntityInError => VirtualMachineOperationalStatus.SupportingEntityInError,
+            MsvmComputerSystemOperationalStatus.CreatingSnapshot => VirtualMachineOperationalStatus.CreatingSnapshot,
+            MsvmComputerSystemOperationalStatus.ApplyingSnapshot => VirtualMachineOperationalStatus.ApplyingSnapshot,
+            MsvmComputerSystemOperationalStatus.DeletingSnapshot => VirtualMachineOperationalStatus.DeletingSnapshot,
+            MsvmComputerSystemOperationalStatus.WaitingToStart => VirtualMachineOperationalStatus.WaitingToStart,
+            MsvmComputerSystemOperationalStatus.MergingDisks => VirtualMachineOperationalStatus.MergingDisks,
+            MsvmComputerSystemOperationalStatus.ExportingVirtualMachine => VirtualMachineOperationalStatus.ExportingVirtualMachine,
+            MsvmComputerSystemOperationalStatus.MigratingVirtualMachine => VirtualMachineOperationalStatus.MigratingVirtualMachine,
+            MsvmComputerSystemOperationalStatus.BackingUpVirtualMachine => VirtualMachineOperationalStatus.BackingUpVirtualMachine,
+            MsvmComputerSystemOperationalStatus.ModifyingUpVirtualMachine => VirtualMachineOperationalStatus.ModifyingUpVirtualMachine,
+            MsvmComputerSystemOperationalStatus.StorageMigrationPhaseOne => VirtualMachineOperationalStatus.StorageMigrationPhaseOne,
+            MsvmComputerSystemOperationalStatus.StorageMigrationPhaseTwo => VirtualMachineOperationalStatus.StorageMigrationPhaseTwo,
+            MsvmComputerSystemOperationalStatus.MigratingPlannedVm => VirtualMachineOperationalStatus.MigratingPlannedVm,
+            MsvmComputerSystemOperationalStatus.CheckingCompatibility => VirtualMachineOperationalStatus.CheckingCompatibility,
+            MsvmComputerSystemOperationalStatus.ApplicationCriticalState => VirtualMachineOperationalStatus.ApplicationCriticalState,
+            MsvmComputerSystemOperationalStatus.CommunicationTimedOut => VirtualMachineOperationalStatus.CommunicationTimedOut,
+            MsvmComputerSystemOperationalStatus.CommunicationFailed => VirtualMachineOperationalStatus.CommunicationFailed,
+            MsvmComputerSystemOperationalStatus.NoIommu => VirtualMachineOperationalStatus.NoIommu,
+            MsvmComputerSystemOperationalStatus.NoIovSupportInNic => VirtualMachineOperationalStatus.NoIovSupportInNic,
+            MsvmComputerSystemOperationalStatus.SwitchNotInIovMode => VirtualMachineOperationalStatus.SwitchNotInIovMode,
+            MsvmComputerSystemOperationalStatus.IovBlockedByPolicy => VirtualMachineOperationalStatus.IovBlockedByPolicy,
+            MsvmComputerSystemOperationalStatus.IovNoAvailResources => VirtualMachineOperationalStatus.IovNoAvailResources,
+            MsvmComputerSystemOperationalStatus.IovGuestDriversNeeded => VirtualMachineOperationalStatus.IovGuestDriversNeeded,
+            MsvmComputerSystemOperationalStatus.CriticalIoError => VirtualMachineOperationalStatus.CriticalIoError,
+            _ => None
+        };
 }

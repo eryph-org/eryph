@@ -11,4 +11,9 @@ public abstract class VirtualNetworkPort: NetworkPort
     public Guid? FloatingPortId { get; set; }
 
     public FloatingNetworkPort? FloatingPort { get; set; }
+
+    /// <summary>
+    /// The name of the port in OVS.
+    /// </summary>
+    public virtual string OvsName => Name;
 }

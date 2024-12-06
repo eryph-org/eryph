@@ -38,7 +38,7 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                     var reportedNetworks = src.Catlet.ReportedNetworks.ToSeq();
                     // Try to find the reported network by the MAC address as a fallback.
                     // This is necessary for backwards compatibility with old port names.
-                    var reportedNetwork = reportedNetworks.Find(x => x.PortName == src.Port.Name)
+                    var reportedNetwork = reportedNetworks.Find(x => x.PortName == src.Port.OvsName)
                                           | reportedNetworks.Find(x => x.MacAddress == src.Port.MacAddress);
 
                     FloatingNetworkPort? floatingPort = null;

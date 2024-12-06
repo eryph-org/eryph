@@ -46,7 +46,6 @@ public static class VirtualNetworkQuery
         select networkData;
 }
 
-
 public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
 {
     public static Eff<RT, MachineNetworkData> getNetworkByAdapter(
@@ -58,7 +57,7 @@ public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
             @"root\virtualization\v2",
             Seq("DefaultGateways", "DHCPEnabled", "DNSServers", "IPAddresses", "Subnets"),
             "Msvm_GuestNetworkAdapterConfiguration",
-            $"InstanceID = '{guestNetworkId.Replace(@"\", @"\\")}%'")
+            $"InstanceID = '{guestNetworkId.Replace(@"\", @"\\")}'")
         from guestNetworkData in wmiObjects.HeadOrNone()
             .ToEff(Error.New("No network information has been returned."))
         from defaultGateways in getRequiredValue<string[]>(guestNetworkData, "DefaultGateways")

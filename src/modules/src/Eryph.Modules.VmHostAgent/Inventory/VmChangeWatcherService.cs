@@ -1,12 +1,7 @@
-﻿using System; 
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Management;
-using System.Text;
-using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
-using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 
@@ -35,7 +30,7 @@ internal class VmChangeWatcherService(IBus bus, ILogger log)
         ManagementBaseObject wmiEvent) =>
         from convertedEvent in ConvertEvent(
             wmiEvent,
-            Seq("__CLASS", "Name", "InstanceID", "OperationalStatus"))
+            Seq("__CLASS", "Name", "InstanceID", "EnabledState", "OtherEnabledState", "HealthState", "OperationalStatus"))
         from message in OnEventArrived(convertedEvent)
         select message.Map(m => (object)m);
 

@@ -8,7 +8,7 @@
 /// The documentation can be found at
 /// <see href="https://learn.microsoft.com/en-us/windows/win32/hyperv_v2/msvm-computersystem"/>.
 /// </remarks>
-internal enum MsvmComputerSystemHealthState
+public enum MsvmComputerSystemHealthState : ushort
 {
     Ok = 5,
     MajorFailure = 20,

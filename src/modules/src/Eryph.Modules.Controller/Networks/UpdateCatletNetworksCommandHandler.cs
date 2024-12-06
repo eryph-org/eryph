@@ -132,7 +132,7 @@ public class UpdateCatletNetworksCommandHandler(
             NetworkProviderName = validNetwork.NetworkProvider,
             NetworkName = networkConfig.Name,
             AdapterName = networkConfig.AdapterName,
-            PortName = networkPort.Name,
+            PortName = networkPort.OvsName,
             MacAddress = networkPort.MacAddress,
             AddressesV4 = ips.Filter(x => x.AddressFamily == AddressFamily.InterNetwork)
                 .Map(ip => ip.ToString())

@@ -32,7 +32,9 @@ public class ReportedNetwork
 
     /// <summary>
     /// The OVS port name of the Hyper-V network adapter for which the
-    /// network has been reported.
+    /// network has been reported. The name contains the <c>ovs_</c>
+    /// prefix. Can be <see langword="null"/> when the OVS Port name
+    /// has not explicitly been set.
     /// </summary>
     /// <remarks>
     /// All network adapters which are managed by eryph should have a

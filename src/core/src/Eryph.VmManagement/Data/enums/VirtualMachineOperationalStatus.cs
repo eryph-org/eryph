@@ -2,7 +2,7 @@
 
 /// <summary>
 /// The values for <c>OperationalStatus</c> as it is returned
-/// by the Powershell Cmdlet <c>Get-VM</c>.
+/// by the <c>Get-VM</c> Powershell Cmdlet.
 /// </summary>
 public enum VirtualMachineOperationalStatus
 {
@@ -11,11 +11,7 @@ public enum VirtualMachineOperationalStatus
     PredictiveFailure = 5,
     InService = 11, // 0x0000000B
     Dormant = 15, // 0x0000000F
-
-    // This value is not documented but is included in the values
-    // returned by the Powershell Cmdlet.
     SupportingEntityInError = 16, // 0x00000010
-        
     CreatingSnapshot = 32768, // 0x00008000
     ApplyingSnapshot = 23769, // 0x00005CD9
     DeletingSnapshot = 32770, // 0x00008002
@@ -23,9 +19,6 @@ public enum VirtualMachineOperationalStatus
     MergingDisks = 32772, // 0x00008004
     ExportingVirtualMachine = 32773, // 0x00008005
     MigratingVirtualMachine = 32774, // 0x00008006
-
-    // These values are not documented but are included in the values
-    // returned by the Powershell Cmdlet.
     BackingUpVirtualMachine = 32776, // 0x00008008
     ModifyingUpVirtualMachine = 32777, // 0x00008009
     StorageMigrationPhaseOne = 32778, // 0x0000800A

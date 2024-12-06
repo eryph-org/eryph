@@ -3,8 +3,17 @@ using JetBrains.Annotations;
 
 namespace Eryph.Resources.Machines;
 
+/// <summary>
+/// Network information which has been pulled from
+/// Hyper-V based on a Hyper-V network adapter.
+/// </summary>
 public class MachineNetworkData
 {
+    /// <summary>
+    /// The OVS port name as reported by Hyper-V (including
+    /// the <c>ovs_</c> prefix). Can be <see langword="null"/>
+    /// when the OVS port name has not been configured.
+    /// </summary>
     [CanBeNull] public string PortName { get; set; }
 
     [PrivateIdentifier]
