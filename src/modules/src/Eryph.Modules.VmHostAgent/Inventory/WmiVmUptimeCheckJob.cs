@@ -63,7 +63,7 @@ internal static class WmiVmUptimeCheckJob<RT> where RT : struct, HasWmi<RT>
     private static Eff<CatletStateChangedEvent> createMessage(
         WmiObject vm,
         DateTimeOffset timestamp) =>
-        from vmId in WmiMsvmUtils.GetVmId(vm)
+        from vmId in WmiMsvmUtils.getVmId(vm)
         from validVmId in vmId
             .ToEff(Error.New("The WMI object does contain a VM ID."))
         from vmState in WmiMsvmUtils.getVmState(vm)

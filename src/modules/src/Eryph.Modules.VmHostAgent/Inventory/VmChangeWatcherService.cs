@@ -38,7 +38,7 @@ internal class VmChangeWatcherService(IBus bus, ILogger log)
         WmiEvent wmiEvent) =>
         from _ in SuccessAff(unit)
         let targetInstance = wmiEvent.TargetInstance
-        from vmId in GetVmId(targetInstance)
+        from vmId in getVmId(targetInstance)
         from message in vmId.Match(
             Some: id => OnEventArrived(wmiEvent, id),
             None: () => SuccessAff(Option<VirtualMachineChangedEvent>.None))

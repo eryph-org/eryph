@@ -116,7 +116,7 @@ class OsvPortManager(
                 }
                 catch (OperationCanceledException)
                 {
-                    // Ignore this exception
+                    // Ignore this exception as we return an error at the end when not all ports are synced.
                 }
             }
 

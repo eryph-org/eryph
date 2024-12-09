@@ -47,7 +47,7 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
         WmiEvent wmiEvent) =>
         from _ in SuccessAff(unit)
         let targetInstance = wmiEvent.TargetInstance
-        from vmId in GetVmId(targetInstance)
+        from vmId in getVmId(targetInstance)
         from message in vmId
             .Map(id => CreateMessage(id, wmiEvent))
             .Sequence()

@@ -28,7 +28,7 @@ public static class WmiMsvmUtils
     /// are localized and will contain different values depending on the system language.
     /// Hence, the best solution is just trying to extract the VM ID.
     /// </remarks>
-    public static Eff<Option<Guid>> GetVmId(
+    public static Eff<Option<Guid>> getVmId(
         WmiObject wmiObject) =>
         from className in getRequiredValue<string>(wmiObject, "__CLASS")
         from vmId in className switch
