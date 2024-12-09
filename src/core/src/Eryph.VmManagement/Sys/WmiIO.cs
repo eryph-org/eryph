@@ -4,6 +4,7 @@ using System.Linq;
 using System.Management;
 using System.Text;
 using System.Threading.Tasks;
+using Eryph.VmManagement.Wmi;
 using LanguageExt;
 
 using static LanguageExt.Prelude;
@@ -12,30 +13,52 @@ namespace Eryph.VmManagement.Sys;
 
 public interface WmiIO
 {
-    public Seq<HashMap<string, Option<object>>> ExecuteQuery(string path, string query);
+    public Fin<Seq<WmiObject>> ExecuteQuery(
+        string scope,
+        Seq<string> properties,
+        string className,
+        Option<string> whereClause);
 }
 
 public readonly struct LiveWmiIO : WmiIO
 {
     public static readonly WmiIO Default = new LiveWmiIO();
 
-    public Seq<HashMap<string, Option<object>>> ExecuteQuery(string path, string query)
+    public Fin<Seq<WmiObject>> ExecuteQuery(
+        string scope,
+        Seq<string> properties,
+        string className,
+        Option<string> whereClause)
     {
-        var scope = new ManagementScope(path);
-        scope.Connect();
-
-        var objectQuery = new ObjectQuery(query);
-        using var searcher = new ManagementObjectSearcher(scope, objectQuery);
+        using var searcher = new ManagementObjectSearcher(
+            new ManagementScope(scope),
+            new ObjectQuery($"SELECT {string.Join(", ", properties)} "
+                + $"FROM {className}"
+                + whereClause.Map(c => $" WHERE {c}").IfNone("")));
         using var collection = searcher.Get();
-
-        // ToSeq() is lazy but we need to eagerly enumerate the collection
-        // to avoid an ObjectDisposedException later. Hence, we call ToList().
-        return collection.Cast<ManagementObject>()
-            .ToList()
-            .Map(mo => mo.Properties
-                .Cast<PropertyData>()
-                .Map(p => (p.Name, Optional(p.Value)))
-                .ToHashMap())
-            .ToSeq();
+        var managementObjects = collection.Cast<ManagementBaseObject>().ToSeq();
+        try
+        {
+            return ConvertObjects(managementObjects, properties).Run();
+        }
+        finally
+        {
+            // The ManagementBaseObjects must be explicitly disposed as they
+            // hold COM objects. Furthermore, ManagementBaseObject.Dispose()
+            // does only work correctly when being invoked directly.
+            // The method is defined with the new keyword and will not be invoked
+            // via the IDisposable interface (e.g. with a using statement).
+            foreach (var managementObject in managementObjects)
+            {
+                managementObject.Dispose();
+            }
+        }
     }
+
+    private static Eff<Seq<WmiObject>> ConvertObjects(
+        Seq<ManagementBaseObject> managementObjects,
+        Seq<string> properties) =>
+        managementObjects
+            .Map(o => WmiUtils.convertObject(o, properties))
+            .Sequence();
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using Dbosoft.OVN.Windows;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.Genetics;
@@ -17,6 +18,7 @@ namespace Eryph.Modules.VmHostAgent;
 [UsedImplicitly]
 internal class UpdateCatletVMCommandHandler(
     IPowershellEngine engine,
+    IHyperVOvsPortManager portManager,
     IFileSystemService fileSystem,
     ITaskMessaging messaging,
     ILogger log,
@@ -50,7 +52,7 @@ internal class UpdateCatletVMCommandHandler(
             .ToAsync()
         from vmInfoConsistent in EnsureNameConsistent(vmInfo, substitutedConfig, Engine).WriteTrace()
         from vmInfoConverged in VirtualMachine.Converge(
-                vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfoConsistent,
+                vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfoConsistent,
                 substitutedConfig, command.MachineMetadata, command.MachineNetworkSettings,
                 plannedStorageSettings, command.ResolvedGenes.ToSeq())
             .WriteTrace().ToAsync()

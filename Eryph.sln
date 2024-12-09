@@ -103,6 +103,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Rebus.Tests", "src\in
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.AnsiConsole", "src\modules\src\Eryph.AnsiConsole\Eryph.AnsiConsole.csproj", "{B6753304-4FF6-474C-8DCF-6CC028EFB199}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.DistributedLock", "src\infrastructure\src\Eryph.DistributedLock\Eryph.DistributedLock.csproj", "{888BDBC5-EC90-435C-BB2E-FF7FEBC15827}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.DistributedLock.Tests", "src\infrastructure\test\Eryph.DistributedLock.Tests\Eryph.DistributedLock.Tests.csproj", "{643D9BEC-6092-4351-B0BD-FD5776C62DEC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -273,6 +277,14 @@ Global
 		{B6753304-4FF6-474C-8DCF-6CC028EFB199}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B6753304-4FF6-474C-8DCF-6CC028EFB199}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B6753304-4FF6-474C-8DCF-6CC028EFB199}.Release|Any CPU.Build.0 = Release|Any CPU
+		{888BDBC5-EC90-435C-BB2E-FF7FEBC15827}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{888BDBC5-EC90-435C-BB2E-FF7FEBC15827}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{888BDBC5-EC90-435C-BB2E-FF7FEBC15827}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{888BDBC5-EC90-435C-BB2E-FF7FEBC15827}.Release|Any CPU.Build.0 = Release|Any CPU
+		{643D9BEC-6092-4351-B0BD-FD5776C62DEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{643D9BEC-6092-4351-B0BD-FD5776C62DEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{643D9BEC-6092-4351-B0BD-FD5776C62DEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{643D9BEC-6092-4351-B0BD-FD5776C62DEC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -319,6 +331,8 @@ Global
 		{07EA56EB-0B74-485B-8008-268C0B9A43AC} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{03B7CC02-557A-4F29-BD61-E3C6899EF9FF} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{B6753304-4FF6-474C-8DCF-6CC028EFB199} = {E889B549-C333-46DC-B71F-9608CBA1FBAA}
+		{888BDBC5-EC90-435C-BB2E-FF7FEBC15827} = {B4BB9FCD-93C2-4C97-B6BA-42C40108097E}
+		{643D9BEC-6092-4351-B0BD-FD5776C62DEC} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

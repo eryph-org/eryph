@@ -14,4 +14,12 @@ public class CatletNetworkPort : VirtualNetworkPort
     // ports are only very rarely accessed from the catlet data or metadata.
     // In this case, the network ports can be loaded manually.
     public Guid CatletMetadataId { get; set; }
+
+    /// <inheritdoc cref="OvsName"/>
+    /// <remarks>
+    /// For catlets, the OVS port name is prefixed with <c>ovs_</c>.
+    /// This way, explicitly configured port names can be identified
+    /// in Hyper-V.
+    /// </remarks>
+    public override string OvsName => $"ovs_{Name}";
 }

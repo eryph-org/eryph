@@ -8,6 +8,7 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Modules.Controller.Inventory;
 using Eryph.Resources;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -26,6 +27,7 @@ namespace Eryph.Modules.Controller.Compute;
 internal class DestroyCatletSaga(
     IWorkflow workflow,
     IStateStoreRepository<Catlet> catletRepository,
+    IInventoryLockManager lockManager,
     IVirtualMachineDataService vmDataService) :
     OperationTaskWorkflowSaga<DestroyCatletCommand, EryphSagaData<DestroyCatletSagaData>>(workflow),
     IHandleMessages<OperationTaskStatusEvent<RemoveCatletVMCommand>>,
@@ -43,6 +45,7 @@ internal class DestroyCatletSaga(
         }
 
         var catlet = catletResult.ValueUnsafe();
+        Data.Data.VmId = catlet.VMId;
 
         await StartNewTask(new RemoveCatletVMCommand
         {
@@ -54,6 +57,8 @@ internal class DestroyCatletSaga(
     public Task Handle(OperationTaskStatusEvent<RemoveCatletVMCommand> message) =>
         FailOrRun(message, async () =>
         {
+            await lockManager.AcquireVmLock(Data.Data.VmId);
+
             var catlet = await catletRepository.GetBySpecAsync(
                 new CatletSpecs.GetForDelete(Data.Data.MachineId));
             if (catlet is null)

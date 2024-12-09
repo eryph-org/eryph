@@ -1,10 +1,10 @@
-﻿namespace Eryph.Resources.Machines
+﻿namespace Eryph.Resources.Machines;
+
+public enum VmStatus
 {
-    public enum VmStatus
-    {
-        Stopped,
-        Running,
-        Pending,
-        Error
-    }
+    Unknown = 0,
+    Stopped = 1,
+    Running = 2,
+    Pending = 3,
+    Error = 4,
 }

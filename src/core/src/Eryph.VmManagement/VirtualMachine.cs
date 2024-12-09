@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Dbosoft.OVN.Windows;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
@@ -198,6 +199,7 @@ namespace Eryph.VmManagement
             VmHostAgentConfiguration vmHostAgentConfig,
             VMHostMachineData hostInfo,
             IPowershellEngine engine,
+            IHyperVOvsPortManager portManager,
             Func<string, Task> reportProgress,
             TypedPsObject<VirtualMachineInfo> vmInfo,
             CatletConfig machineConfig,
@@ -206,8 +208,9 @@ namespace Eryph.VmManagement
             VMStorageSettings storageSettings,
             Seq<UniqueGeneIdentifier> resolvedGenes)
         {
-            var convergeContext =
-                new ConvergeContext(vmHostAgentConfig, engine, reportProgress, machineConfig, metadata, storageSettings, networkSetting, hostInfo, resolvedGenes);
+            var convergeContext = new ConvergeContext(
+                vmHostAgentConfig, engine, portManager, reportProgress, machineConfig, 
+                metadata, storageSettings, networkSetting, hostInfo, resolvedGenes);
 
             var convergeTasks = new ConvergeTaskBase[]
             {
@@ -228,6 +231,7 @@ namespace Eryph.VmManagement
             VmHostAgentConfiguration vmHostAgentConfig,
             VMHostMachineData hostInfo,
             IPowershellEngine engine,
+            IHyperVOvsPortManager portManager,
             Func<string, Task> reportProgress,
             TypedPsObject<VirtualMachineInfo> vmInfo,
             CatletConfig machineConfig,
@@ -237,7 +241,7 @@ namespace Eryph.VmManagement
             // Pass empty MachineNetworkSettings as converging the cloud init disk
             // does not require them.
             var convergeContext = new ConvergeContext(
-                vmHostAgentConfig, engine, reportProgress, machineConfig,
+                vmHostAgentConfig, engine, portManager, reportProgress, machineConfig,
                 metadata, storageSettings, [], hostInfo, Empty);
 
             var convergeTasks = new ConvergeTaskBase[]

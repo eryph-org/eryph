@@ -182,7 +182,7 @@ namespace Eryph.Modules.VmHostAgent
             TypedPsObject<VirtualMachineInfo> vmInfo, IHostInfoProvider hostInfoProvider)
         {
             var inventory = new VirtualMachineInventory(engine, vmHostAgentConfig, hostInfoProvider);
-            return inventory.InventorizeVM(vmInfo).ToAsync();
+            return inventory.InventorizeVM(vmInfo);
         }
 
 
