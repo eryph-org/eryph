@@ -100,10 +100,10 @@ public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
         {
             _ when netmask.StartsWith("/") => parseIPNetwork2(ipAddress + netmask)
                 .ToEff(Error.New($"The subnet '{ipAddress + netmask}' is invalid.")),
-            _ when netmask.IndexOf('.') == -1 => parseIPNetwork2($"{ipAddress}/{netmask}")
+            _ when !netmask.Contains('.') => parseIPNetwork2($"{ipAddress}/{netmask}")
                 .ToEff(Error.New($"The subnet '{ipAddress}/{netmask}' is invalid.")),
             _ => parseIPNetwork2(ipAddress, netmask)
-                .ToEff(Error.New($"IP Address '{ipAddress}' with netmask '{netmask}' is not a valid subnet.s")),
+                .ToEff(Error.New($"IP Address '{ipAddress}' with netmask '{netmask}' is not a valid subnet.")),
         }
         select subnet.ToString();
 }
