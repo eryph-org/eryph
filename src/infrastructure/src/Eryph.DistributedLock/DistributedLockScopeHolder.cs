@@ -11,7 +11,7 @@ namespace Eryph.DistributedLock;
 
 /// <inheritdoc cref="IDistributedLockScopeHolder"/>
 /// <remarks>
-/// Normally, this class should only be used by single thread.
+/// Normally, this class should only be used by a single thread.
 /// However, the implementation is thread-safe to ensure that
 /// all locks are released even if the class is used by
 /// multiple threads.

@@ -67,11 +67,11 @@ internal static class WmiVmUptimeCheckJob<RT> where RT : struct, HasWmi<RT>
         from validVmId in vmId
             .ToEff(Error.New("The WMI object does contain a VM ID."))
         from vmState in WmiMsvmUtils.getVmState(vm)
-        from upTime in WmiMsvmUtils.GetVmUpTime(vm)
+        from upTime in WmiMsvmUtils.getVmUpTime(vm)
         let message = new CatletStateChangedEvent
         {
             VmId = validVmId,
-            Status = InventoryConverter.MapVmInfoStatusToVmStatus(vmState.ToNullable()),
+            Status = VmStateUtils.toVmStatus(vmState),
             UpTime = upTime,
             Timestamp = timestamp,
         }

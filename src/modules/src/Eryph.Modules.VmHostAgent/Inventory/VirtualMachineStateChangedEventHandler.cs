@@ -6,6 +6,8 @@ using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.VmHostAgent.Inventory;
 
 [UsedImplicitly]
@@ -18,7 +20,7 @@ internal class VirtualMachineStateChangedEventHandler(
         bus.SendWorkflowEvent(workflowOptions, new CatletStateChangedEvent
         {
             VmId = message.VmId,
-            Status = InventoryConverter.MapVmInfoStatusToVmStatus(message.State),
+            Status = VmStateUtils.toVmStatus(Optional(message.State)),
             UpTime = message.UpTime,
             Timestamp = message.Timestamp,
         });

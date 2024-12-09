@@ -34,7 +34,7 @@ public class VirtualMachineInventory(
         {
             VMId = vm.Value.Id,
             MetadataId = GetMetadataId(vm),
-            Status = InventoryConverter.MapVmInfoStatusToVmStatus(vm.Value.State),
+            Status = VmStateUtils.toVmStatus(vm.Value.State),
             Name = vm.Value.Name,
             UpTime = vm.Value.Uptime,
             Cpu = cpuData,

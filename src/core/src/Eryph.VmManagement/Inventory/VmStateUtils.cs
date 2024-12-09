@@ -1,4 +1,5 @@
 ﻿using System;
+using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
@@ -9,6 +10,43 @@ namespace Eryph.VmManagement.Inventory;
 
 public static class VmStateUtils
 {
+    public static VmStatus toVmStatus(Option<VirtualMachineState> state) =>
+        state.Match(
+            s => s switch
+            {
+                VirtualMachineState.Other => VmStatus.Unknown,
+                VirtualMachineState.Running => VmStatus.Running,
+                VirtualMachineState.Off => VmStatus.Stopped,
+                VirtualMachineState.Stopping => VmStatus.Pending,
+                VirtualMachineState.Saved => VmStatus.Stopped,
+                VirtualMachineState.Paused => VmStatus.Stopped,
+                VirtualMachineState.Starting => VmStatus.Pending,
+                VirtualMachineState.Reset => VmStatus.Unknown,
+                VirtualMachineState.Saving => VmStatus.Pending,
+                VirtualMachineState.Pausing => VmStatus.Pending,
+                VirtualMachineState.Resuming => VmStatus.Pending,
+                VirtualMachineState.FastSaved => VmStatus.Stopped,
+                VirtualMachineState.FastSaving => VmStatus.Pending,
+                VirtualMachineState.ForceShutdown => VmStatus.Pending,
+                VirtualMachineState.ForceReboot => VmStatus.Pending,
+                VirtualMachineState.Hibernated => VmStatus.Stopped,
+                VirtualMachineState.ComponentServicing => VmStatus.Unknown,
+                VirtualMachineState.RunningCritical => VmStatus.Error,
+                VirtualMachineState.OffCritical => VmStatus.Error,
+                VirtualMachineState.StoppingCritical => VmStatus.Error,
+                VirtualMachineState.SavedCritical => VmStatus.Error,
+                VirtualMachineState.PausedCritical => VmStatus.Error,
+                VirtualMachineState.StartingCritical => VmStatus.Error,
+                VirtualMachineState.ResetCritical => VmStatus.Error,
+                VirtualMachineState.SavingCritical => VmStatus.Error,
+                VirtualMachineState.PausingCritical => VmStatus.Error,
+                VirtualMachineState.ResumingCritical => VmStatus.Error,
+                VirtualMachineState.FastSavedCritical => VmStatus.Error,
+                VirtualMachineState.FastSavingCritical => VmStatus.Error,
+                _ => VmStatus.Unknown,
+            },
+            () => VmStatus.Unknown);
+
     /// <summary>
     /// Checks if a virtual machine can be inventoried based on the
     /// provided state information.

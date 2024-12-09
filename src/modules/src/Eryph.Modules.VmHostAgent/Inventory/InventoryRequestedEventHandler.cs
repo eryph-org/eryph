@@ -77,7 +77,7 @@ internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine
 
     private bool IsInventorizable(TypedPsObject<VirtualMachineInfo> vmInfo)
     {
-        var operationalStatus = VmStateUtils.Convert(vmInfo.Value.OperationalStatus);
+        var operationalStatus = VmStateUtils.convertMsvmOperationalStatus(vmInfo.Value.OperationalStatus);
         var state = vmInfo.Value.State;
         var isInventorizable = VmStateUtils.isInventorizable(state, operationalStatus);
         

@@ -57,7 +57,7 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
         Guid vmId,
         WmiEvent wmiEvent) =>
         from vmState in getVmState(wmiEvent.TargetInstance)
-        from upTime in GetVmUpTime(wmiEvent.TargetInstance)
+        from upTime in getVmUpTime(wmiEvent.TargetInstance)
         let message = new VirtualMachineStateChangedEvent
         {
             VmId = vmId,

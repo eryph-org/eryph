@@ -23,7 +23,7 @@ internal class VmChangeWatcherService(IBus bus, ILogger log)
         new ManagementScope(@"root\virtualization\v2"),
         new WqlEventQuery(
             "__InstanceModificationEvent",
-            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(10),
             "TargetInstance ISA 'Msvm_ComputerSystem' OR TargetInstance ISA 'Msvm_GuestNetworkAdapterConfiguration'"))
 {
     protected override Aff<Option<object>> OnEventArrived(

@@ -18,6 +18,7 @@ internal static class VmStatusExtensions
             VmStatus.Pending => CatletStatus.Pending,
             VmStatus.Running => CatletStatus.Running,
             VmStatus.Stopped => CatletStatus.Stopped,
+            VmStatus.Unknown => CatletStatus.Unknown,
             _ => throw new ArgumentOutOfRangeException(nameof(vmStatus), vmStatus,
                 $"The status {vmStatus} is not supported"),
         };

@@ -27,11 +27,13 @@ public static class WmiUtils
 
     private static Eff<(string, Option<object>)> convertProperty(
         PropertyData propertyData) =>
-        from __ in guardnot(propertyData.Type == CimType.Object,
+        // Reject nested WMI objects. We do not want to leak WMI objects
+        // as we expect the caller to dispose them immediately after
+        // the conversion.
+        from _ in guardnot(propertyData.Type == CimType.Object,
                 Error.New($"The property '{propertyData.Name}' contains a WMI object."))
             .ToEff()
         select (propertyData.Name, Optional(propertyData.Value));
-
 
     public static Eff<T> getRequiredValue<T>(
         WmiObject mo,

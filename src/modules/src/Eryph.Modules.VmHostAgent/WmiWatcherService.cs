@@ -12,6 +12,9 @@ using Rebus.Bus;
 
 namespace Eryph.Modules.VmHostAgent;
 
+/// <summary>
+/// A base class for background services which observe WMI events.
+/// </summary>
 internal abstract class WmiWatcherService : IHostedService, IDisposable
 {
     private readonly IBus _bus;
@@ -54,9 +57,7 @@ internal abstract class WmiWatcherService : IHostedService, IDisposable
     {
         try
         {
-            _log.LogTrace("Processing WMI event created at {Created}: {TargetInstance}",
-                 DateTimeOffset.FromFileTime((long)(ulong)e.NewEvent["TIME_CREATED"]),
-                 ((ManagementBaseObject)e.NewEvent["TargetInstance"]).GetText(TextFormat.Mof));
+            _log.LogTrace("Processing WMI event {Event}", e.NewEvent.GetText(TextFormat.Mof));
             var result = await OnEventArrived(e.NewEvent).Run();
             var message = result.ThrowIfFail();
             await message.IfSomeAsync(m => _bus.SendLocal(m));

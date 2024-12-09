@@ -71,9 +71,9 @@ public static class WmiMsvmUtils
         let secondaryStatus = operationalStatus.Length >= 2
             ? convert<MsvmComputerSystemOperationalStatus>(operationalStatus[1])
             : None
-        select VmStateUtils.Convert(primaryStatus, secondaryStatus);
+        select VmStateUtils.convertMsvmOperationalStatus(primaryStatus, secondaryStatus);
 
-    public static Eff<TimeSpan> GetVmUpTime(
+    public static Eff<TimeSpan> getVmUpTime(
         WmiObject managementObject) =>
         from upTimeMilliseconds in getValue<ulong>(
             managementObject, "OnTimeInMilliseconds")
