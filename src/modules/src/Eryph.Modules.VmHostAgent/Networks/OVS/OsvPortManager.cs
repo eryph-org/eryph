@@ -116,7 +116,7 @@ class OsvPortManager(
                 }
                 catch (OperationCanceledException)
                 {
-
+                    // Ignore this exception
                 }
             }
 

@@ -80,14 +80,14 @@ public static class WmiUtils
             true => value switch
             {
                 string s => Eff(() => (T)Enum.Parse(typeof(T), s, true))
-                    .MapFail(_ => Error.New($"The value '{s}' is not valid for {nameof(T)}.")),
+                    .MapFail(_ => Error.New($"The value '{value}' is not valid for {typeof(T).Name}.")),
                 { } v when Enum.IsDefined(typeof(T), v) => Eff(() => (T)Enum.ToObject(typeof(T), v))
-                    .MapFail(_ => Error.New($"The value '{s}' is not valid for {nameof(T)}.")),
-                _ => FailEff<T>(Error.New($"The value '{s}' is not valid for {nameof(T)}."))
+                    .MapFail(_ => Error.New($"The value '{value}' is not valid for {typeof(T).Name}.")),
+                _ => FailEff<T>(Error.New($"The value '{value}' is not valid for {typeof(T).Name}."))
             },
             false => value is T
                 ? Eff(() => (T)value)
-                : FailEff<T>(Error.New($"The value '{value}' is not of type {nameof(T)}."))
+                : FailEff<T>(Error.New($"The value '{value}' is not of type {typeof(T).Name}."))
         }
         from convertedValue in result
             .MapFail(e => Error.New($"The value '{value}' of property '{propertyName}' is invalid.", e))
