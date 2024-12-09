@@ -17,7 +17,7 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Networks.OVS;
 
-class OsvPortManager(
+class OvsPortManager(
     IHyperVOvsPortManager portManager,
     IPowershellEngine engine,
     ILogger log,
