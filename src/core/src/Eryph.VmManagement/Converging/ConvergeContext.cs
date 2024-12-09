@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Dbosoft.OVN.Windows;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
@@ -15,6 +16,7 @@ namespace Eryph.VmManagement.Converging
     {
         public readonly CatletConfig Config;
         public readonly IPowershellEngine Engine;
+        public readonly IHyperVOvsPortManager PortManager;
         public readonly VmHostAgentConfiguration VmHostAgentConfig;
         public readonly Func<string, Task> ReportProgress;
         public readonly VMStorageSettings StorageSettings;
@@ -27,6 +29,7 @@ namespace Eryph.VmManagement.Converging
         public ConvergeContext(
             VmHostAgentConfiguration vmHostAgentConfig,
             IPowershellEngine engine,
+            IHyperVOvsPortManager portManager,
             Func<string, Task> reportProgress,
             CatletConfig config,
             CatletMetadata metadata,
@@ -37,6 +40,7 @@ namespace Eryph.VmManagement.Converging
         {
             VmHostAgentConfig = vmHostAgentConfig;
             Engine = engine;
+            PortManager = portManager;
             ReportProgress = reportProgress;
             Config = config;
             Metadata = metadata;

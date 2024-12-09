@@ -17,7 +17,7 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Networks.OVS;
 
-class OVSPortManager(
+class OsvPortManager(
     IHyperVOvsPortManager portManager,
     IPowershellEngine engine,
     ILogger log,
@@ -30,6 +30,23 @@ class OVSPortManager(
         change is VMPortChange.Nothing
             ? RightAsync<Error, Unit>(unit)
             : ForceSyncPorts(vmInfo, change);
+
+    public EitherAsync<Error, Unit> SyncPorts(Guid vmId, VMPortChange change) =>
+        change is VMPortChange.Nothing
+            ? RightAsync<Error, Unit>(unit)
+            : ForceSyncPorts(vmId, change);
+
+    private EitherAsync<Error, Unit> ForceSyncPorts(Guid vmId, VMPortChange change) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let psCommand = PsCommandBuilder.Create()
+            .AddCommand("Get-VM")
+            .AddParameter("Id", vmId)
+        from vmInfos in engine.GetObjectsAsync<VirtualMachineInfo>(psCommand)
+            .ToError().ToAsync()
+        from vmInfo in vmInfos.HeadOrNone()
+            .ToEitherAsync(Error.New($"The VM with ID {vmId} was not found."))
+        from __ in ForceSyncPorts(vmInfo, change)
+        select unit;
 
     private EitherAsync<Error, Unit> ForceSyncPorts(
         TypedPsObject<VirtualMachineInfo> vmInfo,
@@ -48,18 +65,6 @@ class OVSPortManager(
             ? AddPorts(vmInfo.Value.Id, portNames).ToAsync()
             : RemovePorts(portNames).ToAsync()
         select unit;
-
-    public EitherAsync<Error, Unit> SyncPorts(Guid vmId, VMPortChange change)
-    {
-        if (change == VMPortChange.Nothing)
-            return Unit.Default;
-
-
-        return GetVMs<VirtualMachineInfo>(vmId)
-            .Bind(SingleOrFailure)
-            .Bind(vmInfo => SyncPorts(vmInfo, change));
-    }
-
 
     private async Task<Either<Error, Unit>> AddPorts(Guid vmId, Seq<string> portNames)
     {
@@ -149,17 +154,5 @@ class OVSPortManager(
 
         }
         return Unit.Default;
-    }
-
-
-    private static EitherAsync<Error, TypedPsObject<T>> SingleOrFailure<T>(Seq<TypedPsObject<T>> sequence)
-    {
-        return sequence.HeadOrNone().ToEither(Errors.SequenceEmpty).ToAsync();
-    }
-
-    private EitherAsync<Error, Seq<TypedPsObject<T>>> GetVMs<T>(Guid vmId)
-    {
-        return engine.GetObjectsAsync<T>(new PsCommandBuilder()
-            .AddCommand("Get-VM").AddParameter("Id", vmId)).ToError().ToAsync();
     }
 }
