@@ -5,6 +5,7 @@ using System.Management;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -58,7 +59,7 @@ public static class WmiMsvmUtils
         from otherEnabledState in getValue<string>(managementObject, "OtherEnabledState")
         from healthState in getRequiredValue<ushort>(managementObject, "HealthState")
         let convertedHealthState = convert<MsvmComputerSystemHealthState>(healthState)
-        let vmState = StateConverter.ConvertVMState(convertedEnabledState, otherEnabledState, convertedHealthState)
+        let vmState = VmStateUtils.convertMsvmState(convertedEnabledState, otherEnabledState, convertedHealthState)
         select vmState;
 
     public static Eff<Option<VirtualMachineOperationalStatus>> getOperationalStatus(
@@ -70,7 +71,7 @@ public static class WmiMsvmUtils
         let secondaryStatus = operationalStatus.Length >= 2
             ? convert<MsvmComputerSystemOperationalStatus>(operationalStatus[1])
             : None
-        select OperationalStatusConverter.Convert(primaryStatus, secondaryStatus);
+        select VmStateUtils.Convert(primaryStatus, secondaryStatus);
 
     public static Eff<TimeSpan> GetVmUpTime(
         WmiObject managementObject) =>
