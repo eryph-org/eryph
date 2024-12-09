@@ -70,10 +70,11 @@ class OsvPortManager(
     {
         var ovsControl = new OVSControl(sysEnvironment);
 
-        var cancelToken = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var cancellationToken = cancellationTokenSource.Token;
         var portsRequired = new LanguageExt.HashSet<string>(portNames);
 
-        while (!cancelToken.IsCancellationRequested && portsRequired.Count > 0)
+        while (!cancellationToken.IsCancellationRequested && portsRequired.Count > 0)
         {
             foreach (var portName in portsRequired.AsParallel())
             {
@@ -85,7 +86,7 @@ class OsvPortManager(
                                 log.LogDebug("Port {portName} not found. Error: {message}",
                                     portName, left.Message);
 
-                                return ovsControl.AddPortWithIFaceId("br-int", portName, cancelToken.Token)
+                                return ovsControl.AddPortWithIFaceId("br-int", portName, cancellationToken)
                                     .Bind(_ => ovsControl.GetInterface(portName));
 
                             }
@@ -95,7 +96,7 @@ class OsvPortManager(
                             log.LogDebug("Interface on port {portName} is not up. OVS Error state: {ovsError}",
                                 portName,
                                 string.Join(',', inf.Error));
-                            return ovsControl.RemovePort("br-int", portName, cancelToken.Token).Map(_ => false);
+                            return ovsControl.RemovePort("br-int", portName, cancellationToken).Map(_ => false);
 
                         }).Match(
                             r => r,
@@ -120,7 +121,7 @@ class OsvPortManager(
             }
 
             if (portsRequired.Count > 0)
-                await Task.Delay(1000, cancelToken.Token);
+                await Task.Delay(1000, cancellationToken);
         }
 
         return portsRequired.Count == 0
@@ -132,7 +133,8 @@ class OsvPortManager(
     {
         var ovsControl = new OVSControl(sysEnvironment);
 
-        var cancelToken = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var cancellationToken = cancellationTokenSource.Token;
 
         foreach (var portName in portNames)
         {
@@ -141,7 +143,7 @@ class OsvPortManager(
                 {
                     log.LogDebug("Interface on port {portName} found. Removing port",
                         portName);
-                    return ovsControl.RemovePort("br-int", portName, cancelToken.Token);
+                    return ovsControl.RemovePort("br-int", portName, cancellationToken);
 
                 }).IfLeft(
                     l =>
