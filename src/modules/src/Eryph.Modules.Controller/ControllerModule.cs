@@ -8,6 +8,7 @@ using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Configuration;
 using Eryph.Core;
+using Eryph.DistributedLock;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Configuration;
 using Eryph.ModuleCore.Startup;
@@ -25,6 +26,7 @@ using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Quartz;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
@@ -51,6 +53,34 @@ namespace Eryph.Modules.Controller
                 .Bind(_changeTrackingConfig);
         }
 
+        [UsedImplicitly]
+        public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
+        {
+            services.AddTransient<InventoryTimerJob>();
+            services.AddQuartz(q =>
+            {
+                q.SchedulerName = $"{Name}.Scheduler";
+
+                q.AddJob<InventoryTimerJob>(
+                    job => job.WithIdentity(InventoryTimerJob.Key)
+                        .DisallowConcurrentExecution());
+
+                q.AddTrigger(trigger => trigger.WithIdentity("InventoryTimerJobTrigger")
+                    .ForJob(InventoryTimerJob.Key)
+                    .StartNow()
+                    .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromMinutes(10)).RepeatForever()));
+
+                // The scheduled trigger will only fire the first time after 10 minutes.
+                // We add another trigger without a schedule to trigger the job immediately
+                // when the scheduler starts.
+                q.AddTrigger(trigger => trigger.WithIdentity("InventoryTimerJobStartupTrigger")
+                    .ForJob(InventoryTimerJob.Key)
+                    .StartNow());
+            });
+            services.AddQuartzHostedService();
+        }
+
+        [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
             container.RegisterSingleton<IFileSystem, FileSystem>();
@@ -58,6 +88,9 @@ namespace Eryph.Modules.Controller
 
             container.Register<IRebusUnitOfWork, StateStoreDbUnitOfWork>(Lifestyle.Scoped);
             container.Collection.Register(typeof(IHandleMessages<>), typeof(ControllerModule).Assembly);
+
+            container.Register<IInventoryLockManager, InventoryLockManager>(Lifestyle.Scoped);
+            container.Register<IDistributedLockScopeHolder, DistributedLockScopeHolder>(Lifestyle.Scoped);
 
             container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
             container.RegisterConditional<IOperationDispatcher, OperationDispatcher>(Lifestyle.Scoped, _ => true);
@@ -123,7 +156,6 @@ namespace Eryph.Modules.Controller
 
             options.AddStartupHandler<SyncNetworksHandler>();
             options.AddStartupHandler<StartBusModuleHandler>();
-            options.AddHostedService<InventoryTimerService>();
             options.AddLogging();
         }
 

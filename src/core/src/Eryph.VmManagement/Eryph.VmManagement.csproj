@@ -6,6 +6,8 @@
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive" Version="1.0.0-rc.12" />
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.NoCloud" Version="1.0.0-rc.12" />
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.WindowsImaging" Version="1.0.0-rc.12" />
+    <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.11" />
+    <PackageReference Include="Dbosoft.OVN.Windows" Version="1.0.0-rc.11" />
     <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.7.0" />
     <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.7.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
@@ -13,7 +15,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.6" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Eryph.VmConfig.Primitives\Eryph.Primitives.csproj" />

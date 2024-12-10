@@ -1,4 +1,5 @@
 ﻿using System.IO.Abstractions;
+using Dbosoft.OVN.Windows;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
@@ -24,6 +25,7 @@ namespace Eryph.Modules.VmHostAgent;
 [UsedImplicitly]
 internal class UpdateConfigDriveCommandHandler(
     IPowershellEngine engine,
+    IHyperVOvsPortManager portManager,
     ITaskMessaging messaging,
     ILogger log,
     IFileSystemService fileSystem,
@@ -53,7 +55,7 @@ internal class UpdateConfigDriveCommandHandler(
             .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
             .ToAsync()
         from vmInfoConverged in VirtualMachine.ConvergeConfigDrive(
-                vmHostAgentConfig, hostInfo, Engine, ProgressMessage, vmInfo,
+                vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfo,
                 substitutedConfig, command.MachineMetadata, currentStorageSettings)
             .WriteTrace().ToAsync()
         select Unit.Default;

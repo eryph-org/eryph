@@ -11,6 +11,7 @@ using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Modules.Controller.Inventory;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -32,6 +33,7 @@ internal class CreateCatletSaga(
     IWorkflow workflow,
     IBus bus,
     IIdGenerator<long> idGenerator,
+    IInventoryLockManager lockManager,
     IVirtualMachineDataService vmDataService,
     IStateStore stateStore)
     : OperationTaskWorkflowSaga<CreateCatletCommand, EryphSagaData<CreateCatletSagaData>>(workflow),
@@ -177,6 +179,7 @@ internal class CreateCatletSaga(
 
         return FailOrRun(message, async (ConvergeCatletResult response) =>
         {
+            await lockManager.AcquireVmLock(response.VmId);
             Data.Data.State = CreateVMState.Created;
 
             var projectName = Optional(Data.Data.Config?.Project).Filter(notEmpty).Match(
@@ -223,6 +226,10 @@ internal class CreateCatletSaga(
                 Name = response.Inventory.Name,
                 Environment = environmentName.Value,
                 DataStore = datastoreName.Value,
+                // Ensure that any inventory updates are applied as the
+                // information which we save right now is incomplete.
+                LastSeen = DateTimeOffset.MinValue,
+                LastSeenState = DateTimeOffset.MinValue,
             }, catletMetadata);
 
             await StartNewTask(new UpdateCatletCommand

@@ -1,13 +1,35 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Eryph.StateDb.Model
+namespace Eryph.StateDb.Model;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum CatletStatus
 {
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum CatletStatus
-    {
-        Stopped,
-        Running,
-        Pending,
-        Error
-    }
+    /// <summary>
+    /// The status of the catlet is unknown.
+    /// </summary>
+    Unknown = 0,
+    
+    /// <summary>
+    /// The catlet is stopped.
+    /// </summary>
+    Stopped = 1,
+
+    /// <summary>
+    /// The catlet is running.
+    /// </summary>
+    Running = 2,
+
+    /// <summary>
+    /// The catlet is currently performing a state transition
+    /// (e.g. starting or stopping).
+    /// </summary>
+    Pending = 3,
+
+    /// <summary>
+    /// The catlet is in an error state. This does not necessarily
+    /// mean that the catlet is not running but the hypervisor
+    /// considers the catlet not fully functional.
+    /// </summary>
+    Error = 4,
 }

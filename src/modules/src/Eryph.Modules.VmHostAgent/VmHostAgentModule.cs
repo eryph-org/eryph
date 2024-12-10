@@ -3,6 +3,7 @@ using System.IO.Abstractions;
 using System.Net.Http;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
+using Dbosoft.OVN.Windows;
 using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
@@ -27,6 +28,7 @@ using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Extensions.Http;
+using Quartz;
 using Rebus.Config;
 using Rebus.Handlers;
 using Rebus.Retry.Simple;
@@ -59,6 +61,20 @@ namespace Eryph.Modules.VmHostAgent
             services.AddHttpClient(GenePoolConstants.PartClientName)
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
                 .AddPolicyHandler(GetRetryPolicy());
+
+            services.AddTransient<WmiVmUptimeCheckJob>();
+            services.AddQuartz(q =>
+            {
+                q.SchedulerName = $"{Name}.Scheduler";
+                q.ScheduleJob<WmiVmUptimeCheckJob>(
+                    trigger => trigger.WithIdentity("WmiVmUptimeCheckJobTrigger")
+                        .ForJob(WmiVmUptimeCheckJob.Key)
+                        .StartNow()
+                        .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromMinutes(1)).RepeatForever()),
+                    job => job.WithIdentity(WmiVmUptimeCheckJob.Key)
+                        .DisallowConcurrentExecution());
+            });
+            services.AddQuartzHostedService();
         }
 
         [UsedImplicitly]
@@ -66,9 +82,12 @@ namespace Eryph.Modules.VmHostAgent
         {
             options.AddHostedService<SyncService>();
             options.AddHostedService<OVSChassisService>();
-            options.AddHostedService<WmiWatcherModuleService>();
             options.AddHostedService<GeneticsRequestWatcherService>();
             options.AddStartupHandler<StartBusModuleHandler>();
+            // Remove this hosted service to avoid triggering the inventory
+            // based on WMI events.
+            options.AddHostedService<VmChangeWatcherService>();
+            options.AddHostedService<VmStateChangeWatcherService>();
             options.AddLogging();
         }
 
@@ -110,7 +129,8 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterSingleton<IHardwareIdProvider, HardwareIdProvider>();
             container.RegisterSingleton<IHostArchitectureProvider, HostArchitectureProvider>();
 
-            container.Register<IOVSPortManager, OVSPortManager>(Lifestyle.Scoped);
+            container.Register<IOVSPortManager, OvsPortManager>(Lifestyle.Scoped);
+            container.Register<IHyperVOvsPortManager>(() => new HyperVOvsPortManager(), Lifestyle.Scoped);
 
 
             var genePoolFactory = new GenePoolFactory(container);

@@ -2,11 +2,13 @@
 using System.IO;
 using System.Linq;
 using AutoMapper;
-using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 using Eryph.StateDb.Model;
+using LanguageExt;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.ComputeApi.Model.V1
 {
@@ -34,8 +36,15 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                         .Cast<VirtualNetworkSubnet>()
                         .Map(x => x.DnsServersV4!).ToList();
 
-                    var reportedNetwork = src.Catlet.ReportedNetworks
-                        .FirstOrDefault(x => x.IpV4Addresses.SequenceEqual(ipV4Addresses));
+                    var reportedNetworks = src.Catlet.ReportedNetworks.ToSeq();
+                    // Try to find the reported network by the MAC address as a fallback.
+                    // This is necessary for backwards compatibility with old port names.
+                    var reportedNetwork = reportedNetworks.Find(x => x.PortName == src.Port.OvsName)
+                                          | reportedNetworks.Find(x => x.MacAddress == src.Port.MacAddress);
+
+                    // When no IP addresses have been reported at all, we assume that the catlet
+                    // is not running. Hence, we return the configured network settings instead.
+                    var isIpReported = reportedNetwork.Map(n => n.IpV4Addresses.Count > 0).IfNone(false);
 
                     FloatingNetworkPort? floatingPort = null;
                     if (src.Port.FloatingPort != null)
@@ -54,11 +63,19 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                     return new CatletNetwork
                     {
                         Name = src.Port.Network.Name,
-                        Provider = src.Port.Network.NetworkProvider!,
-                        IpV4Addresses = reportedNetwork?.IpV4Addresses.ToList() ?? ipV4Addresses,
-                        IPv4DefaultGateway = reportedNetwork?.IPv4DefaultGateway ?? routerIp,
-                        IpV4Subnets = reportedNetwork?.IpV4Subnets.ToList() ?? subnets,
-                        DnsServerAddresses = reportedNetwork?.DnsServerAddresses.ToList() ?? dnsServers,
+                        Provider = src.Port.Network.NetworkProvider,
+                        IpV4Addresses = isIpReported
+                            ? reportedNetwork.ToSeq().SelectMany(n => n.IpV4Addresses).ToList()
+                            : ipV4Addresses,
+                        IPv4DefaultGateway = isIpReported
+                            ? reportedNetwork.Bind(n => Optional(n.IPv4DefaultGateway)).IfNoneUnsafe((string?)null)
+                            : routerIp,
+                        IpV4Subnets = isIpReported
+                            ? reportedNetwork.ToSeq().SelectMany(n => n.IpV4Subnets).ToList()
+                            : subnets,
+                        DnsServerAddresses = isIpReported
+                            ? reportedNetwork.ToSeq().SelectMany(n => n.DnsServerAddresses).ToList()
+                            : dnsServers,
                         FloatingPort = floatingPort,
                     };
                 });

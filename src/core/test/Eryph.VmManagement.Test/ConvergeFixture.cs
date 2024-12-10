@@ -1,11 +1,11 @@
-﻿using Eryph.ConfigModel;
+﻿using Dbosoft.OVN.Windows;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Storage;
-using LanguageExt;
+using Moq;
 
 namespace Eryph.VmManagement.Test;
 
@@ -15,6 +15,7 @@ public class ConvergeFixture
     {
         var mapping = new FakeTypeMapping();
         Engine = new TestPowershellEngine(mapping);
+        PortManager = Mock.Of<IHyperVOvsPortManager>();
         Config = new CatletConfig();
         StorageSettings = new VMStorageSettings();
         NetworkSettings = [];
@@ -34,7 +35,9 @@ public class ConvergeFixture
     public VMStorageSettings StorageSettings { get; set; }
 
     public TestPowershellEngine Engine { get;  }
-    
+
+    public IHyperVOvsPortManager PortManager { get; }
+
     public MachineNetworkSettings[] NetworkSettings { get; set; }
     
     public CatletConfig Config { get; set; }
@@ -48,7 +51,7 @@ public class ConvergeFixture
     public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
 
     public ConvergeContext Context =>
-        new(VmHostAgentConfiguration, Engine, ReportProgressCallBack,
+        new(VmHostAgentConfiguration, Engine, PortManager, ReportProgressCallBack,
             Config, Metadata, StorageSettings, NetworkSettings, HostInfo,
             ResolvedGenes.ToSeq());
 
