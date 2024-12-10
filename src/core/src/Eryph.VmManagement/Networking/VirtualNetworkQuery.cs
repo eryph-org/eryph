@@ -93,6 +93,19 @@ public static class VirtualNetworkQuery<RT> where RT : struct, HasWmi<RT>
             .Sequence()
         select subnets;
 
+    /// <summary>
+    /// Converts the information provided by Hyper-V into a subnet
+    /// in CIDR notation as we expect it (e.g. <c>10.0.0.0/20</c>).
+    /// </summary>
+    /// <remarks>
+    /// Hyper-V encodes the subnet in two different ways:
+    /// <para>
+    /// IPv4: <c>255.255.240.0</c>
+    /// </para>
+    /// <para>
+    /// IPv6: <c>/64</c>
+    /// </para>
+    /// </remarks>
     private static Eff<string> convertSubnet(
         string ipAddress,
         string netmask) =>

@@ -14,18 +14,18 @@ namespace Eryph.VmManagement.Wmi;
 
 public static class WmiEventUtils
 { 
-    public static Eff<WmiEvent> ConvertEvent(
+    public static Eff<WmiEvent> convertEvent(
         ManagementBaseObject wmiEvent,
         Seq<string> properties) =>
         from convertedEvent in convertObject(wmiEvent, Seq1("TIME_CREATED"))
-        from creationTime in GetCreated(convertedEvent)
+        from creationTime in getCreated(convertedEvent)
         // Extract the TargetInstance manually for the WMI event
         from targetInstance in Eff(() => (ManagementBaseObject)wmiEvent["TargetInstance"])
             .MapFail(e => Error.New("The WMI event does not contain a valid TargetInstance.", e))
         from convertedTargetInstance in convertObject(targetInstance, properties)
         select new WmiEvent(creationTime, convertedTargetInstance);
 
-    public static Eff<DateTimeOffset> GetCreated(
+    public static Eff<DateTimeOffset> getCreated(
         WmiObject wmiEvent) =>
         from value in getRequiredValue<ulong>(
             wmiEvent, "TIME_CREATED")

@@ -37,7 +37,7 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
             "TargetInstance ISA 'Msvm_ComputerSystem' and TargetInstance.EnabledState <> PreviousInstance.EnabledState"))
 {
     protected override Aff<Option<object>> OnEventArrived(ManagementBaseObject wmiEvent) =>
-        from convertedEvent in ConvertEvent(
+        from convertedEvent in convertEvent(
             wmiEvent,
             Seq("__CLASS", "Name", "EnabledState", "OtherEnabledState", "HealthState", "OnTimeInMilliseconds"))
         from message in OnEventArrived(convertedEvent)

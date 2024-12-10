@@ -50,11 +50,14 @@ internal static class WmiVmUptimeCheckJob<RT> where RT : struct, HasWmi<RT>
         // The uptime only needs to be accurate during the early start phase to check if
         // the deployment has succeeded and to handle the removal of sensitive data from
         // the cloud-init configs.
+        // According to the documentation, OnTimeInMilliseconds is only set for VMs but
+        // not for the host. Hence, our query should only return instances of Msvm_ComputerSystem
+        // which describe VMs.
         from changedVms in Wmi<RT>.executeQuery(
             @"root\virtualization\v2",
             Seq("__CLASS", "Name", "EnabledState", "OtherEnabledState", "HealthState", "OnTimeInMilliseconds"),
             "Msvm_ComputerSystem",
-            Some("OnTimeInMilliseconds <> NULL AND OnTimeInMilliseconds < 3600000"))
+            "OnTimeInMilliseconds <> NULL AND OnTimeInMilliseconds < 3600000")
         from messages in changedVms
             .Map(vm => createMessage(vm, timestamp))
             .Sequence()

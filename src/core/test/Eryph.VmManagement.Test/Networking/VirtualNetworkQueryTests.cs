@@ -47,8 +47,8 @@ public class VirtualNetworkQueryTests
         networkData.DefaultGateways.Should().Equal("10.0.0.1");
         networkData.DnsServers.Should().Equal("10.0.0.2");
         networkData.DhcpEnabled.Should().BeTrue();
-        networkData.IPAddresses.Should().Equal("10.0.0.100");
-        networkData.Subnets.Should().Equal("10.0.0.0/24");
+        networkData.IPAddresses.Should().Equal("10.0.0.100", "fe80::d0ab:1ff:fed0:501");
+        networkData.Subnets.Should().Equal("10.0.0.0/20", "fe80::/64");
     }
 
     [Fact]
@@ -74,8 +74,8 @@ public class VirtualNetworkQueryTests
         networkData.DefaultGateways.Should().Equal("10.0.0.1");
         networkData.DnsServers.Should().Equal("10.0.0.2");
         networkData.DhcpEnabled.Should().BeTrue();
-        networkData.IPAddresses.Should().Equal("10.0.0.100");
-        networkData.Subnets.Should().Equal("10.0.0.0/24");
+        networkData.IPAddresses.Should().Equal("10.0.0.100", "fe80::d0ab:1ff:fed0:501");
+        networkData.Subnets.Should().Equal("10.0.0.0/20", "fe80::/64");
     }
 
     private void ArrangeData()
@@ -89,8 +89,8 @@ public class VirtualNetworkQueryTests
                 ("DefaultGateways", Optional<object>(new[] { "10.0.0.1" })),
                 ("DNSServers", Optional<object>(new[] { "10.0.0.2" })),
                 ("DHCPEnabled", Optional<object>(true)),
-                ("IPAddresses", Optional<object>(new[] { "10.0.0.100" })),
-                ("Subnets", Optional<object>(new[] { "/24" }))
+                ("IPAddresses", Optional<object>(new[] { "10.0.0.100", "fe80::d0ab:1ff:fed0:501" })),
+                ("Subnets", Optional<object>(new[] { "255.255.240.0", "/64" }))
                 )))));
     }
 

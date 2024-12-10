@@ -13,6 +13,12 @@ namespace Eryph.VmManagement.Wmi;
 
 public static class WmiUtils
 {
+    /// <summary>
+    /// Converts the given <paramref name="managementObject"/> to
+    /// our own <see cref="WmiObject"/> representation. Missing
+    /// properties (present in <paramref name="properties"/> but not
+    /// in the <paramref name="managementObject"/>) are ignored.
+    /// </summary>
     public static Eff<WmiObject> convertObject(
         ManagementBaseObject managementObject,
         Seq<string> properties) =>

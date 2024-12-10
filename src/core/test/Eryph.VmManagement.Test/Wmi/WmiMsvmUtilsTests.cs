@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.TestBase;
 using Eryph.VmManagement.Wmi;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
-using LanguageExt;
 using Xunit;
 
 using static Eryph.VmManagement.Wmi.WmiMsvmUtils;
@@ -87,9 +87,9 @@ public class WmiMsvmUtilsTests
     public void GetVmState_ValidState_ReturnsState()
     {
         var wmiObject = new WmiObject(HashMap(
-            ("EnabledState", Optional<object>((ushort)2)),
+            ("EnabledState", Optional<object>(MsvmConstants.EnabledState.Enabled)),
             ("OtherEnabledState", Optional<object>(null)),
-            ("HealthState", Optional<object>((ushort)25))));
+            ("HealthState", Optional<object>(MsvmConstants.HealthState.CriticalFailure))));
 
         var result = getVmState(wmiObject).Run();
 
@@ -101,7 +101,7 @@ public class WmiMsvmUtilsTests
     public void GetOperationalStatus_ValidStatus_ReturnsStatus()
     {
         var wmiObject = new WmiObject(HashMap(
-            ("OperationalStatus", Optional<object>(new ushort[] { 2 }))));
+            ("OperationalStatus", Optional<object>(new[] { MsvmConstants.OperationalStatus.Ok }))));
 
         var result = getOperationalStatus(wmiObject).Run();
 
