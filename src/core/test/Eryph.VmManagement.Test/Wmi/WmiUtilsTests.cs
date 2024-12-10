@@ -93,7 +93,7 @@ public class WmiUtilsTests
     }
 
     [Fact]
-    public void GetValue_ValueIsInvalidEnumValue_ReturnsValue()
+    public void GetValue_ValueIsInvalidEnumValue_ReturnsError()
     {
         var wmiObject = new WmiObject(HashMap(
             (PropertyName, Optional<object>(404))));
@@ -107,7 +107,7 @@ public class WmiUtilsTests
     }
 
     [Fact]
-    public void GetValue_ValueIsInvalidEnumName_ReturnsValue()
+    public void GetValue_ValueIsInvalidEnumName_ReturnsError()
     {
         var wmiObject = new WmiObject(HashMap(
             (PropertyName, Optional<object>("InvalidValue"))));
@@ -121,7 +121,7 @@ public class WmiUtilsTests
     }
 
     [Fact]
-    public void GetValue_ValueHasInvalidType_ReturnsValue()
+    public void GetValue_ValueHasInvalidType_ReturnsError()
     {
         var wmiObject = new WmiObject(HashMap(
             (PropertyName, Optional<object>("InvalidValue"))));

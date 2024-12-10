@@ -99,7 +99,7 @@ public static class VmStateUtils
         from convertedState in validEnabledState switch
         {
             MsvmComputerSystemEnabledState.Other =>
-                otherEnabledState.Bind(convertOtherState),
+                otherEnabledState.Bind(convertOtherEnabledState),
             _ => convertMsvmEnabledState(validEnabledState)
         }
         let isCritical = healthState.Map(s => s != MsvmComputerSystemHealthState.Ok)
@@ -145,7 +145,7 @@ public static class VmStateUtils
             _ => state
         };
 
-    private static Option<VirtualMachineState> convertOtherState(
+    private static Option<VirtualMachineState> convertOtherEnabledState(
         string otherState) =>
         otherState switch
         {
@@ -185,7 +185,8 @@ public static class VmStateUtils
         // than the primary status. According to the documentation for
         // the WMI class Msvm_ComputerSystem, primary status and secondary
         // status have distinct values but the Hyper-V Cmdlets use the
-        // same enum.
+        // same enum. Anyway, according to the documentation, the secondary
+        // status should only be present when the primary status is 'Other'.
         secondaryStatus | primaryStatus;
 
     private static Option<VirtualMachineOperationalStatus> convertMsvmOperationalStatus(

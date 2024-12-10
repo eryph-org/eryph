@@ -24,8 +24,6 @@ public class VmChangeWatcherServiceTests
 
         var result = await VmChangeWatcherService.OnEventArrived(wmiEvent).Run();
 
-        result.ThrowIfFail();
-
         result.Should().BeSuccess()
             .Which.Should().BeSome()
             .Which.VmId.Should().Be(Guid.Parse("2FE70974-C81A-4F3A-BF4E-7BE405B88C97"));

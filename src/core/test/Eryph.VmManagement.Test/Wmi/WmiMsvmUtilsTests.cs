@@ -32,7 +32,7 @@ public class WmiMsvmUtilsTests
     }
 
     [Fact]
-    public void GetVmId_ComputerSystemWithoutVmId_ReturnsId()
+    public void GetVmId_ComputerSystemWithoutVmId_ReturnsNone()
     {
         var wmiObject = new WmiObject(HashMap(
             ("__CLASS", Optional<object>("Msvm_ComputerSystem")),
