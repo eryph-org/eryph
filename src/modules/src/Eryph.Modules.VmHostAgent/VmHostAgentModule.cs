@@ -62,19 +62,17 @@ namespace Eryph.Modules.VmHostAgent
                 .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
                 .AddPolicyHandler(GetRetryPolicy());
 
+            services.AddTransient<WmiVmUptimeCheckJob>();
             services.AddQuartz(q =>
             {
-                q.AddJob<WmiVmUptimeCheckJob>(
-                    j => j.WithIdentity("uptime-check-job")
+                q.SchedulerName = $"{Name}.Scheduler";
+                q.ScheduleJob<WmiVmUptimeCheckJob>(
+                    trigger => trigger.WithIdentity("WmiVmUptimeCheckJobTrigger")
+                        .ForJob(WmiVmUptimeCheckJob.Key)
+                        .StartNow()
+                        .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromMinutes(1)).RepeatForever()),
+                    job => job.WithIdentity(WmiVmUptimeCheckJob.Key)
                         .DisallowConcurrentExecution());
-
-                q.AddTrigger(t =>
-                {
-                    t.WithIdentity("uptime-check-job-trigger")
-                        .ForJob("uptime-check-job")
-                        .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromMinutes(1)).RepeatForever())
-                        .StartNow();
-                });
             });
             services.AddQuartzHostedService();
         }

@@ -22,20 +22,31 @@ namespace Eryph.Modules.VmHostAgent.Inventory;
 
 internal class WmiVmUptimeCheckJob(Container container) : IJob
 {
+    public static readonly JobKey Key = new(nameof(WmiVmUptimeCheckJob));
+
     private readonly IBus _bus = container.GetInstance<IBus>();
+    private readonly ILogger _logger = container.GetInstance<ILogger<WmiVmUptimeCheckJob>>();
     private readonly ILoggerFactory _loggerFactory = container.GetInstance<ILoggerFactory>();
     private readonly WorkflowOptions _workflowOptions = container.GetInstance<WorkflowOptions>();
 
     public async Task Execute(IJobExecutionContext context)
     {
-        var result = WmiVmUptimeCheckJob<SimpleAgentRuntime>
-            .Execute()
-            .Run(SimpleAgentRuntime.New(_loggerFactory));
-
-        var messages = result.ThrowIfFail();
-        foreach (var message in messages)
+        _logger.LogInformation("Checking uptime of virtual machines...");
+        try
         {
-            await _bus.SendWorkflowEvent(_workflowOptions, message);
+            var result = WmiVmUptimeCheckJob<SimpleAgentRuntime>
+                .Execute()
+                .Run(SimpleAgentRuntime.New(_loggerFactory));
+
+            var messages = result.ThrowIfFail();
+            foreach (var message in messages)
+            {
+                await _bus.SendWorkflowEvent(_workflowOptions, message);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to check uptime of virtual machines");
         }
     }
 }

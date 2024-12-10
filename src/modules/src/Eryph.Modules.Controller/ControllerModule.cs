@@ -56,19 +56,26 @@ namespace Eryph.Modules.Controller
         [UsedImplicitly]
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
         {
+            services.AddTransient<InventoryTimerJob>();
             services.AddQuartz(q =>
             {
+                q.SchedulerName = $"{Name}.Scheduler";
+
                 q.AddJob<InventoryTimerJob>(
-                    j => j.WithIdentity("inventory-timer-job")
+                    job => job.WithIdentity(InventoryTimerJob.Key)
                         .DisallowConcurrentExecution());
 
-                q.AddTrigger(t =>
-                {
-                    t.WithIdentity("inventory-timer-job-trigger")
-                        .ForJob("inventory-timer-job")
-                        .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromMinutes(10)).RepeatForever())
-                        .StartNow();
-                });
+                q.AddTrigger(trigger => trigger.WithIdentity("InventoryTimerJobTrigger")
+                    .ForJob(InventoryTimerJob.Key)
+                    .StartNow()
+                    .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromMinutes(10)).RepeatForever()));
+
+                // The scheduled trigger will only fire the first time after 10 minutes.
+                // We add another trigger without a schedule to trigger the job immediately
+                // when the scheduler starts.
+                q.AddTrigger(trigger => trigger.WithIdentity("InventoryTimerJobStartupTrigger")
+                    .ForJob(InventoryTimerJob.Key)
+                    .StartNow());
             });
             services.AddQuartzHostedService();
         }
