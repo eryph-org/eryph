@@ -24,7 +24,7 @@ internal class InventoryTimerJob(Container container) : IJob
 
     public async Task Execute(IJobExecutionContext context)
     {
-        _logger.LogInformation("Requesting inventory of all agents...");
+        _logger.LogInformation("Requesting scheduled inventory of all agents...");
         try
         {
             // In the future, the gene pool might be shared between multiple agents. Hence,
@@ -41,7 +41,7 @@ internal class InventoryTimerJob(Container container) : IJob
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to request inventory");
+            _logger.LogError(ex, "Failed to request scheduled inventory of all agents");
         }
     }
 }
