@@ -31,7 +31,7 @@ internal class WmiVmUptimeCheckJob(Container container) : IJob
 
     public async Task Execute(IJobExecutionContext context)
     {
-        _logger.LogInformation("Checking uptime of virtual machines...");
+        _logger.LogDebug("Checking uptime of virtual machines...");
         try
         {
             var result = WmiVmUptimeCheckJob<SimpleAgentRuntime>

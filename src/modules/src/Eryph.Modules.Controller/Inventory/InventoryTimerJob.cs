@@ -24,7 +24,7 @@ internal class InventoryTimerJob(Container container) : IJob
 
     public async Task Execute(IJobExecutionContext context)
     {
-        _logger.LogInformation("Requesting scheduled inventory of all agents...");
+        _logger.LogDebug("Requesting scheduled inventory of all agents...");
         try
         {
             // In the future, the gene pool might be shared between multiple agents. Hence,
