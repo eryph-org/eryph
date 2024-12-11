@@ -215,6 +215,7 @@ namespace Eryph.VmManagement
             var convergeTasks = new ConvergeTaskBase[]
             {
                 new ConvergeSecureBoot(convergeContext),
+                new ConvergeTpm(convergeContext),
                 new ConvergeCPU(convergeContext),
                 new ConvergeNestedVirtualization(convergeContext),
                 new ConvergeMemory(convergeContext),
