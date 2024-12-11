@@ -63,7 +63,10 @@ namespace Eryph.Modules.Controller.Inventory
             CatletFarm hostMachine)
         {
             var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
-            var diskInfos = vms.SelectMany(x => x.Drives.Select(d => d.Disk)).ToList();
+            var diskInfos = vms.SelectMany(x => x.Drives)
+                .Select(d => d.Disk)
+                .Where(d => d != null)
+                .ToList();
 
             // Acquire all necessary locks in the beginning to minimize the potential for deadlocks.
             foreach (var vhdId in diskInfos.Map(d => d.DiskIdentifier).Order())
