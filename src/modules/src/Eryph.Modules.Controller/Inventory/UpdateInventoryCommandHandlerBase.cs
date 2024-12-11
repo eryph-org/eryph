@@ -18,9 +18,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
-using Medallion.Threading;
 using Microsoft.Extensions.Logging;
-using Rebus.Messages;
 using Rebus.Pipeline;
 
 namespace Eryph.Modules.Controller.Inventory
