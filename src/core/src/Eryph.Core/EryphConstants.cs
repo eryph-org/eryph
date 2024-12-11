@@ -40,6 +40,7 @@ namespace Eryph.Core
             public static readonly string SecureBoot = "secure_boot";
             public static readonly string NestedVirtualization = "nested_virtualization";
             public static readonly string DynamicMemory = "dynamic_memory";
+            public static readonly string Tpm = "tpm";
         }
 
         public static class CapabilityDetails
