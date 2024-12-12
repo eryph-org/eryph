@@ -11,6 +11,23 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Converging;
 
+/// <summary>
+/// This task converges the settings for the TPM.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The TPM can only be enabled after creating a key protector
+/// with <c>Set-VMKeyProtector</c>.
+/// </para>
+/// <para>
+/// The key protector itself is protected by an HGS guardian.
+/// We create dedicated one for eryph with <c>New-HgsGuardian</c>.
+/// The guardian stores a signing and an encryption certificate
+/// in the computer certificate store. These certificates (and
+/// their private keys) are required to make the TPMs inside
+/// the catlets work.
+/// </para>
+/// </remarks>
 public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
 {
     public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
@@ -60,19 +77,56 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
     private EitherAsync<Error, Unit> EnsureKeyProtector(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
-        // Get-VMKeyProtector returns the protector as a byte array. Even when no protector exist, 
-        // Hyper-V returns a short byte array (e.g. [0, 0, 0, 4]). We check for minimum length of 16
-        // to decide whether a protector exists.
         let getCommand = PsCommandBuilder.Create()
             .AddCommand("Get-VMKeyProtector")
             .AddParameter("VM", vmInfo.PsObject)
-            .Script("Where-Object { $_.Length -ge 16 } | ForEach-Object { ConvertTo-HgsKeyProtector -Bytes $_ }")
-        from keyProtectors in Context.Engine.GetObjectValuesAsync<CimHgsKeyProtector>(getCommand)
+        from vmKeyProtectors in Context.Engine.GetObjectValuesAsync<byte[]>(getCommand)
             .ToError()
-        let hasKeyProtector = keyProtectors.HeadOrNone()
+        from hgsKeyProtector in vmKeyProtectors.HeadOrNone()
+            // Get-VMKeyProtector returns the protector as a byte array. When a proper
+            // protector exists, the byte array contains XML describing the protector.
+            // Even when no protector exists, Hyper-V returns a short byte array (e.g.
+            // [0, 0, 0, 4]). Hence, we just check for a minimal length to prevent
+            // ConvertTo-HgsKeyProtector from failing.
+            .Filter(p => p.Length >= 16)
+            .Map(ConvertProtector)
+            .Sequence()
+        let hasKeyProtector = hgsKeyProtector.HeadOrNone()
         from __ in hasKeyProtector
             ? RightAsync<Error, Unit>(unit)
             : CreateKeyProtector(vmInfo)
+        select unit;
+
+    private EitherAsync<Error, CimHgsKeyProtector> ConvertProtector(
+        byte[] protector) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let convertCommand = PsCommandBuilder.Create()
+            .AddCommand("ConvertTo-HgsKeyProtector")
+            .AddParameter("Bytes", protector)
+        from results in Context.Engine.GetObjectValuesAsync<CimHgsKeyProtector>(convertCommand)
+            .ToError()
+        from result in results.HeadOrNone()
+            .ToEitherAsync(Error.New("Could not extract the configured key protector."))
+        select result;
+
+    private EitherAsync<Error, Unit> CreateKeyProtector(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from guardian in EnsureHgsGuardian()
+        let createCommand = PsCommandBuilder.Create()
+            .AddCommand("New-HgsKeyProtector")
+            .AddParameter("Owner", guardian.PsObject)
+            // AllowUntrustedRoot is required as we use an HSG guardian with locally
+            // generated certificates which are self-signed.
+            .AddParameter("AllowUntrustedRoot")
+        from protectors in Context.Engine.GetObjectsAsync<CimHgsKeyProtector>(createCommand)
+            .ToError().ToAsync()
+        from protector in protectors.HeadOrNone()
+            .ToEitherAsync(Error.New("Failed to create HGS key protector."))
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Set-VMKeyProtector")
+            .AddParameter("VM", vmInfo.PsObject)
+            .AddParameter("KeyProtector", protector.Value.RawData)
+        from _ in Context.Engine.RunAsync(command).ToError().ToAsync()
         select unit;
 
     private EitherAsync<Error, TypedPsObject<CimHgsGuardian>> EnsureHgsGuardian() =>
@@ -98,25 +152,6 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         from guardian in results.HeadOrNone()
             .ToEitherAsync(Error.New("Failed to create HGS guardian."))
         select guardian;
-
-    private EitherAsync<Error, Unit> CreateKeyProtector(
-        TypedPsObject<VirtualMachineInfo> vmInfo) =>
-        from guardian in EnsureHgsGuardian()
-        let createCommand = PsCommandBuilder.Create()
-            .AddCommand("New-HgsKeyProtector")
-            .AddParameter("Owner", guardian.PsObject)
-            .AddParameter("AllowUntrustedRoot")
-            .AddParameter("AllowExpired")
-        from protectors in Context.Engine.GetObjectsAsync<CimHgsKeyProtector>(createCommand)
-            .ToError().ToAsync()
-        from protector in protectors.HeadOrNone()
-            .ToEitherAsync(Error.New("Failed to create HGS key protector."))
-        let command = PsCommandBuilder.Create()
-            .AddCommand("Set-VMKeyProtector")
-            .AddParameter("VM", vmInfo.PsObject)
-            .AddParameter("KeyProtector", protector.Value.RawData)
-        from _ in Context.Engine.RunAsync(command).ToError().ToAsync()
-        select unit;
 
     private EitherAsync<Error, Unit> DisableTpm(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
