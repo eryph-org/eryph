@@ -66,25 +66,56 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         let getCommand = PsCommandBuilder.Create()
             .AddCommand("Get-VMKeyProtector")
             .AddParameter("VM", vmInfo.PsObject)
-            .AddCommand("Select-Object")
-            .AddParameter("ExpandProperty", "Length")
-        from keyProtectors in Context.Engine.GetObjectValuesAsync<int>(getCommand).ToError()
+            .Script("Where-Object { $_.Length -ge 16 } | ForEach-Object { ConvertTo-HgsKeyProtector -Bytes $_ }")
+        from keyProtectors in Context.Engine.GetObjectValuesAsync<CimHgsKeyProtector>(getCommand)
+            .ToError()
         let hasKeyProtector = keyProtectors.HeadOrNone()
-            .Map(l => l >= 16)
-            .IfNone(false)
         from __ in hasKeyProtector
             ? RightAsync<Error, Unit>(unit)
             : CreateKeyProtector(vmInfo)
         select unit;
-    
+
+    private EitherAsync<Error, TypedPsObject<CimHgsGuardian>> EnsureHgsGuardian() =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-HgsGuardian")
+            .AddParameter("Name", EryphConstants.HgsGuardianName)
+        from existingGuardians in Context.Engine.GetObjectsAsync<CimHgsGuardian>(command)
+            .ToError().ToAsync()
+        from guardian in existingGuardians.HeadOrNone().Match(
+                Some: g => g,
+                None: CreateHgsGuardian)
+        select guardian;
+
+    private EitherAsync<Error, TypedPsObject<CimHgsGuardian>> CreateHgsGuardian() =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("New-HgsGuardian")
+            .AddParameter("Name", EryphConstants.HgsGuardianName)
+            .AddParameter("GenerateCertificates")
+        from results in Context.Engine.GetObjectsAsync<CimHgsGuardian>(command)
+            .ToError().ToAsync()
+        from guardian in results.HeadOrNone()
+            .ToEitherAsync(Error.New("Failed to create HGS guardian."))
+        select guardian;
+
     private EitherAsync<Error, Unit> CreateKeyProtector(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
-        from _ in RightAsync<Error, Unit>(unit)
+        from guardian in EnsureHgsGuardian()
+        let createCommand = PsCommandBuilder.Create()
+            .AddCommand("New-HgsKeyProtector")
+            .AddParameter("Owner", guardian.PsObject)
+            .AddParameter("AllowUntrustedRoot")
+            .AddParameter("AllowExpired")
+        from protectors in Context.Engine.GetObjectsAsync<CimHgsKeyProtector>(createCommand)
+            .ToError().ToAsync()
+        from protector in protectors.HeadOrNone()
+            .ToEitherAsync(Error.New("Failed to create HGS key protector."))
         let command = PsCommandBuilder.Create()
             .AddCommand("Set-VMKeyProtector")
             .AddParameter("VM", vmInfo.PsObject)
-            .AddParameter("NewLocalKeyProtector")
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+            .AddParameter("KeyProtector", protector.Value.RawData)
+        from _ in Context.Engine.RunAsync(command).ToError().ToAsync()
         select unit;
 
     private EitherAsync<Error, Unit> DisableTpm(
