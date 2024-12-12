@@ -1,14 +1,27 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 using AutoMapper;
 using AutoMapper.Internal;
+using Eryph.VmManagement.Data.Core;
 using Microsoft.Extensions.Logging;
+using Microsoft.Management.Infrastructure;
 
 namespace Eryph.VmManagement;
 
 #pragma warning disable CS0168
 public static class MapperExtensions
 {
+    public static IProfileExpression AddCimInstanceMapping<TDestination>(
+        this IProfileExpression profile)
+    {
+        profile.CreateMap<CimInstance, TDestination>().ConvertUsing(
+            (source, _, context) => context.Mapper.Map<TDestination>(
+                source.CimInstanceProperties.ToDictionary(p => p.Name, p => p.Value)));
+
+        return profile;
+    }
+
     public static IProfileExpression AddHyperVMapping<TDestination>(this IProfileExpression profile, Assembly assembly, string name, Action<IMappingExpression> configure = null)
     {
         var sourceType = assembly.GetType($"Microsoft.HyperV.PowerShell.{name}", false);
