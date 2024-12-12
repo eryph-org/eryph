@@ -133,12 +133,12 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         from _ in RightAsync<Error, Unit>(unit)
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-HgsGuardian")
-            .AddParameter("Name", EryphConstants.HgsGuardianName)
         from existingGuardians in Context.Engine.GetObjectsAsync<CimHgsGuardian>(command)
-            .ToError().ToAsync()
-        from guardian in existingGuardians.HeadOrNone().Match(
-                Some: g => g,
-                None: CreateHgsGuardian)
+            .ToError()
+            .ToAsync()
+        from guardian in existingGuardians
+            .Find(g => g.Value.Name == EryphConstants.HgsGuardianName)
+            .Match(Some: g => g, None: CreateHgsGuardian)
         select guardian;
 
     private EitherAsync<Error, TypedPsObject<CimHgsGuardian>> CreateHgsGuardian() =>
@@ -162,7 +162,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
         select unit;
     
-    private bool IsEnabled(CatletCapabilityConfig capabilityConfig) =>
+    private static bool IsEnabled(CatletCapabilityConfig capabilityConfig) =>
         capabilityConfig.Details.ToSeq()
             .All(d => !string.Equals(d, EryphConstants.CapabilityDetails.Disabled, StringComparison.OrdinalIgnoreCase));
 }
