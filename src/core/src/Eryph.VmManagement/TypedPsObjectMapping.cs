@@ -159,7 +159,7 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
             if (typeof(T) == typeof(bool))
                 return psObject.BaseObject is bool b ? (T)(object)b : default;
 
-            // special case for byte[]
+            // special case for byte array
             if (typeof(T) == typeof(byte[]))
                 return psObject.BaseObject is byte[] b ? (T)(object)b : default;
 

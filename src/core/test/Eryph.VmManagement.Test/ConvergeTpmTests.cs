@@ -140,8 +140,6 @@ public class ConvergeTpmTests
         };
 
         var result = await _convergeTask.Converge(_vmInfo);
-
-        result.IfLeft(e => e.Throw());
         
         result.Should().BeRight();
         guardianCreated.Should().BeTrue();
