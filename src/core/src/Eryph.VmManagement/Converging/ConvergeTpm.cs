@@ -21,11 +21,11 @@ namespace Eryph.VmManagement.Converging;
 /// </para>
 /// <para>
 /// The key protector itself is protected by an HGS guardian.
-/// We create dedicated one for eryph with <c>New-HgsGuardian</c>.
+/// We create a dedicated one for eryph with <c>New-HgsGuardian</c>.
 /// The guardian stores a signing and an encryption certificate
 /// in the computer certificate store. These certificates (and
-/// their private keys) are required to make the TPMs inside
-/// the catlets work.
+/// their private keys) are required to access the TPMs inside
+/// the catlets.
 /// </para>
 /// </remarks>
 public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
@@ -86,8 +86,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             // Get-VMKeyProtector returns the protector as a byte array. When a proper
             // protector exists, the byte array contains XML describing the protector.
             // Even when no protector exists, Hyper-V returns a short byte array (e.g.
-            // [0, 0, 0, 4]). Hence, we just check for a minimal length to prevent
-            // ConvertTo-HgsKeyProtector from failing.
+            // [0, 0, 0, 4]). Hence, we just check for a minimal length.
             .Filter(p => p.Length >= 16)
             .IsSome
         from __ in hasKeyProtector

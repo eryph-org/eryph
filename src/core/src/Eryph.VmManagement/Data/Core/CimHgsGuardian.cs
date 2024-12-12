@@ -9,7 +9,7 @@ using JetBrains.Annotations;
 namespace Eryph.VmManagement.Data.Core;
 
 /// <summary>
-/// Represent an HGS guardian as returned by the Cmdlet
+/// Represents an HGS guardian as returned by the Cmdlet
 /// <c>Get-HgsGuardian</c>.
 /// </summary>
 public class CimHgsGuardian
