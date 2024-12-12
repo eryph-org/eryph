@@ -59,7 +59,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         from vMSecurityInfo in vmSecurityInfos.HeadOrNone()
             .ToEitherAsync(Error.New($"Failed to fetch security information for the VM {vmInfo.Value.Id}."))
         select vMSecurityInfo;
-    
+
     private EitherAsync<Error, Unit> ConfigureTpm(
         TypedPsObject<VirtualMachineInfo> vmInfo,
         bool enableTpm) =>
@@ -82,32 +82,18 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             .AddParameter("VM", vmInfo.PsObject)
         from vmKeyProtectors in Context.Engine.GetObjectValuesAsync<byte[]>(getCommand)
             .ToError()
-        from hgsKeyProtector in vmKeyProtectors.HeadOrNone()
+        let hasKeyProtector = vmKeyProtectors.HeadOrNone()
             // Get-VMKeyProtector returns the protector as a byte array. When a proper
             // protector exists, the byte array contains XML describing the protector.
             // Even when no protector exists, Hyper-V returns a short byte array (e.g.
             // [0, 0, 0, 4]). Hence, we just check for a minimal length to prevent
             // ConvertTo-HgsKeyProtector from failing.
             .Filter(p => p.Length >= 16)
-            .Map(ConvertProtector)
-            .Sequence()
-        let hasKeyProtector = hgsKeyProtector.HeadOrNone()
+            .IsSome
         from __ in hasKeyProtector
             ? RightAsync<Error, Unit>(unit)
             : CreateKeyProtector(vmInfo)
         select unit;
-
-    private EitherAsync<Error, CimHgsKeyProtector> ConvertProtector(
-        byte[] protector) =>
-        from _ in RightAsync<Error, Unit>(unit)
-        let convertCommand = PsCommandBuilder.Create()
-            .AddCommand("ConvertTo-HgsKeyProtector")
-            .AddParameter("Bytes", protector)
-        from results in Context.Engine.GetObjectValuesAsync<CimHgsKeyProtector>(convertCommand)
-            .ToError()
-        from result in results.HeadOrNone()
-            .ToEitherAsync(Error.New("Could not extract the configured key protector."))
-        select result;
 
     private EitherAsync<Error, Unit> CreateKeyProtector(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
