@@ -30,11 +30,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             : ConfigureTpm(vmInfo, expectedTpmState)
         from updatedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
         select updatedVmInfo;
-
-    private bool IsEnabled(CatletCapabilityConfig capabilityConfig) =>
-        capabilityConfig.Details.ToSeq()
-            .All(d => !string.Equals(d, EryphConstants.CapabilityDetails.Disabled, StringComparison.OrdinalIgnoreCase));
-
+    
     private EitherAsync<Error, VMSecurityInfo> GetVmSecurityInfo(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
@@ -64,6 +60,9 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
     private EitherAsync<Error, Unit> EnsureKeyProtector(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
+        // Get-VMKeyProtector returns the protector as a byte array. Even when no protector exist, 
+        // Hyper-V returns a short byte array (e.g. [0, 0, 0, 4]). We check for minimum length of 16
+        // to decide whether a protector exists.
         let getCommand = PsCommandBuilder.Create()
             .AddCommand("Get-VMKeyProtector")
             .AddParameter("VM", vmInfo.PsObject)
@@ -71,7 +70,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             .AddParameter("ExpandProperty", "Length")
         from keyProtectors in Context.Engine.GetObjectValuesAsync<int>(getCommand).ToError()
         let hasKeyProtector = keyProtectors.HeadOrNone()
-            .Map(l => l > 8)
+            .Map(l => l >= 16)
             .IfNone(false)
         from __ in hasKeyProtector
             ? RightAsync<Error, Unit>(unit)
@@ -96,4 +95,8 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             .AddParameter("VM", vmInfo.PsObject)
         from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
         select unit;
+    
+    private bool IsEnabled(CatletCapabilityConfig capabilityConfig) =>
+        capabilityConfig.Details.ToSeq()
+            .All(d => !string.Equals(d, EryphConstants.CapabilityDetails.Disabled, StringComparison.OrdinalIgnoreCase));
 }
