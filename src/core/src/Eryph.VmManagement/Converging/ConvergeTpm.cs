@@ -89,6 +89,9 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             // [0, 0, 0, 4]). Hence, we just check for a minimal length.
             .Filter(p => p.Length >= 16)
             .IsSome
+        // We cannot change the key protector when one is present as this would brick the
+        // TPM and prevent the VM from starting. When the user manually enabled the TPM
+        // with a different protector, we just need to keep that protector.
         from __ in hasKeyProtector
             ? RightAsync<Error, Unit>(unit)
             : CreateKeyProtector(vmInfo)
