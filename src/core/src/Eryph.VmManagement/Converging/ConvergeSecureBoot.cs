@@ -32,7 +32,7 @@ public class ConvergeSecureBoot : ConvergeTaskBase
             ?? "MicrosoftWindows";
 
         var onOffState = (secureBootCapability.Details?.Any(x =>
-            string.Equals(x, EryphConstants.CapabilityDetails.Disabled, StringComparison.InvariantCultureIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;
+            string.Equals(x, EryphConstants.CapabilityDetails.Disabled, StringComparison.OrdinalIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;
 
         return await (from currentFirmware in Context.Engine.GetObjectsAsync<VMFirmwareInfo>(new PsCommandBuilder()
                 .AddCommand("get-VMFirmware")

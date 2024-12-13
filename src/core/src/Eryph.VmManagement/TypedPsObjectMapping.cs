@@ -108,6 +108,7 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
 
                     c.IgnoreUnmapped(_logger);
                 });
+
                 cfg.CreateProfile("Dism", c =>
                 {
                     var assembly = AppDomain.CurrentDomain.GetAssemblies()
@@ -117,6 +118,19 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
                         return;
 
                     c.CreateMap(assemblyType, typeof(DismDriverInfo));
+                    c.IgnoreUnmapped(_logger);
+                });
+
+                cfg.CreateProfile("NetTCPIP", c =>
+                {
+                    c.AddCimInstanceMapping<CimNetworkNeighbor>();
+                    c.IgnoreUnmapped(_logger);
+                });
+
+                cfg.CreateProfile("HgsClient", c =>
+                {
+                    c.AddCimInstanceMapping<CimHgsGuardian>();
+                    c.AddCimInstanceMapping<CimHgsKeyProtector>();
                     c.IgnoreUnmapped(_logger);
                 });
             });
@@ -142,12 +156,12 @@ public class TypedPsObjectMapping : ITypedPsObjectMapping
         try
         {
             // special case for bool as it is not mapped correctly
-            if(typeof(T) == typeof(bool))
+            if (typeof(T) == typeof(bool))
                 return psObject.BaseObject is bool b ? (T)(object)b : default;
 
-            // Some Cmdlets return generic CimInstance objects
-            if (psObject?.BaseObject is CimInstance cimInstance)
-                return _mapper.Map<T>(cimInstance.CimInstanceProperties.ToDictionary(p => p.Name, p => p.Value));
+            // special case for byte array
+            if (typeof(T) == typeof(byte[]))
+                return psObject.BaseObject is byte[] b ? (T)(object)b : default;
 
             // cast is required to map correctly
             // ReSharper disable once RedundantCast

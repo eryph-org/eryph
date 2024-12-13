@@ -27,6 +27,8 @@ namespace Eryph.Core
 
         public static readonly int DefaultCatletMemoryMb = 1024;
 
+        public static readonly string HgsGuardianName = "eryph-hgs-guardian";
+
         public static class BuildInRoles
         {
             public static readonly Guid Owner = Guid.Parse("{918D2C23-8E9A-41AE-8F0E-ADACA3BECBC4}");
@@ -40,6 +42,7 @@ namespace Eryph.Core
             public static readonly string SecureBoot = "secure_boot";
             public static readonly string NestedVirtualization = "nested_virtualization";
             public static readonly string DynamicMemory = "dynamic_memory";
+            public static readonly string Tpm = "tpm";
         }
 
         public static class CapabilityDetails
