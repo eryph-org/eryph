@@ -170,11 +170,12 @@ namespace Eryph.Runtime.Uninstaller
                     Directory.Delete(eryphPath);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 await _reportProgress(
                     $"The installation folder could not be removed. Please delete the files manually from '{folderPath}'."
                     + Environment.NewLine);
+                return;
             }
 
             await _reportProgress("Installation folder removed." + Environment.NewLine);
