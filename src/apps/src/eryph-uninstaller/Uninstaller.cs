@@ -161,11 +161,20 @@ namespace Eryph.Runtime.Uninstaller
                 return;
             }
 
-            Directory.Delete(folderPath, true);
-
-            if (!Directory.EnumerateFileSystemEntries(eryphPath).Any())
+            try
             {
-                Directory.Delete(eryphPath);
+                Directory.Delete(folderPath, true);
+
+                if (!Directory.EnumerateFileSystemEntries(eryphPath).Any())
+                {
+                    Directory.Delete(eryphPath);
+                }
+            }
+            catch (Exception e)
+            {
+                await _reportProgress(
+                    $"The installation folder could not be removed. Please delete the files manually from '{folderPath}'."
+                    + Environment.NewLine);
             }
 
             await _reportProgress("Installation folder removed." + Environment.NewLine);
