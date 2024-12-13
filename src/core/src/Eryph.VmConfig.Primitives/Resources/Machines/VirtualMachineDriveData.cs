@@ -17,6 +17,13 @@ namespace Eryph.Resources.Machines
 
         public bool Frozen { get; set; }
 
+        /// <summary>
+        /// Contains the actual virtual disk which is attached.
+        /// </summary>
+        /// <remarks>
+        /// Can be <see langword="null"/> when e.g. the VHD has
+        /// been deleted but is still attached to a VM in Hyper-V.
+        /// </remarks>
         public DiskInfo Disk { get; set; }
     }
 }

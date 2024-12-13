@@ -1,28 +1,27 @@
 ﻿using System.Threading.Tasks;
+using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.VmManagement.Inventory;
+using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
 
-namespace Eryph.Modules.VmHostAgent.Inventory
+using static LanguageExt.Prelude;
+
+namespace Eryph.Modules.VmHostAgent.Inventory;
+
+[UsedImplicitly]
+internal class VirtualMachineStateChangedEventHandler(
+    IBus bus,
+    WorkflowOptions workflowOptions)
+    : IHandleMessages<VirtualMachineStateChangedEvent>
 {
-    internal class VirtualMachineStateChangedEventHandler : IHandleMessages<VirtualMachineStateChangedEvent>
-    {
-        private readonly IBus _bus;
-
-        public VirtualMachineStateChangedEventHandler(IBus bus)
+    public Task Handle(VirtualMachineStateChangedEvent message) =>
+        bus.SendWorkflowEvent(workflowOptions, new CatletStateChangedEvent
         {
-            _bus = bus;
-        }
-
-        public Task Handle(VirtualMachineStateChangedEvent message)
-        {
-            return _bus.Advanced.Topics.Publish("vm_events",new VMStateChangedEvent
-            {
-                VmId = message.VmId,
-                Status = InventoryConverter.MapVmInfoStatusToVmStatus(message.State),
-                TimeStamp = message.TimeStamp,
-            });
-        }
-    }
+            VmId = message.VmId,
+            Status = VmStateUtils.toVmStatus(Optional(message.State)),
+            UpTime = message.UpTime,
+            Timestamp = message.Timestamp,
+        });
 }

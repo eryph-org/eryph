@@ -362,10 +362,11 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     AgentName = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    StatusTimestamp = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    LastSeenState = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     CatletType = table.Column<int>(type: "int", nullable: false),
-                    UpTime = table.Column<TimeSpan>(type: "time(6)", nullable: true),
+                    UpTime = table.Column<TimeSpan>(type: "time(6)", nullable: false),
                     VMId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     MetadataId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Path = table.Column<string>(type: "longtext", nullable: true)
@@ -584,9 +585,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     SwitchName = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    NetworkProviderName = table.Column<string>(type: "longtext", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    MacAddress = table.Column<string>(type: "longtext", nullable: true)
+                    MacAddress = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
@@ -607,6 +606,10 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     CatletId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    MacAddress = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    PortName = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     IpV4Addresses = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     IpV6Addresses = table.Column<string>(type: "longtext", nullable: false)

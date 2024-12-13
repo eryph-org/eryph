@@ -306,10 +306,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Environment = table.Column<string>(type: "TEXT", nullable: false),
                     AgentName = table.Column<string>(type: "TEXT", nullable: true),
+                    LastSeen = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    StatusTimestamp = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    LastSeenState = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CatletType = table.Column<int>(type: "INTEGER", nullable: false),
-                    UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: true),
+                    UpTime = table.Column<TimeSpan>(type: "TEXT", nullable: false),
                     VMId = table.Column<Guid>(type: "TEXT", nullable: false),
                     MetadataId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Path = table.Column<string>(type: "TEXT", nullable: true),
@@ -497,8 +498,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     SwitchName = table.Column<string>(type: "TEXT", nullable: true),
-                    NetworkProviderName = table.Column<string>(type: "TEXT", nullable: true),
-                    MacAddress = table.Column<string>(type: "TEXT", nullable: true)
+                    MacAddress = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -517,6 +517,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     CatletId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MacAddress = table.Column<string>(type: "TEXT", nullable: true),
+                    PortName = table.Column<string>(type: "TEXT", nullable: true),
                     IpV4Addresses = table.Column<string>(type: "TEXT", nullable: false),
                     IpV6Addresses = table.Column<string>(type: "TEXT", nullable: false),
                     IPv4DefaultGateway = table.Column<string>(type: "TEXT", nullable: true),

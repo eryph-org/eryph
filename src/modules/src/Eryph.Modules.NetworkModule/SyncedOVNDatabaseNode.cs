@@ -14,17 +14,22 @@ public class SyncedOVNDatabaseNode : OVNDatabaseNode
 
     public SyncedOVNDatabaseNode(
         IAgentControlService agentControlService,
-        ISysEnvironment sysEnv, IOVNSettings ovnSettings, ILoggerFactory loggerFactory) : base(sysEnv, ovnSettings, loggerFactory)
+        ISystemEnvironment systemEnvironment,
+        IOVNSettings ovnSettings,
+        ILoggerFactory loggerFactory)
+        : base(systemEnvironment, ovnSettings, loggerFactory)
     {
         _agentControlService = agentControlService;
     }
 
-    public override EitherAsync<Error, Unit> Stop(bool ensureNodeStopped, CancellationToken cancellationToken = new CancellationToken())
-    {
-        return 
-            from stopController in Prelude.TryAsync(() =>_agentControlService.SendControlEvent(AgentService.OVNController, AgentServiceOperation.Stop,
-                cancellationToken)).ToEither()
-            from stopDb in base.Stop(ensureNodeStopped, cancellationToken)
-            select Unit.Default;
-    }
+    public override EitherAsync<Error, Unit> Stop(
+        bool ensureNodeStopped,
+        CancellationToken cancellationToken = default) => 
+        from stopController in Prelude.TryAsync(() =>_agentControlService.SendControlEvent(
+                AgentService.OVNController,
+                AgentServiceOperation.Stop,
+                cancellationToken))
+            .ToEither()
+        from stopDb in base.Stop(ensureNodeStopped, cancellationToken)
+        select Unit.Default;
 }

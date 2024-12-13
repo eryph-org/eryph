@@ -18,7 +18,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt;
-using Rebus.Messages;
+using Microsoft.Extensions.Logging;
 using Rebus.Pipeline;
 
 namespace Eryph.Modules.Controller.Inventory
@@ -29,33 +29,54 @@ namespace Eryph.Modules.Controller.Inventory
         private readonly IVirtualMachineDataService _vmDataService;
         private readonly IVirtualDiskDataService _vhdDataService;
 
+        private readonly IInventoryLockManager _lockManager;
         protected readonly IVirtualMachineMetadataService MetadataService;
         protected readonly IStateStore StateStore;
         private readonly IMessageContext _messageContext;
+        private readonly ILogger _logger;
 
         protected UpdateInventoryCommandHandlerBase(
-            IVirtualMachineMetadataService metadataService, IOperationDispatcher dispatcher,
+            IInventoryLockManager lockManager,
+            IVirtualMachineMetadataService metadataService,
+            IOperationDispatcher dispatcher,
             IVirtualMachineDataService vmDataService, 
             IVirtualDiskDataService vhdDataService,
-            IStateStore stateStore, IMessageContext messageContext)
+            IStateStore stateStore,
+            IMessageContext messageContext,
+            ILogger logger)
         {
+            _lockManager = lockManager;
             MetadataService = metadataService;
             _dispatcher = dispatcher;
             _vmDataService = vmDataService;
             _vhdDataService = vhdDataService;
             StateStore = stateStore;
             _messageContext = messageContext;
+            _logger = logger;
         }
-
-
 
         protected async Task UpdateVMs(
             DateTimeOffset timestamp,
-            IEnumerable<VirtualMachineData> vmList, CatletFarm hostMachine)
+            IEnumerable<VirtualMachineData> vmList,
+            CatletFarm hostMachine)
         {
             var vms = vmList as VirtualMachineData[] ?? vmList.ToArray();
-            var diskInfos = vms.SelectMany(x => x.Drives.Select(d => d.Disk)).ToList();
-            
+            var diskInfos = vms.SelectMany(x => x.Drives)
+                .Select(d => d.Disk)
+                .Where(d => d != null)
+                .ToList();
+
+            // Acquire all necessary locks in the beginning to minimize the potential for deadlocks.
+            foreach (var vhdId in diskInfos.Map(d => d.DiskIdentifier).Order())
+            {
+                await _lockManager.AcquireVhdLock(vhdId);
+            }
+
+            foreach (var vmId in vms.Select(x => x.VMId).OrderBy(g => g))
+            {
+                await _lockManager.AcquireVmLock(vmId);
+            }
+
             var addedDisks = await ResolveAndUpdateDisks(diskInfos, timestamp, hostMachine)
                 .ConfigureAwait(false);
 
@@ -70,7 +91,7 @@ namespace Eryph.Modules.Controller.Inventory
                     var optionalMachine = (await _vmDataService.GetVM(metadata.MachineId).ConfigureAwait(false));
                     var project = await FindRequiredProject(vmInfo.ProjectName, vmInfo.ProjectId).ConfigureAwait(false);
 
-                    //machine not found or metadata is assigned to new VM - a new VM resource will be created)
+                    //machine not found or metadata is assigned to new VM - a new VM resource will be created
                     if (optionalMachine.IsNone || metadata.VMId != vmInfo.VMId)
                     {
                         // create new metadata for machines that have been imported
@@ -108,6 +129,15 @@ namespace Eryph.Modules.Controller.Inventory
 
                     await optionalMachine.IfSomeAsync(async existingMachine =>
                     {
+                        if (existingMachine.LastSeen >= timestamp)
+                        {
+                            _logger.LogDebug("Skipping inventory update for catlet {CatletId} with timestamp {Timestamp}. Most recent information is dated {LastSeen}.",
+                                existingMachine.Id, timestamp, existingMachine.LastSeen);
+                            return;
+                        }
+                        
+                        existingMachine.LastSeen = timestamp;
+
                         await StateStore.LoadPropertyAsync(existingMachine, x=> x.Project).ConfigureAwait(false);
 
                         Debug.Assert(existingMachine.Project != null);
@@ -120,7 +150,6 @@ namespace Eryph.Modules.Controller.Inventory
                         var newMachine = await VirtualMachineInfoToCatlet(vmInfo,
                             hostMachine, existingMachine.Id, existingMachine.Project, addedDisks).ConfigureAwait(false);
                         existingMachine.Name = newMachine.Name;
-                        existingMachine.Status = newMachine.Status;
                         existingMachine.Host = hostMachine;
                         existingMachine.AgentName = newMachine.AgentName;
                         existingMachine.Frozen = newMachine.Frozen;
@@ -137,6 +166,17 @@ namespace Eryph.Modules.Controller.Inventory
                         existingMachine.StartupMemory = newMachine.StartupMemory;
                         existingMachine.Features = newMachine.Features;
                         existingMachine.SecureBootTemplate = newMachine.SecureBootTemplate;
+
+                        if (existingMachine.LastSeenState >= timestamp)
+                        {
+                            _logger.LogDebug("Skipping state update for catlet {CatletId} with timestamp {Timestamp}. Most recent state information is dated {LastSeen}.",
+                                existingMachine.Id, timestamp, existingMachine.LastSeenState);
+                            return;
+                        }
+
+                        existingMachine.LastSeenState = timestamp;
+                        existingMachine.Status = newMachine.Status;
+                        existingMachine.UpTime = newMachine.UpTime;
                     }).ConfigureAwait(false);
                 }).ConfigureAwait(false);
             }
@@ -339,37 +379,38 @@ namespace Eryph.Modules.Controller.Inventory
                 
                 select new Catlet
                 {
-                Id = machineId,
-                Project = project,
-                ProjectId = project.Id,
-                VMId = vmInfo.VMId,
-                Name = vmInfo.Name,
-                Status = MapVmStatusToMachineStatus(vmInfo.Status),
-                Host = hostMachine,
-                AgentName = hostMachine.Name,
-                DataStore = vmInfo.DataStore,
-                Environment = vmInfo.Environment,
-                Path = vmInfo.VMPath,
-                Frozen = vmInfo.Frozen,
-                StorageIdentifier = vmInfo.StorageIdentifier,
-                MetadataId = vmInfo.MetadataId,
-                UpTime = vmInfo.UpTime,
-                CpuCount = vmInfo.Cpu?.Count ?? 0,
-                StartupMemory = vmInfo.Memory?.Startup ?? 0,
-                MinimumMemory = vmInfo.Memory?.Minimum ?? 0,
-                MaximumMemory = vmInfo.Memory?.Startup ?? 0,
-                Features = MapFeatures(vmInfo),
-                SecureBootTemplate = vmInfo.Firmware?.SecureBootTemplate,
-                NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new CatletNetworkAdapter
-                {
-                    Id = a.Id,
-                    CatletId = machineId,
-                    Name = a.AdapterName,
-                    SwitchName = a.VirtualSwitchName
-                }).ToList(),
-                Drives = drives,
-                ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(machineId) ?? Array.Empty<ReportedNetwork>()).ToList()
-            };
+                    Id = machineId,
+                    Project = project,
+                    ProjectId = project.Id,
+                    VMId = vmInfo.VMId,
+                    Name = vmInfo.Name,
+                    Status = vmInfo.Status.ToCatletStatus(),
+                    Host = hostMachine,
+                    AgentName = hostMachine.Name,
+                    DataStore = vmInfo.DataStore,
+                    Environment = vmInfo.Environment,
+                    Path = vmInfo.VMPath,
+                    Frozen = vmInfo.Frozen,
+                    StorageIdentifier = vmInfo.StorageIdentifier,
+                    MetadataId = vmInfo.MetadataId,
+                    UpTime = vmInfo.Status is VmStatus.Stopped ? TimeSpan.Zero : vmInfo.UpTime,
+                    CpuCount = vmInfo.Cpu?.Count ?? 0,
+                    StartupMemory = vmInfo.Memory?.Startup ?? 0,
+                    MinimumMemory = vmInfo.Memory?.Minimum ?? 0,
+                    MaximumMemory = vmInfo.Memory?.Startup ?? 0,
+                    Features = MapFeatures(vmInfo),
+                    SecureBootTemplate = vmInfo.Firmware?.SecureBootTemplate,
+                    NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new CatletNetworkAdapter
+                    {
+                        Id = a.Id,
+                        CatletId = machineId,
+                        Name = a.AdapterName,
+                        SwitchName = a.VirtualSwitchName,
+                        MacAddress = a.MacAddress,
+                    }).ToList(),
+                    Drives = drives,
+                    ReportedNetworks = (vmInfo.Networks?.ToReportedNetwork(machineId) ?? Array.Empty<ReportedNetwork>()).ToList()
+                };
         }
 
         private static ISet<CatletFeature> MapFeatures(VirtualMachineData vmInfo)
@@ -385,24 +426,5 @@ namespace Eryph.Modules.Controller.Inventory
 
             return features;
         }
-
-        private static CatletStatus MapVmStatusToMachineStatus(VmStatus status)
-        {
-            switch (status)
-            {
-                case VmStatus.Stopped:
-                    return CatletStatus.Stopped;
-                case VmStatus.Running:
-                    return CatletStatus.Running;
-                case VmStatus.Pending:
-                    return CatletStatus.Pending;
-                case VmStatus.Error:
-                    return CatletStatus.Error;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(status), status, null);
-            }
-        }
-
     }
 }

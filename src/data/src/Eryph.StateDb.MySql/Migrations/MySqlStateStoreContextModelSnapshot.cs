@@ -96,13 +96,11 @@ namespace Eryph.StateDb.MySql.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.Property<string>("MacAddress")
+                        .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("NetworkProviderName")
                         .HasColumnType("longtext");
 
                     b.Property<string>("SwitchName")
@@ -484,6 +482,12 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("MacAddress")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PortName")
+                        .HasColumnType("longtext");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CatletId");
@@ -662,6 +666,12 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<Guid?>("HostId")
                         .HasColumnType("char(36)");
 
+                    b.Property<DateTimeOffset>("LastSeen")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTimeOffset>("LastSeenState")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<long>("MaximumMemory")
                         .HasColumnType("bigint");
 
@@ -683,13 +693,10 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("StatusTimestamp")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("longtext");
 
-                    b.Property<TimeSpan?>("UpTime")
+                    b.Property<TimeSpan>("UpTime")
                         .HasColumnType("time(6)");
 
                     b.Property<Guid>("VMId")

@@ -1,33 +1,48 @@
-﻿namespace Eryph.VmManagement.Data
+﻿namespace Eryph.VmManagement.Data;
+
+/// <summary>
+/// The values for <c>State</c> as returned by the
+/// <c>Get-VM</c> Powershell Cmdlet.
+/// </summary>
+/// <remarks>
+/// The numerical values of the corresponding Powershell
+/// enum values are different depending on the Windows version.
+/// Hence, the enum must be mapped by name which is the default
+/// behavior of AutoMapper.
+/// </remarks>
+public enum VirtualMachineState
 {
-    public enum VirtualMachineState
-    {
-        Other = 1,
-        Running = 2,
-        Off = 3,
-        Stopping = 4,
-        Saved = 6,
-        Paused = 9,
-        Starting = 10, // 0x0000000A
-        Reset = 11, // 0x0000000B
-        Saving = 32773, // 0x00008005
-        Pausing = 32776, // 0x00008008
-        Resuming = 32777, // 0x00008009
-        FastSaved = 32779, // 0x0000800B
-        FastSaving = 32780, // 0x0000800C
-        ForceShutdown = 32781, // 0x0000800D
-        ForceReboot = 32782, // 0x0000800E
-        RunningCritical = 32783, // 0x0000800F
-        OffCritical = 32784, // 0x00008010
-        StoppingCritical = 32785, // 0x00008011
-        SavedCritical = 32786, // 0x00008012
-        PausedCritical = 32787, // 0x00008013
-        StartingCritical = 32788, // 0x00008014
-        ResetCritical = 32789, // 0x00008015
-        SavingCritical = 32790, // 0x00008016
-        PausingCritical = 32791, // 0x00008017
-        ResumingCritical = 32792, // 0x00008018
-        FastSavedCritical = 32793, // 0x00008019
-        FastSavingCritical = 32794 // 0x0000801A
-    }
+    Other = 1,
+    Running = 2,
+    Off = 3,
+    Stopping = 4,
+    Saved = 6,
+    Paused = 9,
+    Starting = 10,
+    Reset = 11,
+    Saving = 32773,
+    Pausing = 32776,
+    Resuming = 32777,
+    FastSaved = 32779,
+    FastSaving = 32780,
+    ForceShutdown = 32781,
+
+    // Starting from here the numerical values differ between
+    // the Windows versions. Hibernated and ComponentServicing
+    // are not present on at least Windows Server 2016.
+    ForceReboot = 32782,
+    Hibernated = 32783,
+    ComponentServicing = 32784,
+    RunningCritical = 32785,
+    OffCritical = 32786,
+    StoppingCritical = 32787,
+    SavedCritical = 32788,
+    PausedCritical = 32789,
+    StartingCritical = 32790,
+    ResetCritical = 32791,
+    SavingCritical = 32792,
+    PausingCritical = 32793,
+    ResumingCritical = 32794,
+    FastSavedCritical = 32795,
+    FastSavingCritical = 32796,
 }

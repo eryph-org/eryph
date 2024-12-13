@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
-    [Migration("20241125150524_InitialCreate")]
+    [Migration("20241203163008_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -94,13 +94,11 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("MacAddress")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("NetworkProviderName")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SwitchName")
@@ -482,6 +480,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("MacAddress")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PortName")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CatletId");
@@ -660,6 +664,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid?>("HostId")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("LastSeen")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastSeenState")
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("MaximumMemory")
                         .HasColumnType("INTEGER");
 
@@ -681,13 +691,10 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("StatusTimestamp")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("TEXT");
 
-                    b.Property<TimeSpan?>("UpTime")
+                    b.Property<TimeSpan>("UpTime")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("VMId")

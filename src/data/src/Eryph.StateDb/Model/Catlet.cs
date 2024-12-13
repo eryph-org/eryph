@@ -7,15 +7,29 @@ public class Catlet : Resource
 {
     public string? AgentName { get; set; }
 
+    /// <summary>
+    /// The last time the catlet has been inventoried.
+    /// </summary>
+    public DateTimeOffset LastSeen { get; set; }
+
     public CatletStatus Status { get; set; }
 
-    public DateTime StatusTimestamp { get; set; }
+    /// <summary>
+    /// The last time the <see cref="Status"/> and <see cref="UpTime"/>
+    /// of the catlet have been observed.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="Status"/> and <see cref="UpTime"/> can be updated
+    /// independently of the inventory of the catlet. Hence, we track their
+    /// observation time separately as well.
+    /// </remarks>
+    public DateTimeOffset LastSeenState { get; set; }
 
     public CatletType CatletType { get; set; }
 
     public ICollection<ReportedNetwork> ReportedNetworks { get; set; } = null!;
 
-    public TimeSpan? UpTime { get; set; }
+    public TimeSpan UpTime { get; set; }
 
     public Guid VMId { get; set; }
 

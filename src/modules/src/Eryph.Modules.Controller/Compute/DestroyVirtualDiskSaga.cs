@@ -5,6 +5,7 @@ using Eryph.ConfigModel;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.Modules.Controller.Inventory;
 using Eryph.Resources;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -21,7 +22,8 @@ internal class DestroyVirtualDiskSaga(
     IWorkflow workflow,
     IVirtualDiskDataService virtualDiskDataService,
     IStateStore stateStore,
-    IStorageManagementAgentLocator agentLocator)
+    IStorageManagementAgentLocator agentLocator,
+    IInventoryLockManager lockManager)
     : OperationTaskWorkflowSaga<DestroyVirtualDiskCommand, DestroyVirtualDiskSagaData>(workflow),
         IHandleMessages<OperationTaskStatusEvent<RemoveVirtualDiskCommand>>
 {
@@ -29,7 +31,14 @@ internal class DestroyVirtualDiskSaga(
     {
         return FailOrRun(message, async () =>
         {
-            await virtualDiskDataService.DeleteVHD(Data.DiskId);
+            var virtualDisk = await virtualDiskDataService.GetVHD(Data.DiskId)
+                .Map(d => d.IfNoneUnsafe((VirtualDisk?)null));
+            
+            if (virtualDisk is not null)
+            {
+                await lockManager.AcquireVhdLock(virtualDisk.DiskIdentifier);
+                await virtualDiskDataService.DeleteVHD(Data.DiskId);
+            }
 
             await Complete(new DestroyResourcesResponse
             {

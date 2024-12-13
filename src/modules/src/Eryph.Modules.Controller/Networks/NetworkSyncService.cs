@@ -132,7 +132,7 @@ internal class NetworkSyncService(
         use(Eff(() => AsyncScopedLifestyle.BeginScope(container)),
             scope =>
                 from _ in unitAff
-                let sysEnv = scope.GetInstance<ISysEnvironment>()
+                let sysEnv = scope.GetInstance<ISystemEnvironment>()
                 let ovnSettings = scope.GetInstance<IOVNSettings>()
                 let planBuilder = scope.GetInstance<IProjectNetworkPlanBuilder>()
                 let logger = scope.GetInstance<ILogger>()

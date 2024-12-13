@@ -242,7 +242,7 @@ internal class ProjectNetworkPlanBuilder(
 
     private static NetworkPlan AddCatletPorts(NetworkPlan networkPlan, Seq<CatletNetworkPort> ports) =>
         ports.Map(port => networkPlan.AddNetworkPort(
-                port.Network.Id.ToString(), port.Name, port.MacAddress,
+                port.Network.Id.ToString(), port.OvsName, port.MacAddress,
                 port.IpAssignments.HeadOrNone().Map(h => IPAddress.Parse(h.IpAddress))
                     .IfNone(IPAddress.None), 
                         port.IpAssignments?.FirstOrDefault()?.SubnetId?.ToString() ?? ""))
@@ -287,7 +287,7 @@ internal class ProjectNetworkPlanBuilder(
 
                 return networkPlan.AddNATRule($"project-{networkPlan.Id}", "dnat_and_snat",
                     externalIpAddress, portInfo.Port.MacAddress,
-                    internalIp, portInfo.Port.AssignedPort.Name);
+                    internalIp, portInfo.Port.AssignedPort.OvsName);
 
             })
             .Apply(s => JoinPlans(s, networkPlan));
