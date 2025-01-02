@@ -1,15 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Catlets.Events;
+using Eryph.Resources.Disks;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
+using Eryph.VmManagement.Storage;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
@@ -18,12 +21,17 @@ using Rebus.Bus;
 using Rebus.Handlers;
 
 using static LanguageExt.Prelude;
+using static LanguageExt.Seq;
 
 namespace Eryph.Modules.VmHostAgent.Inventory;
 
 [UsedImplicitly]
-internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log,
+internal class InventoryRequestedEventHandler(
+    IBus bus,
+    IPowershellEngine engine,
+    ILogger log,
     WorkflowOptions workflowOptions,
+    IFileSystemService fileSystemService,
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
@@ -56,10 +64,12 @@ internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine
         from vmData in inventorizableVmInfos
             .Map(vmInfo => InventoryVm(inventory, vmInfo))
             .SequenceParallel()
+        from diskInfos in InventoryDisks(vmHostAgentConfig)
         select new UpdateVMHostInventoryCommand
         {
             HostInventory = hostInventory,
             VMInventory = vmData.Somes().ToList(),
+            DiskInventory = diskInfos.ToList(),
             Timestamp = timestamp
         };
 
@@ -74,6 +84,42 @@ internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine
                            return SuccessAff(Option<VirtualMachineData>.None);
                        })
         select vmData;
+
+    private Aff<Seq<DiskInfo>> InventoryDisks(
+        VmHostAgentConfiguration vmHostAgentConfig) =>
+        from _ in SuccessAff(unit)
+        let storePaths = append(
+            vmHostAgentConfig.Environments.ToSeq()
+                .SelectMany(e => e.Datastores.ToSeq().Map(ds => ds.Path))
+                .ToSeq(),
+            vmHostAgentConfig.Environments.ToSeq()
+                .Map(e => e.Defaults.Volumes),
+            vmHostAgentConfig.Datastores.ToSeq().Map(ds => ds.Path),
+            Seq1(vmHostAgentConfig.Defaults.Volumes))
+        from diskInfos in storePaths
+            .Map(storePath => InventoryDisks(vmHostAgentConfig, storePath))
+            .SequenceSerial()
+        select diskInfos.Flatten();
+
+    private Aff<Seq<DiskInfo>> InventoryDisks(
+        VmHostAgentConfiguration vmHostAgentConfig,
+        string storePath) =>
+        from vhdFiles in Eff(() => fileSystemService.GetFiles(storePath, "*.vhdx", SearchOption.AllDirectories))
+        from diskInfos in vhdFiles.ToSeq()
+            .Map(vhdFile => InventoryDisk(vmHostAgentConfig, vhdFile))
+            .SequenceParallel()
+        select diskInfos.Somes();
+
+    private Aff<Option<DiskInfo>> InventoryDisk(
+        VmHostAgentConfiguration vmHostAgentConfig,
+        string diskPath) =>
+        from diskSettings in DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, diskPath).ToAff(identity).Map(Some)
+                             | @catch(e =>
+                             {
+                                 log.LogError(e, "Inventory of virtual disk '{Path}' failed", diskPath);
+                                 return SuccessAff(Option<DiskStorageSettings>.None);
+                             })
+        select diskSettings.Map(s => s.CreateDiskInfo());
 
     private bool IsInventorizable(TypedPsObject<VirtualMachineInfo> vmInfo)
     {
