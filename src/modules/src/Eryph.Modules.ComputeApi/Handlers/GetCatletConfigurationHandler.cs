@@ -170,7 +170,7 @@ internal class GetCatletConfigurationHandler(
 
             Maximum = catlet.MaximumMemory != 0 ? (int)Math.Ceiling(catlet.MaximumMemory / 1024d / 1024)
                 : null,
-            Minimum = catlet.MinimumMemory != 0 ? (int)Math.Ceiling(catlet.MaximumMemory / 1024d / 1024)
+            Minimum = catlet.MinimumMemory != 0 ? (int)Math.Ceiling(catlet.MinimumMemory / 1024d / 1024)
                 : null,
 
         };
