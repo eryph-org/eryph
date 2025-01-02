@@ -339,6 +339,22 @@ internal class GetCatletConfigurationHandler(
             capabilities.Add(dynamicMemoryCap);
         }
 
+        if (catlet.Features.Any(x =>
+                x == CatletFeature.Tpm
+                || parentCaps.Any(c => c.Name == EryphConstants.Capabilities.Tpm)))
+        {
+            var featureOff = catlet.Features.All(x => x != CatletFeature.Tpm);
+
+            var tpmCap = new CatletCapabilityConfig
+            {
+                Name = EryphConstants.Capabilities.Tpm,
+                Details = featureOff
+                    ? [EryphConstants.CapabilityDetails.Disabled]
+                    : null
+            };
+            capabilities.Add(tpmCap);
+        }
+
         // reduce capabilities to only those that are not set same on parent
         foreach (var capabilityConfig in capabilities.ToArray())
         {

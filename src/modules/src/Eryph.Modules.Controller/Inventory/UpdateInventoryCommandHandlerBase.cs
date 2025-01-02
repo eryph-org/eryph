@@ -419,11 +419,16 @@ namespace Eryph.Modules.Controller.Inventory
             
             if (vmInfo.Firmware?.SecureBoot ?? false)
                 features.Add(CatletFeature.SecureBoot);
+            
             if (vmInfo.Cpu?.ExposeVirtualizationExtensions ?? false)
                 features.Add(CatletFeature.NestedVirtualization);
+            
             if (vmInfo.Memory?.DynamicMemoryEnabled ?? false)
                 features.Add(CatletFeature.DynamicMemory);
 
+            if (vmInfo.Security?.TpmEnabled ?? false)
+                features.Add(CatletFeature.Tpm);
+            
             return features;
         }
     }
