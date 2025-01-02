@@ -1,20 +1,22 @@
-﻿namespace Eryph.VmManagement.Data.Core;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-/// <summary>
-/// Contains information about the security settings of a Hyper-V VM
-/// as returned by <c>Get-VMSecurity</c>.
-/// </summary>
-public class VMSecurityInfo
+namespace Eryph.Resources.Machines;
+
+public class VirtualMachineSecurityData
 {
     public bool TpmEnabled { get; init; }
 
     public bool KsdEnabled { get; init; }
 
     public bool Shielded { get; init; }
-    
+
     public bool EncryptStateAndVmMigrationTraffic { get; init; }
-    
+
     public bool VirtualizationBasedSecurityOptOut { get; init; }
-    
+
     public bool BindToHostTpm { get; init; }
 }

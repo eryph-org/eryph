@@ -12,6 +12,8 @@ using Eryph.VmManagement.Storage;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.VmManagement.Inventory;
 
 public class VirtualMachineInventory(
@@ -22,13 +24,14 @@ public class VirtualMachineInventory(
     public EitherAsync<Error, VirtualMachineData> InventorizeVM(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from hostInfo in hostInfoProvider.GetHostInfoAsync()
-        from vm in Prelude.RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo)
+        from vm in RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo)
         from vmStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vm)
         from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(
             engine, vmHostAgentConfig, vm.GetList(x => x.HardDrives))
         from cpuData in GetCpuData(vmInfo)
         from memoryData in GetMemoryData(vmInfo)
         from firmwareData in GetFirmwareData(vmInfo)
+        from securityData in GetSecurityData(vmInfo)
         from networks in VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vm.GetList(x => x.NetworkAdapters))
         select new VirtualMachineData
         {
@@ -63,6 +66,7 @@ public class VirtualMachineInventory(
                 return res;
             }).ToArray(),
             Networks = networks.ToArray(),
+            Security = securityData,
         };           
 
     private EitherAsync<Error, VirtualMachineCpuData> GetCpuData(TypedPsObject<VirtualMachineInfo> vmInfo)
@@ -101,6 +105,26 @@ public class VirtualMachineInventory(
                 }
             ));
     }
+
+    private EitherAsync<Error, VirtualMachineSecurityData> GetSecurityData(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-VMSecurity")
+            .AddParameter("VM", vmInfo.PsObject)
+        from vmSecurityInfos in engine.GetObjectValuesAsync<VMSecurityInfo>(command)
+            .ToError()
+        from vMSecurityInfo in vmSecurityInfos.HeadOrNone()
+            .ToEitherAsync(Error.New($"Failed to fetch security information for the VM {vmInfo.Value.Id}."))
+        select new VirtualMachineSecurityData
+        {
+            BindToHostTpm = vMSecurityInfo.BindToHostTpm,
+            EncryptStateAndVmMigrationTraffic = vMSecurityInfo.EncryptStateAndVmMigrationTraffic,
+            KsdEnabled = vMSecurityInfo.KsdEnabled,
+            Shielded = vMSecurityInfo.Shielded,
+            TpmEnabled = vMSecurityInfo.TpmEnabled,
+            VirtualizationBasedSecurityOptOut = vMSecurityInfo.VirtualizationBasedSecurityOptOut,
+        };
 
     private static Guid GetMetadataId(TypedPsObject<VirtualMachineInfo> vmInfo)
     {
