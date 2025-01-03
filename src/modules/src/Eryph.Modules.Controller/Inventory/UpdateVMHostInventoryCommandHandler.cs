@@ -36,6 +36,8 @@ internal class UpdateVMHostInventoryCommandHandler(
             logger),
         IHandleMessages<UpdateVMHostInventoryCommand>
 {
+    private readonly IInventoryLockManager _lockManager = lockManager;
+
     public async Task Handle(UpdateVMHostInventoryCommand message)
     {
         var newMachineState = await
@@ -51,6 +53,17 @@ internal class UpdateVMHostInventoryCommandHandler(
 
         var existingMachine = await vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
             .IfNoneAsync(() => vmHostDataService.AddNewVMHost(newMachineState));
+
+        var diskIdentifiers = CollectDiskIdentifiers(message.DiskInventory.ToSeq());
+        foreach (var diskIdentifier in diskIdentifiers)
+        {
+            await _lockManager.AcquireVhdLock(diskIdentifier);
+        }
+
+        foreach (var diskInfo in message.DiskInventory)
+        {
+            await AddOrUpdateDisk(existingMachine.Name, message.Timestamp, diskInfo);
+        }
 
         await UpdateVMs(message.Timestamp, message.VMInventory, existingMachine);
     }

@@ -305,7 +305,7 @@ internal class UpdateCatletSaga(
             await bus.SendLocal(new UpdateInventoryCommand
             {
                 AgentName = Data.Data.AgentName,
-                Inventory = [response.Inventory],
+                Inventory = response.Inventory,
                 Timestamp = response.Timestamp,
             });
 
