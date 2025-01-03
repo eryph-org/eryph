@@ -163,7 +163,7 @@ namespace Eryph.Modules.Controller.Inventory
                         existingMachine.CpuCount = newMachine.CpuCount;
                         existingMachine.StartupMemory = newMachine.StartupMemory;
                         existingMachine.MinimumMemory = newMachine.MinimumMemory;
-                        existingMachine.StartupMemory = newMachine.StartupMemory;
+                        existingMachine.MaximumMemory = newMachine.MaximumMemory;
                         existingMachine.Features = newMachine.Features;
                         existingMachine.SecureBootTemplate = newMachine.SecureBootTemplate;
 
@@ -397,7 +397,7 @@ namespace Eryph.Modules.Controller.Inventory
                     CpuCount = vmInfo.Cpu?.Count ?? 0,
                     StartupMemory = vmInfo.Memory?.Startup ?? 0,
                     MinimumMemory = vmInfo.Memory?.Minimum ?? 0,
-                    MaximumMemory = vmInfo.Memory?.Startup ?? 0,
+                    MaximumMemory = vmInfo.Memory?.Maximum ?? 0,
                     Features = MapFeatures(vmInfo),
                     SecureBootTemplate = vmInfo.Firmware?.SecureBootTemplate,
                     NetworkAdapters = vmInfo.NetworkAdapters.Select(a => new CatletNetworkAdapter
