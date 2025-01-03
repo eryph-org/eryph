@@ -29,5 +29,6 @@ namespace Eryph.Resources.Machines
 
         public VirtualMachineFirmwareData Firmware { get; set; }
 
+        public VirtualMachineSecurityData Security { get; set; }
     }
 }

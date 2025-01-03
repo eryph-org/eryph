@@ -4,5 +4,6 @@ public enum CatletFeature
 {
     SecureBoot,
     DynamicMemory,
-    NestedVirtualization
+    NestedVirtualization,
+    Tpm,
 }
