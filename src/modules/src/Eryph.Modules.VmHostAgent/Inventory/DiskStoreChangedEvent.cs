@@ -8,5 +8,4 @@ namespace Eryph.Modules.VmHostAgent.Inventory;
 
 internal class DiskStoreChangedEvent
 {
-    public required string Path { get; init; }
 }
