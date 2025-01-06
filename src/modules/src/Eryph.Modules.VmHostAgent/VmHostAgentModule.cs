@@ -88,6 +88,7 @@ namespace Eryph.Modules.VmHostAgent
             // based on WMI events.
             options.AddHostedService<VmChangeWatcherService>();
             options.AddHostedService<VmStateChangeWatcherService>();
+            options.AddHostedService<DiskStoreChangeWatcherService>();
             options.AddLogging();
         }
 

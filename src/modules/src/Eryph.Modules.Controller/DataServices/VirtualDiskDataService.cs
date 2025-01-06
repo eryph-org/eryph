@@ -43,7 +43,7 @@ namespace Eryph.Modules.Controller.DataServices
                     environment, storageIdentifier, name, diskIdentifier));
         }
 
-        public async Task<IEnumerable<VirtualDisk>> FindOutdated(DateTimeOffset lastSeenBefore
+        public async Task<IList<VirtualDisk>> FindOutdated(DateTimeOffset lastSeenBefore
         , string agentName)
         {
             return await _stateStore.For<VirtualDisk>().ListAsync(

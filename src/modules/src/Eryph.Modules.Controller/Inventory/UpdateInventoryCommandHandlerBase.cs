@@ -190,32 +190,7 @@ namespace Eryph.Modules.Controller.Inventory
                 }).ConfigureAwait(false);
             }
 
-            
-            var outdatedDisks = (await _vhdDataService.FindOutdated(timestamp, hostMachine.Name)).ToArray();
-            if (outdatedDisks.Length == 0)
-                return;
-            await _dispatcher.StartNew(
-                EryphConstants.DefaultTenantId,
-                Guid.NewGuid().ToString(),
-                new CheckDisksExistsCommand
-                {
-                    AgentName = hostMachine.Name,
-                    Disks = outdatedDisks.Select(d => new DiskInfo
-                    {
-                        Id = d.Id,
-                        ProjectId = d.Project.Id,
-                        ProjectName = d.Project.Name,
-                        DataStore = d.DataStore,
-                        Environment = d.Environment,
-                        StorageIdentifier = d.StorageIdentifier,
-                        Name = d.Name,
-                        FileName = d.FileName,
-                        Path = d.Path,
-                        DiskIdentifier = d.DiskIdentifier,
-                        Gene = d.ToUniqueGeneId(GeneType.Volume)
-                            .IfNoneUnsafe((UniqueGeneIdentifier?)null),
-                    }).ToArray()
-                });
+            await CheckDisks(timestamp, hostMachine.Name);
         }
 
         private async Task<List<VirtualDisk>> ResolveAndUpdateDisks(
@@ -496,6 +471,38 @@ namespace Eryph.Modules.Controller.Inventory
             await _vhdDataService.AddNewVHD(disk).ConfigureAwait(false);
             await StateStore.SaveChangesAsync();
             return disk;
+        }
+
+        protected async Task CheckDisks(
+            DateTimeOffset timestamp,
+            string agentName)
+        {
+            var outdatedDisks = await _vhdDataService.FindOutdated(timestamp, agentName);
+            if (outdatedDisks.Count == 0)
+                return;
+
+            await _dispatcher.StartNew(
+                EryphConstants.DefaultTenantId,
+                Guid.NewGuid().ToString(),
+                new CheckDisksExistsCommand
+                {
+                    AgentName = agentName,
+                    Disks = outdatedDisks.Select(d => new DiskInfo
+                    {
+                        Id = d.Id,
+                        ProjectId = d.Project.Id,
+                        ProjectName = d.Project.Name,
+                        DataStore = d.DataStore,
+                        Environment = d.Environment,
+                        StorageIdentifier = d.StorageIdentifier,
+                        Name = d.Name,
+                        FileName = d.FileName,
+                        Path = d.Path,
+                        DiskIdentifier = d.DiskIdentifier,
+                        Gene = d.ToUniqueGeneId(GeneType.Volume)
+                            .IfNoneUnsafe((UniqueGeneIdentifier?)null),
+                    }).ToArray()
+                });
         }
 
         protected async Task<VirtualDisk?> GetDisk(
