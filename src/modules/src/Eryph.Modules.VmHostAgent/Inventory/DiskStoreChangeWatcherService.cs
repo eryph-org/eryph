@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.DirectoryServices.ActiveDirectory;
 using System.IO;
-using System.IO.Abstractions;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
@@ -11,11 +9,9 @@ using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using LanguageExt;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Rebus.Bus;
-using SimpleInjector;
 
 using static LanguageExt.Prelude;
 using static LanguageExt.Seq;
@@ -111,10 +107,22 @@ public sealed class DiskStoreChangeWatcherService(
         _semaphore.Dispose();
     }
 
+    /// <summary>
+    /// Creates an <see cref="IObservable{T}"/> which monitors the given
+    /// <paramref name="paths"/>.
+    /// </summary>
+    /// <remarks>
+    /// This method internally uses multiple <see cref="FileSystemWatcher"/>s
+    /// to monitor the <paramref name="paths"/>. For simplicity, all their
+    /// events are folded into a single event stream. The event stream is throttled
+    /// to avoid triggering too many inventory actions. Every event, which emerges
+    /// at the end, triggers a full inventory of all disk stores by raising a
+    /// <see cref="DiskStoreChangedEvent"/> via the local Rebus.
+    /// </remarks>
     private IObservable<System.Reactive.Unit> ObserveStores(Seq<string> paths) =>
         paths.ToObservable()
             .SelectMany(ObservePath)
-            .Sample(inventoryConfig.DiskEventDelay)
+            .Throttle(inventoryConfig.DiskEventDelay)
             .Select(_ => Observable.FromAsync(() => bus.SendLocal(new DiskStoreChangedEvent())))
             .Concat();
 

@@ -66,5 +66,7 @@ internal class UpdateVMHostInventoryCommandHandler(
         }
 
         await UpdateVMs(message.Timestamp, message.VMInventory, existingMachine);
+
+        await CheckDisks(message.Timestamp, existingMachine.Name);
     }
 }
