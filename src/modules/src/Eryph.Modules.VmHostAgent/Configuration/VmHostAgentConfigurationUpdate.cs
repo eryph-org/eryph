@@ -15,7 +15,7 @@ public static class VmHostAgentConfigurationUpdate<RT> where RT : struct,
         string configYaml,
         string configPath,
         HostSettings hostSettings) =>
-        from newConfig in VmHostAgentConfiguration<RT>.parseConfigYaml(configYaml)
+        from newConfig in VmHostAgentConfiguration<RT>.parseConfigYaml(configYaml, true)
         from _ in VmHostAgentConfigurationValidations.ValidateVmHostAgentConfig(newConfig)
             .ToAff(issues => Error.New("The new configuration is invalid.",
                 Error.Many(issues.Map(i => i.ToError()))))
