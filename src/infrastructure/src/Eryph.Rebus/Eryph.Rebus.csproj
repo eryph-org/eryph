@@ -3,13 +3,8 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-<<<<<<< HEAD
     <PackageReference Include="Dbosoft.Rebus.Configuration.Selectors" Version="0.8.0" />
     <PackageReference Include="Dbosoft.Rebus.SimpleInjector" Version="0.8.0" />
-=======
-    <PackageReference Include="Dbosoft.Rebus.Configuration.Selectors" Version="0.7.1-PullRequest0016.2" />
-    <PackageReference Include="Dbosoft.Rebus.SimpleInjector" Version="0.7.1-PullRequest0016.2" />
->>>>>>> 965a61d0 (Use improved Dbosoft.Rebus packages)
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
