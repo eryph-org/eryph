@@ -943,6 +943,17 @@ internal static class Program
                 configString,
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
+            // Check that the sync service is available (and hence the VM host agent is running).
+            // When the VM host agent is not running, we do not need to sync the configuration.
+            from canConnect in use(
+                () => new CancellationTokenSource(TimeSpan.FromSeconds(2)),
+                cts => default(SimpleConsoleRuntime).SyncClientEff
+                    .Bind(sc => sc.CheckRunning(cts.Token))
+                    .IfFail(_ => false))
+            from __ in canConnect
+                ? default(SimpleConsoleRuntime).SyncClientEff.Bind(
+                    sc => sc.SendSyncCommand("SYNC_AGENT_SETTINGS", CancellationToken.None))
+                : SuccessAff(unit)
             select unit,
             SimpleConsoleRuntime.New());
 

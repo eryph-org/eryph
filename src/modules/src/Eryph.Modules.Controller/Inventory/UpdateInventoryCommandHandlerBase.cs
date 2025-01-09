@@ -430,6 +430,9 @@ namespace Eryph.Modules.Controller.Inventory
             var disk = await GetDisk(agentName, diskInfo);
             if (disk is not null)
             {
+                if (disk.LastSeen > timestamp)
+                    return disk;
+
                 // TODO Update project
                 // TODO Update parent or fail
                 disk.SizeBytes = diskInfo.SizeBytes;

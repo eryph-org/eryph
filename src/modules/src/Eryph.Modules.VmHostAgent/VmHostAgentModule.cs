@@ -43,11 +43,15 @@ namespace Eryph.Modules.VmHostAgent
     public class VmHostAgentModule
     {
         private readonly TracingConfig _tracingConfig = new();
+        private readonly InventoryConfig _inventoryConfig = new();
 
         public VmHostAgentModule(IConfiguration configuration)
         {
             configuration.GetSection("Tracing")
                 .Bind(_tracingConfig);
+
+            configuration.GetSection("Inventory")
+                .Bind(_inventoryConfig);
         }
 
         public string Name => "Eryph.VmHostAgent";
@@ -95,6 +99,8 @@ namespace Eryph.Modules.VmHostAgent
         [UsedImplicitly]
         public void ConfigureContainer(IServiceProvider serviceProvider, Container container)
         {
+            container.RegisterInstance(_inventoryConfig);
+
             container.Register<ISyncClient, SyncClient>();
             container.Register<IHostNetworkCommands<AgentRuntime>, HostNetworkCommands<AgentRuntime>>();
             container.Register<IOVSControl, OVSControl>();

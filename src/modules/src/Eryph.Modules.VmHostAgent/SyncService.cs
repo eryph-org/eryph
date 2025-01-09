@@ -9,6 +9,7 @@ using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Networks;
+using Eryph.Modules.VmHostAgent.Inventory;
 using LanguageExt;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,12 +21,18 @@ internal class SyncService : BackgroundService
     private readonly ILogger _logger;
     private readonly IAgentControlService _controlService;
     private readonly INetworkSyncService _networkSyncService;
-    public SyncService(ILogger<SyncService> logger, 
-        IAgentControlService controlService, INetworkSyncService networkSyncService)
+    private readonly DiskStoreChangeWatcherService _diskStoreChangeWatcherService;
+
+    public SyncService(
+        ILogger<SyncService> logger, 
+        IAgentControlService controlService,
+        INetworkSyncService networkSyncService,
+        DiskStoreChangeWatcherService diskStoreChangeWatcherService)
     {
         _logger = logger;
         _controlService = controlService;
         _networkSyncService = networkSyncService;
+        _diskStoreChangeWatcherService = diskStoreChangeWatcherService;
     }
 
 
@@ -69,6 +76,7 @@ internal class SyncService : BackgroundService
                     case "START_OVN": break;
                     case "STOP_VSWITCH": break;
                     case "STOP_OVSDB": break;
+                    case "SYNC_AGENT_SETTINGS": break;
                     default:
                         commandValid = false;
                         break;
@@ -171,6 +179,15 @@ internal class SyncService : BackgroundService
                 service = AgentService.OVSDB;
                 operation = AgentServiceOperation.Stop;
                 break;
+            case "SYNC_AGENT_SETTINGS":
+                return await Prelude.TryAsync(async () => await _diskStoreChangeWatcherService.Restart().ToUnit())
+                    .Match(
+                        Succ: _ => new SyncServiceResponse { Response = "DONE" },
+                        Fail: ex =>
+                        {
+                            _logger.LogError(ex, "Failed to restart disk store change watcher");
+                            return new SyncServiceResponse { Response = "FAILED", Error = ex.Message };
+                        });
             default: return new SyncServiceResponse { Response = "INVALID" };
         }
 
