@@ -25,11 +25,12 @@ public static class DiskStoreInventory
         from _ in SuccessAff(unit)
         let storePaths = append(
             vmHostAgentConfig.Environments.ToSeq()
-                .SelectMany(e => e.Datastores.ToSeq().Map(ds => ds.Path))
-                .ToSeq(),
+                .Bind(e => e.Datastores.ToSeq())
+                .Map(ds => ds.Path),
             vmHostAgentConfig.Environments.ToSeq()
                 .Map(e => e.Defaults.Volumes),
-            vmHostAgentConfig.Datastores.ToSeq().Map(ds => ds.Path),
+            vmHostAgentConfig.Datastores.ToSeq()
+                .Map(ds => ds.Path),
             Seq1(vmHostAgentConfig.Defaults.Volumes))
         from diskInfos in storePaths
             .Map(storePath => InventoryStore(fileSystemService, powershellEngine, vmHostAgentConfig, storePath))
@@ -46,7 +47,6 @@ public static class DiskStoreInventory
             .Map(vhdFile => InventoryDisk(powershellEngine, vmHostAgentConfig, vhdFile))
             .SequenceParallel()
         select diskInfos;
-
 
     private static Aff<Either<Error, DiskInfo>> InventoryDisk(
         IPowershellEngine powershellEngine,

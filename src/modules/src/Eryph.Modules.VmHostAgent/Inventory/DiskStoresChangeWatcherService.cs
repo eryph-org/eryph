@@ -38,8 +38,8 @@ public sealed class DiskStoresChangeWatcherService(
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         // Do not pass the cancellationToken as we must always wait
-        // for the semaphore. Another thead might be restarting the
-        // watchers at the moment. We must wait for that thread to
+        // for the semaphore. Another thread might be restarting the
+        // watchers at this moment. We must wait for that thread to
         // complete so we can stop the watchers correctly.
 #pragma warning disable CA2016
         await _semaphore.WaitAsync();

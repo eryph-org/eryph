@@ -32,8 +32,8 @@ namespace Eryph.Modules.Controller.Inventory
         private readonly IVirtualDiskDataService _vhdDataService;
 
         private readonly IInventoryLockManager _lockManager;
-        protected readonly IVirtualMachineMetadataService MetadataService;
-        protected readonly IStateStore StateStore;
+        private readonly IVirtualMachineMetadataService _metadataService;
+        private readonly IStateStore _stateStore;
         private readonly IMessageContext _messageContext;
         private readonly ILogger _logger;
 
@@ -48,11 +48,11 @@ namespace Eryph.Modules.Controller.Inventory
             ILogger logger)
         {
             _lockManager = lockManager;
-            MetadataService = metadataService;
+            _metadataService = metadataService;
             _dispatcher = dispatcher;
             _vmDataService = vmDataService;
             _vhdDataService = vhdDataService;
-            StateStore = stateStore;
+            _stateStore = stateStore;
             _messageContext = messageContext;
             _logger = logger;
         }
@@ -79,15 +79,10 @@ namespace Eryph.Modules.Controller.Inventory
                 await _lockManager.AcquireVmLock(vmId);
             }
 
-            foreach (var diskInfo in diskInfos)
-            {
-                await AddOrUpdateDisk(hostMachine.Name, timestamp, diskInfo);
-            }
-
             foreach (var vmInfo in vms)
             {
                 //get known metadata for VM, if metadata is unknown skip this VM as it is not in Eryph management
-                var optionalMetadata = await MetadataService.GetMetadata(vmInfo.MetadataId);
+                var optionalMetadata = await _metadataService.GetMetadata(vmInfo.MetadataId);
                 //TODO: add logging that entry has been skipped due to missing metadata
 
                 await optionalMetadata.IfSomeAsync(async metadata =>
@@ -141,12 +136,12 @@ namespace Eryph.Modules.Controller.Inventory
                         
                         existingMachine.LastSeen = timestamp;
 
-                        await StateStore.LoadPropertyAsync(existingMachine, x => x.Project);
+                        await _stateStore.LoadPropertyAsync(existingMachine, x => x.Project);
 
                         Debug.Assert(existingMachine.Project != null);  
 
-                        await StateStore.LoadCollectionAsync(existingMachine, x => x.ReportedNetworks);
-                        await StateStore.LoadCollectionAsync(existingMachine, x => x.NetworkAdapters);
+                        await _stateStore.LoadCollectionAsync(existingMachine, x => x.ReportedNetworks);
+                        await _stateStore.LoadCollectionAsync(existingMachine, x => x.NetworkAdapters);
 
 
                         // update data for existing machine
@@ -189,12 +184,12 @@ namespace Eryph.Modules.Controller.Inventory
             string projectName, Guid? optionalProjectId)
         {
             if (optionalProjectId.GetValueOrDefault() != Guid.Empty)
-                return await StateStore.For<Project>().GetByIdAsync(optionalProjectId.GetValueOrDefault());
+                return await _stateStore.For<Project>().GetByIdAsync(optionalProjectId.GetValueOrDefault());
 
             if (string.IsNullOrWhiteSpace(projectName))
                 projectName = EryphConstants.DefaultProjectName;
 
-            return await StateStore.For<Project>()
+            return await _stateStore.For<Project>()
                 .GetBySpecAsync(new ProjectSpecs.GetByName(
                     EryphConstants.DefaultTenantId, projectName));
         }
@@ -298,18 +293,22 @@ namespace Eryph.Modules.Controller.Inventory
             DateTimeOffset timestamp,
             DiskInfo diskInfo)
         {
+            var disk = await GetDisk(agentName, diskInfo);
+            if (disk is not null && disk.LastSeen >= timestamp)
+                return disk;
+
             VirtualDisk? parentDisk = null;
             if (diskInfo.Parent is not null)
             {
                 parentDisk = await AddOrUpdateDisk(agentName, timestamp, diskInfo.Parent);
             }
 
-            var disk = await GetDisk(agentName, diskInfo);
             if (disk is not null)
             {
-                if (disk.LastSeen >= timestamp)
-                    return disk;
-                
+                // We do not attempt to update the project of an existing disks.
+                // Disks are looked up per project so we are always creating a
+                // new disk entry in the database.
+
                 disk.Parent = parentDisk;
                 disk.SizeBytes = diskInfo.SizeBytes;
                 disk.UsedSizeBytes = diskInfo.UsedSizeBytes;
@@ -317,7 +316,7 @@ namespace Eryph.Modules.Controller.Inventory
                 disk.LastSeen = timestamp;
                 disk.LastSeenAgent = agentName;
                 await _vhdDataService.UpdateVhd(disk);
-                await StateStore.SaveChangesAsync();
+                await _stateStore.SaveChangesAsync();
                 return disk;
             }
 
@@ -346,7 +345,7 @@ namespace Eryph.Modules.Controller.Inventory
                 Parent = parentDisk,
             };
             await _vhdDataService.AddNewVHD(disk);
-            await StateStore.SaveChangesAsync();
+            await _stateStore.SaveChangesAsync();
             return disk;
         }
 
@@ -354,7 +353,7 @@ namespace Eryph.Modules.Controller.Inventory
             DateTimeOffset timestamp,
             string agentName)
         {
-            var outdatedDisks = await StateStore.For<VirtualDisk>().ListAsync(
+            var outdatedDisks = await _stateStore.For<VirtualDisk>().ListAsync(
                 new VirtualDiskSpecs.FindOutdated(timestamp, agentName));
             if (outdatedDisks.Count == 0)
                 return;
@@ -389,7 +388,7 @@ namespace Eryph.Modules.Controller.Inventory
             var project = await FindProject(diskInfo.ProjectName, diskInfo.ProjectId)
                 .IfNoneAsync(() => FindRequiredProject(EryphConstants.DefaultProjectName, null));
 
-            var virtualDisks = await StateStore.For<VirtualDisk>().ListAsync(
+            var virtualDisks = await _stateStore.For<VirtualDisk>().ListAsync(
                 new VirtualDiskSpecs.GetByLocation(
                     project.Id,
                     diskInfo.DataStore,
