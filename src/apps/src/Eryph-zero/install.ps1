@@ -747,7 +747,7 @@ $toolsFolder = Join-Path $tempDir -ChildPath "bin"
 $eryphInstallExe = Join-Path $toolsFolder -ChildPath "eryph-zero.exe"
 
 $installLogFile = Join-Path $eryphTempDir "install.log"
-$process = Start-Process $eryphInstallExe -ArgumentList @("install --outFile ""${installLogFile}"" --deleteOutFile") -Verb runas -WindowStyle Hidden 
+$process = Start-Process $eryphInstallExe -ArgumentList @("install --outFile ""${installLogFile}"" --deleteOutFile") -Verb runas -WindowStyle Hidden -PassThru
 
 while(!(Test-Path $installLogFile)){
     Start-Sleep -Milliseconds 100
@@ -764,8 +764,17 @@ Get-Content $installLogFile -Wait -Tail 1 -ErrorAction SilentlyContinue | % {
     }
 }
 
+$process.WaitForExit()
+if ($process.ExitCode -ne 0) {
+    Write-Error "Installation of eryph-zero failed with exit code $($process.ExitCode)."
+}
+
 Write-Verbose 'Cleanup temporary files'
 Remove-Item $eryphTempDir -Recurse -ErrorAction Continue
+
+if ($process.ExitCode -ne 0) {
+    return
+}
 
 
 Write-Verbose 'Ensuring eryph commands are on the path'
