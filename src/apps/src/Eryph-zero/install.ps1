@@ -113,6 +113,10 @@ param(
     $InvitationCode
 )
 
+# settings
+
+$ErrorActionPreference = "Stop"
+
 #region Functions
 
 Function Test-CommandExist {
@@ -389,13 +393,35 @@ function Install-VCRuntime {
     $tempFile = "$env:TEMP\vc_redist.x64.exe"
     $installArgs = "/install /quiet /norestart"
 
-    Write-Information "Installing latest VC runtime redist..." -InformationAction Continue
+    Write-Information "Installing latest Visual C++ Runtime..." -InformationAction Continue
     Request-File -Url $url -File $tempFile -ProxyConfiguration $ProxyConfiguration
 
-    Start-Process -FilePath $tempFile -ArgumentList $installArgs -Wait
+    $process = Start-Process -FilePath $tempFile -ArgumentList $installArgs -Wait -PassThru
+    if(-not $process){
+       $exitcode = -1
+    
+    } else{
+        $exitcode = $process.ExitCode
+        
+    }
+    
+    if ($exitcode -ne 0) {
+        $message = @(
+            "Installation of Visual C++ Runtime failed with exit code $LASTEXITCODE."
+            "As a result, eryph may not function correctly."
+            "However upgrading the VC runtime is not strictly necessary for all systems."
+            "Therefore installation will continue."
+            ""
+            "If you encounter issues, please install the Visual C++ Runtime manually."
+            "You can download it from https://aka.ms/vs/17/release/vc_redist.x64.exe"
+            ""
+        ) -join [Environment]::NewLine
+        Write-Warning $message
+    }
 
 }
 
+Install-VCRuntime
 
 function Get-BetaDownloadUrl {
     [CmdletBinding()]
@@ -513,7 +539,7 @@ if((Test-CommandExist "Get-WindowsFeature")){
 	$HyperVFeature = Get-WindowsFeature -Name 'Hyper-V'
 	if($HyperVFeature.Installed -eq $false){
 		Write-Warning "Hyper-V is not installed. Installing feature..."
-        $result = $HyperVFeature | Install-WindowsFeature -ErrorAction Stop
+        $result = $HyperVFeature | Install-WindowsFeature
         $RestartRequired = $result.RestartNeeded
 	}
 
