@@ -21,18 +21,18 @@ internal class SyncService : BackgroundService
     private readonly ILogger _logger;
     private readonly IAgentControlService _controlService;
     private readonly INetworkSyncService _networkSyncService;
-    private readonly DiskStoreChangeWatcherService _diskStoreChangeWatcherService;
+    private readonly DiskStoresChangeWatcherService _diskStoresChangeWatcherService;
 
     public SyncService(
         ILogger<SyncService> logger, 
         IAgentControlService controlService,
         INetworkSyncService networkSyncService,
-        DiskStoreChangeWatcherService diskStoreChangeWatcherService)
+        DiskStoresChangeWatcherService diskStoresChangeWatcherService)
     {
         _logger = logger;
         _controlService = controlService;
         _networkSyncService = networkSyncService;
-        _diskStoreChangeWatcherService = diskStoreChangeWatcherService;
+        _diskStoresChangeWatcherService = diskStoresChangeWatcherService;
     }
 
 
@@ -180,7 +180,7 @@ internal class SyncService : BackgroundService
                 operation = AgentServiceOperation.Stop;
                 break;
             case "SYNC_AGENT_SETTINGS":
-                return await Prelude.TryAsync(async () => await _diskStoreChangeWatcherService.Restart().ToUnit())
+                return await Prelude.TryAsync(async () => await _diskStoresChangeWatcherService.Restart().ToUnit())
                     .Match(
                         Succ: _ => new SyncServiceResponse { Response = "DONE" },
                         Fail: ex =>

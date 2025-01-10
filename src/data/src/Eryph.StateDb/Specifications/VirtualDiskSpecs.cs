@@ -42,11 +42,11 @@ namespace Eryph.StateDb.Specifications
 
         public sealed class FindOutdated : Specification<VirtualDisk>
         {
-            public FindOutdated(DateTimeOffset lastSeenBefore, [CanBeNull] string agentName)
+            public FindOutdated(DateTimeOffset lastSeenBefore, string? agentName)
             {
                 Query.Where(x => x.LastSeen < lastSeenBefore);
 
-                if(!string.IsNullOrEmpty(agentName))
+                if (!string.IsNullOrEmpty(agentName))
                     Query.Where(x => x.LastSeenAgent == agentName);
                 
                 Query.Include(x => x.Project);

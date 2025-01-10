@@ -222,7 +222,7 @@ public class VmHostAgentConfigurationTests
     [InlineData("", false)]
     [InlineData("true", true)]
     [InlineData("false", false)]
-    public async Task ReadConfig_ConfigWithWatcherSettings_SavesConfigWithNormalizedPaths(
+    public async Task ReadConfig_ConfigWithWatcherSettings_ReturnsConfig(
         string actual,
         bool expected)
     {

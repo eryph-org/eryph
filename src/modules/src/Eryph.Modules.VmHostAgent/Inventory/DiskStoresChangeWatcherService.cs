@@ -18,7 +18,7 @@ using static LanguageExt.Seq;
 
 namespace Eryph.Modules.VmHostAgent.Inventory;
 
-public sealed class DiskStoreChangeWatcherService(
+public sealed class DiskStoresChangeWatcherService(
     IBus bus,
     ILogger logger,
     IHostSettingsProvider hostSettingsProvider,
@@ -123,7 +123,7 @@ public sealed class DiskStoreChangeWatcherService(
         paths.ToObservable()
             .SelectMany(ObservePath)
             .Throttle(inventoryConfig.DiskEventDelay)
-            .Select(_ => Observable.FromAsync(() => bus.SendLocal(new DiskStoreChangedEvent())))
+            .Select(_ => Observable.FromAsync(() => bus.SendLocal(new DiskStoresChangedEvent())))
             .Concat();
 
     private IObservable<FileSystemEventArgs> ObservePath(string path) =>

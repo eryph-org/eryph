@@ -354,7 +354,8 @@ namespace Eryph.Modules.Controller.Inventory
             DateTimeOffset timestamp,
             string agentName)
         {
-            var outdatedDisks = await _vhdDataService.FindOutdated(timestamp, agentName);
+            var outdatedDisks = await StateStore.For<VirtualDisk>().ListAsync(
+                new VirtualDiskSpecs.FindOutdated(timestamp, agentName));
             if (outdatedDisks.Count == 0)
                 return;
 

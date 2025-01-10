@@ -20,7 +20,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.VmHostAgent.Inventory;
 
 [UsedImplicitly]
-internal class DiskStoreChangedEventHandler(
+internal class DiskStoresChangedEventHandler(
     IBus bus,
     IFileSystemService fileSystemService,
     ILogger log,
@@ -28,9 +28,9 @@ internal class DiskStoreChangedEventHandler(
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
     WorkflowOptions workflowOptions)
-    : IHandleMessages<DiskStoreChangedEvent>
+    : IHandleMessages<DiskStoresChangedEvent>
 {
-    public async Task Handle(DiskStoreChangedEvent message)
+    public async Task Handle(DiskStoresChangedEvent message)
     {
         var result = await InventoryDisks().Run();
         result.IfFail(e => { log.LogError(e, "The disk inventory has failed."); });
