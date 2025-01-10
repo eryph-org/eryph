@@ -397,6 +397,8 @@ function Install-VCRuntime {
     Request-File -Url $url -File $tempFile -ProxyConfiguration $ProxyConfiguration
 
     $process = Start-Process -FilePath $tempFile -ArgumentList $installArgs -Wait -PassThru
+
+    # cannot use $LASTEXITCODE here
     if(-not $process){
        $exitcode = -1
     
@@ -407,7 +409,7 @@ function Install-VCRuntime {
     
     if ($exitcode -ne 0) {
         $message = @(
-            "Installation of Visual C++ Runtime failed with exit code $LASTEXITCODE."
+            "Installation of Visual C++ Runtime failed with exit code $exitcode."
             "As a result, eryph may not function correctly."
             "However upgrading the VC runtime is not strictly necessary for all systems."
             "Therefore installation will continue."
