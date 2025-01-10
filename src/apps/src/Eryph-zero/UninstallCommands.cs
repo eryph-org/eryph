@@ -1,19 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text.Json;
 using Eryph.Core;
+using Eryph.Modules.VmHostAgent;
+using Eryph.Modules.VmHostAgent.Configuration;
 using Eryph.Modules.VmHostAgent.Networks;
+using Eryph.Resources.Machines;
+using Eryph.Runtime.Zero.Configuration;
 using Eryph.Security.Cryptography;
+using Eryph.VmManagement;
 using LanguageExt;
-
+using LanguageExt.Sys.IO;
 using static LanguageExt.Prelude;
+using static LanguageExt.Seq;
 
 namespace Eryph.Runtime.Zero;
 
+using static Directory<DriverCommandsRuntime>;
+using static File<DriverCommandsRuntime>;
 using static Logger<DriverCommandsRuntime>;
 using static OvsDriverProvider<DriverCommandsRuntime>;
 
@@ -69,6 +77,15 @@ internal class UninstallCommands
             .Sequence()
         select unit;
 
+    public static Aff<DriverCommandsRuntime, Unit> RemoveCatletsAndDisk() =>
+        from _1 in RemoveCatlets()
+                   | @catch(e => logWarning<UninstallCommands>(
+                       e, "The catlets could not be removed. If necessary, remove them manually."))
+        from _2 in RemoveStores()
+                   | @catch(e => logWarning<UninstallCommands>(
+                       e, "The catlet disks could not be removed. If necessary, remove them manually."))
+        select unit;
+
     private static Eff<Unit> RemoveCertificateAndKey(string keyName) =>
         from _1 in SuccessEff(unit)
         let keyStore = new WindowsCertificateKeyService()
@@ -95,4 +112,62 @@ internal class UninstallCommands
             return unit;
         })
         select unit;
+
+    private static Aff<DriverCommandsRuntime, Unit> RemoveCatlets() =>
+        from catletMetadataPaths in enumerateFiles(ZeroConfig.GetMetadataConfigPath(), "*.json")
+            .IfFail(Seq<string>())
+        from vmIds in catletMetadataPaths.Map(GetOptionalVmId).SequenceSerial()
+        let validVmIds = vmIds.Somes()
+        from _ in validVmIds.Map(RemoveVm).SequenceSerial()
+        select unit;
+
+    private static Aff<DriverCommandsRuntime, Option<Guid>> GetOptionalVmId(
+        string path) =>
+        GetVmId(path).Map(Some)
+        | @catch(e => from _ in logWarning<UninstallCommands>(e, "Could not get VM ID from metadata '{Path}'.", path)
+                      select Option<Guid>.None);
+
+    private static Aff<DriverCommandsRuntime, Guid> GetVmId(
+        string path) =>
+        from metadataJson in readAllText(path)
+        from metadata in Eff(() => JsonDocument.Parse(metadataJson))
+        from vmId in Eff(() => metadata.RootElement.GetProperty(nameof(CatletMetadata.VMId)).GetGuid())
+        select vmId;
+
+    private static Aff<DriverCommandsRuntime, Unit> RemoveVm(
+        Guid vmId) =>
+        from psEngine in default(DriverCommandsRuntime).Powershell
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-VM")
+            .AddParameter("Id", vmId)
+            .AddCommand("Remove-VM")
+            .AddParameter("Force")
+        from _ in psEngine.RunAsync(command).ToAff()
+                  | @catch(e => logWarning<UninstallCommands>(
+                          e, "Could not remove Hyper-V VM {VmId}. If necessary, remove it manually.", vmId)
+                      .ToAff())
+        select unit;    
+
+    private static Aff<DriverCommandsRuntime, Unit> RemoveStores() =>
+        from hostSettings in HostSettingsProvider<DriverCommandsRuntime>.getHostSettings()
+        from vmHostAgentConfig in VmHostAgentConfiguration<DriverCommandsRuntime>.readConfig(
+            Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
+            hostSettings)
+        let paths = append(
+            vmHostAgentConfig.Environments.ToSeq()
+                .Bind(e => e.Datastores.ToSeq())
+                .Map(ds => ds.Path),
+            vmHostAgentConfig.Environments.ToSeq()
+                .Bind(e => Seq(e.Defaults.Vms, e.Defaults.Volumes)),
+            vmHostAgentConfig.Datastores.ToSeq()
+                .Map(ds => ds.Path),
+            Seq1(vmHostAgentConfig.Defaults.Vms),
+            Seq1(vmHostAgentConfig.Defaults.Volumes))
+        from _ in paths.Map(RemoveStore).SequenceSerial()
+        select unit;
+
+    private static Aff<DriverCommandsRuntime, Unit> RemoveStore(
+        string path) =>
+        delete(path) | @catch(e => logWarning<UninstallCommands>(
+            e, "The store {Path} could not be removed. If necessary, remove it manually.", path));
 }

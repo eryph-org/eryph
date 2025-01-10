@@ -129,7 +129,11 @@ internal static class Program
             name: "--delete-app-data",
             description: "Delete all local application data");
         uninstallCommand.AddOption(deleteAppData);
-        uninstallCommand.SetHandler(SelfUnInstall, outFileOption, deleteOutFile, deleteAppData);
+        var deleteCatlets = new System.CommandLine.Option<bool>(
+            name: "--delete-catlets",
+            description: "Delete all virtual machines and disks");
+        uninstallCommand.AddOption(deleteCatlets);
+        uninstallCommand.SetHandler(SelfUnInstall, outFileOption, deleteOutFile, deleteAppData, deleteCatlets);
         rootCommand.AddCommand(uninstallCommand);
 
 
@@ -692,7 +696,7 @@ internal static class Program
         }
     }
 
-    private static async Task<int> SelfUnInstall(FileSystemInfo? outFile, bool deleteOutFile, bool deleteAppData)
+    private static async Task<int> SelfUnInstall(FileSystemInfo? outFile, bool deleteOutFile, bool deleteAppData, bool deleteCatlets)
     {
         TextWriter? outWriter = null;
         var standardOut = Console.Out;
@@ -825,6 +829,15 @@ internal static class Program
                     UninstallCommands.RemoveCertificatesAndKeys().Run()
                         .IfFail(e => Log.Logger.Warning(e,
                             "The cleanup of the certificates failed. Please remove any leftover certificates from the Windows certificate store."));
+
+                    // We need the configuration stored in the data directory to perform
+                    // the cleanup of the catlets and disks.
+                    if (Directory.Exists(dataDir) && deleteCatlets)
+                    {
+                        await DriverCommands.Run(
+                            UninstallCommands.RemoveCatletsAndDisk(),
+                            loggerFactory);
+                    }
 
                     if (Directory.Exists(dataDir) && deleteAppData)
                     {
