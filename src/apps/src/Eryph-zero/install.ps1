@@ -421,8 +421,6 @@ function Install-VCRuntime {
 
 }
 
-Install-VCRuntime
-
 function Get-BetaDownloadUrl {
     [CmdletBinding()]
     param(
