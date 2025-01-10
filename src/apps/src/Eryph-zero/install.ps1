@@ -356,6 +356,47 @@ function Test-EryphInstalled {
     }
 }
 
+
+function Get-VCRuntimeVersion {
+    [CmdletBinding()]
+    param()
+
+    if(-not (Test-Path "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes")){
+        return
+    }
+
+    $vcRuntimeKeys = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes" -Recurse |
+        Where-Object { $_.PSChildName -match "x64" } |
+        Sort-Object -Property PSChildName -Descending
+
+    if ($vcRuntimeKeys) {
+        $latestVersion = $vcRuntimeKeys[0].GetValue("Version")
+        $latestVersion
+    }
+}
+
+
+function Install-VCRuntime {
+    [CmdletBinding()]
+    param(
+
+        [Parameter(Mandatory = $false)]
+        [hashtable]
+        $ProxyConfiguration
+    )
+
+    $url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+    $tempFile = "$env:TEMP\vc_redist.x64.exe"
+    $installArgs = "/install /quiet /norestart"
+
+    Write-Information "Installing latest VC runtime redist..." -InformationAction Continue
+    Request-File -Url $url -File $tempFile -ProxyConfiguration $ProxyConfiguration
+
+    Start-Process -FilePath $tempFile -ArgumentList $installArgs -Wait
+
+}
+
+
 function Get-BetaDownloadUrl {
     [CmdletBinding()]
     param(
@@ -472,7 +513,7 @@ if((Test-CommandExist "Get-WindowsFeature")){
 	$HyperVFeature = Get-WindowsFeature -Name 'Hyper-V'
 	if($HyperVFeature.Installed -eq $false){
 		Write-Warning "Hyper-V is not installed. Installing feature..."
-        $result = $HyperVFeature | Install-WindowsFeature
+        $result = $HyperVFeature | Install-WindowsFeature -ErrorAction Stop
         $RestartRequired = $result.RestartNeeded
 	}
 
@@ -492,6 +533,7 @@ if((Test-CommandExist "Get-WindowsFeature")){
 		return
     }
 }
+
 
 #endregion Pre-check
 
@@ -536,6 +578,17 @@ catch {
         '(4) use the Download + PowerShell method of install.'
     ) -join [Environment]::NewLine
     Write-Warning $errorMessage
+}
+
+
+$vcruntimeVersion = Get-VCRuntimeVersion
+
+if($vcruntimeVersion){
+    Write-Verbose "Found VC runtime version: $vcruntimeVersion" -InformationAction Continue
+}
+
+if($vcruntimeVersion -lt "v14.42.34433.0"){
+    Install-VCRuntime -ProxyConfiguration $proxyConfig
 }
 
 if ($DownloadUrl) {
