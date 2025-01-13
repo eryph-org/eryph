@@ -3,15 +3,15 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Dbosoft.Rebus.Configuration.Selectors" Version="0.7.0" />
-    <PackageReference Include="Dbosoft.Rebus.SimpleInjector" Version="0.7.0" />
+    <PackageReference Include="Dbosoft.Rebus.Configuration.Selectors" Version="0.8.0" />
+    <PackageReference Include="Dbosoft.Rebus.SimpleInjector" Version="0.8.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Rebus" Version="8.4.2" />
-    <PackageReference Include="Rebus.Microsoft.Extensions.Logging" Version="5.0.0" />
-    <PackageReference Include="Rebus.RabbitMq" Version="9.3.0" />
+    <PackageReference Include="Rebus" Version="8.7.1" />
+    <PackageReference Include="Rebus.Microsoft.Extensions.Logging" Version="5.1.0" />
+    <PackageReference Include="Rebus.RabbitMq" Version="9.4.1" />
     <PackageReference Include="Rebus.TransactionScopes" Version="7.0.1" />
     <PackageReference Include="Rebus.UnitOfWork" Version="7.0.1" />
   </ItemGroup>

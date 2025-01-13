@@ -24,7 +24,7 @@
     <PackageReference Include="Quartz" Version="3.13.1" />
     <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.13.1" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
-    <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="21.0.2" />
+    <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="21.2.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Messages\Eryph.Messages.csproj" />
