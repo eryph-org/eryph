@@ -113,6 +113,10 @@ param(
     $InvitationCode
 )
 
+# settings
+
+$ErrorActionPreference = "Stop"
+
 #region Functions
 
 Function Test-CommandExist {
@@ -356,6 +360,69 @@ function Test-EryphInstalled {
     }
 }
 
+
+function Get-VCRuntimeVersion {
+    [CmdletBinding()]
+    param()
+
+    if(-not (Test-Path "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes")){
+        return
+    }
+
+    $vcRuntimeKeys = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes" -Recurse |
+        Where-Object { $_.PSChildName -match "x64" } |
+        Sort-Object -Property PSChildName -Descending
+
+    if ($vcRuntimeKeys) {
+        $latestVersion = $vcRuntimeKeys[0].GetValue("Version")
+        $latestVersion
+    }
+}
+
+
+function Install-VCRuntime {
+    [CmdletBinding()]
+    param(
+
+        [Parameter(Mandatory = $false)]
+        [hashtable]
+        $ProxyConfiguration
+    )
+
+    $url = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+    $tempFile = "$env:TEMP\vc_redist.x64.exe"
+    $installArgs = "/install /quiet /norestart"
+
+    Write-Information "Installing latest Visual C++ Runtime..." -InformationAction Continue
+    Request-File -Url $url -File $tempFile -ProxyConfiguration $ProxyConfiguration
+
+    $process = Start-Process -FilePath $tempFile -ArgumentList $installArgs -Wait -PassThru
+
+    # cannot use $LASTEXITCODE here
+    if(-not $process){
+       $exitcode = -1
+    
+    } else{
+        $exitcode = $process.ExitCode
+        
+    }
+    
+    if ($exitcode -ne 0) {
+        $message = @(
+            "Installation of Visual C++ Runtime failed with exit code $exitcode."
+            "As a result, eryph may not function correctly."
+            "However upgrading the VC runtime is not strictly necessary for all systems."
+            "Therefore installation will continue."
+            ""
+            "If you encounter issues, please install the Visual C++ Runtime manually."
+            "You can download it from https://aka.ms/vs/17/release/vc_redist.x64.exe"
+            ""
+        ) -join [Environment]::NewLine
+        Write-Warning $message
+    }
+
+}
+
 function Get-BetaDownloadUrl {
     [CmdletBinding()]
     param(
@@ -493,6 +560,7 @@ if((Test-CommandExist "Get-WindowsFeature")){
     }
 }
 
+
 #endregion Pre-check
 
 #region Setup
@@ -536,6 +604,17 @@ catch {
         '(4) use the Download + PowerShell method of install.'
     ) -join [Environment]::NewLine
     Write-Warning $errorMessage
+}
+
+
+$vcruntimeVersion = Get-VCRuntimeVersion
+
+if($vcruntimeVersion){
+    Write-Verbose "Found VC runtime version: $vcruntimeVersion" -InformationAction Continue
+}
+
+if($vcruntimeVersion -lt "v14.42.34433.0"){
+    Install-VCRuntime -ProxyConfiguration $proxyConfig
 }
 
 if ($DownloadUrl) {
@@ -668,7 +747,7 @@ $toolsFolder = Join-Path $tempDir -ChildPath "bin"
 $eryphInstallExe = Join-Path $toolsFolder -ChildPath "eryph-zero.exe"
 
 $installLogFile = Join-Path $eryphTempDir "install.log"
-$process = Start-Process $eryphInstallExe -ArgumentList @("install --outFile ""${installLogFile}"" --deleteOutFile") -Verb runas -WindowStyle Hidden 
+$process = Start-Process $eryphInstallExe -ArgumentList @("install --outFile ""${installLogFile}"" --deleteOutFile") -Verb runas -WindowStyle Hidden -PassThru
 
 while(!(Test-Path $installLogFile)){
     Start-Sleep -Milliseconds 100
@@ -685,8 +764,17 @@ Get-Content $installLogFile -Wait -Tail 1 -ErrorAction SilentlyContinue | % {
     }
 }
 
+$process.WaitForExit()
+if ($process.ExitCode -ne 0) {
+    Write-Error "Installation of eryph-zero failed with exit code $($process.ExitCode)."
+}
+
 Write-Verbose 'Cleanup temporary files'
 Remove-Item $eryphTempDir -Recurse -ErrorAction Continue
+
+if ($process.ExitCode -ne 0) {
+    return
+}
 
 
 Write-Verbose 'Ensuring eryph commands are on the path'
