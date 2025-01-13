@@ -131,7 +131,7 @@ internal static class Program
         uninstallCommand.AddOption(deleteAppData);
         var deleteCatlets = new System.CommandLine.Option<bool>(
             name: "--delete-catlets",
-            description: "Delete all virtual machines and disks");
+            description: "Delete all catlets and disks");
         uninstallCommand.AddOption(deleteCatlets);
         uninstallCommand.SetHandler(SelfUnInstall, outFileOption, deleteOutFile, deleteAppData, deleteCatlets);
         rootCommand.AddCommand(uninstallCommand);

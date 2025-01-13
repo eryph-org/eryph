@@ -79,10 +79,11 @@ internal class UninstallCommands
         select unit;
 
     public static Aff<DriverCommandsRuntime, Unit> RemoveCatletsAndDisk() =>
-        from _1 in RemoveCatlets()
+        from _1 in logInformation<UninstallCommands>("Removing catlets and disks...")
+        from _2 in RemoveCatlets()
                    | @catch(e => logWarning<UninstallCommands>(
                        e, "The catlets could not be removed. If necessary, remove them manually."))
-        from _2 in RemoveStores()
+        from _3 in RemoveStores()
                    | @catch(e => logWarning<UninstallCommands>(
                        e, "The catlet disks could not be removed. If necessary, remove them manually."))
         select unit;
