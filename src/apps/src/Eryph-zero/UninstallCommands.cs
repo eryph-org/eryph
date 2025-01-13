@@ -174,6 +174,6 @@ internal class UninstallCommands
         select unit;
 
     private static Aff<DriverCommandsRuntime, Unit> RemoveStore(string path) =>
-        delete(path) | @catch(e => logWarning<UninstallCommands>(
+        delete(path, recursive: true) | @catch(e => logWarning<UninstallCommands>(
             e, "The store {Path} could not be removed. If necessary, remove it manually.", path));
 }
