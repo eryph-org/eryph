@@ -1,3 +1,4 @@
+#Requires -RunAsAdministrator
 <#
     .SYNOPSIS
     Downloads and installs eryph-zero on the local machine.
