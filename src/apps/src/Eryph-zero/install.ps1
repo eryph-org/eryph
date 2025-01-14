@@ -496,6 +496,21 @@ function Install-VCRuntime {
     }
     
     if ($exitcode -ne 0) {
+
+        if($exitcode -eq 3010){
+           $message = @(
+            "Installation of Visual C++ Runtime requires a reboot of your computer."
+            "Therefore installation will now exit."
+            ""
+            "Please restart your computer and try again."
+            ""
+        ) -join [Environment]::NewLine
+
+            Write-Warning $message
+            $true
+            return
+        }
+
         $message = @(
             "Installation of Visual C++ Runtime failed with exit code $exitcode."
             "As a result, eryph may not function correctly."
@@ -507,7 +522,10 @@ function Install-VCRuntime {
             ""
         ) -join [Environment]::NewLine
         Write-Warning $message
+        
     }
+
+    $false
 
 }
 
@@ -607,6 +625,28 @@ if(-not $isAdmin){
     return
 }
 
+Write-Information "Reading System Information.." -InformationAction Continue
+$processor = Get-WmiObject win32_processor
+$computer =  Get-WmiObject win32_computersystem
+
+if($computer.HypervisorPresent -eq $true){
+    Write-Verbose "Detected Hypervisor on Host" -InformationAction Continue
+}
+else{
+    if($processor.VirtualizationFirmwareEnabled -eq $false -or $processor.VMMonitorModeExtensions -eq $false){
+            $errorMessage = @(
+        'Virtualization is not enabled for your computer system.'
+        'To continue the installation enable virtualization extensions in the BIOS of your computer.'
+        ''
+        'A list of requirements of Hyper-V can be found here:'
+        'https://learn.microsoft.com/en-us/virtualization/hyper-v-on-windows/reference/hyper-v-requirements'
+
+    ) -join [Environment]::NewLine
+        Write-Warning $errorMessage
+        return
+    }
+}
+
 if((Test-CommandExist "Get-WindowsFeature")){
 
     $HyperVPSFeature = Get-WindowsFeature -Name 'Hyper-V-PowerShell'
@@ -687,16 +727,6 @@ catch {
     Write-Warning $errorMessage
 }
 
-
-$vcruntimeVersion = Get-VCRuntimeVersion
-
-if($vcruntimeVersion){
-    Write-Verbose "Found VC runtime version: $vcruntimeVersion" -InformationAction Continue
-}
-
-if($vcruntimeVersion -lt "v14.42.34433.0"){
-    Install-VCRuntime -ProxyConfiguration $proxyConfig
-}
 
 if ($DownloadUrl) {
     if ($Version) {
@@ -832,6 +862,21 @@ if($deleteFile) {
 #endregion Download & Extract eryph
 
 #region Install eryph
+
+$vcruntimeVersion = Get-VCRuntimeVersion
+
+if($vcruntimeVersion){
+    Write-Verbose "Found VC runtime version: $vcruntimeVersion" -InformationAction Continue
+}
+
+if($vcruntimeVersion -lt "v14.42.34433.0"){
+    $stop = Install-VCRuntime -ProxyConfiguration $proxyConfig
+
+    if($stop -eq $true){
+        return
+    }
+
+}
 
 Write-Information "Starting eryph-zero installation." -InformationAction Continue
 Write-Host
