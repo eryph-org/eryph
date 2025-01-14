@@ -441,10 +441,10 @@ function Test-InstalledOrNotUpdated {
 
         if(-not $Force -and !$update){
             $True
-        }
-
-        $false
+        }        
     }
+
+    $false
 }
 
 
