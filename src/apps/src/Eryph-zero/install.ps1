@@ -361,7 +361,7 @@ function Test-EryphInstalled {
 }
 
 
-function Test-InstalledOrUpdate {
+function Test-InstalledOrNotUpdated {
     [CmdletBinding()]
     param()
 
@@ -744,7 +744,7 @@ if(-not $DownloadUrl){
     }
 
     # version check as soon we know selected version
-    if(-not (Test-InstalledOrUpdate)){
+    if(Test-InstalledOrNotUpdated){
         return
     }  
 
@@ -788,7 +788,7 @@ if (Test-Path $DownloadUrl) {
     Request-File -Url $DownloadUrl -File $file -ProxyConfiguration $proxyConfig
 
     # check for forced update if not downloaded
-    if(-not (Test-InstalledOrUpdate)){
+    if(Test-InstalledOrNotUpdated){
         return
     }  
 }
