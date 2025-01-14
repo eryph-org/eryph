@@ -1,4 +1,3 @@
-#Requires -RunAsAdministrator
 <#
     .SYNOPSIS
     Downloads and installs eryph-zero on the local machine.
@@ -362,6 +361,91 @@ function Test-EryphInstalled {
 }
 
 
+function Test-InstalledOrUpdate {
+    [CmdletBinding()]
+    param()
+
+    if (Test-EryphInstalled) {
+
+        $update = $false
+        if(-not $Force)
+        {
+            # this may fail for broken installations
+            try{
+                $currentVersion = & $(Get-Command eryph-zero) --version
+                if($currentVersion.Contains("+")){
+                    $currentVersion = $currentVersion.Split('+')[0]
+                }
+
+                Write-Verbose "Version of installed eryph-zero: $currentVersion"
+            }catch{
+                Write-Warning "Failed to check current version. Error: $_"
+            }
+
+            if(-not $version -or -not $currentVersion -or $version -le $currentVersion)
+            { 
+                # failed to check for current version
+                if(-not $currentVersion){
+                    $message = @(
+                    "An existing eryph installation with an unknown version has been detected."
+                    "Installation will not continue."
+                    "For security reasons, this script will not overwrite existing installations"
+                    "of unkown versions. Use the -Force argument to bypass this check."
+                    ""
+                    ) -join [Environment]::NewLine 
+                } else{
+
+                    #version not selected, but from download url
+                    if(-not $version){
+                        $message = @(
+                            "An existing eryph installation with version $currentVersion has been detected."
+                            "Installation will not continue."
+                            "For security reasons, this script will not overwrite existing installations."
+                            "Use the -Force argument to bypass this check."
+                            ""
+                        ) -join [Environment]::NewLine 
+                    }
+                    else{
+                    # same or lower version
+                        $message = @(
+                            "An existing eryph installation with version $currentVersion has been detected."
+                            "Installation will not continue."
+                            "For security reasons, this script will not overwrite existing installations"
+                            "of the same or higher versions. Use the -Force argument to bypass this check."
+                            ""
+                        ) -join [Environment]::NewLine 
+                    }
+
+                }
+                
+            }else{
+                #updateable version
+                $message = @(
+                    "An existing eryph installation with version $currentVersion has been detected."
+                    "Installation will update eryph-zero to version $version."
+                    ""
+                ) -join [Environment]::NewLine 
+                $update = $true
+            }
+            
+        } else{
+            # force flag set
+            $message = @(
+            "An existing eryph installation has been detected. Installation will continue"
+            "due to -Force argument. The existing installation will be overwritten."
+            ""
+        ) -join [Environment]::NewLine
+        }
+
+        Write-Warning $message
+
+        if(-not $Force -and !$update){
+            exit
+        }
+    }
+}
+
+
 function Get-VCRuntimeVersion {
     [CmdletBinding()]
     param()
@@ -504,27 +588,20 @@ function Get-BetaDownloadUrl {
 # Ensure we have all our streams setup correctly, needed for older PSVersions.
 Enable-PSConsoleWriter
 
-if (Test-EryphInstalled) {
+# check for admin (requires don't work for remote loaded script)
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+$isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-    if(-not $Force)
-    {
-    $message = @(
-        "An existing eryph installation was detected. Installation will not continue."
-        "For security reasons, this script will not overwrite existing installations."
-        ""
-    ) -join [Environment]::NewLine } else{
-    $message = @(
-        "An existing eryph installation was detected. Installation will continue"
-        "due to -Force argument. The existing installation will be overwritten."
-        ""
+if(-not $isAdmin){
+
+    $errorMessage = @(
+        'To install eryph, you must run the script at an elevated prompt.'
+        ''
+        'This means that either powershell or the command prompt you are using to install eryph must be started as adminstrator'
+        '(right click on the window -> run as administrator)'
     ) -join [Environment]::NewLine
-    }
-
-    Write-Warning $message
-
-    if(-not $Force){
-        return
-    }
+    Write-Warning $errorMessage
+    return
 }
 
 if((Test-CommandExist "Get-WindowsFeature")){
@@ -656,13 +733,15 @@ if(-not $DownloadUrl){
 
         Write-Information "Selected version of eryph: ${Version}" -InformationAction Continue
     }
-
+    
     $productFile = $productJson.versions."$Version".files | Where-Object arch -eq 'amd64' | Select-Object -First 1
 
     if(!$productFile){
         Write-Error "Version {$Version} not found"
         return
     }
+
+    Test-InstalledOrUpdate  # version check as soon we know selected version
 
     if(-not $productFile.Beta){
         $DownloadUrl = $productFile.url
@@ -702,6 +781,8 @@ if (Test-Path $DownloadUrl) {
     $deleteFile = $true
     Write-Information "Getting eryph from $DownloadUrl." -InformationAction Continue
     Request-File -Url $DownloadUrl -File $file -ProxyConfiguration $proxyConfig
+
+    Test-InstalledOrUpdate # check for forced update if not downloaded
 }
 
 
