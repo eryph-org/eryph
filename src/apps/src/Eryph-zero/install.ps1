@@ -440,8 +440,10 @@ function Test-InstalledOrUpdate {
         Write-Warning $message
 
         if(-not $Force -and !$update){
-            exit
+            $True
         }
+
+        $false
     }
 }
 
@@ -684,6 +686,17 @@ catch {
     Write-Warning $errorMessage
 }
 
+
+$vcruntimeVersion = Get-VCRuntimeVersion
+
+if($vcruntimeVersion){
+    Write-Verbose "Found VC runtime version: $vcruntimeVersion" -InformationAction Continue
+}
+
+if($vcruntimeVersion -lt "v14.42.34433.0"){
+    Install-VCRuntime -ProxyConfiguration $proxyConfig
+}
+
 if ($DownloadUrl) {
     if ($Version) {
         Write-Warning "Ignoring -Version parameter ($Version) because -DownloadUrl is set."
@@ -730,7 +743,10 @@ if(-not $DownloadUrl){
         return
     }
 
-    Test-InstalledOrUpdate  # version check as soon we know selected version
+    # version check as soon we know selected version
+    if(-not (Test-InstalledOrUpdate)){
+        return
+    }  
 
     if(-not $productFile.Beta){
         $DownloadUrl = $productFile.url
@@ -771,7 +787,10 @@ if (Test-Path $DownloadUrl) {
     Write-Information "Getting eryph from $DownloadUrl." -InformationAction Continue
     Request-File -Url $DownloadUrl -File $file -ProxyConfiguration $proxyConfig
 
-    Test-InstalledOrUpdate # check for forced update if not downloaded
+    # check for forced update if not downloaded
+    if(-not (Test-InstalledOrUpdate)){
+        return
+    }  
 }
 
 
@@ -811,18 +830,9 @@ if($deleteFile) {
 
 #region Install eryph
 
-$vcruntimeVersion = Get-VCRuntimeVersion
-
-if($vcruntimeVersion){
-    Write-Verbose "Found VC runtime version: $vcruntimeVersion" -InformationAction Continue
-}
-
-if($vcruntimeVersion -lt "v14.42.34433.0"){
-    Install-VCRuntime -ProxyConfiguration $proxyConfig
-}
-
 Write-Information "Starting eryph-zero installation." -InformationAction Continue
 Write-Host
+
 $toolsFolder = Join-Path $tempDir -ChildPath "bin"
 $eryphInstallExe = Join-Path $toolsFolder -ChildPath "eryph-zero.exe"
 
