@@ -946,7 +946,7 @@ internal static class Program
             // Check that the sync service is available (and hence the VM host agent is running).
             // When the VM host agent is not running, we do not need to sync the configuration.
             from canConnect in use(
-                () => new CancellationTokenSource(TimeSpan.FromSeconds(2)),
+                Eff(() => new CancellationTokenSource(TimeSpan.FromSeconds(2))),
                 cts => default(SimpleConsoleRuntime).SyncClientEff
                     .Bind(sc => sc.CheckRunning(cts.Token))
                     .IfFail(_ => false))
