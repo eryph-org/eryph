@@ -744,7 +744,8 @@ if(-not $DownloadUrl){
     }
 
     # version check as soon we know selected version
-    if((Test-InstalledOrNotUpdated) -eq $true){
+    $stop = Test-InstalledOrNotUpdated
+    if($stop -eq $true){
         return
     }  
 
@@ -788,7 +789,8 @@ if (Test-Path $DownloadUrl) {
     Request-File -Url $DownloadUrl -File $file -ProxyConfiguration $proxyConfig
 
     # check for forced update if not downloaded
-    if((Test-InstalledOrNotUpdated) -eq $true){
+    $stop = Test-InstalledOrNotUpdated
+    if($stop -eq $true){
         return
     }  
 }
