@@ -71,19 +71,26 @@ public sealed class DiskStoresChangeWatcherService(
             var paths = append(
                 vmHostAgentConfig.Environments.ToSeq()
                     .Bind(e => e.Datastores.ToSeq())
-                    .Filter(ds => !ds.WatchFileSystem)
+                    .Filter(ds => ds.WatchFileSystem)
                     .Map(ds => ds.Path),
                 vmHostAgentConfig.Environments.ToSeq()
                     .Filter(e => !e.Defaults.WatchFileSystem)
                     .Map(e => e.Defaults.Volumes),
                 vmHostAgentConfig.Datastores.ToSeq()
-                    .Filter(ds => !ds.WatchFileSystem)
+                    .Filter(ds => ds.WatchFileSystem)
                     .Map(ds => ds.Path),
                 Seq1(vmHostAgentConfig.Defaults)
                     .Filter(d => d.WatchFileSystem)
                     .Map(d => d.Volumes));
 
-            _subscription = ObserveStores(paths).Subscribe();
+            // The observable should not terminate unless we dispose it. When the observable
+            // ends, we stop monitoring the file system events which would be a bug.
+            _subscription = ObserveStores(paths).Subscribe(
+                onNext: _ => { },
+                onError: ex => logger.LogCritical(
+                    ex, "Failed to monitor file system events for the disk stores. Inventory updates might be delayed until eryph is restarted."),
+                onCompleted: () => logger.LogCritical(
+                    "The monitoring of file system events for the disk stores stopped unexpectedly. Inventory updates might be delayed until eryph is restarted."));
         }
         finally
         {
@@ -117,13 +124,18 @@ public sealed class DiskStoresChangeWatcherService(
     /// events are folded into a single event stream. The event stream is throttled
     /// to avoid triggering too many inventory actions. Every event, which emerges
     /// at the end, triggers a full inventory of all disk stores by raising a
-    /// <see cref="DiskStoreChangedEvent"/> via the local Rebus.
+    /// <see cref="DiskStoresChangedEvent"/> via the local Rebus.
     /// </remarks>
     private IObservable<System.Reactive.Unit> ObserveStores(Seq<string> paths) =>
-        paths.ToObservable()
-            .SelectMany(ObservePath)
+        paths.ToList().Select(ObservePath)
+            .Merge()
             .Throttle(inventoryConfig.DiskEventDelay)
-            .Select(_ => Observable.FromAsync(() => bus.SendLocal(new DiskStoresChangedEvent())))
+            .Select(_ => Observable.FromAsync(() => bus.SendLocal(new DiskStoresChangedEvent()))
+                .Catch((Exception ex) =>
+                {
+                    logger.LogError(ex, "Could not send Rebus event for disk store change");
+                    return Observable.Return(System.Reactive.Unit.Default);
+                }))
             .Concat();
 
     private IObservable<FileSystemEventArgs> ObservePath(string path) =>
@@ -133,9 +145,8 @@ public sealed class DiskStoresChangeWatcherService(
                 return Observable.Return(path);
 
             logger.LogWarning("The store path '{Path}' does not exist and will not be monitored.", path);
-            return Observable.Return<string>(null);
+            return Observable.Empty<string>();
         })
-        .Where(p => p is not null)
         .SelectMany(
             Observe(() => new FileSystemWatcher(path)
             {
@@ -149,7 +160,6 @@ public sealed class DiskStoresChangeWatcherService(
                 NotifyFilter = NotifyFilters.FileName,
                 Filter = "*.vhdx",
             })))
-        .Where(fsw => fsw is not null)
         .SelectMany(fsw => Observable.Merge(
                 Observable.FromEventPattern<FileSystemEventHandler, FileSystemEventArgs>(
                     h => fsw.Created += h, h => fsw.Created -= h),
@@ -161,24 +171,18 @@ public sealed class DiskStoresChangeWatcherService(
             .Finally(fsw.Dispose));
 
     /// <summary>
-    /// Tries to create the <see cref="FileSystemWatcher"/> and returns <see langword="null"/>
-    /// when the <see cref="FileSystemWatcher"/> cannot be created.
+    /// Tries to create the <see cref="FileSystemWatcher"/>.
     /// </summary>
     /// <remarks>
     /// The constructor of <see cref="FileSystemWatcher"/> throws when the path is not accessible
     /// or does not exist.
     /// </remarks>
-    private IObservable<FileSystemWatcher> Observe(Func<FileSystemWatcher> factory)
-    {
-        try
-        {
-            var watcher = factory();
-            return Observable.Return(watcher);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to create file system watcher. The corresponding path will not be monitored.");
-            return Observable.Return<FileSystemWatcher>(null);
-        }
-    }
+    private IObservable<FileSystemWatcher> Observe(Func<FileSystemWatcher> factory) =>
+        Observable.Defer(() => Observable.Return(factory()))
+            .Catch((Exception ex) =>
+            {
+                logger.LogWarning(ex,
+                    "Failed to create file system watcher. The corresponding path will not be monitored.");
+                return Observable.Empty<FileSystemWatcher>();
+            });
 }
