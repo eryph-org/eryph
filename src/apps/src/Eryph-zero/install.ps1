@@ -636,9 +636,9 @@ else{
     if($processor.VirtualizationFirmwareEnabled -eq $false -or $processor.VMMonitorModeExtensions -eq $false){
             $errorMessage = @(
         'Virtualization is not enabled for your computer system.'
-        'To continue the installation enable virtualization extensions in the BIOS of your computer.'
+        'To continue the installation, enable virtualization extensions in your computer''s BIOS.'
         ''
-        'A list of requirements of Hyper-V can be found here:'
+        'A list of Hyper-V requirements can be found here:'
         'https://learn.microsoft.com/en-us/virtualization/hyper-v-on-windows/reference/hyper-v-requirements'
 
     ) -join [Environment]::NewLine
