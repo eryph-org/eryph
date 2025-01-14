@@ -127,7 +127,8 @@ public sealed class DiskStoresChangeWatcherService(
     /// <see cref="DiskStoresChangedEvent"/> via the local Rebus.
     /// </remarks>
     private IObservable<System.Reactive.Unit> ObserveStores(Seq<string> paths) =>
-        paths.ToList().Select(ObservePath)
+        paths.ToObservable()
+            .Select(ObservePath)
             .Merge()
             .Throttle(inventoryConfig.DiskEventDelay)
             .Select(_ => Observable.FromAsync(() => bus.SendLocal(new DiskStoresChangedEvent()))
