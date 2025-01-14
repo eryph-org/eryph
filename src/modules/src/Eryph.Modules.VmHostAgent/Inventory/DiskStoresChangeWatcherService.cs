@@ -74,7 +74,7 @@ public sealed class DiskStoresChangeWatcherService(
                     .Filter(ds => ds.WatchFileSystem)
                     .Map(ds => ds.Path),
                 vmHostAgentConfig.Environments.ToSeq()
-                    .Filter(e => !e.Defaults.WatchFileSystem)
+                    .Filter(e => e.Defaults.WatchFileSystem)
                     .Map(e => e.Defaults.Volumes),
                 vmHostAgentConfig.Datastores.ToSeq()
                     .Filter(ds => ds.WatchFileSystem)
