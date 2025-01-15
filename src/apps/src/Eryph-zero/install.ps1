@@ -332,33 +332,76 @@ function Enable-PSConsoleWriter {
     }
 }
 
-function Test-EryphInstalled {
+function Get-EryphZeroPath {
     [CmdletBinding()]
     param()
 
     $checkPath = if ($env:eryphInstall) { $env:eryphInstall } else { "$env:PROGRAMFILES\eryph\zero" }
 
-
-
     if ($Command = Get-Command eryph-zero -CommandType Application -ErrorAction Ignore) {
         # eryph-zero is on the PATH, assume it's installed
-        Write-Warning "'eryph-zero' was found at '$($Command.Path)'."
-        $true
+        $Command.Path
     }
     elseif (-not (Test-Path $checkPath)) {
         # eryph-zero doesn't exist
-        $false
+        $null
     }
     elseif (-not (Get-ChildItem -Path $checkPath)) {
         # Install folder exists but is empty
-        $false
+        $null
     }
     else {
-        # Install folder exists and is not empty
-        Write-Warning "Files from a previous installation of eryph-zero were found at '$($CheckPath)'."
-        $true
+        Join-Path $checkPath "bin\eryph-zero.exe"
+        
     }
 }
+
+function Test-EryphInstalled {
+    [CmdletBinding()]
+    param()
+
+    $zeroPath = Get-EryphZeroPath
+    if($zeroPath){
+        return Test-Path $zeroPath
+    } else{
+        $false
+    }
+}
+
+function Get-ParsedVersion {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]
+        $version
+    )
+
+    # we consider only major, minor and patch - semver information is ignored
+
+    $semverRegex = '^(?<major>\d+)\.(?<minor>\d+)(?:\.(?<patch>\d+))?'
+    $match = $version -match $semverRegex
+    if ($match) {
+        $major = [int]$matches['major']
+        $minor = [int]$matches['minor']
+        $patch = if ($matches['patch']) { [int]$matches['patch'] } else { 0 }
+        $parsedVersion = New-Object System.Version($major, $minor, $patch)
+        return $parsedVersion
+    } else {
+        $versionParts = $version -split '\.'
+        if ($versionParts.Count -ge 2) {
+            $major = [int]$versionParts[0]
+            $minor = [int]$versionParts[1]
+            $patch = if ($versionParts.Count -ge 3) { [int]$versionParts[2] } else { 0 }
+            $parsedVersion = New-Object System.Version($major, $minor, $patch)
+            return $parsedVersion
+        } else {
+            Write-Warning "Invalid version format."
+            return $null
+        }
+    }
+}
+
+
 
 
 function Test-InstalledOrNotUpdated {
@@ -372,17 +415,20 @@ function Test-InstalledOrNotUpdated {
         {
             # this may fail for broken installations
             try{
-                $currentVersion = & $(Get-Command eryph-zero) --version
+                $currentVersion = & $(Get-EryphZeroPath) --version
+
                 if($currentVersion.Contains("+")){
+                    # remove build information
                     $currentVersion = $currentVersion.Split('+')[0]
                 }
-
                 Write-Verbose "Version of installed eryph-zero: $currentVersion"
             }catch{
                 Write-Warning "Failed to check current version. Error: $_"
             }
 
-            if(-not $version -or -not $currentVersion -or $version -le $currentVersion)
+
+
+            if(-not $version -or -not $currentVersion -or (Get-ParsedVersion $version) -le (Get-ParsedVersion $currentVersion))
             { 
                 # failed to check for current version
                 if(-not $currentVersion){
@@ -397,6 +443,7 @@ function Test-InstalledOrNotUpdated {
 
                     #version not selected, but from download url
                     if(-not $version){
+                        
                         $message = @(
                             "An existing eryph installation with version $currentVersion has been detected."
                             "Installation will not continue."
@@ -625,12 +672,12 @@ if(-not $isAdmin){
     return
 }
 
-Write-Information "Reading System Information.." -InformationAction Continue
+Write-Information "Reading System Information..." -InformationAction Continue
 $processor = Get-WmiObject win32_processor
 $computer =  Get-WmiObject win32_computersystem
 
 if($computer.HypervisorPresent -eq $true){
-    Write-Verbose "Detected Hypervisor on Host" -InformationAction Continue
+    Write-Verbose "Detected Hypervisor present - skipping virtualization check"
 }
 else{
     if($processor.VirtualizationFirmwareEnabled -eq $false -or $processor.VMMonitorModeExtensions -eq $false){
@@ -640,7 +687,8 @@ else{
         ''
         'A list of Hyper-V requirements can be found here:'
         'https://learn.microsoft.com/en-us/virtualization/hyper-v-on-windows/reference/hyper-v-requirements'
-
+        ''
+        'You can also use the command ''systeminfo'' to check the status of virtualization requirements.'
     ) -join [Environment]::NewLine
         Write-Warning $errorMessage
         return
