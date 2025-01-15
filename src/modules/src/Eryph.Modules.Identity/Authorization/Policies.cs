@@ -8,7 +8,7 @@ namespace Eryph.Modules.Identity.Authorization;
 
 internal static class Policies
 {
-    public static string Delete = "DeletePolicy";
+    public const string Delete = "DeletePolicy";
 
-    public static string Edit = "EditPolicy";
+    public const string Edit = "EditPolicy";
 }
