@@ -182,7 +182,7 @@ namespace Eryph.Modules.VmHostAgent
             TypedPsObject<VirtualMachineInfo> vmInfo, IHostInfoProvider hostInfoProvider) =>
             from reloadedVmInfo in vmInfo.Reload(engine)
             let inventory = new VirtualMachineInventory(engine, vmHostAgentConfig, hostInfoProvider)
-            from vmData in inventory.InventorizeVM(vmInfo)
+            from vmData in inventory.InventorizeVM(reloadedVmInfo)
             select vmData;
     }
 }
