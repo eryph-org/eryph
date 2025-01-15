@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 using static LanguageExt.Prelude;
 
@@ -34,6 +35,16 @@ public static class ProblemDetailsFactoryExtensions
         return problemDetails;
     }
 
+    /// <summary>
+    /// Create an <see cref="ActionResult"/> with <see cref="ProblemDetails"/>
+    /// for the given <paramref name="authorizationResult"/>.
+    /// </summary>
+    /// <remarks>
+    /// This method is similar to
+    /// <see cref="ControllerBase.ValidationProblem(ModelStateDictionary)"/>.
+    /// There is no built-in method in ASP.NET Core to create an <see cref="ActionResult"/>
+    /// from an <see cref="AuthorizationResult"/>.
+    /// </remarks>
     public static ActionResult CreateForbiddenResult(
         this ProblemDetailsFactory factory,
         HttpContext httpContext,
