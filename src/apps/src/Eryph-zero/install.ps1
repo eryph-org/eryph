@@ -9,7 +9,7 @@
     .NOTES
     =====================================================================
 
-    Copyright 2022 dbosoft GmbH,
+    Copyright 2022-2025 dbosoft GmbH,
 
     Based on Chocolatey installation script, original copyright:
 
@@ -695,6 +695,7 @@ else{
     }
 }
 
+$needsRestart = $false
 if((Test-CommandExist "Get-WindowsFeature")){
 
     $HyperVPSFeature = Get-WindowsFeature -Name 'Hyper-V-PowerShell'
@@ -705,6 +706,10 @@ if((Test-CommandExist "Get-WindowsFeature")){
         $RestartRequired = $result.RestartNeeded
 	}
 
+    if($RestartRequired){
+        $needsRestart = $true
+	}
+
 	$HyperVFeature = Get-WindowsFeature -Name 'Hyper-V'
 	if($HyperVFeature.Installed -eq $false){
 		Write-Warning "Hyper-V is not installed. Installing feature..."
@@ -713,8 +718,7 @@ if((Test-CommandExist "Get-WindowsFeature")){
 	}
 
     if($RestartRequired){
-		Write-Warning "A restart is required to complete the installation of Hyper-V features."
-		return
+        $needsRestart = $true
 	}
     
 } else{
@@ -722,13 +726,57 @@ if((Test-CommandExist "Get-WindowsFeature")){
     # Check if Hyper-V is enabled
     if($HyperVFeature.State -ne "Enabled") {
         Write-Warning "Hyper-V is not installed. Installing feature..."
-        Enable-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V-All -Online
+        Enable-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V-All -Online -NoRestart -OutVariable results | Out-Null 
 
-        Write-Warning "A restart is required to complete the installation of Hyper-V features."
-		return
+        if ($results.RestartNeeded -eq $true) {
+            # give a better explaination why a reboot is required in non-server os as it is not shown in the output
+            # if installation command
+            $errorMessage = @(
+                'Automatic reboot is disabled during Hyper-V installation to prevent data loss.'
+                'However, a reboot is required before you can continue with the installation.'
+            ) -join [Environment]::NewLine
+            Write-Warning $errorMessage
+            $needsRestart = $true
+        }
     }
 }
 
+if($needsRestart -eq $true){
+
+    $errorMessage = @(
+        'Please restart your computer and run the script again.'
+    ) -join [Environment]::NewLine
+    Write-Warning $errorMessage
+    return
+
+}
+
+# make sure that Hyper-V is running - as it may happen that it is not enabled due to a pending reboot of
+# the feature installation.
+# This is a double check in case the script is run again before reboot as pending reboot check
+# is not reliable.
+
+$vmmsStarted = $false
+try{
+    $vmms = Get-WMIObject MSVM_VirtualSystemManagementService -namespace "root\virtualization\v2"
+    $vmmsStarted = $vmms.Started
+}catch{
+    Write-Verbose "Hyper-V status check failed. Error: $_"
+}
+
+if($vmmsStarted  -eq $false){
+
+    $errorMessage = @(
+        'Hyper-V is not enabled. Most likely a reboot is required to complete the installation of Hyper-V features.'
+        'Please restart your computer and run the script again.'
+        ''
+        'If you have already restarted your computer, please check the status of the Hyper-V features and'
+        'if virtual machine management service is running.'
+    ) -join [Environment]::NewLine
+    Write-Warning $errorMessage
+    return
+
+}
 
 #endregion Pre-check
 
@@ -785,7 +833,7 @@ if ($DownloadUrl) {
 } elseif ($Version) {
     Write-Information "Downloading specific version of eryph-zero: $Version" -InformationAction Continue
 } else {
-    Write-Information "Fetching versions of eryph-zero." -InformationAction Continue
+    Write-Information "Fetching versions of eryph-zero..." -InformationAction Continue
 }
 
 if(-not $DownloadUrl){
