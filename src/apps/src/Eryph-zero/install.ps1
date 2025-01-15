@@ -332,32 +332,167 @@ function Enable-PSConsoleWriter {
     }
 }
 
-function Test-EryphInstalled {
+function Get-EryphZeroPath {
     [CmdletBinding()]
     param()
 
     $checkPath = if ($env:eryphInstall) { $env:eryphInstall } else { "$env:PROGRAMFILES\eryph\zero" }
 
-
-
     if ($Command = Get-Command eryph-zero -CommandType Application -ErrorAction Ignore) {
         # eryph-zero is on the PATH, assume it's installed
-        Write-Warning "'eryph-zero' was found at '$($Command.Path)'."
-        $true
+        $Command.Path
     }
     elseif (-not (Test-Path $checkPath)) {
         # eryph-zero doesn't exist
-        $false
+        $null
     }
     elseif (-not (Get-ChildItem -Path $checkPath)) {
         # Install folder exists but is empty
-        $false
+        $null
     }
     else {
-        # Install folder exists and is not empty
-        Write-Warning "Files from a previous installation of eryph-zero were found at '$($CheckPath)'."
-        $true
+        Join-Path $checkPath "bin\eryph-zero.exe"
+        
     }
+}
+
+function Test-EryphInstalled {
+    [CmdletBinding()]
+    param()
+
+    $zeroPath = Get-EryphZeroPath
+    if($zeroPath){
+        return Test-Path $zeroPath
+    } else{
+        $false
+    }
+}
+
+function Get-ParsedVersion {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]
+        $version
+    )
+
+    # we consider only major, minor and patch - semver information is ignored
+
+    $semverRegex = '^(?<major>\d+)\.(?<minor>\d+)(?:\.(?<patch>\d+))?'
+    $match = $version -match $semverRegex
+    if ($match) {
+        $major = [int]$matches['major']
+        $minor = [int]$matches['minor']
+        $patch = if ($matches['patch']) { [int]$matches['patch'] } else { 0 }
+        $parsedVersion = New-Object System.Version($major, $minor, $patch)
+        return $parsedVersion
+    } else {
+        $versionParts = $version -split '\.'
+        if ($versionParts.Count -ge 2) {
+            $major = [int]$versionParts[0]
+            $minor = [int]$versionParts[1]
+            $patch = if ($versionParts.Count -ge 3) { [int]$versionParts[2] } else { 0 }
+            $parsedVersion = New-Object System.Version($major, $minor, $patch)
+            return $parsedVersion
+        } else {
+            Write-Warning "Invalid version format."
+            return $null
+        }
+    }
+}
+
+
+
+
+function Test-InstalledOrNotUpdated {
+    [CmdletBinding()]
+    param()
+
+    if (Test-EryphInstalled) {
+
+        $update = $false
+        if(-not $Force)
+        {
+            # this may fail for broken installations
+            try{
+                $currentVersion = & $(Get-EryphZeroPath) --version
+
+                if($currentVersion.Contains("+")){
+                    # remove build information
+                    $currentVersion = $currentVersion.Split('+')[0]
+                }
+                Write-Verbose "Version of installed eryph-zero: $currentVersion"
+            }catch{
+                Write-Warning "Failed to check current version. Error: $_"
+            }
+
+
+
+            if(-not $version -or -not $currentVersion -or (Get-ParsedVersion $version) -le (Get-ParsedVersion $currentVersion))
+            { 
+                # failed to check for current version
+                if(-not $currentVersion){
+                    $message = @(
+                    "An existing eryph installation with an unknown version has been detected."
+                    "Installation will not continue."
+                    "For security reasons, this script will not overwrite existing installations"
+                    "of unkown versions. Use the -Force argument to bypass this check."
+                    ""
+                    ) -join [Environment]::NewLine 
+                } else{
+
+                    #version not selected, but from download url
+                    if(-not $version){
+                        
+                        $message = @(
+                            "An existing eryph installation with version $currentVersion has been detected."
+                            "Installation will not continue."
+                            "For security reasons, this script will not overwrite existing installations."
+                            "Use the -Force argument to bypass this check."
+                            ""
+                        ) -join [Environment]::NewLine 
+                    }
+                    else{
+                    # same or lower version
+                        $message = @(
+                            "An existing eryph installation with version $currentVersion has been detected."
+                            "Installation will not continue."
+                            "For security reasons, this script will not overwrite existing installations"
+                            "of the same or higher versions. Use the -Force argument to bypass this check."
+                            ""
+                        ) -join [Environment]::NewLine 
+                    }
+
+                }
+                
+            }else{
+                #updateable version
+                $message = @(
+                    "An existing eryph installation with version $currentVersion has been detected."
+                    "Installation will update eryph-zero to version $version."
+                    ""
+                ) -join [Environment]::NewLine 
+                $update = $true
+            }
+            
+        } else{
+            # force flag set
+            $message = @(
+            "An existing eryph installation has been detected. Installation will continue"
+            "due to -Force argument. The existing installation will be overwritten."
+            ""
+        ) -join [Environment]::NewLine
+        }
+
+        Write-Warning $message
+
+        if(-not $Force -and !$update){
+            $True
+            return
+        }        
+    }
+
+    $false
 }
 
 
@@ -408,6 +543,21 @@ function Install-VCRuntime {
     }
     
     if ($exitcode -ne 0) {
+
+        if($exitcode -eq 3010){
+           $message = @(
+            "Installation of Visual C++ Runtime requires a reboot of your computer."
+            "Therefore installation will now exit."
+            ""
+            "Please restart your computer and try again."
+            ""
+        ) -join [Environment]::NewLine
+
+            Write-Warning $message
+            $true
+            return
+        }
+
         $message = @(
             "Installation of Visual C++ Runtime failed with exit code $exitcode."
             "As a result, eryph may not function correctly."
@@ -419,7 +569,10 @@ function Install-VCRuntime {
             ""
         ) -join [Environment]::NewLine
         Write-Warning $message
+        
     }
+
+    $false
 
 }
 
@@ -503,25 +656,41 @@ function Get-BetaDownloadUrl {
 # Ensure we have all our streams setup correctly, needed for older PSVersions.
 Enable-PSConsoleWriter
 
-if (Test-EryphInstalled) {
+# check for admin (requires don't work for remote loaded script)
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+$isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-    if(-not $Force)
-    {
-    $message = @(
-        "An existing eryph installation was detected. Installation will not continue."
-        "For security reasons, this script will not overwrite existing installations."
-        ""
-    ) -join [Environment]::NewLine } else{
-    $message = @(
-        "An existing eryph installation was detected. Installation will continue"
-        "due to -Force argument. The existing installation will be overwritten."
-        ""
+if(-not $isAdmin){
+
+    $errorMessage = @(
+        'To install eryph, you must run the script at an elevated prompt.'
+        ''
+        'This means that either powershell or the command prompt you are using to install eryph must be started as adminstrator'
+        '(right click on the window -> run as administrator)'
     ) -join [Environment]::NewLine
-    }
+    Write-Warning $errorMessage
+    return
+}
 
-    Write-Warning $message
+Write-Information "Reading System Information..." -InformationAction Continue
+$processor = Get-WmiObject win32_processor
+$computer =  Get-WmiObject win32_computersystem
 
-    if(-not $Force){
+if($computer.HypervisorPresent -eq $true){
+    Write-Verbose "Detected Hypervisor present - skipping virtualization check"
+}
+else{
+    if($processor.VirtualizationFirmwareEnabled -eq $false -or $processor.VMMonitorModeExtensions -eq $false){
+            $errorMessage = @(
+        'Virtualization is not enabled for your computer system.'
+        'To continue the installation, enable virtualization extensions in your computer''s BIOS.'
+        ''
+        'A list of Hyper-V requirements can be found here:'
+        'https://learn.microsoft.com/en-us/virtualization/hyper-v-on-windows/reference/hyper-v-requirements'
+        ''
+        'You can also use the command ''systeminfo'' to check the status of virtualization requirements.'
+    ) -join [Environment]::NewLine
+        Write-Warning $errorMessage
         return
     }
 }
@@ -607,16 +776,6 @@ catch {
 }
 
 
-$vcruntimeVersion = Get-VCRuntimeVersion
-
-if($vcruntimeVersion){
-    Write-Verbose "Found VC runtime version: $vcruntimeVersion" -InformationAction Continue
-}
-
-if($vcruntimeVersion -lt "v14.42.34433.0"){
-    Install-VCRuntime -ProxyConfiguration $proxyConfig
-}
-
 if ($DownloadUrl) {
     if ($Version) {
         Write-Warning "Ignoring -Version parameter ($Version) because -DownloadUrl is set."
@@ -655,13 +814,19 @@ if(-not $DownloadUrl){
 
         Write-Information "Selected version of eryph: ${Version}" -InformationAction Continue
     }
-
+    
     $productFile = $productJson.versions."$Version".files | Where-Object arch -eq 'amd64' | Select-Object -First 1
 
     if(!$productFile){
         Write-Error "Version {$Version} not found"
         return
     }
+
+    # version check as soon we know selected version
+    $stop = Test-InstalledOrNotUpdated
+    if($stop -eq $true){
+        return
+    }  
 
     if(-not $productFile.Beta){
         $DownloadUrl = $productFile.url
@@ -701,6 +866,12 @@ if (Test-Path $DownloadUrl) {
     $deleteFile = $true
     Write-Information "Getting eryph from $DownloadUrl." -InformationAction Continue
     Request-File -Url $DownloadUrl -File $file -ProxyConfiguration $proxyConfig
+
+    # check for forced update if not downloaded
+    $stop = Test-InstalledOrNotUpdated
+    if($stop -eq $true){
+        return
+    }  
 }
 
 
@@ -739,6 +910,21 @@ if($deleteFile) {
 #endregion Download & Extract eryph
 
 #region Install eryph
+
+$vcruntimeVersion = Get-VCRuntimeVersion
+
+if($vcruntimeVersion){
+    Write-Verbose "Found VC runtime version: $vcruntimeVersion" -InformationAction Continue
+}
+
+if($vcruntimeVersion -lt "v14.42.34433.0"){
+    $stop = Install-VCRuntime -ProxyConfiguration $proxyConfig
+
+    if($stop -eq $true){
+        return
+    }
+
+}
 
 Write-Information "Starting eryph-zero installation." -InformationAction Continue
 Write-Host
