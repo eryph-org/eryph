@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
@@ -9,14 +8,14 @@ using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.VmManagement.Converging;
 
-public class ConvergeSecureBoot : ConvergeTaskBase
+public class ConvergeSecureBoot(
+    ConvergeContext context)
+    : ConvergeTaskBase(context)
 {
-    public ConvergeSecureBoot(ConvergeContext context) : base(context)
-    {
-    }
-
     public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo)
     {
@@ -59,7 +58,11 @@ public class ConvergeSecureBoot : ConvergeTaskBase
                 }).ToAsync()
             from newVmInfo in vmInfo.RecreateOrReload(Context.Engine)
             select newVmInfo).ToEither();
-
-
     }
+
+    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeSecureBootState(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        from updatedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+        select updatedVmInfo;
 }

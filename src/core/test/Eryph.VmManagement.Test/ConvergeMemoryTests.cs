@@ -30,35 +30,8 @@ public class ConvergeMemoryTests
     }
 
     [Fact]
-    public async Task Converge_NoMemoryConfiguration_CommandIsNotExecuted()
+    public async Task Converge_NoMemoryConfiguration_DisablesDynamicMemory()
     {
-        _fixture.Config.Memory = null;
-        var vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo
-        {
-            DynamicMemoryEnabled = true,
-            MemoryStartup = 42 * 1024L * 1024,
-            MemoryMinimum = 42 * 1024L * 1024,
-            MemoryMaximum = 42 * 1024L * 1024,
-        });
-
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
-        result.Should().BeRight();
-
-        _executedCommand.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task Converge_DynamicMemoryIsDisabled_DisablesDynamicMemory()
-    {
-        _fixture.Config.Capabilities =
-        [
-            new CatletCapabilityConfig
-            {
-                Name = EryphConstants.Capabilities.DynamicMemory,
-                Details = [EryphConstants.CapabilityDetails.Disabled]
-            },
-        ];
         _fixture.Config.Memory = null;
         var vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo
         {
@@ -73,6 +46,100 @@ public class ConvergeMemoryTests
         result.Should().BeRight();
 
         _executedCommand.Should().NotBeNull();
+        _executedCommand!.ShouldBeCommand("Set-VMMemory")
+            .ShouldBeParam("VM", vmInfo.PsObject)
+            .ShouldBeParam("DynamicMemoryEnabled", false)
+            .ShouldBeComplete();
+    }
+
+    [Fact]
+    public async Task Converge_MinimumMemoryIsConfigured_EnablesDynamicMemory()
+    {
+        _fixture.Config.Memory = new CatletMemoryConfig()
+        {
+            Minimum = 1024,
+            Startup = 2048,
+        };
+        var vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo
+        {
+            DynamicMemoryEnabled = false,
+            MemoryStartup = 2048 * 1024L * 1024,
+            MemoryMinimum = 512 * 1024L * 1024,
+            MemoryMaximum = 2048 * 1024L * 1024,
+        });
+
+        var convergeTask = new ConvergeMemory(_fixture.Context);
+        var result = await convergeTask.Converge(vmInfo);
+        result.Should().BeRight();
+
+        _executedCommand.Should().NotBeNull();
+        _executedCommand!.ShouldBeCommand("Set-VMMemory")
+            .ShouldBeParam("VM", vmInfo.PsObject)
+            .ShouldBeParam("DynamicMemoryEnabled", true)
+            .ShouldBeParam("MinimumBytes", 1024 * 1024L * 1024)
+            .ShouldBeComplete();
+    }
+
+    [Fact]
+    public async Task Converge_MaximumMemoryIsConfigured_EnablesDynamicMemory()
+    {
+        _fixture.Config.Memory = new CatletMemoryConfig()
+        {
+            Maximum = 4096,
+            Startup = 2048,
+        };
+        var vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo
+        {
+            DynamicMemoryEnabled = false,
+            MemoryStartup = 2048 * 1024L * 1024,
+            MemoryMinimum = 2048 * 1024L * 1024,
+            MemoryMaximum = 3072 * 1024L * 1024,
+        });
+
+        var convergeTask = new ConvergeMemory(_fixture.Context);
+        var result = await convergeTask.Converge(vmInfo);
+        result.Should().BeRight();
+
+        _executedCommand.Should().NotBeNull();
+        _executedCommand!.ShouldBeCommand("Set-VMMemory")
+            .ShouldBeParam("VM", vmInfo.PsObject)
+            .ShouldBeParam("DynamicMemoryEnabled", true)
+            .ShouldBeParam("MaximumBytes", 4096 * 1024L * 1024)
+            .ShouldBeComplete();
+    }
+
+    [Fact]
+    public async Task Converge_DynamicMemoryIsExplicitlyDisabled_DisablesDynamicMemory()
+    {
+        _fixture.Config.Capabilities =
+        [
+            new CatletCapabilityConfig
+            {
+                Name = EryphConstants.Capabilities.DynamicMemory,
+                Details = [EryphConstants.CapabilityDetails.Disabled]
+            },
+        ];
+        _fixture.Config.Memory = new CatletMemoryConfig()
+        {
+            Startup = 2048,
+            Minimum = 512,
+            Maximum = 4096,
+        };
+        var vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo
+        {
+            DynamicMemoryEnabled = true,
+            MemoryStartup = 2048 * 1024L * 1024,
+            MemoryMinimum = 1024 * 1024L * 1024,
+            MemoryMaximum = 3072 * 1024L * 1024,
+        });
+
+        var convergeTask = new ConvergeMemory(_fixture.Context);
+        var result = await convergeTask.Converge(vmInfo);
+        result.Should().BeRight();
+
+        _executedCommand.Should().NotBeNull();
+        // MinimumBytes and MaximumBytes must not be set as Hyper-V
+        // rejects them when DynamicMemoryEnabled is false.
         _executedCommand!.ShouldBeCommand("Set-VMMemory")
             .ShouldBeParam("VM", vmInfo.PsObject)
             .ShouldBeParam("DynamicMemoryEnabled", false)
@@ -113,6 +180,13 @@ public class ConvergeMemoryTests
     [Fact]
     public async Task Converge_MemorySizesMismatched_UpdateSizesWhichAreNotExplicitlyConfigured()
     {
+        _fixture.Config.Capabilities =
+        [
+            new CatletCapabilityConfig
+            {
+                Name = EryphConstants.Capabilities.DynamicMemory,
+            },
+        ];
         _fixture.Config.Memory = new CatletMemoryConfig
         {
             Startup = 2048,
@@ -139,7 +213,7 @@ public class ConvergeMemoryTests
     }
 
     [Fact]
-    public async Task Converge_NoChanges_CommandIsNotExecuted()
+    public async Task Converge_NoChangesWithDynamicMemory_CommandIsNotExecuted()
     {
         _fixture.Config.Memory = new CatletMemoryConfig
         {
@@ -153,6 +227,28 @@ public class ConvergeMemoryTests
             MemoryStartup = 2048 * 1024L * 1024,
             MemoryMinimum = 1024 * 1024L * 1024,
             MemoryMaximum = 4096 * 1024L * 1024,
+        });
+
+        var convergeTask = new ConvergeMemory(_fixture.Context);
+        var result = await convergeTask.Converge(vmInfo);
+        result.Should().BeRight();
+
+        _executedCommand.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Converge_NoChangesWithoutDynamicMemory_CommandIsNotExecuted()
+    {
+        _fixture.Config.Memory = new CatletMemoryConfig
+        {
+            Startup = 2048,
+        };
+        var vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo
+        {
+            DynamicMemoryEnabled = false,
+            MemoryStartup = 2048 * 1024L * 1024,
+            MemoryMinimum = 512 * 1024L * 1024,
+            MemoryMaximum = 1 * 1024L * 1024 *1024 * 1024,
         });
 
         var convergeTask = new ConvergeMemory(_fixture.Context);
