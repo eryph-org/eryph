@@ -3,7 +3,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Eryph.Core;
 using Eryph.Modules.AspNetCore;
+using Eryph.Modules.Identity.Authorization;
 using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
@@ -17,6 +19,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
 [Route("v{version:apiVersion}")]
 public class NewKey(
+    IAuthorizationService authorizationService,
     IClientService clientService,
     ICertificateGenerator certificateGenerator,
     ICertificateKeyService certificateKeyService,
@@ -47,6 +50,11 @@ public class NewKey(
         var descriptor = await clientService.Get(request.Id, tenantId, cancellationToken);
         if (descriptor is null)
             return NotFound();
+
+        var authorizationResult = await authorizationService.AuthorizeAsync(
+            User, descriptor, Policies.Edit);
+        if (!authorizationResult.Succeeded)
+            return ProblemDetailsFactory.CreateForbiddenResult(HttpContext, authorizationResult);
 
         var sharedSecret = (request.Body.SharedSecret).GetValueOrDefault(false);
         string key;

@@ -8,11 +8,13 @@ using Eryph.IdentityDb.Entities;
 using Eryph.ModuleCore;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.AspNetCore.ApiProvider;
+using Eryph.Modules.Identity.Authorization;
 using Eryph.Modules.Identity.Events.Validations;
 using Eryph.Modules.Identity.Services;
 using Eryph.Security.Cryptography;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -90,7 +92,13 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
                     authority,
                     EryphConstants.Authorization.Scopes.IdentityClientsWrite,
                     EryphConstants.Authorization.Scopes.IdentityWrite)));
+            options.AddPolicy(Policies.Delete,
+                policy => policy.Requirements.Add(new IsNotSystemClientRequirement()));
+            options.AddPolicy(Policies.Edit,
+                policy => policy.Requirements.Add(new IsNotSystemClientRequirement()));
         });
+
+        services.AddSingleton<IAuthorizationHandler, IsNotSystemClientAuthorizationHandler>();
 
         services.AddOpenIddict()
 
@@ -178,6 +186,5 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         container.Register<IClientService, ClientService>(Lifestyle.Scoped);
 
         container.Register<IUserInfoProvider, UserInfoProvider>(Lifestyle.Scoped);
-
     }
 }

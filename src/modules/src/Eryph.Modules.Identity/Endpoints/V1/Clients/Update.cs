@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
 using Eryph.Modules.AspNetCore;
+using Eryph.Modules.Identity.Authorization;
 using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
@@ -15,6 +16,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
 [Route("v{version:apiVersion}")]
 public class Update(
+    IAuthorizationService authorizationService,
     IClientService clientService,
     IOpenIddictScopeManager scopeManager,
     IUserInfoProvider userInfoProvider)
@@ -51,6 +53,11 @@ public class Update(
         var persistentDescriptor = await clientService.Get(request.Id, tenantId, cancellationToken);
         if (persistentDescriptor == null)
             return NotFound();
+
+        var authorizationResult = await authorizationService.AuthorizeAsync(
+            User, persistentDescriptor, Policies.Edit);
+        if (!authorizationResult.Succeeded)
+            return ProblemDetailsFactory.CreateForbiddenResult(HttpContext, authorizationResult);
 
         persistentDescriptor.Scopes.Clear();
         persistentDescriptor.Scopes.UnionWith(request.Client.AllowedScopes);

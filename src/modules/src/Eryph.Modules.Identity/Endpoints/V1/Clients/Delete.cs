@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
 using Eryph.Modules.AspNetCore;
+using Eryph.Modules.Identity.Authorization;
 using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,7 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
 [Route("v{version:apiVersion}")]
 public class Delete(
+    IAuthorizationService authorizationService,
     IClientService clientService,
     IUserInfoProvider userInfoProvider)
     : EndpointBaseAsync
@@ -37,6 +39,11 @@ public class Delete(
         var client = await clientService.Get(request.Id, tenantId, cancellationToken);
         if (client == null)
             return NotFound();
+
+        var authorizationResult = await authorizationService.AuthorizeAsync(
+            User, client, Policies.Delete);
+        if (!authorizationResult.Succeeded)
+            return ProblemDetailsFactory.CreateForbiddenResult(HttpContext, authorizationResult);
 
         await clientService.Delete(client.ClientId, tenantId, cancellationToken);
 
