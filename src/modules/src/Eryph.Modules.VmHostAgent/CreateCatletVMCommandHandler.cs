@@ -53,13 +53,14 @@ namespace Eryph.Modules.VmHostAgent
             from createdVM in CreateVM(plannedStorageSettings, Engine, command.BredConfig)
             let metadataId = Guid.NewGuid()
             from _ in SetMetadataId(createdVM, metadataId)
+            let timestamp = DateTimeOffset.UtcNow
             from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, createdVM, _hostInfoProvider)
             select new ConvergeCatletResult
             {
                 VmId = createdVM.Value.Id,
                 MetadataId = metadataId,
                 Inventory = inventory,
-                Timestamp = DateTimeOffset.UtcNow,
+                Timestamp = timestamp,
             };
 
         private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> CreateVM(

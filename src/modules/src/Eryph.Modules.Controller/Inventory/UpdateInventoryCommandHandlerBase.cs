@@ -131,7 +131,7 @@ namespace Eryph.Modules.Controller.Inventory
                     {
                         if (existingMachine.LastSeen >= timestamp)
                         {
-                            _logger.LogDebug("Skipping inventory update for catlet {CatletId} with timestamp {Timestamp}. Most recent information is dated {LastSeen}.",
+                            _logger.LogDebug("Skipping inventory update for catlet {CatletId} with timestamp {Timestamp:O}. Most recent information is dated {LastSeen:O}.",
                                 existingMachine.Id, timestamp, existingMachine.LastSeen);
                             return;
                         }
@@ -169,7 +169,7 @@ namespace Eryph.Modules.Controller.Inventory
 
                         if (existingMachine.LastSeenState >= timestamp)
                         {
-                            _logger.LogDebug("Skipping state update for catlet {CatletId} with timestamp {Timestamp}. Most recent state information is dated {LastSeen}.",
+                            _logger.LogDebug("Skipping state update for catlet {CatletId} with timestamp {Timestamp:O}. Most recent state information is dated {LastSeen:O}.",
                                 existingMachine.Id, timestamp, existingMachine.LastSeenState);
                             return;
                         }
