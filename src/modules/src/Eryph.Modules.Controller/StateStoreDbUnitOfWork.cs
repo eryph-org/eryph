@@ -21,9 +21,19 @@ namespace Eryph.Modules.Controller
             return default;
         }
 
+        public Task Initialize()
+        {
+            return Task.CompletedTask;
+        }
+
         public Task Commit()
         {
             return _dbContext.SaveChangesAsync();
+        }
+
+        public Task Rollback()
+        {
+            return Task.CompletedTask;
         }
 
         public void Dispose()
