@@ -46,7 +46,7 @@ public class ConvergeSecureBootTests
             [
                 new CatletCapabilityConfig
                 {
-                    Name = EryphConstants.Capabilities.NestedVirtualization,
+                    Name = EryphConstants.Capabilities.SecureBoot,
                     Details = shouldSecureBoot.Value
                         ? [EryphConstants.CapabilityDetails.Enabled]
                         : [EryphConstants.CapabilityDetails.Disabled],
@@ -82,5 +82,39 @@ public class ConvergeSecureBootTests
             .ShouldBeParam(
                 "EnableSecureBoot",
                 shouldSecureBoot.GetValueOrDefault() ? OnOffState.On : OnOffState.Off);
+    }
+
+    [Fact]
+    public async Task Converge_DifferentSecureBootTemplate_ChangesSecureBootTemplate()
+    {
+        _fixture.Config.Capabilities =
+        [
+            new CatletCapabilityConfig
+            {
+                Name = EryphConstants.Capabilities.SecureBoot,
+                Details = ["template:TestTemplate"],
+            }
+        ];
+
+        _fixture.Engine.GetValuesCallback = (_, command) =>
+        {
+            command.ShouldBeCommand("Get-VMFirmware")
+                .ShouldBeParam("VM", _vmInfo.PsObject)
+                .ShouldBeComplete();
+
+            return Seq1<object>(new VMFirmwareInfo
+            {
+                SecureBoot = OnOffState.On,
+                SecureBootTemplate = "MicrosoftWindows",
+            });
+        };
+
+        await _convergeTask.Converge(_vmInfo);
+
+        _executedCommand.Should().NotBeNull();
+        _executedCommand!.ShouldBeCommand("Set-VMFirmware")
+            .ShouldBeParam("VM")
+            .ShouldBeParam("EnableSecureBoot", OnOffState.On)
+            .ShouldBeParam("SecureBootTemplate", "TestTemplate");
     }
 }
