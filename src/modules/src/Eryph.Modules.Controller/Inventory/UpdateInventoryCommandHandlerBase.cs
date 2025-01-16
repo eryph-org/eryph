@@ -295,11 +295,7 @@ namespace Eryph.Modules.Controller.Inventory
         {
             var disk = await GetDisk(agentName, diskInfo);
             if (disk is not null && disk.LastSeen >= timestamp)
-            {
-                _logger.LogDebug("Skipping inventory update for disk {DiskId} with timestamp {Timestamp:O}. Most recent information is dated {LastSeen:O}.",
-                    disk.Id, timestamp, disk.LastSeen);
                 return disk;
-            }
 
             VirtualDisk? parentDisk = null;
             if (diskInfo.Parent is not null)
