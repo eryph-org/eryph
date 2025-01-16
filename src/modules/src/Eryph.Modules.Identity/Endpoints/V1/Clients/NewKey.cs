@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore;
-using Eryph.Modules.Identity.Authorization;
 using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
 using Eryph.Modules.Identity.Services;
@@ -19,7 +18,6 @@ namespace Eryph.Modules.Identity.Endpoints.V1.Clients;
 
 [Route("v{version:apiVersion}")]
 public class NewKey(
-    IAuthorizationService authorizationService,
     IClientService clientService,
     ICertificateGenerator certificateGenerator,
     ICertificateKeyService certificateKeyService,
@@ -51,10 +49,10 @@ public class NewKey(
         if (descriptor is null)
             return NotFound();
 
-        var authorizationResult = await authorizationService.AuthorizeAsync(
-            User, descriptor, Policies.Edit);
-        if (!authorizationResult.Succeeded)
-            return ProblemDetailsFactory.CreateForbiddenResult(HttpContext, authorizationResult);
+        if (descriptor.ClientId == EryphConstants.SystemClientId)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: "The system client cannot be modified.");
 
         var sharedSecret = (request.Body.SharedSecret).GetValueOrDefault(false);
         string key;
