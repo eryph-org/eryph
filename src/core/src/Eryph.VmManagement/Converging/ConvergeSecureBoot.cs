@@ -42,10 +42,9 @@ public class ConvergeSecureBoot(
         TypedPsObject<VirtualMachineInfo> vmInfo,
         bool enableSecureBoot,
         string secureBootTemplate) =>
-        // TODO check if VM is running?
-        // if (vmInfo.Value.State == VirtualMachineState.Running)
-        //     return Error.New("Cannot change secure boot settings of a running catlet.");
-        from _1 in RightAsync<Error, Unit>(unit)
+        from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
+                Error.New("Cannot change secure boot settings of a catlet which is not turned off."))
+            .ToEitherAsync()
         let progressMessage = enableSecureBoot
             ? $"Configuring secure boot settings (Template: {secureBootTemplate})"
             : "Configuring secure boot settings (Secure Boot: Off)"

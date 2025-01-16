@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
+using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
@@ -36,10 +37,9 @@ public class ConvergeNestedVirtualization(
     private EitherAsync<Error, Unit> ConfigureNestedVirtualization(
         TypedPsObject<VirtualMachineInfo> vmInfo,
         bool exposeVirtualizationExtensions) =>
-        from _1 in RightAsync<Error, Unit>(unit)
-        // TODO check V status?
-        //  if (vmInfo.Value.State == VirtualMachineState.Running)
-        //     return Error.New("Cannot change nested virtualization settings of a running catlet.");
+        from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
+                Error.New("Cannot change virtualization settings of a catlet which is not turned off."))
+            .ToEitherAsync()
         let progressMessage = exposeVirtualizationExtensions
             ? "Enabling nested virtualization."
             : "Disabling nested virtualization."
