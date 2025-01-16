@@ -1,22 +1,18 @@
 ﻿using System;
 
-namespace Eryph.VmManagement.Data.Core
+namespace Eryph.VmManagement.Data.Core;
+
+public class VMFirmwareInfo
 {
-    public class VMFirmwareInfo
-    {
-        //public VMBootSourceInfo[] BootOrder { get; private set; }
+    public IPProtocolPreference PreferredNetworkBootProtocol { get; init; }
 
-        public IPProtocolPreference PreferredNetworkBootProtocol { get; private set; }
+    public OnOffState SecureBoot { get; init; }
 
-        public OnOffState SecureBoot { get; private set; }
+    public string SecureBootTemplate { get; init; }
 
-        public string SecureBootTemplate { get; private set; }
-        public Guid? SecureBootTemplateId { get; private set; }
+    public Guid? SecureBootTemplateId { get; init; }
 
-        public ConsoleModeType ConsoleMode { get; private set; }
+    public ConsoleModeType ConsoleMode { get; init; }
 
-
-        public OnOffState PauseAfterBootFailure { get; private set; }
-    }
-
+    public OnOffState PauseAfterBootFailure { get; init; }
 }

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using LanguageExt;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Core;
 
 public static class CatletCapabilities
@@ -28,11 +30,26 @@ public static class CatletCapabilities
             .Map(c => !IsExplicitlyDisabled(c))
             .IfNone(false);
 
+    public static bool IsSecureBootEnabled(
+        Seq<CatletCapabilityConfig> configs) =>
+        FindCapability(configs, EryphConstants.Capabilities.SecureBoot)
+            .Map(c => !IsExplicitlyDisabled(c))
+            .IfNone(false);
+
     public static bool IsTpmEnabled(
         Seq<CatletCapabilityConfig> configs) =>
         FindCapability(configs, EryphConstants.Capabilities.Tpm)
             .Map(c => !IsExplicitlyDisabled(c))
             .IfNone(false);
+
+    public static Option<string> FindSecureBootTemplate(
+        Seq<CatletCapabilityConfig> configs) =>
+        FindCapability(configs, EryphConstants.Capabilities.SecureBoot)
+            .ToSeq()
+            .Bind(c => c.Details.ToSeq())
+            .Filter(notEmpty)
+            .Find(d => d.StartsWith("template:", StringComparison.OrdinalIgnoreCase))
+            .Bind(d => d.Split(':').ToSeq().At(1));
 
     public static Option<CatletCapabilityConfig> FindCapability(
         Seq<CatletCapabilityConfig> configs,
