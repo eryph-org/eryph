@@ -51,15 +51,4 @@ internal class ChangeTrackingQueue<TChange> : IChangeTrackingQueue<TChange>
     }
 }
 
-internal class ChangeTrackingQueueItem<TChange>
-{
-    public ChangeTrackingQueueItem(Guid transactionId, TChange changes)
-    {
-        TransactionId = transactionId;
-        Changes = changes;
-    }
-
-    public Guid TransactionId { get; }
-
-    public TChange Changes { get; }
-}
+internal record ChangeTrackingQueueItem<TChange>(Guid TransactionId, TChange Changes);
