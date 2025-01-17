@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Eryph.Core;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
@@ -51,6 +52,11 @@ public class Update(
         var persistentDescriptor = await clientService.Get(request.Id, tenantId, cancellationToken);
         if (persistentDescriptor == null)
             return NotFound();
+
+        if (persistentDescriptor.ClientId == EryphConstants.SystemClientId)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: "The system client cannot be modified.");
 
         persistentDescriptor.Scopes.Clear();
         persistentDescriptor.Scopes.UnionWith(request.Client.AllowedScopes);

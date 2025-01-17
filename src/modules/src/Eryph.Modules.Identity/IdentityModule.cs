@@ -178,6 +178,5 @@ public class IdentityModule(IEndpointResolver endpointResolver) : WebModule
         container.Register<IClientService, ClientService>(Lifestyle.Scoped);
 
         container.Register<IUserInfoProvider, UserInfoProvider>(Lifestyle.Scoped);
-
     }
 }

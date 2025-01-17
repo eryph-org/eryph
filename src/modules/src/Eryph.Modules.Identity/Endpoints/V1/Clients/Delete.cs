@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Eryph.Core;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.Identity.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -37,6 +38,11 @@ public class Delete(
         var client = await clientService.Get(request.Id, tenantId, cancellationToken);
         if (client == null)
             return NotFound();
+
+        if (client.ClientId == EryphConstants.SystemClientId)
+            return Problem(
+                statusCode: Status400BadRequest,
+                detail: "The system client cannot be deleted.");
 
         await clientService.Delete(client.ClientId, tenantId, cancellationToken);
 

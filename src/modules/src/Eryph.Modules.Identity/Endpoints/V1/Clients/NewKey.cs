@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
+using Eryph.Core;
 using Eryph.Modules.AspNetCore;
 using Eryph.Modules.Identity.Models;
 using Eryph.Modules.Identity.Models.V1;
@@ -47,6 +48,11 @@ public class NewKey(
         var descriptor = await clientService.Get(request.Id, tenantId, cancellationToken);
         if (descriptor is null)
             return NotFound();
+
+        if (descriptor.ClientId == EryphConstants.SystemClientId)
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: "The system client cannot be modified.");
 
         var sharedSecret = (request.Body.SharedSecret).GetValueOrDefault(false);
         string key;
