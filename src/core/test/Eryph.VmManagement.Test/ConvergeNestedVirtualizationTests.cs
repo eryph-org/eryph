@@ -1,6 +1,7 @@
 ﻿using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.VmManagement.Converging;
+using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
@@ -20,7 +21,10 @@ public class ConvergeNestedVirtualizationTests
     public ConvergeNestedVirtualizationTests()
     {
         _convergeTask = new(_fixture.Context);
-        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo());
+        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo()
+        {
+            State = VirtualMachineState.Off,
+        });
         _fixture.Engine.RunCallback = cmd =>
         {
             _executedCommand = cmd;

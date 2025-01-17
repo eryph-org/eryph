@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;

@@ -27,7 +27,10 @@ public class ConvergeSecureBootTests
     public ConvergeSecureBootTests()
     {
         _convergeTask = new(_fixture.Context);
-        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo());
+        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo()
+        {
+            State = VirtualMachineState.Off,
+        });
         _fixture.Engine.RunCallback = cmd =>
         {
             _executedCommand = cmd;
