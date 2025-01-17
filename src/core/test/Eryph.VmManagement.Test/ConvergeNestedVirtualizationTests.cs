@@ -35,17 +35,20 @@ public class ConvergeNestedVirtualizationTests
     [Theory, CombinatorialData]
     public async Task Converge_EnablesNestedVirtualizationWhenNecessary(bool exposed, bool? shouldExpose)
     {
-        if(shouldExpose.HasValue)
-            _fixture.Config.Capabilities =
+        _fixture.Config.Capabilities = shouldExpose.HasValue switch
+        {
+            true =>
             [
                 new CatletCapabilityConfig
                 {
                     Name = EryphConstants.Capabilities.NestedVirtualization,
-                    Details = shouldExpose.GetValueOrDefault() 
+                    Details = shouldExpose.GetValueOrDefault()
                         ? [EryphConstants.CapabilityDetails.Enabled]
                         : [EryphConstants.CapabilityDetails.Disabled],
                 }
-            ];
+            ],
+            false => null,
+        };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {

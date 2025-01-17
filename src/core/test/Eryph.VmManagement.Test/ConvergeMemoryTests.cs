@@ -18,10 +18,12 @@ namespace Eryph.VmManagement.Test;
 public class ConvergeMemoryTests
 {
     private readonly ConvergeFixture _fixture = new();
+    private readonly ConvergeMemory _convergeTask;
     private AssertCommand? _executedCommand;
 
     public ConvergeMemoryTests()
     {
+        _convergeTask = new(_fixture.Context);
         _fixture.Engine.RunCallback = cmd =>
         {
             _executedCommand = cmd;
@@ -41,8 +43,7 @@ public class ConvergeMemoryTests
             MemoryMaximum = 42 * 1024L * 1024,
         });
 
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
+        var result = await _convergeTask.Converge(vmInfo);
         result.Should().BeRight();
 
         _executedCommand.Should().NotBeNull();
@@ -68,8 +69,7 @@ public class ConvergeMemoryTests
             MemoryMaximum = 2048 * 1024L * 1024,
         });
 
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
+        var result = await _convergeTask.Converge(vmInfo);
         result.Should().BeRight();
 
         _executedCommand.Should().NotBeNull();
@@ -96,8 +96,7 @@ public class ConvergeMemoryTests
             MemoryMaximum = 3072 * 1024L * 1024,
         });
 
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
+        var result = await _convergeTask.Converge(vmInfo);
         result.Should().BeRight();
 
         _executedCommand.Should().NotBeNull();
@@ -133,8 +132,7 @@ public class ConvergeMemoryTests
             MemoryMaximum = 3072 * 1024L * 1024,
         });
 
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
+        var result = await _convergeTask.Converge(vmInfo);
         result.Should().BeRight();
 
         _executedCommand.Should().NotBeNull();
@@ -163,8 +161,7 @@ public class ConvergeMemoryTests
             MemoryMaximum = 42 * 1024L * 1024,
         });
 
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
+        var result = await _convergeTask.Converge(vmInfo);
         result.Should().BeRight();
 
         _executedCommand.Should().NotBeNull();
@@ -199,8 +196,7 @@ public class ConvergeMemoryTests
             MemoryMaximum = 1024 * 1024L * 1024,
         });
 
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
+        var result = await _convergeTask.Converge(vmInfo);
         result.Should().BeRight();
 
         _executedCommand.Should().NotBeNull();
@@ -229,8 +225,7 @@ public class ConvergeMemoryTests
             MemoryMaximum = 4096 * 1024L * 1024,
         });
 
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
+        var result = await _convergeTask.Converge(vmInfo);
         result.Should().BeRight();
 
         _executedCommand.Should().BeNull();
@@ -251,8 +246,7 @@ public class ConvergeMemoryTests
             MemoryMaximum = 1 * 1024L * 1024 *1024 * 1024,
         });
 
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
+        var result = await _convergeTask.Converge(vmInfo);
         result.Should().BeRight();
 
         _executedCommand.Should().BeNull();
@@ -274,8 +268,7 @@ public class ConvergeMemoryTests
             MemoryMaximum = 42 * 1024L * 1024,
         });
 
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
+        var result = await _convergeTask.Converge(vmInfo);
         result.Should().BeLeft().Which.Message.Should().Be(
             "Startup memory (1024 MiB) cannot be less than minimum memory (2048 MiB).");
 
@@ -298,8 +291,7 @@ public class ConvergeMemoryTests
             MemoryMaximum = 42 * 1024L * 1024,
         });
 
-        var convergeTask = new ConvergeMemory(_fixture.Context);
-        var result = await convergeTask.Converge(vmInfo);
+        var result = await _convergeTask.Converge(vmInfo);
         result.Should().BeLeft().Which.Message.Should().Be(
             "Startup memory (4096 MiB) cannot be more than maximum memory (2048 MiB).");
 
