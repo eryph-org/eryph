@@ -45,10 +45,9 @@ public class ConvergeSecureBoot(
         from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
                 Error.New("Cannot change secure boot settings of a catlet which is not turned off."))
             .ToEitherAsync()
-        let progressMessage = enableSecureBoot
+        from _2 in Context.ReportProgressAsync(enableSecureBoot
             ? $"Configuring secure boot settings (Template: {secureBootTemplate})"
-            : "Configuring secure boot settings (Secure Boot: Off)"
-        from _2 in TryAsync(() => Context.ReportProgress(progressMessage).ToUnit()).ToEither()
+            : "Configuring secure boot settings (Secure Boot: Off)")
         // Hyper-V allows us to set the SecureBootTemplate even if SecureBoot is disabled.
         // Hence, this works as expected.
         let command = PsCommandBuilder.Create()
@@ -58,7 +57,6 @@ public class ConvergeSecureBoot(
             .AddParameter("SecureBootTemplate", secureBootTemplate)
         from _3 in Context.Engine.RunAsync(command).ToError().ToAsync()
         select unit;
-
 
     private EitherAsync<Error, VMFirmwareInfo> GetFirmwareInfo(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>

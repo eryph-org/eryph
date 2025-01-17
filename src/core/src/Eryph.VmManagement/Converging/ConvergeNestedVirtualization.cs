@@ -39,10 +39,9 @@ public class ConvergeNestedVirtualization(
         from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
                 Error.New("Cannot change virtualization settings of a catlet which is not turned off."))
             .ToEitherAsync()
-        let progressMessage = exposeVirtualizationExtensions
+        from _2 in Context.ReportProgressAsync(exposeVirtualizationExtensions
             ? "Enabling nested virtualization."
-            : "Disabling nested virtualization."
-        from _2 in TryAsync(() => Context.ReportProgress(progressMessage).ToUnit()).ToEither()
+            : "Disabling nested virtualization.")
         let command = PsCommandBuilder.Create()
             .AddCommand("Set-VMProcessor")
             .AddParameter("VM", vmInfo.PsObject)
