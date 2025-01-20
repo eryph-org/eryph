@@ -111,7 +111,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in Context.ReportProgressAsync($"Add Network Adapter: {adapterConfig.AdapterName}")
         let command = PsCommandBuilder.Create()
-            .AddCommand("Add-VmNetworkAdapter")
+            .AddCommand("Add-VMNetworkAdapter")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("Name", adapterConfig.AdapterName)
             .AddParameter("StaticMacAddress", adapterConfig.MacAddress)
@@ -144,9 +144,10 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         string macAddress) =>
         from _ in RightAsync<Error, Unit>(unit)
         let command = PsCommandBuilder.Create()
-            .AddCommand("Set-VmNetworkAdapter")
+            .AddCommand("Set-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
             .AddParameter("StaticMacAddress", macAddress)
+        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
         select unit;
 
     private EitherAsync<Error, Unit> ConnectAdapter(
@@ -155,7 +156,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         from _ in Context.ReportProgressAsync(
             $"Connected Network Adapter {adapter.Value.Name} to network {adapterConfig.NetworkName}")
         let command = PsCommandBuilder.Create()
-            .AddCommand("Connect-VmNetworkAdapter")
+            .AddCommand("Connect-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
             .AddParameter("SwitchName", adapterConfig.SwitchName)
         from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
