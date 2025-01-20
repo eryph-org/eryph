@@ -4,8 +4,6 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Resources.Machines;
-using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using LanguageExt;
