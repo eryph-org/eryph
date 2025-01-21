@@ -116,6 +116,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Deleted = table.Column<bool>(type: "INTEGER", nullable: false),
                     TenantId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

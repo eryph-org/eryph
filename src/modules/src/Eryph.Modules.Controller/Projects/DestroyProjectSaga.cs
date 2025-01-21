@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Events;
@@ -62,12 +63,12 @@ namespace Eryph.Modules.Controller.Projects
                 return;
             }
 
+            project.Deleted = true;
+
             await StartNewTask(new DestroyResourcesCommand
             {
                 Resources = project.Resources.Select(x=> new Resource(x.ResourceType, x.Id)).ToArray()
             });
-
-
         }
 
         private async Task DeleteProject()

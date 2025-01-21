@@ -10,6 +10,8 @@ public class Project
 
     public required string Name { get; set; }
 
+    public bool Deleted { get; set; }
+
     public Guid TenantId { get; set; }
 
     public Tenant Tenant { get; set; } = null!;

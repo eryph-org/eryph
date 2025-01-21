@@ -77,12 +77,14 @@ public abstract class ProjectChangeTrackingTests(
         {
             var project = await stateStore.For<Project>().GetByIdAsync(ProjectId);
             project!.Name = "new-name";
+            project.Deleted = true;
 
             await stateStore.SaveChangesAsync();
         });
 
         var config = await ReadConfig(ProjectId);
         _expectedConfig.Name = "new-name";
+        _expectedConfig.Deleted = true;
         config.Should().BeEquivalentTo(_expectedConfig);
     }
 
