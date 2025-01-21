@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
+using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
@@ -63,7 +64,11 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
     private EitherAsync<Error, Unit> ConfigureTpm(
         TypedPsObject<VirtualMachineInfo> vmInfo,
         bool enableTpm) =>
-        enableTpm ? EnableTpm(vmInfo) : DisableTpm(vmInfo);
+        from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
+                Error.New("Cannot change TPM settings if the catlet is not stopped. Stop the catlet and retry."))
+            .ToEitherAsync()
+        from _2 in enableTpm ? EnableTpm(vmInfo) : DisableTpm(vmInfo)
+        select unit;
     
     private EitherAsync<Error, Unit> EnableTpm(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>

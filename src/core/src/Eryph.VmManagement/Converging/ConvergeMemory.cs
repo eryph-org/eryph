@@ -24,8 +24,12 @@ public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
         Func<string, Task> reportProgress) =>
         from configuredMemory in ValidateMemoryConfig(config.Memory)
             .ToAsync()
-        let useDynamicMemory = CatletCapabilities.IsDynamicMemoryEnabled(
-            config.Capabilities.ToSeq())
+        let capabilities = config.Capabilities.ToSeq()
+        let isDynamicMemoryEnabled = CatletCapabilities.IsDynamicMemoryEnabled(capabilities)
+        let isDynamicMemoryExplicitlyDisabled = CatletCapabilities
+            .IsDynamicMemoryExplicitlyDisabled(capabilities)
+        let useDynamicMemory = !isDynamicMemoryExplicitlyDisabled
+            && (isDynamicMemoryEnabled || configuredMemory.Minimum.IsSome || configuredMemory.Maximum.IsSome)
         // When startup, minimum and maximum are not all configured, we ensure
         // that the missing value are consistent with the configured ones.
         let minMemory = configuredMemory.Minimum
@@ -77,16 +81,12 @@ public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
                        || changedStartupMemory.IsSome
                        || changedMinMemory.IsSome
                        || changedMaxMemory.IsSome
-            ? from _ in TryAsync(async () =>
-              {
-                  await reportProgress(message);
-                  return unit;
-              }).ToEither()
+            ? from _ in TryAsync(() => reportProgress(message).ToUnit()).ToEither()
               from __ in powershellEngine.RunAsync(command5).ToError().ToAsync()
-              from reloadedVmInfo in vmInfo.RecreateOrReload(powershellEngine)
-              select reloadedVmInfo
-            : vmInfo
-        select vmInfo;
+              select unit
+            : RightAsync<Error, Unit>(unit)
+        from reloadedVmInfo in vmInfo.RecreateOrReload(powershellEngine)
+        select reloadedVmInfo;
 
     private static Either<
             Error,

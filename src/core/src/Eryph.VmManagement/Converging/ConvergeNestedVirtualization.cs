@@ -3,60 +3,61 @@ using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.VmManagement.Converging;
 
-public class ConvergeNestedVirtualization : ConvergeTaskBase
+public class ConvergeNestedVirtualization(
+    ConvergeContext context)
+    : ConvergeTaskBase(context)
 {
-    public ConvergeNestedVirtualization(ConvergeContext context) : base(context)
-    {
-    }
+    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        ConvergeNestedVirtualizationState(vmInfo).ToEither();
 
-    public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
-        TypedPsObject<VirtualMachineInfo> vmInfo)
-    {
-        var capability = Context.Config.Capabilities?.FirstOrDefault(x => x.Name ==
-            EryphConstants.Capabilities.NestedVirtualization);
+    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeNestedVirtualizationState(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let expectedNestedVirtualization = CatletCapabilities.IsNestedVirtualizationEnabled(
+            Context.Config.Capabilities.ToSeq())
+        from vmProcessorInfo in GetVmProcessorInfo(vmInfo)
+        let actualNestedVirtualization = vmProcessorInfo.ExposeVirtualizationExtensions
+        from __ in expectedNestedVirtualization == actualNestedVirtualization
+            ? RightAsync<Error, Unit>(unit)
+            : ConfigureNestedVirtualization(vmInfo, expectedNestedVirtualization)
+        from updatedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+        select updatedVmInfo;
 
-        if (capability == null)
-            return vmInfo;
+    private EitherAsync<Error, Unit> ConfigureNestedVirtualization(
+        TypedPsObject<VirtualMachineInfo> vmInfo,
+        bool exposeVirtualizationExtensions) =>
+        from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
+                Error.New("Cannot change virtualization settings if the catlet is not stopped. Stop the catlet and retry."))
+            .ToEitherAsync()
+        from _2 in Context.ReportProgressAsync(exposeVirtualizationExtensions
+            ? "Enabling nested virtualization."
+            : "Disabling nested virtualization.")
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Set-VMProcessor")
+            .AddParameter("VM", vmInfo.PsObject)
+            .AddParameter("ExposeVirtualizationExtensions", exposeVirtualizationExtensions)
+        from _3 in Context.Engine.RunAsync(command).ToError().ToAsync()
+        select unit;
 
-        var onOffState = (capability.Details?.Any(x =>
-            string.Equals(x, EryphConstants.CapabilityDetails.Disabled, 
-                StringComparison.OrdinalIgnoreCase))).GetValueOrDefault() ? OnOffState.Off : OnOffState.On;
-
-        return await (from exposedExtensions in Context.Engine.GetObjectValuesAsync<bool>(new PsCommandBuilder()
-                .AddCommand("Get-VMProcessor")
-                .AddParameter("VM",vmInfo.PsObject)
-                .AddCommand("Select-Object")
-                .AddParameter("ExpandProperty", "ExposeVirtualizationExtensions")
-            ).ToError().Bind(
-                r => r.HeadOrLeft(Error.New("Failed to read processor details.")).ToAsync())
-            let currentOnOffState = exposedExtensions ? OnOffState.On : OnOffState.Off
-            from uNestedVirtualization in currentOnOffState == onOffState
-                ? Unit.Default
-                : Unit.Default.Apply(async _ =>
-                {
-                    if (vmInfo.Value.State == VirtualMachineState.Running)
-                        return Error.New("Cannot change nested virtualization settings of a running catlet.");
-
-                    if(onOffState == OnOffState.On)
-                        await Context.ReportProgress("Enabling nested virtualization.").ConfigureAwait(false);
-                    else
-                        await Context.ReportProgress("Disabling nested virtualization.").ConfigureAwait(false);
-
-                    return await Context.Engine.RunAsync(PsCommandBuilder.Create()
-                        .AddCommand("Set-VMProcessor")
-                        .AddParameter("VM", vmInfo.PsObject)
-                        .AddParameter("ExposeVirtualizationExtensions", onOffState == OnOffState.On)
-                        ).ToError();
-                }).ToAsync()
-            from newVmInfo in vmInfo.RecreateOrReload(Context.Engine)
-            select newVmInfo).ToEither();
-
-
-    }
+    private EitherAsync<Error, VMProcessorInfo> GetVmProcessorInfo(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-VMProcessor")
+            .AddParameter("VM", vmInfo.PsObject)
+        from vmSecurityInfos in Context.Engine.GetObjectValuesAsync<VMProcessorInfo>(command)
+            .ToError()
+        from vmSecurityInfo in vmSecurityInfos.HeadOrNone()
+            .ToEitherAsync(Error.New($"Failed to fetch processor information for the VM {vmInfo.Value.Id}."))
+        select vmSecurityInfo;
 }

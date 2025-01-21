@@ -1,78 +1,78 @@
 ﻿using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.VmManagement.Converging;
-using LanguageExt;
-using LanguageExt.Common;
+using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.Core;
+using Eryph.VmManagement.Data.Full;
+using FluentAssertions;
 using Xunit;
 
-namespace Eryph.VmManagement.Test
+using static LanguageExt.Prelude;
+
+namespace Eryph.VmManagement.Test;
+
+public class ConvergeNestedVirtualizationTests
 {
-    public class ConvergeNestedVirtualizationTests
+    private readonly ConvergeFixture _fixture = new();
+    private readonly ConvergeNestedVirtualization _convergeTask;
+    private readonly TypedPsObject<VirtualMachineInfo> _vmInfo;
+    private AssertCommand? _executedCommand;
+
+    public ConvergeNestedVirtualizationTests()
     {
-        private readonly ConvergeFixture _fixture = new();
-
-        [Theory]
-        [InlineData(false, false)]
-        [InlineData(false, true)]
-        [InlineData(true, false)]
-        [InlineData(true, true)]
-        [InlineData(true, null)]
-        [InlineData(false, null)]
-
-        public async Task Converges_NestedVirtualization_if_necessary(bool exposed, bool? shouldExpose)
+        _convergeTask = new(_fixture.Context);
+        _vmInfo = _fixture.Engine.ToPsObject(new VirtualMachineInfo()
         {
-            var vmData = _fixture.Engine.ToPsObject(
-                new Data.Full.VirtualMachineInfo());
-            var called = false;
+            State = VirtualMachineState.Off,
+        });
+        _fixture.Engine.RunCallback = cmd =>
+        {
+            _executedCommand = cmd;
+            return unit;
+        };
+    }
 
-
-            if(shouldExpose.HasValue)
-                _fixture.Config.Capabilities = new[]
+    [Theory, CombinatorialData]
+    public async Task Converge_EnablesNestedVirtualizationWhenNecessary(bool exposed, bool? shouldExpose)
+    {
+        _fixture.Config.Capabilities = shouldExpose.HasValue switch
+        {
+            true =>
+            [
+                new CatletCapabilityConfig
                 {
-                    new CatletCapabilityConfig
-                    {
-                        Name = EryphConstants.Capabilities.NestedVirtualization,
-                        Details = new []{shouldExpose.GetValueOrDefault() 
-                            ? EryphConstants.CapabilityDetails.Enabled
-                            : EryphConstants.CapabilityDetails.Disabled}
-                    }
-                };
-
-            AssertCommand? runCommand = null;
-            _fixture.Engine.RunCallback = command =>
-            {
-                called = true;
-                runCommand = command;
-                return Unit.Default;
-            };
-            _fixture.Engine.GetValuesCallback = (_, command) =>
-            {
-                if (command.ToString().StartsWith("Get-VMProcessor"))
-                {
-                    return new object []{exposed}.ToSeq();
+                    Name = EryphConstants.Capabilities.NestedVirtualization,
+                    Details = shouldExpose.GetValueOrDefault()
+                        ? [EryphConstants.CapabilityDetails.Enabled]
+                        : [EryphConstants.CapabilityDetails.Disabled],
                 }
+            ],
+            false => null,
+        };
 
-                return new PowershellFailure{ Message = $"Unexpected command {command}"};
-            };
+        _fixture.Engine.GetValuesCallback = (_, command) =>
+        {
+            command.ShouldBeCommand("Get-VMProcessor")
+                .ShouldBeParam("VM", _vmInfo.PsObject)
+                .ShouldBeComplete();
 
-
-            var convergeTask = new ConvergeNestedVirtualization(_fixture.Context);
-            await convergeTask.Converge(vmData);
-
-            if (exposed == shouldExpose || shouldExpose == null)
+            return Seq1<object>(new VMProcessorInfo
             {
-                Assert.False(called);
-                return;
-            }
-            
-            Assert.True(called);
-            Assert.NotNull(runCommand);
-            runCommand.ShouldBeCommand("Set-VMProcessor")
-                .ShouldBeParam("VM")
-                .ShouldBeParam("ExposeVirtualizationExtensions", shouldExpose);
+                ExposeVirtualizationExtensions = exposed,
+            });
+        };
 
+        await _convergeTask.Converge(_vmInfo);
 
+        if (exposed == shouldExpose.GetValueOrDefault())
+        {
+            _executedCommand.Should().BeNull();
+            return;
         }
-
+        
+        _executedCommand.Should().NotBeNull();
+        _executedCommand!.ShouldBeCommand("Set-VMProcessor")
+            .ShouldBeParam("VM")
+            .ShouldBeParam("ExposeVirtualizationExtensions", shouldExpose.GetValueOrDefault());
     }
 }
