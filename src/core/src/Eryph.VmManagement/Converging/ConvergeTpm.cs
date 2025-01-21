@@ -65,7 +65,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         TypedPsObject<VirtualMachineInfo> vmInfo,
         bool enableTpm) =>
         from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
-                Error.New("Cannot change TPM settings of a catlet which is not turned off."))
+                Error.New("Cannot change TPM settings if the catlet is not stopped. Stop the catlet and retry."))
             .ToEitherAsync()
         from _2 in enableTpm ? EnableTpm(vmInfo) : DisableTpm(vmInfo)
         select unit;

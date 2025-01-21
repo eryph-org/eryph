@@ -37,7 +37,7 @@ public class ConvergeNestedVirtualization(
         TypedPsObject<VirtualMachineInfo> vmInfo,
         bool exposeVirtualizationExtensions) =>
         from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
-                Error.New("Cannot change virtualization settings of a catlet which is not turned off."))
+                Error.New("Cannot change virtualization settings if the catlet is not stopped. Stop the catlet and retry."))
             .ToEitherAsync()
         from _2 in Context.ReportProgressAsync(exposeVirtualizationExtensions
             ? "Enabling nested virtualization."

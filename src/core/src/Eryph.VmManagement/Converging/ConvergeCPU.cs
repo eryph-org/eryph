@@ -19,7 +19,7 @@ namespace Eryph.VmManagement.Converging
             if (vmInfo.Value.ProcessorCount == configCount) return vmInfo;
 
             if (vmInfo.Value.State is not (VirtualMachineState.Off or VirtualMachineState.OffCritical))
-                return Error.New("Cannot change CPU count of a catlet which is not turned off.");
+                return Error.New("Cannot change CPU count if the catlet is not stopped. Stop the catlet and retry.");
 
             await Context.ReportProgress($"Configure Catlet CPU count: {configCount}").ConfigureAwait(false);
 

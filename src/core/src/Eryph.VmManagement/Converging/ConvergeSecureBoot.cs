@@ -43,7 +43,7 @@ public class ConvergeSecureBoot(
         bool enableSecureBoot,
         string secureBootTemplate) =>
         from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
-                Error.New("Cannot change secure boot settings of a catlet which is not turned off."))
+                Error.New("Cannot change secure boot settings if the catlet is not stopped. Stop the catlet and retry."))
             .ToEitherAsync()
         from _2 in Context.ReportProgressAsync(enableSecureBoot
             ? $"Configuring secure boot settings (Template: {secureBootTemplate})"
