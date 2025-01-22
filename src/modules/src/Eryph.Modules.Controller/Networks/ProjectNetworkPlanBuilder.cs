@@ -157,13 +157,13 @@ internal class ProjectNetworkPlanBuilder(
             .ToAsync()
         let updatedPlan = networkPlan
             .AddRouterPort($"externalNet-{networkPlan.Id}-{portInfo.Network.NetworkProvider}",
-                $"project-{networkPlan.Id}",
+                $"project-{networkPlan.Id}-{portInfo.Network.Name}",
                 portInfo.Port.MacAddress, parsedExternalIp, externalNetwork, "local")
 
-            .AddNATRule($"project-{networkPlan.Id}", "snat",
+            .AddNATRule($"project-{networkPlan.Id}-{portInfo.Network.Name}", "snat",
                 parsedExternalIp, "", portInfo.Network.IpNetwork)
 
-            .AddStaticRoute($"project-{networkPlan.Id}", "0.0.0.0/0", gatewayIp)
+            .AddStaticRoute($"project-{networkPlan.Id}-{portInfo.Network.Name}", "0.0.0.0/0", gatewayIp)
         select updatedPlan;
 
     private static EitherAsync<Error, NetworkPlan> AddExternalNetSwitches(
@@ -285,7 +285,9 @@ internal class ProjectNetworkPlanBuilder(
                 var externalIpAddress = portInfo.Port.IpAssignments.First().IpAddress.Apply(IPAddress.Parse);
                 var internalIp = portInfo.Port.AssignedPort.IpAssignments.First().IpAddress;
 
-                return networkPlan.AddNATRule($"project-{networkPlan.Id}", "dnat_and_snat",
+                return networkPlan.AddNATRule(
+                    $"project-{networkPlan.Id}-{portInfo.Port.AssignedPort.Network.Name}",
+                    "dnat_and_snat",
                     externalIpAddress, portInfo.Port.MacAddress,
                     internalIp, portInfo.Port.AssignedPort.OvsName);
 
@@ -295,17 +297,16 @@ internal class ProjectNetworkPlanBuilder(
 
     private static NetworkPlan AddProjectRouterAndPorts(NetworkPlan networkPlan, Seq<VirtualNetwork> networks)
     {
-        if(networks.Length > 0)
-            networkPlan = networkPlan.AddRouter($"project-{networkPlan.Id}");
-
         return networks.Map(network =>
         {
             var ipNetwork = IPNetwork2.Parse(network.IpNetwork);
             if (network.RouterPort == null || network.RouterPort.IpAssignments?.Count == 0)
                 return networkPlan;
+            
+            networkPlan = networkPlan.AddRouter($"project-{networkPlan.Id}-{network.Name}");
 
             return networkPlan.AddRouterPort(network.Id.ToString(),
-                $"project-{networkPlan.Id}", network.RouterPort.MacAddress, 
+                $"project-{networkPlan.Id}-{network.Name}", network.RouterPort.MacAddress, 
                 network.RouterPort.IpAssignments!.First().IpAddress.Apply(IPAddress.Parse), ipNetwork);
         }).Apply(s => JoinPlans(s, networkPlan));
     }
