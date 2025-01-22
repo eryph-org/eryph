@@ -7,6 +7,7 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
 using Eryph.Messages.Projects;
 using Eryph.Messages.Resources.Commands;
+using Eryph.Modules.Controller.Inventory;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
@@ -19,6 +20,7 @@ namespace Eryph.Modules.Controller.Projects;
 
 [UsedImplicitly]
 internal class DestroyProjectSaga(
+    IInventoryLockManager lockManager,
     IWorkflow workflow,
     IStateStore stateStore)
     : OperationTaskWorkflowSaga<DestroyProjectCommand, DestroyProjectSagaData>(workflow),
@@ -68,18 +70,23 @@ internal class DestroyProjectSaga(
     private async Task DeleteProject()
     {
         var project = await stateStore.For<Project>().GetByIdAsync(Data.ProjectId);
+        if (project is null)
+            return;
 
-        if (project != null)
+        var disks = await stateStore.For<VirtualDisk>()
+            .ListAsync(new VirtualDiskSpecs.FindDeletedInProject(project.Id));
+        var diskIdentifiers = disks.Select(d => d.DiskIdentifier).Distinct().Order();
+        foreach (var diskIdentifier in diskIdentifiers)
         {
-            var disks = await stateStore.For<VirtualDisk>()
-                .ListAsync(new VirtualDiskSpecs.FindDeletedInProject(project.Id));
-            var roleAssignments = await stateStore.For<ProjectRoleAssignment>()
-                .ListAsync(new ProjectRoleAssignmentSpecs.GetByProject(project.Id));
-
-            await stateStore.For<VirtualDisk>().DeleteRangeAsync(disks);
-            await stateStore.For<ProjectRoleAssignment>().DeleteRangeAsync(roleAssignments);
-            await stateStore.For<Project>().DeleteAsync(project);
+            await lockManager.AcquireVhdLock(diskIdentifier);
         }
+        await stateStore.For<VirtualDisk>().DeleteRangeAsync(disks);
+
+        var roleAssignments = await stateStore.For<ProjectRoleAssignment>()
+            .ListAsync(new ProjectRoleAssignmentSpecs.GetByProject(project.Id));
+        await stateStore.For<ProjectRoleAssignment>().DeleteRangeAsync(roleAssignments);
+        
+        await stateStore.For<Project>().DeleteAsync(project);
     }
 
     public Task Handle(OperationTaskStatusEvent<DestroyResourcesCommand> message)

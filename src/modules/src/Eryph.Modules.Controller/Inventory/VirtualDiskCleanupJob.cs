@@ -21,9 +21,16 @@ internal class VirtualDiskCleanupJob(Container container) : IJob
     {
         await using var scope = AsyncScopedLifestyle.BeginScope(container);
         var stateStore = container.GetInstance<IStateStore>();
+        var lockManager = container.GetInstance<IInventoryLockManager>();
 
         var disks = await stateStore.For<VirtualDisk>().ListAsync(
             new VirtualDiskSpecs.FindDeleted(DateTimeOffset.UtcNow.AddHours(-1)));
+        var diskIdentifiers = disks.Select(d => d.DiskIdentifier).Distinct().Order();
+        foreach (var diskIdentifier in diskIdentifiers)
+        {
+            await lockManager.AcquireVhdLock(diskIdentifier);
+        }
+
         await stateStore.For<VirtualDisk>().DeleteRangeAsync(disks);
         
         await stateStore.SaveChangesAsync();
