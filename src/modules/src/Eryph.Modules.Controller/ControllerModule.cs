@@ -68,17 +68,27 @@ namespace Eryph.Modules.Controller
                 q.AddJob<InventoryTimerJob>(
                     job => job.WithIdentity(InventoryTimerJob.Key)
                         .DisallowConcurrentExecution());
+                q.AddJob<VirtualDiskCleanupJob>(
+                    job => job.WithIdentity(VirtualDiskCleanupJob.Key)
+                        .DisallowConcurrentExecution());
 
                 q.AddTrigger(trigger => trigger.WithIdentity("InventoryTimerJobTrigger")
                     .ForJob(InventoryTimerJob.Key)
                     .StartNow()
                     .WithSimpleSchedule(s => s.WithInterval(_inventoryConfig.InventoryInterval).RepeatForever()));
+                q.AddTrigger(trigger => trigger.WithIdentity("VirtualDiskCleanupJobTrigger")
+                    .ForJob(VirtualDiskCleanupJob.Key)
+                    .StartNow()
+                    .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromHours(1))));
 
                 // The scheduled trigger will only fire the first time after waiting for one interval
                 // (normally 10 minutes). We add another trigger without a schedule to trigger the job
                 // immediately when the scheduler starts.
                 q.AddTrigger(trigger => trigger.WithIdentity("InventoryTimerJobStartupTrigger")
                     .ForJob(InventoryTimerJob.Key)
+                    .StartNow());
+                q.AddTrigger(trigger => trigger.WithIdentity("VirtualDiskCleanupJobStartupTrigger")
+                    .ForJob(VirtualDiskCleanupJob.Key)
                     .StartNow());
             });
             services.AddQuartzHostedService();
@@ -105,7 +115,6 @@ namespace Eryph.Modules.Controller
             container.Register<IVirtualMachineDataService, VirtualMachineDataService>(Lifestyle.Scoped);
             container.Register<IVirtualMachineMetadataService, VirtualMachineMetadataService>(Lifestyle.Scoped);
             container.Register<IVMHostMachineDataService, VMHostMachineDataService>(Lifestyle.Scoped);
-            container.Register<IVirtualDiskDataService, VirtualDiskDataService>(Lifestyle.Scoped);
             container.Register<IProjectNetworkPlanBuilder, ProjectNetworkPlanBuilder>(Lifestyle.Scoped);
 
             container.Register<ICatletIpManager, CatletIpManager>(Lifestyle.Scoped);

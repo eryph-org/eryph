@@ -410,7 +410,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<bool>("Deleted")
+                    b.Property<bool>("BeingDeleted")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("Name")
@@ -718,6 +718,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<DateTimeOffset>("LastInventory")
+                        .HasColumnType("datetime(6)");
+
                     b.ToTable("CatletFarms");
                 });
 
@@ -728,6 +731,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("DataStore")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<Guid>("DiskIdentifier")
                         .HasColumnType("char(36)");

@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Disks;
 using Eryph.Modules.Controller.DataServices;
+using Eryph.StateDb;
+using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 
 namespace Eryph.Modules.Controller.Inventory;
@@ -15,7 +17,7 @@ namespace Eryph.Modules.Controller.Inventory;
 [UsedImplicitly]
 internal class CheckDisksExistsReplyHandler(
     IWorkflow workflow,
-    IVirtualDiskDataService dataService,
+    IStateStoreRepository<VirtualDisk> repository,
     IInventoryLockManager lockManager)
     : IHandleMessages<OperationTaskStatusEvent<CheckDisksExistsCommand>>
 {
@@ -27,7 +29,7 @@ internal class CheckDisksExistsReplyHandler(
         if (message.GetMessage(workflow.WorkflowOptions.JsonSerializerOptions) is not CheckDisksExistsReply reply)
             return;
 
-        if (reply.MissingDisks is not { Length: > 0 })
+        if (reply.MissingDisks is not { Count: > 0 })
             return;
 
         // Acquire all necessary locks in the beginning to minimize the potential for deadlocks.
@@ -36,9 +38,14 @@ internal class CheckDisksExistsReplyHandler(
             await lockManager.AcquireVhdLock(diskIdentifier);
         }
 
-        foreach (var disk in reply.MissingDisks)
+        foreach (var diskInfo in reply.MissingDisks)
         {
-            await dataService.DeleteVHD(disk.Id);
+            var disk = await repository.GetByIdAsync(diskInfo.Id);
+            if (disk is not null)
+            {
+                disk.Deleted = true;
+                disk.LastSeen = reply.Timestamp;
+            }
         }
     }
 }

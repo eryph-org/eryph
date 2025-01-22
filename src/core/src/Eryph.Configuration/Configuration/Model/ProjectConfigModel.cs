@@ -8,8 +8,6 @@ namespace Eryph.Configuration.Model
     {
         public string Name { get; set; }
 
-        public bool Deleted { get; set; }
-
         public Guid TenantId { get; set; }
 
         public ProjectRoleAssignmentConfigModel[] Assignments { get; set; }

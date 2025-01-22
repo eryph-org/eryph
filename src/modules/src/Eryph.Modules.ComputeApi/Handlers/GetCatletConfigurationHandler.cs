@@ -66,7 +66,7 @@ internal class GetCatletConfigurationHandler(
                 
             var driveConfig = new CatletDriveConfig();
 
-            if (drive.AttachedDisk != null)
+            if (drive.AttachedDisk is { Deleted: false })
             {
                 driveConfig.Name = drive.AttachedDisk.Name;
 

@@ -49,7 +49,6 @@ internal class ProjectChangeHandler : IChangeHandler<ProjectChange>
         {
             TenantId = project.TenantId,
             Name = project.Name,
-            Deleted = project.Deleted,
             Assignments = project.ProjectRoles.Map(r => new ProjectRoleAssignmentConfigModel()
             {
                 IdentityId = r.IdentityId,

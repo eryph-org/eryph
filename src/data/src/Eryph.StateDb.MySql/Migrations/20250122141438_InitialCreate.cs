@@ -138,7 +138,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Name = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Deleted = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    BeingDeleted = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     TenantId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
                 },
                 constraints: table =>
@@ -165,7 +165,8 @@ namespace Eryph.StateDb.MySql.Migrations
                     Environment = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     HardwareId = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4")
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    LastInventory = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -282,6 +283,7 @@ namespace Eryph.StateDb.MySql.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     DiskIdentifier = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    Deleted = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     Path = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     FileName = table.Column<string>(type: "longtext", nullable: true)

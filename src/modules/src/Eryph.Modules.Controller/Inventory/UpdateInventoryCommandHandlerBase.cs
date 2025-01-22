@@ -29,8 +29,6 @@ namespace Eryph.Modules.Controller.Inventory
     {
         private readonly IOperationDispatcher _dispatcher;
         private readonly IVirtualMachineDataService _vmDataService;
-        private readonly IVirtualDiskDataService _vhdDataService;
-
         private readonly IInventoryLockManager _lockManager;
         private readonly IVirtualMachineMetadataService _metadataService;
         private readonly IStateStore _stateStore;
@@ -42,7 +40,6 @@ namespace Eryph.Modules.Controller.Inventory
             IVirtualMachineMetadataService metadataService,
             IOperationDispatcher dispatcher,
             IVirtualMachineDataService vmDataService, 
-            IVirtualDiskDataService vhdDataService,
             IStateStore stateStore,
             IMessageContext messageContext,
             ILogger logger)
@@ -51,7 +48,6 @@ namespace Eryph.Modules.Controller.Inventory
             _metadataService = metadataService;
             _dispatcher = dispatcher;
             _vmDataService = vmDataService;
-            _vhdDataService = vhdDataService;
             _stateStore = stateStore;
             _messageContext = messageContext;
             _logger = logger;
@@ -89,6 +85,12 @@ namespace Eryph.Modules.Controller.Inventory
                 {
                     var optionalMachine = (await _vmDataService.GetVM(metadata.MachineId));
                     var project = await FindRequiredProject(vmInfo.ProjectName, vmInfo.ProjectId);
+                    if (project.BeingDeleted)
+                    {
+                        _logger.LogDebug("Skipping inventory update for VM {VmId}. The project {ProjectName}({ProjectId}) is marked as deleted.",
+                            vmInfo.VMId, project.Name, project.Id);
+                        return;
+                    }
 
                     //machine not found or metadata is assigned to new VM - a new VM resource will be created
                     if (optionalMachine.IsNone || metadata.VMId != vmInfo.VMId)
@@ -258,7 +260,7 @@ namespace Eryph.Modules.Controller.Inventory
             DateTimeOffset timestamp)
         {
             var disk = await Optional(driveData.Disk)
-                .MapAsync(d => AddOrUpdateDisk(agentName, timestamp, d))
+                .BindAsync(d => AddOrUpdateDisk(agentName, timestamp, d).ToAsync())
                 .ToOption();
 
             return new CatletDrive
@@ -288,7 +290,7 @@ namespace Eryph.Modules.Controller.Inventory
             return features;
         }
 
-        protected async Task<VirtualDisk> AddOrUpdateDisk(
+        protected async Task<Option<VirtualDisk>> AddOrUpdateDisk(
             string agentName,
             DateTimeOffset timestamp,
             DiskInfo diskInfo)
@@ -297,7 +299,10 @@ namespace Eryph.Modules.Controller.Inventory
             if (disk is not null && disk.LastSeen >= timestamp)
                 return disk;
 
-            VirtualDisk? parentDisk = null;
+            if (disk is not null && disk.Project.BeingDeleted)
+                return None;
+
+            Option<VirtualDisk> parentDisk = null;
             if (diskInfo.Parent is not null)
             {
                 parentDisk = await AddOrUpdateDisk(agentName, timestamp, diskInfo.Parent);
@@ -309,19 +314,21 @@ namespace Eryph.Modules.Controller.Inventory
                 // Disks are looked up per project so we are always creating a
                 // new disk entry in the database.
 
-                disk.Parent = parentDisk;
+                disk.Parent = parentDisk.IfNoneUnsafe(() => null);
                 disk.SizeBytes = diskInfo.SizeBytes;
                 disk.UsedSizeBytes = diskInfo.UsedSizeBytes;
                 disk.Frozen = diskInfo.Frozen;
+                disk.Deleted = false;
                 disk.LastSeen = timestamp;
                 disk.LastSeenAgent = agentName;
-                await _vhdDataService.UpdateVhd(disk);
                 await _stateStore.SaveChangesAsync();
                 return disk;
             }
 
             var project = await FindProject(diskInfo.ProjectName, diskInfo.ProjectId)
                 .IfNoneAsync(() => FindRequiredProject(EryphConstants.DefaultProjectName, null));
+            if (project.BeingDeleted)
+                return None;
 
             disk = new VirtualDisk
             {
@@ -339,12 +346,12 @@ namespace Eryph.Modules.Controller.Inventory
                 GeneArchitecture = diskInfo.Gene?.Architecture.Value,
                 SizeBytes = diskInfo.SizeBytes,
                 UsedSizeBytes = diskInfo.UsedSizeBytes,
-                Frozen = diskInfo.Frozen, 
+                Frozen = diskInfo.Frozen,
                 LastSeen = timestamp,
                 LastSeenAgent = agentName,
-                Parent = parentDisk,
+                Parent = parentDisk.IfNoneUnsafe(() => null),
             };
-            await _vhdDataService.AddNewVHD(disk);
+            await _stateStore.For<VirtualDisk>().AddAsync(disk);
             await _stateStore.SaveChangesAsync();
             return disk;
         }
@@ -411,5 +418,17 @@ namespace Eryph.Modules.Controller.Inventory
                 .Distinct()
                 .Order()
                 .ToSeq();
+
+        protected bool IsUpdateOutdated(CatletFarm vmHost, DateTimeOffset timestamp)
+        {
+            if (vmHost.LastInventory >= timestamp)
+            {
+                _logger.LogInformation(
+                    "Skipping inventory update for host {Hostname} with timestamp {Timestamp:O}. Most recent information is dated {LastInventory:O}.",
+                    vmHost.Name, timestamp, vmHost.LastInventory);
+                return true;
+            }
+            return false;
+        }
     }
 }

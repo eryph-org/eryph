@@ -10,6 +10,7 @@ public class CatletSpecBuilder(
 {
     protected override void CustomizeQuery(ISpecificationBuilder<Catlet> query)
     {
+        query.Include(x => x.Drives).ThenInclude(d => d.AttachedDisk);
         query.Include(x => x.ReportedNetworks);
     }
 }

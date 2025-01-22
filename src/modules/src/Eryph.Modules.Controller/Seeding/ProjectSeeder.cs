@@ -61,7 +61,6 @@ internal class ProjectSeeder : SeederBase
         {
             Id = entityId,
             Name = projectConfig.Name,
-            Deleted = projectConfig.Deleted,
             TenantId = tenantId,
             ProjectRoles = projectConfig.Assignments?.Map(ac => new ProjectRoleAssignment()
             {

@@ -1,8 +1,12 @@
-﻿using Eryph.Resources.Disks;
+﻿using System;
+using System.Collections.Generic;
+using Eryph.Resources.Disks;
 
 namespace Eryph.Messages.Resources.Disks;
 
 public class CheckDisksExistsReply
 {
-    public DiskInfo[] MissingDisks { get; set; }
+    public IReadOnlyList<DiskInfo> MissingDisks { get; set; }
+
+    public DateTimeOffset Timestamp { get; set; }
 }

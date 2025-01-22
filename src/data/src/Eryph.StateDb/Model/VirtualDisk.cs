@@ -17,6 +17,14 @@ public class VirtualDisk : Disk
 
     public bool Frozen { get; set; }
 
+    /// <summary>
+    /// Indicates that the disk has been deleted. Disk are not
+    /// directly removed from the database but marked as deleted.
+    /// Otherwise, the inventory might add deleted disks again in
+    /// some corner cases.
+    /// </summary>
+    public bool Deleted { get; set; }
+
     public string? Path { get; set; }
         
     public string? FileName { get; set; }

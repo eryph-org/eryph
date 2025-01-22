@@ -4,6 +4,7 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using JetBrains.Annotations;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Rebus.Pipeline;
@@ -11,38 +12,31 @@ using Rebus.Pipeline;
 namespace Eryph.Modules.Controller.Inventory;
 
 [UsedImplicitly]
-internal class UpdateVMInventoryCommandHandler
-    : UpdateInventoryCommandHandlerBase,
-    IHandleMessages<UpdateInventoryCommand>
-{
-    private readonly IVMHostMachineDataService _vmHostDataService;
-
-    public UpdateVMInventoryCommandHandler(
-        IInventoryLockManager lockManager,
-        IVirtualMachineMetadataService metadataService,
-        IOperationDispatcher dispatcher,
-        IMessageContext messageContext,
-        IVirtualMachineDataService vmDataService,
-        IVirtualDiskDataService vhdDataService,
-        IVMHostMachineDataService vmHostDataService,
-        IStateStore stateStore,
-        ILogger logger) :
-        base(lockManager,
+internal class UpdateVMInventoryCommandHandler(
+    IInventoryLockManager lockManager,
+    IVirtualMachineMetadataService metadataService,
+    IOperationDispatcher dispatcher,
+    IMessageContext messageContext,
+    IVirtualMachineDataService vmDataService,
+    IVMHostMachineDataService vmHostDataService,
+    IStateStore stateStore,
+    ILogger logger)
+    : UpdateInventoryCommandHandlerBase(
+            lockManager,
             metadataService,
             dispatcher,
             vmDataService,
-            vhdDataService,
             stateStore,
             messageContext,
-            logger)
+            logger),
+        IHandleMessages<UpdateInventoryCommand>
+{
+    public async Task Handle(UpdateInventoryCommand message)
     {
-        _vmHostDataService = vmHostDataService;
-    }
-
-
-    public Task Handle(UpdateInventoryCommand message)
-    {
-        return _vmHostDataService.GetVMHostByAgentName(message.AgentName)
-            .IfSomeAsync(hostMachine => UpdateVMs(message.Timestamp, [message.Inventory], hostMachine));
+        var vmHost = await vmHostDataService.GetVMHostByAgentName(message.AgentName);
+        if (vmHost.IsNone || IsUpdateOutdated(vmHost.ValueUnsafe(), message.Timestamp))
+            return;
+        
+        await UpdateVMs(message.Timestamp, [message.Inventory], vmHost.ValueUnsafe());
     }
 }

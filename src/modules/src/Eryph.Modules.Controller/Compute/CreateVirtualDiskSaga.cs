@@ -29,8 +29,7 @@ internal class CreateVirtualDiskSaga(
     IWorkflow workflow,
     IStateStore stateStore,
     IStorageManagementAgentLocator agentLocator,
-    IInventoryLockManager lockManager,
-    IVirtualDiskDataService dataService)
+    IInventoryLockManager lockManager)
     : OperationTaskWorkflowSaga<CreateVirtualDiskCommand, EryphSagaData<CreateVirtualDiskSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<CreateVirtualDiskVMCommand>>
 {
@@ -64,7 +63,7 @@ internal class CreateVirtualDiskSaga(
         {
             await lockManager.AcquireVhdLock(response.DiskInfo.DiskIdentifier);
 
-            await dataService.AddNewVHD(new VirtualDisk()
+            await stateStore.For<VirtualDisk>().AddAsync(new VirtualDisk
             {
                 ProjectId = Data.Data.ProjectId,
                 Id = Data.Data.DiskId,

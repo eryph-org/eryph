@@ -4,6 +4,7 @@ using Eryph.Messages.Resources.Disks;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using JetBrains.Annotations;
+using LanguageExt.UnsafeValueAccess;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Rebus.Pipeline;
@@ -17,7 +18,7 @@ internal class UpdateDiskInventoryCommandHandler(
     IOperationDispatcher dispatcher,
     IMessageContext messageContext,
     IVirtualMachineDataService vmDataService,
-    IVirtualDiskDataService vhdDataService,
+    IVMHostMachineDataService vmHostDataService,
     IStateStore stateStore,
     ILogger logger)
     : UpdateInventoryCommandHandlerBase(
@@ -25,7 +26,6 @@ internal class UpdateDiskInventoryCommandHandler(
             metadataService,
             dispatcher,
             vmDataService,
-            vhdDataService,
             stateStore,
             messageContext,
             logger),
@@ -35,6 +35,10 @@ internal class UpdateDiskInventoryCommandHandler(
 
     public async Task Handle(UpdateDiskInventoryCommand message)
     {
+        var vmHost = await vmHostDataService.GetVMHostByAgentName(message.AgentName);
+        if (vmHost.IsNone || IsUpdateOutdated(vmHost.ValueUnsafe(), message.Timestamp))
+            return;
+
         var diskIdentifiers = CollectDiskIdentifiers(message.Inventory.ToSeq());
         foreach (var diskIdentifier in diskIdentifiers)
         {
