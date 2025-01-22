@@ -18,8 +18,8 @@ public class VirtualDisk : Disk
     public bool Frozen { get; set; }
 
     /// <summary>
-    /// Indicates that the disk has been deleted. Disk are not
-    /// directly removed from the database but marked as deleted.
+    /// Indicates that the disk has been deleted. Disks are not
+    /// directly removed from the database but are marked as deleted.
     /// Otherwise, the inventory might add deleted disks again in
     /// some corner cases.
     /// </summary>

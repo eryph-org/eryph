@@ -296,11 +296,8 @@ namespace Eryph.Modules.Controller.Inventory
             DiskInfo diskInfo)
         {
             var disk = await GetDisk(agentName, diskInfo);
-            if (disk is not null && disk.LastSeen >= timestamp)
+            if (disk is not null && (disk.LastSeen >= timestamp || disk.Project.BeingDeleted))
                 return disk;
-
-            if (disk is not null && disk.Project.BeingDeleted)
-                return None;
 
             Option<VirtualDisk> parentDisk = null;
             if (diskInfo.Parent is not null)

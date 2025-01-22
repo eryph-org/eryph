@@ -38,8 +38,6 @@ public class RemoveVirtualDiskCommandHandler(
     private EitherAsync<Error, RemoveVirtualDiskCommandResponse> RemoveDisk(
         string path,
         string fileName) =>
-        from _1  in RightAsync<Error, Unit>(unit)
-        let timestamp = DateTimeOffset.UtcNow
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         let vhdPath = Path.Combine(path, fileName)
@@ -48,6 +46,9 @@ public class RemoveVirtualDiskCommandHandler(
         from _2 in pathExists
             ? RemoveExistingDisk(vhdPath, vmHostAgentConfig)
             : RightAsync<Error, Unit>(unit)
+        // We can take the timestamp after the operation as we are actively
+        // deleting the disk.
+        let timestamp = DateTimeOffset.UtcNow
         select new RemoveVirtualDiskCommandResponse
         {
             Timestamp = timestamp,

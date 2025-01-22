@@ -81,9 +81,9 @@ namespace Eryph.Modules.Controller
                     .StartNow()
                     .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromHours(1))));
 
-                // The scheduled trigger will only fire the first time after waiting for one interval
-                // (normally 10 minutes). We add another trigger without a schedule to trigger the job
-                // immediately when the scheduler starts.
+                // The scheduled trigger will only fire the first time after waiting for one interval.
+                // We add another trigger without a schedule to trigger the job immediately when
+                // the scheduler starts.
                 q.AddTrigger(trigger => trigger.WithIdentity("InventoryTimerJobStartupTrigger")
                     .ForJob(InventoryTimerJob.Key)
                     .StartNow());

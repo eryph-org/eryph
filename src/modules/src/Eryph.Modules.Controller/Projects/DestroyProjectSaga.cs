@@ -43,7 +43,6 @@ internal class DestroyProjectSaga(
         }
 
         var project = await stateStore.For<Project>().GetByIdAsync(Data.ProjectId);
-
         if (project == null)
         {
             await Complete();
@@ -51,7 +50,6 @@ internal class DestroyProjectSaga(
         }
 
         await stateStore.LoadCollectionAsync(project, x => x.Resources);
-
         if (project.Resources.Count == 0)
         {
             await DeleteProject();

@@ -53,7 +53,7 @@ namespace Eryph.StateDb.Specifications
         {
             public FindDeletedInProject(Guid projectId)
             {
-                Query.Where(x => x.ProjectId == projectId);
+                Query.Where(x => x.Deleted && x.ProjectId == projectId );
             }
         }
 
