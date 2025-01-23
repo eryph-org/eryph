@@ -12,6 +12,7 @@ using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Rebus.Sagas;
 using Resource = Eryph.Resources.Resource;
@@ -20,6 +21,7 @@ namespace Eryph.Modules.Controller.Projects;
 
 [UsedImplicitly]
 internal class DestroyProjectSaga(
+    ILogger logger,
     IInventoryLockManager lockManager,
     IWorkflow workflow,
     IStateStore stateStore)
@@ -72,6 +74,13 @@ internal class DestroyProjectSaga(
         var project = await stateStore.For<Project>().GetByIdAsync(Data.ProjectId);
         if (project is null)
             return;
+
+        await stateStore.LoadCollectionAsync(project, p => p.Resources);
+
+        logger.LogInformation(
+            "Deleting project {ProjectId} {ProjectName} with following resources still present:\n{Resources}",
+            project.Id, project.Name, string.Join("\n", project.Resources.ToSeq()
+                .Map(r => $"{r.ResourceType} {r.Name} {(r is VirtualDisk d ? $"Deleted: {d.Deleted}" : "")}")));
 
         var disks = await stateStore.For<VirtualDisk>()
             .ListAsync(new VirtualDiskSpecs.FindDeletedInProject(project.Id));

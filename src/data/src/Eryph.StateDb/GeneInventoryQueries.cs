@@ -48,7 +48,8 @@ internal class GeneInventoryQueries(
         CancellationToken cancellationToken = default) =>
         dbContext.VirtualDisks
             .Where(d => d.UniqueGeneIndex == uniqueGeneId.ToUniqueGeneIndex()
-                        && d.LastSeenAgent == agentName)
+                        && d.LastSeenAgent == agentName
+                        && !d.Deleted)
             .SelectMany(d => d.Children)
             .Select(c => c.Id)
             .Distinct()
@@ -59,7 +60,8 @@ internal class GeneInventoryQueries(
         where gene.GeneType != GeneType.Volume
               || !dbContext.VirtualDisks.Any(d => d.UniqueGeneIndex == gene.UniqueGeneIndex
                                                   && d.LastSeenAgent == gene.LastSeenAgent
-                                                  && (d.AttachedDrives.Count != 0 || d.Children.Count != 0))
+                                                  && !d.Deleted
+                                                  && (d.AttachedDrives.Count != 0 || d.Children.Any(c => !c.Deleted)))
         where gene.GeneType != GeneType.Fodder
               || !dbContext.MetadataGenes.Any(mg => mg.UniqueGeneIndex == gene.UniqueGeneIndex)
         select gene;
