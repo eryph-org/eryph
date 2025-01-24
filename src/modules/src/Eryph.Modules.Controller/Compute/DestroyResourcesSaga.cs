@@ -134,7 +134,7 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
             Data.Data.State = DestroyResourceState.CatletsDestroyed;
         }
 
-        if (Data.Data.State < DestroyResourceState.DiskDestroyed)
+        if (Data.Data.State < DestroyResourceState.DisksDestroyed)
         {
             if (Data.Data.PendingDisks.Count > 0)
             {
@@ -146,7 +146,7 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
                 return;
             }
 
-            Data.Data.State = DestroyResourceState.DiskDestroyed;
+            Data.Data.State = DestroyResourceState.DisksDestroyed;
         }
 
         if (Data.Data.State < DestroyResourceState.NetworksDestroyed)

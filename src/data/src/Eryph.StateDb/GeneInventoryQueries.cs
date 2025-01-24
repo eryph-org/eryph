@@ -51,6 +51,7 @@ internal class GeneInventoryQueries(
                         && d.LastSeenAgent == agentName
                         && !d.Deleted)
             .SelectMany(d => d.Children)
+            .Where(d => !d.Deleted)
             .Select(c => c.Id)
             .Distinct()
             .ToListAsync(cancellationToken);
