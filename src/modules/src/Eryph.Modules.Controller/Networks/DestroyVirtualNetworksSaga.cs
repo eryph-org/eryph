@@ -59,6 +59,7 @@ namespace Eryph.Modules.Controller.Networks
             {
                 await Complete(new DestroyResourcesResponse
                 {
+                    DetachedResources = [],
                     DestroyedResources = destroyedNetworks
                         .Select(x => new Resource(ResourceType.VirtualNetwork, x)).ToArray()
                 });
@@ -83,6 +84,7 @@ namespace Eryph.Modules.Controller.Networks
             {
                 return Complete(new DestroyResourcesResponse
                 {
+                    DetachedResources = [],
                     DestroyedResources = (Data.DestroyedNetworks ?? Array.Empty<Guid>())
                         .Select(x => new Resource(ResourceType.VirtualNetwork, x)).ToArray()
                 });

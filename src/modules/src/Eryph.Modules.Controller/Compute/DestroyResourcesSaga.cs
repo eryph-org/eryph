@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
@@ -8,11 +9,9 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
 using Eryph.ModuleCore;
 using Eryph.Resources;
-using Eryph.StateDb.Model;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using Resource = Eryph.Resources.Resource;
 
 namespace Eryph.Modules.Controller.Compute;
 
@@ -42,17 +41,17 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
         Data.Data.PendingCatlets = message.Resources
             .Where(r => r.Type == ResourceType.Catlet)
             .Select(r => r.Id)
-            .ToList();
+            .ToHashSet();
 
         Data.Data.PendingDisks = message.Resources
             .Where(r => r.Type == ResourceType.VirtualDisk)
             .Select(r => r.Id)
-            .ToList();
+            .ToHashSet();
 
         Data.Data.PendingNetworks = message.Resources
             .Where(r => r.Type == ResourceType.VirtualNetwork)
             .Select(r => r.Id)
-            .ToList();
+            .ToHashSet();
 
         await StartNextTask();
     }
@@ -67,7 +66,7 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
                 .Map(r => r.Id);
             Data.Data.PendingCatlets = Data.Data.PendingCatlets
                 .Except(removedCatlets)
-                .ToList();
+                .ToHashSet();
 
             if (Data.Data.PendingCatlets.Count > 0)
                 return;
@@ -86,7 +85,7 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
                 .Map(r => r.Id);
             Data.Data.PendingDisks = Data.Data.PendingDisks
                 .Except(removedDisks)
-                .ToList();
+                .ToHashSet();
 
             if (Data.Data.PendingDisks.Count > 0)
                 return;
@@ -104,7 +103,7 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
                 .Map(r => r.Id);
             Data.Data.PendingNetworks = Data.Data.PendingNetworks
                 .Except(removedNetworks)
-                .ToList();
+                .ToHashSet();
 
             if (Data.Data.PendingNetworks.Count > 0)
             {
@@ -113,8 +112,8 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
             
             await Complete(new DestroyResourcesResponse
             {
-                DestroyedResources = Data.Data.DestroyedResources.ToArray(),
-                DetachedResources = Data.Data.DetachedResources.ToArray()
+                DestroyedResources = Data.Data.DestroyedResources.ToList(),
+                DetachedResources = Data.Data.DetachedResources.ToList()
             });
         });
 
@@ -154,7 +153,11 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
         {
             if (Data.Data.PendingNetworks.Count > 0)
             {
-                await StartNewTask(new DestroyVirtualNetworksCommand { NetworkIds = Data.Data.PendingNetworks.ToArray() });
+                await StartNewTask(new DestroyVirtualNetworksCommand
+                {
+                    NetworkIds = Data.Data.PendingNetworks.ToArray()
+                });
+
                 return;
             }
 
@@ -163,8 +166,8 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
 
         await Complete(new DestroyResourcesResponse
         {
-            DestroyedResources = Data.Data.DestroyedResources.ToArray(),
-            DetachedResources = Data.Data.DetachedResources.ToArray()
+            DestroyedResources = Data.Data.DestroyedResources.ToList(),
+            DetachedResources = Data.Data.DetachedResources.ToList()
         });
     }
 
@@ -172,9 +175,9 @@ internal class DestroyResourcesSaga(IWorkflow workflow) :
     {
         Data.Data.DestroyedResources = Data.Data.DestroyedResources
             .Union(response.DestroyedResources.ToSeq())
-            .ToList();
+            .ToHashSet();
         Data.Data.DetachedResources = Data.Data.DetachedResources
             .Union(response.DetachedResources.ToSeq())
-            .ToList();
+            .ToHashSet();
     }
 }

@@ -37,6 +37,7 @@ internal class DestroyVirtualDiskSaga(
 
             await Complete(new DestroyResourcesResponse
             {
+                DetachedResources = [],
                 DestroyedResources = [ new Resource(ResourceType.VirtualDisk, Data.DiskId) ],
             });
         });
@@ -57,6 +58,7 @@ internal class DestroyVirtualDiskSaga(
         {
             await Complete(new DestroyResourcesResponse
             {
+                DetachedResources = [],
                 DestroyedResources = [ new Resource(ResourceType.VirtualDisk, Data.DiskId) ],
             });
             return;
@@ -73,6 +75,7 @@ internal class DestroyVirtualDiskSaga(
             await Complete(new DestroyResourcesResponse
             {
                 DetachedResources = [new Resource(ResourceType.VirtualDisk, Data.DiskId)],
+                DestroyedResources = [],
             });
             return;
         }

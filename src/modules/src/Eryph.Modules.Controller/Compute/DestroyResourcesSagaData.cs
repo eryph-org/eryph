@@ -10,17 +10,13 @@ public class DestroyResourcesSagaData : TaskWorkflowSagaData
 {
     public DestroyResourceState State { get; set; }
 
-    public Resource[]? Resources { get; set; }
+    public ISet<Guid> PendingCatlets { get; set; } = new HashSet<Guid>();
 
-    public IReadOnlyList<Guid> PendingCatlets { get; set; } = [];
+    public ISet<Guid> PendingDisks { get; set;  } = new HashSet<Guid>();
 
-    public IReadOnlyList<Guid> PendingDisks { get; set;  } = [];
+    public ISet<Guid> PendingNetworks { get; set; } = new HashSet<Guid>();
 
-    public IReadOnlyList<Guid> PendingNetworks { get; set; } = [];
-
-    public IReadOnlyList<Resource> DestroyedResources { get; set; } = [];
+    public ISet<Resource> DestroyedResources { get; set; } = new HashSet<Resource>();
     
-    public IReadOnlyList<Resource> DetachedResources { get; set; } = [];
-
-    public List<List<Resource>> DestroyGroups { get; set; }
+    public ISet<Resource> DetachedResources { get; set; } = new HashSet<Resource>();
 }
