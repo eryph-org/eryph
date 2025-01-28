@@ -237,9 +237,9 @@ internal class ProjectNetworkPlanBuilder(
         from subnetNetwork in parseIPNetwork2(subnet.IpNetwork)
             .ToEitherAsync(Error.New($"The network '{subnet.IpNetwork}' of subnet {subnet.Id} is invalid."))
         from routerPort in Optional(subnet.Network.RouterPort)
-            .ToEitherAsync(Error.New($"The network {subnet.NetworkId} has no router port assigned"))
+            .ToEitherAsync(Error.New($"The network {subnet.NetworkId} has no router port assigned."))
         from networkIp in routerPort.IpAssignments.ToSeq().HeadOrNone()
-            .ToEitherAsync(Error.New($"The network {subnet.NetworkId} has no router IP assigned"))
+            .ToEitherAsync(Error.New($"The network {subnet.NetworkId} has no router IP assigned."))
         let providerPortInfo = providerPortInfos.Find(x => x.Network.Id == subnet.NetworkId)
         let leaseTime = subnet.DhcpLeaseTime == 0 ? 3600 : subnet.DhcpLeaseTime
         let mtu = subnet.MTU == 0 ? 1400 : subnet.MTU
