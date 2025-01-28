@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
@@ -22,8 +21,12 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.VmHostAgent.Inventory;
 
 [UsedImplicitly]
-internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine, ILogger log,
+internal class InventoryRequestedEventHandler(
+    IBus bus,
+    IPowershellEngine engine,
+    ILogger log,
     WorkflowOptions workflowOptions,
+    IFileSystemService fileSystemService,
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
@@ -56,10 +59,20 @@ internal class InventoryRequestedEventHandler(IBus bus, IPowershellEngine engine
         from vmData in inventorizableVmInfos
             .Map(vmInfo => InventoryVm(inventory, vmInfo))
             .SequenceParallel()
+        from diskInfos in DiskStoreInventory.InventoryStores(
+            fileSystemService, engine, vmHostAgentConfig)
+        from __ in diskInfos.Lefts()
+            .Map(e =>
+            {
+                log.LogError(e, "Inventory of virtual disk failed");
+                return SuccessEff(unit);
+            })
+            .Sequence()
         select new UpdateVMHostInventoryCommand
         {
             HostInventory = hostInventory,
             VMInventory = vmData.Somes().ToList(),
+            DiskInventory = diskInfos.Rights().ToList(),
             Timestamp = timestamp
         };
 

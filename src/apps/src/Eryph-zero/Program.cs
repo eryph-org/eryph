@@ -939,10 +939,25 @@ internal static class Program
         RunAsAdmin(
             from configString in ReadInput(inFile)
             from hostSettings in HostSettingsProvider<SimpleConsoleRuntime>.getHostSettings()
-            from _ in VmHostAgentConfigurationUpdate<SimpleConsoleRuntime>.updateConfig(
+            from _1 in AnsiConsole<SimpleConsoleRuntime>.writeLine("Updating agent settings...")
+            from _2 in VmHostAgentConfigurationUpdate<SimpleConsoleRuntime>.updateConfig(
                 configString,
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
+            // Check that the sync service is available (and hence the VM host agent is running).
+            // When the VM host agent is not running, we do not need to sync the configuration.
+            from canConnect in use(
+                Eff(() => new CancellationTokenSource(TimeSpan.FromSeconds(2))),
+                cts => default(SimpleConsoleRuntime).SyncClientEff
+                    .Bind(sc => sc.CheckRunning(cts.Token))
+                    .IfFail(_ => false))
+            from _3 in canConnect
+                ? from _1 in AnsiConsole<SimpleConsoleRuntime>.writeLine(
+                    "eryph is running. Syncing agent settings...")
+                  from _2 in default(SimpleConsoleRuntime).SyncClientEff.Bind(
+                    sc => sc.SendSyncCommand("SYNC_AGENT_SETTINGS", CancellationToken.None))
+                  select unit
+                : SuccessAff(unit)
             select unit,
             SimpleConsoleRuntime.New());
 

@@ -66,7 +66,7 @@ internal class VirtualMachineChangedEventHandler(
         {
             AgentName = Environment.MachineName,
             Timestamp = timestamp,
-            Inventory = [data],
+            Inventory = data,
         });
 
     private bool IsInventorizable(TypedPsObject<VirtualMachineInfo> vmInfo)

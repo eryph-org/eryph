@@ -33,7 +33,7 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         from fileExists in File<RT>.exists(configPath)
         from config in fileExists
             ? from yaml in File<RT>.readAllText(configPath)
-              from config in parseConfigYaml(yaml)
+              from config in parseConfigYaml(yaml, false)
               select config
             : from config in SuccessEff(new VmHostAgentConfiguration())
               from _ in saveConfig(config, configPath, hostSettings)
@@ -53,14 +53,23 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         from __ in File<RT>.writeAllText(configPath, yaml)
         select unit;
 
-    public static Eff<VmHostAgentConfiguration> parseConfigYaml(string yaml) =>
+    public static Eff<VmHostAgentConfiguration> parseConfigYaml(
+        string yaml,
+        bool strict) =>
         from y in Optional(yaml).Filter(notEmpty)
             .ToEff(Error.New("The configuration must not be empty."))
         from config in Eff(() =>
         {
-            var yamlDeserializer = new DeserializerBuilder()
-                .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                .Build();
+            var builder = new DeserializerBuilder()
+                .WithCaseInsensitivePropertyMatching()
+                .WithNamingConvention(UnderscoredNamingConvention.Instance);
+
+            if (!strict)
+            {
+                builder = builder.IgnoreUnmatchedProperties();
+            }
+
+            var yamlDeserializer = builder.Build();
 
             return yamlDeserializer.Deserialize<VmHostAgentConfiguration>(yaml);
         }).MapFail(error => Error.New("The configuration is malformed.", error))
@@ -150,5 +159,6 @@ public static class VmHostAgentConfiguration<RT> where RT : struct,
         {
             Vms = Optional(defaults.Vms).Filter(notEmpty).IfNone(hostSettings.DefaultDataPath),
             Volumes = Optional(defaults.Volumes).Filter(notEmpty).IfNone(hostSettings.DefaultVirtualHardDiskPath),
+            WatchFileSystem = defaults.WatchFileSystem,
         };
 }

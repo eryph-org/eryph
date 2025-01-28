@@ -1,43 +1,44 @@
 ﻿using System.Threading.Tasks;
 using Dbosoft.Rebus;
-using Eryph.Rebus;
 using Eryph.StateDb;
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Eryph.Modules.Controller
+namespace Eryph.Modules.Controller;
+
+[UsedImplicitly]
+public sealed class StateStoreDbUnitOfWork(
+    StateStoreContext dbContext)
+    : IRebusUnitOfWork
 {
-    [UsedImplicitly]
-    public sealed class StateStoreDbUnitOfWork : IRebusUnitOfWork
+    private IDbContextTransaction? _dbTransaction;
+
+    public async Task Initialize()
     {
-        private readonly StateStoreContext _dbContext;
+        _dbTransaction = await dbContext.Database.BeginTransactionAsync();
+    }
 
-        public StateStoreDbUnitOfWork(StateStoreContext dbContext)
-        {
-            _dbContext = dbContext;
-        }
+    public async Task Commit()
+    {
+        await dbContext.SaveChangesAsync();
+        if(_dbTransaction is not null)
+            await _dbTransaction.CommitAsync();
+    }
 
-        public ValueTask DisposeAsync()
-        {
-            return default;
-        }
+    public async Task Rollback()
+    {
+        if (_dbTransaction is not null)
+            await _dbTransaction.RollbackAsync();
+    }
 
-        public Task Initialize()
-        {
-            return Task.CompletedTask;
-        }
+    public async ValueTask DisposeAsync()
+    {
+        if(_dbTransaction is not null)
+            await _dbTransaction.DisposeAsync();
+    }
 
-        public Task Commit()
-        {
-            return _dbContext.SaveChangesAsync();
-        }
-
-        public Task Rollback()
-        {
-            return Task.CompletedTask;
-        }
-
-        public void Dispose()
-        {
-        }
+    public void Dispose()
+    {
+        _dbTransaction?.Dispose();
     }
 }

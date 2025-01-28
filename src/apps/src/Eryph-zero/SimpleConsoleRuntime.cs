@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
 using Eryph.Core.Sys;
+using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Sys;
@@ -38,11 +39,13 @@ public readonly struct SimpleConsoleRuntime :
         new(new SimpleConsoleRuntimeEnv(
             new ZeroApplicationInfoProvider(),
             new HardwareIdProvider(new NullLoggerFactory()),
+            new SyncClient(),
             new CancellationTokenSource()));
 
     public SimpleConsoleRuntime LocalCancel => new(new SimpleConsoleRuntimeEnv(
         _env.ApplicationInfoProvider,
         _env.HardwareIdProvider,
+        _env.SyncClient,
         new CancellationTokenSource()));
 
     public CancellationToken CancellationToken => _env.CancellationTokenSource.Token;
@@ -65,12 +68,16 @@ public readonly struct SimpleConsoleRuntime :
     public Eff<SimpleConsoleRuntime, IHardwareIdProvider> HardwareIdProviderEff =>
         Eff<SimpleConsoleRuntime, IHardwareIdProvider>(rt => rt._env.HardwareIdProvider);
 
+    public Eff<SimpleConsoleRuntime, ISyncClient> SyncClientEff =>
+        Eff<SimpleConsoleRuntime, ISyncClient>(rt => rt._env.SyncClient);
+
     public Eff<SimpleConsoleRuntime, WmiIO> WmiEff => SuccessEff(LiveWmiIO.Default);
 }
 
 public class SimpleConsoleRuntimeEnv(
     IApplicationInfoProvider applicationInfoProvider,
     IHardwareIdProvider hardwareIdProvider,
+    ISyncClient syncClient,
     CancellationTokenSource cancellationTokenSource)
 {
     public IApplicationInfoProvider ApplicationInfoProvider { get; } = applicationInfoProvider;
@@ -78,4 +85,6 @@ public class SimpleConsoleRuntimeEnv(
     public CancellationTokenSource CancellationTokenSource { get; } = cancellationTokenSource;
 
     public IHardwareIdProvider HardwareIdProvider { get; } = hardwareIdProvider;
+
+    public ISyncClient SyncClient { get; } = syncClient;
 }

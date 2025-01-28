@@ -6,6 +6,7 @@ namespace Eryph.Messages.Resources.Commands
     public class DestroyResourcesCommand : IGenericResourcesCommand, IHasResources, ICommandWithName
     {
         public Resource[] Resources { get; set; }
+        
         public string GetCommandName() => "Destroy Resources";
     }
 }

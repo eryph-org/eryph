@@ -61,6 +61,7 @@ public class VmHostAgentConfigurationTests
              defaults:
                vms: {{_hostSettings.DefaultDataPath}}
                volumes: {{_hostSettings.DefaultVirtualHardDiskPath}}
+               watch_file_system: true
              datastores: 
              environments: 
              
@@ -76,7 +77,7 @@ public class VmHostAgentConfigurationTests
     [InlineData(" ")]
     public void ParseConfig_EmptyConfig_ReturnsFail(string yaml)
     {
-        var result = parseConfigYaml(yaml).Run();
+        var result = parseConfigYaml(yaml, false).Run();
 
         result.Should().BeFail()
             .Which.Message.Should().Be("The configuration must not be empty.");
@@ -85,10 +86,44 @@ public class VmHostAgentConfigurationTests
     [Fact]
     public void ParseConfig_MalformedConfig_ReturnsFail()
     {
-        var result = parseConfigYaml("not a config").Run();
+        var result = parseConfigYaml("not a config", false).Run();
 
         result.Should().BeFail()
             .Which.Message.Should().Be("The configuration is malformed.");
+    }
+
+    [Fact]
+    public void ParseConfig_UndefinedPropertyWhenUsingStrictMode_ReturnsFail()
+    {
+        var yaml = """
+                   datastores:
+                   - name: teststore
+                     path: Z:\teststore
+                   undefined_property: test
+                   """;
+        var result = parseConfigYaml(yaml, true).Run();
+
+        result.Should().BeFail()
+            .Which.Message.Should().Be("The configuration is malformed.");
+    }
+
+    [Fact]
+    public void ParseConfig_UndefinedPropertyWhenNotUsingStrictMode_ReturnsConfig()
+    {
+        var yaml = """
+                   datastores:
+                   - name: teststore
+                     path: Z:\teststore
+                   undefined_property: test
+                   """;
+        var result = parseConfigYaml(yaml, false).Run();
+
+        result.Should().BeSuccess().Which.Datastores.Should().SatisfyRespectively(
+            ds =>
+            {
+                ds.Name.Should().Be("teststore");
+                ds.Path.Should().Be(@"Z:\teststore");
+            });
     }
 
     [Fact]
@@ -113,6 +148,7 @@ public class VmHostAgentConfigurationTests
                     defaults:
                       vms: 
                       volumes: 
+                      watch_file_system: true
                     datastores: 
                     environments: 
                     
@@ -146,6 +182,7 @@ public class VmHostAgentConfigurationTests
         var config = result.Should().BeSuccess().Subject;
         config.Defaults.Vms.Should().Be(_hostSettings.DefaultDataPath);
         config.Defaults.Volumes.Should().Be(_hostSettings.DefaultVirtualHardDiskPath);
+        config.Defaults.WatchFileSystem.Should().BeTrue();
         config.Datastores.Should().BeNull();
         config.Environments.Should().BeNull();
 
@@ -173,8 +210,76 @@ public class VmHostAgentConfigurationTests
         var config = result.Should().BeSuccess().Subject;
         config.Defaults.Vms.Should().Be(@"Z:\test\vms");
         config.Defaults.Volumes.Should().Be(@"Z:\test\volumes");
+        config.Defaults.WatchFileSystem.Should().BeTrue();
         config.Datastores.Should().BeNull();
         config.Environments.Should().BeNull();
+
+        _fileMock.VerifyAll();
+        _fileMock.VerifyNoOtherCalls();
+    }
+
+    [Theory]
+    [InlineData("", false)]
+    [InlineData("true", true)]
+    [InlineData("false", false)]
+    public async Task ReadConfig_ConfigWithWatcherSettings_ReturnsConfig(
+        string actual,
+        bool expected)
+    {
+        _fileMock.Setup(m => m.Exists(ConfigPath))
+            .Returns(true)
+            .Verifiable();
+
+        _fileMock.Setup(m => m.ReadAllText(ConfigPath, Encoding.UTF8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync($$"""
+                          defaults:
+                            vms: Z:\defaults\vms
+                            volumes: Z:\defaults\volumes
+                            watch_file_system: {{ actual }}
+                          datastores:
+                          - name: store1
+                            path: Z:\stores\store1
+                            watch_file_system: {{ actual }}
+                          environments:
+                          - name: env1
+                            defaults:
+                              vms: Z:\env1\vms
+                              volumes: Z:\env1\volumes
+                              watch_file_system: {{ actual }}
+                            datastores:
+                            - name: store1
+                              path: Z:\env1\stores\store1
+                              watch_file_system: {{ actual }}
+                          """)
+            .Verifiable();
+
+        var result = await readConfig(ConfigPath, _hostSettings).Run(_runtime);
+
+        var config = result.Should().BeSuccess().Subject;
+        config.Defaults.Vms.Should().Be(@"Z:\defaults\vms");
+        config.Defaults.Volumes.Should().Be(@"Z:\defaults\volumes");
+        config.Defaults.WatchFileSystem.Should().Be(expected);
+        config.Datastores.Should().SatisfyRespectively(
+            datastore =>
+            {
+                datastore.Name.Should().Be("store1");
+                datastore.Path.Should().Be(@"Z:\stores\store1");
+                datastore.WatchFileSystem.Should().Be(expected);
+            });
+        config.Environments.Should().SatisfyRespectively(
+            environment =>
+            {
+                environment.Defaults.Vms.Should().Be(@"Z:\env1\vms");
+                environment.Defaults.Volumes.Should().Be(@"Z:\env1\volumes");
+                environment.Defaults.WatchFileSystem.Should().Be(expected);
+                environment.Datastores.Should().SatisfyRespectively(
+                    datastore =>
+                    {
+                        datastore.Name.Should().Be("store1");
+                        datastore.Path.Should().Be(@"Z:\env1\stores\store1");
+                        datastore.WatchFileSystem.Should().Be(expected);
+                    });
+            });
 
         _fileMock.VerifyAll();
         _fileMock.VerifyNoOtherCalls();
@@ -206,6 +311,7 @@ public class VmHostAgentConfigurationTests
                     defaults:
                       vms: 
                       volumes: 
+                      watch_file_system: true
                     datastores: 
                     environments: 
                     
@@ -271,17 +377,21 @@ public class VmHostAgentConfigurationTests
                     defaults:
                       vms: Z:\defaults\vms
                       volumes: Z:\defaults\volumes
+                      watch_file_system: true
                     datastores:
                     - name: store1
                       path: Z:\stores\store1
+                      watch_file_system: true
                     environments:
                     - name: env1
                       defaults:
                         vms: Z:\env1\vms
                         volumes: Z:\env1\volumes
+                        watch_file_system: true
                       datastores:
                       - name: store1
                         path: Z:\env1\stores\store1
+                        watch_file_system: true
 
                     """,
                     EqualityComparer<string>.Default),

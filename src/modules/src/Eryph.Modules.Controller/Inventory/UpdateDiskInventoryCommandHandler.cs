@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
-using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.Messages.Resources.Disks;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb;
 using JetBrains.Annotations;
@@ -12,7 +12,7 @@ using Rebus.Pipeline;
 namespace Eryph.Modules.Controller.Inventory;
 
 [UsedImplicitly]
-internal class UpdateVMInventoryCommandHandler(
+internal class UpdateDiskInventoryCommandHandler(
     IInventoryLockManager lockManager,
     IVirtualMachineMetadataService metadataService,
     IOperationDispatcher dispatcher,
@@ -29,14 +29,27 @@ internal class UpdateVMInventoryCommandHandler(
             stateStore,
             messageContext,
             logger),
-        IHandleMessages<UpdateInventoryCommand>
+        IHandleMessages<UpdateDiskInventoryCommand>
 {
-    public async Task Handle(UpdateInventoryCommand message)
+    private readonly IInventoryLockManager _lockManager = lockManager;
+
+    public async Task Handle(UpdateDiskInventoryCommand message)
     {
         var vmHost = await vmHostDataService.GetVMHostByAgentName(message.AgentName);
         if (vmHost.IsNone || IsUpdateOutdated(vmHost.ValueUnsafe(), message.Timestamp))
             return;
-        
-        await UpdateVMs(message.Timestamp, [message.Inventory], vmHost.ValueUnsafe());
+
+        var diskIdentifiers = CollectDiskIdentifiers(message.Inventory.ToSeq());
+        foreach (var diskIdentifier in diskIdentifiers)
+        {
+            await _lockManager.AcquireVhdLock(diskIdentifier);
+        }
+
+        foreach (var diskInfo in message.Inventory)
+        {
+            await AddOrUpdateDisk(message.AgentName, message.Timestamp, diskInfo);
+        }
+
+        await CheckDisks(message.Timestamp, message.AgentName);
     }
 }

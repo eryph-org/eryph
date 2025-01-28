@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Dbosoft.Rebus.Operations.Events;
@@ -6,94 +7,96 @@ using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
 using Eryph.Messages.Projects;
 using Eryph.Messages.Resources.Commands;
+using Eryph.Modules.Controller.Inventory;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 using Rebus.Sagas;
 using Resource = Eryph.Resources.Resource;
 
-namespace Eryph.Modules.Controller.Projects
-{
-    [UsedImplicitly]
-    internal class DestroyProjectSaga : OperationTaskWorkflowSaga<DestroyProjectCommand, DestroyProjectSagaData>,
+namespace Eryph.Modules.Controller.Projects;
+
+[UsedImplicitly]
+internal class DestroyProjectSaga(
+    ILogger logger,
+    IInventoryLockManager lockManager,
+    IWorkflow workflow,
+    IStateStore stateStore)
+    : OperationTaskWorkflowSaga<DestroyProjectCommand, DestroyProjectSagaData>(workflow),
         IHandleMessages<OperationTaskStatusEvent<DestroyResourcesCommand>>
+{
+    protected override void CorrelateMessages(
+        ICorrelationConfig<DestroyProjectSagaData> config)
     {
-        private readonly IStateStore _stateStore;
+        base.CorrelateMessages(config);
+        config.Correlate<OperationTaskStatusEvent<DestroyResourcesCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+    }
 
-        public DestroyProjectSaga(IWorkflow workflow, IStateStore stateStore) : base(workflow)
+    protected override async Task Initiated(DestroyProjectCommand message)
+    {
+        Data.ProjectId = message.ProjectId;
+
+        if (Data.ProjectId == EryphConstants.DefaultProjectId)
         {
-            _stateStore = stateStore;
+            await Fail(new ErrorData { ErrorMessage = "Default project cannot be deleted" });
+            return;
         }
 
-
-        protected override void CorrelateMessages(ICorrelationConfig<DestroyProjectSagaData> config)
+        var project = await stateStore.For<Project>().GetByIdAsync(Data.ProjectId);
+        if (project == null)
         {
-            base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<DestroyResourcesCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
+            await Complete();
+            return;
         }
 
-
-        protected override async Task Initiated(DestroyProjectCommand message)
+        await stateStore.LoadCollectionAsync(project, x => x.Resources);
+        if (project.Resources.Count == 0)
         {
-            Data.ProjectId = message.ProjectId;
-
-            if (Data.ProjectId == EryphConstants.DefaultProjectId)
-            {
-                await Fail(new ErrorData { ErrorMessage = "Default project cannot be deleted" });
-                return;
-            }
-
-            var project = await _stateStore.For<Project>().GetByIdAsync(Data.ProjectId);
-
-            if (project == null)
-            {
-                await Complete();
-                return;
-            }
-
-            await _stateStore.LoadCollectionAsync(project, x => x.Resources);
-
-            if (project.Resources.Count == 0)
-            {
-                await DeleteProject();
-                await Complete();
-                return;
-            }
-
-            await StartNewTask(new DestroyResourcesCommand
-            {
-                Resources = project.Resources.Select(x=> new Resource(x.ResourceType, x.Id)).ToArray()
-            });
-
-
+            await DeleteProject();
+            await Complete();
+            return;
         }
 
-        private async Task DeleteProject()
+        project.BeingDeleted = true;
+
+        await StartNewTask(new DestroyResourcesCommand
         {
-            var project = await _stateStore.For<Project>().GetByIdAsync(Data.ProjectId);
+            Resources = project.Resources.Select(x=> new Resource(x.ResourceType, x.Id)).ToArray()
+        });
+    }
 
-            if (project != null)
-            {
-                var roleAssignments = await _stateStore.For<ProjectRoleAssignment>()
-                    .ListAsync(new ProjectRoleAssignmentSpecs.GetByProject(project.Id))
-                    .ConfigureAwait(false);
+    private async Task DeleteProject()
+    {
+        var project = await stateStore.For<Project>().GetByIdAsync(Data.ProjectId);
+        if (project is null)
+            return;
 
-                await _stateStore.For<ProjectRoleAssignment>().DeleteRangeAsync(roleAssignments).ConfigureAwait(false);
-                await _stateStore.For<Project>().DeleteAsync(project).ConfigureAwait(false);
-            }
-        }
-
-        public Task Handle(OperationTaskStatusEvent<DestroyResourcesCommand> message)
+        var disks = await stateStore.For<VirtualDisk>()
+            .ListAsync(new VirtualDiskSpecs.FindDeletedInProject(project.Id));
+        var diskIdentifiers = disks.Select(d => d.DiskIdentifier).Distinct().Order();
+        foreach (var diskIdentifier in diskIdentifiers)
         {
-            return FailOrRun<DestroyResourcesCommand, DestroyResourcesResponse>(message,
-                async (response) =>
-                {
-                    await DeleteProject();
-                    await Complete(response);
-                });
+            await lockManager.AcquireVhdLock(diskIdentifier);
         }
+        await stateStore.For<VirtualDisk>().DeleteRangeAsync(disks);
 
+        var roleAssignments = await stateStore.For<ProjectRoleAssignment>()
+            .ListAsync(new ProjectRoleAssignmentSpecs.GetByProject(project.Id));
+        await stateStore.For<ProjectRoleAssignment>().DeleteRangeAsync(roleAssignments);
+        
+        await stateStore.For<Project>().DeleteAsync(project);
+    }
+
+    public Task Handle(OperationTaskStatusEvent<DestroyResourcesCommand> message)
+    {
+        return FailOrRun(message, async (DestroyResourcesResponse response) =>
+        {
+            await DeleteProject();
+            await Complete(response);
+        });
     }
 }

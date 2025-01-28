@@ -1,18 +1,22 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Modules.Controller.Operations;
 using Eryph.Resources;
 
-namespace Eryph.Modules.Controller.Compute
+namespace Eryph.Modules.Controller.Compute;
+
+public class DestroyResourcesSagaData : TaskWorkflowSagaData
 {
-    public class DestroyResourcesSagaData : TaskWorkflowSagaData
-    {
-        public DestroyResourceState State { get; set; }
+    public DestroyResourceState State { get; set; }
 
-        public Resource[]? Resources { get; set; }
-        public List<Resource> DestroyedResources { get; set; } = new();
-        public List<Resource> DetachedResources { get; set; } = new();
+    public ISet<Guid> PendingCatlets { get; set; } = new HashSet<Guid>();
 
-        public List<List<Resource>> DestroyGroups { get; set; }
-    }
+    public ISet<Guid> PendingDisks { get; set;  } = new HashSet<Guid>();
+
+    public ISet<Guid> PendingNetworks { get; set; } = new HashSet<Guid>();
+
+    public ISet<Resource> DestroyedResources { get; set; } = new HashSet<Resource>();
+    
+    public ISet<Resource> DetachedResources { get; set; } = new HashSet<Resource>();
 }

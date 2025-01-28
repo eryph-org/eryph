@@ -405,6 +405,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("BeingDeleted")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -710,6 +713,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("LastInventory")
+                        .HasColumnType("TEXT");
+
                     b.ToTable("CatletFarms");
                 });
 
@@ -720,6 +726,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("DataStore")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid>("DiskIdentifier")
                         .HasColumnType("TEXT");

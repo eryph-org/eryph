@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Eryph.ConfigModel;
 using Eryph.Resources.Machines;
 
@@ -11,7 +10,8 @@ namespace Eryph.Messages.Resources.Catlets.Commands
         [PrivateIdentifier]
         public string AgentName { get; set; }
 
-        public List<VirtualMachineData> Inventory { get; set; }
+        public VirtualMachineData Inventory { get; set; }
+
         public DateTimeOffset Timestamp { get; set; }
     }
 }

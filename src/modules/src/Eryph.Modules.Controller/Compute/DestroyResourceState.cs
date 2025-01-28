@@ -3,6 +3,7 @@
 public enum DestroyResourceState
 {
     Initiated = 0,
-    ResourcesDestroyed = 5,
-    ResourcesReleased = 10
+    CatletsDestroyed = 10,
+    DisksDestroyed = 20,
+    NetworksDestroyed = 30,
 }

@@ -21,7 +21,6 @@ internal class UpdateVMHostInventoryCommandHandler(
     IOperationDispatcher dispatcher,
     IMessageContext messageContext,
     IVirtualMachineDataService vmDataService,
-    IVirtualDiskDataService vhdDataService,
     IVMHostMachineDataService vmHostDataService,
     IStateStore stateStore,
     ILogger logger)
@@ -30,28 +29,43 @@ internal class UpdateVMHostInventoryCommandHandler(
             metadataService,
             dispatcher,
             vmDataService,
-            vhdDataService,
             stateStore,
             messageContext,
             logger),
         IHandleMessages<UpdateVMHostInventoryCommand>
 {
+    private readonly IInventoryLockManager _lockManager = lockManager;
+
     public async Task Handle(UpdateVMHostInventoryCommand message)
     {
-        var newMachineState = await
-            vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId).IfNoneAsync(
-                async () => new CatletFarm
-                {
-                    Id = Guid.NewGuid(),
-                    Name = message.HostInventory.Name,
-                    HardwareId = message.HostInventory.HardwareId,
-                    Project = await FindRequiredProject(EryphConstants.DefaultProjectName, null),
-                    Environment = EryphConstants.DefaultEnvironmentName,
-                });
+        var vmHost = await vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
+            .IfNoneAsync(async () => await vmHostDataService.AddNewVMHost(new CatletFarm
+            {
+                Id = Guid.NewGuid(),
+                Name = message.HostInventory.Name,
+                HardwareId = message.HostInventory.HardwareId,
+                Project = await FindRequiredProject(EryphConstants.DefaultProjectName, null),
+                Environment = EryphConstants.DefaultEnvironmentName,
+            }));
 
-        var existingMachine = await vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
-            .IfNoneAsync(() => vmHostDataService.AddNewVMHost(newMachineState));
+        if (IsUpdateOutdated(vmHost, message.Timestamp))
+            return;
 
-        await UpdateVMs(message.Timestamp, message.VMInventory, existingMachine);
+        var diskIdentifiers = CollectDiskIdentifiers(message.DiskInventory.ToSeq());
+        foreach (var diskIdentifier in diskIdentifiers)
+        {
+            await _lockManager.AcquireVhdLock(diskIdentifier);
+        }
+
+        foreach (var diskInfo in message.DiskInventory)
+        {
+            await AddOrUpdateDisk(vmHost.Name, message.Timestamp, diskInfo);
+        }
+
+        await UpdateVMs(message.Timestamp, message.VMInventory, vmHost);
+
+        await CheckDisks(message.Timestamp, vmHost.Name);
+
+        vmHost.LastInventory = message.Timestamp;
     }
 }

@@ -23,7 +23,13 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                 .ForMember(x => x.ProviderName, x => x.MapFrom(y => y.NetworkProvider));
 
             CreateMap<StateDb.Model.Catlet, Catlet>();
-            CreateMap<StateDb.Model.CatletDrive, CatletDrive>();
+            CreateMap<StateDb.Model.CatletDrive, CatletDrive>()
+                .ForMember(
+                    d => d.AttachedDiskId,
+                    o => o.MapFrom(drive => Optional(drive.AttachedDisk)
+                        .Filter(disk => !disk.Deleted)
+                        .Map(disk => disk.Id)
+                        .ToNullable()));
             CreateMap<StateDb.Model.CatletNetworkAdapter, CatletNetworkAdapter>();
 
             CreateMap<(StateDb.Model.Catlet Catlet, CatletNetworkPort Port), CatletNetwork>()

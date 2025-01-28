@@ -80,6 +80,7 @@ public class VmHostAgentConfigurationUpdateTests
                     defaults:
                       vms: 
                       volumes: 
+                      watch_file_system: true
                     datastores: 
                     environments: 
                     

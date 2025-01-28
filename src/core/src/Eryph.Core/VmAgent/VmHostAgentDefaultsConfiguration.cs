@@ -11,5 +11,7 @@ namespace Eryph.Core.VmAgent
         public string Vms { get; init; }
 
         public string Volumes { get; init; }
+
+        public bool WatchFileSystem { get; init; } = true;
     }
 }

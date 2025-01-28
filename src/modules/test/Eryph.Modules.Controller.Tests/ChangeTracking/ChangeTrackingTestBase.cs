@@ -68,8 +68,17 @@ public abstract class ChangeTrackingTestBase(
         var container = host.Services.GetRequiredService<Container>();
         await using (var scope = AsyncScopedLifestyle.BeginScope(container))
         {
+            var dbContext = scope.GetInstance<StateStoreContext>();
             var stateStore = scope.GetInstance<IStateStore>();
+
+            // We use transactions in the Rebus unit-of-work and hence
+            // should also use transactions for the tests. The behavior
+            // for deleted entities changes when using transactions.
+            await using var dbTransaction = await dbContext.Database.BeginTransactionAsync();
+            
             await action(stateStore);
+            
+            await dbTransaction.CommitAsync();
         }
         await host.StopAsync();
     }

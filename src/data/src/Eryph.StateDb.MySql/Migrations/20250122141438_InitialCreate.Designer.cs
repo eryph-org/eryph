@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20241203163012_InitialCreate")]
+    [Migration("20250122141438_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -413,6 +413,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<bool>("BeingDeleted")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -718,6 +721,9 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<DateTimeOffset>("LastInventory")
+                        .HasColumnType("datetime(6)");
+
                     b.ToTable("CatletFarms");
                 });
 
@@ -728,6 +734,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("DataStore")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<Guid>("DiskIdentifier")
                         .HasColumnType("char(36)");

@@ -116,6 +116,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
+                    BeingDeleted = table.Column<bool>(type: "INTEGER", nullable: false),
                     TenantId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -138,7 +139,8 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Environment = table.Column<string>(type: "TEXT", nullable: false),
-                    HardwareId = table.Column<string>(type: "TEXT", nullable: false)
+                    HardwareId = table.Column<string>(type: "TEXT", nullable: false),
+                    LastInventory = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -242,6 +244,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     StorageIdentifier = table.Column<string>(type: "TEXT", nullable: true),
                     DiskIdentifier = table.Column<Guid>(type: "TEXT", nullable: false),
                     Frozen = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Deleted = table.Column<bool>(type: "INTEGER", nullable: false),
                     Path = table.Column<string>(type: "TEXT", nullable: true),
                     FileName = table.Column<string>(type: "TEXT", nullable: true),
                     SizeBytes = table.Column<long>(type: "INTEGER", nullable: true),

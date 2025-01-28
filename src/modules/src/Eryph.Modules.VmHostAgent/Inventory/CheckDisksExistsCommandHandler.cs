@@ -34,6 +34,8 @@ public class CheckDisksExistsCommandHandler(
 
     private EitherAsync<Error, CheckDisksExistsReply> Handle(
         CheckDisksExistsCommand command) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let timestamp = DateTimeOffset.UtcNow
         from hostSettings in hostSettings.GetHostSettings()
         from vmHostAgentConfig in configurationManager.GetCurrentConfiguration(hostSettings)
         from missingDisks in command.Disks
@@ -41,7 +43,8 @@ public class CheckDisksExistsCommandHandler(
             .SequenceSerial()
         select new CheckDisksExistsReply
         {
-            MissingDisks = missingDisks.Somes().ToArray(),
+            MissingDisks = missingDisks.Somes().ToList(),
+            Timestamp = timestamp,
         };
 
     private EitherAsync<Error, Option<DiskInfo>> IsDiskMissing(

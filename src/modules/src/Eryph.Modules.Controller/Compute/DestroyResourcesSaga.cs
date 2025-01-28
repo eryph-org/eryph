@@ -1,158 +1,183 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Commands;
+using Eryph.ModuleCore;
 using Eryph.Resources;
 using JetBrains.Annotations;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using Resource = Eryph.Resources.Resource;
 
-namespace Eryph.Modules.Controller.Compute
+namespace Eryph.Modules.Controller.Compute;
+
+[UsedImplicitly]
+internal class DestroyResourcesSaga(IWorkflow workflow) :
+    OperationTaskWorkflowSaga<DestroyResourcesCommand, EryphSagaData<DestroyResourcesSagaData>>(workflow),
+    IHandleMessages<OperationTaskStatusEvent<DestroyCatletCommand>>,
+    IHandleMessages<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>,
+    IHandleMessages<OperationTaskStatusEvent<DestroyVirtualNetworksCommand>>
 {
-    [UsedImplicitly]
-    internal class DestroyResourcesSaga :
-        OperationTaskWorkflowSaga<DestroyResourcesCommand, DestroyResourcesSagaData>,
-        IHandleMessages<OperationTaskStatusEvent<DestroyCatletCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<DestroyVirtualNetworksCommand>>
+    protected override void CorrelateMessages(
+        ICorrelationConfig<EryphSagaData<DestroyResourcesSagaData>> config)
     {
+        base.CorrelateMessages(config);
+        config.Correlate<OperationTaskStatusEvent<DestroyCatletCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<DestroyVirtualNetworksCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+    }
 
-        public DestroyResourcesSaga(IWorkflow workflow) : base(workflow)
+    protected override async Task Initiated(DestroyResourcesCommand message)
+    {
+        Data.Data.State = DestroyResourceState.Initiated;
+
+        Data.Data.PendingCatlets = message.Resources
+            .Where(r => r.Type == ResourceType.Catlet)
+            .Select(r => r.Id)
+            .ToHashSet();
+
+        Data.Data.PendingDisks = message.Resources
+            .Where(r => r.Type == ResourceType.VirtualDisk)
+            .Select(r => r.Id)
+            .ToHashSet();
+
+        Data.Data.PendingNetworks = message.Resources
+            .Where(r => r.Type == ResourceType.VirtualNetwork)
+            .Select(r => r.Id)
+            .ToHashSet();
+
+        await StartNextTask();
+    }
+
+    public Task Handle(OperationTaskStatusEvent<DestroyCatletCommand> message) =>
+        FailOrRun(message, async (DestroyResourcesResponse response) =>
         {
-        }
+            Collect(response);
+            var removedCatlets = response.DestroyedResources.ToSeq()
+                .Concat(response.DetachedResources.ToSeq())
+                .Filter(r => r.Type is ResourceType.Catlet)
+                .Map(r => r.Id);
+            Data.Data.PendingCatlets = Data.Data.PendingCatlets
+                .Except(removedCatlets)
+                .ToHashSet();
 
-        protected override void CorrelateMessages(ICorrelationConfig<DestroyResourcesSagaData> config)
-        {
-            base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<DestroyCatletCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<DestroyVirtualDiskCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
-            config.Correlate<OperationTaskStatusEvent<DestroyVirtualNetworksCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
-
-        }
-
-        protected override Task Initiated(DestroyResourcesCommand message)
-        {
-            Data.State = DestroyResourceState.Initiated;
-            Data.Resources = message.Resources;
-
-            var firstGroup = new List<Resource>();
-            var secondGroup = new List<Resource>();
-
-
-            foreach (var resource in Data.Resources?? Array.Empty<Resource>())
-                switch(resource.Type)
-                {
-                    case ResourceType.Catlet:
-                        firstGroup.Add(resource);
-                        break;
-
-                    case ResourceType.VirtualDisk:
-                        secondGroup.Add(resource);
-                        break;
-                    case ResourceType.VirtualNetwork:
-                        secondGroup.Add(resource);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                };
-
-            Data.DestroyGroups = new List<List<Resource>>();
+            if (Data.Data.PendingCatlets.Count > 0)
+                return;
             
-            if(firstGroup.Count>0)
-                Data.DestroyGroups.Add(firstGroup);
+            await StartNextTask();
+        });
+    
 
-            if (secondGroup.Count > 0)
-                Data.DestroyGroups.Add(secondGroup);
-
-            return DestroyNextGroup();
-
-
-
-        }
-
-        private async Task DestroyNextGroup()
+    public Task Handle(OperationTaskStatusEvent<DestroyVirtualDiskCommand> message) => 
+        FailOrRun(message, async (DestroyResourcesResponse response) =>
         {
-            if (Data.DestroyGroups.Count == 0)
+            Collect(response);
+            var removedDisks = response.DestroyedResources.ToSeq()
+                .Concat(response.DetachedResources.ToSeq())
+                .Filter(r => r.Type is ResourceType.VirtualDisk)
+                .Map(r => r.Id);
+            Data.Data.PendingDisks = Data.Data.PendingDisks
+                .Except(removedDisks)
+                .ToHashSet();
+
+            if (Data.Data.PendingDisks.Count > 0)
+                return;
+
+            await StartNextTask();
+        });
+
+    public Task Handle(OperationTaskStatusEvent<DestroyVirtualNetworksCommand> message) =>
+        FailOrRun(message, async (DestroyResourcesResponse response) =>
+        {
+            Collect(response);
+            var removedNetworks = response.DestroyedResources.ToSeq()
+                .Concat(response.DetachedResources.ToSeq())
+                .Filter(r => r.Type is ResourceType.VirtualNetwork)
+                .Map(r => r.Id);
+            Data.Data.PendingNetworks = Data.Data.PendingNetworks
+                .Except(removedNetworks)
+                .ToHashSet();
+
+            if (Data.Data.PendingNetworks.Count > 0)
             {
-                await Complete(new DestroyResourcesResponse
+                await Fail($"Some networks were not removed: {string.Join(", ", Data.Data.PendingNetworks)}");
+            }
+            
+            await Complete(new DestroyResourcesResponse
+            {
+                DestroyedResources = Data.Data.DestroyedResources.ToList(),
+                DetachedResources = Data.Data.DetachedResources.ToList()
+            });
+        });
+
+    private async Task StartNextTask()
+    {
+        if (Data.Data.State < DestroyResourceState.CatletsDestroyed)
+        {
+            if (Data.Data.PendingCatlets.Count > 0)
+            {
+                foreach (var catletId in Data.Data.PendingCatlets)
                 {
-                    DestroyedResources = Data.DestroyedResources.ToArray(),
-                    DetachedResources = Data.DetachedResources.ToArray()
-                });
+                    await StartNewTask(new DestroyCatletCommand { CatletId = catletId });
+                }
+
                 return;
             }
 
-            Data.Resources = Data.DestroyGroups[0].ToArray();
-            Data.DestroyGroups.RemoveAt(0);
+            Data.Data.State = DestroyResourceState.CatletsDestroyed;
+        }
 
-            var networks = new List<Guid>();
-            foreach (var resource in Data.Resources)
-                switch(resource.Type)
+        if (Data.Data.State < DestroyResourceState.DisksDestroyed)
+        {
+            if (Data.Data.PendingDisks.Count > 0)
+            {
+                foreach (var diskId in Data.Data.PendingDisks)
                 {
+                    await StartNewTask(new DestroyVirtualDiskCommand { DiskId = diskId });
+                }
 
-                    case ResourceType.Catlet:
-                        await StartNewTask(new DestroyCatletCommand{ CatletId = resource.Id });
-                        break;
-                    case ResourceType.VirtualDisk:
-                        await StartNewTask(new DestroyVirtualDiskCommand{DiskId = resource.Id});
-                        break;
-                    case ResourceType.VirtualNetwork:
-                        networks.Add(resource.Id);
-
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                };
-
-            if(networks.Count > 0)
-                await StartNewTask(new DestroyVirtualNetworksCommand { NetworkIds = networks.ToArray() });
-
-        }
-
-
-        public Task Handle(OperationTaskStatusEvent<DestroyVirtualDiskCommand> message)
-        {
-            return FailOrRun<DestroyVirtualDiskCommand, DestroyResourcesResponse>(message,
-                (response) => CollectAndCheckCompleted(response.DestroyedResources, response.DetachedResources));
-        }
-
-        public Task Handle(OperationTaskStatusEvent<DestroyCatletCommand> message)
-        {
-            return FailOrRun<DestroyCatletCommand, DestroyResourcesResponse>(message,
-                (response) => CollectAndCheckCompleted(response.DestroyedResources, response.DetachedResources));
-        }
-
-        public Task Handle(OperationTaskStatusEvent<DestroyVirtualNetworksCommand> message)
-        {
-            return FailOrRun<DestroyVirtualNetworksCommand, DestroyResourcesResponse>(message,
-                (response) => CollectAndCheckCompleted(response.DestroyedResources, response.DetachedResources));
-        }
-
-        private Task CollectAndCheckCompleted(Resource[]? destroyedResources, Resource[]? detachedResources)
-        {
-            if (destroyedResources != null) Data.DestroyedResources.AddRange(destroyedResources);
-
-            if (detachedResources != null) Data.DetachedResources.AddRange(detachedResources);
-
-            var pendingResources = (Data.Resources ?? Array.Empty<Resource>()).ToList();
-
-            foreach (var resource in Data.DestroyedResources.Concat(Data.DetachedResources))
-            {
-                if (pendingResources.Contains(resource))
-                    pendingResources.Remove(resource);
+                return;
             }
 
-            if (pendingResources.Count == 0)
+            Data.Data.State = DestroyResourceState.DisksDestroyed;
+        }
+
+        if (Data.Data.State < DestroyResourceState.NetworksDestroyed)
+        {
+            if (Data.Data.PendingNetworks.Count > 0)
             {
-                return DestroyNextGroup();
+                await StartNewTask(new DestroyVirtualNetworksCommand
+                {
+                    NetworkIds = Data.Data.PendingNetworks.ToArray()
+                });
+
+                return;
             }
 
-            return Task.CompletedTask;
+            Data.Data.State = DestroyResourceState.NetworksDestroyed;
         }
+
+        await Complete(new DestroyResourcesResponse
+        {
+            DestroyedResources = Data.Data.DestroyedResources.ToList(),
+            DetachedResources = Data.Data.DetachedResources.ToList()
+        });
+    }
+
+    private void Collect(DestroyResourcesResponse response)
+    {
+        Data.Data.DestroyedResources = Data.Data.DestroyedResources
+            .Union(response.DestroyedResources.ToSeq())
+            .ToHashSet();
+        Data.Data.DetachedResources = Data.Data.DetachedResources
+            .Union(response.DetachedResources.ToSeq())
+            .ToHashSet();
     }
 }

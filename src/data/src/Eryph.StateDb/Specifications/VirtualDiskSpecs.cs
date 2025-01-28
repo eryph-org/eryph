@@ -40,13 +40,30 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
+        public sealed class FindDeleted : Specification<VirtualDisk>
+        {
+            public FindDeleted(DateTimeOffset cutoff)
+            {
+                Query.Where(x => x.Deleted && x.LastSeen < cutoff);
+            }
+
+        }
+
+        public sealed class FindDeletedInProject : Specification<VirtualDisk>
+        {
+            public FindDeletedInProject(Guid projectId)
+            {
+                Query.Where(x => x.Deleted && x.ProjectId == projectId );
+            }
+        }
+
         public sealed class FindOutdated : Specification<VirtualDisk>
         {
-            public FindOutdated(DateTimeOffset lastSeenBefore, [CanBeNull] string agentName)
+            public FindOutdated(DateTimeOffset lastSeenBefore, string? agentName)
             {
                 Query.Where(x => x.LastSeen < lastSeenBefore);
 
-                if(!string.IsNullOrEmpty(agentName))
+                if (!string.IsNullOrEmpty(agentName))
                     Query.Where(x => x.LastSeenAgent == agentName);
                 
                 Query.Include(x => x.Project);
