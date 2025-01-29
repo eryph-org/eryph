@@ -374,9 +374,9 @@ internal class LocalFirstGeneProvider(
 
     private static bool IsUnexpectedHttpClientError(Error error) =>
         error.Exception
-            .Map(ex => ex is ErrorResponseException
+            .Map(ex => ex is GenepoolClientException
             {
-                Response.StatusCode: >= HttpStatusCode.BadRequest
+                StatusCode: >= HttpStatusCode.BadRequest
                     and < HttpStatusCode.InternalServerError
                     and not HttpStatusCode.NotFound
             })

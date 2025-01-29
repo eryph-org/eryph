@@ -110,7 +110,7 @@ public static class GenePoolCli<RT> where RT : struct,
 
     private static Aff<RT, Unit> validateApiKey(GenePoolApiKey apiKey, GenepoolSettings genepoolSettings) =>
         from userResponse in getApiKeyUser(apiKey, genepoolSettings).Map(Optional)
-                            | @catch(ex => ex is ErrorResponseException { Response.StatusCode: HttpStatusCode.Unauthorized },
+                            | @catch(ex => ex is GenepoolClientException { StatusCode: HttpStatusCode.Unauthorized },
                                 Option<GetMeResponse>.None)
                             | @catch(_ => true, e => Error.New("Could not validate the gene pool API key.", e))
         from _ in userResponse.Match(
