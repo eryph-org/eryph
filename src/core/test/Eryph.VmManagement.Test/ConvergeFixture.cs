@@ -36,7 +36,7 @@ public class ConvergeFixture
 
     public TestPowershellEngine Engine { get;  }
 
-    public IHyperVOvsPortManager PortManager { get; }
+    public IHyperVOvsPortManager PortManager { get; set; }
 
     public MachineNetworkSettings[] NetworkSettings { get; set; }
     

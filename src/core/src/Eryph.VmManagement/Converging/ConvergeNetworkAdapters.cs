@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Eryph.VmManagement.Data.Core;
+using Eryph.ConfigModel;
+using Eryph.ConfigModel.Catlets;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using LanguageExt;
@@ -13,99 +16,149 @@ namespace Eryph.VmManagement.Converging;
 public class ConvergeNetworkAdapters(ConvergeContext context)
     : ConvergeTaskBase(context)
 {
-    public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
-        TypedPsObject<VirtualMachineInfo> vmInfo)
-    {
-        var interfaceCounter = 0;
+    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        ConvergeAdapters(vmInfo).ToEither();
 
-        return await Context.Config.Networks
-            .Map
-            (n =>
-            {
-                return Context.NetworkSettings.Find(x => x.AdapterName == n.AdapterName)
-                    .ToEither(Error.New($"Could not find network settings for adapter {n.AdapterName}"))
-                    .Bind(ms =>
-                    {
+    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeAdapters(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from adapters in GetVmAdapters(vmInfo)
+        from adapterConfigs in PrepareAdapterConfigs().ToAsync()
+        from _ in RemoveMissingAdapters(adapters, adapterConfigs)
+        from __ in AddOrUpdateAdapters(adapterConfigs, adapters, vmInfo)
+        from updatedVmInfo in vmInfo.Reload(Context.Engine)
+        select updatedVmInfo;
 
-                        var switchName =
-                            Context.HostInfo.FindSwitchName(ms.NetworkProviderName);
+    private Either<Error, Seq<PhysicalAdapterConfig>> PrepareAdapterConfigs() =>
+        from adapterConfigs in Context.Config.Networks.ToSeq()
+            .Map(PrepareAdapterConfig)
+            .Sequence()
+        select adapterConfigs;
 
-                        if (switchName == null)
-                            return Left<Error,PhysicalAdapterConfig>(Error.New(
-                                $"Could not find network provider '{ms.NetworkProviderName}' on Host."));
+    private Either<Error, PhysicalAdapterConfig> PrepareAdapterConfig(
+        CatletNetworkConfig networkConfig) =>
+        from adapterName in CatletNetworkAdapterName.NewEither(networkConfig.AdapterName)
+        from settings in Context.NetworkSettings.ToSeq()
+            .Find(s => CatletNetworkAdapterName.NewOption(s.AdapterName) == adapterName)
+            .ToEither(Error.New($"Could not find network settings for adapter {networkConfig.AdapterName}"))
+        from switchName in Context.HostInfo.FindSwitchName(settings.NetworkProviderName)
+            .ToEither(Error.New($"Could not find network provider '{settings.NetworkProviderName}' on host."))
+        select new PhysicalAdapterConfig(
+            adapterName.Value,
+            switchName,
+            settings.MacAddress,
+            settings.PortName,
+            settings.NetworkName);
 
-                        return new PhysicalAdapterConfig(n.AdapterName ?? "eth" + interfaceCounter++,
-                            switchName, ms.MacAddress, ms.PortName, ms.NetworkName);
-                    });
+    private EitherAsync<Error, Seq<TypedPsObject<VMNetworkAdapter>>> GetVmAdapters(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-VMNetworkAdapter")
+            .AddParameter("VM", vmInfo.PsObject)
+        from adapters in Context.Engine.GetObjectsAsync<VMNetworkAdapter>(command)
+            .ToError().ToAsync()
+        select adapters;
 
-            })
-            .Map(e => e.ToAsync())
-            .BindT(c => NetworkAdapter(c, vmInfo).ToAsync())
-            .TraverseSerial(l => l)
-            .Map(e => vmInfo.Recreate())
-            .ToEither();
-    }
+    private EitherAsync<Error, Unit> RemoveMissingAdapters(
+        Seq<TypedPsObject<VMNetworkAdapter>> adapters,
+        Seq<PhysicalAdapterConfig> adapterConfig) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let configuredAdapterNames = toHashSet(adapterConfig
+            .Map(c => CatletNetworkAdapterName.New(c.AdapterName)))
+        from __ in adapters
+            .Filter(a => CatletNetworkAdapterName.NewOption(a.Value.Name)
+                .Map(n => !configuredAdapterNames.Contains(n))
+                .IfNone(true))
+            .Map(RemoveAdapter)
+            .SequenceSerial()
+        select unit;
 
-    private async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> NetworkAdapter(
-        PhysicalAdapterConfig networkAdapterConfig,
-        TypedPsObject<VirtualMachineInfo> vmInfo)
-    {
-        var switchName = string.IsNullOrWhiteSpace(networkAdapterConfig.SwitchName)
-            ? "Default Switch"
-            : networkAdapterConfig.SwitchName;
+    private EitherAsync<Error, Unit> RemoveAdapter(
+        TypedPsObject<VMNetworkAdapter> adapter) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Remove-VMNetworkAdapter")
+            .AddParameter("VMNetworkAdapter", adapter.PsObject)
+        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        select unit;
 
+    private EitherAsync<Error, Unit> AddOrUpdateAdapters(
+        Seq<PhysicalAdapterConfig> adapterConfigs,
+        Seq<TypedPsObject<VMNetworkAdapter>> adapters,
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in adapterConfigs
+            .Map(c => AddOrUpdateAdapter(c, adapters, vmInfo))
+            .SequenceSerial()
+        select unit;
 
-        var optionalAdapter = await ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
-            i => i.NetworkAdapters,
-            device => device.Cast<VMNetworkAdapter>()
-                .Map(adapter => 
-                    networkAdapterConfig.AdapterName.Equals(adapter.Name, StringComparison.OrdinalIgnoreCase)),
-            async () =>
-            {
-                await Context.ReportProgress($"Add Network Adapter: {networkAdapterConfig.AdapterName}")
-                    .ConfigureAwait(false);
-                return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(PsCommandBuilder.Create()
-                    .AddCommand("Add-VmNetworkAdapter")
-                    .AddParameter("Passthru")
-                    .AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("Name", networkAdapterConfig.AdapterName)
-                    .AddParameter("StaticMacAddress", networkAdapterConfig.MacAddress)
-                    .AddParameter("SwitchName", switchName)).ConfigureAwait(false);
-            }).ConfigureAwait(false);
+    private EitherAsync<Error, Unit> AddOrUpdateAdapter(
+        PhysicalAdapterConfig adapterConfig,
+        Seq<TypedPsObject<VMNetworkAdapter>> adapters,
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let adapterName = CatletNetworkAdapterName.New(adapterConfig.AdapterName)
+        let adapter = adapters.Find(a => CatletNetworkAdapterName.NewOption(a.Value.Name) == adapterName)
+        from __ in adapter.Match(
+            Some: a => UpdateAdapter(adapterConfig, a),
+            None: () => AddAdapter(adapterConfig, vmInfo))
+        select unit;
 
+    private EitherAsync<Error, Unit> AddAdapter(
+        PhysicalAdapterConfig adapterConfig,
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in Context.ReportProgressAsync($"Add Network Adapter: {adapterConfig.AdapterName}")
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Add-VMNetworkAdapter")
+            .AddParameter("VM", vmInfo.PsObject)
+            .AddParameter("Name", adapterConfig.AdapterName)
+            .AddParameter("StaticMacAddress", adapterConfig.MacAddress)
+            .AddParameter("SwitchName", adapterConfig.SwitchName)
+            .AddParameter("Passthru")
+        from createdAdapters in Context.Engine.GetObjectValuesAsync<VMNetworkAdapter>(command)
+            .ToError()
+        from createdAdapter in createdAdapters.HeadOrNone()
+            .ToEitherAsync(Error.New("Failed to create network adapter"))
+        from __ in Context.PortManager.SetPortName(createdAdapter.Id, adapterConfig.PortName)
+        select unit;
 
-        return await optionalAdapter.BindAsync(async device =>
-        {
-            var adapter = device.Cast<VMNetworkAdapter>();
+    private EitherAsync<Error, Unit> UpdateAdapter(
+        PhysicalAdapterConfig adapterConfig,
+        TypedPsObject<VMNetworkAdapter> adapter) =>
+        from currentPortName in Context.PortManager.GetPortName(adapter.Value.Id)
+        from _1 in currentPortName == adapterConfig.PortName
+            ? RightAsync<Error, Unit>(unit)
+            : Context.PortManager.SetPortName(adapter.Value.Id, adapterConfig.PortName)
+        from _2 in adapter.Value.MacAddress == adapterConfig.MacAddress
+            ? RightAsync<Error, Unit>(unit)
+            : UpdateMacAddress(adapter, adapterConfig.MacAddress)
+        from _3 in adapter.Value.Connected && adapter.Value.SwitchName == adapterConfig.SwitchName
+            ? RightAsync<Error, Unit>(unit)
+            : ConnectAdapter(adapter, adapterConfig)
+        select unit;
 
-            var res = await Context.PortManager.SetPortName(adapter.Value.Id, networkAdapterConfig.PortName);
-            if (res.IsLeft)
-                return res;
+    private EitherAsync<Error, Unit> UpdateMacAddress(
+        TypedPsObject<VMNetworkAdapter> adapter,
+        string macAddress) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Set-VMNetworkAdapter")
+            .AddParameter("VMNetworkAdapter", adapter.PsObject)
+            .AddParameter("StaticMacAddress", macAddress)
+        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        select unit;
 
-            if (adapter.Value.MacAddress != networkAdapterConfig.MacAddress)
-            {
-                res = await Context.Engine.RunAsync(
-                    PsCommandBuilder.Create().AddCommand("Set-VmNetworkAdapter")
-                        .AddParameter("VMNetworkAdapter", adapter.PsObject)
-                        .AddParameter("StaticMacAddress", networkAdapterConfig.MacAddress)).ToError().ConfigureAwait(false);
-
-                if (res.IsLeft)
-                    return res;
-
-            }
-                
-            if (adapter.Value.Connected && adapter.Value.SwitchName == switchName)
-                return Unit.Default;
-
-            await Context.ReportProgress(
-                    $"Connected Network Adapter {adapter.Value.Name} to network {networkAdapterConfig.NetworkName}")
-                .ConfigureAwait(false);
-            return await Context.Engine.RunAsync(
-                PsCommandBuilder.Create().AddCommand("Connect-VmNetworkAdapter")
-                    .AddParameter("VMNetworkAdapter", adapter.PsObject)
-                    .AddParameter("SwitchName", switchName)).ToError().ConfigureAwait(false);
-        }).BindAsync(_ => vmInfo.RecreateOrReload(Context.Engine).ToEither()).ConfigureAwait(false);
-    }
+    private EitherAsync<Error, Unit> ConnectAdapter(
+        TypedPsObject<VMNetworkAdapter> adapter,
+        PhysicalAdapterConfig adapterConfig) =>
+        from _ in Context.ReportProgressAsync(
+            $"Connected Network Adapter {adapter.Value.Name} to network {adapterConfig.NetworkName}")
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Connect-VMNetworkAdapter")
+            .AddParameter("VMNetworkAdapter", adapter.PsObject)
+            .AddParameter("SwitchName", adapterConfig.SwitchName)
+        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        select unit;
 
     private sealed record PhysicalAdapterConfig(
         string AdapterName,

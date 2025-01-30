@@ -19,7 +19,11 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
     {
         var psObject = new PSObject(obj);
         return new TypedPsObject<T>(psObject, this, ObjectMapping);
+    }
 
+    public TypedPsObject<object> ConvertPsObject<TIn>(TypedPsObject<TIn> obj)
+    {
+        return new TypedPsObject<object>(obj.PsObject, this, ObjectMapping);
     }
 
     public Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder, Action<int>? reportProgress = null)

@@ -44,7 +44,8 @@ internal class UpdateCatletSaga(
         IHandleMessages<OperationTaskStatusEvent<UpdateNetworksCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareGeneCommand>>,
         IHandleMessages<OperationTaskStatusEvent<ResolveCatletConfigCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<ResolveGenesCommand>>
+        IHandleMessages<OperationTaskStatusEvent<ResolveGenesCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<SyncVmNetworkPortsCommand>>
 {
     protected override async Task Initiated(UpdateCatletCommand message)
     {
@@ -345,6 +346,30 @@ internal class UpdateCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<UpdateNetworksCommand> message)
     {
+        if (Data.Data.State >= UpdateVMState.NetworksUpdated)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async () =>
+        {
+            Data.Data.State = UpdateVMState.NetworksUpdated;
+
+            var metadata = await GetCatletMetadata(Data.Data.CatletId);
+            if (metadata.IsNone)
+            {
+                await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
+                return;
+            }
+
+            await StartNewTask(new SyncVmNetworkPortsCommand
+            {
+                CatletId = Data.Data.CatletId,
+                VMId = metadata.ValueUnsafe().Catlet.VMId,
+            });
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<SyncVmNetworkPortsCommand> message)
+    {
         return FailOrRun(message, () => Complete());
     }
 
@@ -367,6 +392,8 @@ internal class UpdateCatletSaga(
         config.Correlate<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<UpdateNetworksCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<SyncVmNetworkPortsCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 
