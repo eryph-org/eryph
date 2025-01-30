@@ -11,6 +11,7 @@ using Eryph.StateDb.Model;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static Eryph.Core.NetworkPrelude;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Networks;
@@ -51,7 +52,7 @@ internal class ProjectNetworkPlanBuilder(
         from p2 in AddExternalNetSwitches(p1, providerSubnets, overLayProviders)
         from p3 in AddProviderRouterPorts(p2, providerRouterPorts)
         let p4 = AddNetworksAsSwitches(p3, networks, dnsNames)
-        let p5 = AddSubnetsAsDhcpOptions(p4, networks)
+        from p5 in AddSubnetsAsDhcpOptions(p4, networks, providerRouterPorts)
         let p6 = AddCatletPorts(p5, catletPorts)
         let p7 = AddFloatingPorts(p6, floatingPorts)
         let p8 = AddDnsNames(p7, dnsInfo)
@@ -157,13 +158,13 @@ internal class ProjectNetworkPlanBuilder(
             .ToAsync()
         let updatedPlan = networkPlan
             .AddRouterPort($"externalNet-{networkPlan.Id}-{portInfo.Network.NetworkProvider}",
-                $"project-{networkPlan.Id}",
+                $"project-{networkPlan.Id}-{portInfo.Network.Name}",
                 portInfo.Port.MacAddress, parsedExternalIp, externalNetwork, "local")
 
-            .AddNATRule($"project-{networkPlan.Id}", "snat",
+            .AddNATRule($"project-{networkPlan.Id}-{portInfo.Network.Name}", "snat",
                 parsedExternalIp, "", portInfo.Network.IpNetwork)
 
-            .AddStaticRoute($"project-{networkPlan.Id}", "0.0.0.0/0", gatewayIp)
+            .AddStaticRoute($"project-{networkPlan.Id}-{portInfo.Network.Name}", "0.0.0.0/0", gatewayIp)
         select updatedPlan;
 
     private static EitherAsync<Error, NetworkPlan> AddExternalNetSwitches(
@@ -218,27 +219,55 @@ internal class ProjectNetworkPlanBuilder(
         networks.Map(network => networkPlan.AddSwitch(network.Id.ToString(), dnsNames))
             .Apply(s => JoinPlans(s, networkPlan));
 
+    private static EitherAsync<Error, NetworkPlan> AddSubnetsAsDhcpOptions(
+        NetworkPlan networkPlan,
+        Seq<VirtualNetwork> networks,
+        Seq<ProviderRouterPortInfo> providerPortInfos) =>
+        from plans in networks
+            .Filter(n => n.RouterPort is { IpAssignments.Count: > 0 })
+            .Bind(n => n.Subnets.ToSeq())
+            .Map(s => AddSubnetAsDhcpOptions(networkPlan, s, providerPortInfos))
+            .SequenceSerial()
+        select JoinPlans(plans, networkPlan);
 
-    private static NetworkPlan AddSubnetsAsDhcpOptions(NetworkPlan networkPlan, Seq<VirtualNetwork> networks) =>
-        (from network in networks.Where(x=>x.RouterPort!=null && x.RouterPort.IpAssignments.Count > 0)
-            let networkIp = network.RouterPort.IpAssignments.First()
-         from subnet in network.Subnets
-            let p1 = networkPlan.AddDHCPOptions(
-                subnet.Id.ToString(), IPNetwork2.Parse(subnet.IpNetwork),
-                Map(
-                    ("server_id", networkIp.IpAddress ),
-                    ("server_mac", network.RouterPort.MacAddress ),
-                    ("lease_time", subnet.DhcpLeaseTime == 0 ? "3600" : subnet.DhcpLeaseTime.ToString() ),
-                    ("mtu", subnet.MTU == 0 ? "1400" : subnet.MTU.ToString() ),
-                    ("dns_server", string.IsNullOrWhiteSpace(subnet.DnsServersV4) ? "9.9.9.9" :
-                        $"{{{string.Join(',', subnet.DnsServersV4.Split(','))}}}"),
-                    ("router", networkIp.IpAddress ),
-                    ("domain_name", $"\\\\\\\"{subnet.DnsDomain}\\\\\\\"")
-                )
-            )
-            select p1)
-        .Apply(s => JoinPlans(s.ToSeq(), networkPlan));
-
+    private static EitherAsync<Error, NetworkPlan> AddSubnetAsDhcpOptions(
+        NetworkPlan networkPlan,
+        VirtualNetworkSubnet subnet,
+        Seq<ProviderRouterPortInfo> providerPortInfos) =>
+        from subnetNetwork in parseIPNetwork2(subnet.IpNetwork)
+            .ToEitherAsync(Error.New($"The network '{subnet.IpNetwork}' of subnet {subnet.Id} is invalid."))
+        from routerPort in Optional(subnet.Network.RouterPort)
+            .ToEitherAsync(Error.New($"The network {subnet.NetworkId} has no router port assigned."))
+        from networkIp in routerPort.IpAssignments.ToSeq().HeadOrNone()
+            .ToEitherAsync(Error.New($"The network {subnet.NetworkId} has no router IP assigned."))
+        let providerPortInfo = providerPortInfos.Find(x => x.Network.Id == subnet.NetworkId)
+        let leaseTime = subnet.DhcpLeaseTime == 0 ? 3600 : subnet.DhcpLeaseTime
+        let mtu = subnet.MTU == 0 ? 1400 : subnet.MTU
+        let dnsServers = Optional(subnet.DnsServersV4)
+            .Filter(notEmpty)
+            .ToSeq()
+            .Bind(s => s.Split(',').ToSeq())
+            .DefaultIfEmpty("9.9.9.9")
+        // Push static routes via DHCP to the catlets. Linux (and likely also other OS
+        // using the weak host model) do not necessarily send the response on the same
+        // network interface which received the request. We add a specific route for the
+        // IP range of the network provider to make sure that natted traffic flows back
+        // to the correct provider.
+        let routes = providerPortInfo
+            .Map(p => $"{p.Subnet.Subnet.IpNetwork},{networkIp.IpAddress}")
+            .ToSeq()
+            .Append($"0.0.0.0/0,{networkIp.IpAddress}")
+        let options = Map(
+            ("server_id", networkIp.IpAddress),
+            ("server_mac", routerPort.MacAddress),
+            ("lease_time", $"{leaseTime}"),
+            ("mtu", $"{mtu}"),
+            ("dns_server", $"{{{string.Join(',', dnsServers)}}}"),
+            ("router", networkIp.IpAddress),
+            ("domain_name", $"\\\\\\\"{subnet.DnsDomain}\\\\\\\""),
+            ("classless_static_route", $"{{{string.Join(',', routes)}}}"))
+        let updatedPlan = networkPlan.AddDHCPOptions(subnet.Id.ToString(), subnetNetwork, options)
+        select updatedPlan;
 
     private static NetworkPlan AddCatletPorts(NetworkPlan networkPlan, Seq<CatletNetworkPort> ports) =>
         ports.Map(port => networkPlan.AddNetworkPort(
@@ -285,7 +314,9 @@ internal class ProjectNetworkPlanBuilder(
                 var externalIpAddress = portInfo.Port.IpAssignments.First().IpAddress.Apply(IPAddress.Parse);
                 var internalIp = portInfo.Port.AssignedPort.IpAssignments.First().IpAddress;
 
-                return networkPlan.AddNATRule($"project-{networkPlan.Id}", "dnat_and_snat",
+                return networkPlan.AddNATRule(
+                    $"project-{networkPlan.Id}-{portInfo.Port.AssignedPort.Network.Name}",
+                    "dnat_and_snat",
                     externalIpAddress, portInfo.Port.MacAddress,
                     internalIp, portInfo.Port.AssignedPort.OvsName);
 
@@ -295,17 +326,16 @@ internal class ProjectNetworkPlanBuilder(
 
     private static NetworkPlan AddProjectRouterAndPorts(NetworkPlan networkPlan, Seq<VirtualNetwork> networks)
     {
-        if(networks.Length > 0)
-            networkPlan = networkPlan.AddRouter($"project-{networkPlan.Id}");
-
         return networks.Map(network =>
         {
             var ipNetwork = IPNetwork2.Parse(network.IpNetwork);
             if (network.RouterPort == null || network.RouterPort.IpAssignments?.Count == 0)
                 return networkPlan;
+            
+            networkPlan = networkPlan.AddRouter($"project-{networkPlan.Id}-{network.Name}");
 
             return networkPlan.AddRouterPort(network.Id.ToString(),
-                $"project-{networkPlan.Id}", network.RouterPort.MacAddress, 
+                $"project-{networkPlan.Id}-{network.Name}", network.RouterPort.MacAddress, 
                 network.RouterPort.IpAssignments!.First().IpAddress.Apply(IPAddress.Parse), ipNetwork);
         }).Apply(s => JoinPlans(s, networkPlan));
     }
