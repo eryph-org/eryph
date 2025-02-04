@@ -7,6 +7,7 @@ public enum CreateVMState
     Placed = 20,
     Resolved = 30,
     GenesResolved = 35,
+    ConfigPrepared = 38,
     Created = 40,
     Updated = 50,
 }

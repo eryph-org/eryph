@@ -21,6 +21,15 @@ public static class CatletFeeding
     public static CatletConfig FeedSystemVariables(
         CatletConfig config,
         CatletMetadata catletMetadata) =>
+        FeedSystemVariables(
+            config,
+            catletMetadata.MachineId.ToString(),
+            catletMetadata.VMId.ToString());
+
+    public static CatletConfig FeedSystemVariables(
+        CatletConfig config,
+        string catletId,
+        string vmId) =>
         config.CloneWith(c =>
         {
             c.Variables =
@@ -30,7 +39,7 @@ public static class CatletFeeding
                 {
                     Name = EryphConstants.SystemVariables.CatletId,
                     Type = VariableType.String,
-                    Value = catletMetadata.MachineId.ToString(),
+                    Value = catletId,
                     Required = false,
                     Secret = false,
                 },
@@ -38,7 +47,7 @@ public static class CatletFeeding
                 {
                     Name = EryphConstants.SystemVariables.VmId,
                     Type = VariableType.String,
-                    Value = catletMetadata.VMId.ToString(),
+                    Value = vmId,
                     Required = false,
                     Secret = false,
                 },
