@@ -51,7 +51,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     TenantId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     StatusMessage = table.Column<string>(type: "TEXT", nullable: true),
-                    LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    ResultData = table.Column<string>(type: "TEXT", nullable: true),
+                    ResultType = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {

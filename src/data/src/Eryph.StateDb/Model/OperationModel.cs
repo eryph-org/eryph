@@ -22,4 +22,8 @@ public class OperationModel
     public string? StatusMessage { get; set; }
 
     public DateTimeOffset LastUpdated { get; set; }
+
+    public string? ResultData { get; set; }
+
+    public string? ResultType { get; set; }
 }

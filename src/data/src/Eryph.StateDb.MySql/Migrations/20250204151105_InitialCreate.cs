@@ -64,7 +64,11 @@ namespace Eryph.StateDb.MySql.Migrations
                     Status = table.Column<int>(type: "int", nullable: false),
                     StatusMessage = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    LastUpdated = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false)
+                    LastUpdated = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
+                    ResultData = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ResultType = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
                 {
