@@ -14,6 +14,16 @@ using SimpleInjector;
 
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 
+/// <summary>
+/// This class is responsible for converting the <see cref="OperationModel.ResultData"/>
+/// into the proper API model.
+/// </summary>
+/// <remarks>
+/// In the backend, we use a generic mechanism to store the result of an operation.
+/// For the REST API, we convert the result into the proper API model. This way,
+/// an API user can work with a well-defined model which is included in the
+/// OpenAPI specification.
+/// </remarks>
 public class OperationResultValueResolver(
     Container container)
     : IValueResolver<OperationModel, Operation, OperationResult?>

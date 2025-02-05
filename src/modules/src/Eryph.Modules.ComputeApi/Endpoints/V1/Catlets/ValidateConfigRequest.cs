@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
-public class QuickValidateConfigRequest
+public class ValidateConfigRequest
 {
     public required JsonElement Configuration { get; set; }
 }
