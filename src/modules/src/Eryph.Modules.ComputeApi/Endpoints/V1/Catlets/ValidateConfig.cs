@@ -13,9 +13,9 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 
 [Route("v{version:apiVersion}")]
-public class QuickValidateConfig()
+public class ValidateConfig()
     : EndpointBaseAsync
-        .WithRequest<QuickValidateConfigRequest>
+        .WithRequest<ValidateConfigRequest>
         .WithActionResult<CatletConfigValidationResult>
 {
     [Authorize(Policy = "compute:catlets:read")]
@@ -27,7 +27,7 @@ public class QuickValidateConfig()
         Tags = ["Catlets"])
     ]
     public override Task<ActionResult<CatletConfigValidationResult>> HandleAsync(
-        [FromBody] QuickValidateConfigRequest request,
+        [FromBody] ValidateConfigRequest request,
         CancellationToken cancellationToken = default)
     {
         var validation = RequestValidations.ValidateCatletConfig(
