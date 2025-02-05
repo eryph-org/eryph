@@ -3,9 +3,7 @@
 public enum UpdateVMState
 {
     Initiated = 0,
-    ConfigValidated = 10,
-    Resolved = 20,
-    GenesResolved = 25,
+    ConfigPrepared = 27,
     GenesPrepared = 30,
     VMUpdated = 40,
     ConfigDriveUpdated = 50,

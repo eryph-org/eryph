@@ -78,11 +78,6 @@ public class ExpandNewCatletConfigSaga(
             {
                 await StartNewTask(command);
             }
-            var fodderGenes = Data.Data.ResolvedGenes
-                .Filter(g => g.GeneType == GeneType.Fodder)
-
-
-
         });
     }
 
@@ -130,7 +125,7 @@ public class ExpandNewCatletConfigSaga(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
-        config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(
+        config.Correlate<OperationTaskStatusEvent<ExpandFodderVMCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 
@@ -140,7 +135,8 @@ public class ExpandNewCatletConfigSaga(
 
         await StartNewTask(new ExpandFodderVMCommand
         {
-            Config = Data.Data.Config,
+            AgentName = Data.Data.AgentName,
+            Config = Data.Data.BredConfig,
             ResolvedGenes = Data.Data.ResolvedGenes,
         });
     }

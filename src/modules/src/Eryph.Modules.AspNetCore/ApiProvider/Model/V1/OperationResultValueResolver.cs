@@ -33,15 +33,18 @@ public class OperationResultValueResolver(
             throw new ArgumentException($"The result type '{source.ResultType}' was not found", nameof(source));
 
         var result = JsonSerializer.Deserialize(source.ResultData, type, workflowOptions.JsonSerializerOptions);
-        if (result is ExpandNewCatletConfigCommandResponse expandResponse)
-        {
-            var configJson = CatletConfigJsonSerializer.SerializeToElement(expandResponse.Config);
-            return new CatletConfigOperationResult
-            {
-                Configuration = configJson
-            };
-        }
 
-        throw new ArgumentException($"The result type '{source.ResultType}' is not supported", nameof(source));
+        return result switch
+        {
+            ExpandNewCatletConfigCommandResponse expandResponse => new CatletConfigOperationResult
+            {
+                Configuration = CatletConfigJsonSerializer.SerializeToElement(expandResponse.Config),
+            },
+            ExpandCatletConfigCommandResponse expandResponse => new CatletConfigOperationResult
+            {
+                Configuration = CatletConfigJsonSerializer.SerializeToElement(expandResponse.Config),
+            },
+            _ => throw new ArgumentException($"The result type '{source.ResultType}' is not supported", nameof(source))
+        };
     }
 }
