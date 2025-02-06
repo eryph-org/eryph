@@ -66,12 +66,12 @@ public class Update(
                 detail: "You do not have admin access to the given project.");
 
         var validation = RequestValidations.ValidateProjectNetworkConfig(
-            request.Body.Configuration,
-            nameof(UpdateProjectNetworksRequestBody.Configuration));
+            request.Body.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
                 detail: "The network configuration is invalid.",
-                modelStateDictionary: validation.ToModelStateDictionary());
+                modelStateDictionary: validation.ToModelStateDictionary(
+                    nameof(UpdateProjectNetworksRequestBody.Configuration)));
 
         return await base.HandleAsync(request, cancellationToken);
     }

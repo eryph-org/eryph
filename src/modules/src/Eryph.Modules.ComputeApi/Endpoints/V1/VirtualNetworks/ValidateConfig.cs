@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
-using Eryph.Modules.ComputeApi.Endpoints.V1.Catlets;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +13,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.VirtualNetworks;
 
 [Route("v{version:apiVersion}")]
-public class QuickValidateConfig()
+public class ValidateConfig()
     : EndpointBaseAsync
         .WithRequest<ValidateProjectNetworksConfigRequest>
         .WithActionResult<ProjectNetworksConfigValidationResult>
@@ -31,9 +30,8 @@ public class QuickValidateConfig()
         ValidateProjectNetworksConfigRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validation = RequestValidations.ValidateCatletConfig(
-            request.Configuration,
-            nameof(NewCatletRequest.Configuration));
+        var validation = RequestValidations.ValidateProjectNetworkConfig(
+            request.Configuration);
 
         var errors = validation.FailToSeq()
             .Map(e => new ValidationIssue { Member = e.Member, Message = e.Message })

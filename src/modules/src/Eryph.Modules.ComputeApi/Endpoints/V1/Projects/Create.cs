@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 using static LanguageExt.Prelude;
+using Eryph.Modules.AspNetCore.ApiProvider;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.Projects;
 
@@ -37,7 +38,8 @@ public class Create(
         [FromBody] NewProjectRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validation = ValidateRequest(request);
+        var validation = ValidateRequest(request)
+            .ToJsonPath(ApiJsonSerializerOptions.Options.PropertyNamingPolicy);
         if (validation.IsFail)
             return ValidationProblem(validation.ToModelStateDictionary());
 

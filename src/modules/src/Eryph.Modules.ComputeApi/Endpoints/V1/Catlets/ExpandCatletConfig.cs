@@ -50,12 +50,12 @@ public class ExpandCatletConfig(
         CancellationToken cancellationToken = default)
     {
         var validation = RequestValidations.ValidateCatletConfig(
-            request.Body.Configuration,
-            nameof(NewCatletRequest.Configuration));
+            request.Body.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
                 detail: "The catlet configuration is invalid.",
-                modelStateDictionary: validation.ToModelStateDictionary());
+                modelStateDictionary: validation.ToModelStateDictionary(
+                    nameof(NewCatletRequest.Configuration)));
 
         return await base.HandleAsync(request, cancellationToken);
     }

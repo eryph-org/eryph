@@ -54,12 +54,12 @@ public class Create(
         CancellationToken cancellationToken = default)
     {
         var validation = RequestValidations.ValidateCatletConfig(
-            request.Configuration,
-            nameof(NewCatletRequest.Configuration));
+            request.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
                 detail: "The catlet configuration is invalid.",
-                modelStateDictionary: validation.ToModelStateDictionary());
+                modelStateDictionary: validation.ToModelStateDictionary(
+                    nameof(NewCatletRequest.Configuration)));
 
         var config = validation.ToOption().ValueUnsafe();
 

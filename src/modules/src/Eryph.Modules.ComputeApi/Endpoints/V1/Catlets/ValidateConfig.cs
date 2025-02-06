@@ -31,8 +31,7 @@ public class ValidateConfig()
         CancellationToken cancellationToken = default)
     {
         var validation = RequestValidations.ValidateCatletConfig(
-            request.Configuration,
-            nameof(NewCatletRequest.Configuration));
+            request.Configuration);
 
         var errors = validation.FailToSeq()
             .Map(e => new ValidationIssue { Member = e.Member, Message = e.Message })

@@ -19,6 +19,7 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
 using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
+using Eryph.Modules.AspNetCore.ApiProvider;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 
@@ -49,7 +50,8 @@ public class Create(
                 detail: "You do not have admin access to the given project.");
 
         var authContext = userRightsProvider.GetAuthContext();
-        var validation = ValidateRequest(request, authContext);
+        var validation = ValidateRequest(request, authContext)
+            .ToJsonPath(ApiJsonSerializerOptions.Options.PropertyNamingPolicy);
         if (validation.IsFail)
             return ValidationProblem(validation.ToModelStateDictionary());
 
