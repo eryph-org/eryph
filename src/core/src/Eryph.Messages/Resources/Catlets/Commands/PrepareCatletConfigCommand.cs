@@ -9,18 +9,13 @@ using Eryph.Resources;
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
 [SendMessageTo(MessageRecipient.Controllers)]
-public class PrepareCatletConfigCommand : IHasCorrelationId, ICommandWithName, IHasResource
+public class PrepareCatletConfigCommand : IHasCorrelationId, IHasResource
 {
     public Guid CatletId { get; set; }
 
     public CatletConfig Config { get; set; }
 
     public Guid CorrelationId { get; set; }
-
-    public string GetCommandName()
-    {
-        return $"Prepare config for existing catlet {CatletId}";
-    }
 
     public Resource Resource => new(ResourceType.Catlet, CatletId);
 }

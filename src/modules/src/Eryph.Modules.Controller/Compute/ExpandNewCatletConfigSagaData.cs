@@ -12,19 +12,13 @@ public class ExpandNewCatletConfigSagaData
 {
     public CatletConfig? Config { get; set; }
 
-    public CatletConfig? ParentConfig { get; set; }
-
     public CatletConfig? BredConfig { get; set; }
 
     public string? AgentName { get; set; }
 
-    public ExpandNewCatletConfigState State { get; set; }
+    public ExpandNewCatletConfigSagaState State { get; set; }
 
-    public Guid TenantId { get; set; }
+    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; } = [];
 
-    public Architecture? Architecture { get; set; }
-
-    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
-
-    public IReadOnlyList<UniqueGeneIdentifier> PendingGenes { get; set; }
+    public IReadOnlyList<UniqueGeneIdentifier> PendingGenes { get; set; } = [];
 }

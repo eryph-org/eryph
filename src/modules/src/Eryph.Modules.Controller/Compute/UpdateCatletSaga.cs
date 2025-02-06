@@ -41,7 +41,7 @@ internal class UpdateCatletSaga(
 {
     protected override async Task Initiated(UpdateCatletCommand message)
     {
-        Data.Data.State = UpdateVMState.Initiated;
+        Data.Data.State = UpdateCatletSagaState.Initiated;
         Data.Data.BredConfig = message.BredConfig;
         Data.Data.ResolvedGenes = message.ResolvedGenes;
         Data.Data.Config = message.Config;
@@ -99,12 +99,12 @@ internal class UpdateCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<PrepareCatletConfigCommand> message)
     {
-        if (Data.Data.State >= UpdateVMState.ConfigPrepared)
+        if (Data.Data.State >= UpdateCatletSagaState.ConfigPrepared)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (PrepareCatletConfigCommandResponse response) =>
         {
-            Data.Data.State = UpdateVMState.ConfigPrepared;
+            Data.Data.State = UpdateCatletSagaState.ConfigPrepared;
             Data.Data.Config = response.Config;
             Data.Data.BredConfig = response.BredConfig;
             Data.Data.ResolvedGenes = response.ResolvedGenes;
@@ -115,7 +115,7 @@ internal class UpdateCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<PrepareGeneCommand> message)
     {
-        if (Data.Data.State >= UpdateVMState.GenesPrepared)
+        if (Data.Data.State >= UpdateCatletSagaState.GenesPrepared)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (PrepareGeneResponse response) =>
@@ -140,7 +140,7 @@ internal class UpdateCatletSaga(
 
     private async Task StartUpdateCatlet()
     {
-        Data.Data.State = UpdateVMState.GenesPrepared;
+        Data.Data.State = UpdateCatletSagaState.GenesPrepared;
 
         var metadata = await GetCatletMetadata(Data.Data.CatletId);
         if (metadata.IsNone)
@@ -185,12 +185,12 @@ internal class UpdateCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<UpdateCatletVMCommand> message)
     {
-        if (Data.Data.State >= UpdateVMState.VMUpdated)
+        if (Data.Data.State >= UpdateCatletSagaState.VMUpdated)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (ConvergeCatletResult response) =>
         {
-            Data.Data.State = UpdateVMState.VMUpdated;
+            Data.Data.State = UpdateCatletSagaState.VMUpdated;
 
 
             //TODO: replace this with operation call
@@ -221,12 +221,12 @@ internal class UpdateCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<UpdateCatletConfigDriveCommand> message)
     {
-        if (Data.Data.State >= UpdateVMState.ConfigDriveUpdated)
+        if (Data.Data.State >= UpdateCatletSagaState.ConfigDriveUpdated)
             return Task.CompletedTask;
 
         return FailOrRun(message, async () =>
         {
-            Data.Data.State = UpdateVMState.ConfigDriveUpdated;
+            Data.Data.State = UpdateCatletSagaState.ConfigDriveUpdated;
 
             await StartNewTask(new UpdateNetworksCommand
             {
@@ -237,12 +237,12 @@ internal class UpdateCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<UpdateNetworksCommand> message)
     {
-        if (Data.Data.State >= UpdateVMState.NetworksUpdated)
+        if (Data.Data.State >= UpdateCatletSagaState.NetworksUpdated)
             return Task.CompletedTask;
 
         return FailOrRun(message, async () =>
         {
-            Data.Data.State = UpdateVMState.NetworksUpdated;
+            Data.Data.State = UpdateCatletSagaState.NetworksUpdated;
 
             var metadata = await GetCatletMetadata(Data.Data.CatletId);
             if (metadata.IsNone)
@@ -286,12 +286,12 @@ internal class UpdateCatletSaga(
 
     private async Task StartPrepareGenes()
     {
-        Data.Data.State = UpdateVMState.ConfigPrepared;
+        Data.Data.State = UpdateCatletSagaState.ConfigPrepared;
 
         if (Data.Data.ResolvedGenes!.Count == 0)
         {
             // no images required - go directly to catlet update
-            Data.Data.State = UpdateVMState.GenesPrepared;
+            Data.Data.State = UpdateCatletSagaState.GenesPrepared;
             Data.Data.PendingGenes = [];
             await StartUpdateCatlet();
             return;

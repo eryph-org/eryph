@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.ConfigModel.Json;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -13,11 +12,9 @@ using Eryph.ModuleCore;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
-using Rebus.Messages;
 using Rebus.Sagas;
 
 namespace Eryph.Modules.Controller.Compute;
-
 
 [UsedImplicitly]
 public class ExpandNewCatletConfigSaga(
@@ -30,30 +27,27 @@ public class ExpandNewCatletConfigSaga(
 {
     protected override async Task Initiated(ExpandNewCatletConfigCommand message)
     {
-        Data.Data.State = ExpandNewCatletConfigState.Initiated;
+        Data.Data.State = ExpandNewCatletConfigSagaState.Initiated;
         Data.Data.Config = message.Config;
 
         await StartNewTask(new PrepareNewCatletConfigCommand
         {
             Config = message.Config,
-            TenantId = message.TenantId,
         });
     }
 
     public Task Handle(OperationTaskStatusEvent<PrepareNewCatletConfigCommand> message)
     {
-        if (Data.Data.State >= ExpandNewCatletConfigState.ConfigPrepared)
+        if (Data.Data.State >= ExpandNewCatletConfigSagaState.ConfigPrepared)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (PrepareNewCatletConfigCommandResponse response) =>
         {
-            Data.Data.State = ExpandNewCatletConfigState.ConfigPrepared;
+            Data.Data.State = ExpandNewCatletConfigSagaState.ConfigPrepared;
 
             Data.Data.AgentName = response.AgentName;
-            Data.Data.Architecture = response.Architecture;
 
             Data.Data.Config = response.Config;
-            Data.Data.ParentConfig = response.ParentConfig;
             Data.Data.BredConfig = response.BredConfig;
 
             Data.Data.ResolvedGenes = response.ResolvedGenes;
@@ -83,7 +77,7 @@ public class ExpandNewCatletConfigSaga(
 
     public Task Handle(OperationTaskStatusEvent<PrepareGeneCommand> message)
     {
-        if (Data.Data.State >= ExpandNewCatletConfigState.GenesPrepared)
+        if (Data.Data.State >= ExpandNewCatletConfigSagaState.GenesPrepared)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (PrepareGeneResponse response) =>
@@ -131,7 +125,7 @@ public class ExpandNewCatletConfigSaga(
 
     private async Task StartExpandFodder()
     {
-        Data.Data.State = ExpandNewCatletConfigState.GenesPrepared;
+        Data.Data.State = ExpandNewCatletConfigSagaState.GenesPrepared;
 
         await StartNewTask(new ExpandFodderVMCommand
         {

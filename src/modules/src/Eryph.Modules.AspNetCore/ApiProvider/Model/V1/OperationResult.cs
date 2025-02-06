@@ -13,8 +13,3 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 public abstract class OperationResult
 {
 }
-
-public class CatletConfigOperationResult : OperationResult
-{
-    public JsonElement Configuration { get; set; }
-}

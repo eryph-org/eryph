@@ -16,7 +16,7 @@ public class CreateCatletSagaData : TaskWorkflowSagaData
 
     public string? AgentName { get; set; }
 
-    public CreateVMState State { get; set; }
+    public CreateCatletSagaState State { get; set; }
 
     public Guid MachineId { get; set; }
         
@@ -24,5 +24,5 @@ public class CreateCatletSagaData : TaskWorkflowSagaData
 
     public Architecture? Architecture { get; set; }
 
-    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
+    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; } = [];
 }

@@ -1,15 +1,18 @@
-﻿using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore;
+using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
+using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
+using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
 using LanguageExt.UnsafeValueAccess;
@@ -17,9 +20,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
-using System.Threading;
-using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
-using Eryph.StateDb;
 
 using static LanguageExt.Prelude;
 

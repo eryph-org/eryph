@@ -12,7 +12,7 @@ namespace Eryph.Modules.ComputeApi.Tests;
 public class RequestValidationsTests
 {
     [Fact]
-    public void ValidateCatletConfigCommand_InvalidValue_ReturnsIssueWithJsonPath()
+    public void ValidateCatletConfig_InvalidValue_ReturnsIssueWithJsonPath()
     {
         using var document = JsonDocument.Parse("""
                                                 {
@@ -35,7 +35,7 @@ public class RequestValidationsTests
     }
 
     [Fact]
-    public void ValidateCatletConfigCommand_InvalidName_ReturnsIssueWithJsonPath()
+    public void ValidateCatletConfig_InvalidName_ReturnsIssueWithJsonPath()
     {
         using var document = JsonDocument.Parse("""
                                                 {

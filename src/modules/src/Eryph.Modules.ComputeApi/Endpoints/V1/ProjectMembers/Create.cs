@@ -6,6 +6,7 @@ using Dbosoft.Functional.Validations;
 using Eryph.Core;
 using Eryph.Messages.Projects;
 using Eryph.Modules.AspNetCore;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.StateDb.Model;
@@ -19,7 +20,6 @@ using Operation = Eryph.Modules.AspNetCore.ApiProvider.Model.V1.Operation;
 
 using static Dbosoft.Functional.Validations.ComplexValidations;
 using static LanguageExt.Prelude;
-using Eryph.Modules.AspNetCore.ApiProvider;
 
 namespace Eryph.Modules.ComputeApi.Endpoints.V1.ProjectMembers;
 

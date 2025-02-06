@@ -11,17 +11,15 @@ namespace Eryph.Modules.Controller.Compute;
 
 internal class ExpandCatletConfigSagaData : TaskWorkflowSagaData
 {
-    public ExpandCatletConfigState State { get; set; }
+    public ExpandCatletConfigSagaState State { get; set; }
 
     public CatletConfig? Config { get; set; }
 
     public CatletConfig? BredConfig { get; set; }
 
-    public IReadOnlyList<UniqueGeneIdentifier>? ResolvedGenes { get; set; }
+    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; } = [];
 
     public Guid CatletId { get; set; }
 
     public string? AgentName { get; set; }
-
-    public Architecture? Architecture { get; set; }
 }

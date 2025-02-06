@@ -5,16 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
-using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb.Model;
-using IdGen;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
-using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
@@ -25,8 +22,6 @@ namespace Eryph.Modules.Controller.Compute;
 [UsedImplicitly]
 internal class ExpandCatletConfigSaga(
     IWorkflow workflow,
-    IBus bus,
-    IIdGenerator<long> idGenerator,
     IVirtualMachineDataService vmDataService,
     IVirtualMachineMetadataService metadataService)
     : OperationTaskWorkflowSaga<ExpandCatletConfigCommand, EryphSagaData<ExpandCatletConfigSagaData>>(workflow),
@@ -35,7 +30,7 @@ internal class ExpandCatletConfigSaga(
 {
     protected override async Task Initiated(ExpandCatletConfigCommand message)
     {
-        Data.Data.State = ExpandCatletConfigState.Initiated;
+        Data.Data.State = ExpandCatletConfigSagaState.Initiated;
         Data.Data.CatletId = message.CatletId;
         Data.Data.Config = message.Config;
 
@@ -63,8 +58,6 @@ internal class ExpandCatletConfigSaga(
             return;
         }
 
-        Data.Data.Architecture = Architecture.New(metadata.Architecture);
-
         await StartNewTask(new PrepareCatletConfigCommand
         {
             CatletId = message.CatletId,
@@ -74,12 +67,12 @@ internal class ExpandCatletConfigSaga(
 
     public Task Handle(OperationTaskStatusEvent<PrepareCatletConfigCommand> message)
     {
-        if (Data.Data.State >= ExpandCatletConfigState.ConfigPrepared)
+        if (Data.Data.State >= ExpandCatletConfigSagaState.ConfigPrepared)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (PrepareCatletConfigCommandResponse response) =>
         {
-            Data.Data.State = ExpandCatletConfigState.ConfigPrepared;
+            Data.Data.State = ExpandCatletConfigSagaState.ConfigPrepared;
             Data.Data.Config = response.Config;
             Data.Data.BredConfig = response.BredConfig;
             Data.Data.ResolvedGenes = response.ResolvedGenes;

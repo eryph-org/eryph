@@ -113,7 +113,8 @@ public class OperationManager(
         await db.TaskProgress.AddAsync(progressEntry).ConfigureAwait(false);
     }
 
-    public override async ValueTask<bool> TryChangeStatusAsync(IOperation operation,
+    public override async ValueTask<bool> TryChangeStatusAsync(
+        IOperation operation,
         Dbosoft.Rebus.Operations.OperationStatus newStatus,
         DateTimeOffset timestamp,
         object? additionalData,

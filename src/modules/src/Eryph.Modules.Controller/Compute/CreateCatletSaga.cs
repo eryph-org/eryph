@@ -37,25 +37,24 @@ internal class CreateCatletSaga(
 {
     protected override async Task Initiated(CreateCatletCommand message)
     {
-        Data.Data.State = CreateVMState.Initiated;
+        Data.Data.State = CreateCatletSagaState.Initiated;
         Data.Data.Config = message.Config;
         Data.Data.TenantId = message.TenantId;
         
         await StartNewTask(new PrepareNewCatletConfigCommand
         {
             Config = message.Config,
-            TenantId = message.TenantId,
         });
     }
 
     public Task Handle(OperationTaskStatusEvent<PrepareNewCatletConfigCommand> message)
     {
-        if (Data.Data.State >= CreateVMState.ConfigPrepared)
+        if (Data.Data.State >= CreateCatletSagaState.ConfigPrepared)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (PrepareNewCatletConfigCommandResponse response) =>
         {
-            Data.Data.State = CreateVMState.ConfigPrepared;
+            Data.Data.State = CreateCatletSagaState.ConfigPrepared;
             
             Data.Data.AgentName = response.AgentName;
             Data.Data.Architecture = response.Architecture;
@@ -80,13 +79,13 @@ internal class CreateCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<CreateCatletVMCommand> message)
     {
-        if (Data.Data.State >= CreateVMState.Created)
+        if (Data.Data.State >= CreateCatletSagaState.Created)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (ConvergeCatletResult response) =>
         {
             await lockManager.AcquireVmLock(response.VmId);
-            Data.Data.State = CreateVMState.Created;
+            Data.Data.State = CreateCatletSagaState.Created;
 
             var projectName = Optional(Data.Data.Config?.Project).Filter(notEmpty).Match(
                 Some: n => ProjectName.New(n),
@@ -150,12 +149,12 @@ internal class CreateCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<UpdateCatletCommand> message)
     {
-        if (Data.Data.State >= CreateVMState.Updated)
+        if (Data.Data.State >= CreateCatletSagaState.Updated)
             return Task.CompletedTask;
 
         return FailOrRun(message, () =>
         {
-            Data.Data.State = CreateVMState.Updated;
+            Data.Data.State = CreateCatletSagaState.Updated;
             return Complete();
         });
     }

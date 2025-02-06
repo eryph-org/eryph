@@ -19,13 +19,9 @@ public class PrepareNewCatletConfigSagaData : TaskWorkflowSagaData
 
     public string? AgentName { get; set; }
 
-    public PrepareNewCatletConfigState State { get; set; }
-
-    public Guid MachineId { get; set; }
-
-    public Guid TenantId { get; set; }
+    public PrepareNewCatletConfigSagaState State { get; set; }
 
     public Architecture? Architecture { get; set; }
 
-    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }
+    public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; } = [];
 }

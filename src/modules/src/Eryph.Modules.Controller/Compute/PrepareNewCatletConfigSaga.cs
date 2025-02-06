@@ -18,10 +18,8 @@ using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
-using IdGen;
 
 namespace Eryph.Modules.Controller.Compute;
-
 
 internal class PrepareNewCatletConfigSaga(
     IWorkflow workflow,
@@ -35,8 +33,7 @@ internal class PrepareNewCatletConfigSaga(
     protected override async Task Initiated(PrepareNewCatletConfigCommand message)
     {
         Data.Data.Config = message.Config;
-        Data.Data.State = PrepareNewCatletConfigState.Initiated;
-        Data.Data.TenantId = message.TenantId;
+        Data.Data.State = PrepareNewCatletConfigSagaState.Initiated;
 
         await StartNewTask(new ValidateCatletConfigCommand
         {
@@ -47,13 +44,13 @@ internal class PrepareNewCatletConfigSaga(
 
     public Task Handle(OperationTaskStatusEvent<ValidateCatletConfigCommand> message)
     {
-        if (Data.Data.State >= PrepareNewCatletConfigState.ConfigValidated)
+        if (Data.Data.State >= PrepareNewCatletConfigSagaState.ConfigValidated)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (ValidateCatletConfigCommand response) =>
         {
             Data.Data.Config = response.Config;
-            Data.Data.State = PrepareNewCatletConfigState.ConfigValidated;
+            Data.Data.State = PrepareNewCatletConfigSagaState.ConfigValidated;
 
             await StartNewTask(new PlaceCatletCommand
             {
@@ -64,12 +61,12 @@ internal class PrepareNewCatletConfigSaga(
 
     public Task Handle(OperationTaskStatusEvent<PlaceCatletCommand> message)
     {
-        if (Data.Data.State >= PrepareNewCatletConfigState.Placed)
+        if (Data.Data.State >= PrepareNewCatletConfigSagaState.Placed)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (PlaceCatletResult response) =>
         {
-            Data.Data.State = PrepareNewCatletConfigState.Placed;
+            Data.Data.State = PrepareNewCatletConfigSagaState.Placed;
             Data.Data.AgentName = response.AgentName;
             Data.Data.Architecture = response.Architecture;
 
@@ -83,7 +80,7 @@ internal class PrepareNewCatletConfigSaga(
 
     public Task Handle(OperationTaskStatusEvent<ResolveCatletConfigCommand> message)
     {
-        if (Data.Data.State >= PrepareNewCatletConfigState.Resolved)
+        if (Data.Data.State >= PrepareNewCatletConfigSagaState.Resolved)
             return Task.CompletedTask;
 
         return FailOrRun(message, async (ResolveCatletConfigCommandResponse response) =>
@@ -91,7 +88,7 @@ internal class PrepareNewCatletConfigSaga(
             if (Data.Data.Config is null)
                 throw new InvalidOperationException("Config is missing.");
 
-            Data.Data.State = PrepareNewCatletConfigState.Resolved;
+            Data.Data.State = PrepareNewCatletConfigSagaState.Resolved;
 
             await bus.SendLocal(new UpdateGenesInventoryCommand
             {
@@ -136,7 +133,7 @@ internal class PrepareNewCatletConfigSaga(
 
     public Task Handle(OperationTaskStatusEvent<ResolveGenesCommand> message)
     {
-        if (Data.Data.State >= PrepareNewCatletConfigState.GenesResolved)
+        if (Data.Data.State >= PrepareNewCatletConfigSagaState.GenesResolved)
             return Task.CompletedTask;
 
         return FailOrRun(message, (ResolveGenesCommandResponse response) =>
@@ -144,7 +141,7 @@ internal class PrepareNewCatletConfigSaga(
             if (Data.Data.Config is null)
                 throw new InvalidOperationException("Config is missing.");
 
-            Data.Data.State = PrepareNewCatletConfigState.GenesResolved;
+            Data.Data.State = PrepareNewCatletConfigSagaState.GenesResolved;
             Data.Data.ResolvedGenes = response.ResolvedGenes;
 
             return Complete(new PrepareNewCatletConfigCommandResponse
