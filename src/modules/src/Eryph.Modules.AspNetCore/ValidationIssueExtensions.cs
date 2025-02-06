@@ -57,8 +57,7 @@ public static partial class ValidationIssueExtensions
                 var modelState = new ModelStateDictionary();
                 var jsonPathPrefix = Optional(pathPrefix)
                     .Filter(notEmpty)
-                    .Map(p => ToJsonPath(p, ApiJsonSerializerOptions.Options.PropertyNamingPolicy))
-                    .IfNone("$.");
+                    .Map(p => ToJsonPath(p, ApiJsonSerializerOptions.Options.PropertyNamingPolicy));
 
                 foreach (var error in errors)
                 {

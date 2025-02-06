@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Eryph.Modules.Controller.Compute;
 
-public enum PrepareNewCatletConfigState
+public enum PrepareNewCatletConfigSagaState
 {
     Initiated = 0,
     ConfigValidated = 10,

@@ -40,7 +40,6 @@ public class ExpandNewCatletConfig(
         return new ExpandNewCatletConfigCommand
         {
             CorrelationId = request.CorrelationId.GetOrGenerate(),
-            TenantId = userRightsProvider.GetUserTenantId(),
             Config = config,
         };
     }

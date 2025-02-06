@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "result_type")]
-[JsonDerivedType(typeof(CatletConfigOperationResult), "catlet_config")]
+[JsonDerivedType(typeof(CatletConfigOperationResult), "CatletConfig")]
 public abstract class OperationResult
 {
 }
