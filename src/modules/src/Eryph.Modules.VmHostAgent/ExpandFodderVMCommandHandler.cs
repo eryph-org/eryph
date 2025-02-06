@@ -31,8 +31,11 @@ internal class ExpandFodderVMCommandHandler(
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
+        let configWithSystemVariables = command.CatletMetadata is not null
+            ? CatletFeeding.FeedSystemVariables(command.Config, command.CatletMetadata)
+            : CatletFeeding.FeedSystemVariables(command.Config, "<<catletId>>", "<<vmId>>")
         from fedConfig in CatletFeeding.Feed(
-            CatletFeeding.FeedSystemVariables(command.Config, "<<catletId>>", "<<vmId>>"),
+            configWithSystemVariables,
             command.ResolvedGenes.ToSeq(),
             genepoolReader)
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)

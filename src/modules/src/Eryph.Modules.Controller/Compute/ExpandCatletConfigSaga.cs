@@ -6,15 +6,14 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core.Genetics;
-using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Messages.Resources.Networks.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.StateDb.Model;
 using IdGen;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.UnsafeValueAccess;
 using Rebus.Bus;
 using Rebus.Handlers;
 using Rebus.Sagas;
@@ -85,9 +84,17 @@ internal class ExpandCatletConfigSaga(
             Data.Data.BredConfig = response.BredConfig;
             Data.Data.ResolvedGenes = response.ResolvedGenes;
 
+            var metadata = await GetCatletMetadata(Data.Data.CatletId);
+            if (metadata.IsNone)
+            {
+                await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
+                return;
+            }
+
             await StartNewTask(new ExpandFodderVMCommand
             {
                 AgentName = Data.Data.AgentName,
+                CatletMetadata = metadata.ValueUnsafe().Metadata,
                 Config = Data.Data.BredConfig,
                 ResolvedGenes = Data.Data.ResolvedGenes,
             });
@@ -114,4 +121,9 @@ internal class ExpandCatletConfigSaga(
         config.Correlate<OperationTaskStatusEvent<ExpandFodderVMCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
+
+    private Task<Option<(Catlet Catlet, CatletMetadata Metadata)>> GetCatletMetadata(Guid catletId) =>
+        from catlet in vmDataService.GetVM(catletId)
+        from metadata in metadataService.GetMetadata(catlet.MetadataId)
+        select (catlet, metadata);
 }
