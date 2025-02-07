@@ -1,16 +1,16 @@
 ﻿using System;
 using Eryph.ConfigModel.Catlets;
-using Eryph.Resources;
-using LanguageExt.Pipes;
 
-namespace Eryph.Messages.Resources.Catlets.Commands
+namespace Eryph.Messages.Resources.Catlets.Commands;
+
+[SendMessageTo(MessageRecipient.Controllers)]
+public class ValidateCatletConfigCommand
 {
-    [SendMessageTo(MessageRecipient.Controllers)]
-    public class ValidateCatletConfigCommand : IHasResource
-    {
-        public CatletConfig Config { get; set; }
-        public Guid MachineId { get; set; }
-        public Resource Resource => new(ResourceType.Catlet, MachineId);
+    public CatletConfig Config { get; set; }
 
-    }
+    /// <summary>
+    /// Indicates that the <see cref="Config"/> will
+    /// be used to update an existing catlet.
+    /// </summary>
+    public bool IsUpdate { get; set; }
 }

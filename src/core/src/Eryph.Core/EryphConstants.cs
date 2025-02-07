@@ -25,6 +25,7 @@ namespace Eryph.Core
         public static readonly string SystemClientId = "system-client";
         public static readonly Guid SuperAdminRole = Guid.Parse("{E5E83176-7543-4D01-BAEA-08A00EA064A6}");
 
+        public static readonly int DefaultCatletCpuCount = 1;
         public static readonly int DefaultCatletMemoryMb = 1024;
 
         public static readonly string HgsGuardianName = "eryph-hgs-guardian";

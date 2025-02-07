@@ -63,8 +63,8 @@ internal class PrepareCatletConfigSaga(
 
         await StartNewTask(new ValidateCatletConfigCommand
         {
-            MachineId = message.Resource.Id,
             Config = message.Config,
+            IsUpdate = true,
         });
     }
 
@@ -73,7 +73,7 @@ internal class PrepareCatletConfigSaga(
         if (Data.Data.State >= PrepareCatletConfigSagaState.ConfigValidated)
             return Task.CompletedTask;
 
-        return FailOrRun(message, async (ValidateCatletConfigCommand response) =>
+        return FailOrRun(message, async (ValidateCatletConfigCommandResponse response) =>
         {
             Data.Data.State = PrepareCatletConfigSagaState.ConfigValidated;
             Data.Data.Config = response.Config;
