@@ -9,5 +9,5 @@ namespace Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
 
 public class CatletConfigOperationResult : OperationResult
 {
-    public JsonElement Configuration { get; set; }
+    public required JsonElement Configuration { get; set; }
 }

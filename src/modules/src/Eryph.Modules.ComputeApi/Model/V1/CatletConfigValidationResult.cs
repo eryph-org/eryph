@@ -11,7 +11,7 @@ public class CatletConfigValidationResult
     /// <summary>
     /// Indicates whether the catlet configuration is valid.
     /// </summary>
-    public bool IsValid { get; set; }
+    public required bool IsValid { get; set; }
 
     /// <summary>
     /// Contains a list of the issues when the configuration is invalid.

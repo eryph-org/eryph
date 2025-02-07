@@ -54,7 +54,7 @@ public class OperationResultValueResolver(
             {
                 Configuration = CatletConfigJsonSerializer.SerializeToElement(expandResponse.Config),
             },
-            _ => throw new ArgumentException($"The result type '{source.ResultType}' is not supported", nameof(source))
+            _ => null,
         };
     }
 }
