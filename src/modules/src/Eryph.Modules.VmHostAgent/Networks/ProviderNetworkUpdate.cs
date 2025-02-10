@@ -84,7 +84,7 @@ public static class ProviderNetworkUpdate<RT>
                     b.Ports.Contains(port.Id)).Name))
                 .ToHashMap(),
             hostState.OvsBridgePorts.Map(port => (port.Name, new OVSBridgePortInfo(hostState.OVSBridges.First(b =>
-                    b.Ports.Contains(port.Id)).Name, port.Name, port.Tag, port.VlanMode)))
+                    b.Ports.Contains(port.Id)).Name, port.Name, port.Tag, port.VlanMode, new Lst<string>(port.Interfaces))))
                 .ToHashMap())
         let newBridges = newConfig.NetworkProviders
             .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)

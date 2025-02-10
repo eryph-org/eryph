@@ -84,6 +84,11 @@ public class OVSControl(
         return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\" -- set interface \"{portName}\" external_ids:iface-id={portName}", false, cancellationToken).Map(_ => Unit.Default);
     }
 
+    public EitherAsync<Error, Unit> AddBond(string bridgeName, string portName, Seq<string> interfaces, string bondMode, CancellationToken cancellationToken)
+    {
+        return RunCommand($" --may-exist add-bond \"{bridgeName}\" \"{portName}\" {string.Join(" ", interfaces.Map(i => $"\"{i}\"")) } bond_mode={bondMode}", false, cancellationToken).Map(_ => Unit.Default);
+    }
+
     public EitherAsync<Error, Unit> RemovePort(string bridgeName, string portName, CancellationToken cancellationToken)
     {
         return RunCommand($" --if-exists del-port \"{bridgeName}\" \"{portName}\"", false, cancellationToken).Map(_ => Unit.Default);
