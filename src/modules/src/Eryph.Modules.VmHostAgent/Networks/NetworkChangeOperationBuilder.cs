@@ -38,6 +38,7 @@ public enum NetworkChangeOperation
 
     RemoveAdapterPort,
     AddAdapterPort,
+    AddBondPort,
     UpdateBridgePort,
 
     ConfigureNatIp,
@@ -596,6 +597,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 if (createdBridges.Contains(networkProvider.BridgeName))
                     return SuccessAff(unit);
 
+                // TODO is this correct? We use find with both bridge name and port name
                 var (currentTag, currentVLanMode) = ovsBridges.Ports.Find(networkProvider.BridgeName)
                     .Map(port => (port.Tag, port.VlanMode)).IfNone((null,null));
 
@@ -637,8 +639,15 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
             foreach (var networkProvider in newConfig.NetworkProviders
                          .Where(x => x.Type is NetworkProviderType.Overlay)
-                         .Where(x => x.Adapters != null))
+                         .Where(x => x.Adapters is { Length: > 0 }))
             {
+                
+                //var adapterName = networkProvider.Adapters.Length > 1
+                //    ? $"{networkProvider.BridgeName}-bond"
+                //    : networkProvider.Adapters[0];
+
+                //var ovsBridgeInfo = ovsBridges.Ports.Find(adapterName);
+
                 foreach (var adapterName in networkProvider.Adapters)
                 {
                     _ = ovsBridges.BridgePorts.Find(adapterName).Match(

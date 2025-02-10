@@ -49,5 +49,24 @@ public class NetworkProviderBridgeOptions
         };
     }
 
+    [YamlMember(Alias = "bond_mode")]
+    public string BondModeString { get; set; }
 
+    [YamlIgnore] public BondMode BondMode => ParseBondMode(BondModeString);
+
+    public static BondMode ParseBondMode([CanBeNull] string modeString)
+    {
+        if (string.IsNullOrWhiteSpace(modeString))
+            return BondMode.ActiveBackup;
+
+        return modeString switch
+        {
+            // for future use
+            //"static" => BridgeHostIpMode.Static,
+            "active_backup" => BondMode.ActiveBackup,
+            "balance_slb" => BondMode.BalanceSlb,
+            "balance_tcp" => BondMode.BalanceTcp,
+            _ => BondMode.ActiveBackup,
+        };
+    }
 }

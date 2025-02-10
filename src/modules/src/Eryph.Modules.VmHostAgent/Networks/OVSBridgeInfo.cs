@@ -9,4 +9,5 @@ public readonly record struct OVSBridgeInfo(
 );
 
 public readonly record struct OVSBridgePortInfo(string BridgeName, 
-    string PortName, int? Tag, string? VlanMode);
+    string PortName, int? Tag, string? VlanMode,
+    Lst<string> Interfaces);
