@@ -68,8 +68,7 @@ internal class CreateCatletSaga(
 
             await StartNewTask(new CreateCatletVMCommand
             {
-                Config = Data.Data.Config,
-                BredConfig = Data.Data.BredConfig,
+                Config = Data.Data.BredConfig,
                 NewMachineId = Data.Data.MachineId,
                 AgentName = Data.Data.AgentName,
                 StorageId = idGenerator.CreateId()

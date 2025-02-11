@@ -29,22 +29,22 @@ public static class CatletConfigDefaults
         });
 
     private static CatletCpuConfig ApplyCpuDefaults(
-        [CanBeNull] CatletCpuConfig config) =>
-        config is { Count: not null }
-            ? config.Clone()
-            : new CatletCpuConfig
+        Option<CatletCpuConfig> config) =>
+        config.Filter(c => c.Count.HasValue)
+            .Map(c => c.Clone())
+            .IfNone(new CatletCpuConfig
             {
                 Count = EryphConstants.DefaultCatletCpuCount,
-            };
+            });
 
     private static CatletMemoryConfig ApplyMemoryDefaults(
-        [CanBeNull] CatletMemoryConfig config) =>
-        config is { Startup: not null} or { Minimum: not null } or { Maximum: not null }
-            ? config.Clone()
-            : new CatletMemoryConfig
+        Option<CatletMemoryConfig> config) =>
+        config.Filter(c => c.Startup.HasValue || c.Minimum.HasValue || c.Maximum.HasValue)
+            .Map(c => c.Clone())
+            .IfNone(new CatletMemoryConfig
             {
                 Startup = EryphConstants.DefaultCatletMemoryMb,
-            };
+            });
 
     private static Seq<CatletNetworkConfig> ApplyNetworksDefaults(
         Seq<CatletNetworkConfig> configs) =>

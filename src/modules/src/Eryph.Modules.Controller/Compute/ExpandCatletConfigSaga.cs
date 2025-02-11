@@ -38,7 +38,7 @@ internal class ExpandCatletConfigSaga(
 
         if (Data.Data.CatletId == Guid.Empty)
         {
-            await Fail("Catlet cannot be updated because the catlet Id is missing.");
+            await Fail("Config for existing catlet cannot be expanded because the catlet Id is missing.");
             return;
         }
 
@@ -46,7 +46,7 @@ internal class ExpandCatletConfigSaga(
             .Map(m => m.IfNoneUnsafe((Catlet?)null));
         if (machineInfo is null)
         {
-            await Fail($"Catlet cannot be updated because the catlet {Data.Data.CatletId} does not exist.");
+            await Fail($"Config for existing catlet cannot be expanded because the catlet {Data.Data.CatletId} does not exist.");
             return;
         }
 
@@ -56,7 +56,7 @@ internal class ExpandCatletConfigSaga(
             .Map(m => m.IfNoneUnsafe((CatletMetadata?)null));
         if (metadata is null)
         {
-            await Fail($"Catlet cannot be updated because the metadata for catlet {Data.Data.CatletId} does not exist.");
+            await Fail($"Config for existing catlet cannot be expanded because the metadata for catlet {Data.Data.CatletId} does not exist.");
             return;
         }
 

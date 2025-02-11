@@ -12,7 +12,5 @@ public enum PrepareNewCatletConfigSagaState
     ConfigValidated = 10,
     Placed = 20,
     Resolved = 30,
-    GenesResolved = 35,
-    Created = 40,
-    Updated = 50,
+    GenesResolved = 40,
 }

@@ -29,12 +29,12 @@ public static class CatletConfigNormalizer
             c.Hostname = c.Hostname != c.Name ? c.Hostname : null;
             c.Cpu = Minimize(c.Cpu);
             c.Memory = Minimize(c.Memory);
-            c.Capabilities = Minimize(c.Capabilities);
-            c.Drives = Minimize(c.Drives);
-            c.NetworkAdapters = Minimize(c.NetworkAdapters);
-            c.Networks = Minimize(c.Networks);
-            c.Variables = Minimize(c.Variables);
-            c.Fodder = Minimize(c.Fodder);
+            c.Capabilities = Minimize(Seq(c.Capabilities));
+            c.Drives = Minimize(Seq(c.Drives));
+            c.NetworkAdapters = Minimize(Seq(c.NetworkAdapters));
+            c.Networks = Minimize(Seq(c.Networks));
+            c.Variables = Minimize(Seq(c.Variables));
+            c.Fodder = Minimize(Seq(c.Fodder));
         });
 
     [CanBeNull]
@@ -53,25 +53,20 @@ public static class CatletConfigNormalizer
 
     [CanBeNull]
     private static FodderConfig[] Minimize(
-        [CanBeNull] FodderConfig[] configs) =>
-        Optional(configs).Filter(c => c.Length > 0)
-            .Map(s => s.Map(Minimize))
-            .Map(s => s.ToArray())
-            .IfNoneUnsafe(() => null);
+        Seq<FodderConfig> configs) =>
+        configs.Match(
+            Empty: () => null,
+            Seq: s => s.Map(Minimize).ToArray());
 
     [CanBeNull]
     private static FodderConfig Minimize(FodderConfig config) =>
-        config.CloneWith(c =>
-        {
-            c.Variables = Minimize(c.Variables);
-        });
+        config.CloneWith(c => { c.Variables = Minimize(Seq(c.Variables)); });
 
     [CanBeNull]
     private static T[] Minimize<T>(
-        [CanBeNull] T[] configs)
+        Seq<T> configs)
         where T : ICloneableConfig<T> =>
-        Optional(configs).Filter(c => c.Length > 0)
-            .Map(s => s.Map(c => c.Clone()))
-            .Map(s => s.ToArray())
-            .IfNoneUnsafe(() => null);
+        configs.Match(
+            Empty: () => null,
+            Seq: s => s.Map(c => c.Clone()).ToArray());
 }

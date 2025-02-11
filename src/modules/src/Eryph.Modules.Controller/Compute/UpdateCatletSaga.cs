@@ -138,26 +138,6 @@ internal class UpdateCatletSaga(
         });
     }
 
-    private async Task StartUpdateCatlet()
-    {
-        Data.Data.State = UpdateCatletSagaState.GenesPrepared;
-
-        var metadata = await GetCatletMetadata(Data.Data.CatletId);
-        if (metadata.IsNone)
-        {
-            await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
-            return;
-        }
-
-        await StartNewTask(new UpdateCatletNetworksCommand
-        {
-            CatletId = Data.Data.CatletId,
-            CatletMetadataId = metadata.ValueUnsafe().Metadata.Id,
-            Config = Data.Data.BredConfig,
-            ProjectId = Data.Data.ProjectId
-        });
-    }
-
     public Task Handle(OperationTaskStatusEvent<UpdateCatletNetworksCommand> message)
     {
         return FailOrRun(message, async (UpdateCatletNetworksCommandResponse r) =>
@@ -308,6 +288,26 @@ internal class UpdateCatletSaga(
         {
             await StartNewTask(command);
         }
+    }
+
+    private async Task StartUpdateCatlet()
+    {
+        Data.Data.State = UpdateCatletSagaState.GenesPrepared;
+
+        var metadata = await GetCatletMetadata(Data.Data.CatletId);
+        if (metadata.IsNone)
+        {
+            await Fail($"The metadata for catlet {Data.Data.CatletId} was not found.");
+            return;
+        }
+
+        await StartNewTask(new UpdateCatletNetworksCommand
+        {
+            CatletId = Data.Data.CatletId,
+            CatletMetadataId = metadata.ValueUnsafe().Metadata.Id,
+            Config = Data.Data.BredConfig,
+            ProjectId = Data.Data.ProjectId
+        });
     }
 
     private Task<Option<(Catlet Catlet, CatletMetadata Metadata)>> GetCatletMetadata(Guid catletId) =>
