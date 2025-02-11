@@ -105,7 +105,6 @@ internal class UpdateCatletSaga(
         return FailOrRun(message, async (PrepareCatletConfigCommandResponse response) =>
         {
             Data.Data.State = UpdateCatletSagaState.ConfigPrepared;
-            Data.Data.Config = response.Config;
             Data.Data.BredConfig = response.BredConfig;
             Data.Data.ResolvedGenes = response.ResolvedGenes;
 

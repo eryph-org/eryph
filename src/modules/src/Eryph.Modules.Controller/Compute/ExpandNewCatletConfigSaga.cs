@@ -48,10 +48,7 @@ public class ExpandNewCatletConfigSaga(
             Data.Data.State = ExpandNewCatletConfigSagaState.ConfigPrepared;
 
             Data.Data.AgentName = response.AgentName;
-
-            Data.Data.Config = response.Config;
             Data.Data.BredConfig = response.BredConfig;
-
             Data.Data.ResolvedGenes = response.ResolvedGenes;
 
             Data.Data.PendingGenes = response.ResolvedGenes
