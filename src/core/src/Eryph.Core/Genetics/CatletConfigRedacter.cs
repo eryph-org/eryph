@@ -11,6 +11,10 @@ namespace Eryph.Core.Genetics;
 
 public static class CatletConfigRedactor
 {
+    /// <summary>
+    /// Redacts any secrets in the <see cref="CatletConfig.Fodder"/>
+    /// or <see cref="CatletConfig.Variables"/>.
+    /// </summary>
     public static CatletConfig RedactSecrets(
         CatletConfig catletConfig) =>
         catletConfig.CloneWith(c =>

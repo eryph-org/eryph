@@ -14,6 +14,15 @@ namespace Eryph.Core.Genetics;
 
 public static class CatletConfigNormalizer
 {
+    /// <summary>
+    /// Minimizes the given <paramref name="config"/>.
+    /// </summary>
+    /// <remarks>
+    /// This method removes values which do not contain any
+    /// meaningful information (e.g. empty lists). Additionally,
+    /// some values are removed when they are identical to other
+    /// values.
+    /// </remarks>
     public static CatletConfig Minimize(CatletConfig config) =>
         config.CloneWith(c =>
         {
