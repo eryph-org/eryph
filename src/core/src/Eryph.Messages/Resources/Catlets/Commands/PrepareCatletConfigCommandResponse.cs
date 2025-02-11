@@ -10,6 +10,8 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 
 public class PrepareCatletConfigCommandResponse
 {
+    public CatletConfig Config { get; set; }
+
     public CatletConfig BredConfig { get; set; }
 
     public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; }

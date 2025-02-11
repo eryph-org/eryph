@@ -181,6 +181,7 @@ internal class PrepareCatletConfigSaga(
 
             await Complete(new PrepareCatletConfigCommandResponse
             {
+                Config = Data.Data.Config,
                 BredConfig = Data.Data.BredConfig,
                 ResolvedGenes = Data.Data.ResolvedGenes,
             });

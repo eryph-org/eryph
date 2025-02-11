@@ -58,6 +58,8 @@ internal class CreateCatletSaga(
             
             Data.Data.AgentName = response.AgentName;
             Data.Data.Architecture = response.Architecture;
+
+            Data.Data.Config = response.Config;
             Data.Data.BredConfig = response.BredConfig;
             Data.Data.ParentConfig = response.ParentConfig;
             Data.Data.ResolvedGenes = response.ResolvedGenes;
