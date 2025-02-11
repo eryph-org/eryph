@@ -79,8 +79,11 @@ public class Create(
                 statusCode: StatusCodes.Status403Forbidden,
                 detail: "You do not have write access to the given project.");
 
+        var catletName = string.IsNullOrWhiteSpace(config.Name)
+            ? EryphConstants.DefaultCatletName
+            : config.Name;
         var existingCatlet = await repository.GetBySpecAsync(
-            new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId, projectName.Value, environmentName.Value),
+            new CatletSpecs.GetByName(catletName, tenantId, projectName.Value, environmentName.Value),
             cancellationToken);
 
         if (existingCatlet != null)

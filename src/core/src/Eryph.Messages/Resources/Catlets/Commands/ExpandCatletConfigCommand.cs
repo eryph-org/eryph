@@ -15,6 +15,8 @@ public class ExpandCatletConfigCommand : IHasCorrelationId, IHasResource
 
     public CatletConfig Config { get; set; }
 
+    public bool ShowSecrets { get; set; }
+
     public Guid CorrelationId { get; set; }
 
     public Resource Resource => new(ResourceType.Catlet, CatletId);

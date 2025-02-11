@@ -15,6 +15,8 @@ internal class ExpandCatletConfigSagaData : TaskWorkflowSagaData
 
     public CatletConfig? Config { get; set; }
 
+    public bool ShowSecrets { get; set; }
+
     public CatletConfig? BredConfig { get; set; }
 
     public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; } = [];

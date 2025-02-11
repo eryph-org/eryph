@@ -12,6 +12,8 @@ public class ExpandNewCatletConfigSagaData
 {
     public CatletConfig? Config { get; set; }
 
+    public bool ShowSecrets { get; set; }
+
     public CatletConfig? BredConfig { get; set; }
 
     public string? AgentName { get; set; }

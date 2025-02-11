@@ -64,7 +64,6 @@ internal class PrepareCatletConfigSaga(
         await StartNewTask(new ValidateCatletConfigCommand
         {
             Config = message.Config,
-            IsUpdate = true,
         });
     }
 
@@ -226,7 +225,8 @@ internal class PrepareCatletConfigSaga(
             })
         from bredUpdateConfig in CatletBreeding.Breed(fixedParentConfig, fixedConfig)
             .MapLeft(e => Error.New("Could not breed the catlet.", e))
-        select (fixedConfig, bredUpdateConfig);
+        let bredUpdateConfigWithDefaults = CatletConfigDefaults.ApplyDefaults(bredUpdateConfig)
+        select (fixedConfig, bredUpdateConfigWithDefaults);
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<PrepareCatletConfigSagaData>> config)
     {

@@ -12,5 +12,7 @@ public class ExpandNewCatletConfigCommand : IHasCorrelationId
 {
     public CatletConfig Config { get; set; }
 
+    public bool ShowSecrets { get; set; }
+
     public Guid CorrelationId { get; set; }
 }

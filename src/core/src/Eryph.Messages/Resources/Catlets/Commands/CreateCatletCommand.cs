@@ -1,5 +1,6 @@
 ﻿using System;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
@@ -14,7 +15,9 @@ public class CreateCatletCommand : IHasCorrelationId, ICommandWithName
 
     public string GetCommandName()
     {
-        var catletName = Config?.Name ?? "Catlet";
+        var catletName = string.IsNullOrWhiteSpace(Config.Name)
+            ? EryphConstants.DefaultCatletName
+            : Config.Name;
         return $"Create catlet {catletName}";
     }
 }

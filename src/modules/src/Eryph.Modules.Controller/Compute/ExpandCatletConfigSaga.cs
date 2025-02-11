@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
@@ -33,6 +34,7 @@ internal class ExpandCatletConfigSaga(
         Data.Data.State = ExpandCatletConfigSagaState.Initiated;
         Data.Data.CatletId = message.CatletId;
         Data.Data.Config = message.Config;
+        Data.Data.ShowSecrets = message.ShowSecrets;
 
         if (Data.Data.CatletId == Guid.Empty)
         {
@@ -98,9 +100,13 @@ internal class ExpandCatletConfigSaga(
     {
         return FailOrRun(message, async (ExpandFodderVMCommandResponse response) =>
         {
+            var redactedConfig = Data.Data.ShowSecrets
+                ? response.Config
+                : CatletConfigRedactor.RedactSecrets(response.Config);
+
             await Complete(new ExpandCatletConfigCommandResponse
             {
-                Config = response.Config,
+                Config = CatletConfigNormalizer.Minimize(redactedConfig),
             });
         });
     }

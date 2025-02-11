@@ -33,7 +33,8 @@ public class ExpandCatletConfig(
         {
             CatletId = model.Id,
             CorrelationId = request.Body.CorrelationId.GetOrGenerate(),
-            Config = config
+            Config = config,
+            ShowSecrets = request.Body.ShowSecrets.GetValueOrDefault(),
         };
     }
 

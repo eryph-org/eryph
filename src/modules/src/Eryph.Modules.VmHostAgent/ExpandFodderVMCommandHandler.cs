@@ -33,7 +33,7 @@ internal class ExpandFodderVMCommandHandler(
         let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
         let configWithSystemVariables = command.CatletMetadata is not null
             ? CatletFeeding.FeedSystemVariables(command.Config, command.CatletMetadata)
-            : CatletFeeding.FeedSystemVariables(command.Config, "<<catletId>>", "<<vmId>>")
+            : CatletFeeding.FeedSystemVariables(command.Config, "#catletId", "#vmId")
         from fedConfig in CatletFeeding.Feed(
             configWithSystemVariables,
             command.ResolvedGenes.ToSeq(),

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
@@ -29,6 +30,7 @@ public class ExpandNewCatletConfigSaga(
     {
         Data.Data.State = ExpandNewCatletConfigSagaState.Initiated;
         Data.Data.Config = message.Config;
+        Data.Data.ShowSecrets = message.ShowSecrets;
 
         await StartNewTask(new PrepareNewCatletConfigCommand
         {
@@ -104,9 +106,13 @@ public class ExpandNewCatletConfigSaga(
     {
         return FailOrRun(message, async (ExpandFodderVMCommandResponse response) =>
         {
+            var redactedConfig = Data.Data.ShowSecrets
+                ? response.Config
+                : CatletConfigRedactor.RedactSecrets(response.Config);
+
             await Complete(new ExpandNewCatletConfigCommandResponse
             {
-                Config = response.Config,
+                Config = CatletConfigNormalizer.Minimize(redactedConfig),
             });
         });
     }

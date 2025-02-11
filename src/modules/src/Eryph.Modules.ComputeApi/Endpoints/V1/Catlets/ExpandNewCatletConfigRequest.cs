@@ -13,4 +13,6 @@ public class ExpandNewCatletConfigRequest : RequestBase
     public Guid? CorrelationId { get; set; }
 
     public required JsonElement Configuration { get; set; }
+
+    public bool? ShowSecrets { get; set; }
 }

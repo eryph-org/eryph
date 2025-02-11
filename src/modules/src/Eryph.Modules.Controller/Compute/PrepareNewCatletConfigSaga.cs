@@ -38,7 +38,6 @@ internal class PrepareNewCatletConfigSaga(
         await StartNewTask(new ValidateCatletConfigCommand
         {
             Config = message.Config,
-            IsUpdate = false,
         });
     }
 
@@ -178,5 +177,6 @@ internal class PrepareNewCatletConfigSaga(
             .MapLeft(e => Error.New("Could not resolve genes in the catlet config.", e))
         from breedingResult in CatletPedigree.Breed(config, resolvedGeneSets, parentConfigs)
             .MapLeft(e => Error.New("Could not breed the catlet.", e))
-        select (resolvedConfig, breedingResult.Config, breedingResult.ParentConfig);
+        let bredConfigWithDefaults = CatletConfigDefaults.ApplyDefaults(breedingResult.Config)
+        select (resolvedConfig, bredConfigWithDefaults, breedingResult.ParentConfig);
 }

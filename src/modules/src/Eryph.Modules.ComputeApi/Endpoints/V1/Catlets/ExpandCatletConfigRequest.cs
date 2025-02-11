@@ -19,4 +19,6 @@ public class ExpandCatletConfigRequestBody
     public Guid? CorrelationId { get; set; }
 
     public required JsonElement Configuration { get; set; }
+
+    public bool? ShowSecrets { get; set; }
 }
