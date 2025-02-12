@@ -5,6 +5,7 @@ using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
+using Eryph.Messages.Genes.Commands;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
@@ -32,6 +33,8 @@ internal class CreateCatletSaga(
     IStateStore stateStore)
     : OperationTaskWorkflowSaga<CreateCatletCommand, EryphSagaData<CreateCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<PrepareNewCatletConfigCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<PrepareGeneCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<ExpandFodderVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<CreateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletCommand>>
 {
@@ -40,7 +43,9 @@ internal class CreateCatletSaga(
         Data.Data.State = CreateCatletSagaState.Initiated;
         Data.Data.Config = message.Config;
         Data.Data.TenantId = message.TenantId;
-        
+
+        Data.Data.MachineId = Guid.NewGuid();
+
         await StartNewTask(new PrepareNewCatletConfigCommand
         {
             Config = message.Config,
@@ -64,7 +69,62 @@ internal class CreateCatletSaga(
             Data.Data.ParentConfig = response.ParentConfig;
             Data.Data.ResolvedGenes = response.ResolvedGenes;
 
-            Data.Data.MachineId = Guid.NewGuid();
+            Data.Data.PendingGenes = response.ResolvedGenes;
+
+            if (Data.Data.PendingGenes.Count == 0)
+            {
+                await StartExpandFodder();
+                return;
+            }
+
+            var commands = Data.Data.PendingGenes.Map(id => new PrepareGeneCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Gene = id,
+            });
+
+            foreach (var command in commands)
+            {
+                await StartNewTask(command);
+            }
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<PrepareGeneCommand> message)
+    {
+        if (Data.Data.State >= CreateCatletSagaState.GenesPrepared)
+            return Task.CompletedTask;
+
+        return FailOrRun(message, async (PrepareGeneResponse response) =>
+        {
+            Data.Data.PendingGenes = Data.Data.PendingGenes
+                .Except([response.RequestedGene])
+                .ToList();
+
+            await bus.SendLocal(new UpdateGenesInventoryCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Inventory = [response.Inventory],
+                Timestamp = response.Timestamp,
+            });
+
+            if (Data.Data.PendingGenes.Count > 0)
+                return;
+
+            await StartExpandFodder();
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<ExpandFodderVMCommand> message)
+    {
+        if (Data.Data.State >= CreateCatletSagaState.FodderExpanded)
+            return Task.CompletedTask;
+
+        // The expand command is only triggered to ensure that the fodder and
+        // variables are valid. We do not need the result as this point.
+        return FailOrRun(message, async (ExpandFodderVMCommandResponse _) =>
+        {
+            Data.Data.State = CreateCatletSagaState.FodderExpanded;
 
             await StartNewTask(new CreateCatletVMCommand
             {
@@ -164,9 +224,25 @@ internal class CreateCatletSaga(
 
         config.Correlate<OperationTaskStatusEvent<PrepareNewCatletConfigCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<ExpandFodderVMCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<CreateCatletVMCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<UpdateCatletCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
+    }
+
+    private async Task StartExpandFodder()
+    {
+        Data.Data.State = CreateCatletSagaState.GenesPrepared;
+
+        await StartNewTask(new ExpandFodderVMCommand
+        {
+            AgentName = Data.Data.AgentName,
+            Config = Data.Data.BredConfig,
+            ResolvedGenes = Data.Data.ResolvedGenes,
+        });
     }
 }

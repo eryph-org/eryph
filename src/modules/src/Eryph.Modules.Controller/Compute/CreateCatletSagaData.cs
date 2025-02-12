@@ -25,4 +25,6 @@ public class CreateCatletSagaData : TaskWorkflowSagaData
     public Architecture? Architecture { get; set; }
 
     public IReadOnlyList<UniqueGeneIdentifier> ResolvedGenes { get; set; } = [];
+
+    public IReadOnlyList<UniqueGeneIdentifier> PendingGenes { get; set; } = [];
 }

@@ -4,6 +4,8 @@ public enum CreateCatletSagaState
 {
     Initiated = 0,
     ConfigPrepared = 10,
-    Created = 20,
-    Updated = 30,
+    GenesPrepared = 20,
+    FodderExpanded = 30,
+    Created = 40,
+    Updated = 50,
 }

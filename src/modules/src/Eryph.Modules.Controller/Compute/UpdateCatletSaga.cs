@@ -33,6 +33,7 @@ internal class UpdateCatletSaga(
     : OperationTaskWorkflowSaga<UpdateCatletCommand, EryphSagaData<UpdateCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<PrepareCatletConfigCommand>>,
         IHandleMessages<OperationTaskStatusEvent<PrepareGeneCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<ExpandFodderVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletConfigDriveCommand>>,
         IHandleMessages<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>,
@@ -83,10 +84,10 @@ internal class UpdateCatletSaga(
 
         if (Data.Data.BredConfig is not null && Data.Data.ResolvedGenes is not null)
         {
-            // The catlet has already been bred. This happens when the update
-            // saga is initiated by the create saga. We can skip directly to
-            // the gene preparation step.
-            await StartPrepareGenes();
+            // The catlet has already been bred and its genes have been prepared.
+            // This happens when the update saga is initiated by the create saga.
+            // We can skip directly to the catlet update step.
+            await StartUpdateCatlet();
             return;
         }
 
@@ -109,7 +110,24 @@ internal class UpdateCatletSaga(
             Data.Data.BredConfig = response.BredConfig;
             Data.Data.ResolvedGenes = response.ResolvedGenes;
 
-            await StartPrepareGenes();
+            Data.Data.PendingGenes = Data.Data.ResolvedGenes;
+
+            if (Data.Data.PendingGenes!.Count == 0)
+            {
+                await StartExpandFodder();
+                return;
+            }
+
+            var commands = Data.Data.ResolvedGenes.Map(id => new PrepareGeneCommand
+            {
+                AgentName = Data.Data.AgentName,
+                Gene = id,
+            });
+
+            foreach (var command in commands)
+            {
+                await StartNewTask(command);
+            }
         });
     }
 
@@ -134,14 +152,32 @@ internal class UpdateCatletSaga(
             if (Data.Data.PendingGenes.Count > 0)
                 return;
 
+            await StartExpandFodder();
+        });
+    }
+
+    public Task Handle(OperationTaskStatusEvent<ExpandFodderVMCommand> message)
+    {
+        if (Data.Data.State >= UpdateCatletSagaState.FodderExpanded)
+            return Task.CompletedTask;
+
+        // The expand command is only triggered to ensure that the fodder and
+        // variables are valid. We do not need the result as this point.
+        return FailOrRun(message, async (ExpandFodderVMCommandResponse _) =>
+        {
             await StartUpdateCatlet();
         });
     }
 
     public Task Handle(OperationTaskStatusEvent<UpdateCatletNetworksCommand> message)
     {
+        if (Data.Data.State >= UpdateCatletSagaState.CatletNetworksUpdated)
+            return Task.CompletedTask;
+
         return FailOrRun(message, async (UpdateCatletNetworksCommandResponse r) =>
         {
+            Data.Data.State = UpdateCatletSagaState.CatletNetworksUpdated;
+
             var metadata = await GetCatletMetadata(Data.Data.CatletId);
             if (metadata.IsNone)
             {
@@ -171,7 +207,6 @@ internal class UpdateCatletSaga(
         return FailOrRun(message, async (ConvergeCatletResult response) =>
         {
             Data.Data.State = UpdateCatletSagaState.VMUpdated;
-
 
             //TODO: replace this with operation call
             await bus.SendLocal(new UpdateInventoryCommand
@@ -252,6 +287,8 @@ internal class UpdateCatletSaga(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<PrepareGeneCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<ExpandFodderVMCommand>>(
+            m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<UpdateCatletNetworksCommand>>(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<UpdateCatletVMCommand>>(
@@ -264,35 +301,21 @@ internal class UpdateCatletSaga(
             m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 
-    private async Task StartPrepareGenes()
+    private async Task StartExpandFodder()
     {
-        Data.Data.State = UpdateCatletSagaState.ConfigPrepared;
+        Data.Data.State = UpdateCatletSagaState.GenesPrepared;
 
-        if (Data.Data.ResolvedGenes!.Count == 0)
-        {
-            // no images required - go directly to catlet update
-            Data.Data.State = UpdateCatletSagaState.GenesPrepared;
-            Data.Data.PendingGenes = [];
-            await StartUpdateCatlet();
-            return;
-        }
-
-        Data.Data.PendingGenes = Data.Data.ResolvedGenes;
-        var commands = Data.Data.ResolvedGenes.Map(id => new PrepareGeneCommand
+        await StartNewTask(new ExpandFodderVMCommand
         {
             AgentName = Data.Data.AgentName,
-            Gene = id,
+            Config = Data.Data.BredConfig,
+            ResolvedGenes = Data.Data.ResolvedGenes,
         });
-
-        foreach (var command in commands)
-        {
-            await StartNewTask(command);
-        }
     }
 
     private async Task StartUpdateCatlet()
     {
-        Data.Data.State = UpdateCatletSagaState.GenesPrepared;
+        Data.Data.State = UpdateCatletSagaState.FodderExpanded;
 
         var metadata = await GetCatletMetadata(Data.Data.CatletId);
         if (metadata.IsNone)
