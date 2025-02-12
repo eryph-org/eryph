@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Ardalis.ApiEndpoints;
 using Eryph.Modules.ComputeApi.Model.V1;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -25,6 +26,12 @@ public class ValidateConfig()
         Description = "Performs a quick validation of the catlet configuration",
         OperationId = "Catlets_ValidateConfig",
         Tags = ["Catlets"])
+    ]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(CatletConfigValidationResult),
+        contentTypes: ["application/json"])
     ]
     public override Task<ActionResult<CatletConfigValidationResult>> HandleAsync(
         [FromBody] ValidateConfigRequest request,

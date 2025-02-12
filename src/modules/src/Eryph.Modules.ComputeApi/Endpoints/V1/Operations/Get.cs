@@ -5,6 +5,7 @@ using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -21,6 +22,12 @@ public class Get(
         Description = "Get an operation",
         OperationId = "Operations_Get",
         Tags = ["Operations"])
+    ]
+    [SwaggerResponse(
+        statusCode: StatusCodes.Status200OK,
+        description: "Success",
+        type: typeof(Operation),
+        contentTypes: ["application/json"])
     ]
     public override async Task<ActionResult<Operation>> HandleAsync(
         [FromRoute] OperationRequest request,
