@@ -11,7 +11,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 
 public class PrepareNewCatletConfigCommandResponse
 {
-    public CatletConfig Config { get; set; }
+    public CatletConfig ResolvedConfig { get; set; }
 
     [CanBeNull] public CatletConfig ParentConfig { get; set; }
 

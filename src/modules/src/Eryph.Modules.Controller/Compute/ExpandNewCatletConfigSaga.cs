@@ -49,7 +49,7 @@ public class ExpandNewCatletConfigSaga(
 
             Data.Data.AgentName = response.AgentName;
 
-            Data.Data.Config = response.Config;
+            Data.Data.Config = response.ResolvedConfig;
             Data.Data.BredConfig = response.BredConfig;
 
             Data.Data.ResolvedGenes = response.ResolvedGenes;

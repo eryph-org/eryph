@@ -75,7 +75,7 @@ internal class ExpandCatletConfigSaga(
         return FailOrRun(message, async (PrepareCatletConfigCommandResponse response) =>
         {
             Data.Data.State = ExpandCatletConfigSagaState.ConfigPrepared;
-            Data.Data.Config = response.Config;
+            Data.Data.Config = response.ResolvedConfig;
             Data.Data.BredConfig = response.BredConfig;
             Data.Data.ResolvedGenes = response.ResolvedGenes;
 

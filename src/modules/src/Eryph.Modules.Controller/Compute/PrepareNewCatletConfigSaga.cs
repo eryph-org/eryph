@@ -147,7 +147,7 @@ internal class PrepareNewCatletConfigSaga(
             {
                 AgentName = Data.Data.AgentName,
                 Architecture = Data.Data.Architecture,
-                Config = Data.Data.Config,
+                ResolvedConfig = Data.Data.Config,
                 ParentConfig = Data.Data.ParentConfig,
                 BredConfig = Data.Data.BredConfig,
                 ResolvedGenes = Data.Data.ResolvedGenes,

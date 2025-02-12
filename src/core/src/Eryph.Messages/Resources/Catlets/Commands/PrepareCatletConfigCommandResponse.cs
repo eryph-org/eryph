@@ -10,7 +10,7 @@ namespace Eryph.Messages.Resources.Catlets.Commands;
 
 public class PrepareCatletConfigCommandResponse
 {
-    public CatletConfig Config { get; set; }
+    public CatletConfig ResolvedConfig { get; set; }
 
     public CatletConfig BredConfig { get; set; }
 
