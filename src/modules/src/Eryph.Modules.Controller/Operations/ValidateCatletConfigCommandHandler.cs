@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
+using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using JetBrains.Annotations;
 using Rebus.Handlers;
@@ -69,6 +70,6 @@ public class ValidateCatletConfigCommandHandler(
                 driveConfig.Size = null;
         }
 
-        return machineConfig;
+        return CatletConfigDefaults.ApplyDefaultNetwork(machineConfig);
     }
 }

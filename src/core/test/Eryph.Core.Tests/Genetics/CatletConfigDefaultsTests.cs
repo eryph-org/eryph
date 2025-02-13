@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using System.Xml.XPath;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 
@@ -13,34 +11,48 @@ namespace Eryph.Core.Tests.Genetics;
 public class CatletConfigDefaultsTests
 {
     [Fact]
-    public void ApplyDefaults_MissingData_AppliesDefaults()
+    public void ApplyDefaultNetwork_NoNetworksConfigured_AppliesDefaultNetwork()
     {
         var config = new CatletConfig();
 
-        var result = CatletConfigDefaults.ApplyDefaults(config);
-
-        result.Name.Should().Be(EryphConstants.DefaultCatletName);
-        
-        result.Cpu.Should().NotBeNull();
-        result.Cpu!.Count.Should().Be(EryphConstants.DefaultCatletCpuCount);
-
-        result.Memory.Should().NotBeNull();
-        result.Memory!.Startup.Should().Be(EryphConstants.DefaultCatletMemoryMb);
-        result.Memory!.Minimum.Should().BeNull();
-        result.Memory!.Maximum.Should().BeNull();
+        var result = CatletConfigDefaults.ApplyDefaultNetwork(config);
 
         result.Networks.Should().SatisfyRespectively(
             n =>
             {
                 n.Name.Should().Be(EryphConstants.DefaultNetworkName);
-                n.AdapterName.Should().Be("eth0");
+                n.AdapterName.Should().BeNull();
                 n.SubnetV4.Should().BeNull();
                 n.SubnetV6.Should().BeNull();
             });
     }
 
     [Fact]
-    public void ApplyDefaults_NetworksWithMissingAdapterNames_AppliesDefaultAdapterNames()
+    public void ApplyDefaultNetwork_NetworkConfigured_KeepsExistingNetwork()
+    {
+        var config = new CatletConfig()
+        {
+            Networks =
+            [
+                new CatletNetworkConfig
+                {
+                    Name = "network1",
+                },
+            ],
+        };
+
+        var result = CatletConfigDefaults.ApplyDefaultNetwork(config);
+
+        result.Networks.Should().SatisfyRespectively(
+            network =>
+            {
+                network.Name.Should().Be("network1");
+                network.AdapterName.Should().BeNull();
+            });
+    }
+
+    [Fact]
+    public void ApplyDefaults_MissingData_AppliesDefaults()
     {
         var config = new CatletConfig()
         {
@@ -59,6 +71,16 @@ public class CatletConfigDefaultsTests
 
         var result = CatletConfigDefaults.ApplyDefaults(config);
 
+        result.Name.Should().Be(EryphConstants.DefaultCatletName);
+        
+        result.Cpu.Should().NotBeNull();
+        result.Cpu!.Count.Should().Be(EryphConstants.DefaultCatletCpuCount);
+
+        result.Memory.Should().NotBeNull();
+        result.Memory!.Startup.Should().Be(EryphConstants.DefaultCatletMemoryMb);
+        result.Memory!.Minimum.Should().BeNull();
+        result.Memory!.Maximum.Should().BeNull();
+
         result.Networks.Should().SatisfyRespectively(
             network =>
             {
@@ -70,6 +92,8 @@ public class CatletConfigDefaultsTests
                 network.Name.Should().Be("network2");
                 network.AdapterName.Should().Be("eth1");
             });
+
+
     }
 
     [Fact]

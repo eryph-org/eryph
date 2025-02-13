@@ -15,8 +15,30 @@ namespace Eryph.Core.Genetics;
 public static class CatletConfigDefaults
 {
     /// <summary>
+    /// Applies the default network in case the <paramref name="config"/>
+    /// contains no networks at all.
+    /// </summary>
+    /// <remarks>
+    /// The default network must be added before the breeding. This way,
+    /// the default network can still be explicitly removed by using the
+    /// <see cref="MutationType.Remove"/> mutation.
+    /// </remarks>
+    public static CatletConfig ApplyDefaultNetwork(CatletConfig config) =>
+        config.CloneWith(c =>
+        {
+            c.Networks = c.Networks.ToSeq()
+                .DefaultIfEmpty(new CatletNetworkConfig { Name = EryphConstants.DefaultNetworkName })
+                .ToArray();
+        });
+
+    /// <summary>
     /// Applies hardcoded default values to the <paramref name="config"/>.
     /// </summary>
+    /// <remarks>
+    /// These default values must be applied in the very end after the
+    /// breeding. This way, the catlet will always use reasonable default
+    /// values.
+    /// </remarks>
     public static CatletConfig ApplyDefaults(CatletConfig config) =>
         config.CloneWith(c =>
         {
@@ -25,7 +47,7 @@ public static class CatletConfigDefaults
                 .IfNone(EryphConstants.DefaultCatletName);
             c.Cpu = ApplyCpuDefaults(c.Cpu);
             c.Memory = ApplyMemoryDefaults(c.Memory);
-            c.Networks = ApplyNetworksDefaults(Seq(c.Networks)).ToArray();
+            c.Networks = c.Networks.ToSeq().Map(ApplyNetworkDefaults).ToArray();
         });
 
     private static CatletCpuConfig ApplyCpuDefaults(
@@ -45,12 +67,6 @@ public static class CatletConfigDefaults
             {
                 Startup = EryphConstants.DefaultCatletMemoryMb,
             });
-
-    private static Seq<CatletNetworkConfig> ApplyNetworksDefaults(
-        Seq<CatletNetworkConfig> configs) =>
-        configs.DefaultIfEmpty(new CatletNetworkConfig { Name = EryphConstants.DefaultNetworkName })
-            .Map(ApplyNetworkDefaults)
-            .ToSeq();
 
     private static CatletNetworkConfig ApplyNetworkDefaults(
         int index,
