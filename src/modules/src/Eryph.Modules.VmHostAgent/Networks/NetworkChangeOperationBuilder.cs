@@ -198,7 +198,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             AddOperation(() =>
                     default(RT).HostNetworkCommands.Bind(c => c
                         .RemoveOverlaySwitch()
-                        .Bind(_ => c.CreateOverlaySwitch(newOverlayAdapters))),
+                        .Bind(_ => c.CreateOverlaySwitch(newOverlayAdapters.ToSeq()))),
                 NetworkChangeOperation.RebuildOverLaySwitch
             );
 
