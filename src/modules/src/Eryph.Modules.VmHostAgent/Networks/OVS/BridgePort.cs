@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Dbosoft.OVN.Model;
 using LanguageExt;
 
@@ -12,7 +13,8 @@ public record BridgePort : OVSTableRecord, IOVSEntityWithName
             { "name", OVSValue<string>.Metadata() },
             { "tag", OVSValue<int>.Metadata() },
             { "vlan_mode", OVSValue<string>.Metadata() },
-            { "interfaces", OVSSet<string>.Metadata() },
+            { "bond_mode", OVSValue<string>.Metadata() },
+            { "interfaces", OVSReference.Metadata() },
         };
 
     public string Name => GetValue<string>("name");
@@ -21,5 +23,7 @@ public record BridgePort : OVSTableRecord, IOVSEntityWithName
     
     public string? VlanMode => GetValue<string>("vlan_mode");
 
-    public Seq<string> Interfaces => GetSet<string>("interfaces");
+    public string? BondMode => GetValue<string>("bond_mode");
+
+    public Seq<Guid> Interfaces => GetReference("interfaces");
 }

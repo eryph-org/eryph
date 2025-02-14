@@ -12,7 +12,8 @@ namespace Eryph.Modules.VmHostAgent.Networks
         Seq<string> AllNetAdaptersNames,
         Option<OverlaySwitchInfo> OverlaySwitch,
         Seq<NetNat> NetNat,
-        Seq<Bridge> OVSBridges,
-        Seq<BridgePort> OvsBridgePorts);
+        Seq<Bridge> OvsBridges,
+        Seq<BridgePort> OvsBridgePorts,
+        Seq<Interface> OvsInterfaces);
 
 }

@@ -19,6 +19,8 @@ using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Modu
 using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Modules.VmHostAgent.Test.TestRuntime>;
 using ChangeOp = Eryph.Modules.VmHostAgent.Networks.NetworkChangeOperation<Eryph.Modules.VmHostAgent.Test.TestRuntime>;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.VmHostAgent.Test
 {
     public class ProviderNetworkConsoleTests
@@ -49,7 +51,7 @@ namespace Eryph.Modules.VmHostAgent.Test
                     newState.VMSwitchExtensions.Should().HaveCount(1);
                     newState.VMSwitches.Should().HaveCount(1);
                     newState.NetNat.Should().HaveCount(1);
-                    newState.OVSBridges.Should().BeEmpty();
+                    newState.OvsBridges.Should().BeEmpty();
                     newState.OvsBridgePorts.Should().BeEmpty();
 
                 }
@@ -359,39 +361,30 @@ namespace Eryph.Modules.VmHostAgent.Test
             var switchId = Guid.NewGuid();
 
             var hostState = new HostState(
-                new[]
+                Seq1(new VMSwitchExtension
                 {
-                    new VMSwitchExtension
-                    {
                         Enabled = true,
                         Id = Guid.NewGuid().ToString(),
                         SwitchId = switchId,
                         SwitchName = EryphConstants.OverlaySwitchName
-                    }
-                }.ToSeq(),
-                new[]{new VMSwitch
+                }),
+                Seq1(new VMSwitch
                 {
                     Id = switchId,
                     Name = EryphConstants.OverlaySwitchName,
                     NetAdapterInterfaceGuid = null
-                }}.ToSeq(),
-                new[]
+                }),
+                Seq1(new HostNetworkAdapter
                 {
-                    new HostNetworkAdapter
-                    {
-                        Name = "Ethernet",
-                        InterfaceGuid = Guid.NewGuid()
-                    }
-                }.ToSeq(),
-                new[] { "Ethernet"}.ToSeq(),
-
-            Option<OverlaySwitchInfo>.Some(new OverlaySwitchInfo(switchId, LanguageExt.HashSet<string>.Empty)),
-                new[]
-                {
-                    new NetNat{Name = "docker_nat", InternalIPInterfaceAddressPrefix = "192.168.10.0/24"}
-                }.ToSeq(),
-                Seq<Bridge>.Empty,
-                Seq<BridgePort>.Empty);
+                    Name = "Ethernet",
+                    InterfaceGuid = Guid.NewGuid()
+                }),
+                Seq1("Ethernet"),
+                Some(new OverlaySwitchInfo(switchId, HashSet<string>())),
+                Seq1(new NetNat { Name = "docker_nat", InternalIPInterfaceAddressPrefix = "192.168.10.0/24" }),
+                Seq<Bridge>(),
+                Seq<BridgePort>(),
+                Seq<Interface>());
 
             return hostState;
         }
@@ -420,7 +413,7 @@ namespace Eryph.Modules.VmHostAgent.Test
                 .FirstOrDefault(x => x.Name == EryphConstants.OverlaySwitchName);
 
             hostCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
-                .Returns(Prelude.SuccessAff(Seq.empty<TypedPsObject<VMNetworkAdapter>>()));
+                .Returns(Prelude.SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
             if (overlaySwitch != null)
             {
                 hostCommandsMock.Setup(x =>
@@ -449,7 +442,7 @@ namespace Eryph.Modules.VmHostAgent.Test
                 .Returns(Prelude.SuccessAff(hostState.NetNat));
 
             ovsControlMock.Setup(x => x.GetBridges(CancellationToken.None))
-                .Returns(hostState.OVSBridges);
+                .Returns(hostState.OvsBridges);
             ovsControlMock.Setup(x => x.GetPorts(CancellationToken.None))
                 .Returns(hostState.OvsBridgePorts);
 
@@ -457,7 +450,7 @@ namespace Eryph.Modules.VmHostAgent.Test
                 .Returns(new OVSTableRecord());
 
             ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
-                .Returns(hostState.OVSBridges);
+                .Returns(hostState.OvsBridges);
 
             ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
                 .Returns(hostState.OvsBridgePorts);
@@ -481,7 +474,7 @@ namespace Eryph.Modules.VmHostAgent.Test
                 .Returns(Prelude.unitAff);
 
             hostCommandsMock.Setup(x => x.GetAdapterIpV4Address("br-nat"))
-                .Returns(Prelude.SuccessAff(Seq<NetIpAddress>.Empty));
+                .Returns(Prelude.SuccessAff(Seq<NetIpAddress>()));
 
             hostCommandsMock.Setup(x => x.ConfigureAdapterIp("br-nat",
                     It.IsAny<IPAddress>(), It.IsAny<IPNetwork2>()))
