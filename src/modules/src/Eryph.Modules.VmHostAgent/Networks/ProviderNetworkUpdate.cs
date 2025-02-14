@@ -12,6 +12,7 @@ using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
+using Quartz.Xml.JobSchedulingData20;
 using static LanguageExt.Prelude;
 using Array = System.Array;
 
@@ -78,13 +79,23 @@ public static class ProviderNetworkUpdate<RT>
         from hostCommands in default(RT).HostNetworkCommands
 
         // generate variables
-        let currentOvsBridges = new OVSBridgeInfo(
-            new Lst<string>(hostState.OVSBridges.Select(x => x.Name)),
-            hostState.OvsBridgePorts.Map(port => (port.Name, hostState.OVSBridges.First(b =>
-                    b.Ports.Contains(port.Id)).Name))
-                .ToHashMap(),
-            hostState.OvsBridgePorts.Map(port => (port.Name, new OVSBridgePortInfo(hostState.OVSBridges.First(b =>
-                    b.Ports.Contains(port.Id)).Name, port.Name, port.Tag, port.VlanMode, new Lst<string>(port.Interfaces))))
+        let currentOvsBridges = new OvsBridgesInfo(
+            hostState.OvsBridges.Map(b => new OvsBridgeInfo(
+                b.Name,
+                hostState.OvsBridgePorts
+                    .Filter(p => b.Ports.Contains(p.Id))
+                    .Map(p => new OvsBridgePortInfo(
+                        b.Name,
+                        p.Name,
+                        p.Tag,
+                        p.VlanMode,
+                        p.BondMode,
+                        hostState.OvsInterfaces
+                            .Map(i => new OvsBridgeInterfaceInfo(i.Name, i.Type))
+                            .Strict()))
+                    .Map(pi => (pi.PortName, pi))
+                    .ToHashMap()))
+                .Map(bi => (bi.Name, bi))
                 .ToHashMap())
         let newBridges = newConfig.NetworkProviders
             .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
@@ -134,7 +145,7 @@ public static class ProviderNetworkUpdate<RT>
             changeBuilder, hostState, pendingBridges,
             needsOverlaySwitch, newOverlayAdapters)
 
-            // remove missing NAT bridges (renamed?)
+        // remove missing NAT bridges (renamed?)
         from ovsBridges3 in changeBuilder.RecreateMissingNatAdapters(
             newConfig, hostState.AllNetAdaptersNames, ovsBridges2)
 
@@ -167,10 +178,10 @@ public static class ProviderNetworkUpdate<RT>
 
         select changeBuilder.Build();
 
-    private static Aff<RT, OVSBridgeInfo> generateOverlaySwitchChanges(
+    private static Aff<RT, OvsBridgesInfo> generateOverlaySwitchChanges(
         NetworkChangeOperationBuilder<RT> changeBuilder,
         HostState hostState,
-        OVSBridgeInfo ovsBridges,
+        OvsBridgesInfo ovsBridges,
         bool needsOverlaySwitch,
         HashSet<string> newOverlayAdapters) =>
         from hostCommands in default(RT).HostNetworkCommands
@@ -198,10 +209,10 @@ public static class ProviderNetworkUpdate<RT>
                 : SuccessAff(ovsBridges))
         select bridges;
 
-    private static Aff<RT, OVSBridgeInfo> generateExistingOverlaySwitchChanges(
+    private static Aff<RT, OvsBridgesInfo> generateExistingOverlaySwitchChanges(
         NetworkChangeOperationBuilder<RT> changeBuilder,
         OverlaySwitchInfo overlaySwitch,
-        OVSBridgeInfo ovsBridges,
+        OvsBridgesInfo ovsBridges,
         HashSet<string> newOverlayAdapters,
         Seq<TypedPsObject<VMNetworkAdapter>> vmAdapters,
         bool multipleOverlaySwitches) =>
@@ -245,8 +256,10 @@ public static class ProviderNetworkUpdate<RT>
         from p8 in progressCallback()
         let cancelSource2 = new CancellationTokenSource(5000)
         from ovsBridgePorts in ovsTool.GetPorts(cancelSource2.Token).ToAff(l => l)
+        let cancelSource3 = new CancellationTokenSource(5000)
+        from ovsInterfaces in ovsTool.GetInterfaces(cancelSource3.Token).ToAff(l => l)
         let hostState = new HostState(vmSwitchExtensions, vmSwitches, netAdapters, allAdapterNames, overlaySwitch, netNat, ovsBridges,
-            ovsBridgePorts)
+            ovsBridgePorts, ovsInterfaces)
         from ls in Logger<RT>.logTrace<HostState>("fetched host state: {hostState}", hostState)
         select hostState;
 

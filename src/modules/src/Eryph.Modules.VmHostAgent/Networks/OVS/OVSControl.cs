@@ -7,6 +7,8 @@ using Dbosoft.OVN.OSCommands.OVS;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.VmHostAgent.Networks.OVS;
 
 public class OVSControl(
@@ -31,7 +33,7 @@ public class OVSControl(
             .Add("ovn-bridge-mappings", bridgeMappings)
 
         from _ in UpdateRecord("open", ".",
-            Map<string, IOVSField>.Empty,
+            Map<string, IOVSField>(),
             new Map<string, IOVSField>(new[]
             {
                 ("external_ids", (IOVSField)new OVSMap<string>(externalIds))
@@ -58,11 +60,23 @@ public class OVSControl(
 
         return from ovsRecord in GetOVSTable(cancellationToken)
             from _ in UpdateRecord("port", bridgeName,
-                Map<string, IOVSField>.Empty,columns,
+                Map<string, IOVSField>(),columns,
                 columnsToClear, cancellationToken)
             select Unit.Default;
-
     }
+
+    public EitherAsync<Error, Unit> UpdateBondPort(
+        string portName,
+        string bondMode,
+        CancellationToken cancellationToken) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let columns = Map<string, IOVSField>(("bond_mode", new OVSValue<string>(bondMode)))
+        let columnsToClear = new Lst<string>()
+        from ovsRecord in GetOVSTable(cancellationToken)
+        from _2 in UpdateRecord("port", portName,
+            Map<string, IOVSField>(), columns,
+            columnsToClear, cancellationToken)
+        select unit;
 
     public EitherAsync<Error, Unit> AddBridge(string bridgeName, CancellationToken cancellationToken)
     {
@@ -96,7 +110,7 @@ public class OVSControl(
 
     public EitherAsync<Error, Seq<Bridge>> GetBridges(CancellationToken cancellationToken)
     {
-        return FindRecords<Bridge>("Bridge", Map<string, OVSQuery>.Empty, cancellationToken: cancellationToken);
+        return FindRecords<Bridge>("Bridge", Map<string, OVSQuery>(), cancellationToken: cancellationToken);
     }
 
     public EitherAsync<Error, Interface> GetInterface(string interfaceName,
@@ -105,9 +119,13 @@ public class OVSControl(
         return GetRecord<Interface>("Interface", interfaceName, cancellationToken: cancellationToken);
     }
 
-
     public EitherAsync<Error, Seq<BridgePort>> GetPorts(CancellationToken cancellationToken)
     {
-        return FindRecords<BridgePort>("Port", Map<string, OVSQuery>.Empty, cancellationToken: cancellationToken);
+        return FindRecords<BridgePort>("Port", Map<string, OVSQuery>(), cancellationToken: cancellationToken);
+    }
+
+    public EitherAsync<Error, Seq<Interface>> GetInterfaces(CancellationToken cancellationToken)
+    {
+        return FindRecords<Interface>("Interface", Map<string, OVSQuery>(), cancellationToken: cancellationToken);
     }
 }
