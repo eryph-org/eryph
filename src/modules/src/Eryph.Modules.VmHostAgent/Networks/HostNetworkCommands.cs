@@ -205,30 +205,6 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from _ in psEngine.RunAsync(enableExtensionCommand).ToAff()
         select unit;
 
-    public Aff<RT, Option<OverlaySwitchInfo>> FindOverlaySwitch(
-        Seq<VMSwitch> vmSwitches,
-        Seq<HostNetworkAdapter> adapters) =>
-        from psEngine in default(RT).Powershell
-        // Only a single overlay switch exists when the network setup is valid.
-        // Otherwise, the network setup needs to be corrected by reapplying the
-        // network provider configuration.
-        let overlaySwitch = vmSwitches.Find(x => x.Name == EryphConstants.OverlaySwitchName)
-        from switchInfo in overlaySwitch
-            .Map(s => PrepareOverlaySwitchInfo(s, adapters))
-            .Sequence()
-        select switchInfo;
-
-    private Aff<RT, OverlaySwitchInfo> PrepareOverlaySwitchInfo(
-        VMSwitch overlaySwitch,
-        Seq<HostNetworkAdapter> adapters) =>
-        from psEngine in default(RT).Powershell
-        from switchAdapters in overlaySwitch.NetAdapterInterfaceGuid.ToSeq()
-            .Map(guid => adapters.Find(x => x.InterfaceGuid == guid)
-                .ToEff(Error.New($"Could not find the host network adapter {guid}")))
-            .Sequence()
-        let switchAdapterNames = switchAdapters.Map(x => x.Name)
-        select new OverlaySwitchInfo(overlaySwitch.Id, toHashSet(switchAdapterNames));
-
     public Aff<RT,Unit> RemoveOverlaySwitch() =>
         from psEngine in default(RT).Powershell.ToAff()
         let removeSwitchCommand = PsCommandBuilder.Create()

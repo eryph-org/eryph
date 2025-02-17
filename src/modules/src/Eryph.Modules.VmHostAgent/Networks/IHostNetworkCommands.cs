@@ -30,10 +30,6 @@ public interface IHostNetworkCommands<RT> where RT : struct, HasCancel<RT>
     Aff<RT, Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters);
     Aff<RT, Unit> CreateOverlaySwitch(Seq<string> adapters);
 
-    Aff<RT, Option<OverlaySwitchInfo>> FindOverlaySwitch(
-        Seq<VMSwitch> vmSwitches,
-        Seq<HostNetworkAdapter> adapters);
-
     Aff<RT, Unit> RemoveOverlaySwitch();
     Aff<RT, Unit> RemoveNetNat(string natName);
     Aff<RT, Unit> WaitForBridgeAdapter(string bridgeName);

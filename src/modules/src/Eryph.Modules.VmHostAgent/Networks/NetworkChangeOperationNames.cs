@@ -26,6 +26,8 @@ public class NetworkChangeOperationNames
                 NetworkChangeOperation.RemoveNetNat => "Remove host NAT for provider {0}",
                 NetworkChangeOperation.RemoveAdapterPort => "Remove adapter '{0}' from bridge '{1}'",
                 NetworkChangeOperation.AddAdapterPort => "Add adapter '{0}' to bridge '{1}'",
+                NetworkChangeOperation.AddBondPort => "Add bond '{0}' of adapters '{1}' to bridge '{2}'",
+                NetworkChangeOperation.UpdateBondPort => "Update settings of bond port '{0}' of bridge '{1}'",
                 NetworkChangeOperation.UpdateBridgePort => "Configure port options for bridge {0}",
                 NetworkChangeOperation.ConfigureNatIp => "Configure ip settings for NAT bridge '{0}'",
                 NetworkChangeOperation.UpdateBridgeMapping => "Update mapping of bridges to network providers",
