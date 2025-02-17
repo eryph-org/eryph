@@ -1,20 +1,23 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Threading;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
+using Humanizer;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
 using LanguageExt.UnsafeValueAccess;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Logging;
+
+using static Eryph.Core.NetworkPrelude;
 using static LanguageExt.Prelude;
-using Array = System.Array;
 
 namespace Eryph.Modules.VmHostAgent.Networks;
 
@@ -62,29 +65,23 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     private Seq<NetworkChangeOperation<RT>> _operations;
     private ILogger _logger;
 
-    private static Aff<RT, Unit> StopOVN()
-    {
-        var cts = new CancellationTokenSource(10000);
+    private static Aff<RT, Unit> StopOVN() =>
+        timeout(
+            TimeSpan.FromSeconds(10),
+            from _1 in Logger<RT>.logDebug<NetworkChangeOperationBuilder<RT>>("Stopping OVN controller")
+            from syncClient in default(RT).AgentSync
+            from ct in cancelToken<RT>()
+            from _2 in syncClient.SendSyncCommand("STOP_OVN", ct)
+            select unit);
 
-        return
-            from l1 in Logger<RT>.logDebug<NetworkChangeOperationBuilder<RT>>("Stopping ovn controller")
-            from syncClient in default(RT).AgentSync.Bind(c => c
-                .SendSyncCommand("STOP_OVN", cts.Token))
-            select unit;
-
-    }
-
-    private static Aff<RT, Unit> StartOVN()
-    {
-        var cts = new CancellationTokenSource(10000);
-
-        return
-            from l1 in Logger<RT>.logDebug<NetworkChangeOperationBuilder<RT>>("Starting ovn controller")
-            from syncClient in default(RT).AgentSync.Bind(c => c
-                .SendSyncCommand("START_OVN", cts.Token))
-            select unit;
-
-    }
+    private static Aff<RT, Unit> StartOVN() =>
+        timeout(
+            TimeSpan.FromSeconds(10),
+            from _1 in Logger<RT>.logDebug<NetworkChangeOperationBuilder<RT>>("Starting OVS controller")
+            from syncClient in default(RT).AgentSync
+            from ct in cancelToken<RT>()
+            from _2 in syncClient.SendSyncCommand("START_OVN", ct)
+            select unit);
 
     internal static Aff<RT, NetworkChangeOperationBuilder<RT>> New()
     {
@@ -140,179 +137,162 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
     private Aff<RT, Unit> LogDebug(string? message, params object?[] args) =>
         Eff<RT, Unit>(_ => { _logger.LogDebug(message, args); return unit; });
-    
 
-    public Aff<RT, Unit> CreateOverlaySwitch(Seq<string> adapters)
-    {
-        using (_logger.BeginScope("Method: {method}", nameof(CreateOverlaySwitch)))
-        {
-            AddOperation(
-                () => default(RT).HostNetworkCommands.Bind(c => c
-                    .CreateOverlaySwitch(adapters)),
-                NetworkChangeOperation.CreateOverlaySwitch);
 
-            AddOperation(
+    public Aff<RT, Unit> CreateOverlaySwitch(Seq<string> adapters) =>
+        use(BeginScope(nameof(CreateOverlaySwitch)), _ =>
+            from _1 in AddOperationRt(
+                () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                    from _ in hostCommands.CreateOverlaySwitch(adapters)
+                    select unit,
+                NetworkChangeOperation.CreateOverlaySwitch)
+            from _2 in AddOperationRt(
                 StartOVN,
-                NetworkChangeOperation.StartOVN);
-
-            return unitAff;
-        }
-    }
+                NetworkChangeOperation.StartOVN)
+            select unit);
 
     public Aff<RT, OvsBridgesInfo> RebuildOverlaySwitch(
         Seq<TypedPsObject<VMNetworkAdapter>> overlayVMAdapters,
         OvsBridgesInfo ovsBridges,
-        HashSet<string> newOverlayAdapters)
-    {
-        using (_logger.BeginScope("Method: {method}", nameof(RebuildOverlaySwitch)))
-        {
+        HashSet<string> newOverlayAdapters) =>
+        use(BeginScope(nameof(RebuildOverlaySwitch)), _ =>
+            from _1 in overlayVMAdapters.Match(
+                Empty: () => unitAff,
+                Seq: a => from _1 in LogDebug("Found adapters on overlay switch. Adding disconnect and reconnect operations.")
+                    from _2 in DisconnectOverlayVmAdapters(a)
+                    select unit)
+            from _2 in AddOperationRt(
+                StopOVN,
+                _ => true,
+                StartOVN,
+                NetworkChangeOperation.StopOVN)
+            from _3 in ovsBridges.Bridges.Keys
+                .Map(AddRemoveBridgeOperation)
+                .SequenceSerial()
+            from _4 in AddOperationRt(
+                () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                    from _1 in hostCommands.RemoveOverlaySwitch()
+                    from _2 in hostCommands.CreateOverlaySwitch(newOverlayAdapters.ToSeq())
+                    select unit,
+                NetworkChangeOperation.RebuildOverLaySwitch)
+            from _5 in overlayVMAdapters.Match(
+                Empty: () => unitAff,
+                Seq: ConnectOverlayVmAdapters)
+            from _6 in AddOperationRt(
+                StartOVN,
+                NetworkChangeOperation.StartOVN)
+            select default(OvsBridgesInfo));
 
-            if (overlayVMAdapters.Count > 0)
-            {
-                _logger.LogDebug("Found adapters on overlay switch. Adding disconnect and reconnect operations.");
-                AddOperation(
-                    () => default(RT).HostNetworkCommands.Bind(c => c
-                        .DisconnectNetworkAdapters(overlayVMAdapters)),
-                    _ => true,
-                    () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ReconnectNetworkAdapters(overlayVMAdapters))
-                    ,
-                    NetworkChangeOperation.DisconnectVMAdapters);
-            }
+    private Aff<RT, Unit> DisconnectOverlayVmAdapters(
+        Seq<TypedPsObject<VMNetworkAdapter>> overlayVMAdapters) =>
+        AddOperationRt(
+            () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                  from _ in hostCommands.DisconnectNetworkAdapters(overlayVMAdapters)
+                  select unit,
+            _ => true,
+            () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                  from _ in hostCommands.ReconnectNetworkAdapters(overlayVMAdapters)
+                  select unit,
+            NetworkChangeOperation.DisconnectVMAdapters);
 
-            AddOperation(StopOVN, _ => true, StartOVN,
-                NetworkChangeOperation.StopOVN);
+    private Aff<RT, Unit> ConnectOverlayVmAdapters(
+        Seq<TypedPsObject<VMNetworkAdapter>> overlayVMAdapters) =>
+        AddOperationRt(
+            () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                  from _ in hostCommands.ConnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)
+                  select unit,
+            NetworkChangeOperation.ConnectVMAdapters);
 
-            foreach (var bridgeName in ovsBridges.Bridges.Keys)
-            {
-                _logger.LogDebug("Adding operation to remove bridge {bridge}", bridgeName);
+    private Aff<RT, Unit> AddRemoveBridgeOperation(string bridgeName) =>
+        from _1 in LogDebug("Adding operation to remove bridge {bridge}", bridgeName)
+        from _2 in AddOperationRt(
+            () => timeout(
+                TimeSpan.FromSeconds(30),
+                from ovs in default(RT).OVS.ToAff()
+                from ct in cancelToken<RT>()
+                from _ in ovs.RemoveBridge(bridgeName, ct).ToAff(e => e)
+                select unit),
+            NetworkChangeOperation.RemoveBridge, 
+            bridgeName)
+        select unit;
 
-                AddOperation(
-                    () => default(RT).OVS.Bind(o =>
-                    {
-                        var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                        return o.RemoveBridge(bridgeName, cancelSourceCommand.Token).ToAff(e => e);
-                    }),
-                    NetworkChangeOperation.RemoveBridge, bridgeName);
-            }
-
-            AddOperation(() =>
-                    default(RT).HostNetworkCommands.Bind(c => c
-                        .RemoveOverlaySwitch()
-                        .Bind(_ => c.CreateOverlaySwitch(newOverlayAdapters.ToSeq()))),
-                NetworkChangeOperation.RebuildOverLaySwitch
-            );
-
-            if (overlayVMAdapters.Length > 0)
-            {
-                AddOperation(
-                    () => default(RT).HostNetworkCommands.Bind(c => c
-                        .ConnectNetworkAdapters(overlayVMAdapters, EryphConstants.OverlaySwitchName)),
-                    NetworkChangeOperation.ConnectVMAdapters);
-            }
-
-            AddOperation(StartOVN, NetworkChangeOperation.StartOVN);
-
-            return SuccessAff(default(OvsBridgesInfo));
-        }
-    }
 
     public Aff<RT, OvsBridgesInfo> RemoveOverlaySwitch(
         Seq<TypedPsObject<VMNetworkAdapter>> overlayVMAdapters,
-        OvsBridgesInfo currentBridges)
-    {
-        using (_logger.BeginScope("Method: {method}", nameof(RemoveOverlaySwitch)))
-        {
-
-            if (overlayVMAdapters.Length > 0)
-            {
-                _logger.LogDebug("Found adapters on overlay switch. Adding disconnect operations.");
-
-                AddOperation(
-                    () => default(RT).HostNetworkCommands.Bind(c => c.DisconnectNetworkAdapters(overlayVMAdapters)),
-                    o => o!.Contains(NetworkChangeOperation.RemoveOverlaySwitch),
-                    () => default(RT).HostNetworkCommands.Bind(c => c.ReconnectNetworkAdapters(overlayVMAdapters)),
-                    NetworkChangeOperation.DisconnectVMAdapters);
-            }
-
-            AddOperation(StopOVN, _ => true, StartOVN, NetworkChangeOperation.StopOVN);
-
-            foreach (var bridgeName in currentBridges.Bridges.Keys)
-            {
-                _logger.LogDebug("Adding operation to remove bridge {bridge}", bridgeName);
-
-                AddOperation(
-                    () => default(RT).OVS.Bind(o =>
-                    {
-                        var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                        return o.RemoveBridge(bridgeName, cancelSourceCommand.Token).ToAff(e => e);
-                    }),
-                    NetworkChangeOperation.RemoveBridge, bridgeName);
-            }
-
-            AddOperation(
-                () => default(RT).HostNetworkCommands.Bind(c => c.RemoveOverlaySwitch()),
-                NetworkChangeOperation.RemoveOverlaySwitch);
-
-            return SuccessAff(default(OvsBridgesInfo));
-        }
-    }
-
-    public Aff<RT, Unit> EnableSwitchExtension(Guid switchId, string switchName)
-    {
-        using (_logger.BeginScope("Method: {method}", nameof(EnableSwitchExtension)))
-        {
-            AddOperation(
-                () => default(RT).HostNetworkCommands.Bind(c => c
-                    .EnableSwitchExtension(switchId)),
+        OvsBridgesInfo currentBridges) =>
+        use(BeginScope(nameof(RemoveOverlaySwitch)), _ =>
+            from _1 in overlayVMAdapters.Match(
+                Empty: () => unitAff,
+                Seq: a => from _1 in LogDebug("Found adapters on overlay switch. Adding disconnect operations.")
+                          from _2 in DisconnectOverlayVmAdapters(a)
+                          select unit)
+            from _2 in AddOperationRt(
+                StopOVN,
+                _ => true,
+                StartOVN,
+                NetworkChangeOperation.StopOVN)
+            from _3 in currentBridges.Bridges.Keys
+                .Map(AddRemoveBridgeOperation)
+                .SequenceSerial()
+            from _4 in AddOperationRt(
+                () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                      from _ in hostCommands.RemoveOverlaySwitch()
+                      select unit,
+                NetworkChangeOperation.RemoveOverlaySwitch)
+            select default(OvsBridgesInfo));
+    
+    public Aff<RT, Unit> EnableSwitchExtension(
+        Guid switchId,
+        string switchName) =>
+        use(BeginScope(nameof(EnableSwitchExtension)), _ =>
+            AddOperationRt(
+                () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                      from _ in hostCommands.EnableSwitchExtension(switchId)
+                      select unit,
                 NetworkChangeOperation.EnableSwitchExtension,
-                switchName);
+                switchName));
 
-            return unitAff;
-        }
-    }
-
-    public Aff<RT, Unit> DisableSwitchExtension(Guid switchId, string switchName)
-    {
-        using (_logger.BeginScope("Method: {method}", nameof(DisableSwitchExtension)))
-        {
-            AddOperation(
-                () => default(RT).HostNetworkCommands.Bind(c => c
-                    .DisableSwitchExtension(switchId)),
+    public Aff<RT, Unit> DisableSwitchExtension(
+        Guid switchId,
+        string switchName) =>
+        use(BeginScope(nameof(DisableSwitchExtension)), _ =>
+            AddOperationRt(
+                () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                      from _ in hostCommands.DisableSwitchExtension(switchId)
+                      select unit,
                 NetworkChangeOperation.DisableSwitchExtension,
-                switchName);
-
-            return unitAff;
-        }
-    }
+                switchName));
 
     public Aff<RT, OvsBridgesInfo> RemoveUnusedBridges(
         OvsBridgesInfo ovsBridges,
-        Seq<NewBridge> newBridges)
-    {
-        using (_logger.BeginScope("Method: {Method}", nameof(RemoveUnusedBridges)))
-        {
-            var newBridgesNames = toHashSet(newBridges.Map(x => x.BridgeName));
-            ovsBridges.Bridges.Values
-                .Filter(bridge => bridge.Name != "br-int")
-                .Filter(bridge => !newBridgesNames.Contains(bridge.Name))
-                .Iter(bridge =>
-                {
-                    _logger.LogDebug("Adding operations to remove unused bridge {Bridge}", bridge);
+        Seq<NewBridge> newBridges) =>
+        use(BeginScope(nameof(RemoveUnusedBridges)), _ =>
+            from _1 in unitAff
+            let newBridgeNames = toHashSet(newBridges.Map(b => b.BridgeName))
+            let unusedBridges = ovsBridges.Bridges.Values
+                .Filter(b => b.Name != "br-int")
+                .Filter(b => !newBridgeNames.Contains(b.Name))
+                .Map(b => b.Name)
+            from _2 in unusedBridges
+                .Map(RemoveUnusedBridge)
+                .SequenceSerial()
+            let result = unusedBridges
+                .Fold(ovsBridges, (s, b) => s.RemoveBridge(b))
+            select result);
 
-                    AddOperation(() => default(RT).OVS.Bind(ovs =>
-                        {
-                            var cancelSourceCommand = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                            return ovs.RemoveBridge(bridge.Name, cancelSourceCommand.Token).ToAff(e => e);
-                        }),
-                        NetworkChangeOperation.RemoveUnusedBridge, bridge);
-
-                    ovsBridges = ovsBridges.RemoveBridge(bridge.Name);
-                });
-
-            return SuccessAff(ovsBridges);
-        }
-    }
+    private Aff<RT, Unit> RemoveUnusedBridge(
+        string bridgeName) =>
+        from _1 in LogDebug("Adding operation to remove bridge {bridge}", bridgeName)
+        from _2 in AddOperationRt(
+            () => timeout(
+                TimeSpan.FromSeconds(30),
+                from ovs in default(RT).OVS.ToAff()
+                from ct in cancelToken<RT>()
+                from _ in ovs.RemoveBridge(bridgeName, ct).ToAff(e => e)
+                select unit),
+            NetworkChangeOperation.RemoveUnusedBridge,
+            bridgeName)
+        select unit;
 
     private (int? VlanTag, string? VlanMode) GetBridgePortSettings(NetworkProviderBridgeOptions? options)
     {
@@ -334,55 +314,52 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         bool hadSwitchBefore,
         Seq<string> enableBridges,
         OvsBridgesInfo ovsBridges,
-        Seq<NewBridge> newBridges)
-    {
-        using (_logger.BeginScope("Method: {method}", nameof(AddMissingBridges)))
-        {
+        Seq<NewBridge> newBridges) =>
+        use(BeginScope(nameof(AddMissingBridges)), _ => 
+            from _1 in unitAff
+            let missingBridges = newBridges
+                    // TODO is hadSwitchBefore needed? When the overlay switch is created we anyway do pass an empty ovsBridges
+                .Filter(b => !hadSwitchBefore || !ovsBridges.Bridges.Find(b.BridgeName).IsSome)
+            from _2 in missingBridges
+                .Map(b => AddMissingBridge(b, enableBridges.Contains(b.BridgeName)))
+                .SequenceSerial()
+            let missingBridgeNames = missingBridges.Map(b => b.BridgeName)
+            select missingBridgeNames);
 
-            var res = newBridges.Map(newBridge =>
-            {
-                if (hadSwitchBefore && ovsBridges.Bridges.Find(newBridge.BridgeName).IsSome)
-                    return None;
-
-                _logger.LogDebug("Adding operation to add bridge {bridge}", newBridge);
-
-                var (vlanTag, vlanMode) = GetBridgePortSettings(newBridge.Options);
-
-                AddOperation(() =>
-                    from c in default(RT).HostNetworkCommands
-                    from ovs in default(RT).OVS
-                    let cancelAddBridge = new CancellationTokenSource(TimeSpan.FromSeconds(30))
-                    from uAddBridge in ovs.AddBridge(newBridge.BridgeName, cancelAddBridge.Token).ToAff(l => l)
-                    let cancelSetBridge = new CancellationTokenSource(TimeSpan.FromSeconds(30))
-                    from uSetBridgePort in ovs
-                        .UpdateBridgePort(newBridge.BridgeName, vlanTag, vlanMode, cancelSetBridge.Token).ToAff(l => l)
-                    from uWait in c.WaitForBridgeAdapter(newBridge.BridgeName)
-                    from uEnable in
-                        enableBridges.Contains(newBridge.BridgeName)
-                            ? c.EnableBridgeAdapter(newBridge.BridgeName)
-                            : unitAff
-                    select Unit.Default, NetworkChangeOperation.AddBridge, newBridge.BridgeName);
-
-                return Some(newBridge.BridgeName);
-
-            }).Somes().Strict();
-
-            return SuccessAff(res);
-        }
-    }
+    private Aff<RT, Unit> AddMissingBridge(
+        NewBridge newBridge,
+        bool enableBridge) =>
+        from _1 in LogDebug("Adding operation to add bridge {bridge}", newBridge.BridgeName)
+        let portSettings = GetBridgePortSettings(newBridge.Options)
+        from _2 in AddOperationRt(
+            () => from c in default(RT).HostNetworkCommands
+                from ovs in default(RT).OVS
+                from _1 in timeout(
+                    TimeSpan.FromSeconds(30),
+                    from ct in cancelToken<RT>()
+                    from _ in ovs.AddBridge(newBridge.BridgeName, ct).ToAff(e => e)
+                    select unit)
+                from _2 in timeout(
+                    TimeSpan.FromSeconds(30),
+                    from ct in cancelToken<RT>()
+                    from _ in ovs.UpdateBridgePort(newBridge.BridgeName, portSettings.VlanTag, portSettings.VlanMode, ct).ToAff(e => e)
+                    select unit)
+                from _3 in c.WaitForBridgeAdapter(newBridge.BridgeName)
+                from _4 in enableBridge ? c.EnableBridgeAdapter(newBridge.BridgeName) : unitAff
+                select unit,
+            NetworkChangeOperation.AddBridge,
+            newBridge.BridgeName)
+        select unit;
 
     public Aff<RT, Seq<string>> RemoveInvalidNats(
         Seq<NetNat> netNat,
         NetworkProvidersConfiguration newConfig,
         Seq<NewBridge> newBridges) =>
-        from _ in unitAff
-        from result in use(
-            Eff(fun(() => _logger.BeginScope("Method: {method}", nameof(RemoveInvalidNats)))),
-            _ => netNat.Filter(n => n.Name.StartsWith("eryph_"))
+        use(BeginScope(nameof(RemoveInvalidNats)), _ =>
+            from results in netNat.Filter(n => n.Name.StartsWith("eryph_"))
                 .Map(n => RemoveInvalidNat(n, newConfig, newBridges))
-                .SequenceSerial())
-        // Force enumeration
-        select result.Somes().ToArray().ToSeq();
+                .SequenceSerial()
+            select results.Somes());
 
     private Aff<RT, Option<string>> RemoveInvalidNat(
         NetNat nat,
@@ -392,21 +369,20 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         let providerConfig = newConfig.NetworkProviders
             .Find(p => GetNetNatName(p.Name) == nat.Name && p.Type == NetworkProviderType.NatOverLay)
         // When the prefix of the NetNat is invalid, we will just recreate the NetNat.
-        let natPrefix = Try(() => IPNetwork2.Parse(nat.InternalIPInterfaceAddressPrefix))
-            .ToOption()
+        let natPrefix = parseIPNetwork2(nat.InternalIPInterfaceAddressPrefix)
         let bridge = providerConfig.Bind(p => newBridges.Find(b => b.BridgeName == p.BridgeName))
         let isNatValid = bridge.Map(b => b.Network == natPrefix).IfNone(false)
         from result in isNatValid
             ? SuccessAff(Option<string>.None)
-            : from _1 in unitAff
-              from _2 in Eff(fun(() => _logger.LogDebug("Removing invalid host NAT '{Nat}'", nat.Name)))
-              let _3 = AddOperation(
-                  () => default(RT).HostNetworkCommands.Bind(c => c.RemoveNetNat(nat.Name)),
+            : from _1 in LogDebug("Removing invalid host NAT '{Nat}'", nat.Name)
+              from _2 in AddOperationRt(
+                  () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
+                        from _ in hostCommands.RemoveNetNat(nat.Name)
+                        select unit,
                   NetworkChangeOperation.RemoveNetNat,
                   nat.Name)
               select Some(nat.Name)
         select result;
-
 
     public Aff<RT, OvsBridgesInfo> RemoveAdapterPortsOnNatOverlays(
         NetworkProvidersConfiguration newConfig,
@@ -427,6 +403,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         OvsBridgeInfo ovsBridge,
         Seq<HostNetworkAdapter> adapters) =>
         from _1 in unitAff
+        //TODO is this correct? The network adapter might have been removed from the host and might not be part of adapters anymore
         let portsToRemove = adapters.Map(a => a.Name)
             // We also need to remove the bonded port if it exists
             .Append(GetBondPortName(ovsBridge.Name))
