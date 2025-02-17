@@ -153,7 +153,7 @@ public class ProviderNetworkConsoleTests
         {
             Operations = new[]
             {
-                new NetworkChangeOperation<TestRuntime>(
+                new ChangeOp(
                     NetworkChangeOperation.AddBridge,
                     () => Prelude.unitAff, null, null)
             }.ToSeq()
@@ -170,14 +170,13 @@ public class ProviderNetworkConsoleTests
             Succ: (r) =>
             {
                 r.IsValid.Should().BeTrue();
-                r.HostState.Should().BeEquivalentTo(hostState);
-                r.HostState.Should().NotBeSameAs(hostState);
+                r.RefreshState.Should().BeTrue();
 
                 var generatedText = string.Join('\n', _runtime.Env.Console.ToList()).Split("\n");
                 _testOutput.WriteLine($"Generated Console output of {nameof(Sync_Before_new_config_happy_path)}:");
                 generatedText.Iter(_testOutput.WriteLine);
 
-                generatedText.Should().HaveCount(16);
+                generatedText.Should().HaveCount(15);
                 generatedText[2].Should().Be("- Add bridge '{0}'");
                 generatedText[13].Should().Be("Host network configuration was updated.");
 
@@ -386,10 +385,6 @@ public class ProviderNetworkConsoleTests
             .Returns(SuccessAff(hostState.NetAdapters));
         _hostNetworkCommandsMock.Setup(x => x.GetAdapterNames())
             .Returns(SuccessAff(hostState.NetAdapters.Select(x=>x.Name)));
-        _hostNetworkCommandsMock.Setup(x => x.FindOverlaySwitch(
-                It.IsAny<Seq<VMSwitch>>(),
-                It.IsAny<Seq<HostNetworkAdapter>>()))
-            .Returns(SuccessAff(hostState.OverlaySwitch));
 
         _hostNetworkCommandsMock.Setup(x => x.GetNetNat())
             .Returns(SuccessAff(hostState.NetNat));
@@ -398,9 +393,6 @@ public class ProviderNetworkConsoleTests
             .Returns(hostState.OvsBridges);
         ovsControlMock.Setup(x => x.GetPorts(CancellationToken.None))
             .Returns(hostState.OvsBridgePorts);
-
-        ovsControlMock.Setup(x => x.GetOVSTable(It.IsAny<CancellationToken>()))
-            .Returns(new OVSTableRecord());
 
         ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
             .Returns(hostState.OvsBridges);
@@ -411,6 +403,9 @@ public class ProviderNetworkConsoleTests
         ovsControlMock.Setup(x => x.GetInterfaces(It.IsAny<CancellationToken>()))
             .Returns(hostState.OvsInterfaces);
         */
+
+        _ovsControlMock.Setup(x => x.GetOVSTable(It.IsAny<CancellationToken>()))
+            .Returns(new OVSTableRecord());
 
         _ovsControlMock.Setup(x => x.AddBridge("br-nat",
                 It.IsAny<CancellationToken>()))

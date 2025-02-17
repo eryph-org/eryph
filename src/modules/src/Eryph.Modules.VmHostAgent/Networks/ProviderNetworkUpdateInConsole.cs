@@ -123,7 +123,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
             .MapFail(e => new OperationError(executedOps, e));
     }
 
-    public static Aff<RT, (bool IsValid, HostState HostState)> syncCurrentConfigBeforeNewConfig(
+    public static Aff<RT, (bool IsValid, bool RefreshState)> syncCurrentConfigBeforeNewConfig(
         HostState hostState,
         NetworkChanges<RT> currentConfigChanges,
         bool nonInteractive)
@@ -168,14 +168,8 @@ public static class ProviderNetworkUpdateInConsole<RT>
                     .IfFailAff(f => minRollbackChanges<bool>(f, false))
                 : // config not valid (ignored) 
                 Prelude.SuccessAff(false)
-
-            // refresh host state if new config was applied
-            from newHostState in isValid && !isEmpty
-                ? getHostStateWithProgress()
-                : Prelude.SuccessAff(hostState)
-            select (isValid, newHostState);
-
-
+            let refreshState = isValid && !isEmpty
+            select (isValid, refreshState);
     }
 
     public static Aff<RT, Unit> syncNetworks()
