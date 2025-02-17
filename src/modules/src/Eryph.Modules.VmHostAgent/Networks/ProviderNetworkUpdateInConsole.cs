@@ -24,7 +24,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
     public static Aff<RT, HostState> getHostStateWithProgress() =>
         from _ in Console<RT>.write("Analyzing host network settings => ")
         // collect network state of host
-        from hostState in ProviderNetworkUpdate<RT>.getHostState(
+        from hostState in HostStateProvider<RT>.getHostState(
             () => Console<RT>.write("."))
         from __ in Console<RT>.writeEmptyLine
         select hostState;

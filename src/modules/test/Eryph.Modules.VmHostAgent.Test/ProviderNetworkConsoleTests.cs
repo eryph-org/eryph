@@ -21,478 +21,430 @@ using ChangeOp = Eryph.Modules.VmHostAgent.Networks.NetworkChangeOperation<Eryph
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Test
+namespace Eryph.Modules.VmHostAgent.Test;
+
+public class ProviderNetworkConsoleTests
 {
-    public class ProviderNetworkConsoleTests
+    private readonly Mock<IOVSControl> _ovsControlMock = new();
+    private readonly Mock<INetworkProviderManager> _networkProviderManagerMock = new();
+    private readonly Mock<IHostNetworkCommands<TestRuntime>> _hostNetworkCommandsMock = new();
+    private readonly Mock<ISyncClient> _syncClientMock = new();
+    private readonly TestRuntime _runtime;
+    private readonly ITestOutputHelper _testOutput;
+
+    public ProviderNetworkConsoleTests(ITestOutputHelper testOutput)
     {
-        private readonly ITestOutputHelper _testOutput;
+        _testOutput = testOutput;
+        _runtime = TestRuntime.New(
+            _ovsControlMock.Object,
+            _syncClientMock.Object,
+            _hostNetworkCommandsMock.Object,
+            _networkProviderManagerMock.Object);
+    }
 
-        public ProviderNetworkConsoleTests(ITestOutputHelper testOutput)
-        {
-            _testOutput = testOutput;
-        }
+    [Fact]
+    public async Task GenerateChanges_generates_as_expected()
+    {
+        var hostState = CreateHostState();
+        AddMocks();
 
-        [Fact]
-        public async Task GetHostState_Gets_Expected_state()
-        {
-            var runtime = TestRuntime.New();
-            var hostState = CreateHostState();
-            AddMocks(runtime, hostState);
+        var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+            .Bind(c => generateChanges(hostState, c))
+            .Run(_runtime);
 
-
-            var res = (await getHostState()
-                    .Run(runtime));
-
-            res.Match(
-                Fail: l => l.Throw(),
-                Succ: newState =>
-                {
-                    newState.NetAdapters.Should().HaveCount(1);
-                    newState.VMSwitchExtensions.Should().HaveCount(1);
-                    newState.VMSwitches.Should().HaveCount(1);
-                    newState.NetNat.Should().HaveCount(1);
-                    newState.OvsBridges.Should().BeEmpty();
-                    newState.OvsBridgePorts.Should().BeEmpty();
-
-                }
-            );
-        }
-
-        [Fact]
-        public async Task GenerateChanges_generates_as_expected()
-        {
-            var runtime = TestRuntime.New();
-            var hostState = CreateHostState();
-            AddMocks(runtime, hostState);
-
-            var res = (await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-                .Bind(c => generateChanges(hostState, c))
-                .Run(runtime));
-
-            res.Match(
-                Fail: l => l.Throw(),
-                Succ: (changes) =>
-                {
-                    changes.Operations.Should().HaveCount(4);
-                    changes.Operations.Select(x => x.Operation)
-                        .Should().ContainInOrder(
-                            NetworkChangeOperation.AddBridge,
-                            NetworkChangeOperation.ConfigureNatIp,
-                            NetworkChangeOperation.AddNetNat,
-                            NetworkChangeOperation.UpdateBridgeMapping
-                        );
-                });
-
-        }
-
-        [Fact]
-        public async Task GenerateChanges_multiple_overlay_switches_triggers_rebuild()
-        {
-            static HostState CreateHostStateWithMultipleSwitches()
+        res.Match(
+            Fail: l => l.Throw(),
+            Succ: (changes) =>
             {
-                var hostState = CreateHostState();
-                return hostState with
-                {
-                    VMSwitches = Prelude.Seq(
-                    [
-                        ..hostState.VMSwitches,
-                        new VMSwitch()
-                        {
-                            Id = Guid.NewGuid(),
-                            Name = EryphConstants.OverlaySwitchName,
-                        }
-                    ]),
-                };
-            }
+                changes.Operations.Should().HaveCount(4);
+                changes.Operations.Select(x => x.Operation)
+                    .Should().ContainInOrder(
+                        NetworkChangeOperation.AddBridge,
+                        NetworkChangeOperation.ConfigureNatIp,
+                        NetworkChangeOperation.AddNetNat,
+                        NetworkChangeOperation.UpdateBridgeMapping
+                    );
+            });
 
-            var runtime = TestRuntime.New();
-            var hostState = CreateHostStateWithMultipleSwitches();
-            AddMocks(runtime, hostState);
+    }
 
-            var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-                .Bind(c => generateChanges(hostState, c))
-                .Run(runtime);
-
-            var operations = res.Should().BeSuccess().Which.Operations;
-            operations.Should().SatisfyRespectively(
-                op => op.Operation.Should().Be(NetworkChangeOperation.StopOVN),
-                op => op.Operation.Should().Be(NetworkChangeOperation.RebuildOverLaySwitch),
-                op => op.Operation.Should().Be(NetworkChangeOperation.StartOVN),
-                op => op.Operation.Should().Be(NetworkChangeOperation.AddBridge),
-                op => op.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
-                op => op.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
-                op => op.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
-        }
-
-        [Fact]
-        public async Task GenerateChanges_invalid_NetNat_recreates_NetNat()
+    [Fact]
+    public async Task GenerateChanges_multiple_overlay_switches_triggers_rebuild()
+    {
+        static HostState CreateHostStateWithMultipleSwitches()
         {
-            static HostState CreateHostStateWithMultipleSwitches()
-            {
-                var hostState = CreateHostState();
-                return hostState with
-                {
-                    NetNat = Prelude.Seq(
-                    [
-                        ..hostState.NetNat,
-                        new NetNat()
-                        {
-                            Name = "eryph_default_default",
-                            InternalIPInterfaceAddressPrefix = "10.249.248.0/28",
-                        }
-                    ]),
-                };
-            }
-
-            var runtime = TestRuntime.New();
-            var hostState = CreateHostStateWithMultipleSwitches();
-            AddMocks(runtime, hostState);
-
-            var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-                .Bind(c => generateChanges(hostState, c))
-                .Run(runtime);
-
-            var operations = res.Should().BeSuccess().Which.Operations;
-            operations.Should().SatisfyRespectively(
-                op => op.Operation.Should().Be(NetworkChangeOperation.AddBridge),
-                op => op.Operation.Should().Be(NetworkChangeOperation.RemoveNetNat),
-                op => op.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
-                op => op.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
-                op => op.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
-        }
-
-        [Fact]
-        public async Task Sync_Before_new_config_happy_path()
-        {
-            var runtime = TestRuntime.New();
             var hostState = CreateHostState();
-            AddMocks(runtime, hostState);
+            return hostState with
+            {
+                VMSwitches = Seq(
+                [
+                    ..hostState.VMSwitches,
+                    new VMSwitch()
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = EryphConstants.OverlaySwitchName,
+                    }
+                ]),
+            };
+        }
+
+        var hostState = CreateHostStateWithMultipleSwitches();
+        AddMocks();
+
+        var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+            .Bind(c => generateChanges(hostState, c))
+            .Run(_runtime);
+
+        var operations = res.Should().BeSuccess().Which.Operations;
+        operations.Should().SatisfyRespectively(
+            op => op.Operation.Should().Be(NetworkChangeOperation.StopOVN),
+            op => op.Operation.Should().Be(NetworkChangeOperation.RebuildOverLaySwitch),
+            op => op.Operation.Should().Be(NetworkChangeOperation.StartOVN),
+            op => op.Operation.Should().Be(NetworkChangeOperation.AddBridge),
+            op => op.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
+            op => op.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
+            op => op.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
+    }
+
+    [Fact]
+    public async Task GenerateChanges_invalid_NetNat_recreates_NetNat()
+    {
+        static HostState CreateHostStateWithMultipleSwitches()
+        {
+            var hostState = CreateHostState();
+            return hostState with
+            {
+                NetNat = Seq(
+                [
+                    ..hostState.NetNat,
+                    new NetNat()
+                    {
+                        Name = "eryph_default_default",
+                        InternalIPInterfaceAddressPrefix = "10.249.248.0/28",
+                    }
+                ]),
+            };
+        }
+
+        
+        var hostState = CreateHostStateWithMultipleSwitches();
+        AddMocks();
+
+        var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+            .Bind(c => generateChanges(hostState, c))
+            .Run(_runtime);
+
+        var operations = res.Should().BeSuccess().Which.Operations;
+        operations.Should().SatisfyRespectively(
+            op => op.Operation.Should().Be(NetworkChangeOperation.AddBridge),
+            op => op.Operation.Should().Be(NetworkChangeOperation.RemoveNetNat),
+            op => op.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
+            op => op.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
+            op => op.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
+    }
+
+    [Fact]
+    public async Task Sync_Before_new_config_happy_path()
+    {
+        var hostState = CreateHostState();
+        AddMocks();
             
-            var changes = new NetworkChanges<TestRuntime>
-            {
-                Operations = new[]
-                {
-                    new NetworkChangeOperation<TestRuntime>(
-                        NetworkChangeOperation.AddBridge,
-                        () => Prelude.unitAff, null, null)
-                }.ToSeq()
-            };
-
-            runtime.Env.Console.WriteKeyLine("a");
-
-
-            var res = (await syncCurrentConfigBeforeNewConfig(hostState, changes, false)
-                .Run(runtime));
-
-            res.Match(
-                Fail: l => l.Throw(),
-                Succ: (r) =>
-                {
-                    r.IsValid.Should().BeTrue();
-                    r.HostState.Should().BeEquivalentTo(hostState);
-                    r.HostState.Should().NotBeSameAs(hostState);
-
-                    var generatedText = string.Join('\n', runtime.Env.Console.ToList()).Split("\n");
-                    _testOutput.WriteLine($"Generated Console output of {nameof(Sync_Before_new_config_happy_path)}:");
-                    generatedText.Iter(_testOutput.WriteLine);
-
-                    generatedText.Should().HaveCount(16);
-                    generatedText[2].Should().Be("- Add bridge '{0}'");
-                    generatedText[13].Should().Be("Host network configuration was updated.");
-
-                });
-
-        }
-
-
-        [Fact]
-        public async Task Sync_Before_new_config_with_rollback()
+        var changes = new NetworkChanges<TestRuntime>
         {
-            var runtime = TestRuntime.New();
-            var hostState = CreateHostState();
-
-            var rolledBack = false;
-
-            var changes = new NetworkChanges<TestRuntime>
+            Operations = new[]
             {
-                Operations = new[]
-                {
-                    new ChangeOp(
-                        NetworkChangeOperation.AddBridge,
-                        () => Prelude.unitAff, _ => true , () =>
-                        {
-                            rolledBack = true;
-                            return Prelude.unitAff;
-                        }),
-                    new ChangeOp(
-                        NetworkChangeOperation.RebuildOverLaySwitch,
-                        () => Prelude.unitAff, null, null),
+                new NetworkChangeOperation<TestRuntime>(
+                    NetworkChangeOperation.AddBridge,
+                    () => Prelude.unitAff, null, null)
+            }.ToSeq()
+        };
 
-                    new ChangeOp(
-                        NetworkChangeOperation.AddNetNat,
-                        () => Prelude.FailAff<Unit>(Errors.TimedOut), null, null)
-                }.ToSeq()
-            };
+        _runtime.Env.Console.WriteKeyLine("a");
 
-            runtime.Env.Console.WriteKeyLine("a");
 
-            var res = (await syncCurrentConfigBeforeNewConfig(hostState, changes, false)
-                .Run(runtime));
+        var res = await syncCurrentConfigBeforeNewConfig(hostState, changes, false)
+            .Run(_runtime);
 
-            res.Match(
-                Fail: l =>
-                {
-                    Assert.Same(Errors.TimedOut, l);
-                },
-                Succ: (_) => throw new Exception("This should not succeed!"));
-
-            Assert.True(rolledBack);
-
-            var generatedText = string.Join('\n', runtime.Env.Console.ToList()).Split("\n");
-            _testOutput.WriteLine($"Generated Console output of {nameof(Sync_Before_new_config_with_rollback)}:");
-            generatedText.Iter(_testOutput.WriteLine);
-
-            generatedText.Should().HaveCount(22);
-            generatedText[4].Should().Be("- Add host NAT for provider '{0}' with prefix '{1}'");
-            generatedText[17].Should().Be("rollback of: Add bridge '{0}'");
-
-        }
-
-        [Fact]
-        public async Task Apply_new_config_happy_path()
-        {
-            var runtime = TestRuntime.New();
-            var hostState = CreateHostState();
-            AddMocks(runtime, hostState);
-
-            var changes = new NetworkChanges<TestRuntime>
+        res.Match(
+            Fail: l => l.Throw(),
+            Succ: (r) =>
             {
-                Operations = new[]
-                {
-                    new ChangeOp(
-                        NetworkChangeOperation.AddBridge,
-                        () => Prelude.unitAff, null, null)
-                }.ToSeq()
-            };
+                r.IsValid.Should().BeTrue();
+                r.HostState.Should().BeEquivalentTo(hostState);
+                r.HostState.Should().NotBeSameAs(hostState);
 
-            runtime.Env.Console.WriteKeyLine("a");
+                var generatedText = string.Join('\n', _runtime.Env.Console.ToList()).Split("\n");
+                _testOutput.WriteLine($"Generated Console output of {nameof(Sync_Before_new_config_happy_path)}:");
+                generatedText.Iter(_testOutput.WriteLine);
+
+                generatedText.Should().HaveCount(16);
+                generatedText[2].Should().Be("- Add bridge '{0}'");
+                generatedText[13].Should().Be("Host network configuration was updated.");
+
+            });
+    }
 
 
+    [Fact]
+    public async Task Sync_Before_new_config_with_rollback()
+    {
+        var hostState = CreateHostState();
 
-            var res = await
-                importConfig(NetworkProvidersConfiguration.DefaultConfig)
-                    .Bind(c => applyChangesInConsole(c, changes, false, true))
-                    .Run(runtime);
+        var rolledBack = false;
 
-            res.Match(
-                Fail: l => l.Throw(),
-                Succ: (_) =>
-                {
-                    var generatedText = string.Join('\n', runtime.Env.Console.ToList()).Split("\n");
-                    _testOutput.WriteLine($"Generated Console output of {nameof(Apply_new_config_happy_path)}:");
-                    generatedText.Iter(_testOutput.WriteLine);
-
-                    generatedText.Should().HaveCount(14);
-                    generatedText[2].Should().Be("- Add bridge '{0}'");
-
-                });
-
-        }
-
-        [Fact]
-        public async Task Apply_new_config_with_rollback()
+        var changes = new NetworkChanges<TestRuntime>
         {
-            var runtime = TestRuntime.New();
-            var hostState = CreateHostState();
-            AddMocks(runtime, hostState);
-
-            var rolledBack = false;
-
-            var changes = new NetworkChanges<TestRuntime>
+            Operations = new[]
             {
-                Operations = new[]
-                {
-                    new ChangeOp(
-                        NetworkChangeOperation.AddBridge,
-                        () => Prelude.unitAff, _ => true , () =>
-                        {
-                            rolledBack = true;
-                            return Prelude.unitAff;
-                        }),
-                    new ChangeOp(
-                        NetworkChangeOperation.RebuildOverLaySwitch,
-                        () => Prelude.unitAff, null, null),
+                new ChangeOp(
+                    NetworkChangeOperation.AddBridge,
+                    () => unitAff, _ => true , () =>
+                    {
+                        rolledBack = true;
+                        return unitAff;
+                    }),
+                new ChangeOp(
+                    NetworkChangeOperation.RebuildOverLaySwitch,
+                    () => unitAff, null, null),
 
-                    new ChangeOp(
-                        NetworkChangeOperation.AddNetNat,
-                        () => Prelude.FailAff<Unit>(Errors.TimedOut), null, null)
-                }.ToSeq()
-            };
+                new ChangeOp(
+                    NetworkChangeOperation.AddNetNat,
+                    () => FailAff<Unit>(Errors.TimedOut), null, null)
+            }.ToSeq()
+        };
 
-            runtime.Env.Console.WriteKeyLine("a");
+        _runtime.Env.Console.WriteKeyLine("a");
 
-            var res = await
-                importConfig(NetworkProvidersConfiguration.DefaultConfig)
-                    .Bind(c => applyChangesInConsole(c, changes, false, true))
-                    .Run(runtime);
-            res.Match(
-                Fail: l =>
-                {
-                    Assert.Same(Errors.TimedOut, l);
-                },
-                Succ: (_) => throw new Exception("This should not succeed!"));
+        var res = (await syncCurrentConfigBeforeNewConfig(hostState, changes, false)
+            .Run(_runtime));
 
-            Assert.True(rolledBack);
-
-            var generatedText = string.Join('\n', runtime.Env.Console.ToList()).Split("\n");
-            _testOutput.WriteLine($"Generated Console output of {nameof(Apply_new_config_with_rollback)}:");
-            generatedText.Iter(_testOutput.WriteLine);
-
-            generatedText.Should().HaveCount(32);
-            generatedText[2].Should().Be("- Add bridge '{0}'");
-            generatedText[16].Should().Be("rollback of: Add bridge '{0}'");
-            generatedText[27].Should().Contain("running: Update mapping of bridges to network providers");
-
-        }
-
-
-        private static HostState CreateHostState()
-        {
-            var switchId = Guid.NewGuid();
-
-            var hostState = new HostState(
-                Seq1(new VMSwitchExtension
-                {
-                        Enabled = true,
-                        Id = Guid.NewGuid().ToString(),
-                        SwitchId = switchId,
-                        SwitchName = EryphConstants.OverlaySwitchName
-                }),
-                Seq1(new VMSwitch
-                {
-                    Id = switchId,
-                    Name = EryphConstants.OverlaySwitchName,
-                    NetAdapterInterfaceGuid = null
-                }),
-                Seq1(new HostNetworkAdapter
-                {
-                    Name = "Ethernet",
-                    InterfaceGuid = Guid.NewGuid()
-                }),
-                Seq1("Ethernet"),
-                Some(new OverlaySwitchInfo(switchId, HashSet<string>())),
-                Seq1(new NetNat { Name = "docker_nat", InternalIPInterfaceAddressPrefix = "192.168.10.0/24" }),
-                Seq<Bridge>(),
-                Seq<BridgePort>(),
-                Seq<Interface>());
-
-            return hostState;
-        }
-
-        private static void AddMocks(TestRuntime runtime, 
-            HostState hostState, Seq<TypedPsObject<VMNetworkAdapter>> 
-                vmAdaptersInOverlaySwitch = default)
-        {
-            var syncClientMock = new Mock<ISyncClient>();
-            var ovsControlMock = new Mock<IOVSControl>();
-            var hostCommandsMock = new Mock<IHostNetworkCommands<TestRuntime>>();
-            var configManager = new Mock<INetworkProviderManager>();
-
-
-            runtime.Env.OVS = ovsControlMock.Object;
-            runtime.Env.SyncClient = syncClientMock.Object;
-            runtime.Env.HostNetworkCommands = hostCommandsMock.Object;
-            runtime.Env.NetworkProviderManager = configManager.Object;
-
-            var realConfigManager = new NetworkProviderManager();
-
-            configManager.Setup(x => x.ParseConfigurationYaml(It.IsAny<string>()))
-                .Returns(realConfigManager.ParseConfigurationYaml);
-
-            var overlaySwitch = hostState.VMSwitches
-                .FirstOrDefault(x => x.Name == EryphConstants.OverlaySwitchName);
-
-            hostCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
-                .Returns(Prelude.SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
-            if (overlaySwitch != null)
+        res.Match(
+            Fail: l =>
             {
-                hostCommandsMock.Setup(x =>
-                        x.GetNetAdaptersBySwitch(overlaySwitch.Id))
-                    .Returns(Prelude.SuccessAff(vmAdaptersInOverlaySwitch));
-            }
+                Assert.Same(Errors.TimedOut, l);
+            },
+            Succ: (_) => throw new Exception("This should not succeed!"));
+
+        Assert.True(rolledBack);
+
+        var generatedText = string.Join('\n', _runtime.Env.Console.ToList()).Split("\n");
+        _testOutput.WriteLine($"Generated Console output of {nameof(Sync_Before_new_config_with_rollback)}:");
+        generatedText.Iter(_testOutput.WriteLine);
+
+        generatedText.Should().HaveCount(22);
+        generatedText[4].Should().Be("- Add host NAT for provider '{0}' with prefix '{1}'");
+        generatedText[17].Should().Be("rollback of: Add bridge '{0}'");
+    }
+
+    [Fact]
+    public async Task Apply_new_config_happy_path()
+    {
+        var hostState = CreateHostState();
+        AddMocks();
+
+        var changes = new NetworkChanges<TestRuntime>
+        {
+            Operations = new[]
+            {
+                new ChangeOp(
+                    NetworkChangeOperation.AddBridge,
+                    () => unitAff, null, null)
+            }.ToSeq()
+        };
+
+        _runtime.Env.Console.WriteKeyLine("a");
 
 
-            hostCommandsMock.Setup(x => x.GetSwitchExtensions())
-                .Returns(Prelude.SuccessAff(hostState.VMSwitchExtensions));
 
-            hostCommandsMock.Setup(x => x.GetSwitchExtensions())
-                .Returns(Prelude.SuccessAff(hostState.VMSwitchExtensions));
-            hostCommandsMock.Setup(x => x.GetSwitches())
-                .Returns(Prelude.SuccessAff(hostState.VMSwitches));
-            hostCommandsMock.Setup(x => x.GetPhysicalAdapters())
-                .Returns(Prelude.SuccessAff(hostState.NetAdapters));
-            hostCommandsMock.Setup(x => x.GetAdapterNames())
-                .Returns(Prelude.SuccessAff(hostState.NetAdapters.Select(x=>x.Name)));
-            hostCommandsMock.Setup(x => x.FindOverlaySwitch(
-                    It.IsAny<Seq<VMSwitch>>(),
-                    It.IsAny<Seq<HostNetworkAdapter>>()))
-                .Returns(Prelude.SuccessAff(hostState.OverlaySwitch));
+        var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+            .Bind(c => applyChangesInConsole(c, changes, false, true))
+            .Run(_runtime);
 
-            hostCommandsMock.Setup(x => x.GetNetNat())
-                .Returns(Prelude.SuccessAff(hostState.NetNat));
+        result.Match(
+            Fail: l => l.Throw(),
+            Succ: (_) =>
+            {
+                var generatedText = string.Join('\n', _runtime.Env.Console.ToList()).Split("\n");
+                _testOutput.WriteLine($"Generated Console output of {nameof(Apply_new_config_happy_path)}:");
+                generatedText.Iter(_testOutput.WriteLine);
 
-            ovsControlMock.Setup(x => x.GetBridges(CancellationToken.None))
-                .Returns(hostState.OvsBridges);
-            ovsControlMock.Setup(x => x.GetPorts(CancellationToken.None))
-                .Returns(hostState.OvsBridgePorts);
+                generatedText.Should().HaveCount(14);
+                generatedText[2].Should().Be("- Add bridge '{0}'");
+            });
+    }
 
-            ovsControlMock.Setup(x => x.GetOVSTable(It.IsAny<CancellationToken>()))
-                .Returns(new OVSTableRecord());
+    [Fact]
+    public async Task Apply_new_config_with_rollback()
+    {
+        AddMocks();
 
-            ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
-                .Returns(hostState.OvsBridges);
+        var rolledBack = false;
 
-            ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
-                .Returns(hostState.OvsBridgePorts);
+        var changes = new NetworkChanges<TestRuntime>
+        {
+            Operations = new[]
+            {
+                new ChangeOp(
+                    NetworkChangeOperation.AddBridge,
+                    () => unitAff, _ => true , () =>
+                    {
+                        rolledBack = true;
+                        return unitAff;
+                    }),
+                new ChangeOp(
+                    NetworkChangeOperation.RebuildOverLaySwitch,
+                    () => unitAff, null, null),
+
+                new ChangeOp(
+                    NetworkChangeOperation.AddNetNat,
+                    () => FailAff<Unit>(Errors.TimedOut), null, null)
+            }.ToSeq()
+        };
+
+        _runtime.Env.Console.WriteKeyLine("a");
+
+        var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
+                .Bind(c => applyChangesInConsole(c, changes, false, true))
+                .Run(_runtime);
+        res.Match(
+            Fail: l =>
+            {
+                Assert.Same(Errors.TimedOut, l);
+            },
+            Succ: (_) => throw new Exception("This should not succeed!"));
+
+        Assert.True(rolledBack);
+
+        var generatedText = string.Join('\n', _runtime.Env.Console.ToList()).Split("\n");
+        _testOutput.WriteLine($"Generated Console output of {nameof(Apply_new_config_with_rollback)}:");
+        generatedText.Iter(_testOutput.WriteLine);
+
+        generatedText.Should().HaveCount(32);
+        generatedText[2].Should().Be("- Add bridge '{0}'");
+        generatedText[16].Should().Be("rollback of: Add bridge '{0}'");
+        generatedText[27].Should().Contain("running: Update mapping of bridges to network providers");
+    }
 
 
-            ovsControlMock.Setup(x => x.AddBridge("br-nat",
-                    It.IsAny<CancellationToken>()))
-                .Returns(Prelude.RightAsync<Error, Unit>(Prelude.unit));
+    private static HostState CreateHostState()
+    {
+        var switchId = Guid.NewGuid();
 
-            ovsControlMock.Setup(x => x.UpdateBridgePort("br-nat",
-                    null,null,
-                    It.IsAny<CancellationToken>()))
-                .Returns(Prelude.RightAsync<Error, Unit>(Prelude.unit));
+        var hostState = new HostState(
+            Seq1(new VMSwitchExtension
+            {
+                Enabled = true,
+                Id = Guid.NewGuid().ToString(),
+                SwitchId = switchId,
+                SwitchName = EryphConstants.OverlaySwitchName
+            }),
+            Seq1(new VMSwitch
+            {
+                Id = switchId,
+                Name = EryphConstants.OverlaySwitchName,
+                NetAdapterInterfaceGuid = null
+            }),
+            Seq1(new HostNetworkAdapter
+            {
+                Name = "Ethernet",
+                InterfaceGuid = Guid.NewGuid()
+            }),
+            Seq1("Ethernet"),
+            Some(new OverlaySwitchInfo(switchId, HashSet<string>())),
+            Seq1(new NetNat { Name = "docker_nat", InternalIPInterfaceAddressPrefix = "192.168.10.0/24" }),
+            new OvsBridgesInfo());
 
+        return hostState;
+    }
 
-            hostCommandsMock.Setup(x => x.WaitForBridgeAdapter(
-                    It.IsAny<string>()))
-                .Returns(Prelude.unitAff);
-            hostCommandsMock.Setup(x => x.EnableBridgeAdapter(
-                    It.IsAny<string>()))
-                .Returns(Prelude.unitAff);
+    private void AddMocks(
+        Guid? switchId = null,
+        Seq<TypedPsObject<VMNetworkAdapter>> vmAdaptersInOverlaySwitch = default)
+    {
+        var realConfigManager = new NetworkProviderManager();
 
-            hostCommandsMock.Setup(x => x.GetAdapterIpV4Address("br-nat"))
-                .Returns(Prelude.SuccessAff(Seq<NetIpAddress>()));
+        _networkProviderManagerMock.Setup(x => x.ParseConfigurationYaml(It.IsAny<string>()))
+            .Returns(realConfigManager.ParseConfigurationYaml);
 
-            hostCommandsMock.Setup(x => x.ConfigureAdapterIp("br-nat",
-                    It.IsAny<IPAddress>(), It.IsAny<IPNetwork2>()))
-                .Returns(Prelude.unitAff);
-
-            hostCommandsMock.Setup(x => x.AddNetNat("eryph_default_default",
-                    It.IsAny<IPNetwork2>()))
-                .Returns(Prelude.unitAff);
-
-            syncClientMock.Setup(x => x.CheckRunning(It.IsAny<CancellationToken>()))
-                .Returns(Prelude.SuccessAff(true));
-
-            ovsControlMock.Setup(x => x.UpdateBridgeMapping(It.IsAny<string>(),
-                    It.IsAny<CancellationToken>()))
-                .Returns(Prelude.RightAsync<Error, Unit>(Prelude.unit));
-
-
+        _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
+            .Returns(SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
+        if (switchId.HasValue)
+        {
+            _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(switchId.Value))
+                .Returns(SuccessAff(vmAdaptersInOverlaySwitch));
         }
 
+        /*
+        _hostNetworkCommandsMock.Setup(x => x.GetSwitchExtensions())
+            .Returns(SuccessAff(hostState.VMSwitchExtensions));
+
+        _hostNetworkCommandsMock.Setup(x => x.GetSwitchExtensions())
+            .Returns(SuccessAff(hostState.VMSwitchExtensions));
+        _hostNetworkCommandsMock.Setup(x => x.GetSwitches())
+            .Returns(SuccessAff(hostState.VMSwitches));
+        _hostNetworkCommandsMock.Setup(x => x.GetPhysicalAdapters())
+            .Returns(SuccessAff(hostState.NetAdapters));
+        _hostNetworkCommandsMock.Setup(x => x.GetAdapterNames())
+            .Returns(SuccessAff(hostState.NetAdapters.Select(x=>x.Name)));
+        _hostNetworkCommandsMock.Setup(x => x.FindOverlaySwitch(
+                It.IsAny<Seq<VMSwitch>>(),
+                It.IsAny<Seq<HostNetworkAdapter>>()))
+            .Returns(SuccessAff(hostState.OverlaySwitch));
+
+        _hostNetworkCommandsMock.Setup(x => x.GetNetNat())
+            .Returns(SuccessAff(hostState.NetNat));
+
+        ovsControlMock.Setup(x => x.GetBridges(CancellationToken.None))
+            .Returns(hostState.OvsBridges);
+        ovsControlMock.Setup(x => x.GetPorts(CancellationToken.None))
+            .Returns(hostState.OvsBridgePorts);
+
+        ovsControlMock.Setup(x => x.GetOVSTable(It.IsAny<CancellationToken>()))
+            .Returns(new OVSTableRecord());
+
+        ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
+            .Returns(hostState.OvsBridges);
+
+        ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
+            .Returns(hostState.OvsBridgePorts);
+
+        ovsControlMock.Setup(x => x.GetInterfaces(It.IsAny<CancellationToken>()))
+            .Returns(hostState.OvsInterfaces);
+        */
+
+        _ovsControlMock.Setup(x => x.AddBridge("br-nat",
+                It.IsAny<CancellationToken>()))
+            .Returns(RightAsync<Error, Unit>(unit));
+
+        _ovsControlMock.Setup(x => x.UpdateBridgePort("br-nat",
+                null,null,
+                It.IsAny<CancellationToken>()))
+            .Returns(RightAsync<Error, Unit>(unit));
+
+
+        _hostNetworkCommandsMock.Setup(x => x.WaitForBridgeAdapter(
+                It.IsAny<string>()))
+            .Returns(unitAff);
+        _hostNetworkCommandsMock.Setup(x => x.EnableBridgeAdapter(
+                It.IsAny<string>()))
+            .Returns(unitAff);
+
+        _hostNetworkCommandsMock.Setup(x => x.GetAdapterIpV4Address("br-nat"))
+            .Returns(SuccessAff(Seq<NetIpAddress>()));
+
+        _hostNetworkCommandsMock.Setup(x => x.ConfigureAdapterIp("br-nat",
+                It.IsAny<IPAddress>(), It.IsAny<IPNetwork2>()))
+            .Returns(unitAff);
+
+        _hostNetworkCommandsMock.Setup(x => x.AddNetNat("eryph_default_default",
+                It.IsAny<IPNetwork2>()))
+            .Returns(unitAff);
+
+        _syncClientMock.Setup(x => x.CheckRunning(It.IsAny<CancellationToken>()))
+            .Returns(SuccessAff(true));
+
+        _ovsControlMock.Setup(x => x.UpdateBridgeMapping(It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(RightAsync<Error, Unit>(unit));
     }
 }

@@ -42,6 +42,7 @@ public enum NetworkChangeOperation
     RemoveAdapterPort,
     AddAdapterPort,
     AddBondPort,
+    UpdateBondPort,
     UpdateBridgePort,
 
     ConfigureNatIp,
@@ -670,15 +671,24 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         string expectedPortName) =>
         from _1 in unitAff
         let adapters = providerConfig.Adapters.ToSeq().Strict()
+        from _2 in adapters.Match(
+                Empty: () => unitAff,
+                Head: a => AddSimpleOverlayAdapterPort(providerConfig, expectedPortName, a),
+                Tail: (a, b) => AddBondedOverlayAdapterPort(providerConfig, expectedPortName, a.Cons(b)))
+        select unit;
+
+    private Aff<RT, Unit> AddBondedOverlayAdapterPort(
+        NetworkProvider providerConfig,
+        string expectedPortName,
+        Seq<string> adapters) =>
+        from _1 in unitAff
         let ovsBondMode = GetBondMode(providerConfig.BridgeOptions?.BondMode)
-        let _2 = AddOperation(
+        from _2 in AddOperationRt(
             () => timeout(
                 TimeSpan.FromSeconds(30),
                 from ovs in default(RT).OVS
                 from ct in cancelToken<RT>()
-                from _ in  adapters.Length > 1
-                    ? ovs.AddBond(providerConfig.BridgeName, expectedPortName, adapters, ovsBondMode, ct).ToAff(e => e)
-                    : ovs.AddPort(providerConfig.BridgeName, expectedPortName, ct).ToAff(e => e)
+                from _ in ovs.AddBond(providerConfig.BridgeName, expectedPortName, adapters, ovsBondMode, ct).ToAff(e => e)
                 select unit),
             _ => true,
             () => timeout(
@@ -688,7 +698,31 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 from _ in ovs.RemovePort(providerConfig.BridgeName, expectedPortName, ct).ToAff(e => e)
                 select unit),
             NetworkChangeOperation.AddBondPort,
-            providerConfig.BridgeName, expectedPortName)
+            expectedPortName, string.Join(", ", adapters), providerConfig.BridgeName)
+        select unit;
+
+    private Aff<RT, Unit> AddSimpleOverlayAdapterPort(
+        NetworkProvider providerConfig,
+        string expectedPortName,
+        string adapters) =>
+        from _1 in unitAff
+        let ovsBondMode = GetBondMode(providerConfig.BridgeOptions?.BondMode)
+        from _2 in AddOperationRt(
+            () => timeout(
+                TimeSpan.FromSeconds(30),
+                from ovs in default(RT).OVS
+                from ct in cancelToken<RT>()
+                from _ in ovs.AddPort(providerConfig.BridgeName, expectedPortName, ct).ToAff(e => e)
+                select unit),
+            _ => true,
+            () => timeout(
+                TimeSpan.FromSeconds(30),
+                from ovs in default(RT).OVS
+                from ct in cancelToken<RT>()
+                from _ in ovs.RemovePort(providerConfig.BridgeName, expectedPortName, ct).ToAff(e => e)
+                select unit),
+            NetworkChangeOperation.AddAdapterPort,
+            expectedPortName, providerConfig.BridgeName)
         select unit;
 
     private Aff<RT, Unit> RemoveOverlayAdapterPort(
@@ -728,12 +762,12 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     from ct in cancelToken<RT>()
                     // TODO does an update by name even work or do we need the ID?
                     // We force a bond mode during the rollback as no bond mode at all
-                    // can break the physical network. When bond port is configured,
-                    // the bond mode should by set anyways.
+                    // can break the physical network. When a bond port is configured,
+                    // the bond mode should be set anyway.
                     from _ in ovs.UpdateBondPort(portInfo.PortName, portInfo.BondMode ?? "active-backup", ct).ToAff(e => e)
                     select unit),
-                NetworkChangeOperation.UpdateBridgePort,
-                providerConfig.BridgeName, portInfo.PortName)
+                NetworkChangeOperation.UpdateBondPort,
+                portInfo.PortName, providerConfig.BridgeName)
         select unit;
 
     public Aff<RT, Unit> UpdateBridgeMappings(NetworkProvidersConfiguration newConfig)

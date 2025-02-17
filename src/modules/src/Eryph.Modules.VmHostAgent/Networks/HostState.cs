@@ -4,16 +4,13 @@ using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 
-namespace Eryph.Modules.VmHostAgent.Networks
-{
-    public  record HostState(Seq<VMSwitchExtension> VMSwitchExtensions,
-        Seq<VMSwitch> VMSwitches,
-        Seq<HostNetworkAdapter> NetAdapters,
-        Seq<string> AllNetAdaptersNames,
-        Option<OverlaySwitchInfo> OverlaySwitch,
-        Seq<NetNat> NetNat,
-        Seq<Bridge> OvsBridges,
-        Seq<BridgePort> OvsBridgePorts,
-        Seq<Interface> OvsInterfaces);
+namespace Eryph.Modules.VmHostAgent.Networks;
 
-}
+public record HostState(
+    Seq<VMSwitchExtension> VMSwitchExtensions,
+    Seq<VMSwitch> VMSwitches,
+    Seq<HostNetworkAdapter> NetAdapters,
+    Seq<string> AllNetAdaptersNames,
+    Option<OverlaySwitchInfo> OverlaySwitch,
+    Seq<NetNat> NetNat,
+    OvsBridgesInfo OvsBridges);

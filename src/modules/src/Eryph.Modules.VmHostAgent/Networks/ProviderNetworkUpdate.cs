@@ -79,46 +79,25 @@ public static class ProviderNetworkUpdate<RT>
         from hostCommands in default(RT).HostNetworkCommands
 
         // generate variables
-        let currentOvsBridges = new OvsBridgesInfo(
-            hostState.OvsBridges.Map(b => new OvsBridgeInfo(
-                b.Name,
-                hostState.OvsBridgePorts
-                    .Filter(p => b.Ports.Contains(p.Id))
-                    .Map(p => new OvsBridgePortInfo(
-                        b.Name,
-                        p.Name,
-                        p.Tag,
-                        p.VlanMode,
-                        p.BondMode,
-                        hostState.OvsInterfaces
-                            .Map(i => new OvsBridgeInterfaceInfo(i.Name, i.Type))
-                            .Strict()))
-                    .Map(pi => (pi.PortName, pi))
-                    .ToHashMap()))
-                .Map(bi => (bi.Name, bi))
-                .ToHashMap())
-        let newBridges = newConfig.NetworkProviders
-            .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
-            .Select(x => new NewBridge(x.BridgeName,
-                x.Type == NetworkProviderType.NatOverLay
-                    ? IPAddress.Parse(x.Subnets.First(s => s.Name == "default").Gateway)
+        let currentOvsBridges = hostState.OvsBridges
+        let newBridges = newConfig.NetworkProviders.ToSeq()
+            .Filter(p => p.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
+            .Map(p => new NewBridge(
+                p.BridgeName,
+                p.Type == NetworkProviderType.NatOverLay
+                    ? IPAddress.Parse(p.Subnets.First(s => s.Name == "default").Gateway)
                     : IPAddress.None,
-                IPNetwork2.Parse(x.Subnets.First(s => s.Name == "default").Network),
-                x.BridgeOptions))
-            .ToSeq()
-        let newOverlayAdapters = toHashSet(newConfig.NetworkProviders
-            .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
-            .Where(x => x.Adapters != null)
-            .SelectMany(x => x.Adapters).Distinct())
+                IPNetwork2.Parse(p.Subnets.First(s => s.Name == "default").Network),
+                p.BridgeOptions))
+        let newOverlayAdapters = toHashSet(newConfig.NetworkProviders.ToSeq()
+            .Filter(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
+            .Bind(x => x.Adapters.ToSeq())
+            .Distinct())
 
-        let enabledBridges = (newConfig.NetworkProviders
-                .Filter(x => x.BridgeOptions?.DefaultIpMode is not null and not BridgeHostIpMode.Disabled)
-                .Map(x => x.BridgeName) ?? Array.Empty<string>())
-            .AsEnumerable()
-            .Append(newConfig.NetworkProviders
-                .Where(x => x.Type == NetworkProviderType.NatOverLay)
-                .Select(x => x.BridgeName))
-            .ToSeq()
+        let enabledBridges = newConfig.NetworkProviders.ToSeq()
+            .Filter(p => p.Type is NetworkProviderType.NatOverLay
+                || p.BridgeOptions?.DefaultIpMode is not null and not BridgeHostIpMode.Disabled)
+            .Map(x => x.BridgeName)
 
         let needsOverlaySwitch = newBridges.Length > 0
         let hasOverlaySwitch = hostState.OverlaySwitch.IsSome
@@ -229,40 +208,6 @@ public static class ProviderNetworkUpdate<RT>
                     select bridges,
             false => SuccessAff(ovsBridges),
         };
-
-    public static Aff<RT, HostState> getHostState() =>
-        getHostState(() => unitEff);
-
-    public static Aff<RT, HostState> getHostState(Func<Eff<RT, Unit>> progressCallback) =>
-        // tools
-        from ovsTool in default(RT).OVS
-        from hostCommands in default(RT).HostNetworkCommands
-        // collect network state of host
-        from p1 in progressCallback()
-        from vmSwitchExtensions in hostCommands.GetSwitchExtensions()
-        from p2 in progressCallback()
-        from vmSwitches in hostCommands.GetSwitches()
-        from p3 in progressCallback()
-        from netAdapters in hostCommands.GetPhysicalAdapters()
-        from p4 in progressCallback()
-        from allAdapterNames in hostCommands.GetAdapterNames()
-        from p5 in progressCallback()
-        from overlaySwitch in hostCommands.FindOverlaySwitch(vmSwitches, netAdapters)
-        from p6 in progressCallback()
-        from netNat in hostCommands.GetNetNat()
-        from p7 in progressCallback()
-        let cancelSource = new CancellationTokenSource(5000)
-        from ovsBridges in ovsTool.GetBridges(cancelSource.Token).ToAff(l => l)
-        from p8 in progressCallback()
-        let cancelSource2 = new CancellationTokenSource(5000)
-        from ovsBridgePorts in ovsTool.GetPorts(cancelSource2.Token).ToAff(l => l)
-        let cancelSource3 = new CancellationTokenSource(5000)
-        from ovsInterfaces in ovsTool.GetInterfaces(cancelSource3.Token).ToAff(l => l)
-        let hostState = new HostState(vmSwitchExtensions, vmSwitches, netAdapters, allAdapterNames, overlaySwitch, netNat, ovsBridges,
-            ovsBridgePorts, ovsInterfaces)
-        from ls in Logger<RT>.logTrace<HostState>("fetched host state: {hostState}", hostState)
-        select hostState;
-
 
     private record OperationError([property: DataMember] Seq<NetworkChangeOperation<RT>> ExecutedOperations, Error Cause)
         : Expected("Operation failed", 100, Cause);
