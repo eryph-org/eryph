@@ -1029,11 +1029,17 @@ internal static class Program
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
-            from syncResult in noCurrentConfigCheck
-                ? SuccessAff((false, hostState))
-                : from currentConfigChanges in generateChanges(hostState, currentConfig)
-                  from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
-                  select r
+            from syncResult in noCurrentConfigCheck switch
+            {
+                true => SuccessAff((false, hostState)),
+                false =>
+                    from currentConfigChanges in generateChanges(hostState, currentConfig)
+                    from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
+                    from s in r.RefreshState
+                        ? getHostStateWithProgress()
+                        : SuccessAff(hostState)
+                    select (r.IsValid, HostState: s)
+            }
             from newConfigChanges in generateChanges(syncResult.HostState, newConfig)
             from validateImpact in validateNetworkImpact(newConfig)
             from __ in applyChangesInConsole(currentConfig, newConfigChanges,

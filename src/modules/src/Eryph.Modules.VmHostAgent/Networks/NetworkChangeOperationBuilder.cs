@@ -796,7 +796,6 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                        : Unit.Default
 
                    select Unit.Default;
-
         }
     }
 
