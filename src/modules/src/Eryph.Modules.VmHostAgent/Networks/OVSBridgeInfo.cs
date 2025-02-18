@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using Eryph.Core.Network;
 using LanguageExt;
 
@@ -42,7 +43,8 @@ public readonly record struct OvsBridgePortInfo(
 
 public readonly record struct OvsBridgeInterfaceInfo(
     string Name,
-    string Type)
+    string Type,
+    Option<Guid> HostInterfaceId)
 {
     public bool IsExternal => Type is "" or "external";
 }

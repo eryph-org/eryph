@@ -39,7 +39,9 @@ public class HostStateProviderTests
     {
         var switchId = Guid.NewGuid();
         var switchExtensionId = Guid.NewGuid().ToString();
-        var hostAdapterId = Guid.NewGuid();
+        var pif1Id = Guid.NewGuid();
+        var pif2Id = Guid.NewGuid();
+        var otherAdapterId = Guid.NewGuid();
 
         _hostNetworkCommandsMock.Setup(x => x.GetSwitchExtensions())
             .Returns(SuccessAff(Seq1(new VMSwitchExtension
@@ -55,18 +57,29 @@ public class HostStateProviderTests
             {
                 Id = switchId,
                 Name = EryphConstants.OverlaySwitchName,
-                NetAdapterInterfaceGuid = [hostAdapterId],
+                NetAdapterInterfaceGuid = [pif1Id, pif2Id],
             })));
 
-        _hostNetworkCommandsMock.Setup(x => x.GetPhysicalAdapters())
-            .Returns(SuccessAff(Seq1(new HostNetworkAdapter
-            {
-                InterfaceGuid = hostAdapterId,
-                Name = "test-adapter",
-            })));
-
-        _hostNetworkCommandsMock.Setup(x => x.GetAdapterNames())
-            .Returns(SuccessAff(Seq("test-adapter", "other-adapter")));
+        _hostNetworkCommandsMock.Setup(x => x.GetHostAdapters())
+            .Returns(SuccessAff(Seq(
+                new HostNetworkAdapter
+                {
+                    InterfaceGuid = pif1Id,
+                    Name = "pif-1",
+                    Virtual = false,
+                },
+                new HostNetworkAdapter
+                {
+                    InterfaceGuid = pif2Id,
+                    Name = "pif-2",
+                    Virtual = false,
+                },
+                new HostNetworkAdapter
+                {
+                    InterfaceGuid = otherAdapterId,
+                    Name = "other-adapter",
+                    Virtual = true,
+                })));
 
         _hostNetworkCommandsMock.Setup(x => x.GetNetNat())
             .Returns(SuccessAff(Seq1(new NetNat
@@ -75,72 +88,69 @@ public class HostStateProviderTests
                 InternalIPInterfaceAddressPrefix = "10.0.0.0/24",
             })));
 
-        var br1Id = Guid.NewGuid();
-        var br1Port1Id = Guid.NewGuid();
-        var br1Port1Interface1Id = Guid.NewGuid();
-        var br1Port1Interface2Id = Guid.NewGuid();
-        var br1Port2Id = Guid.NewGuid();
-        var br1Port2Interface1Id = Guid.NewGuid();
+        var brIntId = Guid.NewGuid();
+        var brIntPort1Id = Guid.NewGuid();
+        var brIntPort1Interface1Id = Guid.NewGuid();
 
-        var br2Id = Guid.NewGuid();
-        var br2Port1Id = Guid.NewGuid();
-        var br2Port1Interface1Id = Guid.NewGuid();
-        var br2Port1Interface2Id = Guid.NewGuid();
-        var br2Port2Id = Guid.NewGuid();
-        var br2Port2Interface1Id = Guid.NewGuid();
+        var brPifId = Guid.NewGuid();
+        var brPifPort1Id = Guid.NewGuid();
+        var brPifPort1Interface1Id = Guid.NewGuid();
+        var brPifPort2Id = Guid.NewGuid();
+        var brPifPort2Interface1Id = Guid.NewGuid();
+        var brPifPort2Interface2Id = Guid.NewGuid();
 
         _ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
             .Returns(Seq(
                 OVSEntity.FromValueMap<Bridge>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br1Id)),
-                    ("name", OVSValue<string>.New("br-1")),
-                    ("ports", OVSReference.New(Seq(br1Port1Id, br1Port2Id))))),
+                    ("_uuid", OVSValue<Guid>.New(brIntId)),
+                    ("name", OVSValue<string>.New("br-int")),
+                    ("ports", OVSReference.New(Seq1(brIntPort1Id))))),
                 OVSEntity.FromValueMap<Bridge>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br2Id)),
-                    ("name", OVSValue<string>.New("br-2")),
-                    ("ports", OVSReference.New(Seq(br2Port1Id, br2Port2Id)))))
+                    ("_uuid", OVSValue<Guid>.New(brPifId)),
+                    ("name", OVSValue<string>.New("br-pif")),
+                    ("ports", OVSReference.New(Seq(brPifPort1Id, brPifPort2Id)))))
                 ));
 
         _ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
             .Returns(Seq(
                 OVSEntity.FromValueMap<BridgePort>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br1Port1Id)),
-                    ("name", OVSValue<string>.New("br-1-port-1")),
-                    ("interfaces", OVSReference.New(Seq(br1Port1Interface1Id, br1Port1Interface2Id))))),
+                    ("_uuid", OVSValue<Guid>.New(brIntPort1Id)),
+                    ("name", OVSValue<string>.New("br-int")),
+                    ("interfaces", OVSReference.New(Seq1(brIntPort1Interface1Id))))),
                 OVSEntity.FromValueMap<BridgePort>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br1Port2Id)),
-                    ("name", OVSValue<string>.New("br-1-port-2")),
-                    ("interfaces", OVSReference.New(Seq1(br1Port2Interface1Id))))),
+                    ("_uuid", OVSValue<Guid>.New(brPifPort1Id)),
+                    ("name", OVSValue<string>.New("br-pif")),
+                    ("interfaces", OVSReference.New(Seq1(brPifPort1Interface1Id))))),
                 OVSEntity.FromValueMap<BridgePort>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br2Port1Id)),
-                    ("name", OVSValue<string>.New("br-2-port-1")),
-                    ("interfaces", OVSReference.New(Seq(br2Port1Interface1Id, br2Port1Interface2Id))))),
-                OVSEntity.FromValueMap<BridgePort>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br2Port2Id)),
-                    ("name", OVSValue<string>.New("br-2-port-2")),
-                    ("interfaces", OVSReference.New(Seq1(br2Port2Interface1Id)))))
+                    ("_uuid", OVSValue<Guid>.New(brPifPort2Id)),
+                    ("name", OVSValue<string>.New("br-pif-bond")),
+                    ("interfaces", OVSReference.New(Seq(brPifPort2Interface1Id, brPifPort2Interface2Id)))))
                 ));
 
         _ovsControlMock.Setup(x => x.GetInterfaces(It.IsAny<CancellationToken>()))
             .Returns(Seq(
                 OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br1Port1Interface1Id)),
-                    ("name", OVSValue<string>.New("br-1-port-1-if-1")))),
+                    ("_uuid", OVSValue<Guid>.New(brIntPort1Interface1Id)),
+                    ("name", OVSValue<string>.New("br-int")),
+                    ("type", OVSValue<string>.New("internal")))),
                 OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br1Port1Interface2Id)),
-                    ("name", OVSValue<string>.New("br-1-port-1-if-2")))),
+                    ("_uuid", OVSValue<Guid>.New(brPifPort1Interface1Id)),
+                    ("name", OVSValue<string>.New("br-pif")),
+                    ("type", OVSValue<string>.New("internal")))),
                 OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br1Port2Interface1Id)),
-                    ("name", OVSValue<string>.New("br-1-port-2-if-1")))),
+                    ("_uuid", OVSValue<Guid>.New(brPifPort2Interface1Id)),
+                    ("name", OVSValue<string>.New("pif-1")),
+                    ("type", OVSValue<string>.New("")),
+                    ("external_ids", OVSMap<string>.New(Map(
+                        ("host-iface-id", pif1Id.ToString())
+                    ))))),
                 OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br2Port1Interface1Id)),
-                    ("name", OVSValue<string>.New("br-2-port-1-if-1")))),
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br2Port1Interface2Id)),
-                    ("name", OVSValue<string>.New("br-2-port-1-if-2")))),
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(br2Port2Interface1Id)),
-                    ("name", OVSValue<string>.New("br-2-port-2-if-1"))))
+                    ("_uuid", OVSValue<Guid>.New(brPifPort2Interface2Id)),
+                    ("name", OVSValue<string>.New("pif-2")),
+                    ("type", OVSValue<string>.New("")),
+                    ("external_ids", OVSMap<string>.New(Map(
+                        ("host-iface-id", pif2Id.ToString())
+                    )))))
             ));
 
         var result = await getHostState().Run(_runtime);
@@ -151,7 +161,7 @@ public class HostStateProviderTests
             {
                 vmSwitch.Id.Should().Be(switchId);
                 vmSwitch.Name.Should().Be(EryphConstants.OverlaySwitchName);
-                vmSwitch.NetAdapterInterfaceGuid.Should().Equal(hostAdapterId);
+                vmSwitch.NetAdapterInterfaceGuid.Should().Equal(pif1Id, pif2Id);
             });
         
         hostState.VMSwitchExtensions.Should().SatisfyRespectively(
@@ -163,49 +173,72 @@ public class HostStateProviderTests
                 vmSwitchExtension.SwitchName.Should().Be(EryphConstants.OverlaySwitchName);
             });
 
-        hostState.NetAdapters.Should().SatisfyRespectively(
-            adapter =>
-            {
-                adapter.InterfaceGuid.Should().Be(hostAdapterId);
-                adapter.Name.Should().Be("test-adapter");
-            });
+        var pif1Info = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1").WhoseValue;
+        pif1Info.InterfaceId.Should().Be(pif1Id);
+        pif1Info.Name.Should().Be("pif-1");
+        pif1Info.IsPhysical.Should().BeTrue();
 
-        hostState.AllNetAdaptersNames.Should().Equal("test-adapter", "other-adapter");
+        var pif2Info = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-2").WhoseValue;
+        pif2Info.InterfaceId.Should().Be(pif2Id);
+        pif2Info.Name.Should().Be("pif-2");
+        pif2Info.IsPhysical.Should().BeTrue();
+
+        var otherAdapterInfo = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("other-adapter").WhoseValue;
+        otherAdapterInfo.InterfaceId.Should().Be(otherAdapterId);
+        otherAdapterInfo.Name.Should().Be("otherAdapter");
+        otherAdapterInfo.IsPhysical.Should().BeFalse();
 
         var overlaySwítchInfo = hostState.OverlaySwitch.Should().BeSome().Subject;
         overlaySwítchInfo.Id.Should().Be(switchId);
-        overlaySwítchInfo.AdaptersInSwitch.Should().Equal("test-adapter");
+        overlaySwítchInfo.AdaptersInSwitch.Should().Equal("pif-1", "pif-2");
 
-        var brigde1Info = hostState.OvsBridges.Bridges.ToDictionary().Should().ContainKey("br-1").WhoseValue;
-        brigde1Info.Name.Should().Be("br-1");
+        var brIntInfo = hostState.OvsBridges.Bridges.ToDictionary().Should().ContainKey("br-int").WhoseValue;
+        brIntInfo.Name.Should().Be("br-int");
         
-        var br1Port1Info = brigde1Info.Ports.ToDictionary().Should().ContainKey("br-1-port-1").WhoseValue;
-        br1Port1Info.PortName.Should().Be("br-1-port-1");
-        br1Port1Info.BridgeName.Should().Be("br-1");
-        br1Port1Info.Interfaces.Should().SatisfyRespectively(
-            i => i.Name.Should().Be("br-1-port-1-if-1"),
-            i => i.Name.Should().Be("br-1-port-1-if-2"));
-        
-        var br1Port2Info = brigde1Info.Ports.ToDictionary().Should().ContainKey("br-1-port-2").WhoseValue;
-        br1Port2Info.PortName.Should().Be("br-1-port-2");
-        br1Port2Info.BridgeName.Should().Be("br-1");
-        br1Port2Info.Interfaces.Should().SatisfyRespectively(
-            i => i.Name.Should().Be("br-1-port-2-if-1"));
+        var brIntPort1Info = brIntInfo.Ports.ToDictionary().Should().ContainKey("br-int").WhoseValue;
+        brIntPort1Info.PortName.Should().Be("br-int");
+        brIntPort1Info.BridgeName.Should().Be("br-int");
+        brIntPort1Info.Interfaces.Should().SatisfyRespectively(
+            i =>
+            {
+                i.Name.Should().Be("br-int");
+                i.Type.Should().Be("internal");
+                i.IsExternal.Should().BeFalse();
+                i.HostInterfaceId.Should().BeNone();
+            });
 
-        var brigde2Info = hostState.OvsBridges.Bridges.ToDictionary().Should().ContainKey("br-2").WhoseValue;
-        brigde2Info.Name.Should().Be("br-2");
+        var brPifInfo = hostState.OvsBridges.Bridges.ToDictionary().Should().ContainKey("br-pif").WhoseValue;
+        brPifInfo.Name.Should().Be("br-pif");
 
-        var br2Port1Info = brigde2Info.Ports.ToDictionary().Should().ContainKey("br-2-port-1").WhoseValue;
-        br2Port1Info.PortName.Should().Be("br-2-port-1");
-        br2Port1Info.BridgeName.Should().Be("br-2");
-        br2Port1Info.Interfaces.Should().SatisfyRespectively(
-            i => i.Name.Should().Be("br-2-port-1-if-1"),
-            i => i.Name.Should().Be("br-2-port-1-if-2"));
+        var brPifPort1Info = brPifInfo.Ports.ToDictionary().Should().ContainKey("br-pif").WhoseValue;
+        brPifPort1Info.PortName.Should().Be("br-pif");
+        brPifPort1Info.BridgeName.Should().Be("br-pif");
+        brPifPort1Info.Interfaces.Should().SatisfyRespectively(
+            i =>
+            {
+                i.Name.Should().Be("br-pif");
+                i.Type.Should().Be("internal");
+                i.IsExternal.Should().BeFalse();
+                i.HostInterfaceId.Should().BeNone();
+            });
 
-        var br2Port2Info = brigde2Info.Ports.ToDictionary().Should().ContainKey("br-2-port-2").WhoseValue;
-        br2Port2Info.PortName.Should().Be("br-2-port-2");
-        br2Port2Info.BridgeName.Should().Be("br-2");
-        br2Port2Info.Interfaces.Should().SatisfyRespectively(
-            i => i.Name.Should().Be("br-2-port-2-if-1"));
+        var brPifPort2Info = brPifInfo.Ports.ToDictionary().Should().ContainKey("br-pif-bond").WhoseValue;
+        brPifPort2Info.PortName.Should().Be("br-pif-bond");
+        brPifPort2Info.BridgeName.Should().Be("br-pif");
+        brPifPort2Info.Interfaces.Should().SatisfyRespectively(
+            i =>
+            {
+                i.Name.Should().Be("pif-1");
+                i.Type.Should().Be("");
+                i.IsExternal.Should().BeTrue();
+                i.HostInterfaceId.Should().Be(pif1Id);
+            },
+            i =>
+            {
+                i.Name.Should().Be("pif-2");
+                i.Type.Should().Be("");
+                i.IsExternal.Should().BeTrue();
+                i.HostInterfaceId.Should().Be(pif2Id);
+            });
     }
 }

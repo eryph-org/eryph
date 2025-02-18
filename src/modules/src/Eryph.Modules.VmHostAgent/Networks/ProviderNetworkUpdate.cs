@@ -126,7 +126,7 @@ public static class ProviderNetworkUpdate<RT>
 
         // remove missing NAT bridges (renamed?)
         from ovsBridges3 in changeBuilder.RecreateMissingNatAdapters(
-            newConfig, hostState.AllNetAdaptersNames, ovsBridges2)
+            newConfig, hostState.HostAdapters, ovsBridges2)
 
         // add bridges from config missing in OVS
         from createdBridges in changeBuilder.AddMissingBridges(
@@ -141,7 +141,7 @@ public static class ProviderNetworkUpdate<RT>
 
         // remove any adapter on nat overlays (happens if type is changed to nat_overlay)
         from ovsBridges4 in changeBuilder.RemoveAdapterPortsOnNatOverlays(
-            newConfig, hostState.NetAdapters, ovsBridges3)
+            newConfig, hostState.HostAdapters, ovsBridges3)
 
         // configure ip settings and nat for nat_overlay adapters
         from uNatAdapter in changeBuilder.ConfigureNatAdapters(
@@ -149,7 +149,7 @@ public static class ProviderNetworkUpdate<RT>
 
         // create ports for adapters in overlay bridges
         from uCreatePorts in changeBuilder.CreateOverlayAdapterPorts(
-            newConfig, ovsBridges4)
+            newConfig, ovsBridges4, hostState.HostAdapters)
 
         // update OVS bridge mapping to new network names and bridges
         from uBrideMappings in changeBuilder.UpdateBridgeMappings(
