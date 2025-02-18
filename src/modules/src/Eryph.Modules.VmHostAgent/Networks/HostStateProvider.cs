@@ -38,9 +38,7 @@ public static class HostStateProvider<RT>
         from _2 in progressCallback()
         from vmSwitches in hostCommands.GetSwitches()
         from _3 in progressCallback()
-        from netAdapters in hostCommands.GetPhysicalAdapters()
-        from _4 in progressCallback()
-        from allAdapterNames in hostCommands.GetAdapterNames()
+        from hostAdapters in hostCommands.GetHostAdapters()
         from _5 in progressCallback()
         from netNat in hostCommands.GetNetNat()
         from _6 in progressCallback()
@@ -61,31 +59,13 @@ public static class HostStateProvider<RT>
             from ct in cancelToken<RT>()
             from i in ovsTool.GetInterfaces(ct).ToAff(e => e)
             select i)
-        from overlaySwitchInfo in FindOverlaySwitch(vmSwitches, netAdapters)
-        let bridgesInfo = new OvsBridgesInfo(
-            ovsBridges.Map(b => new OvsBridgeInfo(
-                    b.Name,
-                    ovsBridgePorts
-                        .Filter(p => b.Ports.Contains(p.Id))
-                        .Map(p => new OvsBridgePortInfo(
-                            b.Name,
-                            p.Name,
-                            p.Tag,
-                            p.VlanMode,
-                            p.BondMode,
-                            ovsInterfaces
-                                .Filter(i => p.Interfaces.Contains(i.Id))
-                                .Map(i => new OvsBridgeInterfaceInfo(i.Name, i.Type))
-                                .Strict()))
-                        .Map(pi => (pi.PortName, pi))
-                        .ToHashMap()))
-                .Map(bi => (bi.Name, bi))
-                .ToHashMap())
+        from overlaySwitchInfo in FindOverlaySwitch(vmSwitches, hostAdapters)
+        let bridgesInfo = CreateBridgesInfo(ovsBridges, ovsBridgePorts, ovsInterfaces)
+        let hostAdaptersInfo = CreateHostAdaptersInfo(hostAdapters)
         let hostState = new HostState(
             vmSwitchExtensions,
             vmSwitches,
-            netAdapters,
-            allAdapterNames,
+            hostAdaptersInfo,
             overlaySwitchInfo,
             netNat,
             bridgesInfo)
@@ -96,12 +76,13 @@ public static class HostStateProvider<RT>
         Seq<VMSwitch> vmSwitches,
         Seq<HostNetworkAdapter> adapters) =>
         from _ in unitEff
+        let physicalAdapters = adapters.Filter(a => !a.Virtual)
         // Only a single overlay switch exists when the network setup is valid.
         // Otherwise, the network setup needs to be corrected by reapplying the
         // network provider configuration.
         let overlaySwitch = vmSwitches.Find(x => x.Name == EryphConstants.OverlaySwitchName)
         from switchInfo in overlaySwitch
-            .Map(s => PrepareOverlaySwitchInfo(s, adapters))
+            .Map(s => PrepareOverlaySwitchInfo(s, physicalAdapters))
             .Sequence()
         select switchInfo;
 
@@ -109,9 +90,57 @@ public static class HostStateProvider<RT>
         VMSwitch overlaySwitch,
         Seq<HostNetworkAdapter> adapters) =>
         from switchAdapters in overlaySwitch.NetAdapterInterfaceGuid.ToSeq()
-            .Map(guid => adapters.Find(x => x.InterfaceGuid == guid)
+            .Map(guid => adapters.Find(a => a.InterfaceGuid == guid)
                 .ToEff(Error.New($"Could not find the host network adapter {guid}")))
             .Sequence()
         let switchAdapterNames = switchAdapters.Map(x => x.Name)
         select new OverlaySwitchInfo(overlaySwitch.Id, toHashSet(switchAdapterNames));
+
+    private static OvsBridgesInfo CreateBridgesInfo(
+        Seq<Bridge> ovsBridges,
+        Seq<BridgePort> ovsPorts,
+        Seq<Interface> ovsInterfaces) =>
+        new(ovsBridges.Map(ovsBridge => createBridgeInfo(ovsBridge, ovsPorts, ovsInterfaces))
+                .Map(bridgeInfo => (bridgeInfo.Name, bridgeInfo))
+                .ToHashMap());
+
+    private static OvsBridgeInfo createBridgeInfo(
+        Bridge ovsBridge,
+        Seq<BridgePort> ovsPorts,
+        Seq<Interface> ovsInterfaces) =>
+        new(ovsBridge.Name,
+            ovsPorts.Filter(ovsPort => ovsBridge.Ports.Contains(ovsPort.Id))
+                .Map(ovsPort => CreateBridgePortInfo(ovsBridge, ovsPort, ovsInterfaces))
+                .Map(portInfo => (portInfo.PortName, portInfo))
+                .ToHashMap());
+
+    private static OvsBridgePortInfo CreateBridgePortInfo(
+        Bridge ovsBridge,
+        BridgePort ovsPort,
+        Seq<Interface> ovsInterfaces) =>
+        new(ovsBridge.Name,
+            ovsPort.Name,
+            ovsPort.Tag,
+            ovsPort.VlanMode,
+            ovsPort.BondMode,
+            ovsInterfaces.Filter(ovsInterface => ovsPort.Interfaces.Contains(ovsInterface.Id))
+                .Map(CreateBridgeInterfaceInfo)
+                .Strict());
+
+    private static OvsBridgeInterfaceInfo CreateBridgeInterfaceInfo(
+        Interface ovsInterface) =>
+        new(ovsInterface.Name,
+            ovsInterface.Type,
+            ovsInterface.ExternalIds.Find("host-iface-id")
+                .Bind(parseGuid));
+
+    private static HostAdaptersInfo CreateHostAdaptersInfo(
+        Seq<HostNetworkAdapter> hostAdapters) =>
+        new(hostAdapters.Map(CreateHostAdapterInfo)
+            .Map(adapterInfo => (adapterInfo.Name, adapterInfo))
+            .ToHashMap());
+
+    private static HostAdapterInfo CreateHostAdapterInfo(
+        HostNetworkAdapter hostAdapter) =>
+        new(hostAdapter.Name, hostAdapter.InterfaceGuid, !hostAdapter.Virtual);
 }

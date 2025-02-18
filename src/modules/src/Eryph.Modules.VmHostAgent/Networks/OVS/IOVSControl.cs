@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using Dbosoft.OVN.Model;
 using LanguageExt;
 using LanguageExt.Common;
@@ -12,6 +13,8 @@ public interface IOVSControl
     EitherAsync<Error, Unit> RemoveBridge(string bridgeName, CancellationToken cancellationToken);
 
     EitherAsync<Error, Unit> AddPort(string bridgeName, string portName, CancellationToken cancellationToken);
+
+    EitherAsync<Error, Unit> AddPort(string bridgeName, string portName, Guid interfaceId, CancellationToken cancellationToken);
 
     EitherAsync<Error, Unit> RemovePort(string bridgeName, string portName, CancellationToken cancellationToken);
 

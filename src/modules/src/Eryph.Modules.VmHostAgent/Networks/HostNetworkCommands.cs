@@ -71,11 +71,10 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from _ in psEngine.RunAsync(command).ToAff()
         select unit;
     
-    public Aff<RT, Seq<HostNetworkAdapter>> GetPhysicalAdapters() =>
+    public Aff<RT, Seq<HostNetworkAdapter>> GetHostAdapters() =>
         from psEngine in default(RT).Powershell.ToAff()
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-NetAdapter")
-            .AddParameter("Physical")
         from netAdapters in psEngine.GetObjectValuesAsync<HostNetworkAdapter>(command).ToAff()
         select netAdapters;
 

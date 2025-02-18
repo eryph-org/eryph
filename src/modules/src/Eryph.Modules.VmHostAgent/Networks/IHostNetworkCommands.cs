@@ -18,8 +18,7 @@ public interface IHostNetworkCommands<RT> where RT : struct, HasCancel<RT>
     Aff<RT, Unit> DisableSwitchExtension(Guid switchId);
     Aff<RT, Unit> EnableSwitchExtension(Guid switchId);
 
-    Aff<RT, Seq<HostNetworkAdapter>> GetPhysicalAdapters();
-    Aff<RT, Seq<string>> GetAdapterNames();
+    Aff<RT, Seq<HostNetworkAdapter>> GetHostAdapters();
 
     Aff<RT, Seq<NetNat>> GetNetNat();
     Aff<RT, Unit> EnableBridgeAdapter(string adapterName);

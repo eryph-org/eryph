@@ -9,8 +9,7 @@ namespace Eryph.Modules.VmHostAgent.Networks;
 public record HostState(
     Seq<VMSwitchExtension> VMSwitchExtensions,
     Seq<VMSwitch> VMSwitches,
-    Seq<HostNetworkAdapter> NetAdapters,
-    Seq<string> AllNetAdaptersNames,
+    HostAdaptersInfo HostAdapters,
     Option<OverlaySwitchInfo> OverlaySwitch,
     Seq<NetNat> NetNat,
     OvsBridgesInfo OvsBridges);

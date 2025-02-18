@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Dbosoft.OVN;
@@ -93,6 +94,11 @@ public class OVSControl(
         return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\"", false, cancellationToken).Map(_ => Unit.Default);
     }
 
+    public EitherAsync<Error, Unit> AddPort(string bridgeName, string portName, Guid hostInterfaceId, CancellationToken cancellationToken)
+    {
+        return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\" -- set interface \"{portName}\" external_ids:host-iface-id={hostInterfaceId}", false, cancellationToken).Map(_ => Unit.Default);
+    }
+
     public EitherAsync<Error, Unit> AddPortWithIFaceId(string bridgeName, string portName, CancellationToken cancellationToken)
     {
         return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\" -- set interface \"{portName}\" external_ids:iface-id={portName}", false, cancellationToken).Map(_ => Unit.Default);
@@ -100,7 +106,7 @@ public class OVSControl(
 
     public EitherAsync<Error, Unit> AddBond(string bridgeName, string portName, Seq<string> interfaces, string bondMode, CancellationToken cancellationToken)
     {
-        return RunCommand($" --may-exist add-bond \"{bridgeName}\" \"{portName}\" {string.Join(" ", interfaces.Map(i => $"\"{i}\"")) } bond_mode={bondMode}", false, cancellationToken).Map(_ => Unit.Default);
+        return RunCommand($" --may-exist add-bond \"{bridgeName}\" \"{portName}\" {string.Join(" ", interfaces.Map(i => $"\"{i}\"")) } bond_mode={bondMode} other_config:bond-detect-mode=miimon", false, cancellationToken).Map(_ => Unit.Default);
     }
 
     public EitherAsync<Error, Unit> RemovePort(string bridgeName, string portName, CancellationToken cancellationToken)
