@@ -197,11 +197,13 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                 .AddCommand("New-VMSwitch")
                 .AddParameter("Name", EryphConstants.OverlaySwitchName)
                 .AddParameter("SwitchType", "Private")
-        from _1 in psEngine.RunAsync(createSwitchCommand).ToAff()
-        let enableExtensionCommand = PsCommandBuilder.Create()
+        // The OVS extension should be enabled only for this new switch.
+        // Hence, we use the Powershell pipeline to pass the switch
+        // instance directly into the enable command.
+        let createSwitchWithExtensionCommand = createSwitchCommand
             .AddCommand("Enable-VMSwitchExtension")
             .AddParameter("Name", EryphConstants.SwitchExtensionName)
-        from _ in psEngine.RunAsync(enableExtensionCommand).ToAff()
+        from _ in psEngine.RunAsync(createSwitchWithExtensionCommand).ToAff()
         select unit;
 
     public Aff<RT,Unit> RemoveOverlaySwitch() =>
