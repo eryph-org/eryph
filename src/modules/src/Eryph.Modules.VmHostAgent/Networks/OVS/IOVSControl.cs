@@ -12,13 +12,9 @@ public interface IOVSControl
 
     EitherAsync<Error, Unit> RemoveBridge(string bridgeName, CancellationToken cancellationToken);
 
-    EitherAsync<Error, Unit> AddPort(string bridgeName, string portName, CancellationToken cancellationToken);
-
     EitherAsync<Error, Unit> AddPort(
         string bridgeName,
-        string portName,
-        Guid interfaceId,
-        string configuredName,
+        InterfaceUpdate @interface,
         CancellationToken cancellationToken);
 
     EitherAsync<Error, Unit> RemovePort(string bridgeName, string portName, CancellationToken cancellationToken);
