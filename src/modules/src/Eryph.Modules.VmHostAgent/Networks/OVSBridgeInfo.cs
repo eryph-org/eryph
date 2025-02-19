@@ -44,7 +44,8 @@ public readonly record struct OvsBridgePortInfo(
 public readonly record struct OvsBridgeInterfaceInfo(
     string Name,
     string Type,
-    Option<Guid> HostInterfaceId)
+    Option<Guid> HostInterfaceId,
+    Option<string> HostInterfaceConfiguredName)
 {
     public bool IsExternal => Type is "" or "external";
 }

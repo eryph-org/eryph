@@ -79,59 +79,83 @@ public class OVSControl(
             columnsToClear, cancellationToken)
         select unit;
 
-    public EitherAsync<Error, Unit> AddBridge(string bridgeName, CancellationToken cancellationToken)
-    {
-        return RunCommand($" --may-exist add-br \"{bridgeName}\"", false, cancellationToken).Map(_ => Unit.Default);
-    }
+    public EitherAsync<Error, Unit> AddBridge(
+        string bridgeName,
+        CancellationToken cancellationToken) =>
+        from _1 in RunCommand($"--may-exist add-br \"{bridgeName}\"", false, cancellationToken)
+        select unit;
 
-    public EitherAsync<Error, Unit> RemoveBridge(string bridgeName, CancellationToken cancellationToken)
-    {
-        return RunCommand($" --if-exists del-br \"{bridgeName}\"", false, cancellationToken).Map(_ => Unit.Default);
-    }
+    public EitherAsync<Error, Unit> RemoveBridge(
+        string bridgeName,
+        CancellationToken cancellationToken) =>
+        from _1 in RunCommand($"--if-exists del-br \"{bridgeName}\"", false, cancellationToken)
+        select unit;
 
-    public EitherAsync<Error, Unit> AddPort(string bridgeName, string portName, CancellationToken cancellationToken)
-    {
-        return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\"", false, cancellationToken).Map(_ => Unit.Default);
-    }
+    public EitherAsync<Error, Unit> AddPort(
+        string bridgeName,
+        string portName,
+        CancellationToken cancellationToken) =>
+        from _1 in RunCommand($"--may-exist add-port \"{bridgeName}\" \"{portName}\"", false, cancellationToken)
+        select unit;
 
-    public EitherAsync<Error, Unit> AddPort(string bridgeName, string portName, Guid hostInterfaceId, CancellationToken cancellationToken)
-    {
-        return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\" -- set interface \"{portName}\" external_ids:host-iface-id={hostInterfaceId}", false, cancellationToken).Map(_ => Unit.Default);
-    }
+    public EitherAsync<Error, Unit> AddPort(
+        string bridgeName,
+        string portName,
+        Guid hostInterfaceId,
+        string hostInterfaceConfiguredName,
+        CancellationToken cancellationToken) =>
+        from _1 in RunCommand(
+            $"--may-exist add-port \"{bridgeName}\" \"{portName}\""
+            + $" -- set interface \"{portName}\" external_ids:host-iface-id={hostInterfaceId} external_ids:host-iface-confs-name={hostInterfaceConfiguredName}",
+            false, cancellationToken)
+        select unit;
 
-    public EitherAsync<Error, Unit> AddPortWithIFaceId(string bridgeName, string portName, CancellationToken cancellationToken)
-    {
-        return RunCommand($" --may-exist add-port \"{bridgeName}\" \"{portName}\" -- set interface \"{portName}\" external_ids:iface-id={portName}", false, cancellationToken).Map(_ => Unit.Default);
-    }
 
-    public EitherAsync<Error, Unit> AddBond(string bridgeName, string portName, Seq<string> interfaces, string bondMode, CancellationToken cancellationToken)
-    {
-        return RunCommand($" --may-exist add-bond \"{bridgeName}\" \"{portName}\" {string.Join(" ", interfaces.Map(i => $"\"{i}\"")) } bond_mode={bondMode} other_config:bond-detect-mode=miimon", false, cancellationToken).Map(_ => Unit.Default);
-    }
+    public EitherAsync<Error, Unit> AddPortWithIFaceId(
+        string bridgeName,
+        string portName,
+        CancellationToken cancellationToken) =>
+        from _1 in RunCommand(
+            $"--may-exist add-port \"{bridgeName}\" \"{portName}\""
+            + $" -- set interface \"{portName}\" external_ids:iface-id={portName}",
+            false, cancellationToken)
+        select unit;
 
-    public EitherAsync<Error, Unit> RemovePort(string bridgeName, string portName, CancellationToken cancellationToken)
-    {
-        return RunCommand($" --if-exists del-port \"{bridgeName}\" \"{portName}\"", false, cancellationToken).Map(_ => Unit.Default);
-    }
+    public EitherAsync<Error, Unit> AddBond(
+        string bridgeName,
+        string portName,
+        Seq<InterfaceUpdate> interfaces,
+        string bondMode,
+        CancellationToken cancellationToken) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let command = $"--may-exist add-bond \"{bridgeName}\" \"{portName}\""
+            + $" {string.Join(" ", interfaces.Map(i => $"\"{i.Name}\""))}"
+            + $" bond_mode={bondMode} other_config:bond-detect-mode=miimon"
+            + string.Join("", interfaces.Map(i => $"--set interface \"{i.Name}\" external_ids:host-iface-id={i.InterfaceId} external_ids:host-iface-conf-name={i.ConfiguredName}"))
+        from _2 in RunCommand(command, false, cancellationToken)
+        select unit;
 
-    public EitherAsync<Error, Seq<Bridge>> GetBridges(CancellationToken cancellationToken)
-    {
-        return FindRecords<Bridge>("Bridge", Map<string, OVSQuery>(), cancellationToken: cancellationToken);
-    }
+    public EitherAsync<Error, Unit> RemovePort(
+        string bridgeName,
+        string portName,
+        CancellationToken cancellationToken) =>
+        from _1 in RunCommand($" --if-exists del-port \"{bridgeName}\" \"{portName}\"", false, cancellationToken)
+        select unit;
 
-    public EitherAsync<Error, Interface> GetInterface(string interfaceName,
-        CancellationToken cancellationToken = default)
-    {
-        return GetRecord<Interface>("Interface", interfaceName, cancellationToken: cancellationToken);
-    }
+    public EitherAsync<Error, Seq<Bridge>> GetBridges(
+        CancellationToken cancellationToken) =>
+        FindRecords<Bridge>("Bridge", Map<string, OVSQuery>(), cancellationToken: cancellationToken);
 
-    public EitherAsync<Error, Seq<BridgePort>> GetPorts(CancellationToken cancellationToken)
-    {
-        return FindRecords<BridgePort>("Port", Map<string, OVSQuery>(), cancellationToken: cancellationToken);
-    }
+    public EitherAsync<Error, Interface> GetInterface(
+        string interfaceName,
+        CancellationToken cancellationToken = default) =>
+        GetRecord<Interface>("Interface", interfaceName, cancellationToken: cancellationToken);
 
-    public EitherAsync<Error, Seq<Interface>> GetInterfaces(CancellationToken cancellationToken)
-    {
-        return FindRecords<Interface>("Interface", Map<string, OVSQuery>(), cancellationToken: cancellationToken);
-    }
+    public EitherAsync<Error, Seq<BridgePort>> GetPorts(
+        CancellationToken cancellationToken) =>
+        FindRecords<BridgePort>("Port", Map<string, OVSQuery>(), cancellationToken: cancellationToken);
+
+    public EitherAsync<Error, Seq<Interface>> GetInterfaces(
+        CancellationToken cancellationToken) =>
+        FindRecords<Interface>("Interface", Map<string, OVSQuery>(), cancellationToken: cancellationToken);
 }

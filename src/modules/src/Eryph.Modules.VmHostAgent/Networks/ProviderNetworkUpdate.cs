@@ -12,14 +12,10 @@ using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
-using Quartz.Xml.JobSchedulingData20;
+
 using static LanguageExt.Prelude;
-using Array = System.Array;
 
 namespace Eryph.Modules.VmHostAgent.Networks;
-
-
-
 
 public static class ProviderNetworkUpdate<RT>
     where RT : struct,
@@ -110,48 +106,55 @@ public static class ProviderNetworkUpdate<RT>
             .Map(e => changeBuilder.EnableSwitchExtension(e.SwitchId, e.SwitchName))
             .SequenceSerial()
 
-        // Disable the OVS extension on all switches besides the overlay switch.
+        // Disable the OVS extension on all switches besides the overlay switch(es).
         from __ in hostState.VMSwitchExtensions
             .Filter(e => e.SwitchName != EryphConstants.OverlaySwitchName && e.Enabled)
             .Map(e => changeBuilder.DisableSwitchExtension(e.SwitchId, e.SwitchName))
             .SequenceSerial()
 
-        // bridge exists in OVS but not in config -> remove it
-        from pendingBridges in changeBuilder
-            .RemoveUnusedBridges(currentOvsBridges, newBridges)
-
-        from ovsBridges2 in generateOverlaySwitchChanges(
-            changeBuilder, hostState, pendingBridges,
+        // Perform a rebuild of the Hyper-V switch used for the overlay if necessary.
+        // This happens e.g. when additional physical adapters are added to the
+        // network providers.
+        // All OVS bridges will be removed as part of the Hyper-V switch rebuild.
+        from ovsBridges1 in generateOverlaySwitchChanges(
+            changeBuilder, hostState, hostState.OvsBridges,
             needsOverlaySwitch, newOverlayAdapters)
 
-        // remove missing NAT bridges (renamed?)
-        from ovsBridges3 in changeBuilder.RecreateMissingNatAdapters(
+        // Bridge exists in OVS but not in config -> remove it
+        from ovsBridges2 in changeBuilder.RemoveUnusedBridges(
+            currentOvsBridges, newBridges)
+
+        // Bridge exists in OVS but its adapter is missing on the host -> remove it
+        // This can ony happen if the adapter has been manually renamed or similar
+        from ovsBridges3 in changeBuilder.RemoveBridgesWithMissingBridgeAdapter(
             newConfig, hostState.HostAdapters, ovsBridges2)
 
-        // add bridges from config missing in OVS
+        // Add bridges from config missing in OVS
         from createdBridges in changeBuilder.AddMissingBridges(
             hasOverlaySwitch, enabledBridges, ovsBridges3, newBridges)
 
         from updateBridgePorts in changeBuilder.UpdateBridgePorts(
             newConfig, createdBridges, ovsBridges3)
 
-        // remove NATs which are no longer needed or need to be recreated
-        from removedNats in changeBuilder.RemoveInvalidNats(
+        // Remove NATs which are no longer needed or need to be recreated
+        from validNats in changeBuilder.RemoveInvalidNats(
             hostState.NetNat, newConfig, newBridges)
 
-        // remove any adapter on nat overlays (happens if type is changed to nat_overlay)
-        from ovsBridges4 in changeBuilder.RemoveAdapterPortsOnNatOverlays(
+        // Remove ports with invalid external interfaces. This happens when:
+        // - a provider is changed between overlay and NAT overlay
+        // - the physical adapters of an overlay provider are changed
+        from ovsBridges4 in changeBuilder.RemoveInvalidAdapterPortsFromBridges(
             newConfig, hostState.HostAdapters, ovsBridges3)
 
-        // configure ip settings and nat for nat_overlay adapters
+        // Configure ip settings and nat for nat_overlay adapters
         from uNatAdapter in changeBuilder.ConfigureNatAdapters(
-            newConfig, hostState.NetNat, createdBridges, newBridges, removedNats)
+            newConfig, validNats, createdBridges, newBridges)
 
-        // create ports for adapters in overlay bridges
-        from uCreatePorts in changeBuilder.CreateOverlayAdapterPorts(
+        // Create ports for adapters in overlay bridges
+        from uCreatePorts in changeBuilder.ConfigureOverlayAdapterPorts(
             newConfig, ovsBridges4, hostState.HostAdapters)
 
-        // update OVS bridge mapping to new network names and bridges
+        // Update OVS bridge mapping to new network names and bridges
         from uBrideMappings in changeBuilder.UpdateBridgeMappings(
             newConfig)
 
@@ -206,6 +209,7 @@ public static class ProviderNetworkUpdate<RT>
                         : SuccessEff(unit)
                     from bridges in changeBuilder.RebuildOverlaySwitch(vmAdapters, ovsBridges, newOverlayAdapters)
                     select bridges,
+            // The OVS extension has been enabled earlier for all existing overlay switches.
             false => SuccessAff(ovsBridges),
         };
 

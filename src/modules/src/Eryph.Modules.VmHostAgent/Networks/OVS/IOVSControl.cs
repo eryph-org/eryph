@@ -14,11 +14,20 @@ public interface IOVSControl
 
     EitherAsync<Error, Unit> AddPort(string bridgeName, string portName, CancellationToken cancellationToken);
 
-    EitherAsync<Error, Unit> AddPort(string bridgeName, string portName, Guid interfaceId, CancellationToken cancellationToken);
+    EitherAsync<Error, Unit> AddPort(
+        string bridgeName,
+        string portName,
+        Guid interfaceId,
+        string configuredName,
+        CancellationToken cancellationToken);
 
     EitherAsync<Error, Unit> RemovePort(string bridgeName, string portName, CancellationToken cancellationToken);
 
-    EitherAsync<Error, Unit> AddBond(string bridgeName, string portName, Seq<string> interfaces, string bondMode,
+    EitherAsync<Error, Unit> AddBond(
+        string bridgeName,
+        string portName,
+        Seq<InterfaceUpdate> interfaces,
+        string bondMode,
         CancellationToken cancellationToken);
 
     EitherAsync<Error, Seq<Bridge>> GetBridges(CancellationToken cancellationToken);
