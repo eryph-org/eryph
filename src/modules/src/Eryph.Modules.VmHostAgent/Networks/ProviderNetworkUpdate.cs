@@ -75,7 +75,6 @@ public static class ProviderNetworkUpdate<RT>
         from hostCommands in default(RT).HostNetworkCommands
 
         // generate variables
-        let currentOvsBridges = hostState.OvsBridges
         let newBridges = newConfig.NetworkProviders.ToSeq()
             .Filter(p => p.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
             .Map(p => new NewBridge(
@@ -122,7 +121,7 @@ public static class ProviderNetworkUpdate<RT>
 
         // Bridge exists in OVS but not in config -> remove it
         from ovsBridges2 in changeBuilder.RemoveUnusedBridges(
-            currentOvsBridges, newBridges)
+            ovsBridges1, newBridges)
 
         // Bridge exists in OVS but its adapter is missing on the host -> remove it
         // This can ony happen if the adapter has been manually renamed or similar

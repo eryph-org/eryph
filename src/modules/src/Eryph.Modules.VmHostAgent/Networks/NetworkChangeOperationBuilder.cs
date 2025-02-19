@@ -694,15 +694,16 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         NetworkProvider providerConfig,
         string expectedPortName,
         HostAdapterInfo adapter) =>
-        from _1 in unitAff
-        let ovsBondMode = GetBondMode(providerConfig.BridgeOptions?.BondMode)
+        from _1 in guard(expectedPortName == adapter.Name,
+            Error.New($"BUG! Mismatch of port name {expectedPortName} and adapter name {adapter.Name}."))
+        let @interface = new InterfaceUpdate(adapter.Name, adapter.InterfaceId, adapter.Name)
         // TODO look 
         from _2 in AddOperationRt(
             () => timeout(
                 TimeSpan.FromSeconds(30),
                 from ovs in default(RT).OVS
                 from ct in cancelToken<RT>()
-                from _ in ovs.AddPort(providerConfig.BridgeName, expectedPortName, adapter.InterfaceId, adapter.Name, ct).ToAff(e => e)
+                from _ in ovs.AddPort(providerConfig.BridgeName, @interface, ct).ToAff(e => e)
                 select unit),
             _ => true,
             () => timeout(
