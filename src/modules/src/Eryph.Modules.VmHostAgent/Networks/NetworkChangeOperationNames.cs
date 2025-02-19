@@ -31,7 +31,7 @@ public class NetworkChangeOperationNames
                 NetworkChangeOperation.UpdateBridgePort => "Configure port options for bridge {0}",
                 NetworkChangeOperation.ConfigureNatIp => "Configure ip settings for NAT bridge '{0}'",
                 NetworkChangeOperation.UpdateBridgeMapping => "Update mapping of bridges to network providers",
-                NetworkChangeOperation.RemoveMissingBridge => "Host adapter '{0}' not found - removing bridge",
+                NetworkChangeOperation.RemoveMissingBridge => "Host adapter for bridge '{0}' not found - removing bridge",
                 NetworkChangeOperation.EnableSwitchExtension => "Enable Open vSwitch extension for switch '{0}'",
                 NetworkChangeOperation.DisableSwitchExtension => "Disable Open vSwitch extension for switch '{0}'",
                 _ => throw new ArgumentOutOfRangeException(nameof(key), key, null)

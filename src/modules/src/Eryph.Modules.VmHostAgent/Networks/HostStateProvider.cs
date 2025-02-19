@@ -132,7 +132,9 @@ public static class HostStateProvider<RT>
         new(ovsInterface.Name,
             ovsInterface.Type,
             ovsInterface.ExternalIds.Find("host-iface-id")
-                .Bind(parseGuid));
+                .Bind(parseGuid),
+            ovsInterface.ExternalIds.Find("host-iface-conf-name")
+                .Filter(notEmpty));
 
     private static HostAdaptersInfo CreateHostAdaptersInfo(
         Seq<HostNetworkAdapter> hostAdapters) =>
