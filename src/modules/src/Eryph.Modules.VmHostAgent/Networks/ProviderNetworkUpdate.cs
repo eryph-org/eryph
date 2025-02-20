@@ -139,6 +139,9 @@ public static class ProviderNetworkUpdate<RT>
         from uCreatePorts in changeBuilder.ConfigureOverlayAdapterPorts(
             newConfig, ovsBridges4, hostState.HostAdapters)
 
+        from _3 in changeBuilder.AddMissingNats(
+            newConfig, newBridges, validNats)
+
         // Update OVS bridge mapping to new network names and bridges
         from uBrideMappings in changeBuilder.UpdateBridgeMappings(
             newConfig)
