@@ -22,7 +22,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
             new NetworkProvider
             {
                 Name = "default",
-                TypeString = "nat_overlay",
+                Type = NetworkProviderType.NatOverlay,
                 BridgeName = "br-nat",
                 Subnets =
                 [
@@ -70,7 +70,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
             new NetworkProvider
             {
                 Name = "second-overlay-provider",
-                TypeString = "nat_overlay",
+                Type = NetworkProviderType.NatOverlay,
                 BridgeName = "br-second-nat",
                 Subnets =
                 [
@@ -95,7 +95,7 @@ public class NetworkConfigRealizerTests(ITestOutputHelper outputHelper)
             new NetworkProvider
             {
                 Name = "flat-provider",
-                TypeString = "flat",
+                Type = NetworkProviderType.Flat,
             },
         ]
     };

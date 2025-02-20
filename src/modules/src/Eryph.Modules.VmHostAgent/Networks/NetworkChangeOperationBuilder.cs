@@ -193,9 +193,8 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Option<NetworkProviderBridgeOptions> options) =>
         (
             options.Bind(o => Optional(o.BridgeVlan)),
-            options.Bind(o => o.VLanMode switch
+            options.Bind(o => o.VlanMode switch
             {
-                BridgeVlanMode.Invalid => None,
                 BridgeVlanMode.Access => Some("access"),
                 BridgeVlanMode.NativeUntagged => Some("native-untagged"),
                 BridgeVlanMode.NativeTagged => Some("native-tagged"),
@@ -219,7 +218,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         from _1 in LogDebug("Adding operation to add bridge {bridge}", newBridge.BridgeName)
         let portSettings = GetBridgePortSettings(newBridge.Options)
         let defaultIpMode = newBridge.Options
-            .Map(o => o.DefaultIpMode)
+            .Bind(o => Optional(o.DefaultIpMode))
             .IfNone(BridgeHostIpMode.Disabled)
         let enableBridge = defaultIpMode != BridgeHostIpMode.Disabled
         from _2 in AddOperation(
@@ -258,7 +257,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<NewBridge> newBridges) =>
         from _ in unitAff
         let providerConfig = newConfig.NetworkProviders.ToSeq()
-            .Find(p => GetNetNatName(p.Name) == nat.Name && p.Type == NetworkProviderType.NatOverLay)
+            .Find(p => GetNetNatName(p.Name) == nat.Name && p.Type == NetworkProviderType.NatOverlay)
         // When the prefix of the NetNat is invalid, we will just recreate the NetNat.
         let natPrefix = parseIPNetwork2(nat.InternalIPInterfaceAddressPrefix)
         let bridge = providerConfig.Bind(p => newBridges.Find(b => b.BridgeName == p.BridgeName))
@@ -281,7 +280,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         OvsBridgesInfo ovsBridges) =>
         from _1 in LogTrace("Entering {Method}", nameof(RemoveInvalidAdapterPortsFromBridges))
         from changedBridges in newConfig.NetworkProviders.ToSeq()
-            .Filter(np => np.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverLay)
+            .Filter(np => np.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverlay)
             .Map(np => from ovsBridge in ovsBridges.Bridges.Find(np.BridgeName)
                        select (ProviderConfig: np, OvsBridge: ovsBridge))
             .Somes()
@@ -301,7 +300,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         // When multiple external interfaces should be used, the port should be bonded.
         from arePortsValid in portsWithPhysicalInterfaces.Match(
             Empty: () => SuccessEff(true),
-            Head: port => IsMatchForConfig(providerConfig, port, adaptersInfo),
+            Head: port => IsAdapterPortValid(providerConfig, port, adaptersInfo),
             Tail: _ => SuccessEff(false))
         let physicalAdapterNames = adaptersInfo.Adapters.Values.ToSeq()
             .Filter(a => a.IsPhysical)
@@ -316,7 +315,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         }
         select result;
 
-    private Eff<RT, bool> IsMatchForConfig(
+    private Eff<RT, bool> IsAdapterPortValid(
         NetworkProvider providerConfig,
         OvsBridgePortInfo port,
         HostAdaptersInfo adaptersInfo) =>
@@ -330,7 +329,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
     private Aff<RT, Unit> RemoveInvalidAdapterPortFromBridge(
         OvsBridgePortInfo port) =>
-        from _1 in LogDebug("The port {PortName} of bridge {BridgeName} uses unnecessary or invalid external interfaces. Removing the por.",
+        from _1 in LogDebug("The port {PortName} of bridge {BridgeName} uses unnecessary or invalid external interfaces. Removing the port.",
             port.PortName, port.BridgeName)
         from _2 in AddOperation(
             () => timeout(
@@ -350,7 +349,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<NewBridge> newBridges) =>
         from _1 in LogTrace("Entering {Method}", nameof(ConfigureNatAdapters))
         from _2 in newConfig.NetworkProviders.ToSeq()
-            .Filter(np => np.Type is NetworkProviderType.NatOverLay)
+            .Filter(np => np.Type is NetworkProviderType.NatOverlay)
             .Map(np => ConfigureNatAdapter(np, netNat, createdBridges, newBridges))
             .SequenceSerial()
         select unit;
@@ -419,7 +418,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         OvsBridgesInfo ovsBridges) =>
         from _1 in LogTrace("Entering {Method}", nameof(RemoveBridgesWithMissingBridgeAdapter))
         let bridgesToRemove = newConfig.NetworkProviders.ToSeq()
-            .Filter(np => np.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverLay)
+            .Filter(np => np.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverlay)
             .Filter(np => ovsBridges.Bridges.Find(np.BridgeName).IsSome)
             .Filter(np => hostAdaptersInfo.Adapters.Find(np.BridgeName).Filter(a => !a.IsPhysical).IsNone)
             .Map(np => np.BridgeName)
@@ -446,7 +445,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         OvsBridgesInfo ovsBridges) =>
         from _1 in LogTrace("Entering {Method}", nameof(UpdateBridgePorts))
         from _2 in newConfig.NetworkProviders.ToSeq()
-            .Filter(np => np.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverLay)
+            .Filter(np => np.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverlay)
             .Filter(np => !createdBridges.Contains(np.BridgeName))
             .Map(np => UpdateBridgePort(np, ovsBridges))
             .SequenceSerial()
@@ -499,10 +498,11 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         OvsBridgesInfo ovsBridges,
         HostAdaptersInfo hostAdaptersInfo) =>
         from _1 in unitAff
-        let expectedAdapters = toHashSet(providerConfig.Adapters)
-        let expectedPortName = expectedAdapters.Count > 1
-            ? GetBondPortName(providerConfig.BridgeName)
-            : providerConfig.Adapters[0]
+        from expectedPortName in providerConfig.Adapters.ToSeq().Match(
+            Empty: () => FailEff<string>(Error.New("BUG! No adapters configured when trying to add overlay adapters.")),
+            Head: SuccessEff,
+            Tail: _ => SuccessEff(GetBondPortName(providerConfig.BridgeName!)))
+        let expectedAdapters = toHashSet(providerConfig.Adapters)  
         // When the port uses the wrong adapters, we already removed the port earlier.
         // Hence, if the port exists, the adapters are correct, and we only need to check the bond setting.
         let existingPort = ovsBridges.Bridges
@@ -556,17 +556,17 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 TimeSpan.FromSeconds(30),
                 from ovs in default(RT).OVS
                 from ct in cancelToken<RT>()
-                from _ in ovs.AddBond(providerConfig.BridgeName, expectedPortName, interfaces, ovsBondMode, ct).ToAff(e => e)
+                from _ in ovs.AddBond(providerConfig.BridgeName!, expectedPortName, interfaces, ovsBondMode, ct).ToAff(e => e)
                 select unit),
             _ => true,
             () => timeout(
                 TimeSpan.FromSeconds(30),
                 from ovs in default(RT).OVS
                 from ct in cancelToken<RT>()
-                from _ in ovs.RemovePort(providerConfig.BridgeName, expectedPortName, ct).ToAff(e => e)
+                from _ in ovs.RemovePort(providerConfig.BridgeName!, expectedPortName, ct).ToAff(e => e)
                 select unit),
             NetworkChangeOperation.AddBondPort,
-            expectedPortName, string.Join(", ", adapters), providerConfig.BridgeName)
+            expectedPortName, string.Join(", ", adapters), providerConfig.BridgeName!)
         select unit;
 
     private Aff<RT, Unit> AddSimpleOverlayAdapterPort(
@@ -583,31 +583,17 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 TimeSpan.FromSeconds(30),
                 from ovs in default(RT).OVS
                 from ct in cancelToken<RT>()
-                from _ in ovs.AddPort(providerConfig.BridgeName, @interface, ct).ToAff(e => e)
+                from _ in ovs.AddPort(providerConfig.BridgeName!, @interface, ct).ToAff(e => e)
                 select unit),
             _ => true,
             () => timeout(
                 TimeSpan.FromSeconds(30),
                 from ovs in default(RT).OVS
                 from ct in cancelToken<RT>()
-                from _ in ovs.RemovePort(providerConfig.BridgeName, expectedPortName, ct).ToAff(e => e)
+                from _ in ovs.RemovePort(providerConfig.BridgeName!, expectedPortName, ct).ToAff(e => e)
                 select unit),
             NetworkChangeOperation.AddAdapterPort,
-            expectedPortName, providerConfig.BridgeName)
-        select unit;
-
-    private Aff<RT, Unit> RemoveOverlayAdapterPort(
-        OvsBridgePortInfo portInfo) =>
-        // TODO add rollback
-        from _1 in AddOperation(
-            () => timeout(
-                TimeSpan.FromSeconds(30),
-                from ovs in default(RT).OVS
-                from ct in cancelToken<RT>()
-                from _ in ovs.RemovePort(portInfo.BridgeName, portInfo.PortName, ct).ToAff(e => e)
-                select unit),
-            NetworkChangeOperation.RemoveAdapterPort,
-            portInfo.PortName, portInfo.BridgeName)
+            expectedPortName, providerConfig.BridgeName!)
         select unit;
 
     private Aff<RT, Unit> UpdateOverlayAdapterPort(
@@ -632,7 +618,6 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     TimeSpan.FromSeconds(30),
                     from ovs in default(RT).OVS
                     from ct in cancelToken<RT>()
-                    // TODO does an update by name even work or do we need the ID?
                     from _ in ovs.UpdateBondPort(portInfo.PortName, expectedBondMode, ct).ToAff(e => e)
                     select unit),
                 _ => true,
@@ -640,14 +625,13 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     TimeSpan.FromSeconds(30),
                     from ovs in default(RT).OVS
                     from ct in cancelToken<RT>()
-                    // TODO does an update by name even work or do we need the ID?
                     // We force a bond mode during the rollback as no bond mode at all
                     // can break the physical network. When a bond port is configured,
                     // the bond mode should be set anyway.
                     from _ in ovs.UpdateBondPort(portInfo.PortName, portInfo.BondMode.IfNone("active-backup"), ct).ToAff(e => e)
                     select unit),
                 NetworkChangeOperation.UpdateBondPort,
-                portInfo.PortName, providerConfig.BridgeName)
+                portInfo.PortName, providerConfig.BridgeName!)
         select unit;
 
     public Aff<RT, Unit> UpdateBridgeMappings(NetworkProvidersConfiguration newConfig) =>
@@ -722,7 +706,6 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             return unit;
         })
         select unit;
-
 
     private Aff<RT, Unit> AddOperation(
         Func<Aff<RT, Unit>> func,

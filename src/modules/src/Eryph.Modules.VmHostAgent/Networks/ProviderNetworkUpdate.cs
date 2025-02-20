@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
+using System.Management.Automation.Host;
 using System.Net;
 using System.Runtime.Serialization;
+using System.ServiceModel.Security.Tokens;
 using System.Threading;
 using Eryph.Core;
 using Eryph.Core.Network;
@@ -26,40 +28,25 @@ public static class ProviderNetworkUpdate<RT>
     HasNetworkProviderManager<RT>,
     HasLogger<RT>
 {
-
-    private static Aff<RT, Unit> isAgentRunning()
-    {
-        var cts = new CancellationTokenSource(2000);
-
-        return default(RT).AgentSync.Bind(a => a.CheckRunning(cts.Token).Bind(r =>
-                r ? SuccessAff(Unit.Default) : FailAff<Unit>(Error.New("")))
-            .MapFail(_ => Error.FromObject("VM Host Agent is not running")));
-    }
+    public static Aff<RT, Unit> isAgentRunning() =>
+        timeout(
+            TimeSpan.FromSeconds(2),
+            from syncClient in default(RT).AgentSync
+            from ct in cancelToken<RT>()
+            from isRunning in syncClient.CheckRunning(ct)
+                .MapFail(_ => Error.New("The VM host agent is not running."))
+            from _ in guard(isRunning,
+                Error.New("The VM host agent is not running."))
+            select unit);
 
     // ReSharper disable once InconsistentNaming
-    public static Aff<RT, NetworkProvidersConfiguration> importConfig(string config)
-
-    {
-        return from inputConfig in
-                NetworkProviderManager<RT>.parseConfigurationYaml(config)
-            from newConfig in validateConfiguration(inputConfig)
-            select newConfig;
-
-    }
-
-    private static Aff<RT, NetworkProvidersConfiguration> validateConfiguration(NetworkProvidersConfiguration config)
-    {
-        if (config.NetworkProviders == null || config.NetworkProviders.Length == 0)
-            return LanguageExt.Aff<NetworkProvidersConfiguration>.Fail("Provider configuration is empty");
-
-        return config.NetworkProviders.Map(NetworkProvider.Validate)
-
-            .Traverse(l => l)
-            .ToAff(errors => Error.New(errors.Aggregate((allErrors, error) => allErrors + "\n" + error)))
-            .Bind(_ => isAgentRunning())
-            .Map(_ => config);
-
-    }
+    public static Aff<RT, NetworkProvidersConfiguration> importConfig(
+        string config) =>
+        from parsedConfig in Eff(() => NetworkProvidersConfigYamlSerializer.Deserialize(config))
+        from _ in NetworkProvidersConfigsValidations.ValidateNetworkProvidersConfig(parsedConfig)
+            .MapFail(issue => issue.ToError())
+            .ToEff(errors => Error.New("The network provider configuration is invalid.", Error.Many(errors)))
+        select parsedConfig;
 
     public static bool canBeAutoApplied(NetworkChanges<RT> changes) =>
        ! changes.Operations.Select(x => x.Operation)
@@ -76,17 +63,17 @@ public static class ProviderNetworkUpdate<RT>
 
         // generate variables
         let newBridges = newConfig.NetworkProviders.ToSeq()
-            .Filter(p => p.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
+            .Filter(p => p.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay)
             .Map(p => new NewBridge(
                 p.BridgeName,
-                p.Type == NetworkProviderType.NatOverLay
+                p.Type == NetworkProviderType.NatOverlay
                     ? IPAddress.Parse(p.Subnets.First(s => s.Name == "default").Gateway)
                     : IPAddress.None,
                 IPNetwork2.Parse(p.Subnets.First(s => s.Name == "default").Network),
                 p.BridgeOptions))
 
         from newOverlayAdapters in newConfig.NetworkProviders.ToSeq()
-            .Filter(np => np.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
+            .Filter(np => np.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay)
             .Bind(np => np.Adapters.ToSeq())
             .Distinct()
             .Map(a => from _ in hostState.HostAdapters.Adapters.Find(a)
