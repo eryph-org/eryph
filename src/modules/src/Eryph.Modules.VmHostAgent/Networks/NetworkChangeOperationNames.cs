@@ -6,8 +6,8 @@ public class NetworkChangeOperationNames
 {
     public static NetworkChangeOperationNames Instance { get; } = new();
 
-    public string this[NetworkChangeOperation key]{
-
+    public string this[NetworkChangeOperation key]
+    {
         get
         {
             return key switch
@@ -37,6 +37,5 @@ public class NetworkChangeOperationNames
                 _ => throw new ArgumentOutOfRangeException(nameof(key), key, null)
             };
         }
-
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Effects.Traits;
 
@@ -10,11 +9,11 @@ public record NetworkChangeOperation<RT>(
     Func<Aff<RT, Unit>> Change,
     Func<Seq<NetworkChangeOperation>,bool>? CanRollBack,
     Func<Aff<RT, Unit>>? Rollback,
-
     params object[] Args)
     where RT : struct, HasCancel<RT>
 {
-    public string Text {
+    public string Text
+    {
         get
         {
             try
@@ -27,6 +26,38 @@ public record NetworkChangeOperation<RT>(
                 return NetworkChangeOperationNames.Instance[Operation];
             }
         }
-
     }
+}
+
+public enum NetworkChangeOperation
+{
+    StartOVN,
+    StopOVN,
+
+    CreateOverlaySwitch,
+    RebuildOverLaySwitch,
+    RemoveOverlaySwitch,
+
+    DisconnectVMAdapters,
+    ConnectVMAdapters,
+
+    RemoveBridge,
+    RemoveUnusedBridge,
+    RemoveMissingBridge,
+    AddBridge,
+
+    AddNetNat,
+    RemoveNetNat,
+
+    RemoveAdapterPort,
+    AddAdapterPort,
+    AddBondPort,
+    UpdateBondPort,
+    UpdateBridgePort,
+
+    ConfigureNatIp,
+    UpdateBridgeMapping,
+
+    EnableSwitchExtension,
+    DisableSwitchExtension
 }
