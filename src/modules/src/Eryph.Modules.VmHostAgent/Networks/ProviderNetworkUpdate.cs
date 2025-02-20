@@ -84,18 +84,17 @@ public static class ProviderNetworkUpdate<RT>
                     : IPAddress.None,
                 IPNetwork2.Parse(p.Subnets.First(s => s.Name == "default").Network),
                 p.BridgeOptions))
-        let newOverlayAdapters = toHashSet(newConfig.NetworkProviders.ToSeq()
-            .Filter(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
-            .Bind(x => x.Adapters.ToSeq())
-            .Distinct())
 
-        let enabledBridges = newConfig.NetworkProviders.ToSeq()
-            .Filter(p => p.Type is NetworkProviderType.NatOverLay
-                || p.BridgeOptions?.DefaultIpMode is not null and not BridgeHostIpMode.Disabled)
-            .Map(x => x.BridgeName)
+        from newOverlayAdapters in newConfig.NetworkProviders.ToSeq()
+            .Filter(np => np.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
+            .Bind(np => np.Adapters.ToSeq())
+            .Distinct()
+            .Map(a => from _ in hostState.HostAdapters.Adapters.Find(a)
+                        .ToEff($"The configured host adapter '{a}' does not exist.")
+                      select a)
+            .Sequence()
 
         let needsOverlaySwitch = newBridges.Length > 0
-        let hasOverlaySwitch = hostState.OverlaySwitch.IsSome
 
         // Enable the OVS extension of the overlay switch(es) in case
         // it was disabled somehow. Otherwise, the execution of OVS
@@ -105,13 +104,13 @@ public static class ProviderNetworkUpdate<RT>
             .Map(e => changeBuilder.EnableSwitchExtension(e.SwitchId, e.SwitchName))
             .SequenceSerial()
 
-        // Disable the OVS extension on all switches besides the overlay switch(es).
+        // Disable the OVS extension on all switches which are not overlay switches.
         from __ in hostState.VMSwitchExtensions
             .Filter(e => e.SwitchName != EryphConstants.OverlaySwitchName && e.Enabled)
             .Map(e => changeBuilder.DisableSwitchExtension(e.SwitchId, e.SwitchName))
             .SequenceSerial()
 
-        // Perform a rebuild of the Hyper-V switch used for the overlay if necessary.
+        // Perform a rebuild of the Hyper-V switch used for the overlay network if necessary.
         // This happens e.g. when additional physical adapters are added to the
         // network providers.
         // All OVS bridges will be removed as part of the Hyper-V switch rebuild.
@@ -130,7 +129,7 @@ public static class ProviderNetworkUpdate<RT>
 
         // Add bridges from config missing in OVS
         from createdBridges in changeBuilder.AddMissingBridges(
-            hasOverlaySwitch, enabledBridges, ovsBridges3, newBridges)
+            ovsBridges3, newBridges)
 
         from updateBridgePorts in changeBuilder.UpdateBridgePorts(
             newConfig, createdBridges, ovsBridges3)
@@ -164,7 +163,7 @@ public static class ProviderNetworkUpdate<RT>
         HostState hostState,
         OvsBridgesInfo ovsBridges,
         bool needsOverlaySwitch,
-        HashSet<string> newOverlayAdapters) =>
+        Seq<string> newOverlayAdapters) =>
         from hostCommands in default(RT).HostNetworkCommands
         let allOverlaySwitches = hostState.VMSwitches
             .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
@@ -184,7 +183,7 @@ public static class ProviderNetworkUpdate<RT>
                 select bridgeChange,
             None: () => needsOverlaySwitch
                 // no switch, but needs one
-                ? changeBuilder.CreateOverlaySwitch(newOverlayAdapters.ToSeq())
+                ? changeBuilder.CreateOverlaySwitch(newOverlayAdapters)
                     .Map(_ => ovsBridges)
                 // no switch needed
                 : SuccessAff(ovsBridges))
@@ -194,16 +193,17 @@ public static class ProviderNetworkUpdate<RT>
         NetworkChangeOperationBuilder<RT> changeBuilder,
         OverlaySwitchInfo overlaySwitch,
         OvsBridgesInfo ovsBridges,
-        HashSet<string> newOverlayAdapters,
+        Seq<string> newOverlayAdapters,
         Seq<TypedPsObject<VMNetworkAdapter>> vmAdapters,
         bool multipleOverlaySwitches) =>
         // When the physical adapters are not correct or multiple overlay switches exist,
         // we must remove all overlay switches and rebuild a single overlay switch
         // with the proper adapters.
-        (overlaySwitch.AdaptersInSwitch != newOverlayAdapters || multipleOverlaySwitches) switch
+        (overlaySwitch.AdaptersInSwitch != toHashSet(newOverlayAdapters) || multipleOverlaySwitches) switch
         {
             true => from _ in multipleOverlaySwitches
-                        ? Logger<RT>.logInformation<NetworkChanges<RT>>(
+                        ? Logger<RT>.logInformation(
+                            nameof(ProviderNetworkUpdate<RT>),
                             "Multiple overlay switches found. The overlay switch must be completely rebuilt.")
                         : SuccessEff(unit)
                     from bridges in changeBuilder.RebuildOverlaySwitch(vmAdapters, ovsBridges, newOverlayAdapters)

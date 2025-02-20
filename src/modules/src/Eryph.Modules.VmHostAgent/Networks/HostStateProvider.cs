@@ -120,9 +120,9 @@ public static class HostStateProvider<RT>
         Seq<Interface> ovsInterfaces) =>
         new(ovsBridge.Name,
             ovsPort.Name,
-            ovsPort.Tag,
-            ovsPort.VlanMode,
-            ovsPort.BondMode,
+            Optional(ovsPort.Tag),
+            Optional(ovsPort.VlanMode),
+            Optional(ovsPort.BondMode),
             ovsInterfaces.Filter(ovsInterface => ovsPort.Interfaces.Contains(ovsInterface.Id))
                 .Map(CreateBridgeInterfaceInfo)
                 .Strict());

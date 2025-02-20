@@ -185,7 +185,7 @@ public class HostStateProviderTests
 
         var otherAdapterInfo = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("other-adapter").WhoseValue;
         otherAdapterInfo.InterfaceId.Should().Be(otherAdapterId);
-        otherAdapterInfo.Name.Should().Be("otherAdapter");
+        otherAdapterInfo.Name.Should().Be("other-adapter");
         otherAdapterInfo.IsPhysical.Should().BeFalse();
 
         var overlaySwítchInfo = hostState.OverlaySwitch.Should().BeSome().Subject;

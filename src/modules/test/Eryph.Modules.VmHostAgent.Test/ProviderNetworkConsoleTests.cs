@@ -408,7 +408,7 @@ public class ProviderNetworkConsoleTests
             .Returns(RightAsync<Error, Unit>(unit));
 
         _ovsControlMock.Setup(x => x.UpdateBridgePort("br-nat",
-                null,null,
+                None, None,
                 It.IsAny<CancellationToken>()))
             .Returns(RightAsync<Error, Unit>(unit));
 

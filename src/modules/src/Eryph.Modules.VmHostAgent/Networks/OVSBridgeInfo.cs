@@ -35,9 +35,9 @@ public readonly record struct OvsBridgeInfo(
 public readonly record struct OvsBridgePortInfo(
     string BridgeName, 
     string PortName,
-    int? Tag,
-    string? VlanMode,
-    string? BondMode,
+    Option<int> Tag,
+    Option<string> VlanMode,
+    Option<string> BondMode,
     // The names of the external interfaces
     Seq<OvsBridgeInterfaceInfo> Interfaces);
 
