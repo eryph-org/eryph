@@ -19,7 +19,7 @@ public record BridgePort : OVSTableRecord, IOVSEntityWithName
 
     public string Name => GetValue<string>("name");
 
-    public int? Tag => GetValue<int>("tag");
+    public int? Tag => GetValue<int?>("tag");
     
     public string? VlanMode => GetValue<string>("vlan_mode");
 

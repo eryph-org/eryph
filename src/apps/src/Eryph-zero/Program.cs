@@ -1026,6 +1026,7 @@ internal static class Program
         return await RunAsAdmin(
             from configString in ReadInput(inFile)
             from _ in ensureDriver(ovsRunDir, true, false)
+            from _2 in isAgentRunning()
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()

@@ -35,7 +35,7 @@ internal class ProjectNetworkPlanBuilder(
         let networkPlan = new NetworkPlan(projectId.ToString())
         let overLayProviders =
             providerConfig.NetworkProviders
-                .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay)
+                .Where(x => x.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay)
                 .ToSeq()
 
         from networks in GetAllOverlayNetworks(projectId, overLayProviders)

@@ -356,11 +356,6 @@ public class ProviderNetworkConsoleTests
         Guid? switchId = null,
         Seq<TypedPsObject<VMNetworkAdapter>> vmAdaptersInOverlaySwitch = default)
     {
-        var realConfigManager = new NetworkProviderManager();
-
-        _networkProviderManagerMock.Setup(x => x.ParseConfigurationYaml(It.IsAny<string>()))
-            .Returns(realConfigManager.ParseConfigurationYaml);
-
         _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
             .Returns(SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
         if (switchId.HasValue)

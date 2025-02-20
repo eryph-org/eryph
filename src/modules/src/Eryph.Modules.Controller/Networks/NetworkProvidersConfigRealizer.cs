@@ -34,7 +34,7 @@ public class NetworkProvidersConfigRealizer : INetworkProvidersConfigRealizer
         var foundIpPools = new List<IpPool>();
 
         foreach (var networkProvider in config.NetworkProviders
-                     .Where(x => x.Type is NetworkProviderType.NatOverLay or NetworkProviderType.Overlay))
+                     .Where(x => x.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay))
         {
             foreach (var subnet in networkProvider.Subnets)
             {

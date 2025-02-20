@@ -379,7 +379,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             new()
             {
                 Name = "default",
-                TypeString = "nat_overlay",
+                Type = NetworkProviderType.NatOverlay,
                 Subnets = new NetworkProviderSubnet[]
                 {
                     new()
@@ -401,7 +401,7 @@ namespace Eryph.Modules.Controller.Tests.Networks
             new()
             {
                 Name = "flat",
-                TypeString = "flat"
+                Type = NetworkProviderType.Flat,
             }
         };
 

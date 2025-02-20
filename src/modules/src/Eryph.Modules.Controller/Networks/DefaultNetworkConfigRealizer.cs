@@ -32,7 +32,7 @@ internal class DefaultNetworkConfigRealizer : IDefaultNetworkConfigRealizer
         if (defaultProvider is null)
             throw new Exception("Default network provider not found");
 
-        var config = defaultProvider.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverLay
+        var config = defaultProvider.Type is NetworkProviderType.Overlay or NetworkProviderType.NatOverlay
             ? ProjectNetworksConfigDefault.Default
             : ProjectNetworksConfigDefault.FlatProviderDefault;
 
