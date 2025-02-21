@@ -91,8 +91,7 @@ public static class ProviderNetworkUpdate<RT>
         // network providers.
         // All OVS bridges will be removed as part of the Hyper-V switch rebuild.
         from ovsBridges1 in generateOverlaySwitchChanges(
-            changeBuilder, hostState, hostState.OvsBridges,
-            needsOverlaySwitch, expectedOverlayAdapters)
+            changeBuilder, hostState, expectedBridges)
 
         // Bridge exists in OVS but not in config -> remove it
         from ovsBridges2 in changeBuilder.RemoveUnusedBridges(
@@ -180,12 +179,28 @@ public static class ProviderNetworkUpdate<RT>
     private static Aff<RT, OvsBridgesInfo> generateOverlaySwitchChanges(
         NetworkChangeOperationBuilder<RT> changeBuilder,
         HostState hostState,
-        OvsBridgesInfo ovsBridges,
-        bool needsOverlaySwitch,
-        Seq<string> newOverlayAdapters) =>
+        Seq<NewBridge> expectedBridges) =>
         from hostCommands in default(RT).HostNetworkCommands
         let allOverlaySwitches = hostState.VMSwitches
             .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
+        let allOtherSwitches = hostState.VMSwitches
+            .Filter(s => s.Name != EryphConstants.OverlaySwitchName)
+        from expectedOverlayAdapters in expectedBridges
+            .Bind(b => b.Adapters.ToSeq())
+            .Distinct()
+            .Map(a => hostState.HostAdapters.Adapters.Find(a)
+                .ToEff($"The configured host adapter '{a}' does not exist."))
+            .Sequence()
+        from _ in expectedOverlayAdapters
+            .Map(a => allOtherSwitches
+                .Find(s => s.NetAdapterInterfaceGuid.ToSeq().Contains(a.InterfaceId)).Match(
+                    Some: s => Fail<Error, Unit>(
+                        Error.New($"The adapter '{a.Name}' is used by the Hyper-V switch '{s.Name}'.")),
+                    None: () => Success<Error, Unit>(unit)))
+            .Sequence()
+            .ToEff(errors => Error.New("Some adapters are used by other Hyper-V switches.", Error.Many(errors)))
+        let needsOverlaySwitch = expectedOverlayAdapters.Length > 0
+        let expectedOverlayAdapterNames = expectedOverlayAdapters.Map(a => a.Name)
         from bridges in hostState.OverlaySwitch.Match(
             Some: overlaySwitch =>
                 from vmAdapters in allOverlaySwitches
@@ -195,17 +210,17 @@ public static class ProviderNetworkUpdate<RT>
                 from bridgeChange in needsOverlaySwitch switch
                 {
                     true => generateExistingOverlaySwitchChanges(
-                                changeBuilder, overlaySwitch, ovsBridges, newOverlayAdapters,
-                                vmAdapters, allOverlaySwitches.Count > 1),
-                    false => changeBuilder.RemoveOverlaySwitch(vmAdapters, ovsBridges),
+                                changeBuilder, overlaySwitch, hostState.OvsBridges,
+                                expectedOverlayAdapterNames, vmAdapters, allOverlaySwitches.Count > 1),
+                    false => changeBuilder.RemoveOverlaySwitch(vmAdapters, hostState.OvsBridges),
                 }
                 select bridgeChange,
             None: () => needsOverlaySwitch
                 // no switch, but needs one
-                ? changeBuilder.CreateOverlaySwitch(newOverlayAdapters)
-                    .Map(_ => ovsBridges)
+                ? changeBuilder.CreateOverlaySwitch(expectedOverlayAdapterNames)
+                    .Map(_ => hostState.OvsBridges)
                 // no switch needed
-                : SuccessAff(ovsBridges))
+                : SuccessAff(hostState.OvsBridges))
         select bridges;
 
     private static Aff<RT, OvsBridgesInfo> generateExistingOverlaySwitchChanges(
