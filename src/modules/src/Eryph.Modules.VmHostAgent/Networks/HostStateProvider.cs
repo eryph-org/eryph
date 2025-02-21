@@ -26,10 +26,12 @@ public static class HostStateProvider<RT>
     HasNetworkProviderManager<RT>,
     HasLogger<RT>
 {
-    public static Aff<RT, HostState> getHostState() =>
-        getHostState(() => unitEff);
+    public static Aff<RT, HostState> getHostState(
+        bool withFallback) =>
+        getHostState(withFallback, () => unitEff);
 
     public static Aff<RT, HostState> getHostState(
+        bool withFallback,
         Func<Eff<RT, Unit>> progressCallback) =>
         from ovsTool in default(RT).OVS
         from hostCommands in default(RT).HostNetworkCommands
@@ -61,7 +63,9 @@ public static class HostStateProvider<RT>
             select i)
         from overlaySwitchInfo in FindOverlaySwitch(vmSwitches, hostAdapters)
         let bridgesInfo = CreateBridgesInfo(ovsBridges, ovsBridgePorts, ovsInterfaces)
-        let hostAdaptersInfo = CreateHostAdaptersInfo(hostAdapters)
+        from hostAdaptersInfo in withFallback
+            ? CreateHostAdaptersInfoWithFallback(hostAdapters, ovsInterfaces)
+            : CreateHostAdaptersInfo(hostAdapters)
         let hostState = new HostState(
             vmSwitchExtensions,
             vmSwitches,
@@ -136,13 +140,52 @@ public static class HostStateProvider<RT>
             ovsInterface.ExternalIds.Find("host-iface-conf-name")
                 .Filter(notEmpty));
 
-    private static HostAdaptersInfo CreateHostAdaptersInfo(
+    private static Eff<HostAdaptersInfo> CreateHostAdaptersInfo(
         Seq<HostNetworkAdapter> hostAdapters) =>
-        new(hostAdapters.Map(CreateHostAdapterInfo)
+        from _ in unitEff
+        let configuredAdapters = HashMap<Guid, string>()
+        let adapterInfos = hostAdapters
+            .Map(adapter => CreateHostAdapterInfo(adapter, configuredAdapters))
             .Map(adapterInfo => (adapterInfo.Name, adapterInfo))
-            .ToHashMap());
+            .ToHashMap()
+        select new HostAdaptersInfo(adapterInfos);
+
+    private static Eff<HostAdaptersInfo> CreateHostAdaptersInfoWithFallback(
+        Seq<HostNetworkAdapter> hostAdapters,
+        Seq<Interface> ovsInterfaces) =>
+        from _ in unitEff
+        let configuredAdapters = ovsInterfaces
+            .Map(CreateBridgeInterfaceInfo)
+            .Filter(interfaceInfo => interfaceInfo.IsExternal)
+            .Map(interfaceInfo => from configuredName in interfaceInfo.HostInterfaceConfiguredName
+                                  from interfaceId in interfaceInfo.HostInterfaceId
+                                  select (interfaceId, configuredName))
+            .Somes()
+            .ToHashMap()
+        let adapterInfos = hostAdapters
+            .Map(adapter => CreateHostAdapterInfo(adapter, configuredAdapters))
+            .Map(adapterInfo => (adapterInfo.Name, AdapterInfo: adapterInfo))
+        let fallbackAdapterInfos = adapterInfos
+            .Map(t => from fallbackName in t.AdapterInfo.ConfiguredName
+                      select t with { Name = fallbackName })
+            .Somes()
+        select new HostAdaptersInfo(adapterInfos.Concat(fallbackAdapterInfos).ToHashMap());
 
     private static HostAdapterInfo CreateHostAdapterInfo(
-        HostNetworkAdapter hostAdapter) =>
-        new(hostAdapter.Name, hostAdapter.InterfaceGuid, !hostAdapter.Virtual);
+        HostNetworkAdapter hostAdapter,
+        HashMap<Guid, string> configuredAdapters) =>
+        new(hostAdapter.Name,
+            hostAdapter.InterfaceGuid,
+            configuredAdapters.Find(hostAdapter.InterfaceGuid),
+            !hostAdapter.Virtual);
+
+    private static Option<HostAdapterInfo> CreateFallbackHostAdapterInfo(
+        HostNetworkAdapter hostAdapter,
+        HashMap<Guid, string> configuredAdapters) =>
+        from configuredAdapter in configuredAdapters.Find(hostAdapter.InterfaceGuid)
+        select new HostAdapterInfo(
+            hostAdapter.Name,
+            hostAdapter.InterfaceGuid,
+            configuredAdapter,
+            !hostAdapter.Virtual);
 }

@@ -13,4 +13,5 @@ public readonly record struct HostAdaptersInfo(
 public readonly record struct HostAdapterInfo(
     string Name,
     Guid InterfaceId,
+    Option<string> ConfiguredName,
     bool IsPhysical);

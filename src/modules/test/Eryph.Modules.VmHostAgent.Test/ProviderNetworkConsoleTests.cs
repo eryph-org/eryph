@@ -344,7 +344,7 @@ public class ProviderNetworkConsoleTests
                 NetAdapterInterfaceGuid = null
             }),
             new HostAdaptersInfo(HashMap(
-                ("Ethernet", new HostAdapterInfo("Ethernet", Guid.NewGuid(), true)))),
+                ("Ethernet", new HostAdapterInfo("Ethernet", Guid.NewGuid(), Option<string>.None, true)))),
             Some(new OverlaySwitchInfo(switchId, HashSet<string>())),
             Seq1(new NetNat { Name = "docker_nat", InternalIPInterfaceAddressPrefix = "192.168.10.0/24" }),
             new OvsBridgesInfo());
