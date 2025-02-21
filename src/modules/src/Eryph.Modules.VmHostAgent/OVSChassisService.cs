@@ -186,7 +186,7 @@ public class OVSChassisService : IHostedService
         try
         {
             await (from currentConfig in getCurrentConfiguration()
-                   from hostState in HostStateProvider<AgentRuntime>.getHostState()
+                   from hostState in HostStateProvider<AgentRuntime>.getHostState(true)
                    from currentConfigChanges in generateChanges(hostState, currentConfig)
                    from _ in canBeAutoApplied(currentConfigChanges)
                        ? executeChanges(currentConfigChanges)

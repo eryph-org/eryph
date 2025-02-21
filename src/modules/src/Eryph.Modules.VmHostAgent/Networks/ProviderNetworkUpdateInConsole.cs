@@ -25,7 +25,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
         from _ in Console<RT>.write("Analyzing host network settings => ")
         // collect network state of host
         from hostState in HostStateProvider<RT>.getHostState(
-            () => Console<RT>.write("."))
+            false, () => Console<RT>.write("."))
         from __ in Console<RT>.writeEmptyLine
         select hostState;
 
