@@ -65,7 +65,6 @@ public class ProviderNetworkConsoleTests
                         NetworkChangeOperation.UpdateBridgeMapping
                     );
             });
-
     }
 
     [Fact]
@@ -344,8 +343,7 @@ public class ProviderNetworkConsoleTests
                 NetAdapterInterfaceGuid = null
             }),
             new HostAdaptersInfo(HashMap(
-                ("Ethernet", new HostAdapterInfo("Ethernet", Guid.NewGuid(), Option<string>.None, true)))),
-            Some(new OverlaySwitchInfo(switchId, HashSet<string>())),
+                ("Ethernet", new HostAdapterInfo("Ethernet", Guid.NewGuid(), None, true)))),
             Seq1(new NetNat { Name = "docker_nat", InternalIPInterfaceAddressPrefix = "192.168.10.0/24" }),
             new OvsBridgesInfo());
 
@@ -363,37 +361,6 @@ public class ProviderNetworkConsoleTests
             _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(switchId.Value))
                 .Returns(SuccessAff(vmAdaptersInOverlaySwitch));
         }
-
-        /*
-        _hostNetworkCommandsMock.Setup(x => x.GetSwitchExtensions())
-            .Returns(SuccessAff(hostState.VMSwitchExtensions));
-
-        _hostNetworkCommandsMock.Setup(x => x.GetSwitchExtensions())
-            .Returns(SuccessAff(hostState.VMSwitchExtensions));
-        _hostNetworkCommandsMock.Setup(x => x.GetSwitches())
-            .Returns(SuccessAff(hostState.VMSwitches));
-        _hostNetworkCommandsMock.Setup(x => x.GetPhysicalAdapters())
-            .Returns(SuccessAff(hostState.NetAdapters));
-        _hostNetworkCommandsMock.Setup(x => x.GetAdapterNames())
-            .Returns(SuccessAff(hostState.NetAdapters.Select(x=>x.Name)));
-
-        _hostNetworkCommandsMock.Setup(x => x.GetNetNat())
-            .Returns(SuccessAff(hostState.NetNat));
-
-        ovsControlMock.Setup(x => x.GetBridges(CancellationToken.None))
-            .Returns(hostState.OvsBridges);
-        ovsControlMock.Setup(x => x.GetPorts(CancellationToken.None))
-            .Returns(hostState.OvsBridgePorts);
-
-        ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
-            .Returns(hostState.OvsBridges);
-
-        ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
-            .Returns(hostState.OvsBridgePorts);
-
-        ovsControlMock.Setup(x => x.GetInterfaces(It.IsAny<CancellationToken>()))
-            .Returns(hostState.OvsInterfaces);
-        */
 
         _ovsControlMock.Setup(x => x.GetOVSTable(It.IsAny<CancellationToken>()))
             .Returns(new OVSTableRecord());
