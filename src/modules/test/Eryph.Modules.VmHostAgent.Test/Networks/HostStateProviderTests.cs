@@ -194,10 +194,6 @@ public class HostStateProviderTests
         pif1Info.ConfiguredName.Should().BeNone();
         otherAdapterInfo.IsPhysical.Should().BeFalse();
 
-        var overlaySwítchInfo = hostState.OverlaySwitch.Should().BeSome().Subject;
-        overlaySwítchInfo.Id.Should().Be(switchId);
-        overlaySwítchInfo.AdaptersInSwitch.Should().Equal("pif-1", "pif-2");
-
         hostState.OvsBridges.Bridges.Should().HaveCount(2);
         
         var brIntInfo = hostState.OvsBridges.Bridges.ToDictionary().Should().ContainKey("br-int").WhoseValue;

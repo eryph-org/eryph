@@ -6,8 +6,8 @@ using System.Threading;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
@@ -62,15 +62,6 @@ public static class ProviderNetworkUpdate<RT>
 
         // generate variables
         from expectedBridges in PrepareExpectedBridges(newConfig)
-        from expectedOverlayAdapters in expectedBridges
-            .Bind(b => b.Adapters.ToSeq())
-            .Distinct()
-            .Map(a => hostState.HostAdapters.Adapters.Find(a)
-                .Map(_ => a)
-                .ToEff($"The configured host adapter '{a}' does not exist."))
-            .Sequence()
-
-        let needsOverlaySwitch = expectedBridges.Length > 0
 
         // Enable the OVS extension of the overlay switch(es) in case
         // it was disabled somehow. Otherwise, the execution of OVS
@@ -180,71 +171,64 @@ public static class ProviderNetworkUpdate<RT>
         NetworkChangeOperationBuilder<RT> changeBuilder,
         HostState hostState,
         Seq<NewBridge> expectedBridges) =>
-        from hostCommands in default(RT).HostNetworkCommands
+        from expectedOverlayAdapters in expectedBridges
+            .Bind(b => b.Adapters)
+            .Distinct()
+            .Map(a => hostState.HostAdapters.Adapters.Find(a).ToEff($"The host adapter '{a}' does not exist."))
+            .Sequence()
         let allOverlaySwitches = hostState.VMSwitches
             .Filter(s => s.Name == EryphConstants.OverlaySwitchName)
         let allOtherSwitches = hostState.VMSwitches
             .Filter(s => s.Name != EryphConstants.OverlaySwitchName)
-        from expectedOverlayAdapters in expectedBridges
-            .Bind(b => b.Adapters.ToSeq())
-            .Distinct()
-            .Map(a => hostState.HostAdapters.Adapters.Find(a)
-                .ToEff($"The configured host adapter '{a}' does not exist."))
-            .Sequence()
         from _ in expectedOverlayAdapters
             .Map(a => allOtherSwitches
                 .Find(s => s.NetAdapterInterfaceGuid.ToSeq().Contains(a.InterfaceId)).Match(
                     Some: s => Fail<Error, Unit>(
-                        Error.New($"The adapter '{a.Name}' is used by the Hyper-V switch '{s.Name}'.")),
+                        Error.New($"The host adapter '{a.Name}' is used by the Hyper-V switch '{s.Name}'.")),
                     None: () => Success<Error, Unit>(unit)))
             .Sequence()
-            .ToEff(errors => Error.New("Some adapters are used by other Hyper-V switches.", Error.Many(errors)))
-        let needsOverlaySwitch = expectedOverlayAdapters.Length > 0
+            .ToEff(errors => Error.New("Some host adapters are used by other Hyper-V switches.", Error.Many(errors)))
         let expectedOverlayAdapterNames = expectedOverlayAdapters.Map(a => a.Name)
-        from bridges in hostState.OverlaySwitch.Match(
-            Some: overlaySwitch =>
-                from vmAdapters in allOverlaySwitches
-                    .Map(s => hostCommands.GetNetAdaptersBySwitch(s.Id))
-                    .SequenceSerial()
-                    .Map(l => l.Flatten())
-                from bridgeChange in needsOverlaySwitch switch
-                {
-                    true => generateExistingOverlaySwitchChanges(
-                                changeBuilder, overlaySwitch, hostState.OvsBridges,
-                                expectedOverlayAdapterNames, vmAdapters, allOverlaySwitches.Count > 1),
-                    false => changeBuilder.RemoveOverlaySwitch(vmAdapters, hostState.OvsBridges),
-                }
-                select bridgeChange,
-            None: () => needsOverlaySwitch
-                // no switch, but needs one
-                ? changeBuilder.CreateOverlaySwitch(expectedOverlayAdapterNames)
-                    .Map(_ => hostState.OvsBridges)
-                // no switch needed
-                : SuccessAff(hostState.OvsBridges))
-        select bridges;
-
-    private static Aff<RT, OvsBridgesInfo> generateExistingOverlaySwitchChanges(
-        NetworkChangeOperationBuilder<RT> changeBuilder,
-        OverlaySwitchInfo overlaySwitch,
-        OvsBridgesInfo ovsBridges,
-        Seq<string> newOverlayAdapters,
-        Seq<TypedPsObject<VMNetworkAdapter>> vmAdapters,
-        bool multipleOverlaySwitches) =>
-        // When the physical adapters are not correct or multiple overlay switches exist,
-        // we must remove all overlay switches and rebuild a single overlay switch
-        // with the proper adapters.
-        (overlaySwitch.AdaptersInSwitch != toHashSet(newOverlayAdapters) || multipleOverlaySwitches) switch
+        from bridges2 in expectedBridges.Length switch
         {
-            true => from _ in multipleOverlaySwitches
-                        ? Logger<RT>.logInformation(
-                            nameof(ProviderNetworkUpdate<RT>),
-                            "Multiple overlay switches found. The overlay switch must be completely rebuilt.")
-                        : SuccessEff(unit)
-                    from bridges in changeBuilder.RebuildOverlaySwitch(vmAdapters, ovsBridges, newOverlayAdapters)
-                    select bridges,
-            // The OVS extension has been enabled earlier for all existing overlay switches.
-            false => SuccessAff(ovsBridges),
-        };
+            > 0 => allOverlaySwitches.Match(
+                Empty: () => from _ in changeBuilder.CreateOverlaySwitch(expectedOverlayAdapterNames)
+                             select hostState.OvsBridges,
+                Head: s => (toHashSet(s.NetAdapterInterfaceGuid.ToSeq()) == toHashSet(expectedOverlayAdapters.Map(a => a.InterfaceId))) switch
+                {
+                    // The OVS extension has been enabled earlier for all existing overlay switches.
+                    true => SuccessAff(hostState.OvsBridges),
+                    // The physical adapters of the overlay switch are not correct. We must rebuild
+                    // the overlay switch with the proper adapters.
+                    false => from vmAdapters in getAllVmAdapters(Seq1(s))
+                             from bridges in changeBuilder.RebuildOverlaySwitch(
+                                 vmAdapters, hostState.OvsBridges, expectedOverlayAdapterNames)
+                             select bridges,
+                },
+                // Multiple overlay switches exist. We must remove all overlay switches and
+                // rebuild a single overlay switch with the proper adapters.
+                Tail: (h, t) => from vmAdapters in getAllVmAdapters(h.Cons(t))
+                                from _ in Logger<RT>.logInformation(
+                                    nameof(ProviderNetworkUpdate<RT>),
+                                    "Multiple overlay switches found. The overlay switch must be completely rebuilt.")
+                                from bridges in changeBuilder.RebuildOverlaySwitch(
+                                    vmAdapters, hostState.OvsBridges, expectedOverlayAdapterNames)
+                                select bridges),
+            _ => allOverlaySwitches.Match(
+                Empty: () => SuccessAff(hostState.OvsBridges),
+                Seq: s => from vmAdapters in getAllVmAdapters(s)
+                          from ovsBridges in changeBuilder.RemoveOverlaySwitch(vmAdapters, hostState.OvsBridges)
+                          select ovsBridges),
+        }
+        select bridges2;
+
+    private static Aff<RT, Seq<TypedPsObject<VMNetworkAdapter>>> getAllVmAdapters(
+        Seq<VMSwitch> switches) => 
+        from hostCommands in default(RT).HostNetworkCommands
+        from vmAdapters in switches
+            .Map(s => hostCommands.GetNetAdaptersBySwitch(s.Id))
+            .SequenceSerial()
+        select vmAdapters.Flatten();
 
     private record OperationError([property: DataMember] Seq<NetworkChangeOperation<RT>> ExecutedOperations, Error Cause)
         : Expected("Operation failed", 100, Cause);

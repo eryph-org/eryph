@@ -9,6 +9,5 @@ public record HostState(
     Seq<VMSwitchExtension> VMSwitchExtensions,
     Seq<VMSwitch> VMSwitches,
     HostAdaptersInfo HostAdapters,
-    Option<OverlaySwitchInfo> OverlaySwitch,
     Seq<NetNat> NetNat,
     OvsBridgesInfo OvsBridges);

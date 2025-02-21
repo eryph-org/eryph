@@ -61,7 +61,6 @@ public static class HostStateProvider<RT>
             from ct in cancelToken<RT>()
             from i in ovsTool.GetInterfaces(ct).ToAff(e => e)
             select i)
-        from overlaySwitchInfo in FindOverlaySwitch(vmSwitches, hostAdapters)
         let bridgesInfo = CreateBridgesInfo(ovsBridges, ovsBridgePorts, ovsInterfaces)
         from hostAdaptersInfo in withFallback
             ? CreateHostAdaptersInfoWithFallback(hostAdapters, ovsInterfaces)
@@ -70,35 +69,10 @@ public static class HostStateProvider<RT>
             vmSwitchExtensions,
             vmSwitches,
             hostAdaptersInfo,
-            overlaySwitchInfo,
             netNat,
             bridgesInfo)
         from _9 in Logger<RT>.logTrace<HostState>("Fetched host state: {HostState}", hostState)
         select hostState;
-
-    private static Eff<RT, Option<OverlaySwitchInfo>> FindOverlaySwitch(
-        Seq<VMSwitch> vmSwitches,
-        Seq<HostNetworkAdapter> adapters) =>
-        from _ in unitEff
-        let physicalAdapters = adapters.Filter(a => !a.Virtual)
-        // Only a single overlay switch exists when the network setup is valid.
-        // Otherwise, the network setup needs to be corrected by reapplying the
-        // network provider configuration.
-        let overlaySwitch = vmSwitches.Find(x => x.Name == EryphConstants.OverlaySwitchName)
-        from switchInfo in overlaySwitch
-            .Map(s => PrepareOverlaySwitchInfo(s, physicalAdapters))
-            .Sequence()
-        select switchInfo;
-
-    private static Eff<RT, OverlaySwitchInfo> PrepareOverlaySwitchInfo(
-        VMSwitch overlaySwitch,
-        Seq<HostNetworkAdapter> adapters) =>
-        from switchAdapters in overlaySwitch.NetAdapterInterfaceGuid.ToSeq()
-            .Map(guid => adapters.Find(a => a.InterfaceGuid == guid)
-                .ToEff(Error.New($"Could not find the host network adapter {guid}")))
-            .Sequence()
-        let switchAdapterNames = switchAdapters.Map(x => x.Name)
-        select new OverlaySwitchInfo(overlaySwitch.Id, toHashSet(switchAdapterNames));
 
     private static OvsBridgesInfo CreateBridgesInfo(
         Seq<Bridge> ovsBridges,
