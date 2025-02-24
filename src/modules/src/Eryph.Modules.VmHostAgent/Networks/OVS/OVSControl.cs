@@ -109,7 +109,7 @@ public class OVSControl(
         from _1 in RightAsync<Error, Unit>(unit)
         let command = $"--may-exist add-bond \"{bridgeName}\" \"{portName}\""
             + $" {string.Join(" ", interfaces.Map(i => $"\"{i.Name}\""))}"
-            + $" bond_mode={bondMode} other_config:bond-detect-mode=miimon"
+            + $" bond_mode={bondMode}"
             + string.Join("", interfaces.Map(i => $" -- set interface \"{i.Name}\" external_ids:host-iface-id={i.InterfaceId} external_ids:host-iface-conf-name={i.ConfiguredName}"))
         from _2 in RunCommandWithResponse(command, cancellationToken)
         select unit;
