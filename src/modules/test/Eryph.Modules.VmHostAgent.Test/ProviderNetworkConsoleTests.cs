@@ -51,7 +51,7 @@ public class ProviderNetworkConsoleTests
             {
                 new ChangeOp(
                     NetworkChangeOperation.AddBridge,
-                    () => Prelude.unitAff, null, null)
+                    () => unitAff, null, null, false)
             }.ToSeq()
         };
 
@@ -96,14 +96,14 @@ public class ProviderNetworkConsoleTests
                     {
                         rolledBack = true;
                         return unitAff;
-                    }),
+                    },
+                    false),
                 new ChangeOp(
                     NetworkChangeOperation.RebuildOverLaySwitch,
-                    () => unitAff, null, null),
-
+                    () => unitAff, null, null, false),
                 new ChangeOp(
                     NetworkChangeOperation.AddNetNat,
-                    () => FailAff<Unit>(Errors.TimedOut), null, null)
+                    () => FailAff<Unit>(Errors.TimedOut), null, null, false)
             }.ToSeq()
         };
 
@@ -142,7 +142,7 @@ public class ProviderNetworkConsoleTests
             {
                 new ChangeOp(
                     NetworkChangeOperation.AddBridge,
-                    () => unitAff, null, null)
+                    () => unitAff, null, null, false)
             }.ToSeq()
         };
 
@@ -151,7 +151,7 @@ public class ProviderNetworkConsoleTests
 
 
         var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-            .Bind(c => applyChangesInConsole(c, changes, false, true))
+            .Bind(c => applyChangesInConsole(c, changes, _ => SuccessAff(hostState), false, true))
             .Run(_runtime);
 
         result.Match(
@@ -170,6 +170,7 @@ public class ProviderNetworkConsoleTests
     [Fact]
     public async Task Apply_new_config_with_rollback()
     {
+        var hostState = CreateHostState();
         AddMocks();
 
         var rolledBack = false;
@@ -184,21 +185,21 @@ public class ProviderNetworkConsoleTests
                     {
                         rolledBack = true;
                         return unitAff;
-                    }),
+                    },
+                    false),
                 new ChangeOp(
                     NetworkChangeOperation.RebuildOverLaySwitch,
-                    () => unitAff, null, null),
-
+                    () => unitAff, null, null, false),
                 new ChangeOp(
                     NetworkChangeOperation.AddNetNat,
-                    () => FailAff<Unit>(Errors.TimedOut), null, null)
+                    () => FailAff<Unit>(Errors.TimedOut), null, null, false)
             }.ToSeq()
         };
 
         _runtime.Env.Console.WriteKeyLine("a");
 
         var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-                .Bind(c => applyChangesInConsole(c, changes, false, true))
+                .Bind(c => applyChangesInConsole(c, changes, _ => SuccessAff(hostState), false, true))
                 .Run(_runtime);
         res.Match(
             Fail: l =>
@@ -213,10 +214,10 @@ public class ProviderNetworkConsoleTests
         _testOutput.WriteLine($"Generated Console output of {nameof(Apply_new_config_with_rollback)}:");
         generatedText.Iter(_testOutput.WriteLine);
 
-        generatedText.Should().HaveCount(32);
+        generatedText.Should().HaveCount(31);
         generatedText[2].Should().Be("- Add bridge '{0}'");
         generatedText[16].Should().Be("rollback of: Add bridge '{0}'");
-        generatedText[27].Should().Contain("running: Update mapping of bridges to network providers");
+        generatedText[26].Should().Contain("running: Update mapping of bridges to network providers");
     }
 
 

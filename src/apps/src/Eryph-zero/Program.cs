@@ -1025,27 +1025,29 @@ internal static class Program
 
         return await RunAsAdmin(
             from configString in ReadInput(inFile)
-            from _ in ensureDriver(ovsRunDir, true, false)
+            from _1 in ensureDriver(ovsRunDir, true, false)
             from _2 in isAgentRunning()
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
-            from hostState in getHostStateWithProgress()
-            from syncResult in noCurrentConfigCheck switch
+            from isCurrentConfigValid in noCurrentConfigCheck switch
             {
-                true => SuccessAff((false, hostState)),
-                false =>
-                    from currentConfigChanges in generateChanges(hostState, currentConfig)
-                    from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
-                    from s in r.RefreshState
-                        ? getHostStateWithProgress()
-                        : SuccessAff(hostState)
-                    select (r.IsValid, HostState: s)
+                true => SuccessAff(false),
+                false => 
+                    // Fetch the host state with fallback adapter names as we want
+                    // to apply the current configuration
+                    from hostState in getHostStateWithProgress(true)
+                         from currentConfigChanges in generateChanges(hostState, currentConfig)
+                         from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
+                         select r.IsValid,
             }
-            from newConfigChanges in generateChanges(syncResult.HostState, newConfig)
+            // Fetch the host state without fallback adapter names as we want
+            // to apply a new configuration which should only contain valid
+            // adapter names.
+            from hostState in getHostStateWithProgress(false)
+            from newConfigChanges in generateChanges(hostState, newConfig)
             from validateImpact in validateNetworkImpact(newConfig)
-            from __ in applyChangesInConsole(currentConfig, newConfigChanges,
-                nonInteractive, syncResult.IsValid)
-
+            from _3 in applyChangesInConsole(currentConfig, newConfigChanges,
+                getHostStateWithProgress, nonInteractive, isCurrentConfigValid)
             from save in saveConfigurationYaml(configString)
             from sync in syncNetworks()
             from m in writeLine("New Network configuration was imported.")
@@ -1061,13 +1063,15 @@ internal static class Program
         var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 
         return await RunAsAdmin(
-            from _ in writeLine("Going to sync network state with the current configuration...")
-            from __ in ensureDriver(ovsRunDir, true, false)
+            from _1 in writeLine("Going to sync network state with the current configuration...")
+            from _2 in ensureDriver(ovsRunDir, true, false)
+            from _3 in isAgentRunning()
             from currentConfig in getCurrentConfiguration()
-            from hostState in getHostStateWithProgress()
+            from hostState in getHostStateWithProgress(true)
             from pendingChanges in generateChanges(hostState, currentConfig)
-            from ___ in applyChangesInConsole(currentConfig, pendingChanges, nonInteractive, false)
-            from ____ in syncNetworks()
+            from _4 in applyChangesInConsole(currentConfig, pendingChanges,
+                getHostStateWithProgress, nonInteractive, false)
+            from _5 in syncNetworks()
             select unit,
             new ConsoleRuntime(nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource()));
     }

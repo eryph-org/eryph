@@ -4,11 +4,31 @@ using LanguageExt.Effects.Traits;
 
 namespace Eryph.Modules.VmHostAgent.Networks;
 
+/// <summary>
+/// Holds a network change operation.
+/// </summary>
+/// <param name="Operation">
+/// The type of operation
+/// </param>
+/// <param name="Change">
+/// The function which applies the change.
+/// </param>
+/// <param name="CanRollBack">
+/// Indicates whether the change can be rolled back.
+/// </param>
+/// <param name="Rollback">
+/// The function which rolls back the change.
+/// </param>
+/// <param name="Force">
+/// Indicates that the change should be applied automatically
+/// even if the operation is considered unsafe.
+/// </param>
 public record NetworkChangeOperation<RT>(
     NetworkChangeOperation Operation, 
     Func<Aff<RT, Unit>> Change,
     Func<Seq<NetworkChangeOperation>,bool>? CanRollBack,
     Func<Aff<RT, Unit>>? Rollback,
+    bool Force,
     params object[] Args)
     where RT : struct, HasCancel<RT>
 {
