@@ -14,10 +14,10 @@ public class StreamString
         this._ioStream = ioStream;
     }
 
-    public async Task<string> ReadString(CancellationToken cancellationToken)
+    public async Task<string?> ReadString(CancellationToken cancellationToken)
     {
         using var sr = new StreamReader(_ioStream, leaveOpen: true);
-        return await sr.ReadLineAsync().WaitAsync(cancellationToken);
+        return await sr.ReadLineAsync(cancellationToken);
     }
 
     internal Task WriteResponse(SyncServiceResponse response, CancellationToken cancellationToken)

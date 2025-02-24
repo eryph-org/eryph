@@ -1036,9 +1036,9 @@ internal static class Program
                     // Fetch the host state with fallback adapter names as we want
                     // to apply the current configuration
                     from hostState in getHostStateWithProgress(true)
-                         from currentConfigChanges in generateChanges(hostState, currentConfig)
-                         from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
-                         select r.IsValid,
+                    from currentConfigChanges in generateChanges(hostState, currentConfig)
+                    from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
+                    select r.IsValid,
             }
             // Fetch the host state without fallback adapter names as we want
             // to apply a new configuration which should only contain valid
@@ -1052,7 +1052,8 @@ internal static class Program
             from sync in syncNetworks()
             from m in writeLine("New Network configuration was imported.")
             select unit,
-            new ConsoleRuntime(nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource()));
+            new ConsoleRuntime(new ConsoleRuntimeEnv(
+                nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
     }
 
     private static async Task<int> SyncNetworkConfig(bool nonInteractive)
@@ -1073,7 +1074,8 @@ internal static class Program
                 getHostStateWithProgress, nonInteractive, false)
             from _5 in syncNetworks()
             select unit,
-            new ConsoleRuntime(nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource()));
+            new ConsoleRuntime(new ConsoleRuntimeEnv(
+                nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
     }
 
     private static Aff<string> ReadInput(FileSystemInfo? inFile) => AffMaybe(async () =>
