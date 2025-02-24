@@ -34,7 +34,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     }
 
     public Aff<RT, Unit> CreateOverlaySwitch(Seq<string> adapters) =>
-        from _1 in LogTrace("Entering {Method}", nameof(CreateOverlaySwitch))
+        from _1 in LogMethodTrace(nameof(CreateOverlaySwitch))
         from _2 in AddOperation(
             () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
                   from _ in hostCommands.CreateOverlaySwitch(adapters)
@@ -51,7 +51,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<TypedPsObject<VMNetworkAdapter>> overlayVMAdapters,
         OvsBridgesInfo ovsBridges,
         Seq<string> newOverlayAdapters) =>
-        from _1 in LogTrace("Entering {Method}", nameof(RebuildOverlaySwitch))
+        from _1 in LogMethodTrace(nameof(RebuildOverlaySwitch))
         from _2 in overlayVMAdapters.Match(
             Empty: () => unitAff,
             Seq: a => from _1 in LogDebug("Found adapters on overlay switch. Adding disconnect and reconnect operations.")
@@ -122,7 +122,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     public Aff<RT, OvsBridgesInfo> RemoveOverlaySwitch(
         Seq<TypedPsObject<VMNetworkAdapter>> overlayVMAdapters,
         OvsBridgesInfo currentBridges) =>
-        from _1 in LogTrace("Entering {Method}", nameof(RemoveOverlaySwitch))
+        from _1 in LogMethodTrace(nameof(RemoveOverlaySwitch))
         from _2 in overlayVMAdapters.Match(
             Empty: () => unitAff,
             Seq: a => from _1 in LogDebug("Found adapters on overlay switch. Adding disconnect operations.")
@@ -148,7 +148,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     public Aff<RT, Unit> EnableSwitchExtension(
         Guid switchId,
         string switchName) =>
-        from _1 in LogTrace("Entering {Method}", nameof(EnableSwitchExtension))
+        from _1 in LogMethodTrace(nameof(EnableSwitchExtension))
         from _2 in AddOperation(
                 () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
                       from _ in hostCommands.EnableSwitchExtension(switchId)
@@ -161,7 +161,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     public Aff<RT, Unit> DisableSwitchExtension(
         Guid switchId,
         string switchName) =>
-        from _1 in LogTrace("Entering {Method}", nameof(DisableSwitchExtension))
+        from _1 in LogMethodTrace(nameof(DisableSwitchExtension))
         from _2 in AddOperation(
                 () => from hostCommands in default(RT).HostNetworkCommands.ToAff()
                       from _ in hostCommands.DisableSwitchExtension(switchId)
@@ -174,7 +174,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     public Aff<RT, OvsBridgesInfo> RemoveUnusedBridges(
         OvsBridgesInfo ovsBridges,
         Seq<NewBridge> expectedBridges) =>
-        from _1 in LogTrace("Entering {Method}", nameof(RemoveUnusedBridges))
+        from _1 in LogMethodTrace(nameof(RemoveUnusedBridges))
         let newBridgeNames = toHashSet(expectedBridges.Map(b => b.BridgeName))
         let unusedBridges = ovsBridges.Bridges.Values
             .Filter(b => b.Name != "br-int")
@@ -202,7 +202,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             bridgeName)
         select unit;
 
-    private (Option<int> VlanTag, Option<string> VlanMode) GetBridgePortSettings(
+    private static (Option<int> VlanTag, Option<string> VlanMode) GetBridgePortSettings(
         Option<NetworkProviderBridgeOptions> options) =>
         (
             options.Bind(o => Optional(o.BridgeVlan)),
@@ -218,7 +218,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     public Aff<RT, HashSet<string>> AddMissingBridges(
         OvsBridgesInfo ovsBridges,
         Seq<NewBridge> expectedBridges) =>
-        from _1 in LogTrace("Entering {Method}", nameof(AddMissingBridges))
+        from _1 in LogMethodTrace(nameof(AddMissingBridges))
         let missingBridges = expectedBridges
             .Filter(b => !ovsBridges.Bridges.Find(b.BridgeName).IsSome)
         from _2 in missingBridges
@@ -258,7 +258,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     public Aff<RT, Seq<NetNat>> RemoveInvalidNats(
         Seq<NetNat> netNats,
         Seq<NewBridge> expectedBridges) =>
-        from _1 in LogTrace("Entering {Method}", nameof(RemoveInvalidNats))
+        from _1 in LogMethodTrace(nameof(RemoveInvalidNats))
         from removedNats in netNats.Filter(n => n.Name.StartsWith("eryph_"))
             .Map(n => RemoveInvalidNat(n, expectedBridges))
             .SequenceSerial()
@@ -333,7 +333,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<NewBridge> expectedBridges,
         HostAdaptersInfo adaptersInfo,
         OvsBridgesInfo ovsBridges) =>
-        from _1 in LogTrace("Entering {Method}", nameof(RemoveInvalidAdapterPortsFromBridges))
+        from _1 in LogMethodTrace(nameof(RemoveInvalidAdapterPortsFromBridges))
         from changedBridges in expectedBridges
             .Map(newBridge => from ovsBridge in ovsBridges.Bridges.Find(newBridge.BridgeName)
                               select (NewBridge: newBridge, OvsBridge: ovsBridge))
@@ -356,9 +356,6 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             Empty: () => SuccessEff((true, false)),
             Head: port => IsAdapterPortValid(expectedBridge, port, adaptersInfo),
             Tail: _ => SuccessEff((false, false)))
-        let physicalAdapterNames = adaptersInfo.Adapters.Values.ToSeq()
-            .Filter(a => a.IsPhysical)
-            .Map(a => a.Name)
         from result in portCheckResult.IsValid switch
         {
             true => SuccessAff(ovsBridge),
@@ -369,7 +366,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         }
         select result;
 
-    private Eff<RT, (bool IsValid, bool AnyAdapterRenamed)> IsAdapterPortValid(
+    private static Eff<RT, (bool IsValid, bool AnyAdapterRenamed)> IsAdapterPortValid(
         NewBridge expectedBridge,
         OvsBridgePortInfo port,
         HostAdaptersInfo adaptersInfo) =>
@@ -404,7 +401,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     public Aff<RT, Unit> ConfigureNatAdapters(
         Seq<NewBridge> expectedBridges,
         HashSet<string> createdBridges) =>
-        from _1 in LogTrace("Entering {Method}", nameof(ConfigureNatAdapters))
+        from _1 in LogMethodTrace(nameof(ConfigureNatAdapters))
         from _2 in expectedBridges
             .Filter(newBridge => newBridge.ProviderType is NetworkProviderType.NatOverlay)
             .Map(newBridge => ConfigureNatAdapter(newBridge, createdBridges))
@@ -462,7 +459,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<NewBridge> expectedBridges,
         HostAdaptersInfo hostAdaptersInfo,
         OvsBridgesInfo ovsBridges) =>
-        from _1 in LogTrace("Entering {Method}", nameof(RemoveBridgesWithMissingBridgeAdapter))
+        from _1 in LogMethodTrace(nameof(RemoveBridgesWithMissingBridgeAdapter))
         let bridgesToRemove = expectedBridges
             .Filter(expectedBridge => ovsBridges.Bridges.Find(expectedBridge.BridgeName).IsSome)
             .Filter(expectedBridge => hostAdaptersInfo.Adapters
@@ -492,7 +489,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<NewBridge> expectedBridges,
         HashSet<string> createdBridges,
         OvsBridgesInfo ovsBridges) =>
-        from _1 in LogTrace("Entering {Method}", nameof(UpdateBridgePorts))
+        from _1 in LogMethodTrace(nameof(UpdateBridgePorts))
         from _2 in expectedBridges
             .Filter(expectedBridge => !createdBridges.Contains(expectedBridge.BridgeName))
             .Map(expectedBridge => UpdateBridgePort(expectedBridge, ovsBridges))
@@ -535,7 +532,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<NewBridge> expectedBridges,
         OvsBridgesInfo ovsBridges,
         HostAdaptersInfo hostAdaptersInfo) =>
-        from _1 in LogTrace("Entering {Method}", nameof(ConfigureOverlayAdapterPorts))
+        from _1 in LogMethodTrace(nameof(ConfigureOverlayAdapterPorts))
         from _2 in expectedBridges
             .Filter(expectedBridge => expectedBridge.ProviderType is NetworkProviderType.Overlay)
             .Filter(expectedBridge => expectedBridge.Adapters.Count > 0)
@@ -581,7 +578,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 Tail: (h, t) => AddBondedOverlayAdapterPort(expectedBridge, expectedPortName, h.Cons(t), anyAdapterRenamed))
         select unit;
 
-    private Eff<HostAdapterInfo> FindHostAdapter(
+    private static Eff<HostAdapterInfo> FindHostAdapter(
         HostAdaptersInfo adaptersInfo,
         string adapterName,
         string bridgeName) =>
@@ -692,7 +689,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
 
     public Aff<RT, Unit> UpdateBridgeMappings(
         Seq<NewBridge> expectedBridges) =>
-        from _1 in LogTrace("Entering {Method}", nameof(UpdateBridgeMappings))
+        from _1 in LogMethodTrace(nameof(UpdateBridgeMappings))
         from ovsTable in timeout(
             TimeSpan.FromSeconds(30),
             from ovs in default(RT).OVS.ToAff()
@@ -779,9 +776,13 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         })
         select unit;
 
-    private Aff<RT, Unit> LogDebug(string message, params object?[] args) =>
+    private static Aff<RT, Unit> LogDebug(string message, params object?[] args) =>
         Logger<RT>.logDebug<NetworkChangeOperationBuilder<RT>>(message, args);
 
-    private Eff<RT, Unit> LogTrace(string message, params object?[] args) =>
+    private static Eff<RT, Unit> LogTrace(string message, params object?[] args) =>
         Logger<RT>.logTrace<NetworkChangeOperationBuilder<RT>>(message, args);
+
+    private static Eff<RT, Unit> LogMethodTrace(string methodName) =>
+        Logger<RT>.logTrace<NetworkChangeOperationBuilder<RT>>(
+            "Entering {Method}", methodName);
 }
