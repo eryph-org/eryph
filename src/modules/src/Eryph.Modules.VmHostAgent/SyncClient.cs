@@ -9,75 +9,69 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.VmHostAgent;
 
 public class SyncClient : ISyncClient
 {
-    public Aff<Unit> SendSyncCommand(string command, CancellationToken cancellationToken)
-    {
-        return SendSyncCommandInternal<object>(command, null, cancellationToken)
-            .ToAsync().Map(_ => Unit.Default).ToAff(l => l);
+    public Aff<Unit> SendSyncCommand(
+        string command,
+        CancellationToken cancellationToken) =>
+        from _ in SendSyncCommandInternal<object>(command, null, cancellationToken)
+        select unit;
 
-    }
+    public Aff<bool> CheckRunning(CancellationToken cancellationToken) =>
+        from response in SendSyncCommandInternal<bool>("STATUS", null, cancellationToken)
+        from result in response.ToAff("Status result expected")
+        select result;
 
-    public Aff<bool> CheckRunning(CancellationToken cancellationToken)
-    {
-        return SendSyncCommandInternal<bool>("STATUS", null, cancellationToken)
-            .ToAsync()
-            .Bind(o => o.ToEitherAsync(Error.New("Status response expected")))
-            .ToAff(l => l);
+    public Aff<string[]> ValidateChanges(
+        NetworkProvider[] networkProviders,
+        CancellationToken cancellationToken) =>
+        from response in SendSyncCommandInternal<string[]>("VALIDATE_CHANGES", networkProviders, cancellationToken)
+        from result in response.ToAff(Error.New("Validation result expected"))
+        select result;
 
-    }
-
-    public Aff<string[]> ValidateChanges(NetworkProvider[] networkProviders, CancellationToken cancellationToken)
-    {
-        return SendSyncCommandInternal<string[]>("VALIDATE_CHANGES", networkProviders, cancellationToken)
-            .ToAsync()
-            .Bind(o => o.ToEitherAsync(Error.New("Change response expected")))
-            .ToAff(l => l);
-
-    }
-
-
-    private async Task<Either<Error, Option<TResponse>>> SendSyncCommandInternal<TResponse>(string command, [CanBeNull] object data, CancellationToken cancellationToken)
-    {
-        return await Prelude.TryAsync(async () =>
+    private Aff<Option<TResponse>> SendSyncCommandInternal<TResponse>(
+        string command,
+        object? data,
+        CancellationToken cancellationToken) =>
+        from responseJson in AffMaybe<string>(async () =>
         {
-            var pipeClient =
-                new NamedPipeClientStream(".", "eryph_hostagent_sync",
-                    PipeDirection.InOut, PipeOptions.Asynchronous,
-                    TokenImpersonationLevel.Impersonation);
+            await using var pipeClient = new NamedPipeClientStream(".", "eryph_hostagent_sync",
+                PipeDirection.InOut, PipeOptions.Asynchronous,
+                TokenImpersonationLevel.Impersonation);
 
             await pipeClient.ConnectAsync(cancellationToken);
 
-            var ss = new StreamString(pipeClient);
+            var stream = new StreamString(pipeClient);
 
             var commandObject = new SyncServiceCommand
             {
-                CommandName = command
+                CommandName = command,
+                Data = data is not null
+                    ? JsonSerializer.SerializeToElement(data)
+                    : null
             };
 
-            if (data != null) commandObject.Data = JsonSerializer.SerializeToElement(data);
+            await stream.WriteCommand(commandObject, cancellationToken);
 
-            await ss.WriteCommand(commandObject, cancellationToken);
-
-            var response = await ss.ReadString(cancellationToken);
-
-            var responseObject = new SyncServiceResponse { Response = "FAILED" };
-            if (response != null) responseObject = JsonSerializer.Deserialize<SyncServiceResponse>(response);
-
-            return responseObject?.Response switch
-            {
-                "INVALID" => throw new InvalidOperationException($"Host agent command {command} is invalid"),
-                "FAILED" => throw new InvalidOperationException($"Host agent command {command} failed. Error: '{responseObject.Error??"unknown"}'"),
-                "PERMISSION_DENIED" => throw new UnauthorizedAccessException(),
-                _ => !(responseObject?.Data).HasValue
-                    ? Option<TResponse>.None
-                    : Option<TResponse>.Some((responseObject!.Data.Value).Deserialize<TResponse>())
-            };
-        }).ToEither( ex => Error.New(ex.Message));
-
-
-    }
-
+            return await stream.ReadString(cancellationToken);
+        })
+        from _1 in guard(notEmpty(responseJson),
+            Error.New("The response of the sync service is empty."))
+        from response in Eff(() => JsonSerializer.Deserialize<SyncServiceResponse>(responseJson))
+            .MapFail(e => Error.New("The response of the sync service is invalid.", e))
+        from _2 in guardnot(response.Response == "INVALID",
+            Error.New($"The host agent command '{command}' is invalid."))
+        from _3 in guardnot(response.Response == "FAILED",
+            Error.New($"The host agent command '{command}' failed. Error: '{(notEmpty(response.Error) ? response.Error : "unknown")}'."))
+        from _4 in guardnot(response.Response == "PERMISSION_DENIED",
+            Error.New($"No permission to access the sync service. Make sure you are elevated."))
+        from responseData in Optional(response.Data)
+            .Map(d => Eff(() => d.Deserialize<TResponse>())
+                .MapFail(e => Error.New("The data of the sync service response is invalid.")))
+            .Sequence()
+        select responseData;
 }

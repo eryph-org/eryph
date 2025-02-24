@@ -29,7 +29,7 @@ public static class ProviderNetworkUpdate<RT>
 {
     public static Aff<RT, Unit> isAgentRunning() =>
         timeout(
-            TimeSpan.FromSeconds(2),
+            TimeSpan.FromSeconds(10),
             from syncClient in default(RT).AgentSync
             from ct in cancelToken<RT>()
             from isRunning in syncClient.CheckRunning(ct)

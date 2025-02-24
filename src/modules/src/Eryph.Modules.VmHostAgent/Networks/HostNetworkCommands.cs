@@ -31,7 +31,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                 s.Value.NetAdapterInterfaceGuid = s.GetNetAdapterInterfaceGuid();
                 return s.Value;
             })).Sequence()
-        select switches;
+        select switches.Strict();
 
     public Aff<RT, Option<VMSystemSwitchExtension>> GetInstalledSwitchExtension() =>
         from psEngine in default(RT).Powershell
@@ -48,7 +48,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             .AddCommand("Get-VMSwitchExtension")
             .AddParameter("Name", EryphConstants.SwitchExtensionName)
         from vmSwitchExtensions in psEngine.GetObjectValuesAsync<VMSwitchExtension>(command).ToAff()
-        select vmSwitchExtensions;
+        select vmSwitchExtensions.Strict();
 
     public Aff<RT, Unit> DisableSwitchExtension(Guid switchId) =>
         from psEngine in default(RT).Powershell
@@ -76,21 +76,14 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-NetAdapter")
         from netAdapters in psEngine.GetObjectValuesAsync<HostNetworkAdapter>(command).ToAff()
-        select netAdapters;
-
-    public Aff<RT, Seq<string>> GetAdapterNames() =>
-        from psEngine in default(RT).Powershell.ToAff()
-        let command = PsCommandBuilder.Create()
-            .AddCommand("Get-NetAdapter")
-        from netAdapters in psEngine.GetObjectValuesAsync<HostNetworkAdapter>(command).ToAff()
-        select netAdapters.Map(a => a.Name);
+        select netAdapters.Strict();
 
     public Aff<RT, Seq<NetNat>> GetNetNat() =>
         from psEngine in default(RT).Powershell.ToAff()
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-NetNat")
         from netNat in psEngine.GetObjectValuesAsync<NetNat>(command).ToAff()
-        select netNat;
+        select netNat.Strict();
 
     public Aff<RT, Unit> EnableBridgeAdapter(string adapterName) =>
         from psEngine in default(RT).Powershell
@@ -241,7 +234,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             .AddParameter("AddressFamily", "IPv4")
             .AddParameter("ErrorAction", "SilentlyContinue")
         from ipAddresses in psEngine.GetObjectValuesAsync<NetIpAddress>(command).ToAff()
-        select ipAddresses;
+        select ipAddresses.Strict();
 
     public Aff<RT, Unit> WaitForBridgeAdapter(string bridgeName)
     {
