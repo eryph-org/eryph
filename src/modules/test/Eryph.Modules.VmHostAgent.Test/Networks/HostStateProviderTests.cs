@@ -142,7 +142,7 @@ public class HostStateProviderTests
                     ("type", OVSValue<string>.New("")),
                     ("external_ids", OVSMap<string>.New(Map(
                         ("host-iface-id", pif1Id.ToString()),
-                        ("host-iface-id-conf-name", "pif-1-conf-name")
+                        ("host-iface-conf-name", "pif-1-conf-name")
                     ))))),
                 OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brPifPort2Interface2Id)),
@@ -240,7 +240,7 @@ public class HostStateProviderTests
                 i.Type.Should().Be("");
                 i.IsExternal.Should().BeTrue();
                 i.HostInterfaceId.Should().Be(pif1Id);
-                i.HostInterfaceConfiguredName.Should().Be("pif-1-config-name");
+                i.HostInterfaceConfiguredName.Should().BeSome().Which.Should().Be("pif-1-conf-name");
             },
             i =>
             {
@@ -248,7 +248,7 @@ public class HostStateProviderTests
                 i.Type.Should().Be("");
                 i.IsExternal.Should().BeTrue();
                 i.HostInterfaceId.Should().Be(pif2Id);
-                i.HostInterfaceConfiguredName.Should().Be("pif-2-config-name");
+                i.HostInterfaceConfiguredName.Should().BeSome().Which.Should().Be("pif-2-conf-name");
             });
     }
 
@@ -333,13 +333,13 @@ public class HostStateProviderTests
         var pif1Info = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1").WhoseValue;
         pif1Info.InterfaceId.Should().Be(pif1Id);
         pif1Info.Name.Should().Be("pif-1");
-        pif1Info.ConfiguredName.Should().Be("pif-1-old");
+        pif1Info.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
         pif1Info.IsPhysical.Should().BeTrue();
 
         var pif1OldInfo = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1-old").WhoseValue;
         pif1OldInfo.InterfaceId.Should().Be(pif1Id);
         pif1OldInfo.Name.Should().Be("pif-1");
-        pif1OldInfo.ConfiguredName.Should().Be("pif-1-old");
+        pif1OldInfo.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
         pif1OldInfo.IsPhysical.Should().BeTrue();
 
         var pif2Info = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-2").WhoseValue;
@@ -394,7 +394,6 @@ public class HostStateProviderTests
                         ("host-iface-id", pif1Id.ToString()),
                         ("host-iface-conf-name", "pif-1-old")
                     ))))),
-                // TODO Can there be multiple interface records with the same name?
                 OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(Guid.NewGuid())),
                     ("name", OVSValue<string>.New("pif-1")),
@@ -409,7 +408,7 @@ public class HostStateProviderTests
 
         var hostState = result.Should().BeSuccess().Subject;
 
-        hostState.HostAdapters.Adapters.Should().HaveCount(4);
+        hostState.HostAdapters.Adapters.Should().HaveCount(2);
 
         var pif1Info = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1").WhoseValue;
         pif1Info.InterfaceId.Should().Be(pif1Id);

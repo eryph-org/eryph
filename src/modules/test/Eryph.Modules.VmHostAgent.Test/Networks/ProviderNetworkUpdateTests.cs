@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,6 +25,8 @@ public class ProviderNetworkUpdateTests
     private readonly Mock<IHostNetworkCommands<TestRuntime>> _hostNetworkCommandsMock = new();
     private readonly Mock<ISyncClient> _syncClientMock = new();
     private readonly TestRuntime _runtime;
+
+    private static readonly Guid OverlaySwitchId = Guid.NewGuid();
 
     public ProviderNetworkUpdateTests()
     {
@@ -86,6 +86,50 @@ public class ProviderNetworkUpdateTests
             operation => operation.Operation.Should().Be(NetworkChangeOperation.RebuildOverLaySwitch),
             operation => operation.Operation.Should().Be(NetworkChangeOperation.StartOVN),
             operation => operation.Operation.Should().Be(NetworkChangeOperation.AddBridge),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
+    }
+
+    [Fact]
+    public async Task GenerateChanges_EryphNetNatWithIncorrectIpRange_GeneratesRebuildOfNetNat()
+    {
+        var providersConfig = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "test-provider",
+                    Type = NetworkProviderType.NatOverlay,
+                    BridgeName = "br-test",
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = "default",
+                            Gateway = "10.249.248.1",
+                            Network = "10.249.248.0/24",
+                        }
+                    ]
+                },
+            ],
+        };
+
+        var hostState = CreateStateWithOverlaySwitch() with
+        {
+            NetNat = Seq1(new NetNat
+            {
+                Name = "eryph_default_default",
+                InternalIPInterfaceAddressPrefix = "10.249.248.0/22",
+            }),
+        };
+
+        var result = await generateChanges(hostState, providersConfig).Run(_runtime);
+
+        result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.AddBridge),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.RemoveNetNat),
             operation => operation.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
             operation => operation.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
             operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
@@ -199,4 +243,22 @@ public class ProviderNetworkUpdateTests
         result.Should().BeFail().Which.Message
             .Should().Be($"The IP range '{eryphNetwork}' of the provider 'test-provider' overlaps the IP range '{otherNetwork}' of the NAT 'other-nat' which is not managed by eryph.");
     }
+
+    private static HostState CreateStateWithOverlaySwitch() =>
+        new HostState(
+            Seq1(new VMSwitchExtension
+            {
+                Id = Guid.NewGuid().ToString(),
+                Enabled = true,
+                SwitchId = OverlaySwitchId,
+                SwitchName = EryphConstants.OverlaySwitchName,
+            }),
+            Seq1(new VMSwitch
+            {
+                Id = OverlaySwitchId,
+                Name = EryphConstants.OverlaySwitchName,
+            }),
+            new HostAdaptersInfo(HashMap<string, HostAdapterInfo>()),
+            Seq<NetNat>(),
+            new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 }
