@@ -136,6 +136,130 @@ public class ProviderNetworkUpdateTests
     }
 
     [Fact]
+    public async Task GenerateChanges_RenamedPhysicalAdapter_GeneratesRebuildOfBridgeWithNewAdapterName()
+    {
+        var providersConfig = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "test-provider",
+                    Type = NetworkProviderType.Overlay,
+                    BridgeName = "br-test",
+                    Adapters = ["renamed-adapter"],
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = "default",
+                            Gateway = "10.249.248.1",
+                            Network = "10.249.248.0/24",
+                        }
+                    ]
+                },
+            ],
+        };
+
+        var interfaceId = Guid.NewGuid();
+
+        var hostState = CreateStateWithOverlaySwitch() with
+        {
+            VMSwitches = Seq1(new VMSwitch
+            {
+                Id = OverlaySwitchId,
+                Name = EryphConstants.OverlaySwitchName,
+                NetAdapterInterfaceGuid = [interfaceId],
+            }),
+            OvsBridges = new OvsBridgesInfo(HashMap(
+                ("br-test", new OvsBridgeInfo("br-test", HashMap(
+                    ("br-test", new OvsBridgePortInfo("br-test", "br-test", None, None, None,
+                        Seq<OvsBridgeInterfaceInfo>())),
+                    ("test-adapter", new OvsBridgePortInfo("br-test", "test-adapter", None, None, None,
+                        Seq1(new OvsBridgeInterfaceInfo("test-adapter", "", interfaceId, "test-adapter")))))
+                )))),
+            HostAdapters = new HostAdaptersInfo(HashMap(
+                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, "test-adapter", true)),
+                ("test-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, "test-adapter", true)),
+                ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false))
+                )),
+        };
+
+        var result = await generateChanges(hostState, providersConfig).Run(_runtime);
+
+        result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
+            operation =>
+            {
+                operation.Operation.Should().Be(NetworkChangeOperation.RemoveAdapterPort);
+                operation.Args.Should().Equal("test-adapter", "br-test");
+                operation.Force.Should().BeTrue();
+            },
+            operation =>
+            {
+                operation.Operation.Should().Be(NetworkChangeOperation.AddAdapterPort);
+                operation.Args.Should().Equal("renamed-adapter", "br-test");
+                operation.Force.Should().BeTrue();
+            },
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
+    }
+
+    [Fact]
+    public async Task GenerateChanges_RenamedPhysicalAdapterIsAlreadyUsed_GeneratesNoAdapterChanges()
+    {
+        var providersConfig = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "test-provider",
+                    Type = NetworkProviderType.Overlay,
+                    BridgeName = "br-test",
+                    Adapters = ["renamed-adapter"],
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = "default",
+                            Gateway = "10.249.248.1",
+                            Network = "10.249.248.0/24",
+                        }
+                    ]
+                },
+            ],
+        };
+
+        var interfaceId = Guid.NewGuid();
+
+        var hostState = CreateStateWithOverlaySwitch() with
+        {
+            VMSwitches = Seq1(new VMSwitch
+            {
+                Id = OverlaySwitchId,
+                Name = EryphConstants.OverlaySwitchName,
+                NetAdapterInterfaceGuid = [interfaceId],
+            }),
+            OvsBridges = new OvsBridgesInfo(HashMap(
+                ("br-test", new OvsBridgeInfo("br-test", HashMap(
+                    ("br-test", new OvsBridgePortInfo("br-test", "br-test", None, None, None,
+                        Seq<OvsBridgeInterfaceInfo>())),
+                    ("renamed-adapter", new OvsBridgePortInfo("br-test", "renamed-adapter", None, None, None,
+                        Seq1(new OvsBridgeInterfaceInfo("renamed-adapter", "", interfaceId, "test-adapter")))))
+                )))),
+            HostAdapters = new HostAdaptersInfo(HashMap(
+                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, "test-adapter", true)),
+                ("test-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, "test-adapter", true)),
+                ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false))
+                )),
+        };
+
+        var result = await generateChanges(hostState, providersConfig).Run(_runtime);
+
+        result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
+    }
+
+    [Fact]
     public async Task GenerateChanges_HostAdapterIsMissing_ReturnsError()
     {
         var providersConfig = new NetworkProvidersConfiguration

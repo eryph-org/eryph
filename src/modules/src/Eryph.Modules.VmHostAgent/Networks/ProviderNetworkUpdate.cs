@@ -48,8 +48,9 @@ public static class ProviderNetworkUpdate<RT>
         select parsedConfig;
 
     public static bool canBeAutoApplied(NetworkChanges<RT> changes) =>
-       ! changes.Operations.Select(x => x.Operation)
-            .Any(x => ProviderNetworkUpdateConstants.UnsafeChanges.Contains(x));
+        changes.Operations
+            .All(o => !ProviderNetworkUpdateConstants.UnsafeChanges.Contains(o.Operation)
+                      || o.Force);
 
     public static Aff<RT, NetworkChanges<RT>> generateChanges(
         HostState hostState,
@@ -61,18 +62,18 @@ public static class ProviderNetworkUpdate<RT>
         from hostCommands in default(RT).HostNetworkCommands
 
         // generate variables
-        from expectedBridges in PrepareExpectedBridges(newConfig)
+        from expectedBridges in prepareExpectedBridges(newConfig)
 
         // Enable the OVS extension of the overlay switch(es) in case
         // it was disabled somehow. Otherwise, the execution of OVS
         // commands might later fail.
-        from _ in hostState.VMSwitchExtensions
+        from _1 in hostState.VMSwitchExtensions
             .Filter(e => e.SwitchName == EryphConstants.OverlaySwitchName && !e.Enabled)
             .Map(e => changeBuilder.EnableSwitchExtension(e.SwitchId, e.SwitchName))
             .SequenceSerial()
 
         // Disable the OVS extension on all switches which are not overlay switch(es).
-        from __ in hostState.VMSwitchExtensions
+        from _2 in hostState.VMSwitchExtensions
             .Filter(e => e.SwitchName != EryphConstants.OverlaySwitchName && e.Enabled)
             .Map(e => changeBuilder.DisableSwitchExtension(e.SwitchId, e.SwitchName))
             .SequenceSerial()
@@ -97,7 +98,7 @@ public static class ProviderNetworkUpdate<RT>
         from createdBridges in changeBuilder.AddMissingBridges(
             ovsBridges3, expectedBridges)
 
-        from updateBridgePorts in changeBuilder.UpdateBridgePorts(
+        from _3 in changeBuilder.UpdateBridgePorts(
             expectedBridges, createdBridges, ovsBridges3)
 
         // Remove NATs which are no longer needed or need to be recreated
@@ -111,36 +112,33 @@ public static class ProviderNetworkUpdate<RT>
             expectedBridges, hostState.HostAdapters, ovsBridges3)
 
         // Configure ip settings and nat for nat_overlay adapters
-        from uNatAdapter in changeBuilder.ConfigureNatAdapters(
-            expectedBridges, createdBridges)
+        from _4 in changeBuilder.ConfigureNatAdapters(expectedBridges, createdBridges)
 
         // Create ports for adapters in overlay bridges
-        from uCreatePorts in changeBuilder.ConfigureOverlayAdapterPorts(
+        from _5 in changeBuilder.ConfigureOverlayAdapterPorts(
             expectedBridges, ovsBridges4, hostState.HostAdapters)
 
-        from _3 in changeBuilder.AddMissingNats(
-            expectedBridges, validNats)
+        from _6 in changeBuilder.AddMissingNats(expectedBridges, validNats)
 
         // Update OVS bridge mapping to new network names and bridges
-        from uBrideMappings in changeBuilder.UpdateBridgeMappings(
-            expectedBridges)
+        from _7 in changeBuilder.UpdateBridgeMappings(expectedBridges)
 
         select changeBuilder.Build();
 
-    private static Eff<Seq<NewBridge>> PrepareExpectedBridges(
+    private static Eff<Seq<NewBridge>> prepareExpectedBridges(
         NetworkProvidersConfiguration providersConfig) =>
         providersConfig.NetworkProviders.ToSeq()
             .Filter(np => np.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay)
-            .Map(PrepareNewBridgeInfo)
+            .Map(prepareNewBridgeInfo)
             .Sequence();
 
-    private static Eff<NewBridge> PrepareNewBridgeInfo(
+    private static Eff<NewBridge> prepareNewBridgeInfo(
         NetworkProvider providerConfig) =>
         from bridgeName in Optional(providerConfig.BridgeName)
             .Filter(notEmpty)
             .ToEff(Error.New($"The network provider {providerConfig.Name} has no bridge name."))
         from nat in providerConfig.Type is NetworkProviderType.NatOverlay
-            ? PrepareNewBridgeNatInfo(providerConfig).Map(Some)
+            ? prepareNewBridgeNatInfo(providerConfig).Map(Some)
             : SuccessEff(Option<NewBridgeNat>.None)
         select new NewBridge(
             bridgeName, 
@@ -150,7 +148,7 @@ public static class ProviderNetworkUpdate<RT>
             providerConfig.Adapters.ToSeq(),
             Optional(providerConfig.BridgeOptions));
 
-    private static Eff<NewBridgeNat> PrepareNewBridgeNatInfo(
+    private static Eff<NewBridgeNat> prepareNewBridgeNatInfo(
         NetworkProvider providerConfig) =>
         from subnet in providerConfig.Subnets.ToSeq()
             .Find(s => s.Name == "default")
@@ -159,9 +157,9 @@ public static class ProviderNetworkUpdate<RT>
             .ToEff(Error.New($"The NAT network provider {providerConfig.Name} has an invalid gateway IP address."))
         from network in parseIPNetwork2(subnet.Network)
             .ToEff(Error.New($"The NAT network provider {providerConfig.Name} has an invalid network."))
-        select new NewBridgeNat(GetNetNatName(providerConfig.Name), gateway, network);
+        select new NewBridgeNat(getNetNatName(providerConfig.Name), gateway, network);
 
-    private static string GetNetNatName(string providerName)
+    private static string getNetNatName(string providerName)
         // The pattern for the NetNat name should be "eryph_{providerName}_{subnetName}".
         // At the moment, we only support a single provider subnet which must be named
         // 'default'. Hence, we hardcode the subnet part for now.
