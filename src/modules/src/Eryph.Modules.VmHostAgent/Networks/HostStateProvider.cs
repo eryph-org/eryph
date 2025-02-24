@@ -152,14 +152,4 @@ public static class HostStateProvider<RT>
             hostAdapter.InterfaceGuid,
             configuredAdapters.Find(hostAdapter.InterfaceGuid),
             !hostAdapter.Virtual);
-
-    private static Option<HostAdapterInfo> CreateFallbackHostAdapterInfo(
-        HostNetworkAdapter hostAdapter,
-        HashMap<Guid, string> configuredAdapters) =>
-        from configuredAdapter in configuredAdapters.Find(hostAdapter.InterfaceGuid)
-        select new HostAdapterInfo(
-            hostAdapter.Name,
-            hostAdapter.InterfaceGuid,
-            configuredAdapter,
-            !hostAdapter.Virtual);
 }

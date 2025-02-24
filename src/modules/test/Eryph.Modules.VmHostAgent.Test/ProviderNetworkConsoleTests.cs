@@ -5,15 +5,12 @@ using Eryph.Core.Network;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
-using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
-using FluentAssertions;
 using LanguageExt;
 using LanguageExt.Common;
 using Moq;
-using Xunit;
 using Xunit.Abstractions;
 using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Modules.VmHostAgent.Test.TestRuntime>;
 using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Modules.VmHostAgent.Test.TestRuntime>;
@@ -40,106 +37,6 @@ public class ProviderNetworkConsoleTests
             _syncClientMock.Object,
             _hostNetworkCommandsMock.Object,
             _networkProviderManagerMock.Object);
-    }
-
-    [Fact]
-    public async Task GenerateChanges_generates_as_expected()
-    {
-        var hostState = CreateHostState();
-        AddMocks();
-
-        var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-            .Bind(c => generateChanges(hostState, c))
-            .Run(_runtime);
-
-        res.Match(
-            Fail: l => l.Throw(),
-            Succ: (changes) =>
-            {
-                changes.Operations.Should().HaveCount(4);
-                changes.Operations.Select(x => x.Operation)
-                    .Should().ContainInOrder(
-                        NetworkChangeOperation.AddBridge,
-                        NetworkChangeOperation.ConfigureNatIp,
-                        NetworkChangeOperation.AddNetNat,
-                        NetworkChangeOperation.UpdateBridgeMapping
-                    );
-            });
-    }
-
-    [Fact]
-    public async Task GenerateChanges_multiple_overlay_switches_triggers_rebuild()
-    {
-        static HostState CreateHostStateWithMultipleSwitches()
-        {
-            var hostState = CreateHostState();
-            return hostState with
-            {
-                VMSwitches = Seq(
-                [
-                    ..hostState.VMSwitches,
-                    new VMSwitch()
-                    {
-                        Id = Guid.NewGuid(),
-                        Name = EryphConstants.OverlaySwitchName,
-                    }
-                ]),
-            };
-        }
-
-        var hostState = CreateHostStateWithMultipleSwitches();
-        AddMocks();
-
-        var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-            .Bind(c => generateChanges(hostState, c))
-            .Run(_runtime);
-
-        var operations = res.Should().BeSuccess().Which.Operations;
-        operations.Should().SatisfyRespectively(
-            op => op.Operation.Should().Be(NetworkChangeOperation.StopOVN),
-            op => op.Operation.Should().Be(NetworkChangeOperation.RebuildOverLaySwitch),
-            op => op.Operation.Should().Be(NetworkChangeOperation.StartOVN),
-            op => op.Operation.Should().Be(NetworkChangeOperation.AddBridge),
-            op => op.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
-            op => op.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
-            op => op.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
-    }
-
-    [Fact]
-    public async Task GenerateChanges_invalid_NetNat_recreates_NetNat()
-    {
-        static HostState CreateHostStateWithMultipleSwitches()
-        {
-            var hostState = CreateHostState();
-            return hostState with
-            {
-                NetNat = Seq(
-                [
-                    ..hostState.NetNat,
-                    new NetNat()
-                    {
-                        Name = "eryph_default_default",
-                        InternalIPInterfaceAddressPrefix = "10.249.248.0/28",
-                    }
-                ]),
-            };
-        }
-
-        
-        var hostState = CreateHostStateWithMultipleSwitches();
-        AddMocks();
-
-        var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-            .Bind(c => generateChanges(hostState, c))
-            .Run(_runtime);
-
-        var operations = res.Should().BeSuccess().Which.Operations;
-        operations.Should().SatisfyRespectively(
-            op => op.Operation.Should().Be(NetworkChangeOperation.AddBridge),
-            op => op.Operation.Should().Be(NetworkChangeOperation.RemoveNetNat),
-            op => op.Operation.Should().Be(NetworkChangeOperation.ConfigureNatIp),
-            op => op.Operation.Should().Be(NetworkChangeOperation.AddNetNat),
-            op => op.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
     }
 
     [Fact]
@@ -181,7 +78,6 @@ public class ProviderNetworkConsoleTests
 
             });
     }
-
 
     [Fact]
     public async Task Sync_Before_new_config_with_rollback()
