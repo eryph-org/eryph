@@ -1029,25 +1029,22 @@ internal static class Program
             from _2 in isAgentRunning()
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
-            from isCurrentConfigValid in noCurrentConfigCheck switch
-            {
-                true => SuccessAff(false),
-                false => 
-                    // Fetch the host state with fallback adapter names as we want
-                    // to apply the current configuration
-                    from hostState in getHostStateWithProgress(true)
-                    from currentConfigChanges in generateChanges(hostState, currentConfig)
-                    from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
-                    select r.IsValid,
-            }
-            // Fetch the host state without fallback adapter names as we want
-            // to apply a new configuration which should only contain valid
-            // adapter names.
             from hostState in getHostStateWithProgress(false)
-            from newConfigChanges in generateChanges(hostState, newConfig)
+            from syncResult in noCurrentConfigCheck switch
+            {
+                true => SuccessAff((false, hostState)),
+                false =>
+                    from currentConfigChanges in generateChanges(hostState, currentConfig, true)
+                    from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
+                    from s in r.RefreshState
+                        ? getHostStateWithProgress(false)
+                        : SuccessAff(hostState)
+                    select (r.IsValid, HostState: s)
+            }
+            from newConfigChanges in generateChanges(syncResult.HostState, newConfig, false)
             from validateImpact in validateNetworkImpact(newConfig)
             from _3 in applyChangesInConsole(currentConfig, newConfigChanges,
-                getHostStateWithProgress, nonInteractive, isCurrentConfigValid)
+                getHostStateWithProgress, nonInteractive, syncResult.IsValid)
             from save in saveConfigurationYaml(configString)
             from sync in syncNetworks()
             from m in writeLine("New Network configuration was imported.")
@@ -1069,7 +1066,7 @@ internal static class Program
             from _3 in isAgentRunning()
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress(true)
-            from pendingChanges in generateChanges(hostState, currentConfig)
+            from pendingChanges in generateChanges(hostState, currentConfig, true)
             from _4 in applyChangesInConsole(currentConfig, pendingChanges,
                 getHostStateWithProgress, nonInteractive, false)
             from _5 in syncNetworks()
