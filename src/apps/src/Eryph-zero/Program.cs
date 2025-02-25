@@ -1016,7 +1016,7 @@ internal static class Program
             from _2 in isAgentRunning()
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
-            from hostState in getHostStateWithProgress(false)
+            from hostState in getHostStateWithProgress()
             from syncResult in noCurrentConfigCheck switch
             {
                 true => SuccessAff((false, hostState)),
@@ -1024,7 +1024,7 @@ internal static class Program
                     from currentConfigChanges in generateChanges(hostState, currentConfig, true)
                     from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
                     from s in r.RefreshState
-                        ? getHostStateWithProgress(false)
+                        ? getHostStateWithProgress()
                         : SuccessAff(hostState)
                     select (r.IsValid, HostState: s)
             }
@@ -1053,7 +1053,7 @@ internal static class Program
             from _2 in ensureDriver(ovsRunDir, true, false)
             from _3 in isAgentRunning()
             from currentConfig in getCurrentConfiguration()
-            from hostState in getHostStateWithProgress(true)
+            from hostState in getHostStateWithProgress()
             from pendingChanges in generateChanges(hostState, currentConfig, true)
             from _4 in applyChangesInConsole(currentConfig, pendingChanges,
                 getHostStateWithProgress, nonInteractive, false)
