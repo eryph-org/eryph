@@ -151,7 +151,7 @@ public class ProviderNetworkConsoleTests
 
 
         var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-            .Bind(c => applyChangesInConsole(c, changes, _ => SuccessAff(hostState), false, true))
+            .Bind(c => applyChangesInConsole(c, changes, () => SuccessAff(hostState), false, true))
             .Run(_runtime);
 
         result.Match(
@@ -199,7 +199,7 @@ public class ProviderNetworkConsoleTests
         _runtime.Env.Console.WriteKeyLine("a");
 
         var res = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-                .Bind(c => applyChangesInConsole(c, changes, _ => SuccessAff(hostState), false, true))
+                .Bind(c => applyChangesInConsole(c, changes, () => SuccessAff(hostState), false, true))
                 .Run(_runtime);
         res.Match(
             Fail: l =>

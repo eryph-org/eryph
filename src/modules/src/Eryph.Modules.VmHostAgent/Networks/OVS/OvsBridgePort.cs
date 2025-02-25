@@ -21,9 +21,9 @@ public record OvsBridgePort : OVSTableRecord, IOVSEntityWithName
 
     public int? Tag => GetValue<int?>("tag");
     
-    public string? VlanMode => GetValue<string>("vlan_mode");
+    public string? VlanMode => GetValue<string?>("vlan_mode");
 
-    public string? BondMode => GetValue<string>("bond_mode");
+    public string? BondMode => GetValue<string?>("bond_mode");
 
     public Seq<Guid> Interfaces => GetReference("interfaces");
 }
