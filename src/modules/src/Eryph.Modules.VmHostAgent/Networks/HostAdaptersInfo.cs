@@ -7,10 +7,10 @@ using LanguageExt;
 
 namespace Eryph.Modules.VmHostAgent.Networks;
 
-public readonly record struct HostAdaptersInfo(
+public record HostAdaptersInfo(
     HashMap<string, HostAdapterInfo> Adapters);
 
-public readonly record struct HostAdapterInfo(
+public record HostAdapterInfo(
     string Name,
     Guid InterfaceId,
     Option<string> ConfiguredName,

@@ -41,15 +41,99 @@ public class ProviderNetworkUpdateTests
     }
 
     [Fact]
-    public void AddFallbackData_OldAdapterNamesConfigured_ReturnsFallbackData()
+    public void AddFallbackData_OldAdapterNameIsUsedInBridge_ReturnsFallbackData()
     {
+        var pif1Id = Guid.NewGuid();
+        var pif2Id = Guid.NewGuid();
+        var pif3Id = Guid.NewGuid();
 
+        var hostState = new HostState(
+            Seq<VMSwitchExtension>(),
+            Seq<VMSwitch>(),
+            new HostAdaptersInfo(HashMap(
+                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true)),
+                ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true)),
+                ("pif-3", new HostAdapterInfo("pif-3", pif3Id, None, true)))),
+            Seq<NetNat>(),
+            new OvsBridgesInfo(HashMap(
+                ("br-pif", new OvsBridgeInfo("br-pif", HashMap(
+                    ("br-pif-bond", new OvsBridgePortInfo(
+                        "br-pif-bond", "br-pif", None, None, None, Seq(
+                            new OvsInterfaceInfo("pif-1-old", "", None, pif1Id, "pif-1-old"),
+                            new OvsInterfaceInfo("pif-3", "", None, pif2Id, "pif-3")))
+                    ))
+                ))
+            )));
+
+        var result = addFallbackData(hostState).Run();
+
+        var resultHostState = result.Should().BeSuccess().Subject;
+
+        resultHostState.HostAdapters.Adapters.Should().HaveCount(4);
+
+        var pif1Info = resultHostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1").WhoseValue;
+        pif1Info.InterfaceId.Should().Be(pif1Id);
+        pif1Info.Name.Should().Be("pif-1");
+        pif1Info.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
+        pif1Info.IsPhysical.Should().BeTrue();
+
+        var pif1OldInfo = resultHostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1-old").WhoseValue;
+        pif1OldInfo.InterfaceId.Should().Be(pif1Id);
+        pif1OldInfo.Name.Should().Be("pif-1");
+        pif1OldInfo.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
+        pif1OldInfo.IsPhysical.Should().BeTrue();
+
+        var pif2Info = resultHostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-2").WhoseValue;
+        pif2Info.InterfaceId.Should().Be(pif2Id);
+        pif2Info.Name.Should().Be("pif-2");
+        pif2Info.ConfiguredName.Should().Be("pif-3");
+        pif2Info.IsPhysical.Should().BeTrue();
+
+        // The fallback data must not override current adapter information
+        var pif3Info = resultHostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-3").WhoseValue;
+        pif3Info.InterfaceId.Should().Be(pif3Id);
+        pif3Info.Name.Should().Be("pif-3");
+        pif3Info.ConfiguredName.Should().BeNone();
+        pif3Info.IsPhysical.Should().BeTrue();
     }
 
     [Fact]
-    public void AddFallbackData_NewAdapterNamesConfigured_ReturnsFallbackData()
+    public void AddFallbackData_NewAdapterNameIsUsedInBridge_ReturnsFallbackData()
     {
+        var pif1Id = Guid.NewGuid();
 
+        var hostState = new HostState(
+            Seq<VMSwitchExtension>(),
+            Seq<VMSwitch>(),
+            new HostAdaptersInfo(HashMap(
+                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true)))),
+            Seq<NetNat>(),
+            new OvsBridgesInfo(HashMap(
+                ("br-pif", new OvsBridgeInfo("br-pif", HashMap(
+                    ("pif-1", new OvsBridgePortInfo(
+                        "pif-1", "br-pif", None, None, None, Seq1(
+                            new OvsInterfaceInfo("pif-1", "", None, pif1Id, "pif-1-old")))
+                    ))
+                ))
+            )));
+
+        var result = addFallbackData(hostState).Run();
+
+        var resultHostState = result.Should().BeSuccess().Subject;
+
+        resultHostState.HostAdapters.Adapters.Should().HaveCount(2);
+
+        var pif1Info = resultHostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1").WhoseValue;
+        pif1Info.InterfaceId.Should().Be(pif1Id);
+        pif1Info.Name.Should().Be("pif-1");
+        pif1Info.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
+        pif1Info.IsPhysical.Should().BeTrue();
+
+        var pif1OldInfo = resultHostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1-old").WhoseValue;
+        pif1OldInfo.InterfaceId.Should().Be(pif1Id);
+        pif1OldInfo.Name.Should().Be("pif-1");
+        pif1OldInfo.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
+        pif1OldInfo.IsPhysical.Should().BeTrue();
     }
 
     [Fact]
@@ -185,10 +269,11 @@ public class ProviderNetworkUpdateTests
             }),
             OvsBridges = new OvsBridgesInfo(HashMap(
                 ("br-test", new OvsBridgeInfo("br-test", HashMap(
-                    ("br-test", new OvsBridgePortInfo("br-test", "br-test", None, None, None,
-                        Seq<OvsBridgeInterfaceInfo>())),
-                    ("test-adapter", new OvsBridgePortInfo("br-test", "test-adapter", None, None, None,
-                        Seq1(new OvsBridgeInterfaceInfo("test-adapter", "", interfaceId, "test-adapter")))))
+                    ("br-test", new OvsBridgePortInfo(
+                        "br-test", "br-test", None, None, None, Seq<OvsInterfaceInfo>())),
+                    ("test-adapter", new OvsBridgePortInfo(
+                        "test-adapter", "br-test", None, None, None, Seq1(
+                            new OvsInterfaceInfo("test-adapter", "", None, interfaceId, "test-adapter")))))
                 )))),
             HostAdapters = new HostAdaptersInfo(HashMap(
                 ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, "test-adapter", true)),
@@ -253,10 +338,11 @@ public class ProviderNetworkUpdateTests
             }),
             OvsBridges = new OvsBridgesInfo(HashMap(
                 ("br-test", new OvsBridgeInfo("br-test", HashMap(
-                    ("br-test", new OvsBridgePortInfo("br-test", "br-test", None, None, None,
-                        Seq<OvsBridgeInterfaceInfo>())),
-                    ("renamed-adapter", new OvsBridgePortInfo("br-test", "renamed-adapter", None, None, None,
-                        Seq1(new OvsBridgeInterfaceInfo("renamed-adapter", "", interfaceId, "test-adapter")))))
+                    ("br-test", new OvsBridgePortInfo(
+                        "br-test", "br-test", None, None, None, Seq<OvsInterfaceInfo>())),
+                    ("renamed-adapter", new OvsBridgePortInfo(
+                        "renamed-adapter", "br-test", None, None, None, Seq1(
+                            new OvsInterfaceInfo("renamed-adapter", "", None, interfaceId, "test-adapter")))))
                 )))),
             HostAdapters = new HostAdaptersInfo(HashMap(
                 ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, "test-adapter", true)),

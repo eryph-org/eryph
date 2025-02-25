@@ -81,7 +81,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             StartOVN,
             false,
             NetworkChangeOperation.StartOVN)
-        select default(OvsBridgesInfo);
+        select new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>());
 
     private Aff<RT, Unit> DisconnectOverlayVmAdapters(
         Seq<TypedPsObject<VMNetworkAdapter>> overlayVMAdapters) =>
@@ -143,7 +143,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                   select unit,
             false,
             NetworkChangeOperation.RemoveOverlaySwitch)
-        select default(OvsBridgesInfo);
+        select new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>());
     
     public Aff<RT, Unit> EnableSwitchExtension(
         Guid switchId,
@@ -362,7 +362,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             false => from _ in portsWithPhysicalInterfaces
                         .Map(pi => RemoveInvalidAdapterPortFromBridge(pi, portCheckResult.AnyAdapterRenamed))
                         .SequenceSerial()
-                     select ovsBridge.RemovePorts(portsWithPhysicalInterfaces.Map(p => p.PortName)),
+                     select ovsBridge.RemovePorts(portsWithPhysicalInterfaces.Map(p => p.Name)),
         }
         select result;
 
@@ -385,17 +385,17 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         OvsBridgePortInfo port,
         bool force) =>
         from _1 in LogDebug("The port {PortName} of bridge {BridgeName} uses unnecessary or invalid external interfaces. Removing the port.",
-            port.PortName, port.BridgeName)
+            port.Name, port.BridgeName)
         from _2 in AddOperation(
             () => timeout(
                 TimeSpan.FromSeconds(30),
                 from ovs in default(RT).OVS.ToAff()
                 from ct in cancelToken<RT>().ToAff()
-                from _ in ovs.RemovePort(port.BridgeName, port.PortName, ct).ToAff(l => l)
+                from _ in ovs.RemovePort(port.BridgeName, port.Name, ct).ToAff(l => l)
                 select unit),
             force,
             NetworkChangeOperation.RemoveAdapterPort,
-            port.PortName, port.BridgeName)
+            port.Name, port.BridgeName)
         select unit;
 
     public Aff<RT, Unit> ConfigureNatAdapters(
@@ -596,7 +596,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         bool force) =>
         from _1 in unitAff
         let interfaces = adapters
-            .Map(a => new InterfaceUpdate(a.Name, a.InterfaceId, a.ConfiguredName.IfNone(a.Name)))
+            .Map(a => new OvsInterfaceUpdate(a.Name, a.InterfaceId, a.ConfiguredName.IfNone(a.Name)))
         let ovsBondMode = GetBondMode(expectedBridge.Options)
         from _2 in AddOperation(
             () => timeout(
@@ -625,7 +625,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         from _1 in guard(expectedPortName == adapter.Name,
                 Error.New($"BUG! Mismatch of port name {expectedPortName} and adapter name {adapter.Name}."))
             .ToAff()
-        let @interface = new InterfaceUpdate(
+        let interfaceUpdate = new OvsInterfaceUpdate(
             adapter.Name,
             adapter.InterfaceId,
             adapter.ConfiguredName.IfNone(adapter.Name))
@@ -634,7 +634,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 TimeSpan.FromSeconds(30),
                 from ovs in default(RT).OVS
                 from ct in cancelToken<RT>()
-                from _ in ovs.AddPort(expectedBridge.BridgeName, @interface, ct).ToAff(e => e)
+                from _ in ovs.AddPort(expectedBridge.BridgeName, interfaceUpdate, ct).ToAff(e => e)
                 select unit),
             _ => true,
             () => timeout(
@@ -670,7 +670,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     TimeSpan.FromSeconds(30),
                     from ovs in default(RT).OVS
                     from ct in cancelToken<RT>()
-                    from _ in ovs.UpdateBondPort(portInfo.PortName, expectedBondMode, ct).ToAff(e => e)
+                    from _ in ovs.UpdateBondPort(portInfo.Name, expectedBondMode, ct).ToAff(e => e)
                     select unit),
                 _ => true,
                 () => timeout(
@@ -680,11 +680,11 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     // We force a bond mode during the rollback as no bond mode at all
                     // can break the physical network. When a bond port is configured,
                     // the bond mode should be set anyway.
-                    from _ in ovs.UpdateBondPort(portInfo.PortName, portInfo.BondMode.IfNone("active-backup"), ct).ToAff(e => e)
+                    from _ in ovs.UpdateBondPort(portInfo.Name, portInfo.BondMode.IfNone("active-backup"), ct).ToAff(e => e)
                     select unit),
                 false,
                 NetworkChangeOperation.UpdateBondPort,
-                portInfo.PortName, expectedBridge.BridgeName)
+                portInfo.Name, expectedBridge.BridgeName)
         select unit;
 
     public Aff<RT, Unit> UpdateBridgeMappings(

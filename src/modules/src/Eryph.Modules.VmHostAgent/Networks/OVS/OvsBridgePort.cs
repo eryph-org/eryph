@@ -5,7 +5,7 @@ using LanguageExt;
 
 namespace Eryph.Modules.VmHostAgent.Networks.OVS;
 
-public record BridgePort : OVSTableRecord, IOVSEntityWithName
+public record OvsBridgePort : OVSTableRecord, IOVSEntityWithName
 {
     public new static readonly IDictionary<string, OVSFieldMetadata>
         Columns = new Dictionary<string, OVSFieldMetadata>(OVSTableRecord.Columns)

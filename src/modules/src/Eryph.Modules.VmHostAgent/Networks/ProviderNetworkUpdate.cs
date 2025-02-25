@@ -274,8 +274,6 @@ public static class ProviderNetworkUpdate<RT>
             .Where(o => o.Rollback != null)
             .Map(o => o.Rollback!()).TraverseSerial(l => l)
             .Bind(_ => FailAff<Unit>(opError.Cause));
-            
-
     }
 
     public static Aff<RT, Unit> executeChanges(NetworkChanges<RT> changes)

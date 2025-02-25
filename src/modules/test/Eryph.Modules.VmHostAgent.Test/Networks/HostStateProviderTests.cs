@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
+using LanguageExt.Common;
 using Moq;
 
 using static Eryph.Modules.VmHostAgent.Networks.HostStateProvider<Eryph.Modules.VmHostAgent.Test.TestRuntime>;
@@ -31,6 +33,65 @@ public class HostStateProviderTests
             _syncClientMock.Object,
             _hostNetworkCommandsMock.Object,
             _networkProviderManagerMock.Object);
+    }
+
+    [Fact]
+    public async Task CheckHostInterfaces_InterfacesWithErrors_ReturnsErrors()
+    {
+        _hostNetworkCommandsMock.Setup(x => x.GetSwitchExtensions())
+            .Returns(SuccessAff(Seq<VMSwitchExtension>()));
+
+        _hostNetworkCommandsMock.Setup(x => x.GetSwitches())
+            .Returns(SuccessAff(Seq<VMSwitch>()));
+
+        _hostNetworkCommandsMock.Setup(x => x.GetHostAdapters())
+            .Returns(SuccessAff(Seq<HostNetworkAdapter>()));
+
+        _hostNetworkCommandsMock.Setup(x => x.GetNetNat())
+            .Returns(SuccessAff(Seq<NetNat>()));
+
+        _ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
+            .Returns(Seq<OvsBridge>());
+
+        _ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
+            .Returns(Seq<OvsBridgePort>());
+
+        _ovsControlMock.Setup(x => x.GetInterfaces(It.IsAny<CancellationToken>()))
+            .Returns(Seq(
+                OVSEntity.FromValueMap<OvsInterface>(Map<string, IOVSField>(
+                    ("_uuid", OVSValue<Guid>.New(Guid.NewGuid())),
+                    ("name", OVSValue<string>.New("br-pif")),
+                    ("type", OVSValue<string>.New("internal")),
+                    ("error", OVSValue<string>.New("br-pif-error")))),
+                OVSEntity.FromValueMap<OvsInterface>(Map<string, IOVSField>(
+                    ("_uuid", OVSValue<Guid>.New(Guid.NewGuid())),
+                    ("name", OVSValue<string>.New("pif-1")),
+                    ("type", OVSValue<string>.New("")),
+                    ("error", OVSValue<string>.New("pif-1-error")),
+                    ("external_ids", OVSMap<string>.New(Map(
+                        ("host-iface-id", Guid.NewGuid().ToString()),
+                        ("host-iface-conf-name", "pif-1-conf-name")
+                    ))))),
+                OVSEntity.FromValueMap<OvsInterface>(Map<string, IOVSField>(
+                    ("_uuid", OVSValue<Guid>.New(Guid.NewGuid())),
+                    ("name", OVSValue<string>.New("pif-2")),
+                    ("type", OVSValue<string>.New("")),
+                    ("error", OVSValue<string>.New("pif-2-error")),
+                    ("external_ids", OVSMap<string>.New(Map(
+                        ("host-iface-id", Guid.NewGuid().ToString()),
+                        ("host-iface-conf-name", "pif-2-conf-name")
+                    )))))
+            ));
+
+        var result = await checkHostInterfaces().Run(_runtime);
+
+        var error = result.Should().BeFail().Subject;
+        error.Message.Should().Be("Some host interfaces reported an error in OVS. Consider restarting the host.");
+        error.Inner.Should().BeSome()
+            .Which.Should().BeOfType<ManyErrors>()
+            .Which.Errors.Should().SatisfyRespectively(
+                e => e.Message.Should().Be("The host interface 'pif-1' reported an error: pif-1-error."),
+                e => e.Message.Should().Be("The host interface 'pif-2' reported an error: pif-2-error."));
     }
 
     [Fact]
@@ -100,11 +161,11 @@ public class HostStateProviderTests
 
         _ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
             .Returns(Seq(
-                OVSEntity.FromValueMap<Bridge>(Map<string, IOVSField>(
+                OVSEntity.FromValueMap<OvsBridge>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brIntId)),
                     ("name", OVSValue<string>.New("br-int")),
                     ("ports", OVSReference.New(Seq1(brIntPort1Id))))),
-                OVSEntity.FromValueMap<Bridge>(Map<string, IOVSField>(
+                OVSEntity.FromValueMap<OvsBridge>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brPifId)),
                     ("name", OVSValue<string>.New("br-pif")),
                     ("ports", OVSReference.New(Seq(brPifPort1Id, brPifPort2Id)))))
@@ -112,15 +173,15 @@ public class HostStateProviderTests
 
         _ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
             .Returns(Seq(
-                OVSEntity.FromValueMap<BridgePort>(Map<string, IOVSField>(
+                OVSEntity.FromValueMap<OvsBridgePort>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brIntPort1Id)),
                     ("name", OVSValue<string>.New("br-int")),
                     ("interfaces", OVSReference.New(Seq1(brIntPort1Interface1Id))))),
-                OVSEntity.FromValueMap<BridgePort>(Map<string, IOVSField>(
+                OVSEntity.FromValueMap<OvsBridgePort>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brPifPort1Id)),
                     ("name", OVSValue<string>.New("br-pif")),
                     ("interfaces", OVSReference.New(Seq1(brPifPort1Interface1Id))))),
-                OVSEntity.FromValueMap<BridgePort>(Map<string, IOVSField>(
+                OVSEntity.FromValueMap<OvsBridgePort>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brPifPort2Id)),
                     ("name", OVSValue<string>.New("br-pif-bond")),
                     ("interfaces", OVSReference.New(Seq(brPifPort2Interface1Id, brPifPort2Interface2Id)))))
@@ -128,15 +189,15 @@ public class HostStateProviderTests
 
         _ovsControlMock.Setup(x => x.GetInterfaces(It.IsAny<CancellationToken>()))
             .Returns(Seq(
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
+                OVSEntity.FromValueMap<OvsInterface>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brIntPort1Interface1Id)),
                     ("name", OVSValue<string>.New("br-int")),
                     ("type", OVSValue<string>.New("internal")))),
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
+                OVSEntity.FromValueMap<OvsInterface>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brPifPort1Interface1Id)),
                     ("name", OVSValue<string>.New("br-pif")),
                     ("type", OVSValue<string>.New("internal")))),
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
+                OVSEntity.FromValueMap<OvsInterface>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brPifPort2Interface1Id)),
                     ("name", OVSValue<string>.New("pif-1")),
                     ("type", OVSValue<string>.New("")),
@@ -144,7 +205,7 @@ public class HostStateProviderTests
                         ("host-iface-id", pif1Id.ToString()),
                         ("host-iface-conf-name", "pif-1-conf-name")
                     ))))),
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
+                OVSEntity.FromValueMap<OvsInterface>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brPifPort2Interface2Id)),
                     ("name", OVSValue<string>.New("pif-2")),
                     ("type", OVSValue<string>.New("")),
@@ -154,7 +215,7 @@ public class HostStateProviderTests
                     )))))
             ));
 
-        var result = await getHostState(false).Run(_runtime);
+        var result = await getHostState().Run(_runtime);
 
         var hostState = result.Should().BeSuccess().Subject;
         hostState.VMSwitches.Should().SatisfyRespectively(
@@ -201,7 +262,7 @@ public class HostStateProviderTests
         brIntInfo.Ports.Should().HaveCount(1);
         
         var brIntPort1Info = brIntInfo.Ports.ToDictionary().Should().ContainKey("br-int").WhoseValue;
-        brIntPort1Info.PortName.Should().Be("br-int");
+        brIntPort1Info.Name.Should().Be("br-int");
         brIntPort1Info.BridgeName.Should().Be("br-int");
         brIntPort1Info.Interfaces.Should().SatisfyRespectively(
             i =>
@@ -218,7 +279,7 @@ public class HostStateProviderTests
         brPifInfo.Ports.Should().HaveCount(2);
 
         var brPifPort1Info = brPifInfo.Ports.ToDictionary().Should().ContainKey("br-pif").WhoseValue;
-        brPifPort1Info.PortName.Should().Be("br-pif");
+        brPifPort1Info.Name.Should().Be("br-pif");
         brPifPort1Info.BridgeName.Should().Be("br-pif");
         brPifPort1Info.Interfaces.Should().SatisfyRespectively(
             i =>
@@ -231,7 +292,7 @@ public class HostStateProviderTests
             });
 
         var brPifPort2Info = brPifInfo.Ports.ToDictionary().Should().ContainKey("br-pif-bond").WhoseValue;
-        brPifPort2Info.PortName.Should().Be("br-pif-bond");
+        brPifPort2Info.Name.Should().Be("br-pif-bond");
         brPifPort2Info.BridgeName.Should().Be("br-pif");
         brPifPort2Info.Interfaces.Should().SatisfyRespectively(
             i =>
@@ -250,176 +311,5 @@ public class HostStateProviderTests
                 i.HostInterfaceId.Should().Be(pif2Id);
                 i.HostInterfaceConfiguredName.Should().BeSome().Which.Should().Be("pif-2-conf-name");
             });
-    }
-
-    [Fact]
-    public async Task GetHostState_WithFallback_ReturnStateWithFallbackData()
-    {
-        var pif1Id = Guid.NewGuid();
-        var pif2Id = Guid.NewGuid();
-        var pif3Id = Guid.NewGuid();
-
-        _hostNetworkCommandsMock.Setup(x => x.GetSwitchExtensions())
-            .Returns(SuccessAff(Seq<VMSwitchExtension>()));
-
-        _hostNetworkCommandsMock.Setup(x => x.GetSwitches())
-            .Returns(SuccessAff(Seq<VMSwitch>()));
-
-        _hostNetworkCommandsMock.Setup(x => x.GetHostAdapters())
-            .Returns(SuccessAff(Seq(
-                new HostNetworkAdapter
-                {
-                    InterfaceGuid = pif1Id,
-                    Name = "pif-1",
-                    Virtual = false,
-                },
-                new HostNetworkAdapter
-                {
-                    InterfaceGuid = pif2Id,
-                    Name = "pif-2",
-                    Virtual = false,
-                },
-                new HostNetworkAdapter
-                {
-                    InterfaceGuid = pif3Id,
-                    Name = "pif-3",
-                    Virtual = false,
-                })));
-
-        _hostNetworkCommandsMock.Setup(x => x.GetNetNat())
-            .Returns(SuccessAff(Seq<NetNat>()));
-
-        _ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
-            .Returns(Seq<Bridge>());
-
-        _ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
-            .Returns(Seq<BridgePort>());
-
-        _ovsControlMock.Setup(x => x.GetInterfaces(It.IsAny<CancellationToken>()))
-            .Returns(Seq(
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(Guid.NewGuid())),
-                    ("name", OVSValue<string>.New("pif-1-old")),
-                    ("type", OVSValue<string>.New("")),
-                    ("external_ids", OVSMap<string>.New(Map(
-                        ("host-iface-id", pif1Id.ToString()),
-                        ("host-iface-conf-name", "pif-1-old")
-                    ))))),
-                // TODO Can there be multiple interface records with the same name?
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(Guid.NewGuid())),
-                    ("name", OVSValue<string>.New("pif-1-old")),
-                    ("type", OVSValue<string>.New("")),
-                    ("external_ids", OVSMap<string>.New(Map(
-                        ("host-iface-id", pif1Id.ToString()),
-                        ("host-iface-conf-name", "pif-1-old")
-                    ))))),
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(Guid.NewGuid())),
-                    ("name", OVSValue<string>.New("pif-2")),
-                    ("type", OVSValue<string>.New("")),
-                    ("external_ids", OVSMap<string>.New(Map(
-                        ("host-iface-id", pif2Id.ToString()),
-                        ("host-iface-conf-name", "pif-3")
-                    )))))
-            ));
-
-        var result = await getHostState(true).Run(_runtime);
-
-        var hostState = result.Should().BeSuccess().Subject;
-
-        hostState.HostAdapters.Adapters.Should().HaveCount(4);
-
-        var pif1Info = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1").WhoseValue;
-        pif1Info.InterfaceId.Should().Be(pif1Id);
-        pif1Info.Name.Should().Be("pif-1");
-        pif1Info.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
-        pif1Info.IsPhysical.Should().BeTrue();
-
-        var pif1OldInfo = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1-old").WhoseValue;
-        pif1OldInfo.InterfaceId.Should().Be(pif1Id);
-        pif1OldInfo.Name.Should().Be("pif-1");
-        pif1OldInfo.ConfiguredName.Should().BeSome().Which.Should().Be("pif-1-old");
-        pif1OldInfo.IsPhysical.Should().BeTrue();
-
-        var pif2Info = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-2").WhoseValue;
-        pif2Info.InterfaceId.Should().Be(pif2Id);
-        pif2Info.Name.Should().Be("pif-2");
-        pif2Info.ConfiguredName.Should().Be("pif-3");
-        pif2Info.IsPhysical.Should().BeTrue();
-
-        var pif3Info = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-3").WhoseValue;
-        pif3Info.InterfaceId.Should().Be(pif3Id);
-        pif3Info.Name.Should().Be("pif-3");
-        pif3Info.ConfiguredName.Should().BeNone();
-        pif3Info.IsPhysical.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task GetHostState_WithFallbackAndNewAdapterNameIsUsedInBridge_ReturnStateWithFallbackData()
-    {
-        var pif1Id = Guid.NewGuid();
-
-        _hostNetworkCommandsMock.Setup(x => x.GetSwitchExtensions())
-            .Returns(SuccessAff(Seq<VMSwitchExtension>()));
-
-        _hostNetworkCommandsMock.Setup(x => x.GetSwitches())
-            .Returns(SuccessAff(Seq<VMSwitch>()));
-
-        _hostNetworkCommandsMock.Setup(x => x.GetHostAdapters())
-            .Returns(SuccessAff(Seq1(
-                new HostNetworkAdapter
-                {
-                    InterfaceGuid = pif1Id,
-                    Name = "pif-1",
-                    Virtual = false,
-                })));
-
-        _hostNetworkCommandsMock.Setup(x => x.GetNetNat())
-            .Returns(SuccessAff(Seq<NetNat>()));
-
-        _ovsControlMock.Setup(x => x.GetBridges(It.IsAny<CancellationToken>()))
-            .Returns(Seq<Bridge>());
-
-        _ovsControlMock.Setup(x => x.GetPorts(It.IsAny<CancellationToken>()))
-            .Returns(Seq<BridgePort>());
-
-        _ovsControlMock.Setup(x => x.GetInterfaces(It.IsAny<CancellationToken>()))
-            .Returns(Seq(
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(Guid.NewGuid())),
-                    ("name", OVSValue<string>.New("pif-1")),
-                    ("type", OVSValue<string>.New("")),
-                    ("external_ids", OVSMap<string>.New(Map(
-                        ("host-iface-id", pif1Id.ToString()),
-                        ("host-iface-conf-name", "pif-1-old")
-                    ))))),
-                OVSEntity.FromValueMap<Interface>(Map<string, IOVSField>(
-                    ("_uuid", OVSValue<Guid>.New(Guid.NewGuid())),
-                    ("name", OVSValue<string>.New("pif-1")),
-                    ("type", OVSValue<string>.New("")),
-                    ("external_ids", OVSMap<string>.New(Map(
-                        ("host-iface-id", pif1Id.ToString()),
-                        ("host-iface-conf-name", "pif-1-old")
-                    )))))
-            ));
-
-        var result = await getHostState(true).Run(_runtime);
-
-        var hostState = result.Should().BeSuccess().Subject;
-
-        hostState.HostAdapters.Adapters.Should().HaveCount(2);
-
-        var pif1Info = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1").WhoseValue;
-        pif1Info.InterfaceId.Should().Be(pif1Id);
-        pif1Info.Name.Should().Be("pif-1");
-        pif1Info.ConfiguredName.Should().Be("pif-1-old");
-        pif1Info.IsPhysical.Should().BeTrue();
-
-        var pif1OldInfo = hostState.HostAdapters.Adapters.ToDictionary().Should().ContainKey("pif-1-old").WhoseValue;
-        pif1OldInfo.InterfaceId.Should().Be(pif1Id);
-        pif1OldInfo.Name.Should().Be("pif-1");
-        pif1OldInfo.ConfiguredName.Should().Be("pif-1-old");
-        pif1OldInfo.IsPhysical.Should().BeTrue();
     }
 }

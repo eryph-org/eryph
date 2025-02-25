@@ -24,16 +24,17 @@ public record OvsBridgeInfo(
 }
 
 public record OvsBridgePortInfo(
+    string Name,
     string BridgeName, 
-    string PortName,
     Option<int> Tag,
     Option<string> VlanMode,
     Option<string> BondMode,
-    Seq<OvsBridgeInterfaceInfo> Interfaces);
+    Seq<OvsInterfaceInfo> Interfaces);
 
-public record OvsBridgeInterfaceInfo(
+public record OvsInterfaceInfo(
     string Name,
     string Type,
+    Option<string> Error,
     Option<Guid> HostInterfaceId,
     Option<string> HostInterfaceConfiguredName)
 {

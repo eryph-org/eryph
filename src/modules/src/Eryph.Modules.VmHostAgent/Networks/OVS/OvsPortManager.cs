@@ -92,7 +92,7 @@ class OvsPortManager(
                             }
                         ).Bind(inf =>
                         {
-                            if (inf.LinkState.FirstOrDefault() == "up") return true;
+                            if (inf.LinkState == "up") return true;
                             log.LogDebug("Interface on port {portName} is not up. OVS Error state: {ovsError}",
                                 portName,
                                 string.Join(',', inf.Error));

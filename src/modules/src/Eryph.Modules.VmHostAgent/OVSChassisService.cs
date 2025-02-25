@@ -186,9 +186,9 @@ public class OVSChassisService : IHostedService
         try
         {
             await (from currentConfig in getCurrentConfiguration()
-                   from hostState in HostStateProvider<AgentRuntime>.getHostState(true)
+                   from hostState in HostStateProvider<AgentRuntime>.getHostState()
                    from currentConfigChanges in generateChanges(hostState, currentConfig, true)
-                   from _ in canBeAutoApplied(currentConfigChanges)
+                   from _1 in canBeAutoApplied(currentConfigChanges)
                        ? executeChanges(currentConfigChanges)
                        : Networks.Logger<AgentRuntime>.logWarning<OVSChassisService>(
                            "Network provider configuration is not fully applied to host." +
@@ -196,6 +196,7 @@ public class OVSChassisService : IHostedService
                            "\nRun command 'eryph-zero networks sync' in a elevated command prompt " +
                            "to apply changes." +
                            "\nChanges: {changes} ", currentConfigChanges.Operations.Select(x => x.Text))
+                   from _2 in HostStateProvider<AgentRuntime>.checkHostInterfaces()
                    select unit)
 
                 .RunUnit(runtime);
@@ -207,5 +208,4 @@ public class OVSChassisService : IHostedService
         }
 
     }
-
 }
