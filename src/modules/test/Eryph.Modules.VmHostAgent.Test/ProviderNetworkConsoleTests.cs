@@ -247,17 +247,10 @@ public class ProviderNetworkConsoleTests
         return hostState;
     }
 
-    private void AddMocks(
-        Guid? switchId = null,
-        Seq<TypedPsObject<VMNetworkAdapter>> vmAdaptersInOverlaySwitch = default)
+    private void AddMocks()
     {
         _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
             .Returns(SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
-        if (switchId.HasValue)
-        {
-            _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(switchId.Value))
-                .Returns(SuccessAff(vmAdaptersInOverlaySwitch));
-        }
 
         _ovsControlMock.Setup(x => x.GetOVSTable(It.IsAny<CancellationToken>()))
             .Returns(new OVSTableRecord());
@@ -270,7 +263,6 @@ public class ProviderNetworkConsoleTests
                 None, None,
                 It.IsAny<CancellationToken>()))
             .Returns(RightAsync<Error, Unit>(unit));
-
 
         _hostNetworkCommandsMock.Setup(x => x.WaitForBridgeAdapter(
                 It.IsAny<string>()))

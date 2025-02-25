@@ -71,7 +71,7 @@ public class SyncClient : ISyncClient
             Error.New($"No permission to access the sync service. Make sure you are elevated."))
         from responseData in Optional(response.Data)
             .Map(d => Eff(() => d.Deserialize<TResponse>())
-                .MapFail(e => Error.New("The data of the sync service response is invalid.")))
+                .MapFail(e => Error.New("The data of the sync service response is invalid.", e)))
             .Sequence()
         select responseData;
 }
