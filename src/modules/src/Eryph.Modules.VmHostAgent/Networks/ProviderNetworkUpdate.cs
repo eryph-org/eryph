@@ -42,7 +42,7 @@ public static class ProviderNetworkUpdate<RT>
     public static Aff<RT, NetworkProvidersConfiguration> importConfig(
         string config) =>
         from parsedConfig in Eff(() => NetworkProvidersConfigYamlSerializer.Deserialize(config))
-        from _ in NetworkProvidersConfigsValidations.ValidateNetworkProvidersConfig(parsedConfig)
+        from _ in NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(parsedConfig)
             .MapFail(issue => issue.ToError())
             .ToEff(errors => Error.New("The network provider configuration is invalid.", Error.Many(errors)))
         select parsedConfig;
@@ -54,7 +54,8 @@ public static class ProviderNetworkUpdate<RT>
 
     public static Aff<RT, NetworkChanges<RT>> generateChanges(
         HostState hostState,
-        NetworkProvidersConfiguration newConfig) =>
+        NetworkProvidersConfiguration newConfig,
+        bool withFallback) =>
 
         // tools
         from changeBuilder in NetworkChangeOperationBuilder<RT>.New()
@@ -63,17 +64,20 @@ public static class ProviderNetworkUpdate<RT>
 
         // generate variables
         from expectedBridges in prepareExpectedBridges(newConfig)
+        from hostStateWithFallback in withFallback
+            ? addFallbackData(hostState)
+            : SuccessEff(hostState)
 
         // Enable the OVS extension of the overlay switch(es) in case
         // it was disabled somehow. Otherwise, the execution of OVS
         // commands might later fail.
-        from _1 in hostState.VMSwitchExtensions
+        from _1 in hostStateWithFallback.VMSwitchExtensions
             .Filter(e => e.SwitchName == EryphConstants.OverlaySwitchName && !e.Enabled)
             .Map(e => changeBuilder.EnableSwitchExtension(e.SwitchId, e.SwitchName))
             .SequenceSerial()
 
         // Disable the OVS extension on all switches which are not overlay switch(es).
-        from _2 in hostState.VMSwitchExtensions
+        from _2 in hostStateWithFallback.VMSwitchExtensions
             .Filter(e => e.SwitchName != EryphConstants.OverlaySwitchName && e.Enabled)
             .Map(e => changeBuilder.DisableSwitchExtension(e.SwitchId, e.SwitchName))
             .SequenceSerial()
@@ -83,7 +87,7 @@ public static class ProviderNetworkUpdate<RT>
         // network providers.
         // All OVS bridges will be removed as part of the Hyper-V switch rebuild.
         from ovsBridges1 in generateOverlaySwitchChanges(
-            changeBuilder, hostState, expectedBridges)
+            changeBuilder, hostStateWithFallback, expectedBridges)
 
         // Bridge exists in OVS but not in config -> remove it
         from ovsBridges2 in changeBuilder.RemoveUnusedBridges(
@@ -92,7 +96,7 @@ public static class ProviderNetworkUpdate<RT>
         // Bridge exists in OVS but its adapter is missing on the host -> remove it
         // This can ony happen if the adapter has been manually renamed or similar
         from ovsBridges3 in changeBuilder.RemoveBridgesWithMissingBridgeAdapter(
-            expectedBridges, hostState.HostAdapters, ovsBridges2)
+            expectedBridges, hostStateWithFallback.HostAdapters, ovsBridges2)
 
         // Add bridges from config missing in OVS
         from createdBridges in changeBuilder.AddMissingBridges(
@@ -103,20 +107,20 @@ public static class ProviderNetworkUpdate<RT>
 
         // Remove NATs which are no longer needed or need to be recreated
         from validNats in changeBuilder.RemoveInvalidNats(
-            hostState.NetNat, expectedBridges)
+            hostStateWithFallback.NetNat, expectedBridges)
 
         // Remove ports with invalid external interfaces. This happens when:
         // - a provider is changed between overlay and NAT overlay
         // - the physical adapters of an overlay provider are changed
         from ovsBridges4 in changeBuilder.RemoveInvalidAdapterPortsFromBridges(
-            expectedBridges, hostState.HostAdapters, ovsBridges3)
+            expectedBridges, hostStateWithFallback.HostAdapters, ovsBridges3)
 
         // Configure ip settings and nat for nat_overlay adapters
         from _4 in changeBuilder.ConfigureNatAdapters(expectedBridges, createdBridges)
 
         // Create ports for adapters in overlay bridges
         from _5 in changeBuilder.ConfigureOverlayAdapterPorts(
-            expectedBridges, ovsBridges4, hostState.HostAdapters)
+            expectedBridges, ovsBridges4, hostStateWithFallback.HostAdapters)
 
         from _6 in changeBuilder.AddMissingNats(expectedBridges, validNats)
 
@@ -131,6 +135,32 @@ public static class ProviderNetworkUpdate<RT>
             .Filter(np => np.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay)
             .Map(prepareNewBridgeInfo)
             .Sequence();
+
+    internal static Eff<HostState> addFallbackData(
+        HostState hostState) =>
+        from _ in unitEff
+        let configuredAdapters = hostState.OvsBridges.Bridges.Values.ToSeq()
+            .Bind(bridge => bridge.Ports.Values.ToSeq())
+            .Bind(bridgePort => bridgePort.Interfaces)
+            .Filter(interfaceInfo => interfaceInfo.IsExternal)
+            .Map(interfaceInfo => from configuredName in interfaceInfo.HostInterfaceConfiguredName
+                                  from interfaceId in interfaceInfo.HostInterfaceId
+                                  select (interfaceId, configuredName))
+            .Somes()
+            .ToHashMap()
+        let adapterInfos = hostState.HostAdapters.Adapters.Values.ToSeq()
+            .Map(adapterInfo => adapterInfo with
+            {
+                ConfiguredName = configuredAdapters.Find(adapterInfo.InterfaceId)
+            })
+            .Map(adapterInfo => (adapterInfo.Name, AdapterInfo: adapterInfo))
+        let fallbackAdapterInfos = adapterInfos
+            .Map(t => from fallbackName in t.AdapterInfo.ConfiguredName
+                      select t with { Name = fallbackName })
+            .Somes()
+        let adaptersInfoWithFallback = new HostAdaptersInfo(adapterInfos.Concat(fallbackAdapterInfos).ToHashMap())
+        select hostState with { HostAdapters = adaptersInfoWithFallback };
+
 
     private static Eff<NewBridge> prepareNewBridgeInfo(
         NetworkProvider providerConfig) =>

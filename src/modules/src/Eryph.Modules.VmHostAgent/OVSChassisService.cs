@@ -187,7 +187,7 @@ public class OVSChassisService : IHostedService
         {
             await (from currentConfig in getCurrentConfiguration()
                    from hostState in HostStateProvider<AgentRuntime>.getHostState(true)
-                   from currentConfigChanges in generateChanges(hostState, currentConfig)
+                   from currentConfigChanges in generateChanges(hostState, currentConfig, true)
                    from _ in canBeAutoApplied(currentConfigChanges)
                        ? executeChanges(currentConfigChanges)
                        : Networks.Logger<AgentRuntime>.logWarning<OVSChassisService>(

@@ -41,6 +41,18 @@ public class ProviderNetworkUpdateTests
     }
 
     [Fact]
+    public void AddFallbackData_OldAdapterNamesConfigured_ReturnsFallbackData()
+    {
+
+    }
+
+    [Fact]
+    public void AddFallbackData_NewAdapterNamesConfigured_ReturnsFallbackData()
+    {
+
+    }
+
+    [Fact]
     public async Task GenerateChanges_DefaultConfigWithDefaultHostState_GeneratesExpectedChanges()
     {
         var hostState = new HostState(
@@ -51,7 +63,7 @@ public class ProviderNetworkUpdateTests
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-            .Bind(c => generateChanges(hostState, c))
+            .Bind(c => generateChanges(hostState, c, false))
             .Run(_runtime);
 
         result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
@@ -78,7 +90,7 @@ public class ProviderNetworkUpdateTests
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
         var result = await importConfig(NetworkProvidersConfiguration.DefaultConfig)
-            .Bind(c => generateChanges(hostState, c))
+            .Bind(c => generateChanges(hostState, c, false))
             .Run(_runtime);
 
         result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
@@ -125,7 +137,7 @@ public class ProviderNetworkUpdateTests
             }),
         };
 
-        var result = await generateChanges(hostState, providersConfig).Run(_runtime);
+        var result = await generateChanges(hostState, providersConfig,false).Run(_runtime);
 
         result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
             operation => operation.Operation.Should().Be(NetworkChangeOperation.AddBridge),
@@ -185,7 +197,7 @@ public class ProviderNetworkUpdateTests
                 )),
         };
 
-        var result = await generateChanges(hostState, providersConfig).Run(_runtime);
+        var result = await generateChanges(hostState, providersConfig, true).Run(_runtime);
 
         result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
             operation =>
@@ -253,7 +265,7 @@ public class ProviderNetworkUpdateTests
                 )),
         };
 
-        var result = await generateChanges(hostState, providersConfig).Run(_runtime);
+        var result = await generateChanges(hostState, providersConfig, true).Run(_runtime);
 
         result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
             operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
@@ -283,7 +295,7 @@ public class ProviderNetworkUpdateTests
             Seq<NetNat>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
-        var result = await generateChanges(hostState, providersConfig).Run(_runtime);
+        var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
 
         result.Should().BeFail().Which.Message
             .Should().Be("The host adapter 'missing-adapter' does not exist.");
@@ -319,7 +331,7 @@ public class ProviderNetworkUpdateTests
             Seq<NetNat>(),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
-        var result = await generateChanges(hostState, providersConfig).Run(_runtime);
+        var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
 
         var error = result.Should().BeFail().Subject;
         error.Message.Should().Be("Some host adapters are used by other Hyper-V switches.");
@@ -362,7 +374,7 @@ public class ProviderNetworkUpdateTests
             Seq1(new NetNat { Name = "other-nat", InternalIPInterfaceAddressPrefix = otherNetwork }),
             new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>()));
 
-        var result = await generateChanges(hostState, providersConfig).Run(_runtime);
+        var result = await generateChanges(hostState, providersConfig, false).Run(_runtime);
 
         result.Should().BeFail().Which.Message
             .Should().Be($"The IP range '{eryphNetwork}' of the provider 'test-provider' overlaps the IP range '{otherNetwork}' of the NAT 'other-nat' which is not managed by eryph.");

@@ -41,7 +41,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
                     "\nFailed to apply new configuration. Rolling back to current active configuration.\n")
                 from hostState in getHostState(true)
                 from currentConfigChanges in ProviderNetworkUpdate<RT>
-                    .generateChanges(hostState, currentConfig)
+                    .generateChanges(hostState, currentConfig, true)
                 from _ in currentConfigChanges.Operations.Length == 0
                     ? Console<RT>.writeLine(
                         "No changes found to be rolled back." +
