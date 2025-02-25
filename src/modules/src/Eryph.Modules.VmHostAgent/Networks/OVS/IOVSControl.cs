@@ -18,7 +18,7 @@ public interface IOVSControl
 
     EitherAsync<Error, Unit> AddPort(
         string bridgeName,
-        InterfaceUpdate @interface,
+        OvsInterfaceUpdate interfaceUpdate,
         CancellationToken cancellationToken);
 
     EitherAsync<Error, Unit> RemovePort(
@@ -29,15 +29,15 @@ public interface IOVSControl
     EitherAsync<Error, Unit> AddBond(
         string bridgeName,
         string portName,
-        Seq<InterfaceUpdate> interfaces,
+        Seq<OvsInterfaceUpdate> interfaceUpdates,
         string bondMode,
         CancellationToken cancellationToken);
 
-    EitherAsync<Error, Seq<Bridge>> GetBridges(CancellationToken cancellationToken);
+    EitherAsync<Error, Seq<OvsBridge>> GetBridges(CancellationToken cancellationToken);
 
-    EitherAsync<Error, Seq<BridgePort>> GetPorts(CancellationToken cancellationToken);
+    EitherAsync<Error, Seq<OvsBridgePort>> GetPorts(CancellationToken cancellationToken);
 
-    EitherAsync<Error, Seq<Interface>> GetInterfaces(CancellationToken cancellationToken);
+    EitherAsync<Error, Seq<OvsInterface>> GetInterfaces(CancellationToken cancellationToken);
 
     EitherAsync<Error, OVSTableRecord> GetOVSTable(CancellationToken cancellationToken);
 

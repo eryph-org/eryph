@@ -1042,12 +1042,13 @@ internal static class Program
                     select (r.IsValid, HostState: s)
             }
             from newConfigChanges in generateChanges(syncResult.HostState, newConfig, false)
-            from validateImpact in validateNetworkImpact(newConfig)
-            from _3 in applyChangesInConsole(currentConfig, newConfigChanges,
+            from _3 in validateNetworkImpact(newConfig)
+            from _4 in applyChangesInConsole(currentConfig, newConfigChanges,
                 getHostStateWithProgress, nonInteractive, syncResult.IsValid)
-            from save in saveConfigurationYaml(configString)
-            from sync in syncNetworks()
-            from m in writeLine("New Network configuration was imported.")
+            from _5 in saveConfigurationYaml(configString)
+            from _6 in syncNetworks()
+            from _7 in writeLine("New Network configuration was imported.")
+            from _8 in checkHostInterfacesWithProgress()
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
                 nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
@@ -1070,6 +1071,7 @@ internal static class Program
             from _4 in applyChangesInConsole(currentConfig, pendingChanges,
                 getHostStateWithProgress, nonInteractive, false)
             from _5 in syncNetworks()
+            from _6 in checkHostInterfacesWithProgress()
             select unit,
             new ConsoleRuntime(new ConsoleRuntimeEnv(
                 nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));

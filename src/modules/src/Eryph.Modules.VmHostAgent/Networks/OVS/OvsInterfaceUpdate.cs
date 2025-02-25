@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Eryph.Modules.VmHostAgent.Networks.OVS;
 
-public record InterfaceUpdate(
+public record OvsInterfaceUpdate(
     string Name,
     Guid InterfaceId,
     string ConfiguredName);
