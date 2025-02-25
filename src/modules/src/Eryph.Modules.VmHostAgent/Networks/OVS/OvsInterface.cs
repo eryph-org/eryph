@@ -18,7 +18,7 @@ public record OvsInterface : OVSTableRecord, IOVSEntityWithName
 
     public string? Error => GetValue<string?>("error");
     
-    public string? LinkState => GetValue<string>("link_state");
+    public string? LinkState => GetValue<string?>("link_state");
 
     public string Type => GetValue<string>("type");
 }

@@ -40,7 +40,7 @@ public readonly struct TestRuntime :
     /// </summary>
     public RuntimeEnv<TestRuntime> Env =>
         env ?? throw new InvalidOperationException(
-            "Runtime Env not set.  Perhaps because of using default(Runtime) or new Runtime() rather than Runtime.New()");
+            "Runtime Env not set. Perhaps because of using default(Runtime) or new Runtime() rather than Runtime.New()");
 
     public static TestRuntime New(
         IOVSControl ovsControl,
@@ -53,62 +53,6 @@ public readonly struct TestRuntime :
             syncClient,
             hostNetworkCommands,
             networkProviderManager));
-
-    /*
-    /// <summary>
-    /// Constructor function
-    /// </summary>
-    /// <param name="timeSpec">Defines how time works in the runtime</param>
-    public static TestRuntime New(TestTimeSpec? timeSpec = default) =>
-        new TestRuntime(new RuntimeEnv<TestRuntime>(new CancellationTokenSource(),
-            System.Text.Encoding.Default,
-            new MemoryConsole(),
-            new MemoryFS(),
-            timeSpec,
-            MemorySystemEnvironment.InitFromSystem()));
-*/
-    /*
-    /// <summary>
-    /// Constructor function
-    /// </summary>
-    /// <param name="source">Cancellation token source</param>
-    /// <param name="timeSpec">Defines how time works in the runtime</param>
-    public static TestRuntime New(CancellationTokenSource source, TestTimeSpec? timeSpec = default) =>
-        new TestRuntime(new RuntimeEnv<TestRuntime>(source,
-            System.Text.Encoding.Default,
-            new MemoryConsole(),
-            new MemoryFS(),
-            timeSpec,
-            MemorySystemEnvironment.InitFromSystem()));
-
-    /// <summary>
-    /// Constructor function
-    /// </summary>
-    /// <param name="encoding">Text encoding</param>
-    /// <param name="timeSpec">Defines how time works in the runtime</param>
-    public static TestRuntime New(Encoding encoding, TestTimeSpec? timeSpec = default) =>
-        new TestRuntime(new RuntimeEnv<TestRuntime>(new CancellationTokenSource(),
-            encoding,
-            new MemoryConsole(),
-            new MemoryFS(),
-            timeSpec,
-            MemorySystemEnvironment.InitFromSystem()));
-
-    /// <summary>
-    /// Constructor function
-    /// </summary>
-    /// <param name="encoding">Text encoding</param>
-    /// <param name="source">Cancellation token source</param>
-    /// <param name="timeSpec">Defines how time works in the runtime</param>
-    public static TestRuntime New(Encoding encoding, CancellationTokenSource source, TestTimeSpec? timeSpec = default) =>
-        new TestRuntime(new RuntimeEnv<TestRuntime>(source,
-            encoding,
-            new MemoryConsole(),
-            new MemoryFS(),
-            timeSpec,
-            MemorySystemEnvironment.InitFromSystem()));
-
-    */
 
     /// <summary>
     /// Create a new Runtime with a fresh cancellation token

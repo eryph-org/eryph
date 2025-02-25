@@ -32,7 +32,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
         from _2 in Console<RT>.writeEmptyLine
         select hostState;
 
-    public static Aff<RT, HostState> getHostStateWithProgress(bool withFallback) =>
+    public static Aff<RT, HostState> getHostStateWithProgress() =>
         from _ in Console<RT>.write("Analyzing host network settings => ")
         // collect network state of host
         from hostState in HostStateProvider<RT>.getHostState(
@@ -44,13 +44,13 @@ public static class ProviderNetworkUpdateInConsole<RT>
     private static Aff<RT, Unit> rollbackToCurrentConfig(
         Error error,
         NetworkProvidersConfiguration currentConfig,
-        Func<bool, Aff<RT, HostState>> getHostState)
+        Func<Aff<RT, HostState>> getHostState)
     {
         return (
                 from m1 in Console<RT>.writeLine(
                     $"\nError: {error}" +
                     "\nFailed to apply new configuration. Rolling back to current active configuration.\n")
-                from hostState in getHostState(true)
+                from hostState in getHostState()
                 from currentConfigChanges in ProviderNetworkUpdate<RT>
                     .generateChanges(hostState, currentConfig, true)
                 from _ in currentConfigChanges.Operations.Length == 0
@@ -217,7 +217,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
     public static Aff<RT, Unit> applyChangesInConsole(
         NetworkProvidersConfiguration currentConfig,
         NetworkChanges<RT> newConfigChanges,
-        Func<bool, Aff<RT, HostState>> getHostState,
+        Func<Aff<RT, HostState>> getHostState,
         bool nonInteractive,
         bool rollbackToCurrent)
     {

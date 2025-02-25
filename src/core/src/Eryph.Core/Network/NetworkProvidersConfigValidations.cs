@@ -13,21 +13,39 @@ using static Dbosoft.Functional.Validations.ComplexValidations;
 
 namespace Eryph.Core.Network;
 
+/// <summary>
+/// Validates the <see cref="NetworkProvidersConfiguration"/>.
+/// </summary>
+/// <remarks>
+/// The validation can be improved in the future when the validation
+/// for the project network configuration has been implemented.
+/// </remarks>
 public static class NetworkProvidersConfigValidations
 {
     public static Validation<ValidationIssue, Unit> ValidateNetworkProvidersConfig(
         NetworkProvidersConfiguration toValidate,
         string path = "") =>
         ValidateNetworkProviderConfigs(toValidate, path);
-
+        
     private static Validation<ValidationIssue, Unit> ValidateNetworkProviderConfigs(
         NetworkProvidersConfiguration toValidate,
         string path = "") =>
         from _1 in ValidateList(toValidate, c => c.NetworkProviders,
             ValidateNetworkProviderConfig, path, minCount: 1, maxCount: int.MaxValue)
         from _2 in ValidateProperty(toValidate, c => c.NetworkProviders,
-            provider => Validations.ValidateDistinct(
-                provider, p => NetworkProviderName.NewValidation(p.Name), "provider name"),
+            providers => Validations.ValidateDistinct(
+                providers, p => NetworkProviderName.NewValidation(p.Name), "network provider name"),
+            path)
+        from _3 in ValidateProperty(toValidate, c => c.NetworkProviders,
+            providers => Validations.ValidateDistinct(
+                providers.ToSeq().Bind(p =>Optional(p.BridgeName).ToSeq()),
+                BridgeName.NewValidation,
+                "bridge name"),
+            path)
+        from _4 in ValidateProperty(toValidate, c => c.NetworkProviders,
+            providers => Validations.ValidateDistinct(
+                providers.ToSeq().Bind(p => p.Adapters.ToSeq()),
+                Success<Error, string>, "adapter"),
             path)
         select unit;
 
@@ -35,7 +53,6 @@ public static class NetworkProvidersConfigValidations
         NetworkProvider toValidate,
         string path = "") =>
         ValidateProperty(toValidate, c => c.Name, NetworkProviderName.NewValidation, path, required: true)
-        | ValidateProperty(toValidate, c => c.Type, ValidateProviderType, path, required: true)
         | ValidateList(toValidate, c => c.Subnets, ValidateSubnet, path, minCount: 1)
         | toValidate.Type switch
         {
@@ -54,6 +71,12 @@ public static class NetworkProvidersConfigValidations
             path)
         | ValidateProperty(toValidate, c => c.BridgeOptions,
             NotAllowed<NetworkProviderBridgeOptions>("The flat network provider does not support bridge options."),
+            path)
+        | ValidateProperty(toValidate, c => c.Adapters,
+            NotAllowed<string[]>("The flat network provider does not use adapters."),
+            path)
+        | ValidateProperty(toValidate, c => c.Vlan,
+            NotAllowed<int>("The flat network provider does not support the configuration of a VLAN."),
             path);
 
     private static Validation<ValidationIssue, Unit> ValidateNatOverlayProviderConfig(
@@ -64,7 +87,14 @@ public static class NetworkProvidersConfigValidations
             NotAllowed<string>("The NAT overlay network provider does not support custom switch names."),
             path)
         | ValidateProperty(toValidate, c => c.BridgeOptions,
-            NotAllowed<NetworkProviderBridgeOptions>("The NAT overlay network provider does not support bridge options."),
+            NotAllowed<NetworkProviderBridgeOptions>(
+                "The NAT overlay network provider does not support bridge options."),
+            path)
+        | ValidateProperty(toValidate, c => c.Adapters,
+            NotAllowed<string[]>("The NAT overlay network provider does not use adapters."),
+            path)
+        | ValidateProperty(toValidate, c => c.Vlan,
+            NotAllowed<int>("The NAT overlay network provider does not support the configuration of a VLAN."),
             path);
 
     private static Validation<ValidationIssue, Unit> ValidateOverlayProviderConfig(
@@ -74,13 +104,13 @@ public static class NetworkProvidersConfigValidations
         | ValidateProperty(toValidate, c => c.SwitchName,
             NotAllowed<string>("The overlay network provider does not support custom switch names."),
             path)
-        | ValidateProperty(toValidate, c => c.BridgeOptions, ValidateNetworkProviderBridgeOptions, path);
+        | ValidateProperty(toValidate, c => c.BridgeOptions, ValidateNetworkProviderBridgeOptions, path)
+        | ValidateProperty(toValidate, c => c.Vlan, ValidateVlanTag, path);
 
     private static Validation<ValidationIssue, Unit> ValidateNetworkProviderBridgeOptions(
         NetworkProviderBridgeOptions toValidate,
         string path = "") =>
-        ValidateProperty(toValidate, c => c.BridgeVlan, ValidateVlanTag, path)
-        | ValidateProperty(toValidate, c => c.VlanMode, ValidateVlanMode, path);
+        ValidateProperty(toValidate, c => c.BridgeVlan, ValidateVlanTag, path);
 
     private static Validation<ValidationIssue, Unit> ValidateSubnet(
         NetworkProviderSubnet toValidate,
@@ -116,24 +146,10 @@ public static class NetworkProvidersConfigValidations
         from _ in Validations.ValidateNotEmpty(ipPoolName, "ip pool name")
         select ipPoolName;
 
-    private static Validation<Error, Unit> ValidateProviderType(
-        NetworkProviderType providerType) =>
-        guard(providerType is NetworkProviderType.Flat
-                    or NetworkProviderType.Overlay
-                    or NetworkProviderType.NatOverlay,
-                Error.New($"The provider type '{providerType}' is not supported."))
-            .ToValidation();
-
     private static Validation<Error, Unit> ValidateVlanTag(int vlanTag) =>
-        guard(vlanTag > 0, Error.New("The vlan tag must be greater than 0."))
-            .ToValidation();
-
-    private static Validation<Error, Unit> ValidateVlanMode(
-        BridgeVlanMode vlanMode) =>
-        guard(vlanMode is BridgeVlanMode.Access
-                    or BridgeVlanMode.NativeTagged
-                    or BridgeVlanMode.NativeUntagged,
-                Error.New($"The VLAN mode '{vlanMode}' is not supported."))
+        guard(vlanTag > 0, Error.New("The VLAN tag must be greater than 0."))
+            .ToValidation()
+        | guard(vlanTag < 4096, Error.New("The VLAN tag must be less than 4096."))
             .ToValidation();
 
     private static Func<T, Validation<Error, T>> NotAllowed<T>(
