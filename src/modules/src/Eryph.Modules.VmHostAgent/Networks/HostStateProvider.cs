@@ -59,21 +59,21 @@ public static class HostStateProvider<RT>
         from vmSwitches in hostCommands.GetSwitches()
         from _3 in progressCallback()
         from hostAdapters in hostCommands.GetHostAdapters()
-        from _5 in progressCallback()
+        from _4 in progressCallback()
         from netNat in hostCommands.GetNetNat()
-        from _6 in progressCallback()
+        from _5 in progressCallback()
         from ovsBridges in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
             from b in ovsTool.GetBridges(ct).ToAff(e => e)
             select b)
-        from _7 in progressCallback()
+        from _6 in progressCallback()
         from ovsBridgePorts in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
             from p in ovsTool.GetPorts(ct).ToAff(e => e)
             select p)
-        from _8 in progressCallback()
+        from _7 in progressCallback()
         from ovsInterfaces in timeout(
             TimeSpan.FromSeconds(5),
             from ct in cancelToken<RT>()
@@ -87,7 +87,7 @@ public static class HostStateProvider<RT>
             hostAdaptersInfo,
             netNat,
             bridgesInfo)
-        from _9 in Logger<RT>.logTrace<HostState>("Fetched host state: {HostState}", hostState)
+        from _8 in Logger<RT>.logTrace<HostState>("Fetched host state: {HostState}", hostState)
         select hostState;
 
     private static Validation<Error, Unit> checkHostInterface(

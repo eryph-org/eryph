@@ -166,6 +166,121 @@ public class NetworkProvidersConfigValidationsTests
             });
     }
 
+    [Theory]
+    [InlineData(NetworkProviderType.Flat)]
+    [InlineData(NetworkProviderType.NatOverlay)]
+    [InlineData(NetworkProviderType.Overlay)]
+    public void ValidateNetworkProviderConfig_SubnetWithDenormalizedNetwork_ReturnsError(
+        NetworkProviderType providerType)
+    {
+        var config = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = EryphConstants.DefaultProviderName,
+                    Type = providerType,
+                    BridgeName = providerType is NetworkProviderType.Flat ? null : "br-test",
+                    SwitchName = providerType is NetworkProviderType.Flat ? "test-switch" : null,
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = EryphConstants.DefaultSubnetName,
+                            Gateway = "10.249.249.1",
+                            Network = "10.249.249.0/22",
+                            IpPools =
+                            [
+                                new NetworkProviderIpPool
+                                {
+                                    Name = EryphConstants.DefaultIpPoolName,
+                                    FirstIp = "10.249.249.50",
+                                    NextIp = "10.249.249.60",
+                                    LastIp = "10.249.249.100"
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+
+        var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].Subnets[0].Network");
+                issue.Message.Should().Match("The normalized IP network '10.249.248.0/22' does not match the specified network '10.249.249.0/22'.*");
+            });
+    }
+
+    [Theory]
+    [InlineData(NetworkProviderType.Flat)]
+    [InlineData(NetworkProviderType.NatOverlay)]
+    [InlineData(NetworkProviderType.Overlay)]
+    public void ValidateNetworkProviderConfig_SubnetWithMismatchedIpAddresses_ReturnsError(
+        NetworkProviderType providerType)
+    {
+        var config = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = EryphConstants.DefaultProviderName,
+                    Type = providerType,
+                    BridgeName = providerType is NetworkProviderType.Flat ? null : "br-test",
+                    SwitchName = providerType is NetworkProviderType.Flat ? "test-switch" : null,
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = EryphConstants.DefaultSubnetName,
+                            Gateway = "10.249.0.1",
+                            Network = "10.249.248.0/22",
+                            IpPools =
+                            [
+                                new NetworkProviderIpPool
+                                {
+                                    Name = EryphConstants.DefaultIpPoolName,
+                                    FirstIp = "10.249.0.50",
+                                    NextIp = "10.249.0.60",
+                                    LastIp = "10.249.0.100"
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+
+        var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].Subnets[0].Gateway");
+                issue.Message.Should().Be("The IP address '10.249.0.1' is not part of the provider's network '10.249.248.0/22'.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].Subnets[0].IpPools[0].FirstIp");
+                issue.Message.Should().Be("The IP address '10.249.0.50' is not part of the provider's network '10.249.248.0/22'.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].Subnets[0].IpPools[0].NextIp");
+                issue.Message.Should().Be("The IP address '10.249.0.60' is not part of the provider's network '10.249.248.0/22'.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].Subnets[0].IpPools[0].LastIp");
+                issue.Message.Should().Be("The IP address '10.249.0.100' is not part of the provider's network '10.249.248.0/22'.");
+            });
+    }
+
     [Fact]
     public void ValidateNetworkProvidersConfig_FlatProviderWithInvalidValues_ReturnsError()
     {
@@ -318,11 +433,131 @@ public class NetworkProvidersConfigValidationsTests
             });
     }
 
-    private static NetworkProviderSubnet ArrangeDefaultSubnet() =>
-        new()
+    [Theory]
+    [InlineData("other-subnet", "default")]
+    [InlineData("default", "other-pool")]
+    public void ValidateNetworkProvidersConfig_NatOverlayProviderWithInvalidSubnet_ReturnsError(
+        string subnetName,
+        string ipPoolName)
+    {
+        var config = new NetworkProvidersConfiguration
         {
-            Name = EryphConstants.DefaultSubnetName,
-            Gateway = "10.249.0.1",
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "default",
+                    Type = NetworkProviderType.NatOverlay,
+                    BridgeName = "br-nat",
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = subnetName,
+                            Gateway = "10.249.0.1",
+                            Network = "10.249.0.0/22",
+                            IpPools =
+                            [
+                                new NetworkProviderIpPool
+                                {
+                                    Name = ipPoolName,
+                                    FirstIp = "10.249.0.50",
+                                    NextIp = "10.249.0.60",
+                                    LastIp = "10.249.0.100"
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+
+        var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].Subnets");
+                issue.Message.Should().Be("The NAT overlay provider must contain only the default subnet with the default IP pool.");
+            });
+    }
+
+    [Fact]
+    public void ValidateNetworkProvidersConfig_OverlappingNatNetworks_ReturnsError()
+    {
+        var config = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "default",
+                    Type = NetworkProviderType.NatOverlay,
+                    BridgeName = "br-nat",
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = EryphConstants.DefaultSubnetName,
+                            Gateway = "10.249.0.1",
+                            Network = "10.249.0.0/22",
+                            IpPools =
+                            [
+                                new NetworkProviderIpPool
+                                {
+                                    Name = EryphConstants.DefaultIpPoolName,
+                                    FirstIp = "10.249.0.50",
+                                    NextIp = "10.249.0.60",
+                                    LastIp = "10.249.0.100"
+                                },
+                            ],
+                        },
+                    ],
+                },
+                new NetworkProvider
+                {
+                    Name = "second-nat-provider",
+                    Type = NetworkProviderType.NatOverlay,
+                    BridgeName = "br-nat-2",
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = EryphConstants.DefaultSubnetName,
+                            Gateway = "10.249.1.1",
+                            Network = "10.249.1.0/24",
+                            IpPools =
+                            [
+                                new NetworkProviderIpPool
+                                {
+                                    Name = EryphConstants.DefaultIpPoolName,
+                                    FirstIp = "10.249.1.50",
+                                    NextIp = "10.249.1.60",
+                                    LastIp = "10.249.1.100"
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+
+        var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders");
+                issue.Message.Should().Be(
+                    "The network '10.249.0.0/22' of provider 'default' overlaps with the network '10.249.1.0/24' of provider 'second-nat-provider'.");
+            });
+    }
+    
+    private static NetworkProviderSubnet ArrangeDefaultSubnet() =>
+    new()
+    {
+        Name = EryphConstants.DefaultSubnetName,
+        Gateway = "10.249.0.1",
             Network = "10.249.0.0/22",
             IpPools =
             [
