@@ -176,16 +176,14 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         Seq<NewBridge> expectedBridges) =>
         from _1 in LogMethodTrace(nameof(RemoveUnusedBridges))
         let newBridgeNames = toHashSet(expectedBridges.Map(b => b.BridgeName))
-        let unusedBridges = ovsBridges.Bridges.Values
+        let unusedBridges = ovsBridges.Bridges.Values.ToSeq()
             .Filter(b => b.Name != "br-int")
             .Filter(b => !newBridgeNames.Contains(b.Name))
             .Map(b => b.Name)
         from _2 in unusedBridges
             .Map(RemoveUnusedBridge)
             .SequenceSerial()
-        let result = unusedBridges
-            .Fold(ovsBridges, (s, b) => s.RemoveBridge(b))
-        select result;
+        select ovsBridges.RemoveBridges(unusedBridges);
 
     private Aff<RT, Unit> RemoveUnusedBridge(
         string bridgeName) =>
@@ -414,11 +412,11 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         from newNat in expectedBridge.Nat
             .ToAff(Error.New($"BUG! NAT bridge '{expectedBridge.BridgeName}' of provider '{expectedBridge.ProviderName}' has no NAT configuration."))
         // When the bridge is new, we do not need to check the IP address.
-        // This checks also prevent us from skipping the assignment of the
+        // This check also prevents us from skipping the assignment of the
         // IP address when the bridge is recreated.
         from isBridgeAdapterIpValid in createdBridges.Contains(expectedBridge.BridgeName)
             ? SuccessAff(false)
-            : IsBridgeAdapterIpValid(expectedBridge.BridgeName, newNat)
+            : IsNatAdapterIpValid(expectedBridge.BridgeName, newNat)
         from _1 in isBridgeAdapterIpValid
             ? unitAff   
             : AddOperation(
@@ -432,7 +430,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                 expectedBridge.BridgeName)
         select unit;
 
-    private Aff<RT, bool> IsBridgeAdapterIpValid(
+    private Aff<RT, bool> IsNatAdapterIpValid(
         string adapterName,
         NewBridgeNat expectedNat) =>
         from hostCommands in default(RT).HostNetworkCommands.ToAff()
@@ -444,12 +442,13 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                                       && ip.IPAddress == expectedNat.Gateway.ToString()
                         from _2 in isMatch
                             ? unitAff
-                            : LogDebug("Host nat adapter {AdapterName} has invalid IP address. Expected: {ExpectedIp}/{ExpectedSuffix}, Actual: {ActualIp}/{ActualSuffix}",
+                            : LogDebug("The host NAT adapter '{AdapterName}' has an invalid IP address. Expected: {ExpectedIp}/{ExpectedSuffix}, Actual: {ActualIp}/{ActualSuffix}",
                                 adapterName, expectedNat.Gateway, expectedNat.Network.Cidr, ip.IPAddress, ip.PrefixLength)
                         select isMatch,
-            Tail: _ => SuccessAff(false))
+            Tail: _ => from _1 in LogDebug("The host NAT adapter '{AdapterName}' has multiple IP addresses.",
+                           adapterName)
+                       select false)
         select isValid;
-    
     
     /// <summary>
     /// This method removes OVS bridges for which the host network adapter no longer exist.
@@ -482,8 +481,7 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                     bridgeName)
                 select unit)
             .SequenceSerial()
-        let result = bridgesToRemove.Fold(ovsBridges, (s, b) => s.RemoveBridge(b))
-        select result;
+        select ovsBridges.RemoveBridges(bridgesToRemove);
 
     public Aff<RT, Unit> UpdateBridgePorts(
         Seq<NewBridge> expectedBridges,
@@ -556,8 +554,6 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         let existingPort = ovsBridges.Bridges
             .Find(expectedBridge.BridgeName)
             .Bind(b => b.Ports.Find(expectedPortName))
-        // When the provider has no adapters configured at all, we do not need to create
-        // or update the overlay port.
         from _4 in  existingPort.Match(
             None: () => AddOverlayAdapterPort(expectedBridge, expectedPortName, hostAdaptersInfo),
             Some: portInfo => UpdateOverlayAdapterPort(expectedBridge, portInfo))

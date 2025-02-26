@@ -37,7 +37,9 @@ public static class NetworkProvidersConfigValidations
             ValidateNetworkProviderConfig, path, minCount: 1, maxCount: int.MaxValue)
         from _2 in ValidateProperty(toValidate, c => c.NetworkProviders,
             providers => Validations.ValidateDistinct(
-                providers, p => NetworkProviderName.NewValidation(p.Name), "network provider name"),
+                providers,
+                p => NetworkProviderName.NewValidation(p.Name),
+                "network provider name"),
             path)
         from _3 in ValidateProperty(toValidate, c => c.NetworkProviders,
             providers => Validations.ValidateDistinct(
@@ -48,7 +50,8 @@ public static class NetworkProvidersConfigValidations
         from _4 in ValidateProperty(toValidate, c => c.NetworkProviders,
             providers => Validations.ValidateDistinct(
                 providers.ToSeq().Bind(p => p.Adapters.ToSeq()),
-                Success<Error, string>, "adapter"),
+                Success<Error, string>,
+                "adapter"),
             path)
         from _5 in ValidateProperty(toValidate, c => c.NetworkProviders,
             providers => ValidateNoOverlappingNatNetworks(providers.ToSeq()),
@@ -193,7 +196,7 @@ public static class NetworkProvidersConfigValidations
     /// We only check NAT overlay providers for overlapping networks. For NAT providers,
     /// overlapping networks cannot be configured at all as the networks would conflict
     /// on the host. For overlay providers, overlapping networks are possible even if
-    /// such a configuration is reasonable in most cases.
+    /// such a configuration is not reasonable in most cases.
     /// </remarks>
     private static Validation<Error, Unit> ValidateNoOverlappingNatNetworks(
         Seq<NetworkProvider> toValidate) =>

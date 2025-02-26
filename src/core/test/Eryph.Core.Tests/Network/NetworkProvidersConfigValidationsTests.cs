@@ -170,7 +170,7 @@ public class NetworkProvidersConfigValidationsTests
     [InlineData(NetworkProviderType.Flat)]
     [InlineData(NetworkProviderType.NatOverlay)]
     [InlineData(NetworkProviderType.Overlay)]
-    public void ValidateNetworkProviderConfig_SubnetWithDenormalizedNetwork_ReturnsError(
+    public void ValidateNetworkProvidersConfig_SubnetWithDenormalizedNetwork_ReturnsError(
         NetworkProviderType providerType)
     {
         var config = new NetworkProvidersConfiguration
@@ -220,7 +220,7 @@ public class NetworkProvidersConfigValidationsTests
     [InlineData(NetworkProviderType.Flat)]
     [InlineData(NetworkProviderType.NatOverlay)]
     [InlineData(NetworkProviderType.Overlay)]
-    public void ValidateNetworkProviderConfig_SubnetWithMismatchedIpAddresses_ReturnsError(
+    public void ValidateNetworkProvidersConfig_SubnetWithMismatchedIpAddresses_ReturnsError(
         NetworkProviderType providerType)
     {
         var config = new NetworkProvidersConfiguration

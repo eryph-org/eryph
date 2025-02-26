@@ -8,8 +8,8 @@ namespace Eryph.Modules.VmHostAgent.Networks;
 public record OvsBridgesInfo(
     HashMap<string, OvsBridgeInfo> Bridges)
 {
-    public OvsBridgesInfo RemoveBridge(string bridgeName) =>
-        new(Bridges: Bridges.Remove(bridgeName));
+    public OvsBridgesInfo RemoveBridges(Seq<string> bridgeNames) =>
+        new(Bridges: Bridges.RemoveRange(bridgeNames));
 
     public OvsBridgesInfo SetBridge(OvsBridgeInfo bridgeInfo) =>
         new(Bridges: Bridges.SetItem(bridgeInfo.Name, bridgeInfo));

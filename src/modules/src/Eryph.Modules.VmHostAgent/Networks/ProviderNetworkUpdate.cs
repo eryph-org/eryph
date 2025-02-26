@@ -64,6 +64,10 @@ public static class ProviderNetworkUpdate<RT>
 
         // generate variables
         from expectedBridges in prepareExpectedBridges(newConfig)
+        // The fallback data contains the host adapters also by the names
+        // which have been used when the network providers have been configured.
+        // This way, we can still use the last configuration even after an adapter
+        // has been renamed.
         from hostStateWithFallback in withFallback
             ? addFallbackData(hostState)
             : SuccessEff(hostState)
@@ -94,7 +98,7 @@ public static class ProviderNetworkUpdate<RT>
             ovsBridges1, expectedBridges)
 
         // Bridge exists in OVS but its adapter is missing on the host -> remove it
-        // This can ony happen if the adapter has been manually renamed or similar
+        // This can only happen if the bridge adapter has been manually renamed by a user.
         from ovsBridges3 in changeBuilder.RemoveBridgesWithMissingBridgeAdapter(
             expectedBridges, hostStateWithFallback.HostAdapters, ovsBridges2)
 
@@ -115,10 +119,10 @@ public static class ProviderNetworkUpdate<RT>
         from ovsBridges4 in changeBuilder.RemoveInvalidAdapterPortsFromBridges(
             expectedBridges, hostStateWithFallback.HostAdapters, ovsBridges3)
 
-        // Configure ip settings and nat for nat_overlay adapters
+        // Configure IP settings nat_overlay adapters
         from _4 in changeBuilder.ConfigureNatAdapters(expectedBridges, createdBridges)
 
-        // Create ports for adapters in overlay bridges
+        // Create ports for physical adapters in overlay bridges
         from _5 in changeBuilder.ConfigureOverlayAdapterPorts(
             expectedBridges, ovsBridges4, hostStateWithFallback.HostAdapters)
 
@@ -135,6 +139,39 @@ public static class ProviderNetworkUpdate<RT>
             .Filter(np => np.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay)
             .Map(prepareNewBridgeInfo)
             .Sequence();
+
+    private static Eff<NewBridge> prepareNewBridgeInfo(
+        NetworkProvider providerConfig) =>
+        from bridgeName in Optional(providerConfig.BridgeName)
+            .Filter(notEmpty)
+            .ToEff(Error.New($"The network provider '{providerConfig.Name}' has no bridge name."))
+        from nat in providerConfig.Type is NetworkProviderType.NatOverlay
+            ? prepareNewBridgeNatInfo(providerConfig).Map(Some)
+            : SuccessEff(Option<NewBridgeNat>.None)
+        select new NewBridge(
+            bridgeName, 
+            providerConfig.Name,
+            providerConfig.Type,
+            nat,
+            providerConfig.Adapters.ToSeq(),
+            Optional(providerConfig.BridgeOptions));
+
+    private static Eff<NewBridgeNat> prepareNewBridgeNatInfo(
+        NetworkProvider providerConfig) =>
+        from subnet in providerConfig.Subnets.ToSeq()
+            .Find(s => s.Name == "default")
+            .ToEff(Error.New($"The NAT network provider '{providerConfig.Name}' has no default subnet."))
+        from gateway in parseIPAddress(subnet.Gateway)
+            .ToEff(Error.New($"The NAT network provider '{providerConfig.Name}' has an invalid gateway IP address."))
+        from network in parseIPNetwork2(subnet.Network)
+            .ToEff(Error.New($"The NAT network provider '{providerConfig.Name}' has an invalid network."))
+        select new NewBridgeNat(getNetNatName(providerConfig.Name), gateway, network);
+
+    private static string getNetNatName(string providerName)
+        // The pattern for the NetNat name should be "eryph_{providerName}_{subnetName}".
+        // At the moment, we only support a single provider subnet which must be named
+        // 'default'. Hence, we hardcode the subnet part for now.
+        => $"eryph_{providerName}_default";
 
     internal static Eff<HostState> addFallbackData(
         HostState hostState) =>
@@ -161,40 +198,6 @@ public static class ProviderNetworkUpdate<RT>
         let adaptersInfoWithFallback = new HostAdaptersInfo(adapterInfos.Concat(fallbackAdapterInfos).ToHashMap())
         select hostState with { HostAdapters = adaptersInfoWithFallback };
 
-
-    private static Eff<NewBridge> prepareNewBridgeInfo(
-        NetworkProvider providerConfig) =>
-        from bridgeName in Optional(providerConfig.BridgeName)
-            .Filter(notEmpty)
-            .ToEff(Error.New($"The network provider {providerConfig.Name} has no bridge name."))
-        from nat in providerConfig.Type is NetworkProviderType.NatOverlay
-            ? prepareNewBridgeNatInfo(providerConfig).Map(Some)
-            : SuccessEff(Option<NewBridgeNat>.None)
-        select new NewBridge(
-            bridgeName, 
-            providerConfig.Name,
-            providerConfig.Type,
-            nat,
-            providerConfig.Adapters.ToSeq(),
-            Optional(providerConfig.BridgeOptions));
-
-    private static Eff<NewBridgeNat> prepareNewBridgeNatInfo(
-        NetworkProvider providerConfig) =>
-        from subnet in providerConfig.Subnets.ToSeq()
-            .Find(s => s.Name == "default")
-            .ToEff(Error.New($"The NAT network provider {providerConfig.Name} has no default subnet."))
-        from gateway in parseIPAddress(subnet.Gateway)
-            .ToEff(Error.New($"The NAT network provider {providerConfig.Name} has an invalid gateway IP address."))
-        from network in parseIPNetwork2(subnet.Network)
-            .ToEff(Error.New($"The NAT network provider {providerConfig.Name} has an invalid network."))
-        select new NewBridgeNat(getNetNatName(providerConfig.Name), gateway, network);
-
-    private static string getNetNatName(string providerName)
-        // The pattern for the NetNat name should be "eryph_{providerName}_{subnetName}".
-        // At the moment, we only support a single provider subnet which must be named
-        // 'default'. Hence, we hardcode the subnet part for now.
-        => $"eryph_{providerName}_default";
-
     private static Aff<RT, OvsBridgesInfo> generateOverlaySwitchChanges(
         NetworkChangeOperationBuilder<RT> changeBuilder,
         HostState hostState,
@@ -211,8 +214,8 @@ public static class ProviderNetworkUpdate<RT>
         from _ in expectedOverlayAdapters
             .Map(a => allOtherSwitches
                 .Find(s => s.NetAdapterInterfaceGuid.ToSeq().Contains(a.InterfaceId)).Match(
-                    Some: s => Fail<Error, Unit>(
-                        Error.New($"The host adapter '{a.Name}' is used by the Hyper-V switch '{s.Name}'.")),
+                    Some: s => Fail<Error, Unit>(Error.New(
+                        $"The host adapter '{a.Name}' is used by the Hyper-V switch '{s.Name}'.")),
                     None: () => Success<Error, Unit>(unit)))
             .Sequence()
             .ToEff(errors => Error.New("Some host adapters are used by other Hyper-V switches.", Error.Many(errors)))
