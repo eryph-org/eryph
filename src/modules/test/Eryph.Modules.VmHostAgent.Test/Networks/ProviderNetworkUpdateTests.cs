@@ -356,7 +356,7 @@ public class ProviderNetworkUpdateTests
     }
 
     [Fact]
-    public async Task GenerateChanges_AddOverlayWithBond_GeneratesChangesNoAdapterChanges()
+    public async Task GenerateChanges_AddOverlayWithBond_GeneratesChanges()
     {
         _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
             .Returns(SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
@@ -408,7 +408,7 @@ public class ProviderNetworkUpdateTests
             operation =>
             {
                 operation.Operation.Should().Be(NetworkChangeOperation.AddBondPort);
-                operation.Args.Should().Equal("br-pif-bond", "pif-1", "pif-2", "br-pif");
+                operation.Args.Should().Equal("br-pif-bond", "pif-1, pif-2", "br-pif");
             },
             operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
     }
