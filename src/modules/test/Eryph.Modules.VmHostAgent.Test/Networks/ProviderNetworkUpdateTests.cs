@@ -243,7 +243,7 @@ public class ProviderNetworkUpdateTests
                     Name = "test-provider",
                     Type = NetworkProviderType.Overlay,
                     BridgeName = "br-test",
-                    Adapters = ["renamed-adapter"],
+                    Adapters = ["test-adapter"],
                     Subnets =
                     [
                         new NetworkProviderSubnet
@@ -276,8 +276,7 @@ public class ProviderNetworkUpdateTests
                             new OvsInterfaceInfo("test-adapter", "", None, interfaceId, "test-adapter")))))
                 )))),
             HostAdapters = new HostAdaptersInfo(HashMap(
-                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, "test-adapter", true)),
-                ("test-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, "test-adapter", true)),
+                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true)),
                 ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false))
                 )),
         };
@@ -312,7 +311,7 @@ public class ProviderNetworkUpdateTests
                     Name = "test-provider",
                     Type = NetworkProviderType.Overlay,
                     BridgeName = "br-test",
-                    Adapters = ["renamed-adapter"],
+                    Adapters = ["test-adapter"],
                     Subnets =
                     [
                         new NetworkProviderSubnet
@@ -345,8 +344,7 @@ public class ProviderNetworkUpdateTests
                             new OvsInterfaceInfo("renamed-adapter", "", None, interfaceId, "test-adapter")))))
                 )))),
             HostAdapters = new HostAdaptersInfo(HashMap(
-                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, "test-adapter", true)),
-                ("test-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, "test-adapter", true)),
+                ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true)),
                 ("br-test", new HostAdapterInfo("br-test", Guid.NewGuid(), None, false))
                 )),
         };
@@ -354,6 +352,64 @@ public class ProviderNetworkUpdateTests
         var result = await generateChanges(hostState, providersConfig, true).Run(_runtime);
 
         result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
+    }
+
+    [Fact]
+    public async Task GenerateChanges_AddOverlayWithBond_GeneratesChangesNoAdapterChanges()
+    {
+        _hostNetworkCommandsMock.Setup(x => x.GetNetAdaptersBySwitch(It.IsAny<Guid>()))
+            .Returns(SuccessAff(Seq<TypedPsObject<VMNetworkAdapter>>()));
+
+        var providersConfig = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "test-provider",
+                    Type = NetworkProviderType.Overlay,
+                    BridgeName = "br-pif",
+                    Adapters = ["pif-1", "pif-2"],
+                    Subnets =
+                    [
+                        new NetworkProviderSubnet
+                        {
+                            Name = "default",
+                            Gateway = "10.249.248.1",
+                            Network = "10.249.248.0/24",
+                        }
+                    ]
+                },
+            ],
+        };
+
+        var pif1Id = Guid.NewGuid();
+        var pif2Id = Guid.NewGuid();
+
+        var hostState = CreateStateWithOverlaySwitch() with
+        {
+            HostAdapters = new HostAdaptersInfo(HashMap(
+                ("pif-1", new HostAdapterInfo("pif-1", pif1Id, None, true)),
+                ("pif-2", new HostAdapterInfo("pif-2", pif2Id, None, true)))),
+        };
+
+        var result = await generateChanges(hostState, providersConfig, true).Run(_runtime);
+
+        result.Should().BeSuccess().Which.Operations.Should().SatisfyRespectively(
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.StopOVN),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.RebuildOverLaySwitch),
+            operation => operation.Operation.Should().Be(NetworkChangeOperation.StartOVN),
+            operation =>
+            {
+                operation.Operation.Should().Be(NetworkChangeOperation.AddBridge);
+                operation.Args.Should().Equal("br-pif");
+            },
+            operation =>
+            {
+                operation.Operation.Should().Be(NetworkChangeOperation.AddBondPort);
+                operation.Args.Should().Equal("br-pif-bond", "pif-1", "pif-2", "br-pif");
+            },
             operation => operation.Operation.Should().Be(NetworkChangeOperation.UpdateBridgeMapping));
     }
 
