@@ -86,6 +86,9 @@ public class VMNetworkAdapter : VirtualMachineDeviceInfo
     [PrivateIdentifier]
     public Guid SwitchId { get; init; }
 
+    [PrivateIdentifier]
+    public Guid VMId { get; init; }
+
     //public VMNetworkAdapterBandwidthSetting BandwidthSetting { get; private set; }
 
 

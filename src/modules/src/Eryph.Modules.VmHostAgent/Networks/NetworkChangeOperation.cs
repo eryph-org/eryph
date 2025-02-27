@@ -41,6 +41,7 @@ public enum NetworkChangeOperation
 
     DisconnectVMAdapters,
     ConnectVMAdapters,
+    RecreateVmPorts,
 
     RemoveBridge,
     RemoveUnusedBridge,

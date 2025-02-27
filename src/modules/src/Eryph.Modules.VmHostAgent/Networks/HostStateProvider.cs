@@ -133,6 +133,8 @@ public static class HostStateProvider<RT>
             ovsInterface.Type,
             Optional(ovsInterface.Error)
                 .Filter(notEmpty),
+            ovsInterface.ExternalIds.Find("iface-id")
+                .Filter(notEmpty),
             ovsInterface.ExternalIds.Find("host-iface-id")
                 .Bind(parseGuid),
             ovsInterface.ExternalIds.Find("host-iface-conf-name")

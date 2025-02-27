@@ -21,6 +21,11 @@ public interface IOVSControl
         OvsInterfaceUpdate interfaceUpdate,
         CancellationToken cancellationToken);
 
+    EitherAsync<Error, Unit> AddPortWithIFaceId(
+        string bridgeName,
+        string portName,
+        CancellationToken cancellationToken);
+
     EitherAsync<Error, Unit> RemovePort(
         string bridgeName,
         string portName,
@@ -36,6 +41,10 @@ public interface IOVSControl
     EitherAsync<Error, Seq<OvsBridge>> GetBridges(CancellationToken cancellationToken);
 
     EitherAsync<Error, Seq<OvsBridgePort>> GetPorts(CancellationToken cancellationToken);
+
+    EitherAsync<Error, OvsInterface> GetInterface(
+        string interfaceName,
+        CancellationToken cancellationToken);
 
     EitherAsync<Error, Seq<OvsInterface>> GetInterfaces(CancellationToken cancellationToken);
 

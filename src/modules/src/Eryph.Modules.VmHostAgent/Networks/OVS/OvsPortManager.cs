@@ -24,6 +24,7 @@ class OvsPortManager(
     ISystemEnvironment sysEnvironment)
     : IOVSPortManager
 {
+
     public EitherAsync<Error, Unit> SyncPorts(
         TypedPsObject<VirtualMachineInfo> vmInfo,
         VMPortChange change) =>
@@ -80,14 +81,14 @@ class OvsPortManager(
             {
                 try
                 {
-                    var portIsOk = await ovsControl.GetInterface(portName)
+                    var portIsOk = await ovsControl.GetInterface(portName, cancellationToken)
                         .BindLeft(left =>
                             {
                                 log.LogDebug("Port {portName} not found. Error: {message}",
                                     portName, left.Message);
 
                                 return ovsControl.AddPortWithIFaceId("br-int", portName, cancellationToken)
-                                    .Bind(_ => ovsControl.GetInterface(portName));
+                                    .Bind(_ => ovsControl.GetInterface(portName, cancellationToken));
 
                             }
                         ).Bind(inf =>
@@ -138,7 +139,7 @@ class OvsPortManager(
 
         foreach (var portName in portNames)
         {
-            await ovsControl.GetInterface(portName)
+            await ovsControl.GetInterface(portName, cancellationToken)
                 .Bind(_ =>
                 {
                     log.LogDebug("Interface on port {portName} found. Removing port",
