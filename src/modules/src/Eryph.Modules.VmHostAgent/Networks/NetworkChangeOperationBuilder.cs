@@ -52,6 +52,17 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
         OvsBridgesInfo ovsBridges,
         Seq<string> newOverlayAdapters) =>
         from _1 in LogMethodTrace(nameof(RebuildOverlaySwitch))
+        // After the overlay switch has been rebuilt and the integration
+        // bridge br-int has been recreated, we must recreate the ports
+        // for the currently running catlets.
+        let vmPortNames = ovsBridges.Bridges.Find("br-int").ToSeq()
+            .Bind(b => b.Ports.Values.ToSeq()
+                // We assume that the port is a catlet port when the port name
+                // matches the interface ID (iface-id) as this the pattern which
+                // we use and the iface-id should only be set by the hypervisor (i.e us).
+                .Filter(p => p.Interfaces.Exists(i => i.InterfaceId.Map(iid => iid == p.Name).IfNone(false))))
+            .Map(p => p.Name)
+            .Strict()
         from _2 in overlayVMAdapters.Match(
             Empty: () => unitAff,
             Seq: a => from _1 in LogDebug("Found adapters on overlay switch. Adding disconnect and reconnect operations.")
@@ -81,6 +92,9 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
             StartOVN,
             false,
             NetworkChangeOperation.StartOVN)
+        from _8 in vmPortNames.Match(
+            Empty: () => unitAff,
+            Seq: RecreateVmPorts)
         select new OvsBridgesInfo(HashMap<string, OvsBridgeInfo>());
 
     private Aff<RT, Unit> DisconnectOverlayVmAdapters(
@@ -104,6 +118,22 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
                   select unit,
             false,
             NetworkChangeOperation.ConnectVMAdapters);
+
+    private Aff<RT, Unit> RecreateVmPorts(
+        Seq<string> portNames) =>
+        AddOperation(
+            () => from _1 in portNames
+                    .Map(portName => timeout(
+                        TimeSpan.FromSeconds(30),
+                        from ovs in default(RT).OVS.ToAff()
+                        from ct in cancelToken<RT>()
+                        from _1 in ovs.AddPortWithIFaceId("br-int", portName, ct).ToAff(e => e)
+                        select unit))
+                    .SequenceParallel()
+                  select unit,
+            false,
+            NetworkChangeOperation.RecreateVmPorts,
+            "br-int");
 
     private Aff<RT, Unit> AddRemoveBridgeOperation(string bridgeName) =>
         from _1 in LogDebug("Adding operation to remove bridge {bridge}", bridgeName)

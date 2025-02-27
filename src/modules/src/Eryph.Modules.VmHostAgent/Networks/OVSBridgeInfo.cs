@@ -35,6 +35,7 @@ public record OvsInterfaceInfo(
     string Name,
     string Type,
     Option<string> Error,
+    Option<string> InterfaceId,
     Option<Guid> HostInterfaceId,
     Option<string> HostInterfaceConfiguredName)
 {

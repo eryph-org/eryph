@@ -127,7 +127,7 @@ public class OVSControl(
 
     public EitherAsync<Error, OvsInterface> GetInterface(
         string interfaceName,
-        CancellationToken cancellationToken = default) =>
+        CancellationToken cancellationToken) =>
         GetRecord<OvsInterface>("Interface", interfaceName, cancellationToken: cancellationToken);
 
     public EitherAsync<Error, Seq<OvsBridgePort>> GetPorts(

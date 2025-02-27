@@ -19,6 +19,7 @@ public class NetworkChangeOperationNames
                 NetworkChangeOperation.RemoveOverlaySwitch => "Remove eryph overlay switch",
                 NetworkChangeOperation.DisconnectVMAdapters => "Disconnect V-Catlets from overlay switch",
                 NetworkChangeOperation.ConnectVMAdapters => "Reconnect V-Catlets to overlay switch",
+                NetworkChangeOperation.RecreateVmPorts => "Recreate ports for V-Catlets on bridge '{0}'",
                 NetworkChangeOperation.RemoveBridge => "Remove bridge '{0}'",
                 NetworkChangeOperation.RemoveUnusedBridge => "Remove unused bridge '{0}'",
                 NetworkChangeOperation.AddBridge => "Add bridge '{0}'",

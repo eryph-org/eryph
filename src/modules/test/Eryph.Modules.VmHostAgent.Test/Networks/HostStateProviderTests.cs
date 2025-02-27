@@ -151,6 +151,8 @@ public class HostStateProviderTests
         var brIntId = Guid.NewGuid();
         var brIntPort1Id = Guid.NewGuid();
         var brIntPort1Interface1Id = Guid.NewGuid();
+        var brIntPort2Id = Guid.NewGuid();
+        var brIntPort2Interface1Id = Guid.NewGuid();
 
         var brPifId = Guid.NewGuid();
         var brPifPort1Id = Guid.NewGuid();
@@ -164,7 +166,7 @@ public class HostStateProviderTests
                 OVSEntity.FromValueMap<OvsBridge>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brIntId)),
                     ("name", OVSValue<string>.New("br-int")),
-                    ("ports", OVSReference.New(Seq1(brIntPort1Id))))),
+                    ("ports", OVSReference.New(Seq(brIntPort1Id, brIntPort2Id))))),
                 OVSEntity.FromValueMap<OvsBridge>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brPifId)),
                     ("name", OVSValue<string>.New("br-pif")),
@@ -177,6 +179,10 @@ public class HostStateProviderTests
                     ("_uuid", OVSValue<Guid>.New(brIntPort1Id)),
                     ("name", OVSValue<string>.New("br-int")),
                     ("interfaces", OVSReference.New(Seq1(brIntPort1Interface1Id))))),
+                OVSEntity.FromValueMap<OvsBridgePort>(Map<string, IOVSField>(
+                    ("_uuid", OVSValue<Guid>.New(brIntPort2Id)),
+                    ("name", OVSValue<string>.New("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0")),
+                    ("interfaces", OVSReference.New(Seq1(brIntPort2Interface1Id))))),
                 OVSEntity.FromValueMap<OvsBridgePort>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brPifPort1Id)),
                     ("name", OVSValue<string>.New("br-pif")),
@@ -193,6 +199,13 @@ public class HostStateProviderTests
                     ("_uuid", OVSValue<Guid>.New(brIntPort1Interface1Id)),
                     ("name", OVSValue<string>.New("br-int")),
                     ("type", OVSValue<string>.New("internal")))),
+                OVSEntity.FromValueMap<OvsInterface>(Map<string, IOVSField>(
+                    ("_uuid", OVSValue<Guid>.New(brIntPort2Interface1Id)),
+                    ("name", OVSValue<string>.New("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0")),
+                    ("type", OVSValue<string>.New("")),
+                    ("external_ids", OVSMap<string>.New(Map(
+                        ("iface-id", "ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0")
+                    ))))),
                 OVSEntity.FromValueMap<OvsInterface>(Map<string, IOVSField>(
                     ("_uuid", OVSValue<Guid>.New(brPifPort1Interface1Id)),
                     ("name", OVSValue<string>.New("br-pif")),
@@ -259,7 +272,7 @@ public class HostStateProviderTests
         
         var brIntInfo = hostState.OvsBridges.Bridges.ToDictionary().Should().ContainKey("br-int").WhoseValue;
         brIntInfo.Name.Should().Be("br-int");
-        brIntInfo.Ports.Should().HaveCount(1);
+        brIntInfo.Ports.Should().HaveCount(2);
         
         var brIntPort1Info = brIntInfo.Ports.ToDictionary().Should().ContainKey("br-int").WhoseValue;
         brIntPort1Info.Name.Should().Be("br-int");
@@ -270,6 +283,21 @@ public class HostStateProviderTests
                 i.Name.Should().Be("br-int");
                 i.Type.Should().Be("internal");
                 i.IsExternal.Should().BeFalse();
+                i.InterfaceId.Should().BeNone();
+                i.HostInterfaceId.Should().BeNone();
+                i.HostInterfaceConfiguredName.Should().BeNone();
+            });
+
+        var brIntPort2Info = brIntInfo.Ports.ToDictionary().Should().ContainKey("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0").WhoseValue;
+        brIntPort2Info.Name.Should().Be("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0");
+        brIntPort2Info.BridgeName.Should().Be("br-int");
+        brIntPort2Info.Interfaces.Should().SatisfyRespectively(
+            i =>
+            {
+                i.Name.Should().Be("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0");
+                i.Type.Should().Be("");
+                i.IsExternal.Should().BeTrue();
+                i.InterfaceId.Should().BeSome().Which.Should().Be("ovs_4c4f76bb-604c-4eb0-9074-0037ddd3dd43_eth0");
                 i.HostInterfaceId.Should().BeNone();
                 i.HostInterfaceConfiguredName.Should().BeNone();
             });
@@ -287,6 +315,7 @@ public class HostStateProviderTests
                 i.Name.Should().Be("br-pif");
                 i.Type.Should().Be("internal");
                 i.IsExternal.Should().BeFalse();
+                i.InterfaceId.Should().BeNone();
                 i.HostInterfaceId.Should().BeNone();
                 i.HostInterfaceConfiguredName.Should().BeNone();
             });
@@ -300,6 +329,7 @@ public class HostStateProviderTests
                 i.Name.Should().Be("pif-1");
                 i.Type.Should().Be("");
                 i.IsExternal.Should().BeTrue();
+                i.InterfaceId.Should().BeNone();
                 i.HostInterfaceId.Should().Be(pif1Id);
                 i.HostInterfaceConfiguredName.Should().BeSome().Which.Should().Be("pif-1-conf-name");
             },
@@ -308,6 +338,7 @@ public class HostStateProviderTests
                 i.Name.Should().Be("pif-2");
                 i.Type.Should().Be("");
                 i.IsExternal.Should().BeTrue();
+                i.InterfaceId.Should().BeNone();
                 i.HostInterfaceId.Should().Be(pif2Id);
                 i.HostInterfaceConfiguredName.Should().BeSome().Which.Should().Be("pif-2-conf-name");
             });

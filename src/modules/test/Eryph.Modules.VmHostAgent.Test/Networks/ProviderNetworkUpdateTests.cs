@@ -59,8 +59,8 @@ public class ProviderNetworkUpdateTests
                 ("br-pif", new OvsBridgeInfo("br-pif", HashMap(
                     ("br-pif-bond", new OvsBridgePortInfo(
                         "br-pif-bond", "br-pif", None, None, None, Seq(
-                            new OvsInterfaceInfo("pif-1-old", "", None, pif1Id, "pif-1-old"),
-                            new OvsInterfaceInfo("pif-3", "", None, pif2Id, "pif-3")))
+                            new OvsInterfaceInfo("pif-1-old", "", None, None, pif1Id, "pif-1-old"),
+                            new OvsInterfaceInfo("pif-3", "", None, None, pif2Id, "pif-3")))
                     ))
                 ))
             )));
@@ -112,7 +112,7 @@ public class ProviderNetworkUpdateTests
                 ("br-pif", new OvsBridgeInfo("br-pif", HashMap(
                     ("pif-1", new OvsBridgePortInfo(
                         "pif-1", "br-pif", None, None, None, Seq1(
-                            new OvsInterfaceInfo("pif-1", "", None, pif1Id, "pif-1-old")))
+                            new OvsInterfaceInfo("pif-1", "", None, None, pif1Id, "pif-1-old")))
                     ))
                 ))
             )));
@@ -273,7 +273,7 @@ public class ProviderNetworkUpdateTests
                         "br-test", "br-test", None, None, None, Seq<OvsInterfaceInfo>())),
                     ("test-adapter", new OvsBridgePortInfo(
                         "test-adapter", "br-test", None, None, None, Seq1(
-                            new OvsInterfaceInfo("test-adapter", "", None, interfaceId, "test-adapter")))))
+                            new OvsInterfaceInfo("test-adapter", "", None, None, interfaceId, "test-adapter")))))
                 )))),
             HostAdapters = new HostAdaptersInfo(HashMap(
                 ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true)),
@@ -341,7 +341,7 @@ public class ProviderNetworkUpdateTests
                         "br-test", "br-test", None, None, None, Seq<OvsInterfaceInfo>())),
                     ("renamed-adapter", new OvsBridgePortInfo(
                         "renamed-adapter", "br-test", None, None, None, Seq1(
-                            new OvsInterfaceInfo("renamed-adapter", "", None, interfaceId, "test-adapter")))))
+                            new OvsInterfaceInfo("renamed-adapter", "", None, None, interfaceId, "test-adapter")))))
                 )))),
             HostAdapters = new HostAdaptersInfo(HashMap(
                 ("renamed-adapter", new HostAdapterInfo("renamed-adapter", interfaceId, None, true)),
