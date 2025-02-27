@@ -20,23 +20,26 @@ public class StreamString
         return await sr.ReadLineAsync(cancellationToken);
     }
 
-    internal Task WriteResponse(SyncServiceResponse response, CancellationToken cancellationToken)
+    internal async Task WriteResponse(SyncServiceResponse response, CancellationToken cancellationToken)
     {
         var responseString = JsonSerializer.Serialize(response);
-        using var sw = new StreamWriter(_ioStream, leaveOpen: true);
-        return sw.WriteLineAsync(responseString).WaitAsync(cancellationToken);
+        await using var sw = new StreamWriter(_ioStream, leaveOpen: true);
+        await sw.WriteLineAsync(responseString).WaitAsync(cancellationToken);
+        await sw.FlushAsync(cancellationToken);
     }
 
-    internal Task WriteCommand(SyncServiceCommand command, CancellationToken cancellationToken)
+    internal async Task WriteCommand(SyncServiceCommand command, CancellationToken cancellationToken)
     {
         var responseString = JsonSerializer.Serialize(command);
-        using var sw = new StreamWriter(_ioStream, leaveOpen: true);
-        return sw.WriteLineAsync(responseString).WaitAsync(cancellationToken);
+        await using var sw = new StreamWriter(_ioStream, leaveOpen: true);
+        await sw.WriteLineAsync(responseString).WaitAsync(cancellationToken);
+        await sw.FlushAsync(cancellationToken);
     }
 
-    public Task WriteString(string outString, CancellationToken cancellationToken)
+    public async Task WriteString(string outString, CancellationToken cancellationToken)
     {
-        using var sw = new StreamWriter(_ioStream, leaveOpen: true);
-        return sw.WriteLineAsync(outString).WaitAsync(cancellationToken);
+        await using var sw = new StreamWriter(_ioStream, leaveOpen: true);
+        await sw.WriteLineAsync(outString).WaitAsync(cancellationToken);
+        await sw.FlushAsync(cancellationToken);
     }
 }

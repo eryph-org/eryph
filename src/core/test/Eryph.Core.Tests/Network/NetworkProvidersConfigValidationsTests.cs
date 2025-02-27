@@ -167,7 +167,6 @@ public class NetworkProvidersConfigValidationsTests
     }
 
     [Theory]
-    [InlineData(NetworkProviderType.Flat)]
     [InlineData(NetworkProviderType.NatOverlay)]
     [InlineData(NetworkProviderType.Overlay)]
     public void ValidateNetworkProvidersConfig_SubnetWithDenormalizedNetwork_ReturnsError(
@@ -217,7 +216,6 @@ public class NetworkProvidersConfigValidationsTests
     }
 
     [Theory]
-    [InlineData(NetworkProviderType.Flat)]
     [InlineData(NetworkProviderType.NatOverlay)]
     [InlineData(NetworkProviderType.Overlay)]
     public void ValidateNetworkProvidersConfig_SubnetWithMismatchedIpAddresses_ReturnsError(
@@ -327,6 +325,11 @@ public class NetworkProvidersConfigValidationsTests
             {
                 issue.Member.Should().Be("NetworkProviders[0].Vlan");
                 issue.Message.Should().Be("The flat network provider does not support the configuration of a VLAN.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].Subnets");
+                issue.Message.Should().Be("The flat network provider does not support subnet configurations.");
             });
     }
 
@@ -433,12 +436,8 @@ public class NetworkProvidersConfigValidationsTests
             });
     }
 
-    [Theory]
-    [InlineData("other-subnet", "default")]
-    [InlineData("default", "other-pool")]
-    public void ValidateNetworkProvidersConfig_NatOverlayProviderWithInvalidSubnet_ReturnsError(
-        string subnetName,
-        string ipPoolName)
+    [Fact]
+    public void ValidateNetworkProvidersConfig_NatOverlayProviderWithInvalidSubnet_ReturnsError()
     {
         var config = new NetworkProvidersConfiguration
         {
@@ -453,14 +452,14 @@ public class NetworkProvidersConfigValidationsTests
                     [
                         new NetworkProviderSubnet
                         {
-                            Name = subnetName,
+                            Name = "other-subnet",
                             Gateway = "10.249.0.1",
                             Network = "10.249.0.0/22",
                             IpPools =
                             [
                                 new NetworkProviderIpPool
                                 {
-                                    Name = ipPoolName,
+                                    Name = "default",
                                     FirstIp = "10.249.0.50",
                                     NextIp = "10.249.0.60",
                                     LastIp = "10.249.0.100"
@@ -478,7 +477,7 @@ public class NetworkProvidersConfigValidationsTests
             issue =>
             {
                 issue.Member.Should().Be("NetworkProviders[0].Subnets");
-                issue.Message.Should().Be("The NAT overlay provider must contain only the default subnet with the default IP pool.");
+                issue.Message.Should().Be("The NAT overlay provider must contain only the default subnet.");
             });
     }
 

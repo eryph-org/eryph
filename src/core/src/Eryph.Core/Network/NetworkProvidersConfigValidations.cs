@@ -62,7 +62,6 @@ public static class NetworkProvidersConfigValidations
         NetworkProvider toValidate,
         string path) =>
         ValidateProperty(toValidate, c => c.Name, NetworkProviderName.NewValidation, path, required: true)
-        | ValidateList(toValidate, c => c.Subnets, ValidateSubnet, path, minCount: 1)
         | toValidate.Type switch
         {
             NetworkProviderType.Flat => ValidateFlatProviderConfig(toValidate, path),
@@ -86,6 +85,9 @@ public static class NetworkProvidersConfigValidations
             path)
         | ValidateProperty(toValidate, c => c.Vlan,
             NotAllowed<int>("The flat network provider does not support the configuration of a VLAN."),
+            path)
+        | ValidateProperty(toValidate, c => c.Subnets,
+            NotAllowed<NetworkProviderSubnet[]>("The flat network provider does not support subnet configurations."),
             path);
 
     private static Validation<ValidationIssue, Unit> ValidateNatOverlayProviderConfig(
@@ -105,6 +107,7 @@ public static class NetworkProvidersConfigValidations
         | ValidateProperty(toValidate, c => c.Vlan,
             NotAllowed<int>("The NAT overlay network provider does not support the configuration of a VLAN."),
             path)
+        | ValidateList(toValidate, c => c.Subnets, ValidateSubnet, path, minCount: 1)
         | ValidateProperty(toValidate, c => c.Subnets, ValidateNatProviderSubnets, path);
 
     private static Validation<ValidationIssue, Unit> ValidateOverlayProviderConfig(
@@ -115,7 +118,8 @@ public static class NetworkProvidersConfigValidations
             NotAllowed<string>("The overlay network provider does not support custom switch names."),
             path)
         | ValidateProperty(toValidate, c => c.BridgeOptions, ValidateNetworkProviderBridgeOptions, path)
-        | ValidateProperty(toValidate, c => c.Vlan, ValidateVlanTag, path);
+        | ValidateProperty(toValidate, c => c.Vlan, ValidateVlanTag, path)
+        | ValidateList(toValidate, c => c.Subnets, ValidateSubnet, path, minCount: 1);
 
     private static Validation<ValidationIssue, Unit> ValidateNetworkProviderBridgeOptions(
         NetworkProviderBridgeOptions toValidate,
@@ -222,10 +226,8 @@ public static class NetworkProvidersConfigValidations
     private static Validation<Error, Unit> ValidateNatProviderSubnets(
         [CanBeNull] NetworkProviderSubnet[] toValidate) =>
         guard(toValidate is { Length: 1 }
-              && toValidate[0].Name == EryphConstants.DefaultSubnetName
-              && toValidate[0].IpPools is {Length: 1}
-              && toValidate[0].IpPools[0].Name == EryphConstants.DefaultIpPoolName,
-                Error.New("The NAT overlay provider must contain only the default subnet with the default IP pool."))
+              && toValidate[0].Name == EryphConstants.DefaultSubnetName,
+                Error.New("The NAT overlay provider must contain only the default subnet."))
             .ToValidation();
 
     private static Func<T, Validation<Error, T>> NotAllowed<T>(
