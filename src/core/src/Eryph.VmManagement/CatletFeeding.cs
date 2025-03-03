@@ -155,9 +155,18 @@ public static class CatletFeeding
         Seq<VariableConfig> geneVariables) =>
         from variablesWithNames in variables
             .Map(vc => from name in VariableName.NewEither(vc.Name)
-                select (name, vc))
+                       select (name, vc))
             .Sequence()
             .Map(s => s.ToHashMap())
+        from geneVariableNames in geneVariables
+            .Map(v => VariableName.NewEither(v.Name))
+            .Sequence()
+        let geneVariableNamesSet = toHashSet(geneVariableNames)
+        from _ in variablesWithNames
+            .Filter((n, _) => !geneVariableNamesSet.Contains(n))
+            .HeadOrNone().Match<Either<Error, Unit>>(
+                Some: v => Error.New($"Found a binding for the variable '{v.Value.Name}' but the variable is not defined in the fodder gene."),
+                None: () => unit)
         from boundVariables in geneVariables
             .Map(geneVc => BindVariable(geneVc, variablesWithNames))
             .Sequence()
