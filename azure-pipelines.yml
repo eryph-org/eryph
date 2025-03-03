@@ -31,7 +31,7 @@ jobs:
       azureSubscription: 'dbosoft Azure PN'
       scriptType: 'batch'
       scriptLocation: 'inlineScript'
-      inlineScript: 'az storage blob download --file=$(Build.SourcesDirectory)\ovspackage.zip --container-name=internal --name=ovs/latest/ovspackage_signed.zip --account-name=dbosoftreleaseseuwest'
+      inlineScript: 'az storage blob download --file=$(Build.SourcesDirectory)\ovspackage.zip --container-name=internal --name=ovs/3.3.90.1/ovspackage_signed.zip --account-name=dbosoftreleaseseuwest'
     
   - task: UseGitVersion@5
     inputs:
