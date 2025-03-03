@@ -9,7 +9,7 @@ using Eryph.Core.Genetics;
 
 namespace Eryph.Modules.Controller.Compute;
 
-internal class ExpandCatletConfigSagaData : TaskWorkflowSagaData
+internal class ExpandCatletConfigSagaData
 {
     public ExpandCatletConfigSagaState State { get; set; }
 

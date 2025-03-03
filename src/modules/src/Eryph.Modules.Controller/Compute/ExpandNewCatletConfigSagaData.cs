@@ -8,7 +8,7 @@ using Eryph.Core.Genetics;
 
 namespace Eryph.Modules.Controller.Compute;
 
-public class ExpandNewCatletConfigSagaData
+internal class ExpandNewCatletConfigSagaData
 {
     public CatletConfig? Config { get; set; }
 

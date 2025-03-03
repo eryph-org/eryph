@@ -18,7 +18,7 @@ using Rebus.Sagas;
 namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
-public class ExpandNewCatletConfigSaga(
+internal class ExpandNewCatletConfigSaga(
     IBus bus,
     IWorkflow workflow)
     : OperationTaskWorkflowSaga<ExpandNewCatletConfigCommand, EryphSagaData<ExpandNewCatletConfigSagaData>>(workflow),
