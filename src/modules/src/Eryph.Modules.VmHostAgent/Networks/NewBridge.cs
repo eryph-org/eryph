@@ -1,6 +1,18 @@
 ﻿using System.Net;
 using Eryph.Core.Network;
+using LanguageExt;
 
 namespace Eryph.Modules.VmHostAgent.Networks;
 
-public readonly record struct NewBridge(string BridgeName, IPAddress IPAddress, IPNetwork2 Network, NetworkProviderBridgeOptions? Options);
+public readonly record struct NewBridge(
+    string BridgeName,
+    string ProviderName,
+    NetworkProviderType ProviderType,
+    Option<NewBridgeNat> Nat,
+    Seq<string> Adapters,
+    Option<NetworkProviderBridgeOptions> Options);
+
+public readonly record struct NewBridgeNat(
+    string NatName,
+    IPAddress Gateway,
+    IPNetwork2 Network);

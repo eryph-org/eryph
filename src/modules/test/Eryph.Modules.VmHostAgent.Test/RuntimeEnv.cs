@@ -10,53 +10,59 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Eryph.Modules.VmHostAgent.Test;
 
-public class RuntimeEnv<RT> where RT : struct, HasCancel<RT>
+public class RuntimeEnv<RT>(
+    CancellationTokenSource source,
+    Encoding encoding,
+    MemoryConsole console,
+    MemoryFS fileSystem,
+    TestTimeSpec? timeSpec,
+    MemorySystemEnvironment sysEnv,
+    IOVSControl ovsControl,
+    ISyncClient syncClient,
+    IHostNetworkCommands<RT> hostNetworkCommands,
+    INetworkProviderManager networkProviderManager)
+    where RT : struct, HasCancel<RT>
 {
-    public readonly CancellationTokenSource Source;
-    public readonly CancellationToken Token;
-    public readonly Encoding Encoding;
-    public readonly MemoryConsole Console;
-    public readonly MemoryFS FileSystem;
-    public readonly TestTimeSpec TimeSpec;
-    public readonly MemorySystemEnvironment SysEnv;
-
-    public IOVSControl OVS { get; set; }
-    public ISyncClient SyncClient { get; set; }
-
-    public IHostNetworkCommands<RT> HostNetworkCommands { get; set; }
-    public INetworkProviderManager NetworkProviderManager { get; set; }
-    public ILoggerFactory LoggerFactory { get; set; } = new NullLoggerFactory();
-
-
     public RuntimeEnv(
         CancellationTokenSource source,
-        CancellationToken token,
-        Encoding encoding,
-        MemoryConsole console,
-        MemoryFS fileSystem,
-        TestTimeSpec? timeSpec,
-        MemorySystemEnvironment sysEnv)
+        IOVSControl ovsControl,
+        ISyncClient syncClient,
+        IHostNetworkCommands<RT> hostNetworkCommands,
+        INetworkProviderManager networkProviderManager)
+        : this(
+            source,
+            Encoding.Default,
+            new MemoryConsole(),
+            new MemoryFS(),
+            TestTimeSpec.RunningFromNow(),
+            MemorySystemEnvironment.InitFromSystem(),
+            ovsControl,
+            syncClient,
+            hostNetworkCommands,
+            networkProviderManager)
     {
-        Source = source;
-        Token = token;
-        Encoding = encoding;
-        Console = console;
-        FileSystem = fileSystem;
-        TimeSpec = timeSpec ?? TestTimeSpec.RunningFromNow();
-        SysEnv = sysEnv;
+
     }
 
-    public RuntimeEnv(
-        CancellationTokenSource source,
-        Encoding encoding,
-        MemoryConsole console,
-        MemoryFS fileSystem,
-        TestTimeSpec? timeSpec,
-        MemorySystemEnvironment sysEnv) :
-        this(source, source.Token, encoding, console, fileSystem, timeSpec, sysEnv)
-    {
-    }
+    public CancellationTokenSource Source { get; } = source;
 
-    public RuntimeEnv<TestRuntime> LocalCancel =>
-        new(new CancellationTokenSource(), Encoding, Console, FileSystem, TimeSpec, SysEnv);
+    public Encoding Encoding { get; } = encoding;
+    
+    public MemoryConsole Console { get; } = console;
+    
+    public MemoryFS FileSystem { get; } = fileSystem;
+    
+    public TestTimeSpec TimeSpec { get; } = timeSpec ?? TestTimeSpec.RunningFromNow();
+    
+    public MemorySystemEnvironment SysEnv { get; } = sysEnv;
+
+    public IOVSControl OVSControl { get; init; } = ovsControl;
+
+    public ISyncClient SyncClient { get; init; } = syncClient;
+
+    public IHostNetworkCommands<RT> HostNetworkCommands { get; init; } = hostNetworkCommands;
+
+    public INetworkProviderManager NetworkProviderManager { get; init; } = networkProviderManager;
+
+    public ILoggerFactory LoggerFactory { get; init; } = new NullLoggerFactory();
 }

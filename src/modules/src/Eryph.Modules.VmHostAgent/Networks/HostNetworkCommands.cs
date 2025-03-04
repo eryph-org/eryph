@@ -17,141 +17,128 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Networks;
 
-
-
 public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
     where RT : struct, HasPowershell<RT>, HasCancel<RT>
 {
-    public Aff<RT, Seq<VMSwitch>> GetSwitches()
-    {
-        return from psEngine in default(RT).Powershell.ToAff()
-            from vmSwitches in psEngine.GetObjectsAsync<VMSwitch>(
-                PsCommandBuilder.Create().AddCommand("Get-VMSwitch")).ToAff()
-            from switches in vmSwitches.Map(s => Prelude.Try(() =>
+    public Aff<RT, Seq<VMSwitch>> GetSwitches() =>
+        from psEngine in default(RT).Powershell.ToAff()
+        let command = PsCommandBuilder.Create().AddCommand("Get-VMSwitch")
+        from vmSwitches in psEngine.GetObjectsAsync<VMSwitch>(command).ToAff()
+        from switches in vmSwitches
+            .Map(s => Eff(() =>
             {
-                var result = s.Value;
-
-                // try to fetch interface ids
-                result.NetAdapterInterfaceGuid = s.GetNetAdapterInterfaceGuid();
-                return result;
-
-            }).ToAff()).TraverseParallel(l=>l)
-            select switches;
-    }
+                // Try to fetch interface IDs
+                s.Value.NetAdapterInterfaceGuid = s.GetNetAdapterInterfaceGuid();
+                return s.Value;
+            })).Sequence()
+        select switches.Strict();
 
     public Aff<RT, Option<VMSystemSwitchExtension>> GetInstalledSwitchExtension() =>
         from psEngine in default(RT).Powershell
         let command = PsCommandBuilder.Create().AddCommand("Get-VMSystemSwitchExtension")
-        from results in psEngine.GetObjectsAsync<VMSystemSwitchExtension>(command).ToAff()
-        select results.Select(r => r.Value)
-            .Where(e => string.Equals(e.Name, EryphConstants.SwitchExtensionName, StringComparison.OrdinalIgnoreCase))
+        from results in psEngine.GetObjectValuesAsync<VMSystemSwitchExtension>(command).ToAff()
+        select results
+            .Filter(e => string.Equals(e.Name, EryphConstants.SwitchExtensionName, StringComparison.OrdinalIgnoreCase))
             .HeadOrNone();
 
     public Aff<RT, Seq<VMSwitchExtension>> GetSwitchExtensions() =>
         from psEngine in default(RT).Powershell
-        from vmSwitchExtensions in psEngine.GetObjectsAsync<VMSwitchExtension>(
-            PsCommandBuilder.Create()
-                .AddCommand("Get-VMSwitch")
-                .AddCommand("Get-VMSwitchExtension")
-                .AddParameter("Name", EryphConstants.SwitchExtensionName)).ToAff()
-        select vmSwitchExtensions.Map(s => s.ToValue());
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-VMSwitch")
+            .AddCommand("Get-VMSwitchExtension")
+            .AddParameter("Name", EryphConstants.SwitchExtensionName)
+        from vmSwitchExtensions in psEngine.GetObjectValuesAsync<VMSwitchExtension>(command).ToAff()
+        select vmSwitchExtensions.Strict();
 
     public Aff<RT, Unit> DisableSwitchExtension(Guid switchId) =>
         from psEngine in default(RT).Powershell
-        from _ in psEngine.RunAsync(PsCommandBuilder.Create()
+        let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMSwitch")
             .AddParameter("Id", switchId)
             .AddCommand("Get-VMSwitchExtension")
             .AddParameter("Name", EryphConstants.SwitchExtensionName)
-            .AddCommand("Disable-VMSwitchExtension")).ToAff()
+            .AddCommand("Disable-VMSwitchExtension")
+        from _ in psEngine.RunAsync(command).ToAff()
         select unit;
 
     public Aff<RT, Unit> EnableSwitchExtension(Guid switchId) =>
         from psEngine in default(RT).Powershell
-        from _ in psEngine.RunAsync(PsCommandBuilder.Create()
+        let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMSwitch")
             .AddParameter("Id", switchId)
             .AddCommand("Enable-VMSwitchExtension")
-            .AddParameter("Name", EryphConstants.SwitchExtensionName)).ToAff()
+            .AddParameter("Name", EryphConstants.SwitchExtensionName)
+        from _ in psEngine.RunAsync(command).ToAff()
         select unit;
     
-    public Aff<RT, Seq<HostNetworkAdapter>> GetPhysicalAdapters() =>
+    public Aff<RT, Seq<HostNetworkAdapter>> GetHostAdapters() =>
         from psEngine in default(RT).Powershell.ToAff()
-        from netAdapters in psEngine.GetObjectsAsync<HostNetworkAdapter>(
-            PsCommandBuilder.Create()
-                .AddCommand("Get-NetAdapter")
-                .AddParameter("-Physical")).ToAff()
-        select netAdapters.Map(s => s.ToValue());
-
-    public Aff<RT, Seq<string>> GetAdapterNames() =>
-        from psEngine in default(RT).Powershell.ToAff()
-        from netAdapters in psEngine.GetObjectsAsync<HostNetworkAdapter>(
-            PsCommandBuilder.Create()
-                .AddCommand("Get-NetAdapter")).ToAff()
-        select netAdapters.Map(s => s.ToValue().Name);
-
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-NetAdapter")
+        from netAdapters in psEngine.GetObjectValuesAsync<HostNetworkAdapter>(command).ToAff()
+        select netAdapters.Strict();
 
     public Aff<RT, Seq<NetNat>> GetNetNat() =>
         from psEngine in default(RT).Powershell.ToAff()
-        from netNat in psEngine.GetObjectsAsync<NetNat>(
-            PsCommandBuilder.Create().AddCommand("Get-NetNat")).ToAff()
-        select netNat.Map(s => s.Value);
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-NetNat")
+        from netNat in psEngine.GetObjectValuesAsync<NetNat>(command).ToAff()
+        select netNat.Strict();
 
     public Aff<RT, Unit> EnableBridgeAdapter(string adapterName) =>
-        default(RT).Powershell.Bind(rt =>
-            rt.RunAsync(PsCommandBuilder.Create()
-                    .AddCommand("Get-NetAdapter")
-                    .AddArgument(adapterName)
-                    .AddCommand("Enable-NetAdapter"))
-                .ToAff());
+        from psEngine in default(RT).Powershell
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-NetAdapter")
+            .AddArgument(adapterName)
+            .AddCommand("Enable-NetAdapter")
+        from _ in psEngine.RunAsync(command).ToAff()
+        select unit;
 
-    public Aff<RT, Unit> ConfigureAdapterIp(string adapterName, IPAddress ipAddress, IPNetwork2 network)
-    {
-        var ipCommand = PsCommandBuilder.Create()
+    public Aff<RT, Unit> ConfigureAdapterIp(
+        string adapterName,
+        IPAddress ipAddress,
+        IPNetwork2 network) =>
+        from psEngine in default(RT).Powershell.ToAff()
+        let ipCommand = PsCommandBuilder.Create()
             .AddCommand("New-NetIPAddress")
             .AddParameter("InterfaceAlias", adapterName)
             .AddParameter("IPAddress", ipAddress.ToString())
-            .AddParameter("PrefixLength", network.Cidr);
-
-
-        return from psEngine in default(RT).Powershell.ToAff()
-            from uEnable in psEngine.RunAsync(
-                PsCommandBuilder.Create()
-                    .AddCommand("Get-NetAdapter")
-                    .AddArgument(adapterName)
-                    .AddCommand("Enable-NetAdapter")).ToAff()
-            from uNoDhcp in psEngine.RunAsync(
-                PsCommandBuilder.Create()
-                    .AddCommand("Set-NetIPInterface")
-                    .AddParameter("InterfaceAlias", adapterName)
-                    .AddParameter("Dhcp", "Disabled")
-                    .AddParameter("Confirm", false)).ToAff()
-            from uRemoveGateway in psEngine.RunAsync(
-                PsCommandBuilder.Create()
-                    .AddCommand("Remove-NetRoute")
-                    .AddParameter("InterfaceAlias", adapterName)
-                    .AddParameter("Confirm", false)
-                    .AddParameter("ErrorAction", "SilentlyContinue")).ToAff()
-            from uRemoveIP in psEngine.RunAsync(
-                PsCommandBuilder.Create()
-                    .AddCommand("Remove-NetIPAddress")
-                    .AddParameter("InterfaceAlias", adapterName)
-                    .AddParameter("Confirm", false)
-                    .AddParameter("ErrorAction", "SilentlyContinue")).ToAff()
-            from uAddIp in psEngine.RunAsync(ipCommand).ToAff()
-            select Unit.Default;
-
-
-    }
+            .AddParameter("PrefixLength", network.Cidr)
+        from uEnable in psEngine.RunAsync(
+            PsCommandBuilder.Create()
+                .AddCommand("Get-NetAdapter")
+                .AddArgument(adapterName)
+                .AddCommand("Enable-NetAdapter")).ToAff()
+        from uNoDhcp in psEngine.RunAsync(
+            PsCommandBuilder.Create()
+                .AddCommand("Set-NetIPInterface")
+                .AddParameter("InterfaceAlias", adapterName)
+                .AddParameter("Dhcp", "Disabled")
+                .AddParameter("Confirm", false)).ToAff()
+        from uRemoveGateway in psEngine.RunAsync(
+            PsCommandBuilder.Create()
+                .AddCommand("Remove-NetRoute")
+                .AddParameter("InterfaceAlias", adapterName)
+                .AddParameter("Confirm", false)
+                .AddParameter("ErrorAction", "SilentlyContinue")).ToAff()
+        from uRemoveIP in psEngine.RunAsync(
+            PsCommandBuilder.Create()
+                .AddCommand("Remove-NetIPAddress")
+                .AddParameter("InterfaceAlias", adapterName)
+                .AddParameter("Confirm", false)
+                .AddParameter("ErrorAction", "SilentlyContinue")).ToAff()
+        from uAddIp in psEngine.RunAsync(ipCommand).ToAff()
+        select unit;
 
     public Aff<RT, Seq<TypedPsObject<VMNetworkAdapter>>> GetNetAdaptersBySwitch(Guid switchId) =>
-        default(RT).Powershell.Bind(ps => ps.GetObjectsAsync<VMNetworkAdapter>(
-                PsCommandBuilder.Create().AddCommand("Get-VMNetworkAdapter")
-                    .AddParameter("All")
-                    .AddParameter("ErrorAction", "SilentlyContinue")).ToAff()
-            .Map(s =>
-                s.Where(a => !string.IsNullOrWhiteSpace(a.Value.VMName))
-                    .Where(a => a.Value.SwitchId == switchId)));
+        from psEngine in default(RT).Powershell.ToAff()
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-VMNetworkAdapter")
+            .AddParameter("All")
+            .AddParameter("ErrorAction", "SilentlyContinue")
+        from adapters in psEngine.GetObjectsAsync<VMNetworkAdapter>(command).ToAff()
+        select adapters.Filter(a => !string.IsNullOrWhiteSpace(a.Value.VMName))
+            .Filter(a => a.Value.SwitchId == switchId);
 
     public Aff<RT, Unit> DisconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters) =>
         from psEngine in default(RT).Powershell
@@ -191,143 +178,63 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             .SequenceParallel()
         select unit;
 
-    public Aff<RT,Unit> CreateOverlaySwitch(IEnumerable<string> adapters)
-    {
-        var createSwitchCommand = PsCommandBuilder.Create().AddCommand("new-VMSwitch")
-            .AddParameter("Name", EryphConstants.OverlaySwitchName);
-
-        var enumerable = adapters as string[] ?? adapters.ToArray();
-        var createTeam = () => SuccessAff(Unit.Default);
-
-        return default(RT).Powershell.Bind(ps =>
-        {
-            if (enumerable.Length() > 0)
-            {
-                string adapterName;
-                if (enumerable.Length() > 1)
-                {
-
-                    // check if it necessary to enable AllowNetLbfoTeams option
-                    // this is required for Windows Server 2022 and later
-                    var newSwitchCommand = ps.GetObjects<PowershellCommand>(
-                            new PsCommandBuilder().AddCommand("Get-Command").AddArgument("New-VMSwitch"))
-                        .RightAsEnumerable().Flatten().AsEnumerable().FirstOrDefault();
-
-                    if (newSwitchCommand is null)
-                        return Prelude.FailAff<Unit>(Error.New("Cannot find command New-VMSwitch"));
-
-                    if (newSwitchCommand.Value.Parameters.ContainsKey("AllowNetLbfoTeams"))
-                        createSwitchCommand.AddParameter("AllowNetLbfoTeams", true);
-
-                    createTeam = () => ps.RunAsync(
-                            PsCommandBuilder.Create()
-                                .AddCommand("New-NetSwitchTeam")
-                                .AddParameter("Name", EryphConstants.OverlaySwitchName)
-                                .AddParameter("TeamMembers", enumerable)
-
-                            )
-                        .ToAsync()
-                        .ToAff(l => Error.New(l.Message));
-
-                    adapterName = EryphConstants.OverlaySwitchName;
-                }
-                else
-                    adapterName = enumerable[0];
-                
-                createSwitchCommand.AddParameter("NetAdapterName", adapterName)
-                    .AddParameter("AllowManagementOS", false);
-            }
-            else
-            {
-                createSwitchCommand.AddParameter("SwitchType", "Private");
-
-            }
-
-            createSwitchCommand.AddCommand("Enable-VMSwitchExtension")
-                .AddParameter("Name", EryphConstants.SwitchExtensionName);
-
-            return
-                createTeam().Bind(_ =>
-                ps.RunAsync(createSwitchCommand)
-                .ToAsync()
-                .ToAff(l => Error.New(l.Message)));
-        });
-    }
-
-    public Aff<RT, Option<OverlaySwitchInfo>> FindOverlaySwitch(
-        Seq<VMSwitch> vmSwitches,
-        Seq<HostNetworkAdapter> adapters) =>
-        from psEngine in default(RT).Powershell
-        // Only a single overlay switch exists when the network setup is valid.
-        // Otherwise, the network setup needs to be corrected by reapplying the
-        // network provider configuration.
-        let overlaySwitch = vmSwitches.Find(x => x.Name == EryphConstants.OverlaySwitchName)
-        from switchInfo in overlaySwitch
-            .Map(s => PrepareOverlaySwitchInfo(s, adapters))
-            .Sequence()
-        select switchInfo;
-
-    private Aff<RT, OverlaySwitchInfo> PrepareOverlaySwitchInfo(
-        VMSwitch overlaySwitch,
-        Seq<HostNetworkAdapter> adapters) =>
-        from psEngine in default(RT).Powershell
-        from adapterNames in overlaySwitch.NetAdapterInterfaceGuid.ToSeq().Match(
-            Empty: () => SuccessAff(Seq<string>()),
-            Head: interfaceGuid => adapters.Find(x => x.InterfaceGuid == interfaceGuid).Match(
-                Some: adapter => SuccessAff(Seq([adapter.Name])),
-                None: () =>
-                    // No adapter with the interface guid found. We assume that the switch
-                    // has a switch embedded team attached and fetch the team members.
-                    from teamMembers in psEngine.GetObjectsAsync<HostNetworkAdapter>(
-                            PsCommandBuilder.Create()
-                                .AddCommand("Get-NetSwitchTeamMember")
-                                .AddParameter("Team", EryphConstants.OverlaySwitchName))
-                        .ToAff()
-                    // We assume that all members of the team are eryph adapters
-                    select teamMembers.Map(m => m.Value.Name).ToSeq()),
-            Tail: _ => FailAff<Seq<string>>(Error.New("More than one adapter in overlay switch")))
-        select new OverlaySwitchInfo(overlaySwitch.Id, toHashSet(adapterNames));
+    public Aff<RT, Unit> CreateOverlaySwitch(Seq<string> adapters) =>
+        from psEngine in default(RT).Powershell.ToAff()
+        let createSwitchCommand = adapters.Count > 0
+            ? PsCommandBuilder.Create()
+                .AddCommand("New-VMSwitch")
+                .AddParameter("Name", EryphConstants.OverlaySwitchName)
+                .AddParameter("NetAdapterName", adapters.ToArray())
+                .AddParameter("AllowManagementOS", false)
+            : PsCommandBuilder.Create()
+                .AddCommand("New-VMSwitch")
+                .AddParameter("Name", EryphConstants.OverlaySwitchName)
+                .AddParameter("SwitchType", "Private")
+        // The OVS extension should be enabled only for this new switch.
+        // Hence, we use the Powershell pipeline to pass the switch
+        // instance directly into the enable command.
+        let createSwitchWithExtensionCommand = createSwitchCommand
+            .AddCommand("Enable-VMSwitchExtension")
+            .AddParameter("Name", EryphConstants.SwitchExtensionName)
+        from _ in psEngine.RunAsync(createSwitchWithExtensionCommand).ToAff()
+        select unit;
 
     public Aff<RT,Unit> RemoveOverlaySwitch() =>
         from psEngine in default(RT).Powershell.ToAff()
-        from uSwitch in psEngine.RunAsync(PsCommandBuilder.Create()
+        let removeSwitchCommand = PsCommandBuilder.Create()
             .AddCommand("Remove-VMSwitch")
             .AddParameter("Name", EryphConstants.OverlaySwitchName)
-            .AddParameter("Force")).ToAff()
-        from uTeam in psEngine.RunAsync(PsCommandBuilder.Create()
-                .AddCommand("Remove-NetSwitchTeam")
-                .AddParameter("Name", EryphConstants.OverlaySwitchName)
-                .AddParameter("ErrorAction", "SilentlyContinue"))
-            .ToAff()
-        select Unit.Default;
+            .AddParameter("Force")
+        from _ in psEngine.RunAsync(removeSwitchCommand).ToAff()
+        select unit;
 
     public Aff<RT,Unit> RemoveNetNat(string natName) =>
-        default(RT).Powershell.Bind(ps => ps.RunAsync(PsCommandBuilder.Create()
+        from psEngine in default(RT).Powershell.ToAff()
+        let command = PsCommandBuilder.Create()
             .AddCommand("Remove-NetNat")
             .AddParameter("Name", natName)
             .AddParameter("Confirm", false)
-        ).ToAff());
+        from _ in psEngine.RunAsync(command).ToAff()
+        select unit;
 
-    public Aff<RT,Unit> AddNetNat(string natName, IPNetwork2 network) =>
-        default(RT).Powershell.Bind(ps => ps.RunAsync(PsCommandBuilder.Create()
+    public Aff<RT, Unit> AddNetNat(string natName, IPNetwork2 network) =>
+        from psEngine in default(RT).Powershell.ToAff()
+        let command = PsCommandBuilder.Create()
             .AddCommand("New-NetNat")
             .AddParameter("Name", natName)
             .AddParameter("InternalIPInterfaceAddressPrefix", network.ToString())
+        from _ in psEngine.RunAsync(command).ToAff()
+        select unit;
 
-        ).ToAff());
-
-    public Aff<RT,Seq<NetIpAddress>> GetAdapterIpV4Address(string adapterName)
-    {
-        return default(RT).Powershell.Bind(ps => ps.GetObjectsAsync<NetIpAddress>(
-                PsCommandBuilder.Create().AddCommand("Get-NetIpAddress")
-                    .AddParameter("InterfaceAlias", adapterName)
-                    .AddParameter("AddressFamily", "IPv4")
-                    .AddParameter("ErrorAction", "SilentlyContinue"))
-
-            .MapAsync(e => e.Map(x => x.ToValue()))
-            .ToAff());
-
-    }
+    public Aff<RT,Seq<NetIpAddress>> GetAdapterIpV4Address(string adapterName) =>
+        from psEngine in default(RT).Powershell.ToAff()
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-NetIpAddress")
+            .AddParameter("InterfaceAlias", adapterName)
+            .AddParameter("AddressFamily", "IPv4")
+            .AddParameter("ErrorAction", "SilentlyContinue")
+        from ipAddresses in psEngine.GetObjectValuesAsync<NetIpAddress>(command).ToAff()
+        select ipAddresses.Strict();
 
     public Aff<RT, Unit> WaitForBridgeAdapter(string bridgeName)
     {

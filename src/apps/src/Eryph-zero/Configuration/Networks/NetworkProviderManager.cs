@@ -4,18 +4,16 @@ using Eryph.Core;
 using Eryph.Core.Network;
 using LanguageExt;
 using LanguageExt.Common;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero.Configuration.Networks;
 
 public class NetworkProviderManager : INetworkProviderManager
 {
-    public EitherAsync<Error, string> GetCurrentConfigurationYaml()
-    {
-        return Prelude.TryAsync(async () =>
+    public EitherAsync<Error, string> GetCurrentConfigurationYaml() =>
+        TryAsync(async () =>
         {
-
             var path = ZeroConfig.GetNetworksConfigPath();
             Config.EnsurePath(path);
 
@@ -27,68 +25,30 @@ public class NetworkProviderManager : INetworkProviderManager
             }
 
             return await File.ReadAllTextAsync(configFilePath);
-
-
         }).ToEither();
-    }
 
-    public EitherAsync<Error, NetworkProvidersConfiguration> GetCurrentConfiguration()
-    {
-        return from yaml in GetCurrentConfigurationYaml()
-               from config in ParseConfigurationYaml(yaml).ToAsync()
-               select config;
+    public EitherAsync<Error, NetworkProvidersConfiguration> GetCurrentConfiguration() =>
+        from yaml in GetCurrentConfigurationYaml()
+        from config in Try(() => NetworkProvidersConfigYamlSerializer.Deserialize(yaml))
+            .ToEitherAsync()
+        select config;
 
-    }
-
-    public Either<Error, NetworkProvidersConfiguration> ParseConfigurationYaml(string yaml)
-    {
-        var yamlDeserializer = new DeserializerBuilder()
-            .WithNamingConvention(UnderscoredNamingConvention.Instance)
-            .Build();
-
-        return Prelude.Try(() =>
+    public EitherAsync<Error, Unit> SaveConfigurationYaml(string config) =>
+        TryAsync(async () =>
         {
-            try
-            {
-                return yamlDeserializer.Deserialize<NetworkProvidersConfiguration>(yaml);
-            }
-            catch (Exception ex)
-            {
-                if (ex.InnerException == null)
-                    throw;
+            var path = ZeroConfig.GetNetworksConfigPath();
+            Config.EnsurePath(path);
 
-                throw ex.InnerException;
-            }
-        })
-            .ToEither(Error.New);
+            var configFilePath = Path.Combine(path, "p_networks.yml");
 
-    }
-
-    public EitherAsync<Error, Unit> SaveConfigurationYaml(string config)
-    {
-        return Prelude.TryAsync(async () =>
-            {
-                var path = ZeroConfig.GetNetworksConfigPath();
-                Config.EnsurePath(path);
-
-                var configFilePath = Path.Combine(path, "p_networks.yml");
-
-                await File.WriteAllTextAsync(configFilePath, config);
-                return Unit.Default;
-            }
-        ).ToEither();
-    }
+            await File.WriteAllTextAsync(configFilePath, config);
+            return unit;
+        }).ToEither();
 
     public EitherAsync<Error, Unit> SaveConfiguration(
         NetworkProvidersConfiguration config) =>
-        from yaml in Prelude.Try(() =>
-        {
-            var yamlSerializer = new SerializerBuilder()
-                .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                .Build();
-
-            return yamlSerializer.Serialize(config);
-        }).ToEitherAsync()
+        from yaml in Try(() => NetworkProvidersConfigYamlSerializer.Serialize(config))
+            .ToEitherAsync()
         from _ in SaveConfigurationYaml(yaml)
-        select Unit.Default;
+        select unit;
 }

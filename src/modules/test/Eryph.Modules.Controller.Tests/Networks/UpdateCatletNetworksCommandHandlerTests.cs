@@ -685,7 +685,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 new NetworkProvider
                 {
                     Name = "default",
-                    TypeString = "nat_overlay",
+                    Type = NetworkProviderType.NatOverlay,
                     BridgeName = "br-nat",
                     Subnets =
                     [
@@ -733,7 +733,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                 new NetworkProvider
                 {
                     Name = "flat-provider",
-                    TypeString = "flat",
+                    Type = NetworkProviderType.Flat,
                 },
             ]
         };

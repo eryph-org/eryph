@@ -1,6 +1,6 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Threading;
-using Dbosoft.OVN;
 using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
 using Eryph.Core.Sys;
@@ -18,7 +18,7 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Runtime.Zero;
 
-public readonly struct ConsoleRuntime :
+public readonly struct ConsoleRuntime(ConsoleRuntimeEnv env) :
     HasAnsiConsole<ConsoleRuntime>,
     HasPowershell<ConsoleRuntime>,
     HasOVSControl<ConsoleRuntime>,
@@ -32,50 +32,42 @@ public readonly struct ConsoleRuntime :
     HasRegistry<ConsoleRuntime>,
     HasDism<ConsoleRuntime>
 {
-    private readonly ILoggerFactory _loggerFactory;
-    private readonly IPowershellEngine _engine;
-    private readonly ISystemEnvironment _systemEnvironment;
+    private readonly ConsoleRuntimeEnv? _env = env;
 
-    public ConsoleRuntime(
-        ILoggerFactory loggerFactory,
-        IPowershellEngine engine,
-        ISystemEnvironment systemEnvironment,
-        CancellationTokenSource cancellationTokenSource)
-    {
-        _loggerFactory = loggerFactory;
-        _engine = engine;
-        CancellationTokenSource = cancellationTokenSource;
-        _systemEnvironment = systemEnvironment;
-    }
+    public ConsoleRuntimeEnv Env => _env ?? throw new InvalidOperationException("Runtime env is not set");
 
     public Eff<ConsoleRuntime, IPowershellEngine> Powershell =>
-        Eff<ConsoleRuntime, IPowershellEngine>(rt => rt._engine);
+        Eff<ConsoleRuntime, IPowershellEngine>(rt => rt.Env.PowershellEngine);
 
     public Eff<ConsoleRuntime, IOVSControl> OVS =>
-        Eff<ConsoleRuntime, IOVSControl>(rt => new OVSControl(rt._systemEnvironment));
+        Eff<ConsoleRuntime, IOVSControl>(rt => new OVSControl(rt.Env.SystemEnvironment));
 
     public Eff<ConsoleRuntime, IHostNetworkCommands<ConsoleRuntime>> HostNetworkCommands =>
         SuccessEff<IHostNetworkCommands<ConsoleRuntime>>(
             new HostNetworkCommands<ConsoleRuntime>());
 
-    public ConsoleRuntime LocalCancel => new(_loggerFactory,_engine, _systemEnvironment, new CancellationTokenSource());
+    public ConsoleRuntime LocalCancel => new(new ConsoleRuntimeEnv(
+        Env.LoggerFactory, Env.PowershellEngine, Env.SystemEnvironment,
+        new CancellationTokenSource()));
 
-    public CancellationToken CancellationToken => CancellationTokenSource.Token;
-    public CancellationTokenSource CancellationTokenSource { get; }
+    public CancellationToken CancellationToken => Env.Token;
+    
+    public CancellationTokenSource CancellationTokenSource => Env.TokenSource;
+
     public Eff<ConsoleRuntime, ISyncClient> AgentSync =>
-        Eff<ConsoleRuntime, ISyncClient>(rt => new SyncClient());
+        Eff<ConsoleRuntime, ISyncClient>(_ => new SyncClient());
 
     public Eff<ConsoleRuntime,ConsoleIO> ConsoleEff =>
         SuccessEff(LanguageExt.Sys.Live.ConsoleIO.Default);
 
     public Eff<ConsoleRuntime, INetworkProviderManager> NetworkProviderManager =>
-        Eff<ConsoleRuntime, INetworkProviderManager>(rt => new NetworkProviderManager());
+        Eff<ConsoleRuntime, INetworkProviderManager>(_ => new NetworkProviderManager());
 
     public Eff<ConsoleRuntime, ILogger> Logger(string category) => 
-        Eff<ConsoleRuntime, ILogger>(rt => rt._loggerFactory.CreateLogger(category));
+        Eff<ConsoleRuntime, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));
 
     public Eff<ConsoleRuntime, ILogger<T>> Logger<T>() =>
-        Eff<ConsoleRuntime, ILogger<T>>(rt => rt._loggerFactory.CreateLogger<T>());
+        Eff<ConsoleRuntime, ILogger<T>>(rt => rt.Env.LoggerFactory.CreateLogger<T>());
 
     public Encoding Encoding => Encoding.UTF8;
 

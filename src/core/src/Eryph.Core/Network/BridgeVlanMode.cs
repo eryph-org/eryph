@@ -2,7 +2,6 @@
 
 public enum BridgeVlanMode
 {
-    Invalid,
     Access,
     NativeUntagged,
     NativeTagged
