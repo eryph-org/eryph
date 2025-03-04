@@ -87,7 +87,7 @@ public class CatletConfigVariableSubstitutionsTests
         var config = new CatletConfig()
         {
             Variables =
-            [
+            [   
                 new VariableConfig()
                 {
                     Name = "testVariable",

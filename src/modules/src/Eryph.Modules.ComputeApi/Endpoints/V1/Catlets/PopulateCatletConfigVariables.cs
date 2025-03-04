@@ -48,7 +48,7 @@ public class PopulateCatletConfigVariables(
     [HttpPost("catlets/config/populate-variables")]
     [SwaggerOperation(
         Summary = "Populate catlet config variables",
-        Description = "Populates all variables in a config for a new catlet based on the parent and fodder genes.",
+        Description = "Populates the variables in a config for a new catlet based on the parent.",
         OperationId = "Catlets_PopulateConfigVariables",
         Tags = ["Catlets"])
 ]
