@@ -10,5 +10,4 @@ public enum BondMode
 {
     ActiveBackup,
     BalanceSlb,
-    BalanceTcp,
 }
