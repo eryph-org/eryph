@@ -744,12 +744,9 @@ public class NetworkChangeOperationBuilder<RT> where RT : struct,
     private static string GetBondMode(
         Option<NetworkProviderBridgeOptions> bridgeOptions) =>
         bridgeOptions.Bind(o => Optional(o.BondMode))
-            .Bind(bondMode => bondMode switch
-            {
-                BondMode.BalanceSlb => Some("balance-slb"),
-                BondMode.BalanceTcp => Some("balance-tcp"),
-                _ => None,
-            })
+            // balance-tcp is not supported as it seems to require LACP
+            // which does not seem to work in Hyper-V.
+            .Bind(bondMode => bondMode is BondMode.BalanceSlb ? Some("balance-slb") : None)
             .IfNone("active-backup");
 
     private static Aff<RT, Unit> StopOVN() =>
