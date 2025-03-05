@@ -9,8 +9,6 @@ using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
 using LanguageExt;
-using LanguageExt.ClassInstances.Pred;
-using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
 
