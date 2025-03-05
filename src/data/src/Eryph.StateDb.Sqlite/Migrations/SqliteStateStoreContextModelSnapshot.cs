@@ -293,6 +293,12 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ResultData")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResultType")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 

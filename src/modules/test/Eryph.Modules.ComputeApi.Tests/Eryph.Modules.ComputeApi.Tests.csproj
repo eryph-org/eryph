@@ -7,6 +7,7 @@
     <PackageReference Include="Dbosoft.Hosuto.SimpleInjector" Version="1.2.0" />
     <PackageReference Include="Dbosoft.Hosuto.Testing.AspNetCore" Version="1.2.0" />
     <PackageReference Include="FluentAssertions" Version="7.0.0" />
+    <PackageReference Include="FluentAssertions.LanguageExt" Version="0.5.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

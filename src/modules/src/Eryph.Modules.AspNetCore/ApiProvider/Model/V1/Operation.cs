@@ -19,4 +19,5 @@ public class Operation
 
     public IReadOnlyList<OperationTask>? Tasks { get; set; }
 
+    public OperationResult? Result { get; set; }
 }

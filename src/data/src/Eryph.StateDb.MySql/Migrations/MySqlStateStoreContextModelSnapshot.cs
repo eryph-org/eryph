@@ -298,6 +298,12 @@ namespace Eryph.StateDb.MySql.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("ResultData")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ResultType")
+                        .HasColumnType("longtext");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 

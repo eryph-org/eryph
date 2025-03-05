@@ -54,12 +54,12 @@ public class Create(
         CancellationToken cancellationToken = default)
     {
         var validation = RequestValidations.ValidateCatletConfig(
-            request.Configuration,
-            nameof(NewCatletRequest.Configuration));
+            request.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
                 detail: "The catlet configuration is invalid.",
-                modelStateDictionary: validation.ToModelStateDictionary());
+                modelStateDictionary: validation.ToModelStateDictionary(
+                    nameof(NewCatletRequest.Configuration)));
 
         var config = validation.ToOption().ValueUnsafe();
 
@@ -79,8 +79,11 @@ public class Create(
                 statusCode: StatusCodes.Status403Forbidden,
                 detail: "You do not have write access to the given project.");
 
+        var catletName = string.IsNullOrWhiteSpace(config.Name)
+            ? EryphConstants.DefaultCatletName
+            : config.Name;
         var existingCatlet = await repository.GetBySpecAsync(
-            new CatletSpecs.GetByName(config.Name ?? "catlet", tenantId, projectName.Value, environmentName.Value),
+            new CatletSpecs.GetByName(catletName, tenantId, projectName.Value, environmentName.Value),
             cancellationToken);
 
         if (existingCatlet != null)

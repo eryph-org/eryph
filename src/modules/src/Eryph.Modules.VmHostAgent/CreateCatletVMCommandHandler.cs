@@ -50,7 +50,7 @@ namespace Eryph.Modules.VmHostAgent
             from vmHostAgentConfig in _vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
             from plannedStorageSettings in VMStorageSettings.Plan(
                 vmHostAgentConfig, LongToString(command.StorageId), command.Config, None)
-            from createdVM in CreateVM(plannedStorageSettings, Engine, command.BredConfig)
+            from createdVM in CreateVM(plannedStorageSettings, Engine, command.Config)
             let metadataId = Guid.NewGuid()
             from _ in SetMetadataId(createdVM, metadataId)
             let timestamp = DateTimeOffset.UtcNow

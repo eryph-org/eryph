@@ -12,8 +12,8 @@
     <PackageReference Include="Ardalis.ApiEndpoints" Version="4.1.0" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
 
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.7.0" />
-    <PackageReference Include="Eryph.ConfigModel.Networks.Json" Version="0.7.0" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.8.0" />
+    <PackageReference Include="Eryph.ConfigModel.Networks.Json" Version="0.8.0" />
 
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>

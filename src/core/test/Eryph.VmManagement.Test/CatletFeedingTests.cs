@@ -410,6 +410,70 @@ public class CatletFeedingTests
     }
 
     [Fact]
+    public void Feed_VariableBindingWithoutVariableInFodder_ReturnsError()
+    {
+        var config = new CatletConfig
+        {
+            Name = "test",
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
+                    Variables =
+                    [
+                        new VariableConfig()
+                        {
+                            Name = "missingVariable",
+                            Value = "catlet value",
+                        },
+                    ],
+                },
+            ],
+        };
+
+        _genepoolReaderMock.SetupGenesetReferences();
+        _genepoolReaderMock.SetupFodderGene(
+            "gene:acme/acme-tools/1.0:test-fodder",
+            "any",
+            new FodderGeneConfig
+            {
+                Name = "test-fodder",
+                Variables =
+                [
+                    new VariableConfig()
+                    {
+                        Name = "foodVariable",
+                        Value = "gene value",
+                        Type = VariableType.String,
+                        Required = false,
+                    },
+                ],
+                Fodder =
+                [
+                    new FodderConfig()
+                    {
+                        Name = "food1",
+                        Content = "test food content",
+                    },
+                ],
+            });
+
+        var resolvedGenes = Seq1(
+            new UniqueGeneIdentifier(
+                GeneType.Fodder,
+                GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder"),
+                Architecture.New("any")));
+
+        var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
+
+        var error = result.Should().BeLeft().Subject;
+        error.Message.Should().Be("Could not expand the fodder gene 'gene:acme/acme-tools/1.0:test-fodder'.");
+        error.Inner.Should().BeSome().Which.Message
+            .Should().Be("Found a binding for the variable 'missingVariable' but the variable is not defined in the fodder gene.");
+    }
+
+    [Fact]
     public void Feed_FodderWithoutSource_FodderIsNotTouched()
     {
         var config = new CatletConfig

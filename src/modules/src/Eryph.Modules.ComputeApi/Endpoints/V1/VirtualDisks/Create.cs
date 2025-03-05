@@ -9,6 +9,7 @@ using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Messages.Resources.Disks;
 using Eryph.Modules.AspNetCore;
+using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.AspNetCore.ApiProvider.Endpoints;
 using Eryph.Modules.AspNetCore.ApiProvider.Handlers;
 using Eryph.Modules.AspNetCore.ApiProvider.Model.V1;
@@ -62,7 +63,8 @@ public class Create(
         [FromBody] NewVirtualDiskRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validation = ValidateRequest(request);
+        var validation = ValidateRequest(request)
+            .ToJsonPath(ApiJsonSerializerOptions.Options.PropertyNamingPolicy);
         if (validation.IsFail)
             return ValidationProblem(validation.ToModelStateDictionary());
 

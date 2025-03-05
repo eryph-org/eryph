@@ -9,7 +9,8 @@ public class MapperProfile : Profile
 {
     public MapperProfile()
     {
-        CreateMap<StateDb.Model.OperationModel, Operation>();
+        CreateMap<StateDb.Model.OperationModel, Operation>()
+            .ForMember(x => x.Result, m => m.MapFrom<OperationResultValueResolver>());
 
         CreateMap<StateDb.Model.OperationProjectModel, Project>()
             .Flatten(x => x.Project);
