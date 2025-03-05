@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using Dbosoft.Functional.Validations;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
-using Eryph.Core;
 using LanguageExt;
+using LanguageExt.ClassInstances.Pred;
 using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
@@ -23,30 +21,30 @@ namespace Eryph.VmManagement;
 public static partial class CatletConfigVariableSubstitutions
 {
     public static Validation<ValidationIssue, CatletConfig> SubstituteVariables(
-       CatletConfig config) =>
-       from valuesMap in config.Variables
-           .ToSeq()
-           .Map(variableConfig =>
-               from name in VariableName.NewValidation(variableConfig.Name)
-                   .MapFail(e => new ValidationIssue(
-                       CreateVariablePath(nameof(CatletConfig.Variables), variableConfig),
-                       e.Message))
-               let info = VariableInfo.FromConfig(variableConfig)
-               from _ in ValidateVariableInfo(info, 
-                   CreateVariablePath(nameof(CatletConfig.Variables), variableConfig))
-               select (name, info))
-           .Sequence()
-           .Map(values => values.ToHashMap())
-       from substitutedFodder in config.Fodder.ToSeq()
-           .Map(fodderConfig => SubstituteVariables(
-               fodderConfig,
-               CreateFodderPath(nameof(CatletConfig.Fodder), fodderConfig),
-               valuesMap))
-           .Sequence()
-       select config.CloneWith(c =>
-       {
-           c.Fodder = substitutedFodder.ToArray();
-       });
+        CatletConfig config) =>
+        from valuesMap in config.Variables
+            .ToSeq()
+            .Map(variableConfig =>
+                from name in VariableName.NewValidation(variableConfig.Name)
+                    .MapFail(e => new ValidationIssue(
+                        CreateVariablePath(nameof(CatletConfig.Variables), variableConfig),
+                        e.Message))
+                let info = VariableInfo.FromConfig(variableConfig)
+                from _ in ValidateCatletVariableInfo(info,
+                    CreateVariablePath(nameof(CatletConfig.Variables), variableConfig))
+                select (name, info))
+            .Sequence()
+            .Map(values => values.ToHashMap())
+        from substitutedFodder in config.Fodder.ToSeq()
+            .Map(fodderConfig => SubstituteVariables(
+                fodderConfig,
+                CreateFodderPath(nameof(CatletConfig.Fodder), fodderConfig),
+                valuesMap))
+            .Sequence()
+        select config.CloneWith(c =>
+        {
+            c.Fodder = substitutedFodder.ToArray();
+        });
 
     private static Validation<ValidationIssue, FodderConfig> SubstituteVariables(
         FodderConfig config,
@@ -54,15 +52,14 @@ public static partial class CatletConfigVariableSubstitutions
         HashMap<VariableName, VariableInfo> catletVariables) =>
         from combinedVariables in config.Variables.ToSeq()
             .Map(variableConfig => SubstituteVariables(
+                config,
                 variableConfig,
                 CreateVariablePath(JoinPath(path, nameof(FodderConfig.Variables)), variableConfig),
                 catletVariables))
             .Sequence()
             .Map(s => s.ToHashMap().Append(catletVariables))
         from result in SubstituteVariables(config.Content ?? "", combinedVariables)
-            .MapFail(e => new ValidationIssue(
-                JoinPath(path, nameof(FodderConfig.Content)),
-                e.Message))
+            .MapFail(issue => ToValidationIssue(issue, config, JoinPath(path, nameof(FodderConfig.Content))))
         select config.CloneWith(c =>
         {
             c.Content = result.Value;
@@ -70,28 +67,29 @@ public static partial class CatletConfigVariableSubstitutions
         });
 
     private static Validation<ValidationIssue, (VariableName Name, VariableInfo Info)> SubstituteVariables(
-        VariableConfig config,
+        FodderConfig fodderConfig,
+        VariableConfig variableConfig,
         string path,
         HashMap<VariableName, VariableInfo> catletVariables) =>
-        from name in VariableName.NewValidation(config.Name)
+        from name in VariableName.NewValidation(variableConfig.Name)
             .MapFail(e => new ValidationIssue(JoinPath(path, nameof(VariableConfig.Name)), e.Message))
-        from t in SubstituteVariables(config.Value ?? "", catletVariables)
-            .MapFail(e => new ValidationIssue(JoinPath(path, nameof(VariableConfig.Value)), e.Message))
-        let info = VariableInfo.FromConfig(config)
+        from t in SubstituteVariables(variableConfig.Value ?? "", catletVariables)
+            .MapFail(issue => ToValidationIssue(issue, fodderConfig, JoinPath(path, nameof(VariableConfig.Value))))
+        let info = VariableInfo.FromConfig(variableConfig)
         let substitutedInfo = info with
         {
             Value = t.Value,
             Secret = info.Secret || t.Secret,
         }
-        from _ in ValidateVariableInfo(substitutedInfo, path)
+        from _ in ValidateFodderVariableInfo(fodderConfig, substitutedInfo, path)
         select (name, substitutedInfo);
 
-    private static Validation<Error, (string Value, bool Secret)> SubstituteVariables(
+    private static Validation<VariableReferenceIssue, (string Value, bool Secret)> SubstituteVariables(
         string input,
         HashMap<VariableName, VariableInfo> values)
     {
         var isSecret = false;
-        var errors = new List<Error>();
+        var errors = new List<VariableReferenceIssue>();
         var result = VariableReferenceRegex().Replace(input, match =>
             MatchVariable(match, values).Match(
                 Succ: t =>
@@ -108,16 +106,15 @@ public static partial class CatletConfigVariableSubstitutions
         return errors.Count > 0 ? errors.ToSeq() : (result, isSecret);
     }
 
-    private static Validation<Error, (string Value, bool Secret)> MatchVariable(
+    private static Validation<VariableReferenceIssue, (string Value, bool Secret)> MatchVariable(
         Match match,
         HashMap<VariableName, VariableInfo> variables) =>
-
         from variableName in Try(() => match.Groups[1].Value.Trim())
-            .ToValidation(_ => Error.New($"The variable reference '{match.Value}' is invalid."))
+            .ToValidation(_ => new VariableReferenceIssue(match.Value, false))
         from validVariableName in VariableName.NewOption(variableName)
-            .ToValidation(Error.New($"The variable reference '{match.Value}' is invalid."))
+            .ToValidation(new VariableReferenceIssue(match.Value, false))
         from matchedVariable in variables.Find(validVariableName)
-            .ToValidation(Error.New($"The referenced variable '{variableName}' does not exist."))
+            .ToValidation(new VariableReferenceIssue(variableName, true))
         let value = matchedVariable.Type switch
         {
             VariableType.Boolean => Optional(matchedVariable.Value)
@@ -133,18 +130,41 @@ public static partial class CatletConfigVariableSubstitutions
     [GeneratedRegex(@"{{\s*?(\S*?)\s*?}}")]
     private static partial Regex VariableReferenceRegex();
 
-    private static Validation<ValidationIssue, Unit> ValidateVariableInfo(
+    private static Validation<ValidationIssue, Unit> ValidateCatletVariableInfo(
         VariableInfo variableInfo,
         string path) =>
         Optional(variableInfo.Value).Filter(notEmpty).Match(
             Some: v => VariableConfigValidations.ValidateVariableValue(v, variableInfo.Type)
                 .Map(_ => unit)
-                .MapFail(e => new ValidationIssue(JoinPath(path, nameof(VariableConfig.Value)), e.Message)),
+                .MapFail(e => new ValidationIssue(
+                    JoinPath(path, nameof(VariableConfig.Value)),
+                    $"The value for the catlet variable '{variableInfo.Name}' is invalid. {e.Message}")),
             None: () => unit)
         | guard(notEmpty(variableInfo.Value) || !variableInfo.Required,
                 new ValidationIssue(
                     JoinPath(path, nameof(VariableConfig.Value)),
-                    "The value is required but missing."))
+                    $"The value for the catlet variable '{variableInfo.Name}' is required but missing."))
+            .ToValidation();
+
+    private static Validation<ValidationIssue, Unit> ValidateFodderVariableInfo(
+        FodderConfig fodderConfig,
+        VariableInfo variableInfo,
+        string path) =>
+        Optional(variableInfo.Value).Filter(notEmpty).Match(
+            Some: v => VariableConfigValidations.ValidateVariableValue(v, variableInfo.Type)
+                .Map(_ => unit)
+                .MapFail(e => new ValidationIssue(
+                    JoinPath(path, nameof(VariableConfig.Value)),
+                    $"The value for the variable '{variableInfo.Name}' of the food '{fodderConfig.Name}'"
+                    + Optional(fodderConfig.Source).Filter(notEmpty).Map(s => $" from '{s}'").IfNone("")
+                    + $" is invalid. {e.Message}")),
+            None: () => unit)
+        | guard(notEmpty(variableInfo.Value) || !variableInfo.Required,
+                new ValidationIssue(
+                    JoinPath(path, nameof(VariableConfig.Value)),
+                    $"The value for the variable '{variableInfo.Name}' of the food '{fodderConfig.Name}'"
+                    + Optional(fodderConfig.Source).Filter(notEmpty).Map(s => $" from '{s}'").IfNone("")
+                    + " is required but missing. The variable should be bound to a catlet variable or a constant value."))
             .ToValidation();
 
     private static string CreateFodderPath(string path, FodderConfig config) =>
@@ -157,6 +177,24 @@ public static partial class CatletConfigVariableSubstitutions
 
     private static string JoinPath(string path, string propertyName) =>
         notEmpty(path) ? $"{path}.{propertyName}" : propertyName;
+
+    private static ValidationIssue ToValidationIssue(
+        VariableReferenceIssue issue,
+        FodderConfig fodderConfig,
+        string path) =>
+        issue.IsValid switch
+        {
+            true => new ValidationIssue(
+                path,
+                $"The variable '{issue.Reference}' referenced by the food '{fodderConfig.Name}'"
+                + Optional(fodderConfig.Source).Filter(notEmpty).Map(s => $" from '{s}'").IfNone("")
+                + " does not exist."),
+            false => new ValidationIssue(
+                path,
+                $"The variable reference '{issue.Reference}' in the food '{fodderConfig.Name}'"
+                + Optional(fodderConfig.Source).Filter(notEmpty).Map(s => $" from '{s}'").IfNone("")
+                + " is invalid.")
+        };
 
     private sealed record VariableInfo
     {
@@ -180,4 +218,8 @@ public static partial class CatletConfigVariableSubstitutions
                 Required = config.Required ?? false,
             };
     }
+
+    private sealed record VariableReferenceIssue(
+        string Reference,
+        bool IsValid);
 }

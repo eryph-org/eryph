@@ -103,7 +103,8 @@ public class CatletConfigVariableSubstitutionsTests
             issue =>
             {
                 issue.Member.Should().Be("Variables[Name=testVariable].Value");
-                issue.Message.Should().Contain("The value is not a valid boolean. Only 'true' and 'false' are allowed.");
+                issue.Message.Should().Be(
+                    "The value for the catlet variable 'testVariable' is invalid. The value is not a valid boolean. Only 'true' and 'false' are allowed.");
             });
     }
 
@@ -116,7 +117,8 @@ public class CatletConfigVariableSubstitutionsTests
             [
                 new FodderConfig()
                 {
-                    Name = "test-fodder",
+                    Name = "test-food",
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
                     Variables =
                     [
                         new VariableConfig()
@@ -135,8 +137,10 @@ public class CatletConfigVariableSubstitutionsTests
         result.Should().BeFail().Which.Should().SatisfyRespectively(
             issue =>
             {
-                issue.Member.Should().Be("Fodder[Name=test-fodder].Variables[Name=testVariable].Value");
-                issue.Message.Should().Contain("The value is not a valid boolean. Only 'true' and 'false' are allowed.");
+                issue.Member.Should().Be("Fodder[Source=gene:acme/acme-tools/1.0:test-fodder;Name=test-food].Variables[Name=testVariable].Value");
+                issue.Message.Should().Be(
+                    "The value for the variable 'testVariable' of the food 'test-food' from 'gene:acme/acme-tools/1.0:test-fodder' is invalid."
+                    + " The value is not a valid boolean. Only 'true' and 'false' are allowed.");
             });
     }
 
@@ -161,7 +165,8 @@ public class CatletConfigVariableSubstitutionsTests
             issue =>
             {
                 issue.Member.Should().Be("Variables[Name=testVariable].Value");
-                issue.Message.Should().Contain("The value is required but missing.");
+                issue.Message.Should().Be(
+                    "The value for the catlet variable 'testVariable' is required but missing.");
             });
     }
 
@@ -174,7 +179,8 @@ public class CatletConfigVariableSubstitutionsTests
             [
                 new FodderConfig()
                 {
-                    Name = "test-fodder",
+                    Name = "test-food",
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
                     Variables =
                     [
                         new VariableConfig()
@@ -192,8 +198,10 @@ public class CatletConfigVariableSubstitutionsTests
         result.Should().BeFail().Which.Should().SatisfyRespectively(
             issue =>
             {
-                issue.Member.Should().Be("Fodder[Name=test-fodder].Variables[Name=testVariable].Value");
-                issue.Message.Should().Contain("The value is required but missing.");
+                issue.Member.Should().Be("Fodder[Source=gene:acme/acme-tools/1.0:test-fodder;Name=test-food].Variables[Name=testVariable].Value");
+                issue.Message.Should().Be(
+                    "The value for the variable 'testVariable' of the food 'test-food' from 'gene:acme/acme-tools/1.0:test-fodder' is required but missing."
+                    + " The variable should be bound to a catlet variable or a constant value.");
             });
     }
 
@@ -214,7 +222,8 @@ public class CatletConfigVariableSubstitutionsTests
             [
                 new FodderConfig()
                 {
-                    Name = "test-fodder",
+                    Name = "test-food",
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
                     Content = "Value is {{ testFodderVariable }}!",
                     Variables =
                     [
@@ -235,8 +244,10 @@ public class CatletConfigVariableSubstitutionsTests
         result.Should().BeFail().Which.Should().SatisfyRespectively(
             issue =>
             {
-                issue.Member.Should().Be("Fodder[Name=test-fodder].Variables[Name=testFodderVariable].Value");
-                issue.Message.Should().Be("The value is not a valid boolean. Only 'true' and 'false' are allowed.");
+                issue.Member.Should().Be("Fodder[Source=gene:acme/acme-tools/1.0:test-fodder;Name=test-food].Variables[Name=testFodderVariable].Value");
+                issue.Message.Should().Be(
+                    "The value for the variable 'testFodderVariable' of the food 'test-food' from 'gene:acme/acme-tools/1.0:test-fodder' is invalid."
+                    + " The value is not a valid boolean. Only 'true' and 'false' are allowed.");
             });
     }
 
@@ -257,7 +268,8 @@ public class CatletConfigVariableSubstitutionsTests
             [
                 new FodderConfig()
                 {
-                    Name = "test-fodder",
+                    Name = "test-food",
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
                     Content = "Price is {{missingVariable}}!",
                     Variables =
                     [
@@ -277,8 +289,9 @@ public class CatletConfigVariableSubstitutionsTests
         result.Should().BeFail().Which.Should().SatisfyRespectively(
             issue =>
             {
-                issue.Member.Should().Be("Fodder[Name=test-fodder].Content");
-                issue.Message.Should().Contain("The referenced variable 'missingVariable' does not exist.");
+                issue.Member.Should().Be("Fodder[Source=gene:acme/acme-tools/1.0:test-fodder;Name=test-food].Content");
+                issue.Message.Should().Be(
+                    "The variable 'missingVariable' referenced by the food 'test-food' from 'gene:acme/acme-tools/1.0:test-fodder' does not exist.");
             });
     }
 
@@ -291,7 +304,8 @@ public class CatletConfigVariableSubstitutionsTests
             [
                 new FodderConfig()
                 {
-                    Name = "test-fodder",
+                    Name = "test-food",
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
                     Variables =
                     [
                         new VariableConfig()
@@ -309,8 +323,9 @@ public class CatletConfigVariableSubstitutionsTests
         result.Should().BeFail().Which.Should().SatisfyRespectively(
             issue =>
             {
-                issue.Member.Should().Be("Fodder[Name=test-fodder].Variables[Name=testVariable].Value");
-                issue.Message.Should().Contain("The referenced variable 'missingVariable' does not exist.");
+                issue.Member.Should().Be("Fodder[Source=gene:acme/acme-tools/1.0:test-fodder;Name=test-food].Variables[Name=testVariable].Value");
+                issue.Message.Should().Be(
+                    "The variable 'missingVariable' referenced by the food 'test-food' from 'gene:acme/acme-tools/1.0:test-fodder' does not exist.");
             });
     }
 
