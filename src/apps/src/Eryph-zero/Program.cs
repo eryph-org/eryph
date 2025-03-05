@@ -280,6 +280,10 @@ internal static class Program
                 container.RegisterInstance<IEndpointResolver>(new EndpointResolver(endpoints));
 
                 var builder = ModulesHost.CreateDefaultBuilder(args);
+                // Explicitly set the content root. Hosuto defaults to Environment.CurrentDirectory.
+                // This leads to incorrect behavior when running as a Windows service. Windows services
+                // are started with the system32 directory as the working directory.
+                builder.UseContentRoot(AppContext.BaseDirectory);
 
                 var host = builder
                     .ConfigureInternalHost(hb =>
@@ -291,9 +295,9 @@ internal static class Program
                         webHostBuilder.UseHttpSys(options => { options.UrlPrefixes.Add(module.Path); });
                     })
                     .UseSimpleInjector(container)
+                    .ConfigureEryphAppConfiguration(args)
                     .ConfigureAppConfiguration((_, config) =>
                     {
-                        config.AddEnvironmentVariables("ERYPH_");
                         config.AddInMemoryCollection(new Dictionary<string, string>
                         {
                             { "warmupMode", warmupMode.ToString() },
@@ -381,24 +385,33 @@ internal static class Program
     private static IConfiguration ReadConfiguration(string[] args)
     {
         using var configHost = Host.CreateDefaultBuilder()
-            .ConfigureAppConfiguration((hostingContext, config) =>
-            {
-                var env = hostingContext.HostingEnvironment;
-                
-                config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-                    .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: false);
-
-                config.AddEnvironmentVariables();
-                config.AddEnvironmentVariables("ERYPH_");
-
-                if (args is { Length: > 0 })
-                {
-                    config.AddCommandLine(args);
-                }
-            })
+            .UseContentRoot(AppContext.BaseDirectory)
+            .ConfigureEryphAppConfiguration(args)
             .Build();
 
         return configHost.Services.GetRequiredService<IConfiguration>();
+    }
+
+    private static T ConfigureEryphAppConfiguration<T>(this T hostBuilder, string[] args)
+        where T : IHostBuilder
+    {
+        hostBuilder.ConfigureAppConfiguration((hostingContext, config) =>
+        {
+            var env = hostingContext.HostingEnvironment;
+            config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: false)
+                .AddJsonFile(Path.Combine(ZeroConfig.GetConfigPath(), "appsettings.json"), optional: true, reloadOnChange: false);
+
+            config.AddEnvironmentVariables();
+            config.AddEnvironmentVariables("ERYPH_");
+
+            if (args is { Length: > 0 })
+            {
+                config.AddCommandLine(args);
+            }
+        });
+
+        return hostBuilder;
     }
 
     private static readonly IPEndPoint DefaultLoopbackEndpoint = new(IPAddress.Loopback, port: 0);
