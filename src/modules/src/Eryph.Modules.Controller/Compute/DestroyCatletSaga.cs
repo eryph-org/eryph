@@ -63,7 +63,7 @@ internal class DestroyCatletSaga(
                 new CatletSpecs.GetForDelete(Data.Data.MachineId));
             if (catlet is null)
             {
-                await Complete();
+                await CompleteWithResponse();
                 return;
             }
 
@@ -100,7 +100,7 @@ internal class DestroyCatletSaga(
                 .Append(response.DetachedResources)
                 .ToList();
 
-            await Complete();
+            await CompleteWithResponse();
         });
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<DestroyCatletSagaData>> config)
@@ -110,7 +110,7 @@ internal class DestroyCatletSaga(
         config.Correlate<OperationTaskStatusEvent<DestroyResourcesCommand>>(m => m.InitiatingTaskId, d => d.SagaTaskId);
     }
 
-    private async Task Complete()
+    private async Task CompleteWithResponse()
     {
         await Complete(new DestroyResourcesResponse()
         {

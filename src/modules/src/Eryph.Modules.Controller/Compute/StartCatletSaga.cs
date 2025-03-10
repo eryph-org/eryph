@@ -26,14 +26,13 @@ namespace Eryph.Modules.Controller.Compute
         protected override Task Initiated(StartCatletCommand message)
         {
             return _vmDataService.GetVM(message.Resource.Id).MatchAsync(
-                None: () => Fail().ToUnit(),
+                None: () => Fail($"The catlet {message.Resource.Id} does not exist.").ToUnit(),
                 Some: s => StartNewTask(new StartCatletVMCommand { CatletId = message.Resource.Id, VMId = s.VMId }).AsTask().ToUnit());
         }
 
         public Task Handle(OperationTaskStatusEvent<StartCatletVMCommand> message)
         {
-            return FailOrRun(message, () => Complete());
-
+            return FailOrRun(message, Complete);
         }
 
         protected override void CorrelateMessages(ICorrelationConfig<StartCatletSagaData> config)
@@ -41,9 +40,5 @@ namespace Eryph.Modules.Controller.Compute
             base.CorrelateMessages(config);
             config.Correlate<OperationTaskStatusEvent<StartCatletVMCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
         }
-
-
-
-
     }
 }
