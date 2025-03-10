@@ -11,7 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.Sqlite.Migrations
 {
     [DbContext(typeof(SqliteStateStoreContext))]
+<<<<<<<< HEAD:src/data/src/Eryph.StateDb.Sqlite/Migrations/20250204151102_InitialCreate.Designer.cs
     [Migration("20250204151102_InitialCreate")]
+========
+    [Migration("20250310183911_InitialCreate")]
+>>>>>>>> af00360 (Add new columns):src/data/src/Eryph.StateDb.Sqlite/Migrations/20250310183911_InitialCreate.Designer.cs
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -760,6 +764,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("GeneSet")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsValid")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
@@ -767,6 +774,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ParentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ParentPath")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Path")

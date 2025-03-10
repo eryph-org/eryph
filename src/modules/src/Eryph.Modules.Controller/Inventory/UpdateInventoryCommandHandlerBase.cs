@@ -347,6 +347,8 @@ namespace Eryph.Modules.Controller.Inventory
                 LastSeen = timestamp,
                 LastSeenAgent = agentName,
                 Parent = parentDisk.IfNoneUnsafe(() => null),
+                ParentPath = diskInfo.ParentPath,
+                IsValid = diskInfo.IsValid,
             };
             await _stateStore.For<VirtualDisk>().AddAsync(disk);
             await _stateStore.SaveChangesAsync();

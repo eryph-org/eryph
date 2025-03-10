@@ -762,6 +762,9 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("GeneSet")
                         .HasColumnType("longtext");
 
+                    b.Property<bool>("IsValid")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<DateTimeOffset>("LastSeen")
                         .HasColumnType("datetime(6)");
 
@@ -770,6 +773,9 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("char(36)");
+
+                    b.Property<string>("ParentPath")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("Path")
                         .HasColumnType("longtext");
