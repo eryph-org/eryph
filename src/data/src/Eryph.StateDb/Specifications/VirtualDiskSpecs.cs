@@ -44,7 +44,8 @@ namespace Eryph.StateDb.Specifications
         {
             public FindDeleted(DateTimeOffset cutoff)
             {
-                Query.Where(x => x.Deleted && x.LastSeen < cutoff);
+                Query.Where(x => x.Deleted && x.LastSeen < cutoff)
+                    .Include(d => d.Children);
             }
 
         }

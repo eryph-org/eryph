@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
 using Eryph.StateDb.Specifications;
-using Microsoft.Extensions.Logging;
 using Quartz;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
