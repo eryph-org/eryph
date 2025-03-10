@@ -103,7 +103,7 @@ public class CleanupGenesSaga(
         });
 
     public Task Handle(OperationTaskStatusEvent<CheckDisksExistsCommand> message) =>
-        FailOrRun(message, () => Complete());
+        FailOrRun(message, Complete);
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<CleanupGenesSagaData>> config)
     {
