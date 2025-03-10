@@ -288,6 +288,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     DiskIdentifier = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     Deleted = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    IsValid = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     Path = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     FileName = table.Column<string>(type: "longtext", nullable: true)
@@ -295,6 +296,8 @@ namespace Eryph.StateDb.MySql.Migrations
                     SizeBytes = table.Column<long>(type: "bigint", nullable: true),
                     UsedSizeBytes = table.Column<long>(type: "bigint", nullable: true),
                     ParentId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    ParentPath = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     LastSeen = table.Column<DateTimeOffset>(type: "datetime(6)", nullable: false),
                     LastSeenAgent = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),

@@ -25,6 +25,12 @@ public class VirtualDisk : Disk
     /// </summary>
     public bool Deleted { get; set; }
 
+    /// <summary>
+    /// Indicates that Hyper-V considers the disk to be valid,
+    /// i.e. it has passed <c>Test-VHD</c>.
+    /// </summary>
+    public bool IsValid { get; set; }
+
     public string? Path { get; set; }
         
     public string? FileName { get; set; }
@@ -40,7 +46,15 @@ public class VirtualDisk : Disk
     public Guid? ParentId { get; set; }
     
     public VirtualDisk? Parent { get; set; }
-    
+
+    /// <summary>
+    /// The path to the parent of this disk. The parent path might be
+    /// populated even if <see cref="Parent"/> is <see langword="null"/>.
+    /// This means that this disk is differential (i.e. it has parent) but
+    /// the parent cannot be found.
+    /// </summary>
+    public string? ParentPath { get; set; }
+
     public DateTimeOffset LastSeen { get; set; }
     
     public string? LastSeenAgent { get; set; }

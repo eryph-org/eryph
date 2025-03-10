@@ -15,24 +15,28 @@ namespace Eryph.Resources.Disks
         public Guid? ProjectId { get; set; }
         public string ProjectName { get; set; }
         public string Environment { get; set; }
-        
+
         public Guid DiskIdentifier { get; set; }
 
         [CanBeNull] public UniqueGeneIdentifier Gene { get; set; }
 
         public bool Frozen { get; set; }
 
+        /// <summary>
+        /// Indicates that Hyper-V considers the disk to be valid,
+        /// i.e. it has passed <c>Test-VHD</c>.
+        /// </summary>
+        public bool IsValid { get; set; }
 
-        [PrivateIdentifier]
+        [PrivateIdentifier] public string Path { get; set; }
 
-        public string Path { get; set; }
-
-        [PrivateIdentifier]
-        public string FileName { get; set; }
+        [PrivateIdentifier] public string FileName { get; set; }
 
         public long? SizeBytes { get; set; }
         public long? UsedSizeBytes { get; set; }
 
-        public DiskInfo Parent { get; set; }
+        [CanBeNull] public DiskInfo Parent { get; set; }
+
+        [CanBeNull] public string ParentPath { get; set; }
     }
 }
