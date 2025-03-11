@@ -16,7 +16,7 @@ public class OperationDispatcher : DefaultOperationDispatcher
     public OperationDispatcher(
         IBus bus,
         WorkflowOptions options,
-        ILogger<DefaultOperationDispatcher> logger,
+        ILogger<OperationDispatcher> logger,
         IOperationManager operationManager)
         : base(bus, options, logger, operationManager)
     {
