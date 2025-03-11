@@ -22,6 +22,14 @@ namespace Eryph.VmManagement.Storage
 
         public Option<DiskStorageSettings> ParentSettings { get; set; }
 
+        /// <summary>
+        /// The path to the parent of this disk. The parent path might be
+        /// populated even if <see cref="ParentSettings"/> are <see cref="OptionNone"/>.
+        /// This means that this disk is differential (i.e. it has parent) but
+        /// the parent is missing.
+        /// </summary>
+        public Option<string> ParentPath { get; set; }
+
         public Option<string> StorageIdentifier { get; set; }
         public StorageNames StorageNames { get; set; }
 
@@ -29,6 +37,12 @@ namespace Eryph.VmManagement.Storage
 
         public long? SizeBytes { get; set; }
         public long? SizeBytesCreate { get; set; }
+
+        /// <summary>
+        /// Indicates that Hyper-V considers the disk to be valid,
+        /// i.e. it has passed <c>Test-VHD</c>.
+        /// </summary>
+        public bool IsValid { get; set; }
 
         public Option<UniqueGeneIdentifier> Gene { get; set; }
 
@@ -75,36 +89,53 @@ namespace Eryph.VmManagement.Storage
             IPowershellEngine engine,
             VmHostAgentConfiguration vmHostAgentConfig,
             string path) =>
-            from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path).ToAsync().ToError()
+            from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path)
             from vhdInfo in optionalVhdInfo.ToEitherAsync(Error.New(
                 $"Could not read VHD {path}"))
+            from result in FromVhdInfo(engine, vmHostAgentConfig, vhdInfo)
+            select result;
+
+        private static EitherAsync<Error, DiskStorageSettings> FromVhdInfo(
+            IPowershellEngine engine,
+            VmHostAgentConfiguration vmHostAgentConfig,
+            TypedPsObject<VhdInfo> vhdInfo) =>
+            from isValid in VhdQuery.TestVhd(engine, vhdInfo.Value.Path)
             let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
             let vhdPath = vhdInfo.Value.Path
             from result in GenePoolPaths.IsPathInGenePool(genePoolPath, vhdPath)
-                ? FromGeneVhdInfo(genePoolPath, vhdInfo.Value)
+                ? FromGeneVhdInfo(genePoolPath, vhdInfo.Value, isValid)
                 : from _ in RightAsync<Error, Unit>(unit)
-                  let nameAndId = StorageNames.FromVhdPath(vhdPath, vmHostAgentConfig)
-                  let parentPath = Optional(vhdInfo.Value.ParentPath).Filter(notEmpty)
-                  from parentSettings in parentPath.Map(p => FromVhdPath(engine, vmHostAgentConfig, p)).Sequence()
-                  let generation = parentSettings.Map(p => p.Generation).IfNone(-1) + 1
-                  select new DiskStorageSettings
-                  {
-                      Path = System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
-                      Name = GetNameWithoutGeneration(vhdInfo.Value.Path, generation),
-                      FileName = System.IO.Path.GetFileName(vhdInfo.Value.Path),
-                      StorageNames = nameAndId.Names,
-                      StorageIdentifier = nameAndId.StorageIdentifier,
-                      SizeBytes = vhdInfo.Value.Size,
-                      UsedSizeBytes = vhdInfo.Value.FileSize,
-                      DiskIdentifier = vhdInfo.Value.DiskIdentifier,
-                      Generation = generation,
-                      ParentSettings = parentSettings
-                  }
+                let nameAndId = StorageNames.FromVhdPath(vhdPath, vmHostAgentConfig)
+                let parentPath = Optional(vhdInfo.Value.ParentPath).Filter(notEmpty)
+                from parentVhdInfo in parentPath
+                    .Map(p => VhdQuery.GetVhdInfo(engine, p))
+                    .Sequence()
+                    .Map(o => o.Flatten())
+                from parentSettings in parentVhdInfo
+                    .Map(i => FromVhdInfo(engine, vmHostAgentConfig, i))
+                    .Sequence()
+                let generation = parentSettings.Map(p => p.Generation).IfNone(-1) + 1
+                select new DiskStorageSettings
+                {
+                    Path = System.IO.Path.GetDirectoryName(vhdInfo.Value.Path),
+                    Name = GetNameWithoutGeneration(vhdInfo.Value.Path, generation),
+                    FileName = System.IO.Path.GetFileName(vhdInfo.Value.Path),
+                    StorageNames = nameAndId.Names,
+                    StorageIdentifier = nameAndId.StorageIdentifier,
+                    SizeBytes = vhdInfo.Value.Size,
+                    UsedSizeBytes = vhdInfo.Value.FileSize,
+                    DiskIdentifier = vhdInfo.Value.DiskIdentifier,
+                    Generation = generation,
+                    ParentSettings = parentSettings,
+                    ParentPath = parentPath,
+                    IsValid = isValid && (parentPath.IsNone || parentSettings.IsSome),
+                }
             select result;
 
         private static EitherAsync<Error, DiskStorageSettings> FromGeneVhdInfo(
             string genePoolPath,
-            VhdInfo vhdInfo) =>
+            VhdInfo vhdInfo,
+            bool isValid) =>
             from uniqueGeneId in GenePoolPaths.GetUniqueGeneIdFromPath(genePoolPath, vhdInfo.Path)
                 .ToAsync()
             select new DiskStorageSettings
@@ -124,8 +155,10 @@ namespace Eryph.VmManagement.Storage
                 UsedSizeBytes = vhdInfo.FileSize,
                 DiskIdentifier = vhdInfo.DiskIdentifier,
                 Generation = 0,
+                IsValid = isValid,
             };
 
+        // TODO Make generation removal less restrictive
         private static string GetNameWithoutGeneration(string path, int generation)
         {
             if (generation == 0)
@@ -137,5 +170,7 @@ namespace Eryph.VmManagement.Storage
                 ? fileName[..^generationSuffix.Length]
                 : fileName;
         }
+
+        
     }
 }

@@ -37,6 +37,12 @@ namespace Eryph.Resources.Disks
 
         [CanBeNull] public DiskInfo Parent { get; set; }
 
+        /// <summary>
+        /// The path to the parent of this disk. The parent path might be
+        /// populated even if <see cref="Parent"/> is <see langword="null"/>.
+        /// This means that this disk is differential (i.e. it has parent) but
+        /// the parent is missing.
+        /// </summary>
         [CanBeNull] public string ParentPath { get; set; }
     }
 }
