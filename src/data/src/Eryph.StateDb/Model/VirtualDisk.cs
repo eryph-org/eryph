@@ -51,7 +51,7 @@ public class VirtualDisk : Disk
     /// The path to the parent of this disk. The parent path might be
     /// populated even if <see cref="Parent"/> is <see langword="null"/>.
     /// This means that this disk is differential (i.e. it has parent) but
-    /// the parent cannot be found.
+    /// the parent is missing.
     /// </summary>
     public string? ParentPath { get; set; }
 
