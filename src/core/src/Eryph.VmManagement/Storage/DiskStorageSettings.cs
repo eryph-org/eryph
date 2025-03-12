@@ -43,10 +43,10 @@ public class DiskStorageSettings
     public long? SizeBytesCreate { get; set; }
 
     /// <summary>
-    /// Indicates that Hyper-V considers the disk to be valid,
+    /// Indicates that Hyper-V considers the disk to be usable,
     /// i.e. it has passed <c>Test-VHD</c>.
     /// </summary>
-    public bool IsValid { get; set; }
+    public bool IsUsable { get; set; }
 
     public Option<UniqueGeneIdentifier> Gene { get; set; }
 
@@ -135,7 +135,7 @@ public class DiskStorageSettings
                 Generation = generation,
                 ParentSettings = parentSettings,
                 ParentPath = parentPath,
-                IsValid = isValid && (parentPath.IsNone || parentSettings.IsSome),
+                IsUsable = isValid && (parentPath.IsNone || parentSettings.IsSome),
             }
         select result;
 
@@ -162,6 +162,6 @@ public class DiskStorageSettings
             UsedSizeBytes = vhdInfo.FileSize,
             DiskIdentifier = vhdInfo.DiskIdentifier,
             Generation = 0,
-            IsValid = isValid,
+            IsUsable = isValid,
         };
 }
