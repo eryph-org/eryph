@@ -762,9 +762,6 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<string>("GeneSet")
                         .HasColumnType("longtext");
 
-                    b.Property<bool>("IsValid")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<DateTimeOffset>("LastSeen")
                         .HasColumnType("datetime(6)");
 
@@ -782,6 +779,9 @@ namespace Eryph.StateDb.MySql.Migrations
 
                     b.Property<long?>("SizeBytes")
                         .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("longtext");

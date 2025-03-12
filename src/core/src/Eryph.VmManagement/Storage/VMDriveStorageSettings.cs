@@ -140,7 +140,7 @@ namespace Eryph.VmManagement.Storage
                             .IfNone(1 * 1024L * 1024 * 1024),
                         SizeBytes = configuredSize.Map(s => (long?)s).IfNoneUnsafe((long?)null),
                         Generation = generation,
-                        IsValid = true,
+                        IsUsable = true,
                     },
                     ControllerNumber = controllerNumber,
                     ControllerLocation = controllerLocation

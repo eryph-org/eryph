@@ -247,7 +247,7 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     DiskIdentifier = table.Column<Guid>(type: "TEXT", nullable: false),
                     Frozen = table.Column<bool>(type: "INTEGER", nullable: false),
                     Deleted = table.Column<bool>(type: "INTEGER", nullable: false),
-                    IsValid = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
                     Path = table.Column<string>(type: "TEXT", nullable: true),
                     FileName = table.Column<string>(type: "TEXT", nullable: true),
                     SizeBytes = table.Column<long>(type: "INTEGER", nullable: true),

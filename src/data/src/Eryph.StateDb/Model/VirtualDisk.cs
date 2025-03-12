@@ -26,10 +26,14 @@ public class VirtualDisk : Disk
     public bool Deleted { get; set; }
 
     /// <summary>
-    /// Indicates that Hyper-V considers the disk to be valid,
-    /// i.e. it has passed <c>Test-VHD</c>.
+    /// The status of the disk.
     /// </summary>
-    public bool IsValid { get; set; }
+    /// <remarks>
+    /// <see cref="VirtualDiskStatus.Error"/> indicates that
+    /// Hyper-V considers the VHD to be unusable, i.e. the
+    /// disk has failed <c>Test-VHD</c>.
+    /// </remarks>
+    public VirtualDiskStatus Status { get; set; }
 
     public string? Path { get; set; }
         

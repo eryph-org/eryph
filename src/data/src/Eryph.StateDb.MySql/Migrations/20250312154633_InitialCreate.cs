@@ -288,7 +288,7 @@ namespace Eryph.StateDb.MySql.Migrations
                     DiskIdentifier = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Frozen = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     Deleted = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    IsValid = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
                     Path = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     FileName = table.Column<string>(type: "longtext", nullable: true)
