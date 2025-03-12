@@ -28,9 +28,6 @@ public static class VhdQuery
             .Map(p => GetVhdInfo(engine, p))
             .Sequence()
             .Map(o => o.Flatten())
-        from optionalIsValid in optionalVhdInfo
-            .Map(vhdInfo => TestVhd(engine, vhdInfo.Value.Path))
-            .Sequence()
         select optionalVhdInfo;
 
     private static EitherAsync<Error, Option<TypedPsObject<VhdInfo>>> GetVhdInfo(

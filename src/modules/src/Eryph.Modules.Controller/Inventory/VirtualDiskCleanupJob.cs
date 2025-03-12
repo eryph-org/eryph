@@ -20,9 +20,8 @@ internal class VirtualDiskCleanupJob(Container container) : IJob
 
     public async Task Execute(IJobExecutionContext context)
     {
-        // TODO Change back to hours
-        var cutoff = DateTimeOffset.UtcNow.AddMinutes(-1);
-        _logger.LogDebug("Cleaning up disk entries which were deleted before {Cutoff}...", cutoff);
+        var cutoff = DateTimeOffset.UtcNow.AddHours(-1);
+        _logger.LogDebug("Cleaning up disk entries which were deleted before {Cutoff:O}...", cutoff);
         try
         {
             // Perform multiple rounds of cleanup so the parent is removed
@@ -53,6 +52,7 @@ internal class VirtualDiskCleanupJob(Container container) : IJob
         if (disks.Count == 0)
             return false;
 
+        _logger.LogDebug("Removing {Count} deleted disk entries...", disks.Count);
         var diskIdentifiers = disks.Select(d => d.DiskIdentifier).Distinct().Order();
         foreach (var diskIdentifier in diskIdentifiers)
         {

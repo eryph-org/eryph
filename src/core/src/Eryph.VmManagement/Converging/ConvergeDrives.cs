@@ -347,7 +347,7 @@ namespace Eryph.VmManagement.Converging
                 $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
             // get disk
             from vhdInfos in Context.Engine.GetObjectsAsync<VhdInfo>(new PsCommandBuilder()
-                    .AddCommand("get-vhd").AddArgument(vhdPath))
+                    .AddCommand("Get-VHD").AddArgument(vhdPath))
                 .ToError().ToAsync()
             from vhdInfo in vhdInfos.HeadOrLeft(Errors.SequenceEmpty).ToAsync()
             // resize if necessary

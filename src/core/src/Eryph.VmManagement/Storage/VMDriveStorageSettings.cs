@@ -83,6 +83,7 @@ namespace Eryph.VmManagement.Storage
                 Some: s => s,
                 None: storageSettings.StorageIdentifier);
 
+            // TODO do we need Test-VHD here?
             return
                 from resolvedPath in driveStorageNames.ResolveVolumeStorageBasePath(vmHostAgentConfig)
                 from parentOptions in match(
@@ -103,6 +104,7 @@ namespace Eryph.VmManagement.Storage
                     _ => $"{driveConfig.Name}.vhdx",
                 }
                 let attachPath = Path.Combine(resolvedPath, identifier, fileName)
+                // TODO generation suffix must only be added when not VHDSet or SharedVHD
                 from attachPathWithGeneration in DiskGenerationNames.AddGenerationSuffix(attachPath, generation)
                     .ToAsync()
                 let configuredSize = Optional(driveConfig.Size).Filter(notDefault).Map(s => s * 1024L * 1024 * 1024)
@@ -110,8 +112,8 @@ namespace Eryph.VmManagement.Storage
                 let vhdMinimumSize = vhdInfo.Bind(i => Optional(i.MinimumSize))
                 let vhdSize = vhdInfo.Map(i => i.Size)
                 from parentVhdInfo in parentPath.Match(
-                    Some: po =>
-                        from ovi in getVhdInfo(Path.Combine(po, parentOptions.Map(p => p.FileName).IfNone("")))
+                    Some: p =>
+                        from ovi in getVhdInfo(p)
                         from vi in ovi.ToEitherAsync(Error.New("The catlet drive source does not exist."))
                         select Some(vi),
                     None: () => RightAsync<Error, Option<VhdInfo>>(None))
