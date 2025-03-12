@@ -40,12 +40,13 @@ namespace Eryph.StateDb.Specifications
             }
         }
 
-        public sealed class FindDeleted : Specification<VirtualDisk>
+        public sealed class FindDeletedWithoutChildren : Specification<VirtualDisk>
         {
-            public FindDeleted(DateTimeOffset cutoff)
+            public FindDeletedWithoutChildren(DateTimeOffset cutoff)
             {
-                Query.Where(x => x.Deleted && x.LastSeen < cutoff)
-                    .Include(d => d.Children);
+                Query.Where(x => x.Deleted
+                                 && x.LastSeen < cutoff
+                                 && x.Children.Count == 0);
             }
 
         }
