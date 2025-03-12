@@ -49,7 +49,6 @@ public class CurrentHardDiskDriveStorageSettings : HardDiskDriveStorageSettings
         {
             Type = CatletDriveType.VHD,
             AttachPath = snapshotPath | vhdPath | hdInfo.Path,
-            // TODO mark as frozen when the disk is invalid
             Frozen = !diskSettings.Map(d => d.StorageIdentifier.IsSome || d.Gene.IsSome).IfNone(false)
                      || !diskSettings.Map(d => d.StorageNames.IsValid).IfNone(false)
                      || !diskSettings.Map(d => d.IsValid).IfNone(false)
