@@ -48,13 +48,11 @@ public abstract class OperationRequestHandlerBase(
             userRightsProvider.GetUserTenantId(),
             httpContextAccessor.HttpContext?.TraceIdentifier ?? "",
             command);
-        var operationModel = (operation as StateDb.Workflows.Operation)?.Model;
 
-        if (operationModel == null)
-            return new UnprocessableEntityResult();
-
+        var operationModel = ((StateDb.Workflows.Operation)operation).Model;
         var mappedModel = mapper.Map<Operation>(operationModel);
         var operationUri = new Uri(endpointResolver.GetEndpoint("compute") + $"/v1/operations/{operationModel.Id}");
+
         return new AcceptedResult(operationUri, mappedModel);
     }
 }
