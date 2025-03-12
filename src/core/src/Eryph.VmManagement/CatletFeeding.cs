@@ -21,6 +21,15 @@ public static class CatletFeeding
     public static CatletConfig FeedSystemVariables(
         CatletConfig config,
         CatletMetadata catletMetadata) =>
+        FeedSystemVariables(
+            config,
+            catletMetadata.MachineId.ToString(),
+            catletMetadata.VMId.ToString());
+
+    public static CatletConfig FeedSystemVariables(
+        CatletConfig config,
+        string catletId,
+        string vmId) =>
         config.CloneWith(c =>
         {
             c.Variables =
@@ -30,7 +39,7 @@ public static class CatletFeeding
                 {
                     Name = EryphConstants.SystemVariables.CatletId,
                     Type = VariableType.String,
-                    Value = catletMetadata.MachineId.ToString(),
+                    Value = catletId,
                     Required = false,
                     Secret = false,
                 },
@@ -38,7 +47,7 @@ public static class CatletFeeding
                 {
                     Name = EryphConstants.SystemVariables.VmId,
                     Type = VariableType.String,
-                    Value = catletMetadata.VMId.ToString(),
+                    Value = vmId,
                     Required = false,
                     Secret = false,
                 },
@@ -146,9 +155,18 @@ public static class CatletFeeding
         Seq<VariableConfig> geneVariables) =>
         from variablesWithNames in variables
             .Map(vc => from name in VariableName.NewEither(vc.Name)
-                select (name, vc))
+                       select (name, vc))
             .Sequence()
             .Map(s => s.ToHashMap())
+        from geneVariableNames in geneVariables
+            .Map(v => VariableName.NewEither(v.Name))
+            .Sequence()
+        let geneVariableNamesSet = toHashSet(geneVariableNames)
+        from _ in variablesWithNames
+            .Filter((n, _) => !geneVariableNamesSet.Contains(n))
+            .HeadOrNone().Match<Either<Error, Unit>>(
+                Some: v => Error.New($"Found a binding for the variable '{v.Value.Name}' but the variable is not defined in the fodder gene."),
+                None: () => unit)
         from boundVariables in geneVariables
             .Map(geneVc => BindVariable(geneVc, variablesWithNames))
             .Sequence()

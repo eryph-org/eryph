@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Variables;
-using Eryph.Core.Genetics;
 using Eryph.Modules.Controller.Compute;
 using Eryph.Resources.Machines;
 
@@ -14,7 +13,7 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Controller.Tests.Compute;
 
-public class UpdateCatletSagaTests
+public class PrepareCatletConfigSagaTests
 {
     [Fact]
     public void PrepareGenes_ValidConfigs_UsesFodderAndVariablesFromMetadata()
@@ -103,7 +102,7 @@ public class UpdateCatletSagaTests
         var parentsMap = HashMap(
             (GeneSetIdentifier.New("acme/acme-os/2.0"), newParentConfig));
 
-        var result = UpdateCatletSaga.PrepareConfigs(newConfig, metaData, geneSetMap, parentsMap);
+        var result = PrepareCatletConfigSaga.PrepareConfigs(newConfig, metaData, geneSetMap, parentsMap);
 
         var configs = result.Should().BeRight().Subject;
 

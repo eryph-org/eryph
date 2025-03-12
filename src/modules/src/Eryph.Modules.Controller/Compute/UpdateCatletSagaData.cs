@@ -9,7 +9,7 @@ namespace Eryph.Modules.Controller.Compute;
 
 public class UpdateCatletSagaData
 {
-    public UpdateVMState State { get; set; }
+    public UpdateCatletSagaState State { get; set; }
 
     public CatletConfig? Config { get; set; }
 

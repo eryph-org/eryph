@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Eryph.Core;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
@@ -15,7 +16,7 @@ namespace Eryph.VmManagement.Converging
         public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
-            var configCount = Context.Config.Cpu?.Count.GetValueOrDefault(1) ?? 1;
+            var configCount = Context.Config.Cpu?.Count ?? EryphConstants.DefaultCatletCpuCount;
             if (vmInfo.Value.ProcessorCount == configCount) return vmInfo;
 
             if (vmInfo.Value.State is not (VirtualMachineState.Off or VirtualMachineState.OffCritical))

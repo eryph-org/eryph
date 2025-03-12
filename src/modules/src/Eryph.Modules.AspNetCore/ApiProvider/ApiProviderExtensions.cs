@@ -81,8 +81,14 @@ public static class ApiProviderExtensions
             if (File.Exists(xmlPath))
                 options.IncludeXmlComments(xmlPath);
 
-            options.EnableAnnotations();
+            options.EnableAnnotations(
+                enableAnnotationsForInheritance: true,
+                // Prevent oneOf from being used as it is not supported by AutoRest
+                enableAnnotationsForPolymorphism: false);
             options.SupportNonNullableReferenceTypes();
+            
+            // AutoRest only supports allOf inheritance
+            options.UseAllOfForInheritance();
 
             options.CustomSchemaIds(type =>
             {

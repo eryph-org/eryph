@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
@@ -48,12 +47,12 @@ public class Update(
         CancellationToken cancellationToken = default)
     {
         var validation = RequestValidations.ValidateCatletConfig(
-            request.Body.Configuration,
-            nameof(NewCatletRequest.Configuration));
+            request.Body.Configuration);
         if (validation.IsFail)
             return ValidationProblem(
                 detail:"The catlet configuration is invalid.",
-                modelStateDictionary: validation.ToModelStateDictionary());
+                modelStateDictionary: validation.ToModelStateDictionary(
+                    nameof(NewCatletRequest.Configuration)));
 
         return await base.HandleAsync(request, cancellationToken);
     }
