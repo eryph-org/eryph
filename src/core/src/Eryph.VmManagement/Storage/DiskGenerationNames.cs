@@ -22,18 +22,28 @@ public static partial class DiskGenerationNames
 
     public static Either<Error, string> AddGenerationSuffix(string diskPath, int generation) =>
         from directoryPath in Try(() => Path.GetDirectoryName(diskPath))
+            .ToOption()
+            .Filter(notEmpty)
             .ToInvalidPathError(diskPath)
         from nameWithoutExtension in Try(() => Path.GetFileNameWithoutExtension(diskPath))
+            .ToOption()
+            .Filter(notEmpty)
             .ToInvalidPathError(diskPath)
         from extension in Try(() => Path.GetExtension(diskPath))
+            .ToOption()
+            .Filter(notEmpty)
             .ToInvalidPathError(diskPath)
-        let result = Path.Combine(directoryPath, $"{nameWithoutExtension}_g{generation}.{extension}")
+        let result = generation > 0
+            ? Path.Combine(directoryPath, $"{nameWithoutExtension}_g{generation}{extension}")
+            : diskPath
         select result;
 
     public static Either<Error, string> GetFileNameWithoutSuffix(
         string path,
         Option<string> parentPath) =>
         from nameWithoutExtension in Try(() => Path.GetFileNameWithoutExtension(path))
+            .ToOption()
+            .Filter(notEmpty)
             .ToInvalidPathError(path)
         from result in parentPath.Match(
             Some: p => GetFileNameWithoutSuffix(nameWithoutExtension, p),
@@ -44,7 +54,9 @@ public static partial class DiskGenerationNames
         string fileName,
         string parentPath) =>
         from parentNameWithoutExtension in Try(() => Path.GetFileNameWithoutExtension(parentPath))
-            .ToEither(_ => Error.New($"The parent disk path '{parentPath}' is invalid."))
+            .ToOption()
+            .Filter(notEmpty)
+            .ToEither(Error.New($"The parent disk path '{parentPath}' is invalid."))
         from generation in GetGenerationFromFileName(fileName)
         from parentGeneration in GetGenerationFromFileName(parentNameWithoutExtension)
         let suffix = generation
@@ -67,7 +79,7 @@ public static partial class DiskGenerationNames
         select result;
 
     private static Either<Error, string> ToInvalidPathError(
-        this Try<string> value,
+        this Option<string> value,
         string path) =>
-        value.ToEither(_ => Error.New($"The disk path '{path}' is invalid."));
+        value.ToEither(Error.New($"The disk path '{path}' is invalid."));
 }
