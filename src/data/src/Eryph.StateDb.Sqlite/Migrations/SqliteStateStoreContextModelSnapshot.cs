@@ -757,9 +757,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<string>("GeneSet")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsValid")
-                        .HasColumnType("INTEGER");
-
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
@@ -776,6 +773,9 @@ namespace Eryph.StateDb.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<long?>("SizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("StorageIdentifier")

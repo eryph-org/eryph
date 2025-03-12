@@ -100,6 +100,12 @@ namespace Eryph.Modules.ComputeApi.Model.V1
                         ? Path.Combine(s.Path, s.FileName)
                         : null;
                 }))
+                .ForMember(x => x.ParentPath, o => o.MapFrom((s, _, _, context) =>
+                {
+                    var authContext = context.GetAuthContext();
+                    var isSuperAdmin = authContext.IdentityRoles.Contains(EryphConstants.SuperAdminRole);
+                    return isSuperAdmin ? s.ParentPath : null;
+                }))
                 .ForMember(d => d.Location, o => o.MapFrom(s => s.StorageIdentifier))
                 .ForMember(d => d.AttachedCatlets, o => o.MapFrom(s => s.AttachedDrives))
                 .ForMember(
