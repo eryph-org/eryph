@@ -22,11 +22,11 @@ public static partial class DiskGenerationNames
 
     public static Either<Error, string> AddGenerationSuffix(string diskPath, int generation) =>
         from directoryPath in Try(() => Path.GetDirectoryName(diskPath))
-            .ToEither(_ => Error.New("BUH"))
+            .ToInvalidPathError(diskPath)
         from nameWithoutExtension in Try(() => Path.GetFileNameWithoutExtension(diskPath))
-            .ToEither(_ => Error.New("BUH"))
+            .ToInvalidPathError(diskPath)
         from extension in Try(() => Path.GetExtension(diskPath))
-            .ToEither(_ => Error.New("BUH"))
+            .ToInvalidPathError(diskPath)
         let result = Path.Combine(directoryPath, $"{nameWithoutExtension}_g{generation}.{extension}")
         select result;
 
@@ -34,7 +34,7 @@ public static partial class DiskGenerationNames
         string path,
         Option<string> parentPath) =>
         from nameWithoutExtension in Try(() => Path.GetFileNameWithoutExtension(path))
-            .ToEither(_ => Error.New("BUH"))
+            .ToInvalidPathError(path)
         from result in parentPath.Match(
             Some: p => GetFileNameWithoutSuffix(nameWithoutExtension, p),
             None: () => nameWithoutExtension)
@@ -44,10 +44,19 @@ public static partial class DiskGenerationNames
         string fileName,
         string parentPath) =>
         from parentNameWithoutExtension in Try(() => Path.GetFileNameWithoutExtension(parentPath))
-            .ToEither(_ => Error.New("BUH"))
+            .ToEither(_ => Error.New($"The parent disk path '{parentPath}' is invalid."))
+        from generation in GetGenerationFromFileName(fileName)
+        from parentGeneration in GetGenerationFromFileName(parentNameWithoutExtension)
+        let suffix = generation
+            .Filter(g => g == parentGeneration.IfNone(0) + 1)
+            .Map(g => $"_g{g}")
+        let index = suffix
+            .Map(s => fileName.IndexOf(s, StringComparison.OrdinalIgnoreCase))
+            .Filter(i => i > 0)
         let i = fileName.IndexOf("_g", StringComparison.OrdinalIgnoreCase)
-        select i > 0 ? fileName[..i] : fileName;
-
+        select index.Match(
+            Some: i => fileName[..i],
+            None: () => fileName);
     
     private static Either<Error, Option<int>> GetGenerationFromFileName(string fileName) =>
         from match in regexMatch(GenerationSuffixRegex(), fileName).ToEither()
@@ -56,5 +65,9 @@ public static partial class DiskGenerationNames
                      from generation in parseInt(g.Value)
                      select generation
         select result;
-}
 
+    private static Either<Error, string> ToInvalidPathError(
+        this Try<string> value,
+        string path) =>
+        value.ToEither(_ => Error.New($"The disk path '{path}' is invalid."));
+}

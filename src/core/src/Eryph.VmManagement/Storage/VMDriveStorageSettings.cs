@@ -92,26 +92,27 @@ namespace Eryph.VmManagement.Storage
                             .ToEitherAsync(Error.New("The catlet drive source is invalid"))
                         select Some(dss),
                     None: () => RightAsync<Error, Option<DiskStorageSettings>>(None))
-                let generation = parentOptions.Map(p => p.Generation).IfNone(-1) + 1
-                let generationSuffix = generation > 0 ? $"_g{generation}" : ""
+                let parentPath = parentOptions.Map(p => Path.Combine(p.Path, p.FileName))
+                let generation = parentOptions.Map(p => p.Generation + 1).IfNone(0)
                 from identifier in storageIdentifier.ToEitherAsync(
                     Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
                 let fileName = driveConfig.Type switch
                 {
                     CatletDriveType.SharedVHD => $"{driveConfig.Name}.vhdx",
                     CatletDriveType.VHDSet => $"{driveConfig.Name}.vhds",
-                    _ => $"{driveConfig.Name}{generationSuffix}.vhdx",
+                    _ => $"{driveConfig.Name}.vhdx",
                 }
                 let attachPath = Path.Combine(resolvedPath, identifier, fileName)
+                from attachPathWithGeneration in DiskGenerationNames.AddGenerationSuffix(attachPath, generation)
+                    .ToAsync()
                 let configuredSize = Optional(driveConfig.Size).Filter(notDefault).Map(s => s * 1024L * 1024 * 1024)
-                from vhdInfo in getVhdInfo(attachPath)
+                from vhdInfo in getVhdInfo(attachPathWithGeneration)
                 let vhdMinimumSize = vhdInfo.Bind(i => Optional(i.MinimumSize))
                 let vhdSize = vhdInfo.Map(i => i.Size)
-                from parentVhdInfo in match(
-                    parentOptions,
+                from parentVhdInfo in parentPath.Match(
                     Some: po =>
-                        from ovi in getVhdInfo(Path.Combine(po.Path, po.FileName))
-                        from vi in ovi.ToEitherAsync(Error.New("The catlet drive source does not exist"))
+                        from ovi in getVhdInfo(Path.Combine(po, parentOptions.Map(p => p.FileName).IfNone("")))
+                        from vi in ovi.ToEitherAsync(Error.New("The catlet drive source does not exist."))
                         select Some(vi),
                     None: () => RightAsync<Error, Option<VhdInfo>>(None))
                 let parentVhdMinimumSize = parentVhdInfo.Bind(i => Optional(i.MinimumSize))
@@ -125,18 +126,20 @@ namespace Eryph.VmManagement.Storage
                 let planned = new HardDiskDriveStorageSettings
                 {
                     Type = driveConfig.Type.GetValueOrDefault(),
-                    AttachPath = attachPath,
+                    AttachPath = attachPathWithGeneration,
                     DiskSettings = new DiskStorageSettings
                     {
                         StorageNames = driveStorageNames,
                         StorageIdentifier = storageIdentifier,
                         ParentSettings = parentOptions,
+                        ParentPath = parentPath,
                         Path = Path.Combine(resolvedPath, identifier),
                         FileName = fileName,
                         Name = driveConfig.Name,
                         SizeBytesCreate = (configuredSize | parentVhdInfo.Map(i => i.Size))
                             .IfNone(1 * 1024L * 1024 * 1024),
                         SizeBytes = configuredSize.Map(s => (long?)s).IfNoneUnsafe((long?)null),
+                        Generation = generation,
                     },
                     ControllerNumber = controllerNumber,
                     ControllerLocation = controllerLocation
