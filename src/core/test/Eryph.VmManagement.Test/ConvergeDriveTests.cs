@@ -26,7 +26,7 @@ public class ConvergeDriveTests
     {
         _fixture.Config.Drives =
         [
-            new CatletDriveConfig { Name = "sda" , Size = configSize}
+            new CatletDriveConfig { Name = "sda" , Size = configSize }
         ];
         _fixture.StorageSettings = _fixture.StorageSettings with
         {
@@ -34,7 +34,6 @@ public class ConvergeDriveTests
             StorageIdentifier = "abc",
             StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names
         };
-
 
         var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
         {
@@ -108,6 +107,93 @@ public class ConvergeDriveTests
         vhdCommand!.ShouldBeCommand("Resize-VHD")
             .ShouldBeParam("Path", @"x:\disks\abc\sda.vhdx")
             .ShouldBeParam("SizeBytes", newSize*1024L*1024*1024);
+    }
+
+    [Fact]
+    public async Task Skips_existing_disk_with_checkpoint()
+    {
+        _fixture.Config.Drives =
+        [
+            new CatletDriveConfig { Name = "sda" , Size = 150 }
+        ];
+        _fixture.StorageSettings = _fixture.StorageSettings with
+        {
+            DefaultVhdPath = @"x:\disks\abc",
+            StorageIdentifier = "abc",
+            StorageNames = StorageNames.FromVmPath(@"x:\data\abc", _fixture.VmHostAgentConfiguration).Names
+        };
+
+        var vmData = _fixture.Engine.ToPsObject(new Data.Full.VirtualMachineInfo
+        {
+            Id = Guid.NewGuid(),
+            HardDrives =
+            [
+                new HardDiskDriveInfo
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ControllerLocation = 0,
+                    ControllerNumber = 0,
+                    ControllerType = ControllerType.SCSI,
+                    Path = @"x:\disks\abc\sda_B33BA733-5341-4E6A-8801-C0B2F8C3EEAB.avhdx"
+                }
+            ]
+        });
+
+        AssertCommand? vhdCommand = null;
+
+        _fixture.Engine.RunCallback = command =>
+        {
+            if (command.ToString().Contains("CheckpointType"))
+            {
+                command.ShouldBeCommand("Set-VM")
+                    .ShouldBeParam("VM", vmData.PsObject)
+                    .ShouldBeParam("CheckpointType");
+            }
+
+            if (command.ToString().Contains("Resize-VHD")) vhdCommand = command;
+
+            return Unit.Default;
+        };
+
+        _fixture.Engine.GetObjectCallback = (_, command) =>
+        {
+            var commandString = command.ToString();
+            if (commandString.StartsWith("Get-VM"))
+                return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
+
+            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda.vhdx]"))
+                return Seq1(_fixture.Engine.ToPsObject<object>(true));
+
+            if (commandString.StartsWith(@"Get-VHD [x:\disks\abc\sda.vhdx]"))
+                return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
+                {
+                    Path = @"x:\disks\abc\sda.vhdx",
+                    Size = 100 * 1024L * 1024 * 1024
+                }));
+
+            if (commandString.StartsWith(@"Get-VHD [x:\disks\abc\sda_B33BA733-5341-4E6A-8801-C0B2F8C3EEAB.avhdx]"))
+                return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
+                {
+                    Path = @"x:\disks\abc\sda_B33BA733-5341-4E6A-8801-C0B2F8C3EEAB.avhdx",
+                    ParentPath = @"x:\disks\abc\sda.vhdx",
+                    Size = 100 * 1024L * 1024 * 1024
+                }));
+
+            return new PowershellFailure { Message = $"unknown command: {commandString}" };
+        };
+
+        _fixture.Engine.GetValuesCallback = (_, command) =>
+        {
+            if (command.ToString().StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
+                return Seq1<object>(true);
+
+            return new PowershellFailure { Message = $"unknown command: {command}" };
+        };
+
+        var convergeTask = new ConvergeDrives(_fixture.Context);
+        _ = (await convergeTask.Converge(vmData)).IfLeft(l => l.Throw());
+
+        vhdCommand.Should().BeNull();
     }
 
     [Theory]
