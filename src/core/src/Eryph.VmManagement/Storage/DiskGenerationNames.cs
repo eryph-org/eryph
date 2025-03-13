@@ -1,12 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Eryph.VmManagement.Data;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -65,7 +59,6 @@ public static partial class DiskGenerationNames
         let index = suffix
             .Map(s => fileName.IndexOf(s, StringComparison.OrdinalIgnoreCase))
             .Filter(i => i > 0)
-        let i = fileName.IndexOf("_g", StringComparison.OrdinalIgnoreCase)
         select index.Match(
             Some: i => fileName[..i],
             None: () => fileName);

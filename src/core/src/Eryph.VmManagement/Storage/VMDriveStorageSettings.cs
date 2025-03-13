@@ -87,7 +87,7 @@ public class VMDriveStorageSettings
         from parentOptions in Optional(driveConfig.Source)
             .Filter(notEmpty)
             .Map(src => from dss in DiskStorageSettings.FromSourceString(vmHostAgentConfig, resolvedGenes, src)
-                        .ToEitherAsync(Error.New("The catlet drive source is invalid"))
+                            .ToEitherAsync(Error.New($"The catlet drive source '{driveConfig.Source}' is invalid."))
                         select dss)
             .Sequence()
         let parentPath = parentOptions.Map(p => Path.Combine(p.Path, p.FileName))
@@ -111,13 +111,13 @@ public class VMDriveStorageSettings
         let vhdSize = vhdInfo.Map(i => i.Size)
         from parentVhdInfo in parentPath
             .Map(p => from ovi in getVhdInfo(p)
-                      from vi in ovi.ToEitherAsync(Error.New("The catlet drive source does not exist."))
+                      from vi in ovi.ToEitherAsync(Error.New($"The catlet drive source '{driveConfig.Source}' does not exist."))
                       select vi)
             .Sequence()
         from _2 in parentPath
             .Map(p => from isUsable in testVhd(p)
                       from _  in guard(isUsable,
-                          Error.New("The catlet drive source is considered unusable by Hyper-V."))
+                          Error.New($"The catlet drive source '{driveConfig.Source}' is considered unusable by Hyper-V."))
                       select unit)
             .Sequence()
         let parentVhdMinimumSize = parentVhdInfo.Bind(i => Optional(i.MinimumSize))
