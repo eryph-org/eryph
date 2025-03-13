@@ -1,30 +1,34 @@
-﻿using Dbosoft.Hosuto.Modules.Testing;
-using Eryph.StateDb.TestBase;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Net;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
-using Xunit;
-using Xunit.Abstractions;
 using Eryph.Core;
 using Eryph.Modules.AspNetCore.ApiProvider;
-using System.Net;
-using System.Net.Http.Json;
+using Eryph.Modules.AspNetCore.ApiProvider.Model;
 using FluentAssertions;
+using Xunit;
+using Xunit.Abstractions;
 using ApiVirtualDisk = Eryph.Modules.ComputeApi.Model.V1.VirtualDisk;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;
 
-public class ListVirtualDisksTests : VirtualDiskTestBase
+public class ListVirtualDisksTests(ITestOutputHelper outputHelper)
+    : VirtualDiskTestBase(outputHelper)
 {
-    public ListVirtualDisksTests(
-        ITestOutputHelper outputHelper,
-        WebModuleFactory<ComputeApiModule> factory)
-        : base(outputHelper, factory)
+    [Fact]
+    public async Task Virtual_disk_is_not_included_when_not_authorized()
     {
-        
+        await ArrangeDiskWithParentAndCatlet();
+
+        var response = await Factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, "compute:read", false)
+            .GetAsync($"v1/virtualdisks/");
+
+        response.Should().HaveStatusCode(HttpStatusCode.OK);
+
+        var virtualDisks = await response.Content.ReadFromJsonAsync<ListResponse<ApiVirtualDisk>>(
+            options: ApiJsonSerializerOptions.Options);
+
+        virtualDisks.Value.Should().BeEmpty();
     }
 
     [Fact]
@@ -32,16 +36,18 @@ public class ListVirtualDisksTests : VirtualDiskTestBase
     {
         await ArrangeDiskWithParentAndCatlet();
 
-        // TODO test list endpoint
         var response = await Factory.CreateDefaultClient()
-            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
-            .GetAsync($"v1/virtualdisks/{DiskId}");
+            .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:read", true)
+            .GetAsync("v1/virtualdisks/");
 
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
-        var virtualDisk = await response.Content.ReadFromJsonAsync<ApiVirtualDisk>(
+        var virtualDisks = await response.Content.ReadFromJsonAsync<ListResponse<ApiVirtualDisk>>(
             options: ApiJsonSerializerOptions.Options);
 
+        virtualDisks.Value.Should().HaveCount(2);
+
+        var virtualDisk = virtualDisks.Value.Should().ContainSingle(d => d.Id == DiskId.ToString()).Subject;
         virtualDisk.Id.Should().Be(DiskId.ToString());
         virtualDisk.Project.Should().NotBeNull();
         virtualDisk.Project.Id.Should().Be(EryphConstants.DefaultProjectId.ToString());
@@ -54,24 +60,44 @@ public class ListVirtualDisksTests : VirtualDiskTestBase
         virtualDisk.Location.Should().Be(LocationName);
         virtualDisk.SizeBytes.Should().Be(DiskSize);
         virtualDisk.ParentId.Should().Be(ParentDiskId.ToString());
+        virtualDisk.AttachedCatlets.Should().SatisfyRespectively(
+            catlet => catlet.CatletId.Should().Be(CatletId.ToString()));
+
+        var parentDisk = virtualDisks.Value.Should().ContainSingle(d => d.Id == ParentDiskId.ToString()).Subject;
+        parentDisk.Id.Should().Be(ParentDiskId.ToString());
+        parentDisk.Project.Should().NotBeNull();
+        parentDisk.Project.Id.Should().Be(EryphConstants.DefaultProjectId.ToString());
+        parentDisk.Project.Name.Should().Be(EryphConstants.DefaultProjectName);
+        parentDisk.Project.TenantId.Should().Be(EryphConstants.DefaultTenantId.ToString());
+        parentDisk.Name.Should().Be(ParentDiskName);
+        parentDisk.Path.Should().Be(@"Z:\disks\test-parent-disk.vhdx");
+        parentDisk.Environment.Should().Be(EnvironmentName);
+        parentDisk.DataStore.Should().Be(StoreName);
+        parentDisk.Location.Should().Be(LocationName);
+        parentDisk.SizeBytes.Should().Be(ParentDiskSize);
+        parentDisk.ParentId.Should().BeNull();
+        parentDisk.ParentPath.Should().BeNull();
+        parentDisk.AttachedCatlets.Should().BeEmpty();
     }
 
     [Fact]
     public async Task Virtual_disk_is_returned_without_paths_when_user_is_not_admin()
     {
-        await ArrangeOtherUser(BuiltinRole.Reader);
+        await ArrangeOtherUserAccess(BuiltinRole.Reader);
         await ArrangeDiskWithParentAndCatlet();
 
-        // TODO test list endpoint
         var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, "compute:read", false)
-            .GetAsync($"v1/virtualdisks/{DiskId}");
+            .GetAsync($"v1/virtualdisks/");
 
         response.Should().HaveStatusCode(HttpStatusCode.OK);
 
-        var virtualDisk = await response.Content.ReadFromJsonAsync<ApiVirtualDisk>(
+        var virtualDisks = await response.Content.ReadFromJsonAsync<ListResponse<ApiVirtualDisk>>(
             options: ApiJsonSerializerOptions.Options);
+
+        var virtualDisk = virtualDisks.Value.Should().ContainSingle(d => d.Id == DiskId.ToString()).Subject;
         virtualDisk.Id.Should().Be(DiskId.ToString());
         virtualDisk.Path.Should().BeNull();
+        virtualDisk.ParentPath.Should().BeNull();
     }
 }

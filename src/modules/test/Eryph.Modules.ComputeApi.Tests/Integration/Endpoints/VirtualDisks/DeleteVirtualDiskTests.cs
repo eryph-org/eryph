@@ -1,17 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
-using System.Text;
 using System.Threading.Tasks;
-using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
@@ -19,19 +14,9 @@ using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;
 
-public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFactory<ComputeApiModule>>
+public class DeleteVirtualDiskTests(ITestOutputHelper outputHelper)
+    : VirtualDiskTestBase(outputHelper)
 {
-    private readonly WebModuleFactory<ComputeApiModule> _factory;
-    private static readonly Guid DiskId = Guid.NewGuid();
-
-    public DeleteVirtualDiskTests(
-        ITestOutputHelper outputHelper,
-        WebModuleFactory<ComputeApiModule> factory)
-        : base(outputHelper)
-    {
-        _factory = factory.WithApiHost(ConfigureDatabase);
-    }
-
     protected override async Task SeedAsync(IStateStore stateStore)
     {
         await SeedDefaultTenantAndProject();
@@ -47,28 +32,15 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
     }
 
     [Theory]
-    [InlineData(false, "compute:read", HttpStatusCode.Forbidden)]
-    [InlineData(true, "compute:write", HttpStatusCode.NotFound)]
+    [InlineData(BuiltinRole.Contributor, "compute:read", HttpStatusCode.Forbidden)]
+    [InlineData(BuiltinRole.Reader, "compute:write", HttpStatusCode.NotFound)]
     public async Task Virtual_disk_is_not_deleted_when_not_authorized(
-        bool hasReadOnlyRole, string scope, HttpStatusCode expectedStatusCode)
+        BuiltinRole role, string scope, HttpStatusCode expectedStatusCode)
     {
-        var notAuthorizedUserId = Guid.NewGuid().ToString();
-        await WithScope(async stateStore =>
-        {
-            await stateStore.For<ProjectRoleAssignment>().AddAsync(
-                new ProjectRoleAssignment()
-                {
-                    ProjectId = EryphConstants.DefaultProjectId,
-                    IdentityId = notAuthorizedUserId,
-                    RoleId = hasReadOnlyRole
-                        ? EryphConstants.BuildInRoles.Reader
-                        : EryphConstants.BuildInRoles.Contributor,
-                });
-            await stateStore.SaveChangesAsync();
-        });
+        await ArrangeOtherUserAccess(role);
 
-        var response = await _factory.CreateDefaultClient()
-            .SetEryphToken(EryphConstants.DefaultTenantId, notAuthorizedUserId, scope, false)
+        var response = await Factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, scope, false)
             .DeleteAsync($"v1/virtualdisks/{DiskId}");
 
         response.StatusCode.Should().Be(expectedStatusCode);
@@ -98,7 +70,7 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             await stateStore.SaveChangesAsync();
         });
 
-        var response = await _factory.CreateDefaultClient()
+        var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .DeleteAsync($"v1/virtualdisks/{DiskId}");
 
@@ -127,7 +99,7 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             await stateStore.SaveChangesAsync();
         });
 
-        var response = await _factory.CreateDefaultClient()
+        var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .DeleteAsync($"v1/virtualdisks/{DiskId}");
 
@@ -159,7 +131,7 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             await stateStore.SaveChangesAsync();
         });
 
-        var response = await _factory.CreateDefaultClient()
+        var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .DeleteAsync($"v1/virtualdisks/{genePoolDiskId}");
 
@@ -180,7 +152,7 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             await stateStore.SaveChangesAsync();
         });
 
-        var response = await _factory.CreateDefaultClient()
+        var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .DeleteAsync($"v1/virtualdisks/{DiskId}");
 
@@ -194,24 +166,17 @@ public class DeleteVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
     [Fact]
     public async Task Virtual_disk_is_deleted()
     {
-        var response = await _factory.CreateDefaultClient()
+        var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .DeleteAsync($"v1/virtualdisks/{DiskId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
         
-        var messages = _factory.GetPendingRebusMessages<DestroyVirtualDiskCommand>();
+        var messages = Factory.GetPendingRebusMessages<DestroyVirtualDiskCommand>();
         messages.Should().SatisfyRespectively(
             m =>
             {
                 m.DiskId.Should().Be(DiskId);
             });
-    }
-
-    private async Task WithScope(Func<IStateStore, Task> func)
-    {
-        await using var scope = CreateScope();
-        var stateStore = scope.GetInstance<IStateStore>();
-        await func(stateStore);
     }
 }
