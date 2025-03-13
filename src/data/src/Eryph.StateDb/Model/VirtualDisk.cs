@@ -29,7 +29,7 @@ public class VirtualDisk : Disk
     /// The status of the disk.
     /// </summary>
     /// <remarks>
-    /// <see cref="VirtualDiskStatus.Error"/> indicates that
+    /// The status <c>Error</c> indicates that
     /// Hyper-V considers the VHD to be unusable, i.e. the
     /// disk has failed <c>Test-VHD</c>.
     /// </remarks>
@@ -52,9 +52,9 @@ public class VirtualDisk : Disk
     public VirtualDisk? Parent { get; set; }
 
     /// <summary>
-    /// The path to the parent of this disk. The parent path might be
-    /// populated even if <see cref="Parent"/> is <see langword="null"/>.
-    /// This means that this disk is differential (i.e. it has parent) but
+    /// The path to the parent of this disk. The <see cref="ParentPath"/> might be
+    /// populated even if the <see cref="Parent"/> is <see langword="null"/>.
+    /// This means that this disk is differential (i.e. it has a sparent) but
     /// the parent is missing.
     /// </summary>
     public string? ParentPath { get; set; }

@@ -15,7 +15,7 @@ public class ListVirtualDisksTests(ITestOutputHelper outputHelper)
     : VirtualDiskTestBase(outputHelper)
 {
     [Fact]
-    public async Task Virtual_disk_is_not_included_when_not_authorized()
+    public async Task Virtual_disks_are_not_included_when_not_authorized()
     {
         await ArrangeDiskWithParentAndCatlet();
 
@@ -32,7 +32,7 @@ public class ListVirtualDisksTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public async Task Virtual_disk_with_parent_is_returned()
+    public async Task Virtual_disks_are_returned()
     {
         await ArrangeDiskWithParentAndCatlet();
 
@@ -81,7 +81,7 @@ public class ListVirtualDisksTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public async Task Virtual_disk_is_returned_without_paths_when_user_is_not_admin()
+    public async Task Virtual_disks_are_returned_without_paths_when_user_is_not_admin()
     {
         await ArrangeOtherUserAccess(BuiltinRole.Reader);
         await ArrangeDiskWithParentAndCatlet();

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text.RegularExpressions;
 using LanguageExt;
 
 using static LanguageExt.Prelude;
@@ -25,6 +20,4 @@ public static class RegexPrelude
 
     public static Option<Group> regexGroup(GroupCollection groups, string groupName) =>
         Optional(groups[groupName]).Filter(g => g.Success);
-
 }
-

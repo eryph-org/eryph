@@ -28,7 +28,7 @@ internal class VirtualDiskCleanupJob(Container container) : IJob
             // when all children were removed in previous rounds.
             // Limit the number of cleanup rounds to prevent the job from running
             // too long or forever in case of weird issues. This job is triggered
-            // regularly by the scheduler anyway
+            // regularly by the scheduler anyway.
             for (var i = 0; i < MaxRounds; i++)
             {
                 if (!await CleanupDisks(cutoff))

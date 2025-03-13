@@ -41,7 +41,7 @@ public class DiskInfo
     /// <summary>
     /// The path to the parent of this disk. The parent path might be
     /// populated even if <see cref="Parent"/> is <see langword="null"/>.
-    /// This means that this disk is differential (i.e. it has parent) but
+    /// This means that this disk is differential (i.e. it has a parent) but
     /// the parent is missing.
     /// </summary>
     [CanBeNull] public string ParentPath { get; set; }
