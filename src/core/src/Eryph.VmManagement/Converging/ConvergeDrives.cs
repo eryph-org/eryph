@@ -237,7 +237,8 @@ namespace Eryph.VmManagement.Converging
             from vhdPath in driveSettings.AttachPath.ToEitherAsync(Error.New(
                 $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
             let currentSettings = currentStorageSettings.Find(x =>
-                string.Equals(vhdPath, x.AttachPath.IfNone(""), StringComparison.OrdinalIgnoreCase))
+                // The attach path might point to a snapshot, so we need to compare the actual VHD path.
+                string.Equals(vhdPath, Path.Combine(x.DiskSettings.Path, x.DiskSettings.FileName), StringComparison.OrdinalIgnoreCase))
             let isFrozen = currentSettings.Map(s => s.Frozen).IfNone(false)
             from reloadedVmInfo in isFrozen switch
             {
