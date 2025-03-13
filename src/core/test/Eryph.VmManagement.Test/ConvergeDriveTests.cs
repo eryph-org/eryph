@@ -317,10 +317,9 @@ public class ConvergeDriveTests
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            /*
-            if (command.ToString().Contains(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
+            if (command.ToString().StartsWith($"Test-VHD [{expectedParentPath}]"))
                 return Seq1<object>(true);
-            */
+            
             return new PowershellFailure { Message = $"unknown command: {command}" };
         };
 
@@ -376,14 +375,14 @@ public class ConvergeDriveTests
         string architecture,
         string expectedParentPath)
     {
-        _fixture.Config.Drives = new[]
-        {
+        _fixture.Config.Drives =
+        [
             new CatletDriveConfig
             {
                 Name = "sda", Source = "gene:testorg/testset/testtag:sda",
                 Type =driveType
             }
-        };
+        ];
 
         _fixture.ResolvedGenes =
         [
@@ -427,40 +426,44 @@ public class ConvergeDriveTests
             return Unit.Default;
         };
 
-        _fixture.Engine.GetObjectCallback = (type, command) =>
+        _fixture.Engine.GetObjectCallback = (_, command) =>
         {
             var commandString = command.ToString();
-            if (commandString.Contains("Get-VM"))
-                return new[] { _fixture.Engine.ToPsObject<object>(vmData.Value) }.ToSeq();
+            if (commandString.StartsWith("Get-VM"))
+                return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
 
-            if (commandString.Contains(@$"Test-Path [x:\disks\abc\{diskName}]"))
-                return new[] { _fixture.Engine.ToPsObject<object>(false) }.ToSeq();
-
-
-            if (commandString.Contains("Get-VHD"))
-                return new[] { _fixture.Engine.ToPsObject<object>(new VhdInfo
+            if (commandString.StartsWith(@$"Test-Path [x:\disks\abc\{diskName}]"))
+                return Seq1(_fixture.Engine.ToPsObject<object>(false));
+            
+            if (commandString.StartsWith("Get-VHD"))
+                return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
                     Path =  @$"x:\disks\abc\{diskName}",
                     Size = 1073741824
-                }) }.ToSeq();
+                }));
 
-
-            if (command.ToString().Contains("Add-VMHardDiskDrive"))
+            if (command.ToString().StartsWith("Add-VMHardDiskDrive"))
             {
                 attachCommand = command;
-                var res = new HardDiskDriveInfo
+                return Seq1(_fixture.Engine.ToPsObject<object>(new HardDiskDriveInfo
                 {
                     Id = Guid.NewGuid().ToString(),
                     ControllerLocation = 0,
                     ControllerNumber = 0,
                     ControllerType = ControllerType.SCSI,
                     Path = $@"x:\disks\abc\{diskName}"
-                };
-
-                return new[] { _fixture.Engine.ToPsObject<object>(res) }.ToSeq();
+                }));
             }
 
             return new PowershellFailure { Message = $"unknown command: {commandString}" };
+        };
+
+        _fixture.Engine.GetValuesCallback = (_, command) =>
+        {
+            if (command.ToString().StartsWith($"Test-VHD [{expectedParentPath}]"))
+                return Seq1<object>(true);
+
+            return new PowershellFailure { Message = $"unknown command: {command}" };
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);
