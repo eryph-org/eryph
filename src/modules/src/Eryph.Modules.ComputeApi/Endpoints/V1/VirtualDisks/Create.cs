@@ -93,7 +93,7 @@ public class Create(
         if (diskExists)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                detail: "A disk with this name already exists.");
+                detail: $"A disk with the name '{request.Name}' already exists in the specified storage location. Disk names must be unique within a storage location.");
 
         return await base.HandleAsync(request, cancellationToken);
     }
