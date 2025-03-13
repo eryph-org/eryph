@@ -20,9 +20,9 @@ public class VirtualDisk
     public required string Environment { get; set; }
 
     /// <summary>
-    /// The status of the disk. <see cref="DiskStatus.Error"/>
+    /// The status of the disk. The status <c>Error</c>
     /// indicates that Hyper-V considers the disk to be unusable,
-    /// i.e . the disk has failed <c>Test-VHD</c>.
+    /// i.e. the disk has failed <c>Test-VHD</c>.
     /// </summary>
     public required DiskStatus Status { get; set; }
 
