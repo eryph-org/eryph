@@ -25,9 +25,9 @@ public class DiskStorageSettings
     public Option<DiskStorageSettings> ParentSettings { get; set; }
 
     /// <summary>
-    /// The path to the parent of this disk. The parent path might be
-    /// populated even if <see cref="ParentSettings"/> are <see cref="OptionNone"/>.
-    /// This means that this disk is differential (i.e. it has parent) but
+    /// The path to the parent of this disk. The <see cref="ParentPath"/> might be
+    /// populated even if the <see cref="ParentSettings"/> are <see cref="OptionNone"/>.
+    /// This means that this disk is differential (i.e. it has a parent) but
     /// the parent is missing.
     /// </summary>
     public Option<string> ParentPath { get; set; }
@@ -95,7 +95,7 @@ public class DiskStorageSettings
         string path) =>
         from optionalVhdInfo in VhdQuery.GetVhdInfo(engine, path)
         from vhdInfo in optionalVhdInfo.ToEitherAsync(Error.New(
-            $"Could not read VHD {path}"))
+            $"Could not read the VHD '{path}'."))
         from result in FromVhdInfo(engine, vmHostAgentConfig, vhdInfo)
         select result;
 
@@ -103,11 +103,11 @@ public class DiskStorageSettings
         IPowershellEngine engine,
         VmHostAgentConfiguration vmHostAgentConfig,
         TypedPsObject<VhdInfo> vhdInfo) =>
-        from isValid in VhdQuery.TestVhd(engine, vhdInfo.Value.Path)
+        from isUsable in VhdQuery.TestVhd(engine, vhdInfo.Value.Path)
         let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         let vhdPath = vhdInfo.Value.Path
         from result in GenePoolPaths.IsPathInGenePool(genePoolPath, vhdPath)
-            ? FromGeneVhdInfo(genePoolPath, vhdInfo.Value, isValid)
+            ? FromGeneVhdInfo(genePoolPath, vhdInfo.Value, isUsable)
             : from _ in RightAsync<Error, Unit>(unit)
             let nameAndId = StorageNames.FromVhdPath(vhdPath, vmHostAgentConfig)
             let parentPath = Optional(vhdInfo.Value.ParentPath).Filter(notEmpty)
@@ -135,14 +135,14 @@ public class DiskStorageSettings
                 Generation = generation,
                 ParentSettings = parentSettings,
                 ParentPath = parentPath,
-                IsUsable = isValid && (parentPath.IsNone || parentSettings.IsSome),
+                IsUsable = isUsable,
             }
         select result;
 
     private static EitherAsync<Error, DiskStorageSettings> FromGeneVhdInfo(
         string genePoolPath,
         VhdInfo vhdInfo,
-        bool isValid) =>
+        bool isUsable) =>
         from uniqueGeneId in GenePoolPaths.GetUniqueGeneIdFromPath(genePoolPath, vhdInfo.Path)
             .ToAsync()
         select new DiskStorageSettings
@@ -162,6 +162,6 @@ public class DiskStorageSettings
             UsedSizeBytes = vhdInfo.FileSize,
             DiskIdentifier = vhdInfo.DiskIdentifier,
             Generation = 0,
-            IsUsable = isValid,
+            IsUsable = isUsable,
         };
 }

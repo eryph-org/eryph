@@ -200,10 +200,6 @@ public class ConvergeDriveTests
             if (command.ToString().Contains(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1<object>(true);
 
-            // TODO It this correct? Or does Test-VHD not work for VHDSets and shared VHDs?
-            if (command.ToString().Contains($@"Test-VHD [x:\disks\abc\sdb.{extension}]"))
-                return Seq1<object>(true);
-
             return new PowershellFailure { Message = $"unknown command: {command}" };
         };
 

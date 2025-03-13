@@ -34,7 +34,6 @@ public static class VhdQuery
         IPowershellEngine engine,
         string path) =>
         from _1 in RightAsync<Error, Unit>(unit)
-        let optionalPath = Optional(path).Filter(notEmpty)
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VHD")
             .AddArgument(path)
@@ -50,7 +49,7 @@ public static class VhdQuery
             .AddCommand("Test-VHD")
             .AddArgument(path)
             // Test-VHD returns an error when e.g. the chain of VHDs is broken.
-            // When the error is ignored, Test-VHD returns false when the VHD is not valid.
+            // When the error is ignored, Test-VHD returns false when the VHD is not usable.
             .AddParameter("ErrorAction", "SilentlyContinue")
         from results in engine.GetObjectValuesAsync<bool>(command).ToError()
         from isValid in results.HeadOrNone()
@@ -75,15 +74,15 @@ public static class VhdQuery
         from result in IsSnapshotVhd(vhdInfo.Value.Path) switch
         {
             true => from _ in guard(depth < MaxSnapshotDepth, Error.New(
-                            "Exceeded maximum search depth when looking for base VHD of snapshot. The snapshot chain might be corrupted."))
+                            "Exceeded maximum search depth when looking for the base VHD of the snapshot. The snapshot chain might be corrupted."))
                         .ToEitherAsync()
-                    from snapshotParentPath in Optional(vhdInfo.Value.ParentPath)
+                    from parentPath in Optional(vhdInfo.Value.ParentPath)
                         .Filter(notEmpty)
                         .ToEitherAsync(Error.New("Storage failure: Missing snapshot parent path."))
-                    from snapshotVhdInfo in GetVhdInfo(engine, snapshotParentPath)
-                    from validSnapshotVhdInfo in snapshotVhdInfo
+                    from parentVhdInfo in GetVhdInfo(engine, parentPath)
+                    from validParentVhdInfo in parentVhdInfo
                         .ToEitherAsync(Error.New("Storage failure: Missing snapshot parent VHD."))
-                    from baseVhd in ResolveActualVhd(engine, validSnapshotVhdInfo, depth + 1)
+                    from baseVhd in ResolveActualVhd(engine, validParentVhdInfo, depth + 1)
                     select baseVhd,
             false => vhdInfo,
         }
