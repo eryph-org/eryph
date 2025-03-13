@@ -1,20 +1,15 @@
-﻿using Dbosoft.Hosuto.Modules.Testing;
+﻿using System;
+using System.Threading.Tasks;
+using Dbosoft.Hosuto.Modules.Testing;
+using Eryph.Core;
 using Eryph.StateDb;
 using Eryph.StateDb.TestBase;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.Core;
 using Eryph.StateDb.Model;
-using Eryph.StateDb.Specifications;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;
 
-public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase, IClassFixture<WebModuleFactory<ComputeApiModule>>
+public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase
 {
     protected readonly WebModuleFactory<ComputeApiModule> Factory;
 
@@ -28,19 +23,17 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase, IClassFixtu
 
     protected static readonly Guid DiskId = Guid.NewGuid();
     protected const string DiskName = "test-disk";
-    protected const string DiskPath = @"Z:\disks\test-disk.vhdx";
     protected const int DiskSize = 42;
 
     protected static readonly Guid ParentDiskId = Guid.NewGuid();
     protected const string ParentDiskName = "test-parent-disk";
-    protected const string ParentDiskPath = @"Z:\disks\test-parent-disk.vhdx";
+    protected const int ParentDiskSize = 43;
 
-    protected VirtualDiskTestBase(
-        ITestOutputHelper outputHelper,
-        WebModuleFactory<ComputeApiModule> factory)
+    protected VirtualDiskTestBase(ITestOutputHelper outputHelper)
         : base(outputHelper)
     {
-        Factory = factory.WithApiHost(ConfigureDatabase);
+        Factory = new WebModuleFactory<ComputeApiModule>()
+            .WithApiHost(ConfigureDatabase);
     }
 
     protected override async Task SeedAsync(IStateStore stateStore)
@@ -64,6 +57,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase, IClassFixtu
                     Environment = EnvironmentName,
                     DataStore = StoreName,
                     StorageIdentifier = LocationName,
+                    SizeBytes = ParentDiskSize,
                 });
 
             await stateStore.For<VirtualDisk>().AddAsync(
@@ -78,6 +72,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase, IClassFixtu
                     DataStore = StoreName,
                     StorageIdentifier = LocationName,
                     Parent = parentDisk,
+                    ParentPath = @"Z:\disks\test-parent-disk.vhdx",
                     SizeBytes = DiskSize,
                     AttachedDrives =
                     [
@@ -115,7 +110,7 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase, IClassFixtu
         });
     }
 
-    protected async Task ArrangeOtherUser(BuiltinRole role)
+    protected async Task ArrangeOtherUserAccess(BuiltinRole role)
     {
         await WithScope(async stateStore =>
         {
@@ -135,5 +130,11 @@ public abstract class VirtualDiskTestBase : InMemoryStateDbTestBase, IClassFixtu
         await using var scope = CreateScope();
         var stateStore = scope.GetInstance<IStateStore>();
         await func(stateStore);
+    }
+
+    public override async Task DisposeAsync()
+    {
+        Factory.Dispose();
+        await base.DisposeAsync();
     }
 }
