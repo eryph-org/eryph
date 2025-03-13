@@ -38,6 +38,7 @@ namespace Eryph.VmManagement.Converging
                     from plannedDriveStorageSettings in VMDriveStorageSettings.PlanDriveStorageSettings(
                         Context.VmHostAgentConfig, Context.Config, Context.StorageSettings,
                         path => VhdQuery.GetVhdInfo(Context.Engine, path).MapT(o => o.Value),
+                        path => VhdQuery.TestVhd(Context.Engine, path),
                         Context.ResolvedGenes)
                     //ensure that the changes reflect the current VM settings
                     from infoReloaded in vmInfo.Reload(Context.Engine)

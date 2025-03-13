@@ -142,6 +142,12 @@ public class DiskStorageSettingsTests
                 Path = @"x:\dummy\sda.vhdx",
             }));
         };
+        psEngine.GetValuesCallback = (_, command) =>
+        {
+            if (!command.ToString().StartsWith("Test-VHD"))
+                return new PowershellFailure { Message = "Unknown command" };
+            return Seq1<object>(true);
+        };
 
         var result = await DiskStorageSettings.FromVhdPath(
             psEngine, _vmHostAgentConfig, path);
@@ -166,7 +172,12 @@ public class DiskStorageSettingsTests
             {
                 Path = path,
             }));
-
+        };
+        psEngine.GetValuesCallback = (_, command) =>
+        {
+            if (!command.ToString().StartsWith("Test-VHD"))
+                return new PowershellFailure { Message = "Unknown command" };
+            return Seq1<object>(true);
         };
 
         var result = await DiskStorageSettings.FromVhdPath(
