@@ -136,12 +136,17 @@ public static class CatletFeeding
                       select (Name: n, Config: f))
             .Sequence()
             .ToAsync()
-        let filteredGeneFodder = geneFodderWithName
-            .Filter(fwn => name.IsNone || fwn.Name == name)
-            .Map(fwn => fwn.Config)
+        from filteredGeneFodderWithName in name.Match(
+            Some: n => from food in geneFodderWithName
+                          .Find(fwn => fwn.Name == n)
+                          .ToEither(Error.New($"The food '{n}' does not exist in the gene '{uniqueGeneId.Id} ({uniqueGeneId.Architecture})'."))
+                          .ToAsync()
+                       select Seq1(food),
+            None: () => geneFodderWithName)
         from boundVariables in BindVariables(fodderConfig.Variables.ToSeq(), geneFodderConfig.Variables.ToSeq())
             .ToAsync()
-        let boundFodder = filteredGeneFodder
+        let boundFodder = filteredGeneFodderWithName
+            .Map(fwn => fwn.Config)
             .Map(f => f.CloneWith(c =>
             {
                 c.Source = geneId.Value;
