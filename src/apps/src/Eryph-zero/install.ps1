@@ -722,23 +722,50 @@ if((Test-CommandExist "Get-WindowsFeature")){
 	}
     
 } else{
-    $HyperVFeature = Get-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V -Online
-    # Check if Hyper-V is enabled
-    if($HyperVFeature.State -ne "Enabled") {
-        Write-Warning "Hyper-V is not installed. Installing feature..."
-        Enable-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V -All -Online -NoRestart -OutVariable results | Out-Null 
+    $MissingHyperVFeatures = Get-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V* -Online `
+                | Where-Object { $_.State -ne "Enabled" }
 
-        if ($results.RestartNeeded -eq $true) {
-            # give a better explaination why a reboot is required in non-server os as it is not shown in the output
-            # if installation command
-            $errorMessage = @(
-                'Automatic reboot is disabled during Hyper-V installation to prevent data loss.'
-                'However, a reboot is required before you can continue with the installation.'
-            ) -join [Environment]::NewLine
-            Write-Warning $errorMessage
-            $needsRestart = $true
+    # Check if Hyper-V is enabled
+    if($MissingHyperVFeatures) {
+        
+        $missingHypervisorFeature = $MissingHyperVFeatures | Where-Object { 
+            $_.FeatureName -eq "Microsoft-Hyper-V-Hypervisor" }
+        
+        if($missingHypervisorFeature){
+
+            Write-Warning "Hyper-V is not installed. Installing feature..."
+
+            # install Hyper-V core feature which cannot be run in same command as other Hyper-V features
+            Enable-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V -All -Online `
+                -NoRestart -OutVariable results | Out-Null 
+
+            if ($results.RestartNeeded -eq $true) {
+                # give a better explaination why a reboot is required in non-server os as it is not shown in the output
+                # if installation command
+                $errorMessage = @(
+                    'Automatic reboot is disabled during Hyper-V installation to prevent data loss.'
+                    'However, a reboot is required before you can continue with the installation.'
+                ) -join [Environment]::NewLine
+                Write-Warning $errorMessage
+                $needsRestart = $true
+            }
+        }
+
+        # install all other Hyper-V features
+        $MissingHyperVFeatures = Get-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V* -Online `
+                | Where-Object { $_.State -ne "Enabled" }
+
+        $MissingHyperVFeatures | ForEach-Object { 
+            Write-Warning "Enabling Hyper-V feature: $($_.FeatureName)"
+            Enable-WindowsOptionalFeature -FeatureName $_.FeatureName -All -Online `
+            -NoRestart -OutVariable results | Out-Null 
+
+            if ($results.RestartNeeded -eq $true) {
+                $needsRestart = $true
+            }
         }
     }
+
 }
 
 if($needsRestart -eq $true){
