@@ -92,7 +92,7 @@ public class PopulateCatletConfigVariables(
         if (existingCatlet != null)
             return Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                detail: "A catlet with this name already exists");
+                detail: $"A catlet with the name '{catletName}' already exists in the project '{projectName.Value}'. Catlet names must be unique within a project.");
 
         return await base.HandleAsync(request, cancellationToken);
     }
