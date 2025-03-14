@@ -10,6 +10,11 @@ public class Catlet
 
     public required string Name { get; set; }
 
+    /// <summary>
+    /// The ID of the corresponding Hyper-V virtual machine.
+    /// </summary>
+    public required string VmId { get; set; }
+
     public required Project Project { get; set; }
 
     public required CatletStatus Status { get; set; }
