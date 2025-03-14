@@ -19,8 +19,11 @@ public enum CatletStopMode
     /// This mode immediately stops the catlet comparable to pulling the power plug.
     /// </summary>
     Hard = 1,
-
-    // The kill mode will be implemented in the future and will
-    // terminate the underlying process of the Hyper-V VM.
-    // Kill = 2,
+    
+    /// <summary>
+    /// This mode immediately stops the catlet comparable to pulling the power plug.
+    /// When Hyper-V does not process the stop command, the underlying work
+    /// process will be terminated.
+    /// </summary>
+    Kill = 2,
 }
