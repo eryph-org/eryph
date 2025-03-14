@@ -23,6 +23,7 @@ namespace Eryph.VmManagement.Test.Storage;
 public class VMDriveStorageSettingsTests
 {
     private readonly Mock<Func<string, EitherAsync<Error, Option<VhdInfo>>>> _getVhdInfoMock = new();
+    private readonly Mock<Func<string, EitherAsync<Error, bool>>> _testVhdMock = new();
 
     private readonly VmHostAgentConfiguration _vmHostAgentConfiguration = new()
     {
@@ -76,10 +77,12 @@ public class VMDriveStorageSettingsTests
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
+        _testVhdMock.Setup(m => m(It.IsAny<string>()))
+            .Returns(RightAsync<Error, bool>(false));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, Empty);
+            _getVhdInfoMock.Object, _testVhdMock.Object, Empty);
 
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
@@ -135,10 +138,12 @@ public class VMDriveStorageSettingsTests
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
+        _testVhdMock.Setup(m => m(It.IsAny<string>()))
+            .Returns(RightAsync<Error, bool>(false));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, Empty);
+            _getVhdInfoMock.Object, _testVhdMock.Object, Empty);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -183,6 +188,11 @@ public class VMDriveStorageSettingsTests
                 Size = 42,
             }));
 
+        _testVhdMock.Setup(m => m(It.IsAny<string>()))
+            .Returns(RightAsync<Error, bool>(false));
+        _testVhdMock.Setup(m => m(expectedParentPath))
+            .Returns(RightAsync<Error, bool>(true));
+
         var resolvedGenes = Seq1(new UniqueGeneIdentifier(
             GeneType.Volume,
             GeneIdentifier.New("gene:testorg/testset/testtag:sda"),
@@ -190,7 +200,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, resolvedGenes);
+            _getVhdInfoMock.Object, _testVhdMock.Object, resolvedGenes);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -225,10 +235,12 @@ public class VMDriveStorageSettingsTests
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
+        _testVhdMock.Setup(m => m(It.IsAny<string>()))
+            .Returns(RightAsync<Error, bool>(false));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, Empty);
+            _getVhdInfoMock.Object, _testVhdMock.Object, Empty);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -264,10 +276,12 @@ public class VMDriveStorageSettingsTests
 
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
+        _testVhdMock.Setup(m => m(It.IsAny<string>()))
+            .Returns(RightAsync<Error, bool>(false));
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, Empty);
+            _getVhdInfoMock.Object, _testVhdMock.Object, Empty);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -316,6 +330,11 @@ public class VMDriveStorageSettingsTests
                 Size = 40 * 1024L * 1024 * 1024,
             }));
 
+        _testVhdMock.Setup(m => m(It.IsAny<string>()))
+            .Returns(RightAsync<Error, bool>(false));
+        _testVhdMock.Setup(m => m(expectedParentPath))
+            .Returns(RightAsync<Error, bool>(true));
+
         var resolvedGenes = Seq1(new UniqueGeneIdentifier(
             GeneType.Volume,
             GeneIdentifier.New("gene:testorg/testset/testtag:sda"),
@@ -323,7 +342,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, resolvedGenes);
+            _getVhdInfoMock.Object, _testVhdMock.Object, resolvedGenes);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>
@@ -358,14 +377,21 @@ public class VMDriveStorageSettingsTests
             ],
         };
 
+        var parentPath = @"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx";
+
         _getVhdInfoMock.Setup(m => m(It.IsAny<string>()))
             .Returns(RightAsync<Error, Option<VhdInfo>>(None));
 
-        _getVhdInfoMock.Setup(m => m(@"x:\disks\genepool\testorg\testset\testtag\volumes\sda.vhdx"))
+        _getVhdInfoMock.Setup(m => m(parentPath))
             .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo()
             {
                 Size = 50 * 1024L * 1024 * 1024,
             }));
+
+        _testVhdMock.Setup(m => m(It.IsAny<string>()))
+            .Returns(RightAsync<Error, bool>(false));
+        _testVhdMock.Setup(m => m(parentPath))
+            .Returns(RightAsync<Error, bool>(true));
 
         var resolvedGenes = Seq1(new UniqueGeneIdentifier(
             GeneType.Volume,
@@ -374,7 +400,7 @@ public class VMDriveStorageSettingsTests
 
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, resolvedGenes);
+            _getVhdInfoMock.Object, _testVhdMock.Object, resolvedGenes);
 
         result.Should().BeLeft().Which.Message.Should().Be("Disk size is below minimum size of the virtual disk");
     }
@@ -395,15 +421,19 @@ public class VMDriveStorageSettingsTests
             ],
         };
 
-        _getVhdInfoMock.Setup(m => m(@"x:\disks\storage-id-vm\sda.vhdx"))
+        var parentPath = @"x:\disks\storage-id-vm\sda.vhdx";
+        _getVhdInfoMock.Setup(m => m(parentPath))
             .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo()
             {
                 Size = 50 * 1024L * 1024 * 1024,
             }));
 
+        _testVhdMock.Setup(m => m(parentPath))
+            .Returns(RightAsync<Error, bool>(true));
+
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, Empty);
+            _getVhdInfoMock.Object, _testVhdMock.Object, Empty);
 
         result.Should().BeLeft().Which.Message.Should().Be("Disk size is below minimum size of the virtual disk");
     }
@@ -424,15 +454,19 @@ public class VMDriveStorageSettingsTests
             ],
         };
 
-        _getVhdInfoMock.Setup(m => m(@"x:\disks\storage-id-vm\sda.vhdx"))
+        var parentPath = @"x:\disks\storage-id-vm\sda.vhdx";
+        _getVhdInfoMock.Setup(m => m(parentPath))
             .Returns(RightAsync<Error, Option<VhdInfo>>(new VhdInfo()
             {
                 Size = 40 * 1024L * 1024 * 1024,
             }));
 
+        _testVhdMock.Setup(m => m(parentPath))
+            .Returns(RightAsync<Error, bool>(true));
+
         var result = await VMDriveStorageSettings.PlanDriveStorageSettings(
             _vmHostAgentConfiguration, config, _storageSettings,
-            _getVhdInfoMock.Object, Empty);
+            _getVhdInfoMock.Object, _testVhdMock.Object, Empty);
 
         result.Should().BeRight().Which.Should().SatisfyRespectively(
             dss =>

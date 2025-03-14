@@ -766,10 +766,16 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ParentPath")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Path")
                         .HasColumnType("TEXT");
 
                     b.Property<long?>("SizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("StorageIdentifier")

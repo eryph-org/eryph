@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Eryph.StateDb.MySql.Migrations
 {
     [DbContext(typeof(MySqlStateStoreContext))]
-    [Migration("20250204151105_InitialCreate")]
+    [Migration("20250312154633_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -774,11 +774,17 @@ namespace Eryph.StateDb.MySql.Migrations
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("ParentPath")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Path")
                         .HasColumnType("longtext");
 
                     b.Property<long?>("SizeBytes")
                         .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<string>("StorageIdentifier")
                         .HasColumnType("longtext");
