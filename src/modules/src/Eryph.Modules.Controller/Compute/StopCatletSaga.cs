@@ -36,13 +36,22 @@ internal class StopCatletSaga :
                 CatletStopMode.Shutdown => 
                     StartNewTask(new ShutdownVMCommand
                     {
-                        CatletId = message.Resource.Id, VMId = s.VMId
+                        CatletId = message.Resource.Id,
+                        VMId = s.VMId,
                     }).AsTask().ToUnit(),
                 CatletStopMode.Hard =>
                     StartNewTask(new StopVMCommand
                     {
                         CatletId = message.Resource.Id,
-                        VMId = s.VMId
+                        VMId = s.VMId,
+                    }).AsTask().ToUnit(),
+
+                CatletStopMode.Kill =>
+                    StartNewTask(new StopVMCommand
+                    {
+                        CatletId = message.Resource.Id,
+                        VMId = s.VMId,
+                        StopProcess = true,
                     }).AsTask().ToUnit(),
                 _ => Fail($"The stop mode {message.Mode} is not supported").ToUnit(),
             });
