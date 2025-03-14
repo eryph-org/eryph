@@ -729,13 +729,14 @@ if((Test-CommandExist "Get-WindowsFeature")){
     if($MissingHyperVFeatures) {
         
         $missingHypervisorFeature = $MissingHyperVFeatures | Where-Object { 
-            $_.FeatureName -eq "Microsoft-Hyper-V-Hypervisor" }
+            # check if Hyper-V core feature is missing
+            # this is a special case as it cannot be installed in same command as other Hyper-V features
+            $_.FeatureName -eq "Microsoft-Hyper-V" }
         
         if($missingHypervisorFeature){
 
             Write-Warning "Hyper-V is not installed. Installing feature..."
 
-            # install Hyper-V core feature which cannot be run in same command as other Hyper-V features
             Enable-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V -All -Online `
                 -NoRestart -OutVariable results | Out-Null 
 
@@ -756,11 +757,12 @@ if((Test-CommandExist "Get-WindowsFeature")){
                 | Where-Object { $_.State -ne "Enabled" }
 
         $MissingHyperVFeatures | ForEach-Object { 
-            Write-Warning "Enabling Hyper-V feature: $($_.FeatureName)"
+            Write-Warning "Enabling Hyper-V feature: $($_.DisplayName)"
             Enable-WindowsOptionalFeature -FeatureName $_.FeatureName -All -Online `
             -NoRestart -OutVariable results | Out-Null 
 
             if ($results.RestartNeeded -eq $true) {
+                # this is used, linter issue
                 $needsRestart = $true
             }
         }
