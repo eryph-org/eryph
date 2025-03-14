@@ -722,11 +722,11 @@ if((Test-CommandExist "Get-WindowsFeature")){
 	}
     
 } else{
-    $HyperVFeature = Get-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V-All -Online
+    $HyperVFeature = Get-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V -Online
     # Check if Hyper-V is enabled
     if($HyperVFeature.State -ne "Enabled") {
         Write-Warning "Hyper-V is not installed. Installing feature..."
-        Enable-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V-All -Online -NoRestart -OutVariable results | Out-Null 
+        Enable-WindowsOptionalFeature -FeatureName Microsoft-Hyper-V -All -Online -NoRestart -OutVariable results | Out-Null 
 
         if ($results.RestartNeeded -eq $true) {
             # give a better explaination why a reboot is required in non-server os as it is not shown in the output
