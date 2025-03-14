@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Common;
-
+using Microsoft.PowerShell.Commands;
 using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiUtils;
 
@@ -43,4 +43,16 @@ public static class WmiQueries<RT> where RT: struct, HasWmi<RT>
         from vhdPath in getRequiredValue<string>(settings, "DefaultVirtualHardDiskPath")
             .MapFail(e => Error.New("Failed to lookup the Hyper-V setting 'DefaultVirtualHardDiskPath'.", e))
         select (DataRootPath: dataRootPath, VhdPath: vhdPath);
+
+    public static Eff<RT, Option<uint>> getVmProcessId(Guid vmId) =>
+        from queryResult in Wmi<RT>.executeQuery(
+            @"\Root\Virtualization\v2",
+            Seq1("ProcessID"),
+            "Msvm_ComputerSystem",
+            $"Name = '{vmId}'")
+        from vm in queryResult.HeadOrNone()
+            .ToEff(Error.New($"Could not find the VM '{vmId}'"))
+        from processId in getValue<uint>(vm, "ProcessID")
+            .Filter(pid => pid > 4)
+        select processId;
 }
