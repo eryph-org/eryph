@@ -76,7 +76,7 @@ namespace Eryph.VmManagement.Test
                         Size = currentSize*1024L*1024*1024
                     }) }.ToSeq();
 
-                return new PowershellFailure { Message = $"unknown command: {commandString}" };
+                return new PowershellFailure ($"unknown command: {commandString}");
             };
 
             var convergeTask = new ConvergeDrives(_fixture.Context);
@@ -177,7 +177,7 @@ namespace Eryph.VmManagement.Test
                 }
 
 
-                return new PowershellFailure { Message = $"unknown command: {commandString}" };
+                return new PowershellFailure($"unknown command: {commandString}");
             };
 
             var convergeTask = new ConvergeDrives(_fixture.Context);
@@ -289,7 +289,7 @@ namespace Eryph.VmManagement.Test
                     return new[] { _fixture.Engine.ToPsObject<object>(res) }.ToSeq();
                 }
 
-                return new PowershellFailure { Message = $"unknown command: {commandString}" };
+                return new PowershellFailure ($"unknown command: {commandString}");
             };
 
             var convergeTask = new ConvergeDrives(_fixture.Context);
@@ -428,7 +428,7 @@ namespace Eryph.VmManagement.Test
                     return new[] { _fixture.Engine.ToPsObject<object>(res) }.ToSeq();
                 }
 
-                return new PowershellFailure { Message = $"unknown command: {commandString}" };
+                return new PowershellFailure ($"unknown command: {commandString}");
             };
 
             var convergeTask = new ConvergeDrives(_fixture.Context);

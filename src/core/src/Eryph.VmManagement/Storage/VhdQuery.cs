@@ -15,10 +15,9 @@ namespace Eryph.VmManagement.Storage
                 return Option<TypedPsObject<VhdInfo>>.None;
 
             var res = await engine
-                .GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path)
+                .GetObjectAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path)
                     .AddParameter("ErrorAction", "SilentlyContinue")
-                )
-                .MapAsync(s => s.HeadOrNone());
+                ).ToEither();
             return res;
         }
 
@@ -46,16 +45,15 @@ namespace Eryph.VmManagement.Storage
 
                 while (actualVhdOption.IsNone)
                 {
-                    var eitherVhdInfo = await snapshotVhdOption.ToEither(new PowershellFailure
-                            {Message = "Storage failure: Missing snapshot "})
+                    // TODO Cleanup after rebase
+                    var eitherVhdInfo = await snapshotVhdOption.ToEither(
+                            new PowershellFailure("Storage failure: Missing snapshot "))
                         .Map(snapshotVhd => string.IsNullOrWhiteSpace(snapshotVhd?.Value?.ParentPath)
                             ? Option<string>.None
                             : Option<string>.Some(snapshotVhd.Value.ParentPath))
-                        .Bind(o => o.ToEither(new PowershellFailure
-                            {Message = "Storage failure: Missing snapshot parent path"}))
+                        .Bind(o => o.ToEither(new PowershellFailure("Storage failure: Missing snapshot parent path")))
                         .BindAsync(path => GetVhdInfo(engine, path))
-                        .BindAsync(o => o.ToEither(new PowershellFailure
-                            {Message = "Storage failure: Missing snapshot parent"}))
+                        .BindAsync(o => o.ToEither(new PowershellFailure("Storage failure: Missing snapshot parent")))
                         .ConfigureAwait(false);
 
 

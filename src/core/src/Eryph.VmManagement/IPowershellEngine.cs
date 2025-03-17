@@ -6,17 +6,23 @@ namespace Eryph.VmManagement;
 
 public interface IPowershellEngine
 {
-    Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder,
-        Action<int> reportProgress = null);
+    EitherAsync<PowershellFailure, Option<TypedPsObject<T>>> GetObjectAsync<T>(
+        PsCommandBuilder builder);
 
-    Either<PowershellFailure, Unit> Run(PsCommandBuilder builder, Action<int> reportProgress = null);
-
-    Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder,
+    EitherAsync<PowershellFailure, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
+        PsCommandBuilder builder,
         Func<int, Task> reportProgress = null);
 
-    EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(PsCommandBuilder builder,
+    EitherAsync<PowershellFailure, Option<T>> GetObjectValueAsync<T>(
+        PsCommandBuilder builder);
+
+    EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
+        PsCommandBuilder builder,
         Func<int, Task> reportProgress = null);
 
-    Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder, Func<int, Task> reportProgress = null);
+    Task<Either<PowershellFailure, Unit>> RunAsync(
+        PsCommandBuilder builder,
+        Func<int, Task> reportProgress = null);
+    
     ITypedPsObjectMapping ObjectMapping { get; }
 }

@@ -74,28 +74,16 @@ namespace Eryph.Modules.VmHostAgent
             return result.ToString();
         }
 
-        protected EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> EnsureSingleEntry(
-            Seq<TypedPsObject<VirtualMachineInfo>> list, Guid id)
-        {
-            return (list.Count > 1
-                ? Prelude.Left(Error.New($"VM id '{id}' is not unique."))
-                : list.HeadOrNone().ToEither(Error.New($"VM id '{id}' is not found."))).ToAsync();
-        }
-
-
-        protected static EitherAsync<Error, Seq<TypedPsObject<VirtualMachineInfo>>> GetVmInfo(Guid id,
-            IPowershellEngine engine)
-        {
-            return Prelude.Cond<Guid>(c => c != Guid.Empty)(id).MatchAsync(
-                None: () => Seq<TypedPsObject<VirtualMachineInfo>>.Empty,
-                Some: s => engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
-                    .AddCommand("get-vm").AddParameter("Id", id)
-                    //this a bit dangerous, because there may be other errors causing the 
-                    //command to fail. However there seems to be no other way except parsing error response
-                    .AddParameter("ErrorAction", "SilentlyContinue")
-                )).ToError().ToAsync();
-        }
-
+        // TODO Replace with standardized query
+        protected static EitherAsync<Error, Option<TypedPsObject<VirtualMachineInfo>>> GetVmInfo(
+            Guid id,
+            IPowershellEngine engine) =>
+            from _ in Prelude.RightAsync<Error, Unit>(Prelude.unit)
+            let command = PsCommandBuilder.Create()
+                .AddCommand("Get-VM")
+                .AddParameter("Id", id)
+            from vmInfo in engine.GetObjectAsync<VirtualMachineInfo>(command).ToError()
+            select vmInfo;
 
         protected EitherAsync<Error, Unit> EnsureMetadata(
             TypedPsObject<VirtualMachineInfo> vmInfo,

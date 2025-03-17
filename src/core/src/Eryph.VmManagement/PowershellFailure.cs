@@ -1,7 +1,11 @@
-﻿namespace Eryph.VmManagement
+﻿namespace Eryph.VmManagement;
+
+public record PowershellFailure(
+    string Message,
+    PowershellFailureCategory Category)
 {
-    public class PowershellFailure
+    public PowershellFailure(string message)
+        : this(message, PowershellFailureCategory.NotSpecified)
     {
-        public string Message { get; set; }
     }
 }

@@ -220,7 +220,7 @@ namespace Eryph.VmManagement.Converging
                                     .AddParameter("ControllerLocation", dvdSettings.ControllerLocation)
                                     .AddParameter("PassThru"));
                         }).ToAsync()
-                    from _ in Context.Engine.Run(PsCommandBuilder.Create()
+                    from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
                         .AddCommand("Set-VMDvdDrive")
                         .AddParameter("VMDvdDrive", dvdDrive.PsObject)
                         .AddParameter("Path", dvdSettings.Path)).ToAsync().ToError()
@@ -247,7 +247,7 @@ namespace Eryph.VmManagement.Converging
                 false =>
                     from testPathResult in Context.Engine.GetObjectsAsync<bool>(
                             new PsCommandBuilder().AddCommand("Test-Path").AddArgument(vhdPath))
-                        .ToError().ToAsync()
+                        .ToError()
                     let fileExists = testPathResult.Any(v => v.Value)
                     from __ in fileExists
                         ? UpdateVirtualDisk(driveSettings)
@@ -264,7 +264,7 @@ namespace Eryph.VmManagement.Converging
                                 .ConfigureAwait(false);
                             return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
                                 BuildAttachCommand(vmInfo, vhdPath, driveSettings)
-                            ).ConfigureAwait(false);
+                            );
                         }).ToAsync()
                     from reloadedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
                     select reloadedVmInfo
@@ -348,7 +348,7 @@ namespace Eryph.VmManagement.Converging
             // get disk
             from vhdInfos in Context.Engine.GetObjectsAsync<VhdInfo>(new PsCommandBuilder()
                     .AddCommand("get-vhd").AddArgument(vhdPath))
-                .ToError().ToAsync()
+                .ToError()
             from vhdInfo in vhdInfos.HeadOrLeft(Errors.SequenceEmpty).ToAsync()
             // resize if necessary
             let newSize = driveSettings.DiskSettings.SizeBytes.GetValueOrDefault()

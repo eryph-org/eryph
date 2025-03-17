@@ -9,10 +9,8 @@ namespace Eryph.VmManagement;
 
 public class PsCommandBuilder
 {
-
-    private readonly List<object> _input = new();
-
-    private readonly List<BasePart> _dataChain = new();
+    private readonly List<object> _input = [];
+    private readonly List<BasePart> _dataChain = [];
 
     public static PsCommandBuilder Create()
     {

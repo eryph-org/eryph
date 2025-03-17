@@ -49,7 +49,7 @@ namespace Eryph.VmManagement.Converging
                             Context.Metadata.SecureDataHidden,
                             string.IsNullOrWhiteSpace(Context.Config.Hostname) ? Context.Config.Name : Context.Config.Hostname,
                             networkData,
-                            Context.Config.Fodder).ToAsync()
+                            Context.Config.Fodder)
                         from newVmInfo in InsertConfigDriveDisk(configDriveIsoPath, vmInfo).ToAsync()
                         select newVmInfo);
 
@@ -94,60 +94,53 @@ namespace Eryph.VmManagement.Converging
             return new NetworkData(config);
         }
 
-        private Task<Either<Error, Unit>> GenerateConfigDriveDisk(string configDriveIsoPath,
+        private EitherAsync<Error, Unit> GenerateConfigDriveDisk(
+            string configDriveIsoPath,
             bool withoutSensitive,
             string hostname,
             NetworkData networkData,
-            [CanBeNull] FodderConfig[] config)
-        {
+            [CanBeNull] FodderConfig[] config) =>
+            Prelude.TryAsync(async () =>
+            {
+                var configDrive = new ConfigDriveBuilder()
+                    .NoCloud(new NoCloudConfigDriveMetaData(hostname, Context.Metadata.MachineId.ToString()))
+                    .Build();
 
-            return Prelude.TryAsync(async () =>
+                if (config != null)
                 {
-
-                    var configDrive = new ConfigDriveBuilder()
-                        .NoCloud(new NoCloudConfigDriveMetaData(hostname, Context.Metadata.MachineId.ToString()))
-                        .Build();
-
-                    if (config != null)
+                    foreach (var cloudInitConfig in config)
                     {
-                        foreach (var cloudInitConfig in config)
+                        if (withoutSensitive && cloudInitConfig.Secret.GetValueOrDefault())
+                            continue;
+
+                        var contentType = cloudInitConfig.Type switch
                         {
-                            if (withoutSensitive && cloudInitConfig.Secret.GetValueOrDefault())
-                                continue;
+                            "include-url" => UserDataContentType.IncludeUrl,
+                            "include-once-url" => UserDataContentType.IncludeUrlOnce,
+                            "cloud-config-archive" => UserDataContentType.CloudConfigArchive,
+                            "upstart-job" => UserDataContentType.UpstartJob,
+                            "cloud-config" => UserDataContentType.CloudConfig,
+                            "part-handler" => UserDataContentType.PartHandler,
+                            "shellscript" => UserDataContentType.ShellScript,
+                            "cloud-boothook" => UserDataContentType.BootHook,
+                            _ => UserDataContentType.CloudConfig
+                        };
 
-                            var contentType = cloudInitConfig.Type switch
-                            {
-                                "include-url" => UserDataContentType.IncludeUrl,
-                                "include-once-url" => UserDataContentType.IncludeUrlOnce,
-                                "cloud-config-archive" => UserDataContentType.CloudConfigArchive,
-                                "upstart-job" => UserDataContentType.UpstartJob,
-                                "cloud-config" => UserDataContentType.CloudConfig,
-                                "part-handler" => UserDataContentType.PartHandler,
-                                "shellscript" => UserDataContentType.ShellScript,
-                                "cloud-boothook" => UserDataContentType.BootHook,
-                                _ => UserDataContentType.CloudConfig
-                            };
-
-                            var userData = new UserData(contentType, 
-                                (cloudInitConfig.Content ?? "").TrimEnd('\0'),
-                                cloudInitConfig.Filename!,
-                                Encoding.UTF8);
-                            configDrive.AddUserData(userData);
-                        }
+                        var userData = new UserData(contentType,
+                            (cloudInitConfig.Content ?? "").TrimEnd('\0'),
+                            cloudInitConfig.Filename!,
+                            Encoding.UTF8);
+                        configDrive.AddUserData(userData);
                     }
+                }
 
-                    configDrive.SetNetworkData(networkData);
+                configDrive.SetNetworkData(networkData);
 
-                    var isoWriter = new ConfigDriveImageWriter(configDriveIsoPath);
-                    await isoWriter.WriteConfigDrive(configDrive);
+                var isoWriter = new ConfigDriveImageWriter(configDriveIsoPath);
+                await isoWriter.WriteConfigDrive(configDrive);
 
-                    return Unit.Default;
-                }).ToEither(l => new PowershellFailure { Message = l.Message })
-                .ToEither().ToError();
-
-
-        }
-
+                return Unit.Default;
+            }).ToEither();
 
         private static Either<Error, Unit> CreateConfigDriveDirectory(string configDrivePath)
         {
@@ -220,14 +213,14 @@ namespace Eryph.VmManagement.Converging
                     l => l.DVDDrives,
                     device => device.Cast<DvdDriveInfo>()
                         .Map(drive =>drive.ControllerLocation == 63 && drive.ControllerNumber == 0),
-                    () => Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
+                    async () => await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
                         PsCommandBuilder.Create().AddCommand("Add-VMDvdDrive")
                             .AddParameter("VM", vmInfo.PsObject)
                             .AddParameter("ControllerNumber", 0)
                             .AddParameter("ControllerLocation", 63)
                             .AddParameter("PassThru"))
                 ).ToAsync()
-                from _ in Context.Engine.Run(PsCommandBuilder.Create()
+                from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
                     .AddCommand("Set-VMDvdDrive")
                     .AddParameter("VMDvdDrive", dvdDrive.PsObject)
                     .AddParameter("Path", configDriveIsoPath)).ToAsync().ToError()

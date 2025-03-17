@@ -73,7 +73,7 @@ public class VirtualMachineInventory(
     {
         return engine.GetObjectsAsync<VirtualMachineCpuData>(
                 new PsCommandBuilder().AddInput(vmInfo.PsObject).AddCommand("Get-VMProcessor"))
-            .ToError().ToAsync().Bind(
+            .ToError().Bind(
                 r => r.HeadOrLeft(Error.New(Errors.SequenceEmpty)).ToAsync())
             .Map(r => r.ToValue());
     }
@@ -82,7 +82,7 @@ public class VirtualMachineInventory(
     {
         return engine.GetObjectsAsync<VirtualMachineMemoryData>(
                 new PsCommandBuilder().AddInput(vmInfo.PsObject).AddCommand("Get-VMMemory"))
-            .ToError().ToAsync().Bind(
+            .ToError().Bind(
                 r => r.HeadOrLeft(Error.New(Errors.SequenceEmpty)).ToAsync())
             .Map(r => r.ToValue());
     }
@@ -94,7 +94,7 @@ public class VirtualMachineInventory(
 
         return engine.GetObjectsAsync<VMFirmwareInfo>(
                 new PsCommandBuilder().AddInput(vmInfo.PsObject).AddCommand("Get-VMFirmware"))
-            .ToError().ToAsync().Map(
+            .ToError().Map(
                 r => r.HeadOrNone())
             .Map(r => r.Match(
                 None: () => new VirtualMachineFirmwareData(),

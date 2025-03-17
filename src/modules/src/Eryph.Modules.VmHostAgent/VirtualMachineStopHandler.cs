@@ -57,6 +57,7 @@ internal static class VirtualMachineStopHandler<RT>
             .AddCommand("Stop-VM")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("TurnOff")
+        // TODO add a retry
         from _ in timeout(
             TimeSpan.FromSeconds(15),
             from ct in cancelToken<RT>()
@@ -65,6 +66,8 @@ internal static class VirtualMachineStopHandler<RT>
         select unit;
 
     private static Aff<RT, Unit> StopVmProcess(Guid vmId) =>
+        // Unfortunately, the Get-VM Cmdlet does not expose the process ID
+        // of the VM's worker process. Hence, we query Hyper-V via WMI.
         from processId in WmiQueries<RT>.getVmProcessId(vmId)
         from _ in processId
             .Map(StopProcess)
