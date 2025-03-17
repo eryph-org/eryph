@@ -57,7 +57,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddCommand("Get-VMNetworkAdapter")
             .AddParameter("VM", vmInfo.PsObject)
         from adapters in Context.Engine.GetObjectsAsync<VMNetworkAdapter>(command)
-            .ToError().ToAsync()
+            .ToError()
         select adapters;
 
     private EitherAsync<Error, Unit> RemoveMissingAdapters(

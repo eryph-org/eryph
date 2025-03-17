@@ -38,7 +38,6 @@ internal abstract class CatletOperationHandlerBase<T>(
     private EitherAsync<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>> GetVmInfo(
         Guid vmId) =>
         engine.GetObjectsAsync<VirtualMachineInfo>(CreateGetVMCommand(vmId))
-            .ToAsync()
             .Map(seq => seq.HeadOrNone());
 
     protected virtual PsCommandBuilder CreateGetVMCommand(Guid vmId) =>

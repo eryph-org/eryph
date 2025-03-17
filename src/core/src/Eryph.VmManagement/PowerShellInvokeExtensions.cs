@@ -4,21 +4,18 @@ using System.Linq;
 using System.Management.Automation;
 using System.Threading.Tasks;
 using LanguageExt;
-using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 
 namespace Eryph.VmManagement;
 
 internal static class PowerShellInvokeExtensions
 {
-    public static Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(
-        this PowerShell ps, IEnumerable input,  ILogger log, IPsObjectRegistry registry, ITypedPsObjectMapping mapping)
-    {
-        return InvokeGetObjects(ps, ps.InvokeTyped<T>(input, registry, mapping), log);
-    }
-
     public static async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(
-        this PowerShell ps, IEnumerable input, ILogger log, IPsObjectRegistry registry, ITypedPsObjectMapping mapping)
+        this PowerShell ps,
+        IEnumerable input,
+        ILogger log,
+        IPsObjectRegistry registry,
+        ITypedPsObjectMapping mapping)
     {
         using var inputData = new PSDataCollection<PSObject>();
 
@@ -47,19 +44,11 @@ internal static class PowerShellInvokeExtensions
                     var r = s.ToArray().Map(x => new TypedPsObject<T>(x, registry, mapping)).ToSeq();
                     s.Dispose();
                     return r;
-                }).ToEither(ex => new PowershellFailure{Message = ex.Message});
+                }).ToEither(ToFailure);
             },
-            Fail: ex => ExceptionToPowershellFailure(ex, log));
+            Fail: ex => ToFailure(ex));
 
         return HandlePowershellErrors(ps, result, log);
-    }
-
-    public static Either<PowershellFailure, Unit> Run(this PowerShell ps, IEnumerable input, ILogger log)
-    {
-        return HandlePowershellErrors(ps,
-            Prelude.Try(() => ps.Invoke(input)).Try().Match<Either<PowershellFailure, Unit>>(
-                Succ: s => Unit.Default,
-                Fail: ex => ExceptionToPowershellFailure(ex, log)), log);
     }
 
     public static async Task<Either<PowershellFailure, Unit>> RunAsync(this PowerShell ps,IEnumerable input, ILogger log)
@@ -88,64 +77,51 @@ internal static class PowerShellInvokeExtensions
                 s.Dispose();
                 return Unit.Default;
             },
-            Fail: ex => ExceptionToPowershellFailure(ex, log));
+            Fail: ex => ToFailure(ex));
 
         return HandlePowershellErrors(ps, result, log);
     }
 
-    private static Either<PowershellFailure, Seq<TypedPsObject<T>>> InvokeGetObjects<T>(this PowerShell ps,
-        Try<Seq<TypedPsObject<T>>> invokeFunc, ILogger log)
-    {
-        return HandlePowershellErrors(ps, invokeFunc.ToEither(ex =>ExceptionToPowershellFailure(ex, log)), log);
-    }
+    // TODO improve me
+    private static PowershellFailure ToFailure(
+        this Exception exception) =>
+        new PowershellFailure(
+            exception.Message,
+            PowershellFailureCategory.NotSpecified);
 
 
+    // TODO Do we need the logging here? This might be confusing as the error by the Powershell command might be expected
+    /*
     private static PowershellFailure ExceptionToPowershellFailure(Exception ex, ILogger log)
     {
         log?.LogError(ex, ex.Message);
         return new PowershellFailure {Message = ex.Message};
     }
+    */
 
-    private static Either<PowershellFailure, TResult> HandlePowershellErrors<TResult>(PowerShell ps,
-        Either<PowershellFailure, TResult> result, ILogger log)
+    private static Either<PowershellFailure, TResult> HandlePowershellErrors<TResult>(
+        PowerShell ps,
+        Either<PowershellFailure, TResult> result,
+        ILogger log)
     {
-
-        if (result.IsLeft)
-        {
-            ps.Streams.ClearStreams();
-            return result;
-        }
-
-        var error = ps.Streams.Error.FirstOrDefault();
-
-        if (error != null)
-        {
-            var message =
-                $"Command: {error.InvocationInfo?.MyCommand}, Error: {error}, Exception: {error.Exception}";
-
-            log.LogError(error.Exception, message);
-
-            ps.Streams.ClearStreams();
-
-            return new PowershellFailure
-            {
-                Message = message
-            };
-        }
+        var handledResult = result
+            .Bind(r => HandleErrors<TResult>(r, ps.Streams.Error.ToSeq()));
 
         ps.Streams.ClearStreams();
-        return result;
+        
+        return handledResult;
     }
 
-    public static Try<Seq<TypedPsObject<T>>> InvokeTyped<T>(this PowerShell ps, IEnumerable input, 
-        IPsObjectRegistry registry, ITypedPsObjectMapping mapping)
-    {
-        return Prelude.Try( () =>
-        {
-            var invoked =  ps.Invoke(input);
-            var typed = invoked.Map(x => new TypedPsObject<T>(x, registry, mapping)).ToSeq();
-            
-            return typed;
-        });
-    }
+    private static Either<PowershellFailure, TResult> HandleErrors<TResult>(
+        Either<PowershellFailure, TResult> result,
+        Seq<ErrorRecord> errors) =>
+        from value in result
+        from _ in errors
+            .Map(e => new PowershellFailure(
+                $"Command: {e.InvocationInfo?.MyCommand}, Error: {e}, Exception: {e.Exception}",
+                e.CategoryInfo.Category.ToFailureCategory()))
+            .OrderByDescending(f => f.Category != PowershellFailureCategory.ObjectNotFound)
+            .Map(Prelude.Left<PowershellFailure, TResult>)
+            .Sequence()
+        select value;
 }

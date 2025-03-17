@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ using Eryph.VmManagement.Data.Planned;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
 using LanguageExt.Common;
+
 using static LanguageExt.Prelude;
 
 
@@ -28,37 +30,33 @@ namespace Eryph.VmManagement
 {
     public static class VirtualMachine
     {
-
         public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Create(
             IPowershellEngine engine,
             string vmName,
             string storageIdentifier,
             string vmPath,
-            int? startupMemory)
-        {
-            var memoryStartupBytes = startupMemory.GetValueOrDefault(EryphConstants.DefaultCatletMemoryMb) * 1024L * 1024;
-
-            return engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
-                    .AddCommand("New-VM")
-                    .AddParameter("Name", storageIdentifier)
-                    .AddParameter("Path", vmPath)
-                    .AddParameter("MemoryStartupBytes", memoryStartupBytes)
-                    .AddParameter("Generation", 2))
-                .MapAsync(x => x.Head).MapAsync(
-                    async result =>
-                    {
-                        await engine.RunAsync(PsCommandBuilder.Create().AddCommand("Get-VMNetworkAdapter")
-                            .AddParameter("VM", result.PsObject).AddCommand("Remove-VMNetworkAdapter"));
-
-                        return result;
-                    })
-                .ToAsync()
+            int? startupMemory) =>
+            from _ in RightAsync<Error, Unit>(unit)
+            let memoryStartupBytes = startupMemory.GetValueOrDefault(EryphConstants.DefaultCatletMemoryMb) * 1024L * 1024
+            let createVmCommand = PsCommandBuilder.Create()
+                .AddCommand("New-VM")
+                .AddParameter("Name", storageIdentifier)
+                .AddParameter("Path", vmPath)
+                .AddParameter("MemoryStartupBytes", memoryStartupBytes)
+                .AddParameter("Generation", 2)
+            from optionalVmInfo in engine.GetObjectAsync<VirtualMachineInfo>(createVmCommand)
                 .ToError()
-                .Bind(info => Rename(engine, info, vmName))
-                .Bind(info => SetDefaults(engine, info));
+            from created in optionalVmInfo.ToEitherAsync(Error.New("Failed to create VM"))
+            let removeNetworkAdaptersCommand = PsCommandBuilder.Create()
+                .AddCommand("Get-VMNetworkAdapter")
+                .AddParameter("VM", created.PsObject)
+                .AddCommand("Remove-VMNetworkAdapter")
+            from _2 in engine.RunAsync(removeNetworkAdaptersCommand).ToError().ToAsync()
+            from renamed in Rename(engine, created, vmName)
+            from result in SetDefaults(engine, renamed)
+            select result;
 
-        }
-
+        /*
         //keep this method (old template import) as base for vm import feature
         public static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> VMTemplateFromPath(
             IPowershellEngine engine,
@@ -76,7 +74,7 @@ namespace Eryph.VmManagement
                     engine.GetObjectsAsync<VMCompatibilityReportInfo>(PsCommandBuilder.Create()
                             .AddCommand("Compare-VM")
                             .AddParameter("Path", configPath)
-                        ).ToError().ToAsync()
+                        ).ToError()
                         .Bind(x => x.HeadOrLeft(Error.New("Failed to load VM from path")).ToAsync())
                         .Bind(rep => ExpandTemplateData(
                             rep.GetProperty(x => x.VM), engine)));
@@ -105,7 +103,7 @@ namespace Eryph.VmManagement
                     .AddParameter("VhdDestinationPath", vhdPath)
                     .AddParameter("Copy")
                     .AddParameter("GenerateNewID")
-                ).ToError().ToAsync()
+                ).ToError()
                 .Bind(x => x.HeadOrLeft(Error.New("Failed to Import VM")).ToAsync())
                 .Bind(rep => (
                         //from uD in RemoveAllPlannedDrives(engine, rep.GetProperty(x => x.VM))
@@ -123,15 +121,16 @@ namespace Eryph.VmManagement
                     //from template in ExpandTemplateData(rep.Value.VM, engine)
                     from vms in engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
                         .AddCommand("Import-VM")
-                        .AddParameter("CompatibilityReport", rep.PsObject)).ToError().ToAsync()
+                        .AddParameter("CompatibilityReport", rep.PsObject)).ToError()
                     from vm in vms.HeadOrLeft(Error.New("Failed to import VM Image")).ToAsync()
-                    from _ in RenameDisksToConvention(engine, vm).ToAsync()
+                    //from _ in RenameDisksToConvention(engine, vm).ToAsync()
                     from vmReloaded in vm.Reload(engine)
                     select vmReloaded);
 
 
             return vmInfo;
         }
+        */
 
         public static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> RemoveAllPlannedDrives(
             IPowershellEngine engine,
@@ -160,39 +159,33 @@ namespace Eryph.VmManagement
 
         public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> SetDefaults(
             IPowershellEngine engine,
-            TypedPsObject<VirtualMachineInfo> vmInfo)
-        {
-
-            return
-                from setVMCommand in engine.GetObjectsAsync<PowershellCommand>(
-                        new PsCommandBuilder().AddCommand("Get-Command")
-                            .AddArgument("Set-VM")).ToAsync()
+            TypedPsObject<VirtualMachineInfo> vmInfo) =>
+            from optionalSetVmCommand in engine.GetObjectAsync<PowershellCommand>(
+                    PsCommandBuilder.Create().AddCommand("Get-Command").AddArgument("Set-VM"))
                     .ToError()
-                    .Bind(o => 
-                        o.HeadOrLeft(Error.New("Command Set-VM not found")).ToAsync())
-                let builder = BuildSetVMCommand(vmInfo, setVMCommand)
-                from uSet in 
-                engine.RunAsync(builder).ToAsync().ToError()
-                from reloaded in vmInfo.RecreateOrReload(engine)
-                select reloaded;
+            from setVmCommand in optionalSetVmCommand.ToEitherAsync(
+                Error.New("The Powershell command Set-VM was not found."))
+            let builder = BuildSetVMCommand(vmInfo, setVmCommand)
+            from uSet in engine.RunAsync(builder).ToAsync().ToError()
+            from reloaded in vmInfo.RecreateOrReload(engine)
+            select reloaded;
 
-            static PsCommandBuilder BuildSetVMCommand(TypedPsObject<VirtualMachineInfo> vmInfo, PowershellCommand commandInfo)
-            {
-                var builder = new PsCommandBuilder().AddCommand("Set-VM");
-                builder
-                    .AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("DynamicMemory", false)
-                    .AddParameter("AutomaticStartAction", "Nothing")
-                    .AddParameter("AutomaticStopAction", "Save");
+        private static PsCommandBuilder BuildSetVMCommand(TypedPsObject<VirtualMachineInfo> vmInfo, PowershellCommand commandInfo)
+        {
+            var builder = new PsCommandBuilder().AddCommand("Set-VM");
+            builder
+                .AddParameter("VM", vmInfo.PsObject)
+                .AddParameter("DynamicMemory", false)
+                .AddParameter("AutomaticStartAction", "Nothing")
+                .AddParameter("AutomaticStopAction", "Save");
 
-                if (commandInfo.Parameters.ContainsKey("AutomaticCheckpointsEnabled"))
-                    builder.AddParameter("AutomaticCheckpointsEnabled", false);
+            if (commandInfo.Parameters.ContainsKey("AutomaticCheckpointsEnabled"))
+                builder.AddParameter("AutomaticCheckpointsEnabled", false);
 
-                if (commandInfo.Parameters.ContainsKey("EnhancedSessionTransportType"))
-                    builder.AddParameter("EnhancedSessionTransportType", "VMBus");
+            if (commandInfo.Parameters.ContainsKey("EnhancedSessionTransportType"))
+                builder.AddParameter("EnhancedSessionTransportType", "VMBus");
 
-                return builder;
-            }
+            return builder;
         }
 
         public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
@@ -294,6 +287,7 @@ namespace Eryph.VmManagement
             ).ToError().ToAsync().Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
+        /*
         private static async Task<Either<Error, Unit>> RenameDisksToConvention<T>(
             IPowershellEngine engine,
             TypedPsObject<T> vmInfo)
@@ -329,6 +323,7 @@ namespace Eryph.VmManagement
 
             return Unit.Default;
         }
+        */
 
 
         private static EitherAsync<Error, Unit> RenamePlannedNetAdaptersToConvention(

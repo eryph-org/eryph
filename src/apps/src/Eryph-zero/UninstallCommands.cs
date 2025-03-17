@@ -151,7 +151,7 @@ internal class UninstallCommands
         // when we remove the stores.
         from _ in vmInfo.Match(
             Some: v => from stoppedVm in v.StopIfRunning(psEngine).ToAff()
-                       from _ in stoppedVm.Remove(psEngine).ToAff()
+                       from _ in v.Remove(psEngine).ToAff()
                        select unit,
             None: () => SuccessAff(unit))
         select unit;

@@ -35,16 +35,16 @@ internal class RemoveVirtualMachineHandler(
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         from storageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo)
-        from stoppedVM in vmInfo.StopIfRunning(_engine).ToAsync().ToError()
+        from stoppedVM in vmInfo.StopIfRunning(_engine).ToError()
         from uRemovePorts in ovsPortManager.SyncPorts(vmInfo, VMPortChange.Remove)
-        from _ in stoppedVM.Remove(_engine).ToAsync().ToError()
+        from _ in vmInfo.Remove(_engine).ToError()
         from __ in RemoveVMFiles(storageSettings)
         select unit;
 
     protected override PsCommandBuilder CreateGetVMCommand(Guid vmId) =>
         base.CreateGetVMCommand(vmId)
             .AddParameter("ErrorAction", "SilentlyContinue");
-
+    
     private EitherAsync<Error, Unit> RemoveVMFiles(
         Option<VMStorageSettings> storageSettings) =>
         storageSettings

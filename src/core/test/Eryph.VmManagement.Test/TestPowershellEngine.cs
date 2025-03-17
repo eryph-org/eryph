@@ -26,31 +26,15 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         return new TypedPsObject<object>(obj.PsObject, this, ObjectMapping);
     }
 
-    public Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder, Action<int>? reportProgress = null)
-    {
-        return GetObjectsAsync<T>(builder, (msg) =>
-        {
-            reportProgress?.Invoke(msg);
-            return Task.CompletedTask;
-        }).GetAwaiter().GetResult();
-    }
-
-    public Either<PowershellFailure, Unit> Run(PsCommandBuilder builder, Action<int>? reportProgress = null)
-    {
-        return RunAsync(builder, (msg) =>
-        {
-            reportProgress?.Invoke(msg);
-            return Task.CompletedTask;
-        }).GetAwaiter().GetResult();
-    }
-
-    public Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder, Func<int, Task>? reportProgress = null)
+    public EitherAsync<PowershellFailure, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
+        PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null)
     {
         var commandInput = builder.ToDictionary();
-        var result = GetObjectCallback?.Invoke(typeof(T), AssertCommand.Parse(commandInput));
+        var result = GetObjectCallback(typeof(T), AssertCommand.Parse(commandInput));
         Debug.Assert(result != null, nameof(result) + " != null");
-        return Task.FromResult(result.Value.Map(seq => seq.Map( r => new TypedPsObject<T>(r.PsObject, this, ObjectMapping))));
-
+        return result.ToAsync()
+            .Map(seq => seq.Map(r => new TypedPsObject<T>(r.PsObject, this, ObjectMapping)));
     }
 
     public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
@@ -65,7 +49,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         var result = GetValuesCallback.Invoke(typeof(T), 
             AssertCommand.Parse(commandInput));
 
-        return result.Map(s => s.Map(v =>(T) v)).ToAsync();
+        return result.Map(s => s.Map(v =>(T)v)).ToAsync();
     }
 
     public Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder, Func<int, Task>? reportProgress = null)
@@ -81,5 +65,16 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
     public void AddPsObject(PSObject psObject)
     {
             
+    }
+
+    public EitherAsync<PowershellFailure, Option<TypedPsObject<T>>> GetObjectAsync<T>(PsCommandBuilder builder)
+    {
+        throw new NotImplementedException();
+    }
+
+    public EitherAsync<PowershellFailure, Option<T>> GetObjectValueAsync<T>(
+        PsCommandBuilder builder)
+    {
+        throw new NotImplementedException();
     }
 }
