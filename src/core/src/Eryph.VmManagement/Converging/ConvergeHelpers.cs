@@ -25,7 +25,7 @@ namespace Eryph.VmManagement.Converging
                 );
 
 
-            var creatorResult = await creatorFunc().ToError().ConfigureAwait(false);
+            var creatorResult = await creatorFunc().ToError();
 
             var res = creatorResult.Bind(
                 seq => seq.HeadOrNone()

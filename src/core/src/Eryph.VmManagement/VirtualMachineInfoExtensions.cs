@@ -3,52 +3,64 @@ using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
+using static LanguageExt.Prelude;
 
-namespace Eryph.VmManagement
+namespace Eryph.VmManagement;
+
+public static class VirtualMachineInfoExtensions
 {
-    public static class VirtualMachineInfoExtensions
-    {
-        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> StopIfRunning(
-            this TypedPsObject<VirtualMachineInfo> vmInfo, IPowershellEngine engine)
-        {
-            if (vmInfo.Value.State == VirtualMachineState.Running ||
-                vmInfo.Value.State == VirtualMachineState.RunningCritical)
-                return engine.RunAsync(new PsCommandBuilder().AddCommand("Stop-VM").AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("Force")).MapAsync(u => vmInfo.Recreate());
+    /// <summary>
+    /// This method aggressively stops the VM by first turning it off (hard power off in Hyper-V)
+    /// and if that is not successful, it kills the VM worker process.
+    /// </summary>
+    public static EitherAsync<PowershellFailure, Unit> StopIfRunning(
+        this TypedPsObject<VirtualMachineInfo> vmInfo,
+        IPowershellEngine engine) =>
+        from _ in Some(vmInfo).Filter(i =>
+                i.Value.State is VirtualMachineState.Running or VirtualMachineState.RunningCritical)
+            .Map(i => Stop(i, engine))
+            .SequenceSerial()
+        select unit;
 
-            return Prelude.Right<PowershellFailure, TypedPsObject<VirtualMachineInfo>>(vmInfo).AsTask();
-        }
+    private static EitherAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>> Stop(
+        this TypedPsObject<VirtualMachineInfo> vmInfo,
+        IPowershellEngine engine) =>
+        from _1 in RightAsync<PowershellFailure, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Stop-VM")
+            .AddParameter("VM", vmInfo.PsObject)
+            .AddParameter("TurnOff")
+        from _2 in engine.RunAsync(command).ToAsync()
+        select vmInfo;
 
-        public static Task<Either<PowershellFailure, TypedPsObject<VirtualMachineInfo>>> Remove(
-            this TypedPsObject<VirtualMachineInfo> vmInfo, IPowershellEngine engine)
-        {
-            
-            return engine.RunAsync(new PsCommandBuilder().AddCommand("Remove-VM").AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("Force"))
-                .MapAsync(u => vmInfo);
-        }
+    public static EitherAsync<PowershellFailure, Unit> Remove(
+        this TypedPsObject<VirtualMachineInfo> vmInfo,
+        IPowershellEngine engine) =>
+        from _1 in RightAsync<PowershellFailure, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Remove-VM")
+            .AddParameter("VM", vmInfo.PsObject)
+            .AddParameter("Force")
+        from _2 in engine.RunAsync(command).ToAsync()
+        select unit;
 
-        public static EitherAsync<Error, TypedPsObject<T>> RecreateOrReload<T>(
-            this TypedPsObject<T> vmInfo, IPowershellEngine engine)
-            where T : IVirtualMachineCoreInfo
-        {
-            return Prelude.Try(vmInfo.Recreate().Apply(
-                    r => Prelude.RightAsync<Error, TypedPsObject<T>>(r).ToEither()))
-                .MatchAsync(
-                    Fail: f => vmInfo.Reload(engine).ToEither(),
-                    Succ: s => s).ToAsync();
-        }
+    public static EitherAsync<Error, TypedPsObject<T>> RecreateOrReload<T>(
+        this TypedPsObject<T> vmInfo,
+        IPowershellEngine engine)
+        where T : IVirtualMachineCoreInfo =>
+        Try(vmInfo.Recreate()).ToEitherAsync() | vmInfo.Reload(engine);
 
-        public static EitherAsync<Error, TypedPsObject<T>> Reload<T>(this TypedPsObject<T> vmInfo,
-            IPowershellEngine engine)
-            where T : IVirtualMachineCoreInfo
-        {
-            return engine.GetObjectsAsync<T>(
-                    new PsCommandBuilder().AddCommand("Get-VM").AddParameter("Id", vmInfo.Value.Id))
-                .BindAsync(r => r.HeadOrNone()
-                    .ToEither(new PowershellFailure {Message = "Failed to refresh VM data"}))
-                .ToAsync().ToError()                
-                ;
-        }
-    }
+    public static EitherAsync<Error, TypedPsObject<T>> Reload<T>(
+        this TypedPsObject<T> vmInfo,
+        IPowershellEngine engine)
+        where T : IVirtualMachineCoreInfo =>
+        from _  in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-VM")
+            .AddParameter("Id", vmInfo.Value.Id)
+        from vmInfos in engine.GetObjectsAsync<T>(command)
+            .ToError()
+        from reloadedInfo in vmInfos.HeadOrNone()
+            .ToEitherAsync(Error.New($"Failed to reload data of VM {vmInfo.Value.Id}."))
+        select reloadedInfo;
 }

@@ -7,10 +7,13 @@ using System.Management.Automation.Runspaces;
 using System.Threading;
 using System.Threading.Tasks;
 using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.PowerShell;
 using Microsoft.PowerShell.Commands;
 using Microsoft.Win32;
+
+using static LanguageExt.Prelude;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
@@ -59,29 +62,43 @@ namespace Eryph.VmManagement
             }
         }
 
-        public Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder,
-            Action<int> reportProgress = null)
-        {
-            using var ps = CreateShell().GetAwaiter().GetResult();
-            var input = builder.Build(ps);
-            InitializeProgressReporting(ps, reportProgress);
-            return ps.GetObjects<T>(input, _log, this, ObjectMapping);
-        }
+        public EitherAsync<PowershellFailure, Option<TypedPsObject<T>>> GetObjectAsync<T>(
+            PsCommandBuilder builder) =>
+            from results in GetObjectsAsync<T>(builder)
+                .BindLeft(f => f.Category switch
+                {
+                    PowershellFailureCategory.ObjectNotFound =>
+                        RightAsync<PowershellFailure, Seq<TypedPsObject<T>>>(Empty),
+                    _ => LeftAsync<PowershellFailure, Seq<TypedPsObject<T>>>(f),
+                })
+            from _ in guard(results.Count <= 1,
+                new PowershellFailure($"Powershell returned multiple values when fetching {typeof(T).Name}."))
+            select results.HeadOrNone();
 
-        public async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(
+        public EitherAsync<PowershellFailure, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
+            PsCommandBuilder builder,
+            Func<int, Task> reportProgress = null) =>
+            GetInternalAsync<T>(builder, reportProgress).ToAsync();
+
+        private async Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetInternalAsync<T>(
             PsCommandBuilder builder,
             Func<int, Task> reportProgress = null)
         {
             using var ps = await CreateShell();
 
-
             var input = builder.Build(ps);
             InitializeAsyncProgressReporting(ps, reportProgress);
 
             var res = await ps.GetObjectsAsync<T>(input, _log, this, ObjectMapping).ConfigureAwait(false);
-            
+
             return res;
         }
+
+        public EitherAsync<PowershellFailure, Option<T>> GetObjectValueAsync<T>(
+            PsCommandBuilder builder) =>
+            GetObjectAsync<T>(builder)
+                .Map(result => result.Map(x => x.Value));
+
 
         public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
             PsCommandBuilder builder,
@@ -90,14 +107,6 @@ namespace Eryph.VmManagement
                 .Map(result => result.Map(seq => seq.Map(x => x.Value).Strict()))
                 .ToAsync();
 
-        public Either<PowershellFailure, Unit> Run(PsCommandBuilder builder, Action<int> reportProgress = null)
-        {
-            using var ps = CreateShell().GetAwaiter().GetResult();
-            var input = builder.Build(ps);
-                
-            InitializeProgressReporting(ps, reportProgress);
-            return ps.Run(input, _log);
-        }
 
         public async Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder,
             Func<int, Task> reportProgress = null)
@@ -191,7 +200,6 @@ namespace Eryph.VmManagement
             _createdObjects = _createdObjects.Add(new WeakReference<PSObject>(psObject));
         }
 
-
         private static readonly Lazy<bool> IsWindows2016 = new(
             () =>
             {
@@ -204,8 +212,5 @@ namespace Eryph.VmManagement
                     defaultValue: null);
                 return productName?.Contains("Server 2016", StringComparison.OrdinalIgnoreCase) ?? false;
             });
-
     }
-
-
 }

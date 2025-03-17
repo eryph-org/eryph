@@ -83,7 +83,7 @@ public class ConvergeDriveTests
                     Size = currentSize * 1024L * 1024 * 1024
                 }));
 
-            return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            return new PowershellFailure ($"unknown command: {commandString}");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
@@ -91,7 +91,7 @@ public class ConvergeDriveTests
             if (command.ToString().StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1<object>(true);
 
-            return new PowershellFailure { Message = $"unknown command: {command}" };
+            return new PowershellFailure ($"unknown command: {command}");
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);
@@ -278,7 +278,7 @@ public class ConvergeDriveTests
                 }));
             }
 
-            return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            return new PowershellFailure($"unknown command: {commandString}");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
@@ -286,7 +286,7 @@ public class ConvergeDriveTests
             if (command.ToString().Contains(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1<object>(true);
 
-            return new PowershellFailure { Message = $"unknown command: {command}" };
+            return new PowershellFailure(Message = $"unknown command: {command}");
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);
@@ -394,7 +394,7 @@ public class ConvergeDriveTests
                 }));
             }
 
-            return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            return new PowershellFailure ($"unknown command: {commandString}");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
@@ -402,7 +402,7 @@ public class ConvergeDriveTests
             if (command.ToString().StartsWith($"Test-VHD [{expectedParentPath}]"))
                 return Seq1<object>(true);
             
-            return new PowershellFailure { Message = $"unknown command: {command}" };
+            return new PowershellFailure(Message = $"unknown command: {command}");
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);
@@ -537,7 +537,7 @@ public class ConvergeDriveTests
                 }));
             }
 
-            return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            return new PowershellFailure ($"unknown command: {commandString}");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
@@ -545,7 +545,7 @@ public class ConvergeDriveTests
             if (command.ToString().StartsWith($"Test-VHD [{expectedParentPath}]"))
                 return Seq1<object>(true);
 
-            return new PowershellFailure { Message = $"unknown command: {command}" };
+            return new PowershellFailure(Message = $"unknown command: {command}");
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);
