@@ -93,7 +93,7 @@ namespace Eryph.VmManagement.Converging
             return engine.RunAsync(new PsCommandBuilder()
                 .AddCommand("Set-VM")
                 .AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("CheckpointType", checkpointType)).ToAsync().ToError();
+                .AddParameter("CheckpointType", checkpointType)).ToError();
         }
 
         private EitherAsync<Error, Unit> DetachUndefinedDrives(
@@ -156,8 +156,9 @@ namespace Eryph.VmManagement.Converging
 
                         return detach;
                     },
-                    i => Context.Engine.RunAsync(PsCommandBuilder.Create().AddCommand("Remove-VMHardDiskDrive")
-                        .AddParameter("VMHardDiskDrive", i.PsObject))).Map(x => x.Lefts().HeadOrNone())
+                    async i => await Context.Engine.RunAsync(PsCommandBuilder.Create().AddCommand("Remove-VMHardDiskDrive")
+                        .AddParameter("VMHardDiskDrive", i.PsObject)))
+                .Map(x => x.Lefts().HeadOrNone())
                         .MatchAsync(
                             l => Prelude.LeftAsync<PowershellFailure, Unit>(l).ToEither(),
                             () => Prelude.RightAsync<PowershellFailure, Unit>(Unit.Default)
@@ -189,7 +190,7 @@ namespace Eryph.VmManagement.Converging
 
                         return detach;
                     },
-                    i => Context.Engine.RunAsync(PsCommandBuilder.Create().AddCommand("Remove-VMDvdDrive")
+                    async i => await Context.Engine.RunAsync(PsCommandBuilder.Create().AddCommand("Remove-VMDvdDrive")
                         .AddParameter("VMDvdDrive", i.PsObject))).Map(x => x.Lefts().HeadOrNone())
                 .MatchAsync(
                     l => Prelude.LeftAsync<PowershellFailure, Unit>(l).ToEither(),
@@ -224,7 +225,7 @@ namespace Eryph.VmManagement.Converging
                     from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
                         .AddCommand("Set-VMDvdDrive")
                         .AddParameter("VMDvdDrive", dvdDrive.PsObject)
-                        .AddParameter("Path", dvdSettings.Path)).ToAsync().ToError()
+                        .AddParameter("Path", dvdSettings.Path)).ToError()
                     from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
                     select vmInfoRecreated;
 
@@ -294,14 +295,14 @@ namespace Eryph.VmManagement.Converging
                                 .AddCommand("Copy-Item")
                                 .AddArgument(parentFilePath)
                                 .AddArgument(copyToPath)
-                                .AddParameter("Force")).ToAsync().ToError()
+                                .AddParameter("Force")).ToError()
                             from ___ in ResetDiskIdentifier(copyToPath)
                             from ____ in driveSettings.Type == CatletDriveType.SharedVHD
                                 ? RightAsync<Error, Unit>(unit)
                                 : Context.Engine.RunAsync(PsCommandBuilder.Create()
                                     .AddCommand("Convert-VHD")
                                     .AddArgument(copyToPath)
-                                    .AddArgument(vhdPath)).ToError().ToAsync()
+                                    .AddArgument(vhdPath)).ToError()
                             select unit,
                         None: () =>
                             from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
@@ -309,7 +310,7 @@ namespace Eryph.VmManagement.Converging
                                 .AddParameter("Path", vhdPath)
                                 .AddParameter("Dynamic")
                                 .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate))
-                                .ToError().ToAsync()
+                                .ToError()
                             select unit),
                 _ => driveSettings.DiskSettings.ParentSettings.Match(
                     Some: parentSettings =>
@@ -321,7 +322,7 @@ namespace Eryph.VmManagement.Converging
                             .AddParameter("ParentPath", parentFilePath)
                             .AddParameter("Differencing")
                             .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)
-                        from __ in Context.Engine.RunAsync(newCommand).ToAsync().ToError()
+                        from __ in Context.Engine.RunAsync(newCommand).ToError()
                         from ___ in ResetDiskIdentifier(vhdPath)
                         select unit,
                     None: () =>
@@ -329,7 +330,7 @@ namespace Eryph.VmManagement.Converging
                             .AddCommand("New-VHD")
                             .AddParameter("Path", vhdPath)
                             .AddParameter("Dynamic")
-                            .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)).ToAsync().ToError()
+                            .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytesCreate)).ToError()
                         select unit)
             }
             select unit;
@@ -340,7 +341,7 @@ namespace Eryph.VmManagement.Converging
                     .AddParameter("Path", path)
                     .AddParameter("ResetDiskIdentifier")
                     .AddParameter("Force"))
-                .ToAsync().ToError()
+                .ToError()
             select unit;
 
         private EitherAsync<Error, Unit> UpdateVirtualDisk(
@@ -365,7 +366,7 @@ namespace Eryph.VmManagement.Converging
                           .AddCommand("Resize-VHD")
                           .AddParameter("Path", vhdPath)
                           .AddParameter("SizeBytes", driveSettings.DiskSettings.SizeBytes))
-                      .ToError().ToAsync()
+                      .ToError()
                   select unit
             select unit;
 

@@ -30,7 +30,7 @@ public static class VirtualMachineInfoExtensions
             .AddCommand("Stop-VM")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("TurnOff")
-        from _2 in engine.RunAsync(command).ToAsync()
+        from _2 in engine.RunAsync(command)
         select vmInfo;
 
     public static EitherAsync<PowershellFailure, Unit> Remove(
@@ -41,14 +41,17 @@ public static class VirtualMachineInfoExtensions
             .AddCommand("Remove-VM")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("Force")
-        from _2 in engine.RunAsync(command).ToAsync()
+        from _2 in engine.RunAsync(command)
         select unit;
 
     public static EitherAsync<Error, TypedPsObject<T>> RecreateOrReload<T>(
         this TypedPsObject<T> vmInfo,
         IPowershellEngine engine)
         where T : IVirtualMachineCoreInfo =>
-        Try(vmInfo.Recreate()).ToEitherAsync() | vmInfo.Reload(engine);
+        Try(vmInfo.Recreate).ToEither().Match(
+            Left: e => vmInfo.Reload(engine),
+            Right: RightAsync<Error, TypedPsObject<T>>);
+            
 
     public static EitherAsync<Error, TypedPsObject<T>> Reload<T>(
         this TypedPsObject<T> vmInfo,

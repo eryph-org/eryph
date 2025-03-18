@@ -5,7 +5,7 @@ public record PowershellFailure(
     PowershellFailureCategory Category)
 {
     public PowershellFailure(string message)
-        : this(message, PowershellFailureCategory.NotSpecified)
+        : this(message, PowershellFailureCategory.Other)
     {
     }
 }

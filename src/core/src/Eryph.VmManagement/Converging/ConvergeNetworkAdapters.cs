@@ -80,7 +80,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         let command = PsCommandBuilder.Create()
             .AddCommand("Remove-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from __ in Context.Engine.RunAsync(command).ToError()
         select unit;
 
     private EitherAsync<Error, Unit> AddOrUpdateAdapters(
@@ -145,7 +145,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddCommand("Set-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
             .AddParameter("StaticMacAddress", macAddress)
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from __ in Context.Engine.RunAsync(command).ToError()
         select unit;
 
     private EitherAsync<Error, Unit> ConnectAdapter(
@@ -157,7 +157,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddCommand("Connect-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
             .AddParameter("SwitchName", adapterConfig.SwitchName)
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from __ in Context.Engine.RunAsync(command).ToError()
         select unit;
 
     private sealed record PhysicalAdapterConfig(
