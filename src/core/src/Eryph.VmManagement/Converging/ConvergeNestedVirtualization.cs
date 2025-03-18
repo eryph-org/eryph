@@ -46,7 +46,7 @@ public class ConvergeNestedVirtualization(
             .AddCommand("Set-VMProcessor")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("ExposeVirtualizationExtensions", exposeVirtualizationExtensions)
-        from _3 in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from _3 in Context.Engine.RunAsync(command).ToError()
         select unit;
 
     private EitherAsync<Error, VMProcessorInfo> GetVmProcessorInfo(

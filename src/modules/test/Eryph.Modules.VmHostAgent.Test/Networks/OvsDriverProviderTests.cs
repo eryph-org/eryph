@@ -277,9 +277,9 @@ public class OvsDriverProviderTests
         };
 
         _powershellEngineMock.Setup(m => m.GetObjectValuesAsync<string?>(
-                It.Is<PsCommandBuilder>(b => isGetSignatureCommand(b)), null))
+                It.Is<PsCommandBuilder>(b => isGetSignatureCommand(b)), null, CancellationToken.None))
             .Returns(EitherAsync<PowershellFailure, Seq<string?>>.Right(
-                SeqOne(isTestSigned
+                Seq1<string?>(isTestSigned
                     ? "Some Test Publisher"
                     : "Microsoft Windows Hardware Compatibility Publisher")));
     }

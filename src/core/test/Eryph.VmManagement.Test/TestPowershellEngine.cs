@@ -28,22 +28,26 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
 
     public EitherAsync<PowershellFailure, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
         PsCommandBuilder builder,
-        Func<int, Task>? reportProgress = null)
+        Func<int, Task>? reportProgress = null,
+        CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
+        if (GetObjectCallback is null)
+            throw new InvalidOperationException("GetObjectCallback is not set");
+
         var result = GetObjectCallback(typeof(T), AssertCommand.Parse(commandInput));
-        Debug.Assert(result != null, nameof(result) + " != null");
         return result.ToAsync()
             .Map(seq => seq.Map(r => new TypedPsObject<T>(r.PsObject, this, ObjectMapping)));
     }
 
     public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
-        Func<int, Task>? reportProgress = null)
+        Func<int, Task>? reportProgress = null,
+        CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
 
-        if(GetValuesCallback == null)
+        if (GetValuesCallback is null)
             throw new InvalidOperationException("GetValuesCallback is not set");
 
         var result = GetValuesCallback.Invoke(typeof(T), 
@@ -52,29 +56,54 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         return result.Map(s => s.Map(v =>(T)v)).ToAsync();
     }
 
-    public Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder, Func<int, Task>? reportProgress = null)
+    public EitherAsync<PowershellFailure, Option<TypedPsObject<T>>> GetObjectAsync<T>(
+        PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null,
+        CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
-        var result = RunCallback?.Invoke(AssertCommand.Parse(commandInput));
+        if (GetObjectCallback is null)
+            throw new InvalidOperationException("GetObjectCallback is not set");
 
-        Debug.Assert(result != null, nameof(result) + " != null");
-        return Task.FromResult(result.Value);
-    }
+        var result = GetObjectCallback(typeof(T), AssertCommand.Parse(commandInput));
 
-    public ITypedPsObjectMapping ObjectMapping { get; }
-    public void AddPsObject(PSObject psObject)
-    {
-            
-    }
-
-    public EitherAsync<PowershellFailure, Option<TypedPsObject<T>>> GetObjectAsync<T>(PsCommandBuilder builder)
-    {
-        throw new NotImplementedException();
+        return result
+            .Map(seq => seq.Map(r => new TypedPsObject<T>(r.PsObject, this, ObjectMapping)))
+            .Map(s => s.HeadOrNone())
+            .ToAsync();
     }
 
     public EitherAsync<PowershellFailure, Option<T>> GetObjectValueAsync<T>(
-        PsCommandBuilder builder)
+        PsCommandBuilder builder,
+        CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var commandInput = builder.ToDictionary();
+
+        if (GetValuesCallback is null)
+            throw new InvalidOperationException("GetValuesCallback is not set");
+
+        var result = GetValuesCallback.Invoke(typeof(T),
+            AssertCommand.Parse(commandInput));
+
+        return result.Map(s => s.Map(v => (T)v))
+            .Map(s => s.HeadOrNone())
+            .ToAsync();
     }
+
+    public EitherAsync<PowershellFailure, Unit> RunAsync(
+        PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var commandInput = builder.ToDictionary();
+        if (RunCallback is null)
+            throw new InvalidOperationException("RunCallback is not set");
+        
+        var result = RunCallback.Invoke(AssertCommand.Parse(commandInput));
+        return result.ToAsync();
+    }
+
+    public ITypedPsObjectMapping ObjectMapping { get; }
+    
+    public void AddPsObject(PSObject psObject) { }
 }

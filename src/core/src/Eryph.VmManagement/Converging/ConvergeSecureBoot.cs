@@ -55,7 +55,7 @@ public class ConvergeSecureBoot(
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("EnableSecureBoot", enableSecureBoot ? OnOffState.On : OnOffState.Off)
             .AddParameter("SecureBootTemplate", secureBootTemplate)
-        from _3 in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from _3 in Context.Engine.RunAsync(command).ToError()
         select unit;
 
     private EitherAsync<Error, VMFirmwareInfo> GetFirmwareInfo(

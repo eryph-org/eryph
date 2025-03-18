@@ -159,13 +159,15 @@ namespace Eryph.VmManagement.Converging
         {
             async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Eject()
             {
-                var res = await ConvergeHelpers.FindAndApply(vmInfo, l => l.DVDDrives,
+                var res = await ConvergeHelpers.FindAndApply(
+                        vmInfo,
+                        l => l.DVDDrives,
                         device =>
                         {
                             var drive = device.Cast<DvdDriveInfo>();
                             return drive.Value.ControllerLocation == 63 && drive.Value.ControllerNumber == 0;
                         },
-                        drive => Context.Engine.RunAsync(PsCommandBuilder.Create()
+                        async drive => await Context.Engine.RunAsync(PsCommandBuilder.Create()
                             .AddCommand("Set-VMDvdDrive")
                             .AddParameter("VMDvdDrive", drive.PsObject)
                             .AddParameter("Path", null)))
@@ -223,7 +225,7 @@ namespace Eryph.VmManagement.Converging
                 from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
                     .AddCommand("Set-VMDvdDrive")
                     .AddParameter("VMDvdDrive", dvdDrive.PsObject)
-                    .AddParameter("Path", configDriveIsoPath)).ToAsync().ToError()
+                    .AddParameter("Path", configDriveIsoPath)).ToError()
                 from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
                 select vmInfoRecreated).ToEither();
         }

@@ -146,7 +146,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
             .Map(adapter => PsCommandBuilder.Create()
                 .AddCommand("Disconnect-VMNetworkAdapter")
                 .AddParameter("VMNetworkAdapter", adapter.PsObject))
-            .Map(cmd => psEngine.RunAsync(cmd).ToAsync().ToAff())
+            .Map(cmd => psEngine.RunAsync(cmd).ToAff())
             .SequenceParallel()
         select unit;
 
@@ -159,7 +159,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                 .AddCommand("Connect-VMNetworkAdapter")
                 .AddParameter("VMNetworkAdapter", adapter.PsObject)
                 .AddParameter("SwitchName", switchName))
-            .Map(cmd => psEngine.RunAsync(cmd).ToAsync().ToAff())
+            .Map(cmd => psEngine.RunAsync(cmd).ToAff())
             .SequenceParallel()
         select unit;
 
@@ -174,7 +174,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
                 .AddParameter("Id", adapter.Value.SwitchId)
                 .AddCommand("Connect-VMNetworkAdapter")
                 .AddParameter("VMNetworkAdapter", adapter.PsObject))
-            .Map(cmd => psEngine.RunAsync(cmd).ToAsync().ToAff())
+            .Map(cmd => psEngine.RunAsync(cmd).ToAff())
             .SequenceParallel()
         select unit;
 

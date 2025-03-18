@@ -76,7 +76,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         let command = PsCommandBuilder.Create()
             .AddCommand("Enable-VMTPM")
             .AddParameter("VM", vmInfo.PsObject)
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from __ in Context.Engine.RunAsync(command).ToError()
         select unit;
 
     private EitherAsync<Error, Unit> EnsureKeyProtector(
@@ -119,7 +119,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             .AddCommand("Set-VMKeyProtector")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("KeyProtector", protector.Value.RawData)
-        from _ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from _ in Context.Engine.RunAsync(command).ToError()
         select unit;
 
     private EitherAsync<Error, TypedPsObject<CimHgsGuardian>> EnsureHgsGuardian() =>
@@ -151,7 +151,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         let command = PsCommandBuilder.Create()
             .AddCommand("Disable-VMTPM")
             .AddParameter("VM", vmInfo.PsObject)
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from __ in Context.Engine.RunAsync(command).ToError()
         select unit;
     
     private static bool IsEnabled(CatletCapabilityConfig capabilityConfig) =>

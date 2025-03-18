@@ -64,7 +64,7 @@ namespace Eryph.VmManagement
         public Either<PowershellFailure, TypedPsObject<TNew>> CastSafe<TNew>()
         {
             return Prelude.Try(() => new TypedPsObject<TNew>(PsObject, _registry, _mapping))
-                .ToEither(l => new PowershellFailure(l.Message, PowershellFailureCategory.NotSpecified));
+                .ToEither(l => new PowershellFailure(l.Message, PowershellFailureCategory.Other));
 
         }
 
