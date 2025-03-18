@@ -23,8 +23,7 @@ internal abstract class VirtualMachineStateTransitionHandler<T>(
         TypedPsObject<VirtualMachineInfo> vmInfo,
         T command) =>
         _engine.RunAsync(CreateTransitionCommand(vmInfo))
-            .ToError()
-            .ToAsync();
+            .ToError();
 
     protected abstract PsCommandBuilder CreateTransitionCommand(
         TypedPsObject<VirtualMachineInfo> vmInfo);

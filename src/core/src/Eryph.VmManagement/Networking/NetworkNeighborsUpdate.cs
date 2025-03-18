@@ -44,7 +44,7 @@ public static class NetworkNeighborsUpdate
                     .AddCommand("Remove-NetNeighbor")
                     .AddParameter("InputObject", n.Map(v => v.PsObject).ToArray())
                     .AddParameter("Confirm", false))
-                .ToError().ToAsync())
+                .ToError())
         select unit;
 
     private static Fin<bool> IsOutdated(

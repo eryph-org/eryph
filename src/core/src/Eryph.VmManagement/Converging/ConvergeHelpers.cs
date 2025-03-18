@@ -34,7 +34,8 @@ namespace Eryph.VmManagement.Converging
             return res;
         }
 
-        public static Task<IEnumerable<TRes>> FindAndApply<T, TSub, TRes>(TypedPsObject<T> parentInfo,
+        public static Task<IEnumerable<TRes>> FindAndApply<T, TSub, TRes>(
+            TypedPsObject<T> parentInfo,
             Expression<Func<T, IList<TSub>>> listProperty,
             Func<TypedPsObject<TSub>, bool> predicateFunc,
             Func<TypedPsObject<TSub>, Task<TRes>> applyFunc)

@@ -109,9 +109,8 @@ namespace Eryph.Modules.VmHostAgent
                 var newNotes = $"eryph metadata id: {metadataId}";
 
                 return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("Notes", newNotes))
-                    .ToError()
-                    .ToAsync();
+                        .AddParameter("Notes", newNotes))
+                    .ToError();
             }
 
             if (!Guid.TryParse(metadataIdString, out var exitingMetadataId))
@@ -149,7 +148,7 @@ namespace Eryph.Modules.VmHostAgent
 
 
             return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("Notes", newNotes)).ToAsync().ToError();
+                .AddParameter("Notes", newNotes)).ToError();
         }
 
 
