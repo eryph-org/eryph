@@ -50,8 +50,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         if (GetValuesCallback is null)
             throw new InvalidOperationException("GetValuesCallback is not set");
 
-        var result = GetValuesCallback.Invoke(typeof(T), 
-            AssertCommand.Parse(commandInput));
+        var result = GetValuesCallback(typeof(T), AssertCommand.Parse(commandInput));
 
         return result.Map(s => s.Map(v =>(T)v)).ToAsync();
     }
@@ -75,6 +74,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
 
     public EitherAsync<PowershellFailure, Option<T>> GetObjectValueAsync<T>(
         PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null,
         CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
@@ -82,8 +82,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         if (GetValuesCallback is null)
             throw new InvalidOperationException("GetValuesCallback is not set");
 
-        var result = GetValuesCallback.Invoke(typeof(T),
-            AssertCommand.Parse(commandInput));
+        var result = GetValuesCallback(typeof(T), AssertCommand.Parse(commandInput));
 
         return result.Map(s => s.Map(v => (T)v))
             .Map(s => s.HeadOrNone())
@@ -99,7 +98,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         if (RunCallback is null)
             throw new InvalidOperationException("RunCallback is not set");
         
-        var result = RunCallback.Invoke(AssertCommand.Parse(commandInput));
+        var result = RunCallback(AssertCommand.Parse(commandInput));
         return result.ToAsync();
     }
 

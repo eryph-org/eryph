@@ -19,12 +19,13 @@ public interface IPowershellEngine
 
     EitherAsync<PowershellFailure, Option<T>> GetObjectValueAsync<T>(
         PsCommandBuilder builder,
+        Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default);
 
     EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null
-        , CancellationToken cancellationToken = default);
+        Func<int, Task> reportProgress = null,
+        CancellationToken cancellationToken = default);
 
     EitherAsync<PowershellFailure, Unit> RunAsync(
         PsCommandBuilder builder,
