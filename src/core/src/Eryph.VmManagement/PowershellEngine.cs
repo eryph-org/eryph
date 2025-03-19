@@ -4,19 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using LanguageExt;
-using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.PowerShell;
 using Microsoft.PowerShell.Commands;
-using Microsoft.Win32;
 
 using static LanguageExt.Prelude;
-
-// ReSharper disable ArgumentsStyleAnonymousFunction
 
 namespace Eryph.VmManagement;
 
@@ -24,9 +22,10 @@ public sealed class PowershellEngine(
     ILogger logger)
     : IPowershellEngine, IDisposable, IPsObjectRegistry
 {
-    private RunspacePool _runspace;
-    private SemaphoreSlim _semaphore = new(1);
-    private IList<WeakReference<PSObject>> _createdObjects = new List<WeakReference<PSObject>>();
+    private RunspacePool _runspacePool;
+    private readonly SemaphoreSlim _semaphore = new(1);
+    // TODO Is WeakReference correct here? The whole idea is to hold the PSObjects and call dispose on their BaseObjects
+    private readonly IList<PSObject> _createdObjects = new List<PSObject>();
 
     public ITypedPsObjectMapping ObjectMapping { get; } = new TypedPsObjectMapping(logger);
 
@@ -34,13 +33,7 @@ public sealed class PowershellEngine(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
-        from results in GetObjectsAsync<T>(builder)
-            .BindLeft(f => f.Category switch
-            {
-                PowershellFailureCategory.ObjectNotFound =>
-                    RightAsync<PowershellFailure, Seq<TypedPsObject<T>>>(Empty),
-                _ => LeftAsync<PowershellFailure, Seq<TypedPsObject<T>>>(f),
-            })
+        from results in GetObjectsAsync<T>(builder, reportProgress, cancellationToken)
         from _ in guard(results.Count <= 1,
             new PowershellFailure($"Powershell returned multiple values when fetching {typeof(T).Name}."))
         select results.HeadOrNone();
@@ -49,24 +42,33 @@ public sealed class PowershellEngine(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
-        TryAsync(async () =>
-        {
-            var output = await Execute(builder, reportProgress, cancellationToken);
-            return output.Map(x => new TypedPsObject<T>(x, this, ObjectMapping))
-                .ToSeq().Strict();
-        }).ToEither().MapLeft(e => ToFailure(e));
+        from results in TryAsync(async () =>
+            {
+                var output = await ExecuteAsync(builder, reportProgress, cancellationToken);
+                return output.Map(x => new TypedPsObject<T>(x, this, ObjectMapping)).ToSeq().Strict();
+            })
+            .ToEither()
+            .MapLeft(e => ToFailure(e))
+            .BindLeft(f => f.Category switch
+            {
+                PowershellFailureCategory.ObjectNotFound =>
+                    RightAsync<PowershellFailure, Seq<TypedPsObject<T>>>(Empty),
+                _ => LeftAsync<PowershellFailure, Seq<TypedPsObject<T>>>(f),
+            })
+        select results;
 
     public EitherAsync<PowershellFailure, Option<T>> GetObjectValueAsync<T>(
         PsCommandBuilder builder,
+        Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
-        GetObjectAsync<T>(builder).Map(result => result.Map(x => x.Value));
-
+        GetObjectAsync<T>(builder, reportProgress, cancellationToken)
+            .Map(result => result.Map(x => x.Value));
 
     public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
-        GetObjectsAsync<T>(builder, reportProgress)
+        GetObjectsAsync<T>(builder, reportProgress, cancellationToken)
             .Map(result => result.Map(seq => seq.Map(x => x.Value).Strict()))
                 .ToAsync();
 
@@ -77,7 +79,7 @@ public sealed class PowershellEngine(
         CancellationToken cancellationToken = default) =>
         TryAsync(async () =>
         {
-            var outputs = await Execute(builder, reportProgress, cancellationToken);
+            var outputs = await ExecuteAsync(builder, reportProgress, cancellationToken);
             foreach (var output in outputs)
             {
                 output.DisposeObject();
@@ -88,22 +90,17 @@ public sealed class PowershellEngine(
 
     public void AddPsObject(PSObject psObject)
     {
-        _createdObjects.Add(new WeakReference<PSObject>(psObject));
+        _createdObjects.Add(psObject);
     }
 
-    private static bool IsWindows2016 =>
-        // The build number of Windows Server 2016 (and the corresponding Windows 10 release) is 14393
-        Environment.OSVersion.Version.Build <= 14393;
-
-
-    private async Task<IList<PSObject>> Execute(
+    private async Task<IList<PSObject>> ExecuteAsync(
         PsCommandBuilder builder,
         [CanBeNull] Func<int, Task> reportProgress,
         CancellationToken cancellationToken)
     {
         using var powerShell = await CreatePowerShell();
-        InitializeAsyncProgressReporting(powerShell, reportProgress);
-
+        using var _ = InitializeProgressReporting(powerShell, reportProgress);
+        
         var inputs = builder.Build(powerShell);
         using var inputData = new PSDataCollection<PSObject>(
             inputs.Map(input => input is PSObject pso ? pso : new PSObject(input)));
@@ -113,20 +110,38 @@ public sealed class PowershellEngine(
             ErrorActionPreference = ActionPreference.Stop,
         };
 
-        var task = powerShell.InvokeAsync(inputData, invocationSettings, null, null);
-        
-        await task.WaitAsync(cancellationToken);
-        if (cancellationToken.IsCancellationRequested)
+        IList<PSObject> outputs;
+        IList<ErrorRecord> errors;
+        try
         {
-            await powerShell.StopAsync(null, null);
+            var task = powerShell.InvokeAsync(inputData, invocationSettings, null, null);
+
+            await task.WaitAsync(cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                await powerShell.StopAsync(null, null);
+            }
+
+            // The 'await task' will throw a PipelineStoppedException when the pipeline
+            // has been stopped with StopAsync.
+            using var outputData = await task;
+            
+            outputs = outputData.ToList();
+            errors = powerShell.Streams.Error.ToList();
+        }
+        catch (RuntimeException ex) when (ex is not PipelineStoppedException)
+        {
+            logger.LogInformation(ex, "Powershell command '{Command}' failed: {Error}.",
+                ex.ErrorRecord.InvocationInfo?.MyCommand, ex.ErrorRecord.ToString());
+            throw;
+        }
+        catch (Exception ex) when (ex is not PipelineStoppedException)
+        {
+            logger.LogInformation(ex, "Powershell failed with exception.");
+            throw;
         }
 
-
-        using var outputData = await task;
-        var outputs = outputData.ToList();
-
-        var errors = powerShell.Streams.Error.ToList();
-        foreach(var error in errors)
+        foreach (var error in errors)
         {
             logger.LogInformation(error.Exception, "Powershell command '{Command}' failed: {Error}.",
                 error.InvocationInfo?.MyCommand, error.ToString());
@@ -135,8 +150,6 @@ public sealed class PowershellEngine(
         var bestError = errors.FirstOrDefault(e => e.CategoryInfo.Category != ErrorCategory.ObjectNotFound)
             ?? errors.FirstOrDefault(e => string.IsNullOrEmpty(e.CategoryInfo.Activity))
             ?? errors.FirstOrDefault();
-
-        powerShell.Streams.ClearStreams();
 
         if (bestError is null)
             return outputs;
@@ -155,14 +168,14 @@ public sealed class PowershellEngine(
         ps.RunspacePool = runspacePool;
         return ps;
     }
-
+    
     private async Task<RunspacePool> GetRunspacePool()
     {
         await _semaphore.WaitAsync();
         try
         {
-            if (_runspace is not null)
-                return _runspace;
+            if (_runspacePool is not null)
+                return _runspacePool;
 
             var iss = InitialSessionState.CreateDefault();
             iss.ExecutionPolicy = ExecutionPolicy.RemoteSigned;
@@ -184,10 +197,10 @@ public sealed class PowershellEngine(
                 })
             ]);
 
-            _runspace = RunspaceFactory.CreateRunspacePool(iss);
-            await Task.Factory.FromAsync(_runspace.BeginOpen, _runspace.EndOpen, null);
+            _runspacePool = RunspaceFactory.CreateRunspacePool(iss);
+            await Task.Factory.FromAsync(_runspacePool.BeginOpen, _runspacePool.EndOpen, null);
 
-            return _runspace;
+            return _runspacePool;
         }
         finally
         {
@@ -195,21 +208,31 @@ public sealed class PowershellEngine(
         }
     }
 
-    private static void InitializeAsyncProgressReporting(PowerShell ps, Func<int, Task> reportProgress)
-    {
-        if (reportProgress is null)
-            return;
-        // TODO use reactive extensions
-        ps.Streams.Progress.DataAdded += async (sender, eventargs) =>
-        {
-            var progressRecords = (PSDataCollection<ProgressRecord>)sender;
-            var percent = progressRecords[eventargs.Index].PercentComplete;
-            if (percent == 0 || percent == 100)
-                return;
+    private static bool IsWindows2016 =>
+        // The build number of Windows Server 2016 (and the corresponding Windows 10 release) is 14393
+        Environment.OSVersion.Version.Build <= 14393;
 
-            await reportProgress(percent).ConfigureAwait(false);
+    private IDisposable InitializeProgressReporting(
+        PowerShell ps,
+        [CanBeNull] Func<int, Task> reportProgress) =>
+        reportProgress switch
+        {
+            not null => Observable
+                .FromEventPattern<EventHandler<DataAddingEventArgs>, DataAddingEventArgs>(
+                    h => ps.Streams.Progress.DataAdding += h, h => ps.Streams.Progress.DataAdding -= h)
+                .SelectMany(e => Observable.FromAsync(async () =>
+                {
+                    var progress = (ProgressRecord)e.EventArgs.ItemAdded;
+                    if (progress is not { ParentActivityId: < 0, PercentComplete: > 0 and < 100 })
+                        return;
+
+                    await reportProgress!(progress.PercentComplete).ConfigureAwait(false);
+                }))
+                .Subscribe(
+                    onNext: _ => {},
+                    onError: ex => logger.LogError(ex, "Failed to process Powershell progress record.")),
+            _ => Disposable.Empty,
         };
-    }
 
     /// <summary>
     /// Converts a <see cref="Exception"/> to a <see cref="PowershellFailure"/>.
@@ -248,34 +271,13 @@ public sealed class PowershellEngine(
 
     public void Dispose()
     {
-        _semaphore?.Dispose();
-        _semaphore = null;
-
-        if ((_runspace?.IsDisposed).GetValueOrDefault(true))
-            return;
-
-        try
+        _semaphore.Dispose();
+        _runspacePool.Dispose();
+        foreach (var psObject in _createdObjects)
         {
-            _runspace?.Close();
-            _runspace?.Dispose();
-            _runspace = null;
-
-            foreach (var reference in _createdObjects)
-            {
-                if (!reference.TryGetTarget(out var psObject))
-                    continue;
-
-                psObject.DisposeObject();
-            }
-
-            _createdObjects = null;
-        }
-        catch
-        {
-            // ignored
+            psObject.DisposeObject();
         }
     }
-
 
     /// <summary>
     /// This exception shortly holds an <see cref="ErrorRecord"/> and allows

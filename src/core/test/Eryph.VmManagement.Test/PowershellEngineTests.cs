@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Eryph.VmManagement.Data.Full;
-using FluentAssertions;
+﻿using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -13,6 +7,7 @@ namespace Eryph.VmManagement.Test;
 
 public sealed class PowershellEngineTests : IDisposable
 {
+    // TODO add tests for all methods
     private readonly PowershellEngine _engine = new PowershellEngine(NullLogger.Instance);
 
     [Fact]
@@ -109,6 +104,27 @@ public sealed class PowershellEngineTests : IDisposable
         
         start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
         result.Should().BeLeft();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithProgress_ReportsProgress()
+    {
+        var command = PsCommandBuilder.Create()
+            .Script("""
+                    Write-Progress -Activity Testing -PercentComplete 25
+                    Write-Progress -Activity Testing -PercentComplete 50
+                    Write-Progress -Activity Testing -PercentComplete 75
+                    """);
+
+        var progress = new List<int>();
+
+        var result = await _engine.RunAsync(
+            command,
+            p => { progress.Add(p); return Task.CompletedTask; },
+            CancellationToken.None);
+
+        result.Should().BeRight();
+        progress.Should().Equal(25, 50, 75);
     }
 
     public void Dispose()
