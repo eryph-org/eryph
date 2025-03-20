@@ -24,7 +24,6 @@ public sealed class PowershellEngine(
 {
     private RunspacePool _runspacePool;
     private readonly SemaphoreSlim _semaphore = new(1);
-    // TODO Is WeakReference correct here? The whole idea is to hold the PSObjects and call dispose on their BaseObjects
     private readonly IList<PSObject> _createdObjects = new List<PSObject>();
 
     public ITypedPsObjectMapping ObjectMapping { get; } = new TypedPsObjectMapping(logger);
@@ -116,7 +115,8 @@ public sealed class PowershellEngine(
         {
             var task = powerShell.InvokeAsync(inputData, invocationSettings, null, null);
 
-            await task.WaitAsync(cancellationToken);
+            await ((Task)task.WaitAsync(cancellationToken))
+                .ConfigureAwait(options: ConfigureAwaitOptions.SuppressThrowing);
             if (cancellationToken.IsCancellationRequested)
             {
                 await powerShell.StopAsync(null, null);
