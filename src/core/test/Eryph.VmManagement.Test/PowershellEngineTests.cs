@@ -5,15 +5,111 @@ using Xunit;
 
 namespace Eryph.VmManagement.Test;
 
+/// <summary>
+/// These tests verify the behavior of the <see cref="PowershellEngine"/>.
+/// Hence, the Powershell commands are actually executed. To avoid side effects,
+/// the tests access environment variables which are created specifically for
+/// these tests.
+/// </summary>
 public sealed class PowershellEngineTests : IDisposable
 {
-    // TODO add tests for all methods
     private readonly PowershellEngine _engine = new(NullLogger.Instance);
 
     public PowershellEngineTests()
     {
         Environment.SetEnvironmentVariable("ERYPH_UNITTEST_A", "a");
         Environment.SetEnvironmentVariable("ERYPH_UNITTEST_B", "b");
+    }
+
+    [Fact]
+    public async Task GetObjectAsync_ItemsExist_ReturnsValues()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A");
+
+        var result = await _engine.GetObjectAsync<EnvVar>(command);
+        var entry = result.Should().BeRight().Which.Should().BeSome().Subject;
+        entry.Value.Key.Should().Be("ERYPH_UNITTEST_A");
+        entry.Value.Value.Should().Be("a");
+    }
+
+    [Fact]
+    public async Task GetObjectAsync_ItemDoesNotExist_ReturnsEmpty()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_MISSING");
+
+        var result = await _engine.GetObjectAsync<EnvVar>(command);
+        result.Should().BeRight().Which.Should().BeNone();
+    }
+
+    [Fact]
+    public async Task GetObjectAsync_ItemDoesNotExistAndMissingCommand_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
+            .AddCommand("Test-Missing");
+
+        var result = await _engine.GetObjectAsync<EnvVar>(command);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Contain("Test-Missing");
+        failure.Category.Should().Be(PowershellFailureCategory.Other);
+    }
+
+    [Fact]
+    public async Task GetObjectAsync_ItemDoesNotExistAndScriptError_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
+            .Script("throw test-error");
+
+        var result = await _engine.GetObjectAsync<EnvVar>(command);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Contain("test-error");
+        failure.Category.Should().Be(PowershellFailureCategory.Other);
+    }
+
+    [Fact]
+    public async Task GetObjectAsync_IsCancelled_AbortsEarly()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Start-Sleep")
+            .AddParameter("Second", 50);
+
+        var start = DateTimeOffset.UtcNow;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        var result = await _engine.GetObjectAsync<EnvVar>(command, null, cts.Token);
+
+        start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Be("The Powershell pipeline has been cancelled.");
+        failure.Category.Should().Be(PowershellFailureCategory.PipelineStopped);
+    }
+
+    [Fact]
+    public async Task GetObjectAsync_WithProgress_ReportsProgress()
+    {
+        var command = PsCommandBuilder.Create()
+            .Script("""
+                    Write-Progress -Activity Testing -PercentComplete 25
+                    Write-Progress -Activity Testing -PercentComplete 50
+                    Write-Progress -Activity Testing -PercentComplete 75
+                    Get-Item -Path Env:\ERYPH_UNITTEST_A
+                    """);
+
+        var progress = new List<int>();
+
+        var result = await _engine.GetObjectAsync<EnvVar>(
+            command,
+            p => { progress.Add(p); return Task.CompletedTask; },
+            CancellationToken.None);
+
+        result.Should().BeRight().Which.Should().BeSome();
+        progress.Should().Equal(25, 50, 75);
     }
 
     [Fact]
@@ -53,6 +149,22 @@ public sealed class PowershellEngineTests : IDisposable
     }
 
     [Fact]
+    public async Task GetObjectsAsync_ItemDoesNotExistAndMissingCommand_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_*")
+            .AddCommand("Sort-Object")
+            .AddParameter("Property", "Name")
+            .AddCommand("Test-Missing");
+
+        var result = await _engine.GetObjectsAsync<EnvVar>(command);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Contain("Test-Missing");
+        failure.Category.Should().Be(PowershellFailureCategory.Other);
+    }
+
+    [Fact]
     public async Task GetObjectsAsync_ItemDoesNotExistAndScriptError_ReturnsError()
     {
         var command = PsCommandBuilder.Create()
@@ -76,10 +188,10 @@ public sealed class PowershellEngineTests : IDisposable
             .AddParameter("Second", 50);
 
         var start = DateTimeOffset.UtcNow;
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var result = await _engine.GetObjectsAsync<EnvVar>(command, null, cts.Token);
 
-        start.Should().BeWithin(TimeSpan.FromSeconds(6)).Before(DateTimeOffset.Now);
+        start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
         var failure = result.Should().BeLeft().Subject;
         failure.Message.Should().Be("The Powershell pipeline has been cancelled.");
         failure.Category.Should().Be(PowershellFailureCategory.PipelineStopped);
@@ -107,59 +219,252 @@ public sealed class PowershellEngineTests : IDisposable
         progress.Should().Equal(25, 50, 75);
     }
 
-
     [Fact]
-    public async Task GetObjectValue_ValueExists_ReturnsValue()
+    public async Task GetObjectValueAsync_ItemsExist_ReturnsValues()
     {
         var command = PsCommandBuilder.Create()
             .AddCommand("Get-Item")
-            .AddParameter("Path", @"Env:\OS")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
             .AddCommand("Select-Object")
             .AddParameter("ExpandProperty", "Value");
 
         var result = await _engine.GetObjectValueAsync<string>(command);
-        result.Should().BeRight()
-            .Which.Should().BeSome()
-            .Which.Should().Be("Windows_NT");
+        var entry = result.Should().BeRight().Which.Should().BeSome()
+            .Which.Should().Be("a");
     }
 
     [Fact]
-    public async Task GetObjectValue_NotFound_ReturnsNone()
+    public async Task GetObjectValueAsync_ItemDoesNotExist_ReturnsEmpty()
     {
         var command = PsCommandBuilder.Create()
             .AddCommand("Get-Item")
-            .AddParameter("Path", $@"Env:\test-{Guid.NewGuid()}")
-            //.AddParameter("ErrorAction", "Stop")
-            .AddCommand("Select-Object")
-            .AddParameter("ExpandProperty", "Value");
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_MISSING");
 
         var result = await _engine.GetObjectValueAsync<string>(command);
         result.Should().BeRight().Which.Should().BeNone();
     }
 
     [Fact]
-    public async Task GetObjectValue_NotFoundAndMissingCommand_ReturnsError()
+    public async Task GetObjectValueAsync_ItemDoesNotExistAndMissingCommand_ReturnsError()
     {
         var command = PsCommandBuilder.Create()
             .AddCommand("Get-Item")
-            .AddParameter("Path", $@"Env:\test-{Guid.NewGuid()}")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
             .AddCommand("Test-Missing");
 
         var result = await _engine.GetObjectValueAsync<string>(command);
-        result.Should().BeLeft();
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Contain("Test-Missing");
+        failure.Category.Should().Be(PowershellFailureCategory.Other);
     }
 
     [Fact]
-    public async Task GetObjectValue_NotFoundAndScriptError_ReturnsError()
+    public async Task GetObjectValueAsync_ItemDoesNotExistAndScriptError_ReturnsError()
     {
         var command = PsCommandBuilder.Create()
             .AddCommand("Get-Item")
-            .AddParameter("Path", $@"Env:\test-{Guid.NewGuid()}")
-            .AddParameter("ErrorAction", "Continue")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
             .Script("throw test-error");
 
         var result = await _engine.GetObjectValueAsync<string>(command);
-        result.Should().BeLeft();
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Contain("test-error");
+        failure.Category.Should().Be(PowershellFailureCategory.Other);
+    }
+
+    [Fact]
+    public async Task GetObjectValueAsync_IsCancelled_AbortsEarly()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Start-Sleep")
+            .AddParameter("Second", 50);
+
+        var start = DateTimeOffset.UtcNow;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        var result = await _engine.GetObjectValueAsync<EnvVar>(command, null, cts.Token);
+
+        start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Be("The Powershell pipeline has been cancelled.");
+        failure.Category.Should().Be(PowershellFailureCategory.PipelineStopped);
+    }
+
+    [Fact]
+    public async Task GetObjectValueAsync_WithProgress_ReportsProgress()
+    {
+        var command = PsCommandBuilder.Create()
+            .Script("""
+                    Write-Progress -Activity Testing -PercentComplete 25
+                    Write-Progress -Activity Testing -PercentComplete 50
+                    Write-Progress -Activity Testing -PercentComplete 75
+                    Get-Item -Path Env:\ERYPH_UNITTEST_A
+                    """);
+
+        var progress = new List<int>();
+
+        var result = await _engine.GetObjectValueAsync<string>(
+            command,
+            p => { progress.Add(p); return Task.CompletedTask; },
+            CancellationToken.None);
+
+        result.Should().BeRight().Which.Should().BeSome();
+        progress.Should().Equal(25, 50, 75);
+    }
+
+    [Fact]
+    public async Task GetObjectValuesAsync_ItemsExist_ReturnsValues()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_*")
+            .AddCommand("Sort-Object")
+            .AddParameter("Property", "Name")
+            .AddCommand("Select-Object")
+            .AddParameter("ExpandProperty", "Value");
+
+        var result = await _engine.GetObjectValuesAsync<string>(command);
+        result.Should().BeRight().Which.Should().Equal("a", "b");
+    }
+
+    [Fact]
+    public async Task GetObjectValuesAsync_ItemDoesNotExist_ReturnsEmpty()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_MISSING")
+            .AddCommand("Sort-Object")
+            .AddParameter("Property", "Name")
+            .AddCommand("Select-Object")
+            .AddParameter("ExpandProperty", "Value");
+
+        var result = await _engine.GetObjectValuesAsync<string>(command);
+        result.Should().BeRight().Which.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetObjectValuesAsync_ItemDoesNotExistAndMissingCommand_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_*")
+            .AddCommand("Sort-Object")
+            .AddParameter("Property", "Name")
+            .AddCommand("Select-Object")
+            .AddParameter("ExpandProperty", "Value")
+            .AddCommand("Test-Missing");
+
+        var result = await _engine.GetObjectValuesAsync<string>(command);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Contain("Test-Missing");
+        failure.Category.Should().Be(PowershellFailureCategory.Other);
+    }
+
+    [Fact]
+    public async Task GetObjectValuesAsync_ItemDoesNotExistAndScriptError_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_*")
+            .AddCommand("Sort-Object")
+            .AddParameter("Property", "Name")
+            .AddCommand("Select-Object")
+            .AddParameter("ExpandProperty", "Value")
+            .Script("throw test-error");
+
+        var result = await _engine.GetObjectValuesAsync<string>(command);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Contain("test-error");
+        failure.Category.Should().Be(PowershellFailureCategory.Other);
+    }
+
+    [Fact]
+    public async Task GetObjectValuesAsync_IsCancelled_AbortsEarly()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Start-Sleep")
+            .AddParameter("Second", 50);
+
+        var start = DateTimeOffset.UtcNow;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        var result = await _engine.GetObjectValuesAsync<string>(command, null, cts.Token);
+
+        start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Be("The Powershell pipeline has been cancelled.");
+        failure.Category.Should().Be(PowershellFailureCategory.PipelineStopped);
+    }
+
+    [Fact]
+    public async Task GetObjectValuesAsync_WithProgress_ReportsProgress()
+    {
+        var command = PsCommandBuilder.Create()
+            .Script("""
+                    Write-Progress -Activity Testing -PercentComplete 25
+                    Write-Progress -Activity Testing -PercentComplete 50
+                    Write-Progress -Activity Testing -PercentComplete 75
+                    Get-Item -Path Env:\ERYPH_UNITTEST_* | Sort-Object | Select-Object -ExpandProperty Value
+                    """);
+
+        var progress = new List<int>();
+
+        var result = await _engine.GetObjectValuesAsync<string>(
+            command,
+            p => { progress.Add(p); return Task.CompletedTask; },
+            CancellationToken.None);
+
+        result.Should().BeRight().Which.Should().Equal("a", "b");
+        progress.Should().Equal(25, 50, 75);
+    }
+
+    [Fact]
+    public async Task RunAsync_ItemsExist_ReturnsUnit()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A");
+
+        var result = await _engine.RunAsync(command);
+        result.Should().BeRight();
+    }
+
+    [Fact]
+    public async Task RunAsync_ItemDoesNotExist_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_MISSING");
+
+        var result = await _engine.RunAsync(command);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Category.Should().Be(PowershellFailureCategory.ObjectNotFound);
+    }
+
+    [Fact]
+    public async Task RunAsync_ItemDoesNotExistAndMissingCommand_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
+            .AddCommand("Test-Missing");
+
+        var result = await _engine.RunAsync(command);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Contain("Test-Missing");
+        failure.Category.Should().Be(PowershellFailureCategory.Other);
+    }
+
+    [Fact]
+    public async Task RunAsync_ItemDoesNotExistAndScriptError_ReturnsError()
+    {
+        var command = PsCommandBuilder.Create()
+            .AddCommand("Get-Item")
+            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
+            .Script("throw test-error");
+
+        var result = await _engine.RunAsync(command);
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Contain("test-error");
+        failure.Category.Should().Be(PowershellFailureCategory.Other);
     }
 
     [Fact]
@@ -168,13 +473,15 @@ public sealed class PowershellEngineTests : IDisposable
         var command = PsCommandBuilder.Create()
             .AddCommand("Start-Sleep")
             .AddParameter("Second", 50);
-        
+
         var start = DateTimeOffset.UtcNow;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-        var result = await _engine.GetObjectsAsync<string>(command, null, cts.Token);
-        
+        var result = await _engine.RunAsync(command, null, cts.Token);
+
         start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
-        result.Should().BeLeft();
+        var failure = result.Should().BeLeft().Subject;
+        failure.Message.Should().Be("The Powershell pipeline has been cancelled.");
+        failure.Category.Should().Be(PowershellFailureCategory.PipelineStopped);
     }
 
     [Fact]
