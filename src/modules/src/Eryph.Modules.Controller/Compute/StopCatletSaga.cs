@@ -58,11 +58,11 @@ internal class StopCatletSaga :
 
     public Task Handle(OperationTaskStatusEvent<StopVMCommand> message)
     {
-        return FailOrRun(message, () => Complete());
+        return FailOrRun(message, Complete);
     }
 
     public Task Handle(OperationTaskStatusEvent<ShutdownVMCommand> message)
     {
-        return FailOrRun(message, () => Complete());
+        return FailOrRun(message, Complete);
     }
 }

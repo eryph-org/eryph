@@ -94,7 +94,7 @@ namespace Eryph.Modules.Controller.Compute
 
         public Task Handle(OperationTaskStatusEvent<UpdateCatletConfigDriveCommand> message)
         {
-            return FailOrRun(message, () => Complete());
+            return FailOrRun(message, Complete);
         }
 
         protected override void CorrelateMessages(ICorrelationConfig<UpdateConfigDriveSagaData> config)

@@ -7,9 +7,14 @@ namespace Eryph.ModuleCore;
 
 public static class OperationDispatcherExtensions
 {
-    public static ValueTask<IOperation?> StartNew(this IOperationDispatcher dispatcher, Guid tenantId, string traceId, object command)
+    public static ValueTask<IOperation> StartNew(
+        this IOperationDispatcher dispatcher,
+        Guid tenantId,
+        string traceId,
+        object command)
     {
-        return dispatcher.StartNew(command, 
+        return dispatcher.StartNew(
+            command, 
             additionalData:new OperationDataRecord(tenantId, traceId),
             additionalHeaders:new Dictionary<string, string>
             {
