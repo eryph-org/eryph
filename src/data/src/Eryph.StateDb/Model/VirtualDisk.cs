@@ -25,6 +25,16 @@ public class VirtualDisk : Disk
     /// </summary>
     public bool Deleted { get; set; }
 
+    /// <summary>
+    /// The status of the disk.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="VirtualDiskStatus.Error"/> indicates that
+    /// Hyper-V considers the VHD to be unusable, i.e. the
+    /// disk has failed <c>Test-VHD</c>.
+    /// </remarks>
+    public VirtualDiskStatus Status { get; set; }
+
     public string? Path { get; set; }
         
     public string? FileName { get; set; }
@@ -40,7 +50,15 @@ public class VirtualDisk : Disk
     public Guid? ParentId { get; set; }
     
     public VirtualDisk? Parent { get; set; }
-    
+
+    /// <summary>
+    /// The path to the parent of this disk. The <see cref="ParentPath"/> might be
+    /// populated even if the <see cref="Parent"/> is <see langword="null"/>.
+    /// This means that this disk is differential (i.e. it has a parent) but
+    /// the parent is missing.
+    /// </summary>
+    public string? ParentPath { get; set; }
+
     public DateTimeOffset LastSeen { get; set; }
     
     public string? LastSeenAgent { get; set; }

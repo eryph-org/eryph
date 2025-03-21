@@ -312,12 +312,14 @@ namespace Eryph.Modules.Controller.Inventory
                 // new disk entry in the database.
 
                 disk.Parent = parentDisk.IfNoneUnsafe(() => null);
+                disk.ParentPath = diskInfo.ParentPath;
                 disk.SizeBytes = diskInfo.SizeBytes;
                 disk.UsedSizeBytes = diskInfo.UsedSizeBytes;
                 disk.Frozen = diskInfo.Frozen;
                 disk.Deleted = false;
                 disk.LastSeen = timestamp;
                 disk.LastSeenAgent = agentName;
+                disk.Status = diskInfo.Status.ToVirtualDiskStatus();
                 await _stateStore.SaveChangesAsync();
                 return disk;
             }
@@ -347,6 +349,8 @@ namespace Eryph.Modules.Controller.Inventory
                 LastSeen = timestamp,
                 LastSeenAgent = agentName,
                 Parent = parentDisk.IfNoneUnsafe(() => null),
+                ParentPath = diskInfo.ParentPath,
+                Status = diskInfo.Status.ToVirtualDiskStatus(),
             };
             await _stateStore.For<VirtualDisk>().AddAsync(disk);
             await _stateStore.SaveChangesAsync();

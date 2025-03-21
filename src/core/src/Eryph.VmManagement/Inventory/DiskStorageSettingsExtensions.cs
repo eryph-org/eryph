@@ -22,12 +22,14 @@ public static class DiskStorageSettingsExtensions
         Environment = settings.StorageNames.EnvironmentName.IfNone(EryphConstants.DefaultEnvironmentName),
         DataStore = settings.StorageNames.DataStoreName.IfNone(EryphConstants.DefaultDataStoreName),
         StorageIdentifier = settings.StorageIdentifier.IfNoneUnsafe((string)null),
-        Frozen = settings.Gene.IsNone && settings.StorageIdentifier.IsNone,
+        Frozen = (settings.Gene.IsNone && settings.StorageIdentifier.IsNone) || !settings.IsUsable,
         Parent = settings.ParentSettings.Map(ps => ps.CreateDiskInfo()).IfNoneUnsafe((DiskInfo)null),
+        ParentPath = settings.ParentPath.IfNoneUnsafe((string)null),
         Gene = settings.Gene.IfNoneUnsafe((UniqueGeneIdentifier)null),
         Path = settings.Path,
         FileName = settings.FileName,
         SizeBytes = settings.SizeBytes,
-        UsedSizeBytes = settings.UsedSizeBytes
+        UsedSizeBytes = settings.UsedSizeBytes,
+        Status = settings.IsUsable ? DiskStatus.Ok : DiskStatus.Error,
     };
 }

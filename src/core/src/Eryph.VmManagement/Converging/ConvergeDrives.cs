@@ -37,7 +37,8 @@ namespace Eryph.VmManagement.Converging
                     //make a plan
                     from plannedDriveStorageSettings in VMDriveStorageSettings.PlanDriveStorageSettings(
                         Context.VmHostAgentConfig, Context.Config, Context.StorageSettings,
-                        path => VhdQuery.GetVhdInfo(Context.Engine, path).ToError().ToAsync().MapT(o => o.Value),
+                        path => VhdQuery.GetVhdInfo(Context.Engine, path).MapT(o => o.Value),
+                        path => VhdQuery.TestVhd(Context.Engine, path),
                         Context.ResolvedGenes)
                     //ensure that the changes reflect the current VM settings
                     from infoReloaded in vmInfo.Reload(Context.Engine)
@@ -236,7 +237,8 @@ namespace Eryph.VmManagement.Converging
             from vhdPath in driveSettings.AttachPath.ToEitherAsync(Error.New(
                 $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
             let currentSettings = currentStorageSettings.Find(x =>
-                string.Equals(vhdPath, x.AttachPath.IfNone(""), StringComparison.OrdinalIgnoreCase))
+                // The attach path might point to a snapshot, so we need to compare the actual VHD path.
+                string.Equals(vhdPath, Path.Combine(x.DiskSettings.Path, x.DiskSettings.FileName), StringComparison.OrdinalIgnoreCase))
             let isFrozen = currentSettings.Map(s => s.Frozen).IfNone(false)
             from reloadedVmInfo in isFrozen switch
             {
@@ -347,7 +349,7 @@ namespace Eryph.VmManagement.Converging
                 $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
             // get disk
             from vhdInfos in Context.Engine.GetObjectsAsync<VhdInfo>(new PsCommandBuilder()
-                    .AddCommand("get-vhd").AddArgument(vhdPath))
+                    .AddCommand("Get-VHD").AddArgument(vhdPath))
                 .ToError().ToAsync()
             from vhdInfo in vhdInfos.HeadOrLeft(Errors.SequenceEmpty).ToAsync()
             // resize if necessary
