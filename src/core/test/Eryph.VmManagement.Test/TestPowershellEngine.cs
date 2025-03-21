@@ -26,60 +26,83 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         return new TypedPsObject<object>(obj.PsObject, this, ObjectMapping);
     }
 
-    public Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder, Action<int>? reportProgress = null)
-    {
-        return GetObjectsAsync<T>(builder, (msg) =>
-        {
-            reportProgress?.Invoke(msg);
-            return Task.CompletedTask;
-        }).GetAwaiter().GetResult();
-    }
-
-    public Either<PowershellFailure, Unit> Run(PsCommandBuilder builder, Action<int>? reportProgress = null)
-    {
-        return RunAsync(builder, (msg) =>
-        {
-            reportProgress?.Invoke(msg);
-            return Task.CompletedTask;
-        }).GetAwaiter().GetResult();
-    }
-
-    public Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder, Func<int, Task>? reportProgress = null)
+    public EitherAsync<PowershellFailure, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
+        PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null,
+        CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
-        var result = GetObjectCallback?.Invoke(typeof(T), AssertCommand.Parse(commandInput));
-        Debug.Assert(result != null, nameof(result) + " != null");
-        return Task.FromResult(result.Value.Map(seq => seq.Map( r => new TypedPsObject<T>(r.PsObject, this, ObjectMapping))));
+        if (GetObjectCallback is null)
+            throw new InvalidOperationException("GetObjectCallback is not set");
 
+        var result = GetObjectCallback(typeof(T), AssertCommand.Parse(commandInput));
+        return result.ToAsync()
+            .Map(seq => seq.Map(r => new TypedPsObject<T>(r.PsObject, this, ObjectMapping)));
     }
 
     public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
-        Func<int, Task>? reportProgress = null)
+        Func<int, Task>? reportProgress = null,
+        CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
 
-        if(GetValuesCallback == null)
+        if (GetValuesCallback is null)
             throw new InvalidOperationException("GetValuesCallback is not set");
 
-        var result = GetValuesCallback.Invoke(typeof(T), 
-            AssertCommand.Parse(commandInput));
+        var result = GetValuesCallback(typeof(T), AssertCommand.Parse(commandInput));
 
-        return result.Map(s => s.Map(v =>(T) v)).ToAsync();
+        return result.Map(s => s.Map(v =>(T)v)).ToAsync();
     }
 
-    public Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder, Func<int, Task>? reportProgress = null)
+    public EitherAsync<PowershellFailure, Option<TypedPsObject<T>>> GetObjectAsync<T>(
+        PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null,
+        CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
-        var result = RunCallback?.Invoke(AssertCommand.Parse(commandInput));
+        if (GetObjectCallback is null)
+            throw new InvalidOperationException("GetObjectCallback is not set");
 
-        Debug.Assert(result != null, nameof(result) + " != null");
-        return Task.FromResult(result.Value);
+        var result = GetObjectCallback(typeof(T), AssertCommand.Parse(commandInput));
+
+        return result
+            .Map(seq => seq.Map(r => new TypedPsObject<T>(r.PsObject, this, ObjectMapping)))
+            .Map(s => s.HeadOrNone())
+            .ToAsync();
+    }
+
+    public EitherAsync<PowershellFailure, Option<T>> GetObjectValueAsync<T>(
+        PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var commandInput = builder.ToDictionary();
+
+        if (GetValuesCallback is null)
+            throw new InvalidOperationException("GetValuesCallback is not set");
+
+        var result = GetValuesCallback(typeof(T), AssertCommand.Parse(commandInput));
+
+        return result.Map(s => s.Map(v => (T)v))
+            .Map(s => s.HeadOrNone())
+            .ToAsync();
+    }
+
+    public EitherAsync<PowershellFailure, Unit> RunAsync(
+        PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var commandInput = builder.ToDictionary();
+        if (RunCallback is null)
+            throw new InvalidOperationException("RunCallback is not set");
+        
+        var result = RunCallback(AssertCommand.Parse(commandInput));
+        return result.ToAsync();
     }
 
     public ITypedPsObjectMapping ObjectMapping { get; }
-    public void AddPsObject(PSObject psObject)
-    {
-            
-    }
+    
+    public void AddPsObject(PSObject psObject) { }
 }

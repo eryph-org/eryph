@@ -82,7 +82,7 @@ public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
                        || changedMinMemory.IsSome
                        || changedMaxMemory.IsSome
             ? from _ in TryAsync(() => reportProgress(message).ToUnit()).ToEither()
-              from __ in powershellEngine.RunAsync(command5).ToError().ToAsync()
+              from __ in powershellEngine.RunAsync(command5).ToError()
               select unit
             : RightAsync<Error, Unit>(unit)
         from reloadedVmInfo in vmInfo.RecreateOrReload(powershellEngine)

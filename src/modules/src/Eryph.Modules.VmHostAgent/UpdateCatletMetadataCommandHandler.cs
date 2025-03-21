@@ -16,8 +16,9 @@ namespace Eryph.Modules.VmHostAgent
 
         protected override EitherAsync<Error, Unit> HandleCommand(
             UpdateCatletMetadataCommand command) =>
-            from vmList in GetVmInfo(command.VMId, Engine)
-            from vmInfo in EnsureSingleEntry(vmList, command.VMId)
+            from optionalVmInfo in GetVmInfo(command.VMId, Engine)
+            from vmInfo in optionalVmInfo.ToEitherAsync(
+                Error.New(Error.New($"The VM with ID {command.VMId} was not found.")))
             from currentMetadata in EnsureMetadata(vmInfo, command.CurrentMetadataId)
             from _ in SetMetadataId(vmInfo, command.NewMetadataId)
             select Unit.Default;

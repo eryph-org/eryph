@@ -30,7 +30,7 @@ public static class NetworkNeighborsUpdate
                 // The Cmdlet will return an error when there is no entry for an
                 // IP address. Hence, we need to suppress the error.
                 .AddParameter("ErrorAction", "SilentlyContinue"))
-            .ToError().ToAsync()
+            .ToError()
         from psNeighborsToRemove in psNetNeighbors
             .Map(n => from isOutdated in IsOutdated(n, parsedUpdatedNeighbors)
                       select (IsOutdated: isOutdated, Neighbor: n))
@@ -44,7 +44,7 @@ public static class NetworkNeighborsUpdate
                     .AddCommand("Remove-NetNeighbor")
                     .AddParameter("InputObject", n.Map(v => v.PsObject).ToArray())
                     .AddParameter("Confirm", false))
-                .ToError().ToAsync())
+                .ToError())
         select unit;
 
     private static Fin<bool> IsOutdated(

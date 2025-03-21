@@ -79,7 +79,7 @@ public class ConvergeNetworkAdaptersTests
                 return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
             }
 
-            return new PowershellFailure { Message = $"Unexpected command {command}" };
+            return new PowershellFailure ($"Unexpected command {command}");
         };
         _portManagerMock.Setup(m => m.GetPortName("eth0Id"))
             .Returns(RightAsync<Error, string>("port0"));
@@ -191,7 +191,7 @@ public class ConvergeNetworkAdaptersTests
                 return unit;
             }
 
-            return new PowershellFailure { Message = $"Unexpected command {command}" };
+            return new PowershellFailure ($"Unexpected command {command}");
         };
 
         _portManagerMock.Setup(m => m.SetPortName("eth0Id", "port1"))

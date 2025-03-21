@@ -40,8 +40,9 @@ internal class UpdateConfigDriveCommandHandler(
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         from hostInfo in hostInfoProvider.GetHostInfoAsync().WriteTrace()
         let vmId = command.VMId
-        from vmList in GetVmInfo(vmId, Engine)
-        from vmInfo in EnsureSingleEntry(vmList, vmId)
+        from optionalVmInfo in GetVmInfo(vmId, Engine)
+        from vmInfo in optionalVmInfo.ToEitherAsync(
+            Error.New(Error.New($"The VM with ID {vmId} was not found.")))
         from metadata in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
             .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())

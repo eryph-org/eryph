@@ -76,7 +76,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         let command = PsCommandBuilder.Create()
             .AddCommand("Enable-VMTPM")
             .AddParameter("VM", vmInfo.PsObject)
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from __ in Context.Engine.RunAsync(command).ToError()
         select unit;
 
     private EitherAsync<Error, Unit> EnsureKeyProtector(
@@ -112,14 +112,14 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             // generated certificates which are self-signed.
             .AddParameter("AllowUntrustedRoot")
         from protectors in Context.Engine.GetObjectsAsync<CimHgsKeyProtector>(createCommand)
-            .ToError().ToAsync()
+            .ToError()
         from protector in protectors.HeadOrNone()
             .ToEitherAsync(Error.New("Failed to create HGS key protector."))
         let command = PsCommandBuilder.Create()
             .AddCommand("Set-VMKeyProtector")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("KeyProtector", protector.Value.RawData)
-        from _ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from _ in Context.Engine.RunAsync(command).ToError()
         select unit;
 
     private EitherAsync<Error, TypedPsObject<CimHgsGuardian>> EnsureHgsGuardian() =>
@@ -128,7 +128,6 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             .AddCommand("Get-HgsGuardian")
         from existingGuardians in Context.Engine.GetObjectsAsync<CimHgsGuardian>(command)
             .ToError()
-            .ToAsync()
         from guardian in existingGuardians
             .Find(g => g.Value.Name == EryphConstants.HgsGuardianName)
             .Match(Some: g => g, None: CreateHgsGuardian)
@@ -141,7 +140,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             .AddParameter("Name", EryphConstants.HgsGuardianName)
             .AddParameter("GenerateCertificates")
         from results in Context.Engine.GetObjectsAsync<CimHgsGuardian>(command)
-            .ToError().ToAsync()
+            .ToError()
         from guardian in results.HeadOrNone()
             .ToEitherAsync(Error.New("Failed to create HGS guardian."))
         select guardian;
@@ -152,7 +151,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         let command = PsCommandBuilder.Create()
             .AddCommand("Disable-VMTPM")
             .AddParameter("VM", vmInfo.PsObject)
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from __ in Context.Engine.RunAsync(command).ToError()
         select unit;
     
     private static bool IsEnabled(CatletCapabilityConfig capabilityConfig) =>
