@@ -68,9 +68,7 @@ public sealed class PowershellEngine(
         Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
         GetObjectsAsync<T>(builder, reportProgress, cancellationToken)
-            .Map(result => result.Map(seq => seq.Map(x => x.Value).Strict()))
-                .ToAsync();
-
+            .Map(result => result.Map(seq => seq.Map(x => x.Value)).Strict());
 
     public EitherAsync<PowershellFailure, Unit> RunAsync(
         PsCommandBuilder builder,
