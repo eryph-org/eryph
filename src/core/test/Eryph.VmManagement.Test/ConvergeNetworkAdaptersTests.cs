@@ -42,12 +42,12 @@ public class ConvergeNetworkAdaptersTests
                         new NetworkProvider()
                         {
                             Name = "default",
-                            TypeString = "nat_overlay",
+                            Type = NetworkProviderType.NatOverlay,
                         },
                         new NetworkProvider()
                         {
                             Name = "flat",
-                            TypeString = "flat",
+                            Type = NetworkProviderType.Flat,
                             SwitchName = "test-switch",
                         },
                     ],

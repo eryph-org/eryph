@@ -33,7 +33,7 @@ public class ProjectNetworkPlanBuilderTests(
             new NetworkProvider
             {
                 Name = "default",
-                TypeString = "nat_overlay",
+                Type = NetworkProviderType.NatOverlay,
                 BridgeName = "br-nat",
                 Subnets =
                 [

@@ -290,7 +290,7 @@ public abstract class NetworkProvidersChangeTrackingTests : ChangeTrackingTestBa
             new NetworkProvider()
             {
                 Name = "test-provider",
-                TypeString = "nat_overlay",
+                Type = NetworkProviderType.NatOverlay,
                 Subnets =
                 [
                     new NetworkProviderSubnet()

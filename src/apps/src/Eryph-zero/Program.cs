@@ -1025,25 +1025,33 @@ internal static class Program
 
         return await RunAsAdmin(
             from configString in ReadInput(inFile)
-            from _ in ensureDriver(ovsRunDir, true, false)
+            from _1 in ensureDriver(ovsRunDir, true, false)
+            from _2 in isAgentRunning()
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
-            from syncResult in noCurrentConfigCheck
-                ? SuccessAff((false, hostState))
-                : from currentConfigChanges in generateChanges(hostState, currentConfig)
-                  from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
-                  select r
-            from newConfigChanges in generateChanges(syncResult.HostState, newConfig)
-            from validateImpact in validateNetworkImpact(newConfig)
-            from __ in applyChangesInConsole(currentConfig, newConfigChanges,
-                nonInteractive, syncResult.IsValid)
-
-            from save in saveConfigurationYaml(configString)
-            from sync in syncNetworks()
-            from m in writeLine("New Network configuration was imported.")
+            from syncResult in noCurrentConfigCheck switch
+            {
+                true => SuccessAff((false, hostState)),
+                false =>
+                    from currentConfigChanges in generateChanges(hostState, currentConfig, true)
+                    from r in syncCurrentConfigBeforeNewConfig(hostState, currentConfigChanges, nonInteractive)
+                    from s in r.RefreshState
+                        ? getHostStateWithProgress()
+                        : SuccessAff(hostState)
+                    select (r.IsValid, HostState: s)
+            }
+            from newConfigChanges in generateChanges(syncResult.HostState, newConfig, false)
+            from _3 in validateNetworkImpact(newConfig)
+            from _4 in applyChangesInConsole(currentConfig, newConfigChanges,
+                getHostStateWithProgress, nonInteractive, syncResult.IsValid)
+            from _5 in saveConfigurationYaml(configString)
+            from _6 in syncNetworks()
+            from _7 in writeLine("New Network configuration was imported.")
+            from _8 in checkHostInterfacesWithProgress()
             select unit,
-            new ConsoleRuntime(nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource()));
+            new ConsoleRuntime(new ConsoleRuntimeEnv(
+                nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
     }
 
     private static async Task<int> SyncNetworkConfig(bool nonInteractive)
@@ -1054,15 +1062,19 @@ internal static class Program
         var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 
         return await RunAsAdmin(
-            from _ in writeLine("Going to sync network state with the current configuration...")
-            from __ in ensureDriver(ovsRunDir, true, false)
+            from _1 in writeLine("Going to sync network state with the current configuration...")
+            from _2 in ensureDriver(ovsRunDir, true, false)
+            from _3 in isAgentRunning()
             from currentConfig in getCurrentConfiguration()
             from hostState in getHostStateWithProgress()
-            from pendingChanges in generateChanges(hostState, currentConfig)
-            from ___ in applyChangesInConsole(currentConfig, pendingChanges, nonInteractive, false)
-            from ____ in syncNetworks()
+            from pendingChanges in generateChanges(hostState, currentConfig, true)
+            from _4 in applyChangesInConsole(currentConfig, pendingChanges,
+                getHostStateWithProgress, nonInteractive, false)
+            from _5 in syncNetworks()
+            from _6 in checkHostInterfacesWithProgress()
             select unit,
-            new ConsoleRuntime(nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource()));
+            new ConsoleRuntime(new ConsoleRuntimeEnv(
+                nullLoggerFactory, psEngine, sysEnv, new CancellationTokenSource())));
     }
 
     private static Aff<string> ReadInput(FileSystemInfo? inFile) => AffMaybe(async () =>

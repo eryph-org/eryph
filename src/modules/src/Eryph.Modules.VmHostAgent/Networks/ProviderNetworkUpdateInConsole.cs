@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 using System.Threading;
 using Eryph.Core.Network;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
@@ -7,6 +8,8 @@ using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
 using LanguageExt.Sys;
 using LanguageExt.Sys.Traits;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Networks;
 
@@ -21,23 +24,35 @@ public static class ProviderNetworkUpdateInConsole<RT>
     HasLogger<RT>
 
 {
+    public static Aff<RT, Unit> checkHostInterfacesWithProgress() =>
+        from _1 in Console<RT>.write("Checking status of host interfaces => ")
+        from hostState in HostStateProvider<RT>.checkHostInterfaces(
+            () => Console<RT>.write("."))
+            | @catch(e => Console<RT>.writeEmptyLine.Bind(_ => FailEff<Unit>(e)))
+        from _2 in Console<RT>.writeEmptyLine
+        select hostState;
+
     public static Aff<RT, HostState> getHostStateWithProgress() =>
         from _ in Console<RT>.write("Analyzing host network settings => ")
         // collect network state of host
-        from hostState in ProviderNetworkUpdate<RT>.getHostState(
+        from hostState in HostStateProvider<RT>.getHostState(
             () => Console<RT>.write("."))
+            | @catch(e => Console<RT>.writeEmptyLine.Bind(_ => FailEff<HostState>(e)))
         from __ in Console<RT>.writeEmptyLine
         select hostState;
 
-    private static Aff<RT, Unit> rollbackToCurrentConfig(Error error, NetworkProvidersConfiguration currentConfig)
+    private static Aff<RT, Unit> rollbackToCurrentConfig(
+        Error error,
+        NetworkProvidersConfiguration currentConfig,
+        Func<Aff<RT, HostState>> getHostState)
     {
         return (
                 from m1 in Console<RT>.writeLine(
                     $"\nError: {error}" +
                     "\nFailed to apply new configuration. Rolling back to current active configuration.\n")
-                from hostState in getHostStateWithProgress()
+                from hostState in getHostState()
                 from currentConfigChanges in ProviderNetworkUpdate<RT>
-                    .generateChanges(hostState, currentConfig)
+                    .generateChanges(hostState, currentConfig, true)
                 from _ in currentConfigChanges.Operations.Length == 0
                     ? Console<RT>.writeLine(
                         "No changes found to be rolled back." +
@@ -45,8 +60,8 @@ public static class ProviderNetworkUpdateInConsole<RT>
                         "\nif networking is still working properly in host and catlets.")
                     : from _ in executeChangesConsole(currentConfigChanges)
                     from m2 in Console<RT>.writeLine("Rollback complete")
-                    select Prelude.unit
-                select Prelude.unit
+                    select unit
+                select unit
             )
             // if rollback fails output error inf rollback
             .IfFailAff(f =>
@@ -54,14 +69,14 @@ public static class ProviderNetworkUpdateInConsole<RT>
             )
 
             //always exit rollback with a error
-            .Bind(_ => Prelude.FailAff<Unit>(error));
+            .Bind(_ => FailAff<Unit>(error));
 
     }
 
     private static Aff<RT, T> minRollbackChanges<T>(Error error, bool fullRollbackFollows)
     {
         if (error is not OperationError opError)
-            return Prelude.FailAff<T>(error);
+            return FailAff<T>(error);
 
         var rollbackMessage = false;
         var executedOpCodes = opError.ExecutedOperations
@@ -87,10 +102,8 @@ public static class ProviderNetworkUpdateInConsole<RT>
                                               "\nif networking is still working properly in host and catlets.");
                         }
 
-                        return Prelude.FailAff<T>(opError.Cause);
-                    }))
-            ;
-
+                        return FailAff<T>(opError.Cause);
+                    }));
     }
 
     private record OperationError([property: DataMember] Seq<NetworkChangeOperation<RT>> ExecutedOperations, Error Cause)
@@ -102,7 +115,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
         Seq<NetworkChangeOperation<RT>> executedOps = default;
 
         if (changes.Operations.Length == 0)
-            return Prelude.unitAff;
+            return unitAff;
 
         return
             (from m1 in Console<RT>.writeLine("\nApplying host changes:")
@@ -115,15 +128,15 @@ public static class ProviderNetworkUpdateInConsole<RT>
                             return r;
                         }
                     )
-                    select Prelude.unit).TraverseSerial(l => l)
-                select Prelude.unit)
+                    select unit).TraverseSerial(l => l)
+                select unit)
 
             .Bind(_ => Console<RT>.writeLine("\nHost network configuration was updated.\n"))
-            .Map(_ => Prelude.unit)
+            .Map(_ => unit)
             .MapFail(e => new OperationError(executedOps, e));
     }
 
-    public static Aff<RT, (bool IsValid, HostState HostState)> syncCurrentConfigBeforeNewConfig(
+    public static Aff<RT, (bool IsValid, bool RefreshState)> syncCurrentConfigBeforeNewConfig(
         HostState hostState,
         NetworkChanges<RT> currentConfigChanges,
         bool nonInteractive)
@@ -141,17 +154,17 @@ public static class ProviderNetworkUpdateInConsole<RT>
                     "\nHowever - a valid current state is recommended, as in case a error occurs " +
                     "\nwhile applying the new config a full rollback can be done.\n")
 
-                from decision in Prelude.repeat(
+                from decision in repeat(
                                      from _ in Console<RT>.write("\nApply (a), Ignore (i) or Cancel (c): ")
                                      from l in Console<RT>.readLine
                                      let input = l.ToLowerInvariant()
-                                     from f1 in Prelude.guardnot(input == "c", Errors.Cancelled)
-                                     from f2 in Prelude.guardnot(input == "a", Error.New(100, "apply"))
-                                     from f3 in Prelude.guardnot(input == "i", Error.New(200, "ignore"))
+                                     from f1 in guardnot(input == "c", Errors.Cancelled)
+                                     from f2 in guardnot(input == "a", Error.New(100, "apply"))
+                                     from f3 in guardnot(input == "i", Error.New(200, "ignore"))
                                      from _1 in Console<RT>.writeLine("Invalid input. Accepted input: a, i or c")
                                      select l)
-                                 | Prelude.@catch(100, "a")
-                                 | Prelude.@catch(200, "i")
+                                 | @catch(100, "a")
+                                 | @catch(200, "i")
                 select decision == "a"
                 : from m4 in Console<RT>.writeLine("Non interactive mode - changes will be applied.")
                 select true
@@ -160,22 +173,16 @@ public static class ProviderNetworkUpdateInConsole<RT>
 
         var isEmpty = currentConfigChanges.Operations.Length == 0;
 
-        return from run in isEmpty ? Prelude.SuccessEff(true) : InteractiveCheck()
+        return from run in isEmpty ? SuccessEff(true) : InteractiveCheck()
             from isValid in run
                 ? // apply changes or empty changes
                 executeChangesConsole(currentConfigChanges)
                     .Map(_ => true)
                     .IfFailAff(f => minRollbackChanges<bool>(f, false))
                 : // config not valid (ignored) 
-                Prelude.SuccessAff(false)
-
-            // refresh host state if new config was applied
-            from newHostState in isValid && !isEmpty
-                ? getHostStateWithProgress()
-                : Prelude.SuccessAff(hostState)
-            select (isValid, newHostState);
-
-
+                SuccessAff(false)
+            let refreshState = isValid && !isEmpty
+            select (isValid, refreshState);
     }
 
     public static Aff<RT, Unit> syncNetworks()
@@ -201,7 +208,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
                         from m2 in Console<RT>.writeLine("Active network settings are incompatible with new configuration:")
                         from ml in messages.Map(m => Console<RT>.writeLine($" - {m}")).Traverse(l => l)
                         from m3 in Console<RT>.writeEmptyLine
-                        from error in Prelude.FailEff<Unit>(Error.New("Incompatible network settings detected. You have to remove these settings before applying the new configuration."))
+                        from error in FailEff<Unit>(Error.New("Incompatible network settings detected. You have to remove these settings before applying the new configuration."))
                         select Unit.Default;
                 });
         });
@@ -210,6 +217,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
     public static Aff<RT, Unit> applyChangesInConsole(
         NetworkProvidersConfiguration currentConfig,
         NetworkChanges<RT> newConfigChanges,
+        Func<Aff<RT, HostState>> getHostState,
         bool nonInteractive,
         bool rollbackToCurrent)
     {
@@ -228,18 +236,18 @@ public static class ProviderNetworkUpdateInConsole<RT>
                         "\nNetwork connectivity may be interrupted while applying these changes." +
                         "\nIn the event of an error, a rollback is attempted.\n")
 
-                    from decision in Prelude.repeat(
+                    from decision in repeat(
                                          from _ in Console<RT>.write("\nApply (a) or Cancel (c): ")
                                          from l in Console<RT>.readLine
                                          let input = l.ToLowerInvariant()
-                                         from f1 in Prelude.guardnot(input == "c", Errors.Cancelled)
-                                         from f2 in Prelude.guardnot(input == "a", Error.New(100, "apply"))
+                                         from f1 in guardnot(input == "c", Errors.Cancelled)
+                                         from f2 in guardnot(input == "a", Error.New(100, "apply"))
                                          from _1 in Console<RT>.writeLine("Invalid input. Accepted input: a, or c")
                                          select l)
-                                     | Prelude.@catch(100, "a")
-                    select Prelude.unit
+                                     | @catch(100, "a")
+                    select unit
                     : from m4 in Console<RT>.writeLine("Non interactive mode - changes will be applied.")
-                    select Prelude.unit
+                    select unit
                 select output;
 
             var isEmpty = newConfigChanges.Operations.Length == 0;
@@ -255,8 +263,8 @@ public static class ProviderNetworkUpdateInConsole<RT>
                     // try to rollback to a valid, current config
                     .IfFailAff(f =>
                         rollbackToCurrent ?
-                            rollbackToCurrentConfig(f, currentConfig)
-                            : Prelude.FailAff<Unit>(f)));
+                            rollbackToCurrentConfig(f, currentConfig, getHostState)
+                            : FailAff<Unit>(f)));
 
         });
     }

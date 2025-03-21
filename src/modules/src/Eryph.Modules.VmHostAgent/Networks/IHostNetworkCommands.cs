@@ -18,8 +18,7 @@ public interface IHostNetworkCommands<RT> where RT : struct, HasCancel<RT>
     Aff<RT, Unit> DisableSwitchExtension(Guid switchId);
     Aff<RT, Unit> EnableSwitchExtension(Guid switchId);
 
-    Aff<RT, Seq<HostNetworkAdapter>> GetPhysicalAdapters();
-    Aff<RT, Seq<string>> GetAdapterNames();
+    Aff<RT, Seq<HostNetworkAdapter>> GetHostAdapters();
 
     Aff<RT, Seq<NetNat>> GetNetNat();
     Aff<RT, Unit> EnableBridgeAdapter(string adapterName);
@@ -28,11 +27,7 @@ public interface IHostNetworkCommands<RT> where RT : struct, HasCancel<RT>
     Aff<RT, Unit> ConnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters, string switchName);
     Aff<RT, Unit> DisconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters);
     Aff<RT, Unit> ReconnectNetworkAdapters(Seq<TypedPsObject<VMNetworkAdapter>> adapters);
-    Aff<RT, Unit> CreateOverlaySwitch(IEnumerable<string> adapters);
-
-    Aff<RT, Option<OverlaySwitchInfo>> FindOverlaySwitch(
-        Seq<VMSwitch> vmSwitches,
-        Seq<HostNetworkAdapter> adapters);
+    Aff<RT, Unit> CreateOverlaySwitch(Seq<string> adapters);
 
     Aff<RT, Unit> RemoveOverlaySwitch();
     Aff<RT, Unit> RemoveNetNat(string natName);

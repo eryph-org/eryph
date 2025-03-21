@@ -8,10 +8,13 @@ namespace Eryph.VmManagement.Data.Core
     {
         public static Guid[] GetNetAdapterInterfaceGuid(this TypedPsObject<VMSwitch> vmSwitch)
         {
-            if (string.IsNullOrWhiteSpace(vmSwitch.Value.NetAdapterInterfaceDescription) ||
-                vmSwitch.Value.NetAdapterInterfaceGuid != null) 
-                
+            // It is possible that Hyper-V report a switch embedded team without interfaces.
+            // We need to handle this situation gracefully.
+            if (vmSwitch.Value.NetAdapterInterfaceDescriptions is not { Length: > 0 }
+                || vmSwitch.Value.NetAdapterInterfaceGuid != null)
+            {
                 return vmSwitch.Value.NetAdapterInterfaceGuid;
+            }
             
             // NetAdapterInterfaceGuid as property is not available, so fetch it via reflection
             // this has been added for Server 2016 compatibility so it can be removed
@@ -39,7 +42,7 @@ namespace Eryph.VmManagement.Data.Core
                         object[] externalAdapters = null;
                         if (externalAdapterAccessorField != null)
                         {
-                            // their is either a list of external network adapters 
+                            // there is either a list of external network adapters 
                             var externalAdapterAccessor = externalAdapterAccessorField.GetValue(externalPort);
                             var externalAdapterAccessorDataField = externalAdapterAccessor?.GetType().BaseType?
                                 .GetField("m_Value", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -79,6 +82,7 @@ namespace Eryph.VmManagement.Data.Core
                                     deviceList.Add(deviceGuid);
                                 }
                             }
+
                             return deviceList.ToArray();
                         }
                     }
@@ -86,8 +90,6 @@ namespace Eryph.VmManagement.Data.Core
             }
 
             throw new Exception($"Failed to identify physical adapters of switch '{vmSwitch.Value.Name}'");
-
         }
-
     }
 }

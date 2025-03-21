@@ -87,7 +87,7 @@ namespace Eryph.VmManagement
             PsCommandBuilder builder,
             Func<int, Task> reportProgress = null) =>
             GetObjectsAsync<T>(builder, reportProgress)
-                .Map(result => result.Map(seq => seq.Map(x => x.Value)))
+                .Map(result => result.Map(seq => seq.Map(x => x.Value).Strict()))
                 .ToAsync();
 
         public Either<PowershellFailure, Unit> Run(PsCommandBuilder builder, Action<int> reportProgress = null)
