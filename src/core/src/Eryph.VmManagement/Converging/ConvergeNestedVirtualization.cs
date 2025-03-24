@@ -46,7 +46,7 @@ public class ConvergeNestedVirtualization(
             .AddCommand("Set-VMProcessor")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("ExposeVirtualizationExtensions", exposeVirtualizationExtensions)
-        from _3 in Context.Engine.RunAsync(command).ToError()
+        from _3 in Context.Engine.RunAsync(command)
         select unit;
 
     private EitherAsync<Error, VMProcessorInfo> GetVmProcessorInfo(
@@ -56,7 +56,6 @@ public class ConvergeNestedVirtualization(
             .AddCommand("Get-VMProcessor")
             .AddParameter("VM", vmInfo.PsObject)
         from vmSecurityInfos in Context.Engine.GetObjectValuesAsync<VMProcessorInfo>(command)
-            .ToError()
         from vmSecurityInfo in vmSecurityInfos.HeadOrNone()
             .ToEitherAsync(Error.New($"Failed to fetch processor information for the VM {vmInfo.Value.Id}."))
         select vmSecurityInfo;

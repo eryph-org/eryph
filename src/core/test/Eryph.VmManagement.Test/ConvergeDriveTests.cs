@@ -7,6 +7,7 @@ using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Storage;
 using FluentAssertions;
 using LanguageExt;
+using LanguageExt.Common;
 using Xunit;
 
 using static LanguageExt.Prelude;
@@ -83,7 +84,7 @@ public class ConvergeDriveTests
                     Size = currentSize * 1024L * 1024 * 1024
                 }));
 
-            return new PowershellFailure ($"unknown command: {commandString}");
+            return Error.New ($"unknown command: {commandString}");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
@@ -278,7 +279,7 @@ public class ConvergeDriveTests
                 }));
             }
 
-            return new PowershellFailure($"unknown command: {commandString}");
+            return Error.New($"unknown command: {commandString}");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
@@ -394,7 +395,7 @@ public class ConvergeDriveTests
                 }));
             }
 
-            return new PowershellFailure ($"unknown command: {commandString}");
+            return Error.New ($"unknown command: {commandString}");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
@@ -537,7 +538,7 @@ public class ConvergeDriveTests
                 }));
             }
 
-            return new PowershellFailure ($"unknown command: {commandString}");
+            return Error.New ($"unknown command: {commandString}");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>

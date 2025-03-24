@@ -13,7 +13,7 @@ public static class VirtualMachineInfoExtensions
     /// This method aggressively stops the VM by first turning it off (hard power off in Hyper-V)
     /// and if that is not successful, it kills the VM worker process.
     /// </summary>
-    public static EitherAsync<PowershellFailure, Unit> StopIfRunning(
+    public static EitherAsync<Error, Unit> StopIfRunning(
         this TypedPsObject<VirtualMachineInfo> vmInfo,
         IPowershellEngine engine) =>
         from _ in Some(vmInfo).Filter(i =>
@@ -22,10 +22,10 @@ public static class VirtualMachineInfoExtensions
             .SequenceSerial()
         select unit;
 
-    private static EitherAsync<PowershellFailure, TypedPsObject<VirtualMachineInfo>> Stop(
+    private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Stop(
         this TypedPsObject<VirtualMachineInfo> vmInfo,
         IPowershellEngine engine) =>
-        from _1 in RightAsync<PowershellFailure, Unit>(unit)
+        from _1 in RightAsync<Error , Unit>(unit)
         let command = PsCommandBuilder.Create()
             .AddCommand("Stop-VM")
             .AddParameter("VM", vmInfo.PsObject)
@@ -33,10 +33,10 @@ public static class VirtualMachineInfoExtensions
         from _2 in engine.RunAsync(command)
         select vmInfo;
 
-    public static EitherAsync<PowershellFailure, Unit> Remove(
+    public static EitherAsync<Error, Unit> Remove(
         this TypedPsObject<VirtualMachineInfo> vmInfo,
         IPowershellEngine engine) =>
-        from _1 in RightAsync<PowershellFailure, Unit>(unit)
+        from _1 in RightAsync<Error, Unit>(unit)
         let command = PsCommandBuilder.Create()
             .AddCommand("Remove-VM")
             .AddParameter("VM", vmInfo.PsObject)
@@ -62,7 +62,6 @@ public static class VirtualMachineInfoExtensions
             .AddCommand("Get-VM")
             .AddParameter("Id", vmInfo.Value.Id)
         from vmInfos in engine.GetObjectsAsync<T>(command)
-            .ToError()
         from reloadedInfo in vmInfos.HeadOrNone()
             .ToEitherAsync(Error.New($"Failed to reload data of VM {vmInfo.Value.Id}."))
         select reloadedInfo;

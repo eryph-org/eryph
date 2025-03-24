@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.PowerShell;
 using Microsoft.PowerShell.Commands;
@@ -28,16 +29,16 @@ public sealed class PowershellEngine(
 
     public ITypedPsObjectMapping ObjectMapping { get; } = new TypedPsObjectMapping(logger);
 
-    public EitherAsync<PowershellFailure, Option<TypedPsObject<T>>> GetObjectAsync<T>(
+    public EitherAsync<Error, Option<TypedPsObject<T>>> GetObjectAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
         from results in GetObjectsAsync<T>(builder, reportProgress, cancellationToken)
         from _ in guard(results.Count <= 1,
-            new PowershellFailure($"Powershell returned multiple values when fetching {typeof(T).Name}."))
+            Error.New($"Powershell returned multiple values when fetching {typeof(T).Name}."))
         select results.HeadOrNone();
 
-    public EitherAsync<PowershellFailure, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
+    public EitherAsync<Error, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
@@ -48,29 +49,33 @@ public sealed class PowershellEngine(
             })
             .ToEither()
             .MapLeft(e => ToFailure(e))
-            .BindLeft(f => f.Category switch
+            .BindLeft(e => e switch
             {
-                PowershellFailureCategory.ObjectNotFound =>
-                    RightAsync<PowershellFailure, Seq<TypedPsObject<T>>>(Empty),
-                _ => LeftAsync<PowershellFailure, Seq<TypedPsObject<T>>>(f),
+                // We need to be careful with ObjectNotFound. Powershell uses the corresponding
+                // category for other reasons as well (e.g. when a command is not found).
+                // We additionally check that the Activity is set to ensure that the error has
+                // been raised by a properly executed command.
+                PowershellError { Activity.IsSome: true, Category: PowershellErrorCategory.ObjectNotFound } =>
+                    RightAsync<Error, Seq<TypedPsObject<T>>>(Empty),
+                _ => LeftAsync<Error, Seq<TypedPsObject<T>>>(e),
             })
         select results;
 
-    public EitherAsync<PowershellFailure, Option<T>> GetObjectValueAsync<T>(
+    public EitherAsync<Error, Option<T>> GetObjectValueAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
         GetObjectAsync<T>(builder, reportProgress, cancellationToken)
             .Map(result => result.Map(x => x.Value));
 
-    public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
+    public EitherAsync<Error, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
         GetObjectsAsync<T>(builder, reportProgress, cancellationToken)
             .Map(result => result.Map(seq => seq.Map(x => x.Value)).Strict());
 
-    public EitherAsync<PowershellFailure, Unit> RunAsync(
+    public EitherAsync<Error, Unit> RunAsync(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
@@ -83,7 +88,7 @@ public sealed class PowershellEngine(
             }
 
             return unit;
-        }).ToEither().MapLeft(e => ToFailure(e));
+        }).ToEither().MapLeft(e => (Error)ToFailure(e));
 
     public void AddPsObject(PSObject psObject)
     {
@@ -107,8 +112,8 @@ public sealed class PowershellEngine(
             ErrorActionPreference = ActionPreference.Stop,
         };
 
-        IList<PSObject> outputs;
-        IList<ErrorRecord> errors;
+        List<PSObject> outputs;
+        List<ErrorRecord> errors;
         try
         {
             var task = powerShell.InvokeAsync(inputData, invocationSettings, null, null);
@@ -145,18 +150,14 @@ public sealed class PowershellEngine(
                 error.InvocationInfo?.MyCommand, error.ToString());
         }
 
-        var bestError = errors.FirstOrDefault(e => e.CategoryInfo.Category != ErrorCategory.ObjectNotFound)
-            ?? errors.FirstOrDefault(e => string.IsNullOrEmpty(e.CategoryInfo.Activity))
-            ?? errors.FirstOrDefault();
-
-        if (bestError is null)
+        if (errors.Count == 0)
             return outputs;
 
         foreach (var output in outputs)
         {
             output.DisposeObject();
         }
-        throw new PsErrorException(bestError);
+        throw new PsErrorException(errors);
     }
 
     private async Task<PowerShell> CreatePowerShell()
@@ -233,39 +234,16 @@ public sealed class PowershellEngine(
         };
 
     /// <summary>
-    /// Converts a <see cref="Exception"/> to a <see cref="PowershellFailure"/>.
+    /// Converts a <see cref="Exception"/> to a <see cref="PowershellError"/>.
     /// </summary>
-    /// <remarks>
-    /// We need to be careful when we return <see cref="PowershellFailureCategory.ObjectNotFound"/>.
-    /// <see cref="ErrorCategory.ObjectNotFound"/> is used fo a lot of different errors including
-    /// when a command does not exist. We additionally check <see cref="ErrorCategoryInfo.Activity"/>.
-    /// When it is present, the error has been raised by a properly executed command.
-    /// </remarks>
-    private static PowershellFailure ToFailure(
+    private static Error ToFailure(
         Exception exception) =>
         exception switch
         {
-            PsErrorException pee => ToFailure(pee.Error),
-            PipelineStoppedException _ => new PowershellFailure(
-                "The Powershell pipeline has been cancelled.",
-                PowershellFailureCategory.PipelineStopped),
-            RuntimeException rex => ToFailure(rex.ErrorRecord),
-            _ => new PowershellFailure(
-                exception.Message,
-                PowershellFailureCategory.Other)
+            PsErrorException pee => Error.Many(pee.ErrorRecords.ToSeq().Map<Error>(PowershellError.New)),
+            RuntimeException rex => PowershellError.New(rex),
+            _ => Error.New("Unexpected exception in Powershell engine.", Error.New(exception)),
         };
-
-    private static PowershellFailure ToFailure(
-        ErrorRecord errorRecord) =>
-        new PowershellFailure(
-            $"Powershell command '{errorRecord.InvocationInfo?.MyCommand}' failed: {errorRecord}.",
-            ToFailureCategory(errorRecord.CategoryInfo));
-
-    private static PowershellFailureCategory ToFailureCategory(
-        ErrorCategoryInfo categoryInfo) =>
-        notEmpty(categoryInfo.Activity) && categoryInfo.Category is ErrorCategory.ObjectNotFound
-            ? PowershellFailureCategory.ObjectNotFound
-            : PowershellFailureCategory.Other;
 
     public void Dispose()
     {
@@ -287,9 +265,9 @@ public sealed class PowershellEngine(
 #pragma warning disable S3871 // Exception types should be "public"
     private sealed class PsErrorException(
 #pragma warning restore S3871 // Exception types should be "public"
-        ErrorRecord errorRecord) :
+        IReadOnlyList<ErrorRecord> errorRecords) :
         Exception("PowerShell returned one or more non-terminating errors.")
     {
-        public ErrorRecord Error { get; } = errorRecord;
+        public IReadOnlyList<ErrorRecord> ErrorRecords { get; } = errorRecords;
     }
 }

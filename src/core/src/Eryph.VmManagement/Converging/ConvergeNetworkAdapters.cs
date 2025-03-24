@@ -57,7 +57,6 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddCommand("Get-VMNetworkAdapter")
             .AddParameter("VM", vmInfo.PsObject)
         from adapters in Context.Engine.GetObjectsAsync<VMNetworkAdapter>(command)
-            .ToError()
         select adapters;
 
     private EitherAsync<Error, Unit> RemoveMissingAdapters(
@@ -80,7 +79,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         let command = PsCommandBuilder.Create()
             .AddCommand("Remove-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
-        from __ in Context.Engine.RunAsync(command).ToError()
+        from __ in Context.Engine.RunAsync(command)
         select unit;
 
     private EitherAsync<Error, Unit> AddOrUpdateAdapters(
@@ -116,7 +115,6 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddParameter("SwitchName", adapterConfig.SwitchName)
             .AddParameter("Passthru")
         from createdAdapters in Context.Engine.GetObjectValuesAsync<VMNetworkAdapter>(command)
-            .ToError()
         from createdAdapter in createdAdapters.HeadOrNone()
             .ToEitherAsync(Error.New("Failed to create network adapter"))
         from __ in Context.PortManager.SetPortName(createdAdapter.Id, adapterConfig.PortName)
@@ -145,7 +143,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddCommand("Set-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
             .AddParameter("StaticMacAddress", macAddress)
-        from __ in Context.Engine.RunAsync(command).ToError()
+        from __ in Context.Engine.RunAsync(command)
         select unit;
 
     private EitherAsync<Error, Unit> ConnectAdapter(
@@ -157,7 +155,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddCommand("Connect-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
             .AddParameter("SwitchName", adapterConfig.SwitchName)
-        from __ in Context.Engine.RunAsync(command).ToError()
+        from __ in Context.Engine.RunAsync(command)
         select unit;
 
     private sealed record PhysicalAdapterConfig(

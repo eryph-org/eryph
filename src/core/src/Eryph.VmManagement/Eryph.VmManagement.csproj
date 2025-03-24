@@ -3,6 +3,9 @@
     <TargetFramework>net8.0-windows</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+     <InternalsVisibleTo Include="$(AssemblyName).Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive" Version="2.0.0" />
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.NoCloud" Version="2.0.0" />
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.WindowsImaging" Version="2.0.0" />

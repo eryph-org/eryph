@@ -19,11 +19,11 @@ public record PowershellError : Error
     internal PowershellError(
         string message,
         int code,
-        string activity,
-        int category,
-        string reason,
-        string targetName,
-        string targetType)
+        Option<string> activity,
+        PowershellErrorCategory category,
+        Option<string> reason,
+        Option<string> targetName,
+        Option<string> targetType)
     {
         Message = message;
         Code = code;
@@ -39,16 +39,15 @@ public record PowershellError : Error
 
     public override int Code { get; }
 
-    public string Activity { get; }
+    public Option<string> Activity { get; }
 
-    // TODO category should be enum
-    public int Category { get; }
+    public PowershellErrorCategory Category { get; }
 
-    public string Reason { get; }
+    public Option<string> Reason { get; }
 
-    public string TargetName { get; }
+    public Option<string> TargetName { get; }
 
-    public string TargetType { get; }
+    public Option<string> TargetType { get; }
 
     public override bool IsExceptional => false;
 
@@ -56,54 +55,66 @@ public record PowershellError : Error
 
     public override bool Is<E>() => false;
 
-    public override ErrorException ToErrorException()
-    {
-        throw new NotImplementedException();
-    }
+    public override ErrorException ToErrorException() =>
+        new PowershellErrorException(Message, Code, Activity, Category, Reason, TargetName, TargetType);
 
     public static PowershellError New(RuntimeException runtimeException) =>
-        new(runtimeException.ErrorRecord.CategoryInfo.GetMessage(CultureInfo.InvariantCulture),
+        new(Optional(runtimeException.ErrorRecord.ErrorDetails)
+                .Bind(r => Optional(r.Message))
+                .Filter(notEmpty)
+                .IfNone(runtimeException.Message),
             runtimeException.HResult,
-            runtimeException.ErrorRecord.CategoryInfo.Activity,
-            (int)runtimeException.ErrorRecord.CategoryInfo.Category,
-            runtimeException.ErrorRecord.CategoryInfo.Reason,
-            runtimeException.ErrorRecord.CategoryInfo.TargetName,
-            runtimeException.ErrorRecord.CategoryInfo.TargetType);
+            Optional(runtimeException.ErrorRecord.CategoryInfo.Activity).Filter(notEmpty),
+            ToPowershellErrorCategory(runtimeException.ErrorRecord.CategoryInfo.Category, runtimeException),
+            Optional(runtimeException.ErrorRecord.CategoryInfo.Reason).Filter(notEmpty),
+            Optional(runtimeException.ErrorRecord.CategoryInfo.TargetName).Filter(notEmpty),
+            Optional(runtimeException.ErrorRecord.CategoryInfo.TargetType).Filter(notEmpty));
 
     public static PowershellError New(ErrorRecord errorRecord) =>
-        new(errorRecord.CategoryInfo.GetMessage(CultureInfo.InvariantCulture),
+        new(Optional(errorRecord.ErrorDetails)
+                .Bind(r => Optional(r.Message))
+                .Filter(notEmpty)
+                .IfNone(errorRecord.Exception.Message),
             errorRecord.Exception.HResult,
-            errorRecord.CategoryInfo.Activity,
-            (int)errorRecord.CategoryInfo.Category,
-            errorRecord.CategoryInfo.Reason,
-            errorRecord.CategoryInfo.TargetName,
-            errorRecord.CategoryInfo.TargetType);
+            Optional(errorRecord.CategoryInfo.Activity).Filter(notEmpty),
+            ToPowershellErrorCategory(errorRecord.CategoryInfo.Category, errorRecord.Exception),
+            Optional(errorRecord.CategoryInfo.Reason).Filter(notEmpty),
+            Optional(errorRecord.CategoryInfo.TargetName).Filter(notEmpty),
+            Optional(errorRecord.CategoryInfo.TargetType).Filter(notEmpty));
+
+    private static PowershellErrorCategory ToPowershellErrorCategory(
+        ErrorCategory category, Exception exception) =>
+        exception switch
+        {
+            CommandNotFoundException => PowershellErrorCategory.CommandNotFound,
+            PipelineStoppedException => PowershellErrorCategory.PipelineStopped,
+            _ => category.ToPowershellErrorCategory()
+        };
 }
 
 public class PowershellErrorException(
     string message,
     int code,
-    string activity,
-    int category,
-    string reason,
-    string targetName,
-    string targetType)
+    Option<string> activity,
+    PowershellErrorCategory category,
+    Option<string> reason,
+    Option<string> targetName,
+    Option<string> targetType)
     : ErrorException(code)
 {
     public override string Message { get; } = message;
 
     public override int Code { get; } = code;
 
-    public string Activity { get; } = activity;
+    public Option<string> Activity { get; } = activity;
 
-    // TODO category should be enum
-    public int Category { get; } = category;
+    public PowershellErrorCategory Category { get; } = category;
 
-    public string Reason { get; } = reason;
+    public Option<string> Reason { get; } = reason;
 
-    public string TargetName { get; } = targetName;
+    public Option<string> TargetName { get; } = targetName;
 
-    public string TargetType { get; } = targetType;
+    public Option<string> TargetType { get; } = targetType;
 
     public override Option<ErrorException> Inner => Option<ErrorException>.None;
 

@@ -45,13 +45,12 @@ namespace Eryph.VmManagement
                 .AddParameter("MemoryStartupBytes", memoryStartupBytes)
                 .AddParameter("Generation", 2)
             from optionalVmInfo in engine.GetObjectAsync<VirtualMachineInfo>(createVmCommand)
-                .ToError()
             from created in optionalVmInfo.ToEitherAsync(Error.New("Failed to create VM"))
             let removeNetworkAdaptersCommand = PsCommandBuilder.Create()
                 .AddCommand("Get-VMNetworkAdapter")
                 .AddParameter("VM", created.PsObject)
                 .AddCommand("Remove-VMNetworkAdapter")
-            from _2 in engine.RunAsync(removeNetworkAdaptersCommand).ToError()
+            from _2 in engine.RunAsync(removeNetworkAdaptersCommand)
             from renamed in Rename(engine, created, vmName)
             from result in SetDefaults(engine, renamed)
             select result;
@@ -140,7 +139,7 @@ namespace Eryph.VmManagement
                 .AddInput(vmInfo.GetList(x=>x.HardDrives)
                     .Select(x=>x.PsObject).ToArray())
                 .AddCommand("Remove-VMHardDiskDrive")
-            ).ToError().Bind(u => vmInfo.RecreateOrReload(engine));
+            ).Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
 
@@ -154,7 +153,7 @@ namespace Eryph.VmManagement
                 .AddCommand("Rename-VM")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("NewName", newName)
-            ).ToError().Bind(u => vmInfo.RecreateOrReload(engine));
+            ).Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
         public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> SetDefaults(
@@ -162,11 +161,10 @@ namespace Eryph.VmManagement
             TypedPsObject<VirtualMachineInfo> vmInfo) =>
             from optionalSetVmCommand in engine.GetObjectAsync<PowershellCommand>(
                     PsCommandBuilder.Create().AddCommand("Get-Command").AddArgument("Set-VM"))
-                    .ToError()
             from setVmCommand in optionalSetVmCommand.ToEitherAsync(
                 Error.New("The Powershell command Set-VM was not found."))
             let builder = BuildSetVMCommand(vmInfo, setVmCommand)
-            from uSet in engine.RunAsync(builder).ToError()
+            from uSet in engine.RunAsync(builder)
             from reloaded in vmInfo.RecreateOrReload(engine)
             select reloaded;
 
@@ -258,11 +256,13 @@ namespace Eryph.VmManagement
                 .AddCommand("Set-VM")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("Notes", "")
-            ).ToError().Bind(u => vmInfo.RecreateOrReload(engine));
+            ).Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
+        /*
         private static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> ExpandTemplateData(
-            TypedPsObject<PlannedVirtualMachineInfo> template, IPowershellEngine engine)
+            TypedPsObject<PlannedVirtualMachineInfo> template,
+            IPowershellEngine engine)
         {
             return template.GetList(x=>x.HardDrives)
                 .Map(device =>
@@ -274,6 +274,7 @@ namespace Eryph.VmManagement
                 .SequenceSerial()
                 .Map(_ => template);
         }
+        */
 
         private static EitherAsync<Error, TypedPsObject<T>> DisconnectNetworkAdapters<T>(
             IPowershellEngine engine,
@@ -284,7 +285,7 @@ namespace Eryph.VmManagement
                 .AddCommand("Get-VMNetworkAdapter")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddCommand("Disconnect-VMNetworkAdapter")
-            ).ToError().Bind(u => vmInfo.RecreateOrReload(engine));
+            ).Bind(u => vmInfo.RecreateOrReload(engine));
         }
 
         /*

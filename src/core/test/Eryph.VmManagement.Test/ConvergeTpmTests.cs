@@ -6,6 +6,7 @@ using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
+using LanguageExt.Common;
 using Xunit;
 
 using static LanguageExt.Prelude;
@@ -87,7 +88,7 @@ public class ConvergeTpmTests
                 return Seq1(cimHgsGuardian); 
             }
             
-            return new PowershellFailure ($"Unexpected command {command}");
+            return Error.New ($"Unexpected command {command}");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
@@ -114,7 +115,7 @@ public class ConvergeTpmTests
                 return Seq1<object>(new byte[] { 0, 0, 0, 4 });
             }
 
-            return new PowershellFailure ($"Unexpected command {command}");
+            return Error.New ($"Unexpected command {command}");
         };
 
         _fixture.Engine.RunCallback = command =>
@@ -140,7 +141,7 @@ public class ConvergeTpmTests
                 return unit;
             }
 
-            return new PowershellFailure ($"Unexpected command {command}");
+            return Error.New ($"Unexpected command {command}");
         };
 
         var result = await _convergeTask.Converge(_vmInfo);
@@ -173,7 +174,7 @@ public class ConvergeTpmTests
                 });
             }
 
-            return new PowershellFailure ($"Unexpected command {command}");
+            return Error.New ($"Unexpected command {command}");
         };
 
         _fixture.Engine.RunCallback = command =>
@@ -219,7 +220,7 @@ public class ConvergeTpmTests
                 });
             }
 
-            return new PowershellFailure ($"Unexpected command {command}");
+            return Error.New ($"Unexpected command {command}");
         };
 
         var result = await _convergeTask.Converge(_vmInfo);

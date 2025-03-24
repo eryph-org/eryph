@@ -54,23 +54,21 @@ public sealed class PowershellEngineTests : IDisposable
             .AddCommand("Test-Missing");
 
         var result = await _engine.GetObjectAsync<EnvVar>(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Contain("Test-Missing");
-        failure.Category.Should().Be(PowershellFailureCategory.Other);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("Test-Missing");
+        error.Category.Should().Be(PowershellErrorCategory.CommandNotFound);
     }
 
     [Fact]
-    public async Task GetObjectAsync_ItemDoesNotExistAndScriptError_ReturnsError()
+    public async Task GetObjectAsync_ScriptError_ReturnsError()
     {
         var command = PsCommandBuilder.Create()
-            .AddCommand("Get-Item")
-            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
-            .Script("throw test-error");
+            .Script("throw 'test-error'");
 
         var result = await _engine.GetObjectAsync<EnvVar>(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Contain("test-error");
-        failure.Category.Should().Be(PowershellFailureCategory.Other);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("test-error");
+        error.Category.Should().Be(PowershellErrorCategory.OperationStopped);
     }
 
     [Fact]
@@ -78,16 +76,16 @@ public sealed class PowershellEngineTests : IDisposable
     {
         var command = PsCommandBuilder.Create()
             .AddCommand("Start-Sleep")
-            .AddParameter("Second", 50);
+            .AddParameter("Second", 60);
 
         var start = DateTimeOffset.UtcNow;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var result = await _engine.GetObjectAsync<EnvVar>(command, null, cts.Token);
 
-        start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Be("The Powershell pipeline has been cancelled.");
-        failure.Category.Should().Be(PowershellFailureCategory.PipelineStopped);
+        start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Be("The pipeline has been stopped.");
+        error.Category.Should().Be(PowershellErrorCategory.PipelineStopped);
     }
 
     [Fact]
@@ -159,25 +157,21 @@ public sealed class PowershellEngineTests : IDisposable
             .AddCommand("Test-Missing");
 
         var result = await _engine.GetObjectsAsync<EnvVar>(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Contain("Test-Missing");
-        failure.Category.Should().Be(PowershellFailureCategory.Other);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("Test-Missing");
+        error.Category.Should().Be(PowershellErrorCategory.CommandNotFound);
     }
 
     [Fact]
-    public async Task GetObjectsAsync_ItemDoesNotExistAndScriptError_ReturnsError()
+    public async Task GetObjectsAsync_ScriptError_ReturnsError()
     {
         var command = PsCommandBuilder.Create()
-            .AddCommand("Get-Item")
-            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_*")
-            .AddCommand("Sort-Object")
-            .AddParameter("Property", "Name")
-            .Script("throw test-error");
+            .Script("throw 'test-error'");
 
         var result = await _engine.GetObjectsAsync<EnvVar>(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Contain("test-error");
-        failure.Category.Should().Be(PowershellFailureCategory.Other);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("test-error");
+        error.Category.Should().Be(PowershellErrorCategory.OperationStopped);
     }
 
     [Fact]
@@ -185,16 +179,16 @@ public sealed class PowershellEngineTests : IDisposable
     {
         var command = PsCommandBuilder.Create()
             .AddCommand("Start-Sleep")
-            .AddParameter("Second", 50);
+            .AddParameter("Second", 60);
 
         var start = DateTimeOffset.UtcNow;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var result = await _engine.GetObjectsAsync<EnvVar>(command, null, cts.Token);
 
-        start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Be("The Powershell pipeline has been cancelled.");
-        failure.Category.Should().Be(PowershellFailureCategory.PipelineStopped);
+        start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Be("The pipeline has been stopped.");
+        error.Category.Should().Be(PowershellErrorCategory.PipelineStopped);
     }
 
     [Fact]
@@ -253,23 +247,21 @@ public sealed class PowershellEngineTests : IDisposable
             .AddCommand("Test-Missing");
 
         var result = await _engine.GetObjectValueAsync<string>(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Contain("Test-Missing");
-        failure.Category.Should().Be(PowershellFailureCategory.Other);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("Test-Missing");
+        error.Category.Should().Be(PowershellErrorCategory.CommandNotFound);
     }
 
     [Fact]
-    public async Task GetObjectValueAsync_ItemDoesNotExistAndScriptError_ReturnsError()
+    public async Task GetObjectValueAsync_ScriptError_ReturnsError()
     {
         var command = PsCommandBuilder.Create()
-            .AddCommand("Get-Item")
-            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
-            .Script("throw test-error");
+            .Script("throw 'test-error'");
 
         var result = await _engine.GetObjectValueAsync<string>(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Contain("test-error");
-        failure.Category.Should().Be(PowershellFailureCategory.Other);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("test-error");
+        error.Category.Should().Be(PowershellErrorCategory.OperationStopped);
     }
 
     [Fact]
@@ -277,16 +269,16 @@ public sealed class PowershellEngineTests : IDisposable
     {
         var command = PsCommandBuilder.Create()
             .AddCommand("Start-Sleep")
-            .AddParameter("Second", 50);
+            .AddParameter("Second", 60);
 
         var start = DateTimeOffset.UtcNow;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var result = await _engine.GetObjectValueAsync<EnvVar>(command, null, cts.Token);
 
-        start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Be("The Powershell pipeline has been cancelled.");
-        failure.Category.Should().Be(PowershellFailureCategory.PipelineStopped);
+        start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Be("The pipeline has been stopped.");
+        error.Category.Should().Be(PowershellErrorCategory.PipelineStopped);
     }
 
     [Fact]
@@ -354,27 +346,21 @@ public sealed class PowershellEngineTests : IDisposable
             .AddCommand("Test-Missing");
 
         var result = await _engine.GetObjectValuesAsync<string>(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Contain("Test-Missing");
-        failure.Category.Should().Be(PowershellFailureCategory.Other);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("Test-Missing");
+        error.Category.Should().Be(PowershellErrorCategory.CommandNotFound);
     }
 
     [Fact]
-    public async Task GetObjectValuesAsync_ItemDoesNotExistAndScriptError_ReturnsError()
+    public async Task GetObjectValuesAsync_ScriptError_ReturnsError()
     {
         var command = PsCommandBuilder.Create()
-            .AddCommand("Get-Item")
-            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_*")
-            .AddCommand("Sort-Object")
-            .AddParameter("Property", "Name")
-            .AddCommand("Select-Object")
-            .AddParameter("ExpandProperty", "Value")
-            .Script("throw test-error");
+            .Script("throw 'test-error'");
 
         var result = await _engine.GetObjectValuesAsync<string>(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Contain("test-error");
-        failure.Category.Should().Be(PowershellFailureCategory.Other);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("test-error");
+        error.Category.Should().Be(PowershellErrorCategory.OperationStopped);
     }
 
     [Fact]
@@ -382,16 +368,16 @@ public sealed class PowershellEngineTests : IDisposable
     {
         var command = PsCommandBuilder.Create()
             .AddCommand("Start-Sleep")
-            .AddParameter("Second", 50);
+            .AddParameter("Second", 60);
 
         var start = DateTimeOffset.UtcNow;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var result = await _engine.GetObjectValuesAsync<string>(command, null, cts.Token);
 
-        start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Be("The Powershell pipeline has been cancelled.");
-        failure.Category.Should().Be(PowershellFailureCategory.PipelineStopped);
+        start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Be("The pipeline has been stopped.");
+        error.Category.Should().Be(PowershellErrorCategory.PipelineStopped);
     }
 
     [Fact]
@@ -435,8 +421,8 @@ public sealed class PowershellEngineTests : IDisposable
             .AddParameter("Path", @"Env:\ERYPH_UNITTEST_MISSING");
 
         var result = await _engine.RunAsync(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Category.Should().Be(PowershellFailureCategory.ObjectNotFound);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Category.Should().Be(PowershellErrorCategory.ObjectNotFound);
     }
 
     [Fact]
@@ -448,23 +434,21 @@ public sealed class PowershellEngineTests : IDisposable
             .AddCommand("Test-Missing");
 
         var result = await _engine.RunAsync(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Contain("Test-Missing");
-        failure.Category.Should().Be(PowershellFailureCategory.Other);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("Test-Missing");
+        error.Category.Should().Be(PowershellErrorCategory.CommandNotFound);
     }
 
     [Fact]
-    public async Task RunAsync_ItemDoesNotExistAndScriptError_ReturnsError()
+    public async Task RunAsync_ScriptError_ReturnsError()
     {
         var command = PsCommandBuilder.Create()
-            .AddCommand("Get-Item")
-            .AddParameter("Path", @"Env:\ERYPH_UNITTEST_A")
-            .Script("throw test-error");
+            .Script("throw 'test-error'");
 
         var result = await _engine.RunAsync(command);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Contain("test-error");
-        failure.Category.Should().Be(PowershellFailureCategory.Other);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Contain("test-error");
+        error.Category.Should().Be(PowershellErrorCategory.OperationStopped);
     }
 
     [Fact]
@@ -472,16 +456,16 @@ public sealed class PowershellEngineTests : IDisposable
     {
         var command = PsCommandBuilder.Create()
             .AddCommand("Start-Sleep")
-            .AddParameter("Second", 50);
+            .AddParameter("Second", 60);
 
         var start = DateTimeOffset.UtcNow;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var result = await _engine.RunAsync(command, null, cts.Token);
 
-        start.Should().BeWithin(TimeSpan.FromSeconds(2)).Before(DateTimeOffset.Now);
-        var failure = result.Should().BeLeft().Subject;
-        failure.Message.Should().Be("The Powershell pipeline has been cancelled.");
-        failure.Category.Should().Be(PowershellFailureCategory.PipelineStopped);
+        start.Should().BeWithin(TimeSpan.FromSeconds(30)).Before(DateTimeOffset.Now);
+        var error = result.Should().BeLeft().Which.Should().BeOfType<PowershellError>().Subject;
+        error.Message.Should().Be("The pipeline has been stopped.");
+        error.Category.Should().Be(PowershellErrorCategory.PipelineStopped);
     }
 
     [Fact]

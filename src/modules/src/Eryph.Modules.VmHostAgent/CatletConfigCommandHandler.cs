@@ -82,7 +82,7 @@ namespace Eryph.Modules.VmHostAgent
             let command = PsCommandBuilder.Create()
                 .AddCommand("Get-VM")
                 .AddParameter("Id", id)
-            from vmInfo in engine.GetObjectAsync<VirtualMachineInfo>(command).ToError()
+            from vmInfo in engine.GetObjectAsync<VirtualMachineInfo>(command)
             select vmInfo;
 
         protected EitherAsync<Error, Unit> EnsureMetadata(
@@ -109,8 +109,7 @@ namespace Eryph.Modules.VmHostAgent
                 var newNotes = $"eryph metadata id: {metadataId}";
 
                 return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                        .AddParameter("Notes", newNotes))
-                    .ToError();
+                        .AddParameter("Notes", newNotes));
             }
 
             if (!Guid.TryParse(metadataIdString, out var exitingMetadataId))
@@ -148,7 +147,7 @@ namespace Eryph.Modules.VmHostAgent
 
 
             return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("Notes", newNotes)).ToError();
+                .AddParameter("Notes", newNotes));
         }
 
 
