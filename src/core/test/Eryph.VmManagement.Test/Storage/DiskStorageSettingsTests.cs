@@ -11,6 +11,7 @@ using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Storage;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
+using LanguageExt.Common;
 using Xunit;
 
 using static LanguageExt.Prelude;
@@ -117,7 +118,7 @@ public class DiskStorageSettingsTests
         psEngine.GetObjectCallback = (_, command) =>
         {
             if (!command.ToString().StartsWith("Get-VHD"))
-                return new PowershellFailure("Unknown command");
+                return Error.New("Unknown command");
 
             if (command.ToString().Contains("sda_g2"))
             {
@@ -166,7 +167,7 @@ public class DiskStorageSettingsTests
         psEngine.GetObjectCallback = (_, command) =>
         {
             if (!command.ToString().StartsWith("Get-VHD"))
-                return new PowershellFailure ("Unknown command");
+                return Error.New ("Unknown command");
 
             return Seq1(psEngine.ToPsObject<object>(new VhdInfo
             {

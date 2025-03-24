@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using System.Text;
 using Eryph.Core;
 using Eryph.VmManagement.Sys;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -278,7 +279,7 @@ public class OvsDriverProviderTests
 
         _powershellEngineMock.Setup(m => m.GetObjectValuesAsync<string?>(
                 It.Is<PsCommandBuilder>(b => isGetSignatureCommand(b)), null, CancellationToken.None))
-            .Returns(EitherAsync<PowershellFailure, Seq<string?>>.Right(
+            .Returns(EitherAsync<Error, Seq<string?>>.Right(
                 Seq1<string?>(isTestSigned
                     ? "Some Test Publisher"
                     : "Microsoft Windows Hardware Compatibility Publisher")));

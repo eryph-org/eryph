@@ -35,9 +35,9 @@ internal class RemoveVirtualMachineHandler(
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         from storageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo)
-        from stoppedVM in vmInfo.StopIfRunning(_engine).ToError()
+        from stoppedVM in vmInfo.StopIfRunning(_engine)
         from uRemovePorts in ovsPortManager.SyncPorts(vmInfo, VMPortChange.Remove)
-        from _ in vmInfo.Remove(_engine).ToError()
+        from _ in vmInfo.Remove(_engine)
         from __ in RemoveVMFiles(storageSettings)
         select unit;
 

@@ -37,6 +37,6 @@ public class ConvergeCPU(
             .AddCommand("Set-VMProcessor")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("Count", cpuCount)
-        from _2 in Context.Engine.RunAsync(command).ToError()
+        from _2 in Context.Engine.RunAsync(command)
         select unit;
 }

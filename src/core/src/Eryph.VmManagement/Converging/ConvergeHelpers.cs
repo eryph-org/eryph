@@ -14,7 +14,7 @@ namespace Eryph.VmManagement.Converging
             TypedPsObject<T> parentInfo,
             Expression<Func<T, IList<TSub>>> listProperty,
             Func<TypedPsObject<TSub>, bool> predicateFunc,
-            Func<Task<Either<PowershellFailure, Seq<TypedPsObject<TSub>>>>> creatorFunc)
+            Func<Task<Either<Error, Seq<TypedPsObject<TSub>>>>> creatorFunc)
         {
             var result = parentInfo.GetList(listProperty, predicateFunc).ToArray();
 
@@ -25,7 +25,7 @@ namespace Eryph.VmManagement.Converging
                 );
 
 
-            var creatorResult = await creatorFunc().ToError();
+            var creatorResult = await creatorFunc();
 
             var res = creatorResult.Bind(
                 seq => seq.HeadOrNone()

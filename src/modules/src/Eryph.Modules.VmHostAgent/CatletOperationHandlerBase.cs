@@ -20,7 +20,7 @@ internal abstract class CatletOperationHandlerBase<T>(
     {
         var command = message.Command;
 
-        return GetVmInfo(command.VMId).ToError()
+        return GetVmInfo(command.VMId)
             .Bind(optVmInfo =>
             {
                 return optVmInfo.Match(
@@ -35,7 +35,7 @@ internal abstract class CatletOperationHandlerBase<T>(
         T command);
 
 
-    private EitherAsync<PowershellFailure, Option<TypedPsObject<VirtualMachineInfo>>> GetVmInfo(
+    private EitherAsync<Error, Option<TypedPsObject<VirtualMachineInfo>>> GetVmInfo(
         Guid vmId) =>
         engine.GetObjectsAsync<VirtualMachineInfo>(CreateGetVMCommand(vmId))
             .Map(seq => seq.HeadOrNone());

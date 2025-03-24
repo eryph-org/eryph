@@ -55,7 +55,7 @@ public class ConvergeSecureBoot(
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("EnableSecureBoot", enableSecureBoot ? OnOffState.On : OnOffState.Off)
             .AddParameter("SecureBootTemplate", secureBootTemplate)
-        from _3 in Context.Engine.RunAsync(command).ToError()
+        from _3 in Context.Engine.RunAsync(command)
         select unit;
 
     private EitherAsync<Error, VMFirmwareInfo> GetFirmwareInfo(
@@ -65,7 +65,6 @@ public class ConvergeSecureBoot(
             .AddCommand("Get-VMFirmware")
             .AddParameter("VM", vmInfo.PsObject)
         from vmSecurityInfos in Context.Engine.GetObjectValuesAsync<VMFirmwareInfo>(command)
-            .ToError()
         from vMSecurityInfo in vmSecurityInfos.HeadOrNone()
             .ToEitherAsync(Error.New($"Failed to fetch firmware information for the VM {vmInfo.Value.Id}."))
         select vMSecurityInfo;

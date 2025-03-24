@@ -225,7 +225,7 @@ namespace Eryph.VmManagement.Converging
                 from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
                     .AddCommand("Set-VMDvdDrive")
                     .AddParameter("VMDvdDrive", dvdDrive.PsObject)
-                    .AddParameter("Path", configDriveIsoPath)).ToError()
+                    .AddParameter("Path", configDriveIsoPath))
                 from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
                 select vmInfoRecreated).ToEither();
         }

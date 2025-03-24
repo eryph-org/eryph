@@ -43,7 +43,6 @@ class OvsPortManager(
             .AddCommand("Get-VM")
             .AddParameter("Id", vmId)
         from vmInfos in engine.GetObjectsAsync<VirtualMachineInfo>(psCommand)
-            .ToError()
         from vmInfo in vmInfos.HeadOrNone()
             .ToEitherAsync(Error.New($"The VM with ID {vmId} was not found."))
         from __ in ForceSyncPorts(vmInfo, change)
@@ -57,7 +56,6 @@ class OvsPortManager(
             .AddCommand("Get-VMNetworkAdapter")
             .AddParameter("VM", vmInfo.PsObject)
         from allAdapters in engine.GetObjectsAsync<VMNetworkAdapter>(getAdaptersCommand)
-            .ToError()
         let adapters = allAdapters
             .Map(a => a.Value)
             .Filter(a => a.SwitchName == EryphConstants.OverlaySwitchName)

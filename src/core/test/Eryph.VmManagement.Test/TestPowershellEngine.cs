@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Management.Automation;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement.Test;
 
@@ -11,9 +12,9 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         ObjectMapping =mapping;
     }
 
-    public Func<Type,AssertCommand, Either<PowershellFailure,Seq<TypedPsObject<object>>>>? GetObjectCallback;
-    public Func<AssertCommand, Either<PowershellFailure, Unit>>? RunCallback;
-    public Func<Type, AssertCommand, Either<PowershellFailure, Seq<object>>>? GetValuesCallback;
+    public Func<Type,AssertCommand, Either<Error,Seq<TypedPsObject<object>>>>? GetObjectCallback;
+    public Func<AssertCommand, Either<Error, Unit>>? RunCallback;
+    public Func<Type, AssertCommand, Either<Error, Seq<object>>>? GetValuesCallback;
 
     public TypedPsObject<T> ToPsObject<T>(T obj)
     {
@@ -26,7 +27,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         return new TypedPsObject<object>(obj.PsObject, this, ObjectMapping);
     }
 
-    public EitherAsync<PowershellFailure, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
+    public EitherAsync<Error, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task>? reportProgress = null,
         CancellationToken cancellationToken = default)
@@ -40,7 +41,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
             .Map(seq => seq.Map(r => new TypedPsObject<T>(r.PsObject, this, ObjectMapping)));
     }
 
-    public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
+    public EitherAsync<Error, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task>? reportProgress = null,
         CancellationToken cancellationToken = default)
@@ -55,7 +56,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         return result.Map(s => s.Map(v =>(T)v)).ToAsync();
     }
 
-    public EitherAsync<PowershellFailure, Option<TypedPsObject<T>>> GetObjectAsync<T>(
+    public EitherAsync<Error, Option<TypedPsObject<T>>> GetObjectAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task>? reportProgress = null,
         CancellationToken cancellationToken = default)
@@ -72,7 +73,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
             .ToAsync();
     }
 
-    public EitherAsync<PowershellFailure, Option<T>> GetObjectValueAsync<T>(
+    public EitherAsync<Error, Option<T>> GetObjectValueAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task>? reportProgress = null,
         CancellationToken cancellationToken = default)
@@ -89,7 +90,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
             .ToAsync();
     }
 
-    public EitherAsync<PowershellFailure, Unit> RunAsync(
+    public EitherAsync<Error, Unit> RunAsync(
         PsCommandBuilder builder,
         Func<int, Task>? reportProgress = null,
         CancellationToken cancellationToken = default)
