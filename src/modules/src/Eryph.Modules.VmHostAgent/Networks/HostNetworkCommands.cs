@@ -240,7 +240,7 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
     {
         return default(RT).Powershell.Bind(ps =>
         {
-            return Prelude.TryAsync(async () =>
+            return TryAsync(async () =>
                 {
                     //make sure adapter is created
                     var cts = new CancellationTokenSource();

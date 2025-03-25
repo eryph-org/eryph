@@ -8,7 +8,7 @@ using LanguageExt.Effects.Traits;
 
 namespace Eryph.Core;
 
-public static partial class EryphPrelude
+public static partial class Prelude
 {
     // The @catch in LanguageExt 4 only supports predicates for exceptions.
     // The @catchError adds support for predicates for errors.
