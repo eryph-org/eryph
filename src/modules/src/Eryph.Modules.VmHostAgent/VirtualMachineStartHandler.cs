@@ -12,7 +12,7 @@ using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Handlers;
 
-using static Eryph.Core.EryphPrelude;
+using static Eryph.Core.Prelude;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent;

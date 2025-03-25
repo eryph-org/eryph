@@ -14,6 +14,8 @@ using LanguageExt;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.VmHostAgent;
 
 internal class SyncService : BackgroundService
@@ -142,7 +144,7 @@ internal class SyncService : BackgroundService
             case "VALIDATE_CHANGES":
                 var networkProviders = command.Data.HasValue 
                     ? command.Data.Value.Deserialize<NetworkProvider[]>()
-                    : Array.Empty<NetworkProvider>();
+                    : [];
                 return await _networkSyncService.ValidateChanges(networkProviders)
                     .Match(r => new SyncServiceResponse
                         {
@@ -180,7 +182,7 @@ internal class SyncService : BackgroundService
                 operation = AgentServiceOperation.Stop;
                 break;
             case "SYNC_AGENT_SETTINGS":
-                return await Prelude.TryAsync(async () => await _diskStoresChangeWatcherService.Restart().ToUnit())
+                return await TryAsync(async () => await _diskStoresChangeWatcherService.Restart().ToUnit())
                     .Match(
                         Succ: _ => new SyncServiceResponse { Response = "DONE" },
                         Fail: ex =>

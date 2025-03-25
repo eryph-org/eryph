@@ -1,6 +1,8 @@
 ﻿using Eryph.Core.Sys;
 using LanguageExt;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Core.Tests.Sys;
 
 /// <summary>
@@ -59,6 +61,6 @@ public class RegistryTests
 
     private readonly struct TestRuntime : HasRegistry<TestRuntime>
     {
-        public Eff<TestRuntime, RegistryIO> RegistryEff => Prelude.SuccessEff(LiveRegistryIO.Default);
+        public Eff<TestRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
     }
 }
