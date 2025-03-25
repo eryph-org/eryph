@@ -118,7 +118,7 @@ public class DiskStorageSettingsTests
         psEngine.GetObjectCallback = (_, command) =>
         {
             if (!command.ToString().StartsWith("Get-VHD"))
-                return Error.New("Unknown command");
+                return Error.New($"Unexpected command: {command}.");
 
             if (command.ToString().Contains("sda_g2"))
             {
@@ -146,7 +146,7 @@ public class DiskStorageSettingsTests
         psEngine.GetValuesCallback = (_, command) =>
         {
             if (!command.ToString().StartsWith("Test-VHD"))
-                return new PowershellFailure { Message = "Unknown command" };
+                return Error.New($"Unexpected command: {command}.");
             return Seq1<object>(true);
         };
 
@@ -167,7 +167,7 @@ public class DiskStorageSettingsTests
         psEngine.GetObjectCallback = (_, command) =>
         {
             if (!command.ToString().StartsWith("Get-VHD"))
-                return Error.New ("Unknown command");
+                return Error.New($"Unexpected command: {command}.");
 
             return Seq1(psEngine.ToPsObject<object>(new VhdInfo
             {
@@ -177,7 +177,7 @@ public class DiskStorageSettingsTests
         psEngine.GetValuesCallback = (_, command) =>
         {
             if (!command.ToString().StartsWith("Test-VHD"))
-                return new PowershellFailure { Message = "Unknown command" };
+                return Error.New($"Unexpected command: {command}.");
             return Seq1<object>(true);
         };
 

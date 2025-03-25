@@ -79,7 +79,7 @@ public class ConvergeNetworkAdaptersTests
                 return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
             }
 
-            return Error.New($"Unexpected command {command}");
+            return Error.New($"Unexpected command: {command}.");
         };
         _portManagerMock.Setup(m => m.GetPortName("eth0Id"))
             .Returns(RightAsync<Error, string>("port0"));
