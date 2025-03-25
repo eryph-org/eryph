@@ -629,6 +629,80 @@ public class CatletFeedingTests
             .Should().Be("Gene 'gene:acme/acme-tools/1.0:test-fodder' does not exist in local genepool.");
     }
 
+    [Theory]
+    [InlineData("any", "hyperv/any")]
+    [InlineData("any", "hyperv/amd64")]
+    [InlineData("hyperv/any", "hyperv/amd64")]
+    public void Feed_FoodDoesNotExistInFodderGene_ReturnsError(
+        string architecture,
+        string otherArchitecture)
+    {
+        var config = new CatletConfig
+        {
+            Name = "test",
+            Fodder =
+            [
+                new FodderConfig()
+                {
+                    Name = "food2",
+                    Source = "gene:acme/acme-tools/1.0:test-fodder",
+                },
+            ],
+        };
+
+        _genepoolReaderMock.SetupGenesetReferences();
+
+        _genepoolReaderMock.SetupFodderGene(
+            "gene:acme/acme-tools/1.0:test-fodder",
+            architecture,
+            new FodderGeneConfig()
+            {
+                Name = "test-fodder",
+                Fodder =
+                [
+                    new FodderConfig()
+                    {
+                        Name = "food1",
+                        Content = "food 1 content",
+                    },
+                ]
+            });
+
+        _genepoolReaderMock.SetupFodderGene(
+            "gene:acme/acme-tools/1.0:test-fodder",
+            otherArchitecture,
+            new FodderGeneConfig()
+            {
+                Name = "test-fodder",
+                Fodder =
+                [
+                    new FodderConfig()
+                    {
+                        Name = "food1",
+                        Content = "food 1 content",
+                    },
+                    new FodderConfig()
+                    {
+                        Name = "food2",
+                        Content = "food 2 content",
+                    }
+                ]
+            });
+
+        var resolvedGenes = Seq1(
+            new UniqueGeneIdentifier(
+                GeneType.Fodder,
+                GeneIdentifier.New("gene:acme/acme-tools/1.0:test-fodder"),
+                Architecture.New(architecture)));
+
+        var result = CatletFeeding.Feed(config, resolvedGenes, _genepoolReaderMock.Object);
+
+        var error = result.Should().BeLeft().Subject;
+        error.Message.Should().Be("Could not expand the fodder gene 'gene:acme/acme-tools/1.0:test-fodder'.");
+        error.Inner.Should().BeSome().Which.Message
+            .Should().Be($"The food 'food2' does not exist in the gene 'gene:acme/acme-tools/1.0:test-fodder ({architecture})'.");
+    }
+
     [Fact]
     public void FeedSystemVariables_SystemVariablesAreAppended()
     {
