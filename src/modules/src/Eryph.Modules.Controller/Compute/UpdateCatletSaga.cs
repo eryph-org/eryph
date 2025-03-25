@@ -276,7 +276,7 @@ internal class UpdateCatletSaga(
 
     public Task Handle(OperationTaskStatusEvent<SyncVmNetworkPortsCommand> message)
     {
-        return FailOrRun(message, () => Complete());
+        return FailOrRun(message, Complete);
     }
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<UpdateCatletSagaData>> config)

@@ -124,7 +124,7 @@ namespace Eryph.Modules.Controller.Networks
  
         public Task Handle(OperationTaskStatusEvent<UpdateNetworksCommand> message)
         {
-            return FailOrRun(message, () => Complete());
+            return FailOrRun(message, Complete);
         }
     }
 }
