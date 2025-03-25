@@ -1,70 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
-using System.Text;
 using System.Threading.Tasks;
-using Dbosoft.Hosuto.Modules.Testing;
 using Eryph.Core;
 using Eryph.Messages.Resources.Disks;
 using Eryph.Modules.AspNetCore.ApiProvider;
 using Eryph.Modules.ComputeApi.Endpoints.V1.VirtualDisks;
-using Eryph.StateDb;
 using Eryph.StateDb.Model;
-using Eryph.StateDb.TestBase;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Eryph.Modules.ComputeApi.Tests.Integration.Endpoints.VirtualDisks;
 
-public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<WebModuleFactory<ComputeApiModule>>
+public class CreateVirtualDiskTests(ITestOutputHelper outputHelper)
+    : VirtualDiskTestBase(outputHelper)
 {
-    private readonly WebModuleFactory<ComputeApiModule> _factory;
-
-    private const string DiskName = "test-disk";
-    private const int DiskSize = 5;
-    private const string LocationName = "test-location";
-    private const string EnvironmentName = "test-environment";
-    private const string StoreName = "test-store";
-
-    public CreateVirtualDiskTests(
-        ITestOutputHelper outputHelper,
-        WebModuleFactory<ComputeApiModule> factory)
-        : base(outputHelper)
-    {
-        _factory = factory.WithApiHost(ConfigureDatabase);
-    }
-
-    protected override async Task SeedAsync(IStateStore stateStore)
-    {
-        await SeedDefaultTenantAndProject();
-    }
-
     [Theory]
-    [InlineData(false, "compute:read", HttpStatusCode.Forbidden)]
-    [InlineData(true, "compute:write", HttpStatusCode.Forbidden)]
+    [InlineData(BuiltinRole.Contributor, "compute:read", HttpStatusCode.Forbidden)]
+    [InlineData(BuiltinRole.Reader, "compute:write", HttpStatusCode.Forbidden)]
     public async Task Virtual_disk_is_not_created_when_not_authorized(
-        bool hasReadOnlyRole, string scope, HttpStatusCode expectedStatusCode)
+        BuiltinRole role,
+        string scope,
+        HttpStatusCode expectedStatusCode)
     {
-        var notAuthorizedUserId = Guid.NewGuid().ToString();
-        await WithScope(async stateStore =>
-        {
-            await stateStore.For<ProjectRoleAssignment>().AddAsync(
-                new ProjectRoleAssignment()
-                {
-                    ProjectId = EryphConstants.DefaultProjectId,
-                    IdentityId = notAuthorizedUserId,
-                    RoleId = hasReadOnlyRole
-                        ? EryphConstants.BuildInRoles.Reader
-                        : EryphConstants.BuildInRoles.Contributor,
-                });
-            await stateStore.SaveChangesAsync();
-        });
+        await ArrangeOtherUserAccess(role);
 
-        var response = await _factory.CreateDefaultClient()
-            .SetEryphToken(EryphConstants.DefaultTenantId, notAuthorizedUserId, scope, false)
+        var response = await Factory.CreateDefaultClient()
+            .SetEryphToken(EryphConstants.DefaultTenantId, OtherClientId, scope, false)
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
                 ProjectId = EryphConstants.DefaultProjectId.ToString(),
@@ -94,7 +56,7 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             await stateStore.SaveChangesAsync();
         });
 
-        var response = await _factory.CreateDefaultClient()
+        var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
@@ -127,7 +89,7 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
             await stateStore.SaveChangesAsync();
         });
 
-        var response = await _factory.CreateDefaultClient()
+        var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
@@ -144,14 +106,14 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
     [Fact]
     public async Task Virtual_disk_is_created()
     {
-        var response = await _factory.CreateDefaultClient()
+        var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
                 ProjectId = EryphConstants.DefaultProjectId.ToString(),
                 Name = DiskName,
                 Location = LocationName,
-                Size = 5,
+                Size = DiskSize,
                 Environment = EnvironmentName,
                 Store = StoreName,
             },
@@ -159,7 +121,7 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
-        var messages = _factory.GetPendingRebusMessages<CreateVirtualDiskCommand>();
+        var messages = Factory.GetPendingRebusMessages<CreateVirtualDiskCommand>();
         messages.Should().SatisfyRespectively(
             m =>
             {
@@ -175,20 +137,20 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
     [Fact]
     public async Task Virtual_disk_is_created_with_default_values()
     {
-        var response = await _factory.CreateDefaultClient()
+        var response = await Factory.CreateDefaultClient()
             .SetEryphToken(EryphConstants.DefaultTenantId, EryphConstants.SystemClientId, "compute:write", true)
             .PostAsJsonAsync("v1/virtualdisks", new NewVirtualDiskRequest
             {
                 ProjectId = EryphConstants.DefaultProjectId.ToString(),
                 Name = DiskName,
                 Location = LocationName,
-                Size = 5,
+                Size = DiskSize,
             },
             options: ApiJsonSerializerOptions.Options);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
 
-        var messages = _factory.GetPendingRebusMessages<CreateVirtualDiskCommand>();
+        var messages = Factory.GetPendingRebusMessages<CreateVirtualDiskCommand>();
         messages.Should().SatisfyRespectively(
             m =>
             {
@@ -199,12 +161,5 @@ public class CreateVirtualDiskTests : InMemoryStateDbTestBase, IClassFixture<Web
                 m.Environment.Should().Be(null);
                 m.DataStore.Should().Be(null);
             });
-    }
-
-    private async Task WithScope(Func<IStateStore, Task> func)
-    {
-        await using var scope = CreateScope();
-        var stateStore = scope.GetInstance<IStateStore>();
-        await func(stateStore);
     }
 }

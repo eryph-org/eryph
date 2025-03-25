@@ -38,7 +38,7 @@ namespace Eryph.VmManagement
                 .Map(x =>
 
                     from plannedDrive in x.CastSafe<PlannedHardDiskDriveInfo>().ToAsync().ToError()
-                    from optionalDrive in VhdQuery.GetVhdInfo(engine, plannedDrive.Value.Path).ToAsync().ToError()
+                    from optionalDrive in VhdQuery.GetVhdInfo(engine, plannedDrive.Value.Path)
                     select new CatletDriveConfig
                     {
                         Name = Path.GetFileNameWithoutExtension(plannedDrive.Value.Path),

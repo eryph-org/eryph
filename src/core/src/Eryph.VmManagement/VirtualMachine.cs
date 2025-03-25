@@ -271,15 +271,15 @@ namespace Eryph.VmManagement
         private static EitherAsync<Error, TypedPsObject<PlannedVirtualMachineInfo>> ExpandTemplateData(
             TypedPsObject<PlannedVirtualMachineInfo> template, IPowershellEngine engine)
         {
-            return template.GetList(x=>x.HardDrives).MapToEitherAsync(device =>
-                    (   from hd in device.CastSafeAsync<PlannedHardDiskDriveInfo>().ToAsync()
-                        from optionalDrive in VhdQuery.GetVhdInfo(engine, hd.Value.Path).ToAsync()
-                        from drive in optionalDrive.ToEither(new PowershellFailure
-                                {Message = "Failed to find realized VM disk"})
-                            .ToAsync()
-                        let _ = drive.Apply(d => hd.Value.Size = d.Value.Size)
-                        select hd).ToEither())
-                .MapT(hd => template).ToError().ToAsync();
+            return template.GetList(x=>x.HardDrives)
+                .Map(device =>
+                    from hd in device.CastSafeAsync<PlannedHardDiskDriveInfo>().ToError().ToAsync()
+                    from optionalDrive in VhdQuery.GetVhdInfo(engine, hd.Value.Path)
+                    from drive in optionalDrive.ToEitherAsync(Error.New("Failed to find realized VM disk"))
+                    let _ = drive.Apply(d => hd.Value.Size = d.Value.Size)
+                    select hd)
+                .SequenceSerial()
+                .Map(_ => template);
         }
 
         private static EitherAsync<Error, TypedPsObject<T>> DisconnectNetworkAdapters<T>(

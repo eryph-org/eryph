@@ -1,82 +1,93 @@
 ﻿using System;
 using System.IO;
-using System.Threading.Tasks;
 using Eryph.VmManagement.Data.Core;
 using LanguageExt;
+using LanguageExt.Common;
 
-namespace Eryph.VmManagement.Storage
+using static LanguageExt.Prelude;
+
+namespace Eryph.VmManagement.Storage;
+
+using SnapshotInfo = (TypedPsObject<VhdInfo> ActualVhd, Option<TypedPsObject<VhdInfo>> SnapshotVhd);
+
+public static class VhdQuery
 {
-    public static class VhdQuery
-    {
-        public static async Task<Either<PowershellFailure, Option<TypedPsObject<VhdInfo>>>> GetVhdInfo(
-            IPowershellEngine engine, string path)
+    /// <summary>
+    /// The maximum number of snapshots which are inspected
+    /// when looking for the base VHD of a snapshot.
+    /// </summary>
+    /// <remarks>
+    /// Hyper-V has a documented limit of 50 snapshots per VM.
+    /// </remarks>
+    private const int MaxSnapshotDepth = 50;
+
+    public static EitherAsync<Error, Option<TypedPsObject<VhdInfo>>> GetVhdInfo(
+        IPowershellEngine engine,
+        Option<string> path) =>
+        from optionalVhdInfo in path.Filter(notEmpty)
+            .Map(p => GetVhdInfo(engine, p))
+            .Sequence()
+            .Map(o => o.Flatten())
+        select optionalVhdInfo;
+
+    private static EitherAsync<Error, Option<TypedPsObject<VhdInfo>>> GetVhdInfo(
+        IPowershellEngine engine,
+        string path) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Get-VHD")
+            .AddArgument(path)
+            .AddParameter("ErrorAction", "SilentlyContinue")
+        from vhdInfos in engine.GetObjectsAsync<VhdInfo>(command).ToAsync().ToError()
+        select vhdInfos.HeadOrNone();
+
+    public static EitherAsync<Error, bool> TestVhd(
+        IPowershellEngine engine,
+        string path) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Test-VHD")
+            .AddArgument(path)
+            // Test-VHD returns an error when e.g. the chain of VHDs is broken.
+            // When the error is ignored, Test-VHD returns false when the VHD is not usable.
+            .AddParameter("ErrorAction", "SilentlyContinue")
+        from results in engine.GetObjectValuesAsync<bool>(command).ToError()
+        from isValid in results.HeadOrNone()
+            .ToEitherAsync(Error.New("Test-VHD did not return a result."))
+        select isValid;
+
+    public static EitherAsync<Error, SnapshotInfo> GetSnapshotAndActualVhd(
+        IPowershellEngine engine,
+        TypedPsObject<VhdInfo> vhdInfo) =>
+        IsSnapshotVhd(vhdInfo.Value.Path) switch
         {
-            if (string.IsNullOrWhiteSpace(path))
-                return Option<TypedPsObject<VhdInfo>>.None;
+            true => from baseVhd in ResolveActualVhd(engine, vhdInfo, 0)
+                    .MapLeft(e => Error.New($"Could not resolve base VHD of snapshot '{vhdInfo.Value.Path}.", e))
+                    select new SnapshotInfo(baseVhd, vhdInfo),
+            false => new SnapshotInfo(vhdInfo, None),
+        };
 
-            var res = await engine
-                .GetObjectsAsync<VhdInfo>(new PsCommandBuilder().AddCommand("Get-VHD").AddArgument(path)
-                    .AddParameter("ErrorAction", "SilentlyContinue")
-                )
-                .MapAsync(s => s.HeadOrNone());
-            return res;
-        }
-
-
-        public static Task<Either<PowershellFailure, (Option<TypedPsObject<VhdInfo>> SnapshotVhd,
-                Option<TypedPsObject<VhdInfo>> ActualVhd)>>
-            GetSnapshotAndActualVhd(IPowershellEngine engine, Option<TypedPsObject<VhdInfo>> vhdInfo)
+    private static EitherAsync<Error, TypedPsObject<VhdInfo>> ResolveActualVhd(
+        IPowershellEngine engine,
+        TypedPsObject<VhdInfo> vhdInfo,
+        int depth) =>
+        from result in IsSnapshotVhd(vhdInfo.Value.Path) switch
         {
-            return vhdInfo.MapAsync(async info =>
-            {
-                var firstSnapshotVhdOption = Option<TypedPsObject<VhdInfo>>.None;
-                var snapshotVhdOption = Option<TypedPsObject<VhdInfo>>.None;
-                var actualVhdOption = Option<TypedPsObject<VhdInfo>>.None;
-
-                // check for snapshots, return parent path if it is not a snapshot
-                if (string.Equals(Path.GetExtension(info.Value.Path), ".avhdx", StringComparison.OrdinalIgnoreCase))
-                {
-                    snapshotVhdOption = vhdInfo;
-                    firstSnapshotVhdOption = vhdInfo;
-                }
-                else
-                {
-                    actualVhdOption = vhdInfo;
-                }
-
-                while (actualVhdOption.IsNone)
-                {
-                    var eitherVhdInfo = await snapshotVhdOption.ToEither(new PowershellFailure
-                            {Message = "Storage failure: Missing snapshot "})
-                        .Map(snapshotVhd => string.IsNullOrWhiteSpace(snapshotVhd?.Value?.ParentPath)
-                            ? Option<string>.None
-                            : Option<string>.Some(snapshotVhd.Value.ParentPath))
-                        .Bind(o => o.ToEither(new PowershellFailure
-                            {Message = "Storage failure: Missing snapshot parent path"}))
-                        .BindAsync(path => GetVhdInfo(engine, path))
-                        .BindAsync(o => o.ToEither(new PowershellFailure
-                            {Message = "Storage failure: Missing snapshot parent"}))
-                        .ConfigureAwait(false);
-
-
-                    if (eitherVhdInfo.IsLeft)
-                        return Prelude
-                            .Left<PowershellFailure, (Option<TypedPsObject<VhdInfo>> SnapshotVhd,
-                                Option<TypedPsObject<VhdInfo>> ActualVhd)>(eitherVhdInfo.LeftAsEnumerable()
-                                .FirstOrDefault());
-
-                    info = eitherVhdInfo.IfLeft(new TypedPsObject<VhdInfo>(null, 
-                        (IPsObjectRegistry) engine, engine.ObjectMapping));
-
-
-                    if (string.Equals(Path.GetExtension(info.Value.Path), ".avhdx", StringComparison.OrdinalIgnoreCase))
-                        snapshotVhdOption = info;
-                    else
-                        actualVhdOption = info;
-                }
-
-                return Prelude.Right((firstSnapshotVhdOption, actualVhdOption));
-            }).IfNone(Prelude.Right((Option<TypedPsObject<VhdInfo>>.None, Option<TypedPsObject<VhdInfo>>.None)));
+            true => from _ in guard(depth < MaxSnapshotDepth, Error.New(
+                            "Exceeded maximum search depth when looking for the base VHD of the snapshot. The snapshot chain might be corrupted."))
+                        .ToEitherAsync()
+                    from parentPath in Optional(vhdInfo.Value.ParentPath)
+                        .Filter(notEmpty)
+                        .ToEitherAsync(Error.New("Storage failure: Missing snapshot parent path."))
+                    from parentVhdInfo in GetVhdInfo(engine, parentPath)
+                    from validParentVhdInfo in parentVhdInfo
+                        .ToEitherAsync(Error.New("Storage failure: Missing snapshot parent VHD."))
+                    from baseVhd in ResolveActualVhd(engine, validParentVhdInfo, depth + 1)
+                    select baseVhd,
+            false => vhdInfo,
         }
-    }
+        select result;
+
+    private static bool IsSnapshotVhd(string path) =>
+        string.Equals(Path.GetExtension(path), ".avhdx", StringComparison.OrdinalIgnoreCase);
 }
