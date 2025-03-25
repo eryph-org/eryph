@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
+using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.VmManagement;

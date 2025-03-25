@@ -1,8 +1,10 @@
-﻿using Dbosoft.Rebus.Operations.Workflow;
+﻿using System;
 
-namespace Eryph.Modules.Controller.Compute
+namespace Eryph.Modules.Controller.Compute;
+
+public class StartCatletSagaData
 {
-    public class StartCatletSagaData : TaskWorkflowSagaData
-    {
-    }
+    public Guid CatletId { get; set; }
+
+    public Guid VmId { get; set; }
 }

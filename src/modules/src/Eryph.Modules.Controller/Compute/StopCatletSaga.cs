@@ -2,10 +2,12 @@
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
@@ -15,49 +17,95 @@ namespace Eryph.Modules.Controller.Compute;
 internal class StopCatletSaga(
     IWorkflow workflow,
     IVirtualMachineDataService vmDataService)
-    : OperationTaskWorkflowSaga<StopCatletCommand, StopCatletSagaData>(workflow),
+    : OperationTaskWorkflowSaga<StopCatletCommand, EryphSagaData<StopCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<ShutdownVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<StopVMCommand>>,
-        IHandleMessages<OperationTaskStatusEvent<KillVMCommand>>
+        IHandleMessages<OperationTaskStatusEvent<KillVMCommand>>,
+        IHandleMessages<OperationTaskStatusEvent<UpdateCatletStateCommand>>
 {
-    protected override Task Initiated(StopCatletCommand message)
+    protected override async Task Initiated(StopCatletCommand message)
     {
-        return vmDataService.GetVM(message.Resource.Id).MatchAsync(
-            None: () => Fail($"The catlet {message.Resource.Id} does not exist.").ToUnit(),
-            Some: s => message.Mode switch
-            {
-                CatletStopMode.Shutdown => 
-                    StartNewTask(new ShutdownVMCommand
-                    {
-                        CatletId = message.Resource.Id,
-                        VMId = s.VMId,
-                    }).AsTask().ToUnit(),
-                CatletStopMode.Hard =>
-                    StartNewTask(new StopVMCommand
-                    {
-                        CatletId = message.Resource.Id,
-                        VMId = s.VMId,
-                    }).AsTask().ToUnit(),
-                CatletStopMode.Kill =>
-                    StartNewTask(new KillVMCommand
-                    {
-                        CatletId = message.Resource.Id,
-                        VMId = s.VMId,
-                    }).AsTask().ToUnit(),
-                _ => Fail($"The stop mode {message.Mode} is not supported").ToUnit(),
-            });
+        Data.Data.CatletId = message.CatletId;
+        var catlet = await vmDataService.GetVM(message.CatletId);
+        if (catlet.IsNone)
+        {
+            await Fail($"The catlet {message.CatletId} does not exist.");
+            return;
+        }
+        Data.Data.VmId = catlet.ValueUnsafe().VMId;
+
+        switch (message.Mode)
+        {
+            case CatletStopMode.Shutdown:
+                await StartNewTask(new ShutdownVMCommand
+                {
+                    CatletId = message.CatletId,
+                    VMId = Data.Data.VmId,
+                });
+                return;
+            case CatletStopMode.Hard:
+                await StartNewTask(new StopVMCommand
+                {
+                    CatletId = message.CatletId,
+                    VMId = Data.Data.VmId,
+                });
+                return;
+            case CatletStopMode.Kill:
+                await StartNewTask(new KillVMCommand
+                {
+                    CatletId = message.CatletId,
+                    VMId = Data.Data.VmId,
+                });
+                return;
+            default:
+                await Fail($"The stop mode {message.Mode} is not supported");
+                return;
+        }
     }
 
     public Task Handle(OperationTaskStatusEvent<StopVMCommand> message) =>
-        FailOrRun(message, () => Complete());
+        FailOrRun(message, async (CatletStateResponse response) =>
+        {
+            await StartNewTask(new UpdateCatletStateCommand
+            {
+                CatletId = Data.Data.CatletId,
+                VmId = Data.Data.VmId,
+                Status = response.Status,
+                UpTime = response.UpTime,
+                Timestamp = response.Timestamp,
+            });
+        });
 
     public Task Handle(OperationTaskStatusEvent<ShutdownVMCommand> message) =>
-        FailOrRun(message, () => Complete());
+        FailOrRun(message, async (CatletStateResponse response) =>
+        {
+            await StartNewTask(new UpdateCatletStateCommand
+            {
+                CatletId = Data.Data.CatletId,
+                VmId = Data.Data.VmId,
+                Status = response.Status,
+                UpTime = response.UpTime,
+                Timestamp = response.Timestamp,
+            });
+        });
 
     public Task Handle(OperationTaskStatusEvent<KillVMCommand> message) =>
+        FailOrRun(message, async (CatletStateResponse response) =>
+        {
+            await StartNewTask(new UpdateCatletStateCommand
+            {
+                CatletId = Data.Data.CatletId,
+                VmId = Data.Data.VmId,
+                Status = response.Status,
+                UpTime = response.UpTime,
+                Timestamp = response.Timestamp,
+            });
+        });
+
+    public Task Handle(OperationTaskStatusEvent<UpdateCatletStateCommand> message) =>
         FailOrRun(message, () => Complete());
 
-    protected override void CorrelateMessages(ICorrelationConfig<StopCatletSagaData> config)
+    protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<StopCatletSagaData>> config)
     {
         base.CorrelateMessages(config);
         config.Correlate<OperationTaskStatusEvent<StopVMCommand>>(
@@ -65,6 +113,8 @@ internal class StopCatletSaga(
         config.Correlate<OperationTaskStatusEvent<ShutdownVMCommand>>(
             m => m.InitiatingTaskId, m => m.SagaTaskId);
         config.Correlate<OperationTaskStatusEvent<KillVMCommand>>(
+            m => m.InitiatingTaskId, m => m.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<UpdateCatletStateCommand>>(
             m => m.InitiatingTaskId, m => m.SagaTaskId);
     }
 }

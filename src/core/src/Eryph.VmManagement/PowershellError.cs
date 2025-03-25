@@ -55,6 +55,9 @@ public record PowershellError : Error
 
     public override bool Is<E>() => false;
 
+    public override bool Is(Error error) =>
+        error is PowershellError pe && pe.Category == Category && pe.Code == Code;
+
     public override ErrorException ToErrorException() =>
         new PowershellErrorException(Message, Code, Activity, Category, Reason, TargetName, TargetType);
 

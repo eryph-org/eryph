@@ -2,43 +2,62 @@
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using JetBrains.Annotations;
-using LanguageExt;
+using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
-namespace Eryph.Modules.Controller.Compute
+namespace Eryph.Modules.Controller.Compute;
+
+[UsedImplicitly]
+internal class StartCatletSaga(IWorkflow workflow,
+    IVirtualMachineDataService vmDataService) :
+    OperationTaskWorkflowSaga<StartCatletCommand, EryphSagaData<StartCatletSagaData>>(workflow),
+    IHandleMessages<OperationTaskStatusEvent<StartCatletVMCommand>>,
+    IHandleMessages<OperationTaskStatusEvent<UpdateCatletStateCommand>>
 {
-    [UsedImplicitly]
-    internal class StartCatletSaga :
-        OperationTaskWorkflowSaga<StartCatletCommand, StartCatletSagaData>,
-        IHandleMessages<OperationTaskStatusEvent<StartCatletVMCommand>>
+    protected override async Task Initiated(StartCatletCommand message)
     {
-        private readonly IVirtualMachineDataService _vmDataService;
-
-        public StartCatletSaga(IWorkflow workflow,
-            IVirtualMachineDataService vmDataService) : base(workflow)
+        Data.Data.CatletId = message.CatletId;
+        var catlet = await vmDataService.GetVM(message.CatletId);
+        if (catlet.IsNone)
         {
-            _vmDataService = vmDataService;
+            await Fail($"The catlet {message.CatletId} does not exist.");
+            return;
         }
-
-        protected override Task Initiated(StartCatletCommand message)
+        Data.Data.VmId = catlet.ValueUnsafe().VMId;
+        
+        await StartNewTask(new StartCatletVMCommand
         {
-            return _vmDataService.GetVM(message.Resource.Id).MatchAsync(
-                None: () => Fail($"The catlet {message.Resource.Id} does not exist.").ToUnit(),
-                Some: s => StartNewTask(new StartCatletVMCommand { CatletId = message.Resource.Id, VMId = s.VMId }).AsTask().ToUnit());
-        }
+            CatletId = message.CatletId,
+            VMId = Data.Data.VmId,
+        });
+    }
 
-        public Task Handle(OperationTaskStatusEvent<StartCatletVMCommand> message)
+    public Task Handle(OperationTaskStatusEvent<StartCatletVMCommand> message) =>
+        FailOrRun(message, async (CatletStateResponse response) =>
         {
-            return FailOrRun(message, Complete);
-        }
+            await StartNewTask(new UpdateCatletStateCommand
+            {
+                CatletId = Data.Data.CatletId,
+                VmId = Data.Data.VmId,
+                Status = response.Status,
+                UpTime = response.UpTime,
+                Timestamp = response.Timestamp,
+            });
+        });
 
-        protected override void CorrelateMessages(ICorrelationConfig<StartCatletSagaData> config)
-        {
-            base.CorrelateMessages(config);
-            config.Correlate<OperationTaskStatusEvent<StartCatletVMCommand>>(m => m.InitiatingTaskId, m => m.SagaTaskId);
-        }
+    public Task Handle(OperationTaskStatusEvent<UpdateCatletStateCommand> message) =>
+        FailOrRun(message, () => Complete());
+
+    protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<StartCatletSagaData>> config)
+    {
+        base.CorrelateMessages(config);
+        config.Correlate<OperationTaskStatusEvent<StartCatletVMCommand>>(
+            m => m.InitiatingTaskId, m => m.SagaTaskId);
+        config.Correlate<OperationTaskStatusEvent<UpdateCatletStateCommand>>(
+            m => m.InitiatingTaskId, m => m.SagaTaskId);
     }
 }
