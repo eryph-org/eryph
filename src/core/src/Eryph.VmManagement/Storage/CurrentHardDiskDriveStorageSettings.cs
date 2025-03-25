@@ -19,7 +19,7 @@ public class CurrentHardDiskDriveStorageSettings : HardDiskDriveStorageSettings
         VmHostAgentConfiguration vmHostAgentConfig,
         Seq<TypedPsObject<VirtualMachineDeviceInfo>> deviceInfos) =>
         from hdInfos in deviceInfos
-            .Map(deviceInfo => deviceInfo.CastSafe<HardDiskDriveInfo>().ToError())
+            .Map(deviceInfo => deviceInfo.CastSafe<HardDiskDriveInfo>())
             .Sequence()
             .ToAsync()
         from result in hdInfos
