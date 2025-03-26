@@ -50,7 +50,7 @@ namespace Eryph.VmManagement.Converging
                             string.IsNullOrWhiteSpace(Context.Config.Hostname) ? Context.Config.Name : Context.Config.Hostname,
                             networkData,
                             Context.Config.Fodder)
-                        from newVmInfo in InsertConfigDriveDisk(configDriveIsoPath, vmInfo).ToAsync()
+                        from newVmInfo in InsertConfigDriveDisk(configDriveIsoPath, vmInfo)
                         select newVmInfo);
 
                 },
@@ -157,27 +157,21 @@ namespace Eryph.VmManagement.Converging
         private async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> EjectConfigDriveDisk(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
-            async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Eject()
-            {
-                var res = await ConvergeHelpers.FindAndApply(
-                        vmInfo,
-                        l => l.DVDDrives,
-                        device =>
-                        {
-                            var drive = device.Cast<DvdDriveInfo>();
-                            return drive.Value.ControllerLocation == 63 && drive.Value.ControllerNumber == 0;
-                        },
-                        async drive => await Context.Engine.RunAsync(PsCommandBuilder.Create()
-                            .AddCommand("Set-VMDvdDrive")
-                            .AddParameter("VMDvdDrive", drive.PsObject)
-                            .AddParameter("Path", null)))
-                    .Map(list => list.ToArr().Lefts().HeadOrNone()).MatchAsync(
-                        None: () => vmInfo.RecreateOrReload(Context.Engine).ToEither(),
-                        Some: l => Prelude.LeftAsync<Error, TypedPsObject<VirtualMachineInfo>>(l.Message)
-                            .ToEither());
-
-                return res;
-            }
+            EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Eject() =>
+                from _ in ConvergeHelpers.FindAndApply(
+                    vmInfo,
+                    l => l.DVDDrives,
+                    device =>
+                    {
+                        var drive = device.Cast<DvdDriveInfo>();
+                        return drive.Value.ControllerLocation == 63 && drive.Value.ControllerNumber == 0;
+                    },
+                    drive => Context.Engine.RunAsync(PsCommandBuilder.Create()
+                        .AddCommand("Set-VMDvdDrive")
+                        .AddParameter("VMDvdDrive", drive.PsObject)
+                        .AddParameter("Path", null)))
+                from reloadedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+                select reloadedVmInfo;
 
             var res = await Eject();
 
@@ -205,29 +199,25 @@ namespace Eryph.VmManagement.Converging
             return  Error.New("Timeout while waiting for cloud-init disk to be ejected.");
         }
 
-        private Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> InsertConfigDriveDisk(
+        private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> InsertConfigDriveDisk(
             string configDriveIsoPath,
-            TypedPsObject<VirtualMachineInfo> vmInfo)
-        {
-
-            return
-                (from dvdDrive in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
-                    l => l.DVDDrives,
-                    device => device.Cast<DvdDriveInfo>()
-                        .Map(drive =>drive.ControllerLocation == 63 && drive.ControllerNumber == 0),
-                    async () => await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
-                        PsCommandBuilder.Create().AddCommand("Add-VMDvdDrive")
-                            .AddParameter("VM", vmInfo.PsObject)
-                            .AddParameter("ControllerNumber", 0)
-                            .AddParameter("ControllerLocation", 63)
-                            .AddParameter("PassThru"))
-                ).ToAsync()
-                from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
-                    .AddCommand("Set-VMDvdDrive")
-                    .AddParameter("VMDvdDrive", dvdDrive.PsObject)
-                    .AddParameter("Path", configDriveIsoPath))
-                from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
-                select vmInfoRecreated).ToEither();
-        }
+            TypedPsObject<VirtualMachineInfo> vmInfo) =>
+            from dvdDrive in ConvergeHelpers.GetOrCreateInfoAsync(
+                vmInfo,
+                l => l.DVDDrives,
+                device => device.Cast<DvdDriveInfo>()
+                    .Map(drive => drive.ControllerLocation == 63 && drive.ControllerNumber == 0),
+                () => Context.Engine.GetObjectAsync<VirtualMachineDeviceInfo>(
+                    PsCommandBuilder.Create().AddCommand("Add-VMDvdDrive")
+                        .AddParameter("VM", vmInfo.PsObject)
+                        .AddParameter("ControllerNumber", 0)
+                        .AddParameter("ControllerLocation", 63)
+                        .AddParameter("PassThru")))
+            from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                .AddCommand("Set-VMDvdDrive")
+                .AddParameter("VMDvdDrive", dvdDrive.PsObject)
+                .AddParameter("Path", configDriveIsoPath))
+            from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
+            select vmInfoRecreated;
     }
 }

@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement;
@@ -13,6 +9,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
 
+using static Eryph.Core.Prelude;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Networks;
@@ -236,36 +233,23 @@ public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
         from ipAddresses in psEngine.GetObjectValuesAsync<NetIpAddress>(command).ToAff()
         select ipAddresses.Strict();
 
-    public Aff<RT, Unit> WaitForBridgeAdapter(string bridgeName)
-    {
-        return default(RT).Powershell.Bind(ps =>
-        {
-            return TryAsync(async () =>
-                {
-                    //make sure adapter is created
-                    var cts = new CancellationTokenSource();
-                    cts.CancelAfter(new TimeSpan(0, 0, 30));
-                    while (!cts.IsCancellationRequested)
-                    {
-                        await Task.Delay(500, cts.Token);
-                        var res = await ps.GetObjectsAsync<HostNetworkAdapter>(
-                            PsCommandBuilder.Create().AddCommand("Get-NetAdapter")
-                                .AddArgument(bridgeName));
-
-                        if (res.IsLeft)
-                        {
-                            continue;
-                        }
-
-                        break;
-                    }
-
-                    await Task.Delay(1000, cts.Token); //relax a bit more
-                    return Unit.Default;
-                }).ToEither(f => Error.New(f.Message))
-                .ToAff(f => Error.New($"Could not find adapter for bridge. Error: {f}"));
-
-        });
-
-    }
+    public Aff<RT, Unit> WaitForBridgeAdapter(string bridgeName) =>
+        from psEngine in default(RT).Powershell
+        from _ in retry(
+            Schedule.NoDelayOnFirst
+            & Schedule.spaced(TimeSpan.FromMilliseconds(500))
+            & Schedule.upto(TimeSpan.FromSeconds(30)),
+            from _1 in unitAff
+            let command = PsCommandBuilder.Create()
+                .AddCommand("Get-NetAdapter")
+                .AddParameter("Name", bridgeName)
+            from optionalAdapter in psEngine.GetObjectAsync<HostNetworkAdapter>(command)
+                .ToAff()
+                .MapFail(e => Error.New($"Could not find host adapter for bridge '{bridgeName}'.", e))
+            from _2 in optionalAdapter.ToAff(Error.New(
+                $"Could not find host adapter for bridge '{bridgeName}'."))
+            select unit)
+        // Relax a bit more
+        from _2 in sleep<RT>(TimeSpan.FromSeconds(1))
+        select unit;
 }

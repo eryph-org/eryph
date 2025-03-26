@@ -48,17 +48,18 @@ public sealed class PowershellEngine(
                 return output.Map(x => new TypedPsObject<T>(x, this, ObjectMapping)).ToSeq().Strict();
             })
             .ToEither()
-            .MapLeft(e => ToFailure(e))
-            .BindLeft(e => e switch
-            {
-                // We need to be careful with ObjectNotFound. Powershell uses the corresponding
-                // category for other reasons as well (e.g. when a command is not found).
-                // We additionally check that the Activity is set to ensure that the error has
-                // been raised by a properly executed command.
-                PowershellError { Activity.IsSome: true, Category: PowershellErrorCategory.ObjectNotFound } =>
-                    RightAsync<Error, Seq<TypedPsObject<T>>>(Empty),
-                _ => LeftAsync<Error, Seq<TypedPsObject<T>>>(e),
-            })
+            .MapLeft(ToPowershellError)
+            // We need to be careful with ObjectNotFound. Powershell uses the corresponding
+            // category for other reasons as well (e.g. when a command is not found).
+            // We additionally check that the Activity is set to ensure that the error has
+            // been raised by a properly executed command.
+            .BindLeft(e => e is PowershellError { Activity.IsSome: true } pse
+                           && (pse.Category == PowershellErrorCategory.ObjectNotFound
+                               // Hyper-V Cmdlets sometimes use the category
+                               // InvalidArgument when the entity does not exist.
+                               || pse.Reason == "VirtualizationException" && pse.Category == PowershellErrorCategory.InvalidArgument)
+                ? RightAsync<Error, Seq<TypedPsObject<T>>>(Empty)
+                : LeftAsync<Error, Seq<TypedPsObject<T>>>(e))
         select results;
 
     public EitherAsync<Error, Option<T>> GetObjectValueAsync<T>(
@@ -88,7 +89,7 @@ public sealed class PowershellEngine(
             }
 
             return unit;
-        }).ToEither().MapLeft(e => (Error)ToFailure(e));
+        }).ToEither().MapLeft(ToPowershellError);
 
     public void AddPsObject(PSObject psObject)
     {
@@ -234,15 +235,15 @@ public sealed class PowershellEngine(
         };
 
     /// <summary>
-    /// Converts a <see cref="Exception"/> to a <see cref="PowershellError"/>.
+    /// Converts an <see cref="Error"/> to a <see cref="PowershellError"/>.
     /// </summary>
-    private static Error ToFailure(
-        Exception exception) =>
-        exception switch
+    private static Error ToPowershellError(Error error) =>
+        error switch
         {
-            PsErrorException pee => Error.Many(pee.ErrorRecords.ToSeq().Map<Error>(PowershellError.New)),
-            RuntimeException rex => PowershellError.New(rex),
-            _ => Error.New("Unexpected exception in Powershell engine.", Error.New(exception)),
+            { Exception.Case: PsErrorException pee } =>
+                Error.Many(pee.ErrorRecords.ToSeq().Map<Error>(PowershellError.New)),
+            { Exception.Case: RuntimeException rex } => PowershellError.New(rex),
+            _ => Error.New("Unexpected exception in Powershell engine.", error),
         };
 
     public void Dispose()
