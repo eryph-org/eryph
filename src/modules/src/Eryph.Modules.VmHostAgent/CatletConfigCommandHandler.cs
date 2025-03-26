@@ -74,17 +74,6 @@ namespace Eryph.Modules.VmHostAgent
             return result.ToString();
         }
 
-        // TODO Replace with standardized query
-        protected static EitherAsync<Error, Option<TypedPsObject<VirtualMachineInfo>>> GetVmInfo(
-            Guid id,
-            IPowershellEngine engine) =>
-            from _ in Prelude.RightAsync<Error, Unit>(Prelude.unit)
-            let command = PsCommandBuilder.Create()
-                .AddCommand("Get-VM")
-                .AddParameter("Id", id)
-            from vmInfo in engine.GetObjectAsync<VirtualMachineInfo>(command)
-            select vmInfo;
-
         protected EitherAsync<Error, Unit> EnsureMetadata(
             TypedPsObject<VirtualMachineInfo> vmInfo,
             Guid metadataId)

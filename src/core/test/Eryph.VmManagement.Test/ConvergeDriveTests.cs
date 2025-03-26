@@ -1,5 +1,4 @@
-﻿using System.Data;
-using Eryph.ConfigModel;
+﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 using Eryph.Resources.Disks;

@@ -1,6 +1,7 @@
 ﻿using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -16,9 +17,7 @@ namespace Eryph.Modules.VmHostAgent
 
         protected override EitherAsync<Error, Unit> HandleCommand(
             UpdateCatletMetadataCommand command) =>
-            from optionalVmInfo in GetVmInfo(command.VMId, Engine)
-            from vmInfo in optionalVmInfo.ToEitherAsync(
-                Error.New(Error.New($"The VM with ID {command.VMId} was not found.")))
+            from vmInfo in VmQueries.GetVmInfo(Engine, command.VMId)
             from currentMetadata in EnsureMetadata(vmInfo, command.CurrentMetadataId)
             from _ in SetMetadataId(vmInfo, command.NewMetadataId)
             select Unit.Default;
