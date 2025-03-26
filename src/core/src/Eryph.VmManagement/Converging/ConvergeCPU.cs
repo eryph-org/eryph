@@ -33,10 +33,11 @@ public class ConvergeCPU(
         from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
                 Error.New("Cannot change CPU count if the catlet is not stopped. Stop the catlet and retry."))
             .ToEitherAsync()
+        from _2 in Context.ReportProgressAsync($"Configure Catlet CPU count: {cpuCount}")
         let command = PsCommandBuilder.Create()
             .AddCommand("Set-VMProcessor")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("Count", cpuCount)
-        from _2 in Context.Engine.RunAsync(command)
+        from _3 in Context.Engine.RunAsync(command)
         select unit;
 }

@@ -22,7 +22,7 @@ public enum CatletStopMode
     
     /// <summary>
     /// This mode terminates the Hyper-V worker process of the catlet. This
-    /// mode circumvents the normal logic Hyper-V and should only be used
+    /// mode circumvents the normal logic of Hyper-V and should only be used
     /// when the catlet does not respond to commands in Hyper-V. This mode
     /// can cause inconsistencies in Hyper-V.
     /// </summary>

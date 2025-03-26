@@ -29,15 +29,6 @@ public sealed class PowershellEngine(
 
     public ITypedPsObjectMapping ObjectMapping { get; } = new TypedPsObjectMapping(logger);
 
-    public EitherAsync<Error, Option<TypedPsObject<T>>> GetObjectAsync<T>(
-        PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null,
-        CancellationToken cancellationToken = default) =>
-        from results in GetObjectsAsync<T>(builder, reportProgress, cancellationToken)
-        from _ in guard(results.Count <= 1,
-            Error.New($"Powershell returned multiple values when fetching {typeof(T).Name}."))
-        select results.HeadOrNone();
-
     public EitherAsync<Error, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
@@ -62,19 +53,13 @@ public sealed class PowershellEngine(
                 : LeftAsync<Error, Seq<TypedPsObject<T>>>(e))
         select results;
 
-    public EitherAsync<Error, Option<T>> GetObjectValueAsync<T>(
-        PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null,
-        CancellationToken cancellationToken = default) =>
-        GetObjectAsync<T>(builder, reportProgress, cancellationToken)
-            .Map(result => result.Map(x => x.Value));
-
     public EitherAsync<Error, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
         CancellationToken cancellationToken = default) =>
-        GetObjectsAsync<T>(builder, reportProgress, cancellationToken)
-            .Map(result => result.Map(seq => seq.Map(x => x.Value)).Strict());
+        from objects in GetObjectsAsync<T>(builder, reportProgress, cancellationToken)
+        let result = objects.Map(x => x.Value).Strict()
+        select result;
 
     public EitherAsync<Error, Unit> RunAsync(
         PsCommandBuilder builder,

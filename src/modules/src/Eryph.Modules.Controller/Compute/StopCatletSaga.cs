@@ -103,7 +103,7 @@ internal class StopCatletSaga(
         });
 
     public Task Handle(OperationTaskStatusEvent<UpdateCatletStateCommand> message) =>
-        FailOrRun(message, () => Complete());
+        FailOrRun(message, Complete);
 
     protected override void CorrelateMessages(ICorrelationConfig<EryphSagaData<StopCatletSagaData>> config)
     {

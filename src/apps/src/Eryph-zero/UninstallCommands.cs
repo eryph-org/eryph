@@ -15,6 +15,7 @@ using Eryph.Security.Cryptography;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
+using LanguageExt.Common;
 using LanguageExt.Sys.IO;
 using static LanguageExt.Prelude;
 using static LanguageExt.Seq;
@@ -149,11 +150,32 @@ internal class UninstallCommands
         let vmInfo = vmInfos.HeadOrNone()
         // We only remove the VM here. Any leftover files will be removed later
         // when we remove the stores.
-        from _ in vmInfo.Match(
-            Some: v => from stoppedVm in v.StopIfRunning(psEngine).ToAff()
-                       from _ in v.Remove(psEngine).ToAff()
-                       select unit,
-            None: () => SuccessAff(unit))
+        from _ in vmInfo.Map(StopAndRemoveVm).SequenceSerial()
+        select unit;
+
+    private static Aff<DriverCommandsRuntime, Unit> StopAndRemoveVm(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from psEngine in default(DriverCommandsRuntime).Powershell
+        let stopCommand = PsCommandBuilder.Create()
+            .AddCommand("Stop-VM")
+            .AddParameter("VM", vmInfo.PsObject)
+            .AddParameter("TurnOff")
+        // We try to remove the VM whether it was stopped successfully or not.
+        // Maybe, we are lucky and can remove the VM even after the stop command failed.
+        // TODO Add timeout for stop command
+        from _ in psEngine.RunAsync(stopCommand).ToAff().Bind(_ => RemoveVm(vmInfo))
+                  | @catch(stopError => RemoveVm(vmInfo)
+                      .MapFail(removeError => Error.Many(stopError, removeError)))
+        select unit;
+
+    private static Aff<DriverCommandsRuntime, Unit> RemoveVm(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from psEngine in default(DriverCommandsRuntime).Powershell
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Remove-VM")
+            .AddParameter("VM", vmInfo.PsObject)
+            .AddParameter("Force")
+        from _2 in psEngine.RunAsync(command).ToAff()
         select unit;
 
     private static Aff<DriverCommandsRuntime, Unit> RemoveStores() =>
