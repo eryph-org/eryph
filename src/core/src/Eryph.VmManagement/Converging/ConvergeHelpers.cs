@@ -1,48 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.VmManagement.Converging
+using static LanguageExt.Prelude;
+
+namespace Eryph.VmManagement.Converging;
+
+public static class ConvergeHelpers
 {
-    public static class ConvergeHelpers
-    {
-        public static async Task<Either<Error, TypedPsObject<TSub>>> GetOrCreateInfoAsync<T, TSub>(
-            TypedPsObject<T> parentInfo,
-            Expression<Func<T, IList<TSub>>> listProperty,
-            Func<TypedPsObject<TSub>, bool> predicateFunc,
-            Func<Task<Either<Error, Seq<TypedPsObject<TSub>>>>> creatorFunc)
-        {
-            var result = parentInfo.GetList(listProperty, predicateFunc).ToArray();
+    public static EitherAsync<Error, TypedPsObject<TSub>> GetOrCreateInfoAsync<T, TSub>(
+        TypedPsObject<T> parentInfo,
+        Expression<Func<T, IList<TSub>>> listProperty,
+        Func<TypedPsObject<TSub>, bool> predicateFunc,
+        Func<EitherAsync<Error, Option<TypedPsObject<TSub>>>> creatorFunc) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let items = parentInfo.GetList(listProperty, predicateFunc).Strict()
+        from result in items.Match(
+            Empty: () => from optionalCreated in creatorFunc()
+                         from created in optionalCreated.ToEitherAsync(Error.New(
+                             "The object was successfully created, but no result was returned."))
+                         select created,
+            Head: item => item,
+            Tail: _ => Error.New("The predicate matched multiple objects."))
+        select result;
 
-            if (result.Length() != 0)
-                return Prelude.Try(result.Single()).Try().Match<Either<Error, TypedPsObject<TSub>>>(
-                    Fail: ex => Prelude.Left(Error.New(ex)),
-                    Succ: r => Prelude.Right(r)
-                );
-
-
-            var creatorResult = await creatorFunc();
-
-            var res = creatorResult.Bind(
-                seq => seq.HeadOrNone()
-                    .ToEither(() => Error.New("Object creation was successful, but no result was returned.")));
-
-            return res;
-        }
-
-        public static Task<IEnumerable<TRes>> FindAndApply<T, TSub, TRes>(
-            TypedPsObject<T> parentInfo,
-            Expression<Func<T, IList<TSub>>> listProperty,
-            Func<TypedPsObject<TSub>, bool> predicateFunc,
-            Func<TypedPsObject<TSub>, Task<TRes>> applyFunc)
-        {
-            return parentInfo.GetList(listProperty, predicateFunc).ToArray().Map(applyFunc)
-                .TraverseSerial(l => l);
-        }
-
-    }
+    public static EitherAsync<Error, Seq<TRes>> FindAndApply<T, TSub, TRes>(
+        TypedPsObject<T> parentInfo,
+        Expression<Func<T, IList<TSub>>> listProperty,
+        Func<TypedPsObject<TSub>, bool> predicateFunc,
+        Func<TypedPsObject<TSub>, EitherAsync<Error, TRes>> applyFunc) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let items = parentInfo.GetList(listProperty, predicateFunc).Strict()
+        from results in items.Map(applyFunc).SequenceSerial()
+        select results;
 }

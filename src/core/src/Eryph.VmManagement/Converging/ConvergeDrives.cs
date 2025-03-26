@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
 using Eryph.ConfigModel.Catlets;
@@ -9,7 +8,6 @@ using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
 using LanguageExt.Common;
-using LanguageExt.UnsafeValueAccess;
 
 using static LanguageExt.Prelude;
 
@@ -109,127 +107,105 @@ namespace Eryph.VmManagement.Converging
 
 
         private EitherAsync<Error, Unit> DetachUndefinedHardDrives(
-            TypedPsObject<VirtualMachineInfo> vmInfo, Seq<VMDriveStorageSettings> plannedStorageSettings,
-            Seq<CurrentHardDiskDriveStorageSettings> currentDiskStorageSettings)
-
-        {
-            var planedDiskSettings = plannedStorageSettings.Where(x =>
+            TypedPsObject<VirtualMachineInfo> vmInfo,
+            Seq<VMDriveStorageSettings> plannedStorageSettings,
+            Seq<CurrentHardDiskDriveStorageSettings> currentDiskStorageSettings) =>
+            from _1 in RightAsync<Error, Unit>(unit)
+            let plannedDiskSettings = plannedStorageSettings.Where(x =>
                     x.Type is CatletDriveType.VHD or CatletDriveType.SharedVHD or CatletDriveType.VHDSet)
-                .Cast<HardDiskDriveStorageSettings>().ToSeq();
+                .Cast<HardDiskDriveStorageSettings>().ToSeq()
+            let frozenDiskIds = currentDiskStorageSettings.Where(x => x.Frozen).Map(x => x.AttachedVMId)
+            from _2 in ConvergeHelpers.FindAndApply(vmInfo,
+                i => i.HardDrives,
+                device =>
+                {
+                    var hd = device.Cast<HardDiskDriveInfo>().Value;
 
-            var frozenDiskIds = currentDiskStorageSettings.Where(x => x.Frozen).Map(x => x.AttachedVMId);
+                    var plannedDiskAtControllerPos = plannedDiskSettings
+                        .FirstOrDefault(x =>
+                            x.ControllerLocation == hd.ControllerLocation &&
+                            x.ControllerNumber == hd.ControllerNumber);
 
-            return ConvergeHelpers.FindAndApply(vmInfo,
-                    i => i.HardDrives,
-                    device =>
+                    var detach = plannedDiskAtControllerPos == null;
+
+                    if (!detach && plannedDiskAtControllerPos.AttachPath.IsSome)
                     {
-                        var hd = device.Cast<HardDiskDriveInfo>().Value;
-
-                        var plannedDiskAtControllerPos = planedDiskSettings
-                            .FirstOrDefault(x =>
-                                x.ControllerLocation == hd.ControllerLocation &&
-                                x.ControllerNumber == hd.ControllerNumber);
-
-                        var detach = plannedDiskAtControllerPos == null;
-
-                        if (!detach && plannedDiskAtControllerPos.AttachPath.IsSome)
-                        {
-                            var plannedAttachPath = plannedDiskAtControllerPos.AttachPath.IfNone("");
-                            if (hd.Path == null || !hd.Path.Equals(plannedAttachPath,
+                        var plannedAttachPath = plannedDiskAtControllerPos.AttachPath.IfNone("");
+                        if (hd.Path == null || !hd.Path.Equals(plannedAttachPath,
                                 StringComparison.OrdinalIgnoreCase))
-                                detach = true;
-                        }
+                            detach = true;
+                    }
 
-                        if (detach && frozenDiskIds.Contains(hd.Id))
-                        {
-                            Context.ReportProgress(hd.Path != null
-                                ? $"Skipping detach of frozen disk {Path.GetFileNameWithoutExtension(hd.Path)}"
-                                : $"Skipping detach of unknown frozen disk at controller {hd.ControllerNumber}, Location: {hd.ControllerLocation}");
+                    if (detach && frozenDiskIds.Contains(hd.Id))
+                    {
+                        Context.ReportProgress(hd.Path != null
+                            ? $"Skipping detach of frozen disk {Path.GetFileNameWithoutExtension(hd.Path)}"
+                            : $"Skipping detach of unknown frozen disk at controller {hd.ControllerNumber}, Location: {hd.ControllerLocation}");
 
-                            return false;
-                        }
+                        return false;
+                    }
 
-                        if (detach)
-                            Context.ReportProgress(hd.Path != null
-                                ? $"Detaching disk {Path.GetFileNameWithoutExtension(hd.Path)} from controller: {hd.ControllerNumber}, Location: {hd.ControllerLocation}"
-                                : $"Detaching unknown disk at controller: {hd.ControllerNumber}, Location: {hd.ControllerLocation}");
+                    if (detach)
+                        Context.ReportProgress(hd.Path != null
+                            ? $"Detaching disk {Path.GetFileNameWithoutExtension(hd.Path)} from controller: {hd.ControllerNumber}, Location: {hd.ControllerLocation}"
+                            : $"Detaching unknown disk at controller: {hd.ControllerNumber}, Location: {hd.ControllerLocation}");
 
-                        return detach;
-                    },
-                    async i => await Context.Engine.RunAsync(PsCommandBuilder.Create().AddCommand("Remove-VMHardDiskDrive")
-                        .AddParameter("VMHardDiskDrive", i.PsObject)))
-                .Map(x => x.Lefts().HeadOrNone())
-                        .MatchAsync(
-                            l => Prelude.LeftAsync<Error, Unit>(l).ToEither(),
-                            () => Prelude.RightAsync<Error, Unit>(Unit.Default)
-                                .ToEither()).ToAsync();
-        }
-
+                    return detach;
+                },
+                d => from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                        .AddCommand("Remove-VMHardDiskDrive")
+                        .AddParameter("VMHardDiskDrive", d.PsObject))
+                    select d)
+            select unit;
 
         private EitherAsync<Error, Unit> DetachUndefinedDvdDrives(
-            TypedPsObject<VirtualMachineInfo> vmInfo, Seq<VMDriveStorageSettings> plannedStorageSettings)
-
-        {
-            var controllersAndLocations = plannedStorageSettings.Where(x => x.Type == CatletDriveType.DVD)
-                .Map(x => new {x.ControllerNumber, x.ControllerLocation})
-                .GroupBy(x => x.ControllerNumber)
-                .ToImmutableDictionary(x => x.Key, x => x.Map(y => y.ControllerLocation).ToImmutableArray());
-
-
-            return ConvergeHelpers.FindAndApply(vmInfo,
-                    i => i.DVDDrives,
-                    device =>
-                    {
-                        var dvd = device.Cast<DvdDriveInfo>().Value;
-                        //ignore cloud init drive, will be handled later
-                        if (dvd.ControllerLocation == 63 && dvd.ControllerNumber == 0)
-                            return false;
-
-                        var detach = !controllersAndLocations.ContainsKey(dvd.ControllerNumber) ||
-                                     !controllersAndLocations[dvd.ControllerNumber].Contains(dvd.ControllerLocation);
-
-                        return detach;
-                    },
-                    async i => await Context.Engine.RunAsync(PsCommandBuilder.Create().AddCommand("Remove-VMDvdDrive")
-                        .AddParameter("VMDvdDrive", i.PsObject))).Map(x => x.Lefts().HeadOrNone())
-                .MatchAsync(
-                    l => Prelude.LeftAsync<Error, Unit>(l).ToEither(),
-                    () => Prelude.RightAsync<Error, Unit>(Unit.Default)
-                        .ToEither()).ToAsync();
-        }
+            TypedPsObject<VirtualMachineInfo> vmInfo,
+            Seq<VMDriveStorageSettings> plannedStorageSettings) =>
+            from _1 in RightAsync<Error, Unit>(unit)
+            let plannedDvdDrives = plannedStorageSettings
+                .Filter(c => c.Type is CatletDriveType.DVD)
+                .Map(c => (Number: c.ControllerNumber, Location: c.ControllerLocation))
+            from _2 in ConvergeHelpers.FindAndApply(
+                vmInfo,
+                i => i.DVDDrives,
+                device =>
+                {
+                    var dvd = device.Cast<DvdDriveInfo>().Value;
+                    // Ignore cloud init drive, will be handled later
+                    return !(dvd.ControllerNumber == 0 && dvd.ControllerLocation == 63)
+                           && !plannedDvdDrives.Contains((dvd.ControllerNumber, dvd.ControllerLocation));
+                },
+                d => from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                        .AddCommand("Remove-VMDvdDrive")
+                        .AddParameter("VMDvdDrive", d.PsObject))
+                     select d)
+            select unit;
 
         private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> DvdDrive(
             VMDvDStorageSettings dvdSettings,
-            TypedPsObject<VirtualMachineInfo> vmInfo)
-        {
-            return
-                from dvdDrive in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
-                        l => l.DVDDrives,
-                        device => device.Cast<DvdDriveInfo>()
-                            .Map(drive => drive.ControllerLocation == dvdSettings.ControllerLocation
-                                          && drive.ControllerNumber == dvdSettings.ControllerNumber),
-                        async () =>
-                        {
-                            await Context
-                                .ReportProgress(
-                                    $"Attaching DVD Drive to controller: {dvdSettings.ControllerNumber}, Location: {dvdSettings.ControllerLocation}")
-                                .ConfigureAwait(false);
-
-                            return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
-                                PsCommandBuilder.Create().AddCommand("Add-VMDvdDrive")
-                                    .AddParameter("VM", vmInfo.PsObject)
-                                    .AddParameter("ControllerNumber", dvdSettings.ControllerNumber)
-                                    .AddParameter("ControllerLocation", dvdSettings.ControllerLocation)
-                                    .AddParameter("PassThru"));
-                        }).ToAsync()
-                    from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
-                        .AddCommand("Set-VMDvdDrive")
-                        .AddParameter("VMDvdDrive", dvdDrive.PsObject)
-                        .AddParameter("Path", dvdSettings.Path))
-                    from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
-                    select vmInfoRecreated;
-
-        }
+            TypedPsObject<VirtualMachineInfo> vmInfo) =>
+            from dvdDrive in ConvergeHelpers.GetOrCreateInfoAsync(
+                vmInfo,
+                l => l.DVDDrives,
+                device => device.Cast<DvdDriveInfo>()
+                    .Map(drive => drive.ControllerLocation == dvdSettings.ControllerLocation
+                                  && drive.ControllerNumber == dvdSettings.ControllerNumber),
+                () => from _ in Context.ReportProgressAsync(
+                              $"Attaching DVD Drive to controller: {dvdSettings.ControllerNumber}, Location: {dvdSettings.ControllerLocation}")
+                      from created in Context.Engine.GetObjectAsync<VirtualMachineDeviceInfo>(
+                          PsCommandBuilder.Create()
+                              .AddCommand("Add-VMDvdDrive")
+                              .AddParameter("VM", vmInfo.PsObject)
+                              .AddParameter("ControllerNumber", dvdSettings.ControllerNumber)
+                              .AddParameter("ControllerLocation", dvdSettings.ControllerLocation)
+                              .AddParameter("PassThru"))
+                      select created)
+            from _ in Context.Engine.RunAsync(PsCommandBuilder.Create()
+                .AddCommand("Set-VMDvdDrive")
+                .AddParameter("VMDvdDrive", dvdDrive.PsObject)
+                .AddParameter("Path", dvdSettings.Path))
+            from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
+            select vmInfoRecreated;
 
         private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeVirtualDisk(
             HardDiskDriveStorageSettings driveSettings,
@@ -254,20 +230,16 @@ namespace Eryph.VmManagement.Converging
                     from __ in fileExists
                         ? UpdateVirtualDisk(driveSettings)
                         : CreateVirtualDisk(driveSettings)
-                    from uAttach in ConvergeHelpers.GetOrCreateInfoAsync(vmInfo,
+                    from uAttach in ConvergeHelpers.GetOrCreateInfoAsync(
+                        vmInfo,
                         i => i.HardDrives,
                         device => device.Cast<HardDiskDriveInfo>()
                             .Map(disk => currentSettings.Map(x => x.AttachedVMId) == disk.Id),
-                        async () =>
-                        {
-                            await Context
-                                .ReportProgress(
-                                    $"Attaching HD Drive {driveSettings.DiskSettings.Name} to controller: {driveSettings.ControllerNumber}, Location: {driveSettings.ControllerLocation}")
-                                .ConfigureAwait(false);
-                            return await Context.Engine.GetObjectsAsync<VirtualMachineDeviceInfo>(
-                                BuildAttachCommand(vmInfo, vhdPath, driveSettings)
-                            );
-                        }).ToAsync()
+                        () => from _  in Context.ReportProgressAsync(
+                                  $"Attaching HD Drive {driveSettings.DiskSettings.Name} to controller: {driveSettings.ControllerNumber}, Location: {driveSettings.ControllerLocation}")
+                              from result in Context.Engine.GetObjectAsync<VirtualMachineDeviceInfo>(
+                                  BuildAttachCommand(vmInfo, vhdPath, driveSettings))
+                              select result)
                     from reloadedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
                     select reloadedVmInfo
             }
