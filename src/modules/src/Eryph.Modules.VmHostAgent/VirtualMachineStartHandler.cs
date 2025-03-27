@@ -43,6 +43,8 @@ internal class VirtualMachineStartHandler(
                 .AddParameter("VM", vmInfo.PsObject)
             from _ in powershell.RunAsync(stopCommand, cancellationToken: ct).ToAff()
             select unit)
+            // Starting a VM is best-effort. Hyper-V might wait for a response from
+            // guest integration which can cause the command to block for a long time.
             | @catchError(
                 e => e is PowershellError { Category: PowershellErrorCategory.PipelineStopped },
                 _ => unitAff)

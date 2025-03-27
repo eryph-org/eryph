@@ -142,7 +142,6 @@ internal class UninstallCommands
             e, "Could not remove Hyper-V VM {VmId}. If necessary, remove it manually.", vmId));
 
     private static Aff<DriverCommandsRuntime, Unit> RemoveVm(Guid vmId) =>
-        from psEngine in default(DriverCommandsRuntime).Powershell
         from _1 in logInformation<UninstallCommands>("Removing Hyper-V VM {VmId}...", vmId)
         from vmInfo in getOptionalVmInfo(vmId)
         // We only remove the VM here. Any leftover files will be removed later

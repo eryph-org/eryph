@@ -44,6 +44,12 @@ public static class WmiQueries<RT> where RT: struct, HasWmi<RT>
             .MapFail(e => Error.New("Failed to lookup the Hyper-V setting 'DefaultVirtualHardDiskPath'.", e))
         select (DataRootPath: dataRootPath, VhdPath: vhdPath);
 
+    /// <summary>
+    /// Finds the ID of the worker process of the Hyper-V VM with
+    /// the given <paramref name="vmId"/>. The result will be
+    /// <see cref="None"/> when the VM is not running and hence
+    /// has no worker process.
+    /// </summary>
     public static Eff<RT, Option<uint>> getVmProcessId(Guid vmId) =>
         from queryResult in Wmi<RT>.executeQuery(
             @"\Root\Virtualization\v2",
@@ -53,6 +59,10 @@ public static class WmiQueries<RT> where RT: struct, HasWmi<RT>
         from vm in queryResult.HeadOrNone()
             .ToEff(Error.New($"Could not find the VM '{vmId}'"))
         from processId in getValue<uint>(vm, "ProcessID")
-            .Filter(pid => pid > 4)
+        from _ in processId
+            // Process IDs <=4 are reserved for low-level system processes.
+            .Map(pid => guard(pid > 4, Error.New($"The process ID {pid} of the Hyper-V VM {vmId} is invalid."))
+                .ToEff())
+            .Sequence()
         select processId;
 }

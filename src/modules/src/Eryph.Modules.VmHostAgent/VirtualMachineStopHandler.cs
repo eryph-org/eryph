@@ -43,9 +43,6 @@ internal class VirtualMachineStopHandler(
                 .AddParameter("TurnOff")
             from _ in powershell.RunAsync(stopCommand, cancellationToken: ct).ToAff()
             select unit)
-            | @catchError(
-                e => e is PowershellError { Category: PowershellErrorCategory.PipelineStopped },
-                _ => unitAff)
         let timestamp = DateTimeOffset.UtcNow
         from reloadedVmInfo in getVmInfo(command.VMId)
         select new CatletStateResponse
