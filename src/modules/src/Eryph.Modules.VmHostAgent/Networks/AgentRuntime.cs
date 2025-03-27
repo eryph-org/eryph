@@ -73,7 +73,7 @@ public readonly struct AgentRuntime :
     public CancellationTokenSource CancellationTokenSource =>
         Env.Source;
 
-    private Eff<AgentRuntime, T> FromServiceProvider<T>() =>
+    private static Eff<AgentRuntime, T> FromServiceProvider<T>() =>
         Eff<AgentRuntime, T>(rt => rt.Env.ServiceProvider.GetRequiredService<T>());
 
     public Eff<AgentRuntime, IPowershellEngine> Powershell => 

@@ -118,10 +118,10 @@ public sealed class PowershellEngine(
             outputs = outputData.ToList();
             errors = powerShell.Streams.Error.ToList();
         }
-        catch (RuntimeException ex) when (ex is not PipelineStoppedException)
+        catch (RuntimeException rex) when (rex is not PipelineStoppedException)
         {
-            logger.LogInformation(ex, "Powershell command '{Command}' failed: {Error}.",
-                ex.ErrorRecord.InvocationInfo?.MyCommand, ex.ErrorRecord.ToString());
+            logger.LogInformation(rex, "Powershell command '{Command}' failed: {Error}",
+                rex.ErrorRecord.InvocationInfo?.MyCommand, rex.ErrorRecord.ToString());
             throw;
         }
         catch (Exception ex) when (ex is not PipelineStoppedException)
@@ -132,7 +132,7 @@ public sealed class PowershellEngine(
 
         foreach (var error in errors)
         {
-            logger.LogInformation(error.Exception, "Powershell command '{Command}' failed: {Error}.",
+            logger.LogInformation(error.Exception, "Powershell command '{Command}' failed: {Error}",
                 error.InvocationInfo?.MyCommand, error.ToString());
         }
 
