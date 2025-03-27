@@ -49,17 +49,14 @@ internal class VirtualMachineKillHandler(
                 .AddParameter("Id", processId)
                 .AddParameter("Force")
             from _1 in powershell.RunAsync(stopProcessCommand, cancellationToken: ct).ToAff()
-            // There is no way to force Hyper-V to refresh the VM state. Hence,
-            // we just poll the VM state until Hyper-V has noticed that the
-            // worker process died and has updated the VM state.
-            from _2 in repeatWhile(
-                Schedule.NoDelayOnFirst & Schedule.spaced(TimeSpan.FromSeconds(5)),
+            // Server 2016 restarts the VM after the worker process has been killed.
+            // We retry the power off command until it is successful. This forces the
+            // VM into a valid off state.
+            from _2 in retry(
+                Schedule.spaced(TimeSpan.FromSeconds(5)),
                 from vmInfo in getVmInfo(command.VMId)
-                select vmInfo,
-                vmInfo => vmInfo.Value.State != VirtualMachineState.Off).Map(_ => unit)
-                | @catchError(
-                   e => e is PowershellError { Category: PowershellErrorCategory.PipelineStopped },
-                   _ => unitAff)
+                from _ in stopVm(vmInfo)
+                select unit)
             select unit)
         let timestamp = DateTimeOffset.UtcNow
         from reloadedVmInfo in getVmInfo(command.VMId)
