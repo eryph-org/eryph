@@ -41,10 +41,6 @@ internal class VirtualMachineKillHandler(
         from processId in optionalProcessId.ToAff(Error.New(
             $"The VM with ID {command.VMId} was not found."))
         from powershell in default(AgentRuntime).Powershell
-        let stopProcessCommand = PsCommandBuilder.Create()
-            .AddCommand("Stop-Process")
-            .AddParameter("Id", processId)
-            .AddParameter("Force")
         from _ in timeout(
             EryphConstants.OperationTimeout,
             from ct in cancelToken<AgentRuntime>()
