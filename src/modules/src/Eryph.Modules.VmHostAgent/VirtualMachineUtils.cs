@@ -17,13 +17,15 @@ public static class VirtualMachineUtils<RT>
     public static Aff<RT, TypedPsObject<VirtualMachineInfo>> getVmInfo(
         Guid guid) =>
         from powershell in default(RT).Powershell
-        from vmInfo in VmQueries.GetVmInfo(powershell, guid).ToAff()
+        from ct in cancelToken<RT>()
+        from vmInfo in VmQueries.GetVmInfo(powershell, guid, ct).ToAff()
         select vmInfo;
 
     public static Aff<RT, Option<TypedPsObject<VirtualMachineInfo>>> getOptionalVmInfo(
         Guid guid) =>
         from powershell in default(RT).Powershell
-        from vmInfo in VmQueries.GetOptionalVmInfo(powershell, guid).ToAff()
+        from ct in cancelToken<RT>()
+        from vmInfo in VmQueries.GetOptionalVmInfo(powershell, guid, ct).ToAff()
         select vmInfo;
 
     public static Aff<RT, Unit> stopVm(

@@ -54,14 +54,13 @@ internal class VirtualMachineKillHandler(
             // worker process died and has updated the VM state.
             from _2 in repeatWhile(
                 Schedule.NoDelayOnFirst & Schedule.spaced(TimeSpan.FromSeconds(5)),
-                from ct in cancelToken<AgentRuntime>()
                 from vmInfo in getVmInfo(command.VMId)
                 select vmInfo,
-                vmInfo => vmInfo.Value.State != VirtualMachineState.Off)
+                vmInfo => vmInfo.Value.State != VirtualMachineState.Off).Map(_ => unit)
+                | @catchError(
+                   e => e is PowershellError { Category: PowershellErrorCategory.PipelineStopped },
+                   _ => unitAff)
             select unit)
-            | @catchError(
-                e => e is PowershellError {Category: PowershellErrorCategory.PipelineStopped},
-                _ => unitAff)
         let timestamp = DateTimeOffset.UtcNow
         from reloadedVmInfo in getVmInfo(command.VMId)
         select new CatletStateResponse
