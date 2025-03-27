@@ -43,6 +43,8 @@ internal class VirtualMachineShutdownHandler(
                 .AddParameter("Force")
             from _ in powershell.RunAsync(stopCommand, cancellationToken: ct).ToAff()
             select unit)
+            // Shutting down a VM is best-effort. Hyper-V waits for a graceful shutdown
+            // by the guest integration which can cause the command to block for a long time.
             | @catchError(
                 e => e is PowershellError { Category: PowershellErrorCategory.PipelineStopped },
                 _ => unitAff)

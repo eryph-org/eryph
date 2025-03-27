@@ -39,7 +39,7 @@ internal class VirtualMachineKillHandler(
         // of the VM's worker process. Hence, we query Hyper-V via WMI.
         from optionalProcessId in WmiQueries<AgentRuntime>.getVmProcessId(command.VMId)
         from processId in optionalProcessId.ToAff(Error.New(
-            $"The VM with ID {command.VMId} was not found."))
+            $"The VM with ID {command.VMId} has no worker process."))
         from powershell in default(AgentRuntime).Powershell
         from _ in timeout(
             EryphConstants.OperationTimeout,

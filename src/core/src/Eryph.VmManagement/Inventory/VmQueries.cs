@@ -22,14 +22,15 @@ public static class VmQueries
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VM")
             .AddParameter("Id", vmId)
-        from vmInfo in powershellEngine.GetObjectAsync<VirtualMachineInfo>(command)
+        from vmInfo in powershellEngine.GetObjectAsync<VirtualMachineInfo>
+            (command, cancellationToken: cancellationToken)
         select vmInfo;
 
     public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> GetVmInfo(
         IPowershellEngine powershellEngine,
         Guid vmId,
         CancellationToken cancellationToken = default) =>
-        from optionalVmInfo in GetOptionalVmInfo(powershellEngine, vmId)
+        from optionalVmInfo in GetOptionalVmInfo(powershellEngine, vmId, cancellationToken)
         from vmInfo in optionalVmInfo.ToEitherAsync(
             Error.New($"The VM with ID {vmId} was not found."))
         select vmInfo;
