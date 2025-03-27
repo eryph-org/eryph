@@ -224,9 +224,9 @@ namespace Eryph.VmManagement.Converging
                         $"Skipping HD Drive '{driveSettings.DiskSettings.Name}': storage management is disabled for this disk.")
                     select vmInfo,
                 false =>
-                    from testPathResult in Context.Engine.GetObjectsAsync<bool>(
+                    from testPathResult in Context.Engine.GetObjectValueAsync<bool>(
                             new PsCommandBuilder().AddCommand("Test-Path").AddArgument(vhdPath))
-                    let fileExists = testPathResult.Any(v => v.Value)
+                    let fileExists = testPathResult.IfNone(false)
                     from __ in fileExists
                         ? UpdateVirtualDisk(driveSettings)
                         : CreateVirtualDisk(driveSettings)
@@ -318,9 +318,10 @@ namespace Eryph.VmManagement.Converging
             from vhdPath in driveSettings.AttachPath.ToEitherAsync(Error.New(
                 $"The path is missing for virtual disk {driveSettings.ControllerNumber},{driveSettings.ControllerLocation}"))
             // get disk
-            from vhdInfos in Context.Engine.GetObjectsAsync<VhdInfo>(new PsCommandBuilder()
+            from optionalVhdInfo in Context.Engine.GetObjectAsync<VhdInfo>(new PsCommandBuilder()
                     .AddCommand("Get-VHD").AddArgument(vhdPath))
-            from vhdInfo in vhdInfos.HeadOrLeft(Errors.SequenceEmpty).ToAsync()
+            from vhdInfo in optionalVhdInfo.ToEitherAsync(Error.New(
+                $"Could not find the virtual disk '{vhdPath}'."))
             // resize if necessary
             let newSize = driveSettings.DiskSettings.SizeBytes.GetValueOrDefault()
             let hasCorrectSize = newSize == 0 || vhdInfo.Value.Size == newSize

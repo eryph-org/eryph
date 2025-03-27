@@ -55,10 +55,10 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMSecurity")
             .AddParameter("VM", vmInfo.PsObject)
-        from vmSecurityInfos in Context.Engine.GetObjectValuesAsync<VMSecurityInfo>(command)
-        from vMSecurityInfo in vmSecurityInfos.HeadOrNone()
-            .ToEitherAsync(Error.New($"Failed to fetch security information for the VM {vmInfo.Value.Id}."))
-        select vMSecurityInfo;
+        from optionalVmSecurityInfo in Context.Engine.GetObjectValueAsync<VMSecurityInfo>(command)
+        from vmSecurityInfo in optionalVmSecurityInfo.ToEitherAsync(Error.New(
+            $"Failed to fetch security information for the VM {vmInfo.Value.Id}."))
+        select vmSecurityInfo;
 
     private EitherAsync<Error, Unit> ConfigureTpm(
         TypedPsObject<VirtualMachineInfo> vmInfo,
@@ -84,8 +84,8 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         let getCommand = PsCommandBuilder.Create()
             .AddCommand("Get-VMKeyProtector")
             .AddParameter("VM", vmInfo.PsObject)
-        from vmKeyProtectors in Context.Engine.GetObjectValuesAsync<byte[]>(getCommand)
-        let hasKeyProtector = vmKeyProtectors.HeadOrNone()
+        from vmKeyProtector in Context.Engine.GetObjectValueAsync<byte[]>(getCommand)
+        let hasKeyProtector = vmKeyProtector
             // Get-VMKeyProtector returns the protector as a byte array. When a proper
             // protector exists, the byte array contains XML describing the protector.
             // Even when no protector exists, Hyper-V returns a short byte array (e.g.
@@ -109,8 +109,8 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             // AllowUntrustedRoot is required as we use an HSG guardian with locally
             // generated certificates which are self-signed.
             .AddParameter("AllowUntrustedRoot")
-        from protectors in Context.Engine.GetObjectsAsync<CimHgsKeyProtector>(createCommand)
-        from protector in protectors.HeadOrNone()
+        from optionalProtector in Context.Engine.GetObjectAsync<CimHgsKeyProtector>(createCommand)
+        from protector in optionalProtector
             .ToEitherAsync(Error.New("Failed to create HGS key protector."))
         let command = PsCommandBuilder.Create()
             .AddCommand("Set-VMKeyProtector")
@@ -135,8 +135,8 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
             .AddCommand("New-HgsGuardian")
             .AddParameter("Name", EryphConstants.HgsGuardianName)
             .AddParameter("GenerateCertificates")
-        from results in Context.Engine.GetObjectsAsync<CimHgsGuardian>(command)
-        from guardian in results.HeadOrNone()
+        from optionalGuardian in Context.Engine.GetObjectAsync<CimHgsGuardian>(command)
+        from guardian in optionalGuardian
             .ToEitherAsync(Error.New("Failed to create HGS guardian."))
         select guardian;
 

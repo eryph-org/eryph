@@ -3,10 +3,8 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.VmManagement;
-using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -16,6 +14,8 @@ using static Eryph.Core.Prelude;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent;
+
+using static VirtualMachineUtils<AgentRuntime>;
 
 [UsedImplicitly]
 internal class VirtualMachineStartHandler(
@@ -34,7 +34,7 @@ internal class VirtualMachineStartHandler(
     private static Aff<AgentRuntime, CatletStateResponse> HandleCommand(
         StartCatletVMCommand command) =>
         from powershell in default(AgentRuntime).Powershell
-        from vmInfo in VmQueries.GetVmInfo(powershell, command.VMId).ToAff()
+        from vmInfo in getVmInfo(command.VMId)
         from _ in timeout(
             EryphConstants.OperationTimeout,
             from ct in cancelToken<AgentRuntime>()
@@ -47,7 +47,7 @@ internal class VirtualMachineStartHandler(
                 e => e is PowershellError { Category: PowershellErrorCategory.PipelineStopped },
                 _ => unitAff)
         let timestamp = DateTimeOffset.UtcNow
-        from reloadedVmInfo in VmQueries.GetVmInfo(powershell, command.VMId).ToAff()
+        from reloadedVmInfo in getVmInfo(command.VMId)
         select new CatletStateResponse
         {
             Status = VmStateUtils.toVmStatus(reloadedVmInfo.Value.State),

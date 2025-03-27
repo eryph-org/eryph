@@ -26,136 +26,134 @@ using LanguageExt.Common;
 using static LanguageExt.Prelude;
 
 
-namespace Eryph.VmManagement
+namespace Eryph.VmManagement;
+
+public static class VirtualMachine
 {
-    public static class VirtualMachine
+    public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Create(
+        IPowershellEngine engine,
+        string vmName,
+        string storageIdentifier,
+        string vmPath,
+        int? startupMemory) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let memoryStartupBytes = startupMemory.GetValueOrDefault(EryphConstants.DefaultCatletMemoryMb) * 1024L * 1024
+        let createVmCommand = PsCommandBuilder.Create()
+            .AddCommand("New-VM")
+            .AddParameter("Name", storageIdentifier)
+            .AddParameter("Path", vmPath)
+            .AddParameter("MemoryStartupBytes", memoryStartupBytes)
+            .AddParameter("Generation", 2)
+        from optionalVmInfo in engine.GetObjectAsync<VirtualMachineInfo>(createVmCommand)
+        from created in optionalVmInfo.ToEitherAsync(Error.New("Failed to create VM"))
+        let removeNetworkAdaptersCommand = PsCommandBuilder.Create()
+            .AddCommand("Get-VMNetworkAdapter")
+            .AddParameter("VM", created.PsObject)
+            .AddCommand("Remove-VMNetworkAdapter")
+        from _2 in engine.RunAsync(removeNetworkAdaptersCommand)
+        from renamed in Rename(engine, created, vmName)
+        from result in SetDefaults(engine, renamed)
+        select result;
+
+    public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Rename(
+        IPowershellEngine engine,
+        TypedPsObject<VirtualMachineInfo> vmInfo,
+        string newName)
     {
-        public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Create(
-            IPowershellEngine engine,
-            string vmName,
-            string storageIdentifier,
-            string vmPath,
-            int? startupMemory) =>
-            from _ in RightAsync<Error, Unit>(unit)
-            let memoryStartupBytes = startupMemory.GetValueOrDefault(EryphConstants.DefaultCatletMemoryMb) * 1024L * 1024
-            let createVmCommand = PsCommandBuilder.Create()
-                .AddCommand("New-VM")
-                .AddParameter("Name", storageIdentifier)
-                .AddParameter("Path", vmPath)
-                .AddParameter("MemoryStartupBytes", memoryStartupBytes)
-                .AddParameter("Generation", 2)
-            from optionalVmInfo in engine.GetObjectAsync<VirtualMachineInfo>(createVmCommand)
-            from created in optionalVmInfo.ToEitherAsync(Error.New("Failed to create VM"))
-            let removeNetworkAdaptersCommand = PsCommandBuilder.Create()
-                .AddCommand("Get-VMNetworkAdapter")
-                .AddParameter("VM", created.PsObject)
-                .AddCommand("Remove-VMNetworkAdapter")
-            from _2 in engine.RunAsync(removeNetworkAdaptersCommand)
-            from renamed in Rename(engine, created, vmName)
-            from result in SetDefaults(engine, renamed)
-            select result;
+        return engine.RunAsync(PsCommandBuilder.Create()
+            .AddCommand("Rename-VM")
+            .AddParameter("VM", vmInfo.PsObject)
+            .AddParameter("NewName", newName)
+        ).Bind(u => vmInfo.RecreateOrReload(engine));
+    }
 
-        public static EitherAsync<Error, TypedPsObject<T>> Rename<T>(
-            IPowershellEngine engine,
-            TypedPsObject<T> vmInfo,
-            string newName)
-            where T : IVirtualMachineCoreInfo
+    public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> SetDefaults(
+        IPowershellEngine engine,
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from optionalSetVmCommand in engine.GetObjectAsync<PowershellCommand>(
+                PsCommandBuilder.Create().AddCommand("Get-Command").AddArgument("Set-VM"))
+        from setVmCommand in optionalSetVmCommand.ToEitherAsync(
+            Error.New("The Powershell command Set-VM was not found."))
+        let builder = BuildSetVMCommand(vmInfo, setVmCommand)
+        from uSet in engine.RunAsync(builder)
+        from reloaded in vmInfo.RecreateOrReload(engine)
+        select reloaded;
+
+    private static PsCommandBuilder BuildSetVMCommand(TypedPsObject<VirtualMachineInfo> vmInfo, PowershellCommand commandInfo)
+    {
+        var builder = new PsCommandBuilder().AddCommand("Set-VM");
+        builder
+            .AddParameter("VM", vmInfo.PsObject)
+            .AddParameter("DynamicMemory", false)
+            .AddParameter("AutomaticStartAction", "Nothing")
+            .AddParameter("AutomaticStopAction", "Save");
+
+        if (commandInfo.Parameters.ContainsKey("AutomaticCheckpointsEnabled"))
+            builder.AddParameter("AutomaticCheckpointsEnabled", false);
+
+        if (commandInfo.Parameters.ContainsKey("EnhancedSessionTransportType"))
+            builder.AddParameter("EnhancedSessionTransportType", "VMBus");
+
+        return builder;
+    }
+
+    public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+        VmHostAgentConfiguration vmHostAgentConfig,
+        VMHostMachineData hostInfo,
+        IPowershellEngine engine,
+        IHyperVOvsPortManager portManager,
+        Func<string, Task> reportProgress,
+        TypedPsObject<VirtualMachineInfo> vmInfo,
+        CatletConfig machineConfig,
+        CatletMetadata metadata,
+        MachineNetworkSettings[] networkSetting,
+        VMStorageSettings storageSettings,
+        Seq<UniqueGeneIdentifier> resolvedGenes)
+    {
+        var convergeContext = new ConvergeContext(
+            vmHostAgentConfig, engine, portManager, reportProgress, machineConfig, 
+            metadata, storageSettings, networkSetting, hostInfo, resolvedGenes);
+
+        var convergeTasks = new ConvergeTaskBase[]
         {
-            return engine.RunAsync(PsCommandBuilder.Create()
-                .AddCommand("Rename-VM")
-                .AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("NewName", newName)
-            ).Bind(u => vmInfo.RecreateOrReload(engine));
-        }
+            new ConvergeSecureBoot(convergeContext),
+            new ConvergeTpm(convergeContext),
+            new ConvergeCPU(convergeContext),
+            new ConvergeNestedVirtualization(convergeContext),
+            new ConvergeMemory(convergeContext),
+            new ConvergeDrives(convergeContext),
+            new ConvergeNetworkAdapters(convergeContext),
+        };
 
-        public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> SetDefaults(
-            IPowershellEngine engine,
-            TypedPsObject<VirtualMachineInfo> vmInfo) =>
-            from optionalSetVmCommand in engine.GetObjectAsync<PowershellCommand>(
-                    PsCommandBuilder.Create().AddCommand("Get-Command").AddArgument("Set-VM"))
-            from setVmCommand in optionalSetVmCommand.ToEitherAsync(
-                Error.New("The Powershell command Set-VM was not found."))
-            let builder = BuildSetVMCommand(vmInfo, setVmCommand)
-            from uSet in engine.RunAsync(builder)
-            from reloaded in vmInfo.RecreateOrReload(engine)
-            select reloaded;
+        return convergeTasks.Fold(
+            RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
+            (info, task) => info.BindAsync(task.Converge));
+    }
 
-        private static PsCommandBuilder BuildSetVMCommand(TypedPsObject<VirtualMachineInfo> vmInfo, PowershellCommand commandInfo)
+    public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> ConvergeConfigDrive(
+        VmHostAgentConfiguration vmHostAgentConfig,
+        VMHostMachineData hostInfo,
+        IPowershellEngine engine,
+        IHyperVOvsPortManager portManager,
+        Func<string, Task> reportProgress,
+        TypedPsObject<VirtualMachineInfo> vmInfo,
+        CatletConfig machineConfig,
+        CatletMetadata metadata,
+        VMStorageSettings storageSettings)
+    {
+        // Pass empty MachineNetworkSettings as converging the cloud init disk
+        // does not require them.
+        var convergeContext = new ConvergeContext(
+            vmHostAgentConfig, engine, portManager, reportProgress, machineConfig,
+            metadata, storageSettings, [], hostInfo, Empty);
+
+        var convergeTasks = new ConvergeTaskBase[]
         {
-            var builder = new PsCommandBuilder().AddCommand("Set-VM");
-            builder
-                .AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("DynamicMemory", false)
-                .AddParameter("AutomaticStartAction", "Nothing")
-                .AddParameter("AutomaticStopAction", "Save");
+            new ConvergeCloudInitDisk(convergeContext),
+        };
 
-            if (commandInfo.Parameters.ContainsKey("AutomaticCheckpointsEnabled"))
-                builder.AddParameter("AutomaticCheckpointsEnabled", false);
-
-            if (commandInfo.Parameters.ContainsKey("EnhancedSessionTransportType"))
-                builder.AddParameter("EnhancedSessionTransportType", "VMBus");
-
-            return builder;
-        }
-
-        public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
-            VmHostAgentConfiguration vmHostAgentConfig,
-            VMHostMachineData hostInfo,
-            IPowershellEngine engine,
-            IHyperVOvsPortManager portManager,
-            Func<string, Task> reportProgress,
-            TypedPsObject<VirtualMachineInfo> vmInfo,
-            CatletConfig machineConfig,
-            CatletMetadata metadata,
-            MachineNetworkSettings[] networkSetting,
-            VMStorageSettings storageSettings,
-            Seq<UniqueGeneIdentifier> resolvedGenes)
-        {
-            var convergeContext = new ConvergeContext(
-                vmHostAgentConfig, engine, portManager, reportProgress, machineConfig, 
-                metadata, storageSettings, networkSetting, hostInfo, resolvedGenes);
-
-            var convergeTasks = new ConvergeTaskBase[]
-            {
-                new ConvergeSecureBoot(convergeContext),
-                new ConvergeTpm(convergeContext),
-                new ConvergeCPU(convergeContext),
-                new ConvergeNestedVirtualization(convergeContext),
-                new ConvergeMemory(convergeContext),
-                new ConvergeDrives(convergeContext),
-                new ConvergeNetworkAdapters(convergeContext),
-            };
-
-            return convergeTasks.Fold(
-                RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
-                (info, task) => info.BindAsync(task.Converge));
-        }
-
-        public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> ConvergeConfigDrive(
-            VmHostAgentConfiguration vmHostAgentConfig,
-            VMHostMachineData hostInfo,
-            IPowershellEngine engine,
-            IHyperVOvsPortManager portManager,
-            Func<string, Task> reportProgress,
-            TypedPsObject<VirtualMachineInfo> vmInfo,
-            CatletConfig machineConfig,
-            CatletMetadata metadata,
-            VMStorageSettings storageSettings)
-        {
-            // Pass empty MachineNetworkSettings as converging the cloud init disk
-            // does not require them.
-            var convergeContext = new ConvergeContext(
-                vmHostAgentConfig, engine, portManager, reportProgress, machineConfig,
-                metadata, storageSettings, [], hostInfo, Empty);
-
-            var convergeTasks = new ConvergeTaskBase[]
-            {
-                new ConvergeCloudInitDisk(convergeContext),
-            };
-
-            return convergeTasks.Fold(
-                RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
-                (info, task) => info.BindAsync(task.Converge));
-        }
+        return convergeTasks.Fold(
+            RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
+            (info, task) => info.BindAsync(task.Converge));
     }
 }
