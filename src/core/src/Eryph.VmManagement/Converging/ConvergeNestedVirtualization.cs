@@ -55,8 +55,8 @@ public class ConvergeNestedVirtualization(
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMProcessor")
             .AddParameter("VM", vmInfo.PsObject)
-        from vmSecurityInfos in Context.Engine.GetObjectValuesAsync<VMProcessorInfo>(command)
-        from vmSecurityInfo in vmSecurityInfos.HeadOrNone()
-            .ToEitherAsync(Error.New($"Failed to fetch processor information for the VM {vmInfo.Value.Id}."))
+        from optionalVmSecurityInfo in Context.Engine.GetObjectValueAsync<VMProcessorInfo>(command)
+        from vmSecurityInfo in optionalVmSecurityInfo.ToEitherAsync(Error.New(
+            $"Failed to fetch processor information for the VM {vmInfo.Value.Id}."))
         select vmSecurityInfo;
 }

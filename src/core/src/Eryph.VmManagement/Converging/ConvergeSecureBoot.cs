@@ -64,8 +64,8 @@ public class ConvergeSecureBoot(
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMFirmware")
             .AddParameter("VM", vmInfo.PsObject)
-        from vmSecurityInfos in Context.Engine.GetObjectValuesAsync<VMFirmwareInfo>(command)
-        from vMSecurityInfo in vmSecurityInfos.HeadOrNone()
-            .ToEitherAsync(Error.New($"Failed to fetch firmware information for the VM {vmInfo.Value.Id}."))
-        select vMSecurityInfo;
+        from optionalVmSecurityInfo in Context.Engine.GetObjectValueAsync<VMFirmwareInfo>(command)
+        from vmSecurityInfo in optionalVmSecurityInfo.ToEitherAsync(Error.New(
+            $"Failed to fetch firmware information for the VM {vmInfo.Value.Id}."))
+        select vmSecurityInfo;
 }

@@ -74,9 +74,6 @@ public class ConvergeDriveTests
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
 
-            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda.vhdx]"))
-                return Seq1(_fixture.Engine.ToPsObject<object>(true));
-
             if (commandString.StartsWith(@"Get-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
@@ -89,7 +86,11 @@ public class ConvergeDriveTests
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            if (command.ToString().StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
+            var commandString = command.ToString();
+            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda.vhdx]"))
+                return Seq1<object>(true);
+
+            if (commandString.StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1<object>(true);
 
             return Error.New($"Unexpected command: {command}.");
@@ -162,9 +163,6 @@ public class ConvergeDriveTests
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
 
-            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda.vhdx]"))
-                return Seq1(_fixture.Engine.ToPsObject<object>(true));
-
             if (commandString.StartsWith(@"Get-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
@@ -185,7 +183,11 @@ public class ConvergeDriveTests
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            if (command.ToString().StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
+            var commandString = command.ToString();
+            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda.vhdx]"))
+                return Seq1<object>(true);
+
+            if (commandString.StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1<object>(true);
 
             return Error.New($"Unexpected command: {command}.");
@@ -256,9 +258,6 @@ public class ConvergeDriveTests
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
 
-            if (commandString.StartsWith($@"Test-Path [x:\disks\abc\sdb{extension}]"))
-                return Seq1(_fixture.Engine.ToPsObject<object>(false));
-
             if (commandString.StartsWith("Get-VHD"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
@@ -284,7 +283,11 @@ public class ConvergeDriveTests
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            if (command.ToString().Contains(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
+            var commandString = command.ToString();
+            if (commandString.StartsWith($@"Test-Path [x:\disks\abc\sdb{extension}]"))
+                return Seq1<object>(false);
+
+            if (commandString.StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1<object>(true);
 
             return Error.New($"Unexpected command: {command}.");
@@ -372,9 +375,6 @@ public class ConvergeDriveTests
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
 
-            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda_g1.vhdx]"))
-                return Seq1(_fixture.Engine.ToPsObject<object>(false));
-
             if (commandString.StartsWith("Get-VHD"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
@@ -400,7 +400,11 @@ public class ConvergeDriveTests
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            if (command.ToString().StartsWith($"Test-VHD [{expectedParentPath}]"))
+            var commandString = command.ToString();
+            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda_g1.vhdx]"))
+                return Seq1<object>(false);
+
+            if (commandString.StartsWith($"Test-VHD [{expectedParentPath}]"))
                 return Seq1<object>(true);
             
             return Error.New($"unknown command: {command}");
@@ -514,9 +518,6 @@ public class ConvergeDriveTests
             var commandString = command.ToString();
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
-
-            if (commandString.StartsWith(@$"Test-Path [x:\disks\abc\{diskName}]"))
-                return Seq1(_fixture.Engine.ToPsObject<object>(false));
             
             if (commandString.StartsWith("Get-VHD"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
@@ -543,7 +544,11 @@ public class ConvergeDriveTests
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            if (command.ToString().StartsWith($"Test-VHD [{expectedParentPath}]"))
+            var commandString = command.ToString();
+            if (commandString.StartsWith(@$"Test-Path [x:\disks\abc\{diskName}]"))
+                return Seq1<object>(false);
+
+            if (commandString.StartsWith($"Test-VHD [{expectedParentPath}]"))
                 return Seq1<object>(true);
 
             return Error.New($"Unexpected command: {command}.");

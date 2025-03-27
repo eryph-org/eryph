@@ -120,9 +120,9 @@ public class VirtualMachineInventory(
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMSecurity")
             .AddParameter("VM", vmInfo.PsObject)
-        from vmSecurityInfos in engine.GetObjectValuesAsync<VMSecurityInfo>(command)
-        from vMSecurityInfo in vmSecurityInfos.HeadOrNone()
-            .ToEitherAsync(Error.New($"Failed to fetch security information for the VM {vmInfo.Value.Id}."))
+        from optionalVmSecurityInfo in engine.GetObjectValueAsync<VMSecurityInfo>(command)
+        from vMSecurityInfo in optionalVmSecurityInfo.ToEitherAsync(Error.New(
+            $"Failed to fetch security information for the VM {vmInfo.Value.Id}."))
         select new VirtualMachineSecurityData
         {
             BindToHostTpm = vMSecurityInfo.BindToHostTpm,

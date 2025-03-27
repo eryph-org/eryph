@@ -26,6 +26,7 @@ using static Directory<DriverCommandsRuntime>;
 using static File<DriverCommandsRuntime>;
 using static Logger<DriverCommandsRuntime>;
 using static OvsDriverProvider<DriverCommandsRuntime>;
+using static VirtualMachineUtils<DriverCommandsRuntime>;
 
 internal class UninstallCommands
 {
@@ -142,41 +143,21 @@ internal class UninstallCommands
 
     private static Aff<DriverCommandsRuntime, Unit> RemoveVm(Guid vmId) =>
         from psEngine in default(DriverCommandsRuntime).Powershell
-        let getCommand = PsCommandBuilder.Create()
-            .AddCommand("Get-VM")
-            .AddParameter("Id", vmId)
-        from vmInfos in psEngine.GetObjectsAsync<VirtualMachineInfo>(getCommand)
-            .ToAff()
-        let vmInfo = vmInfos.HeadOrNone()
+        from _1 in logInformation<UninstallCommands>("Removing Hyper-V VM {VmId}...", vmId)
+        from vmInfo in getOptionalVmInfo(vmId)
         // We only remove the VM here. Any leftover files will be removed later
         // when we remove the stores.
-        from _ in vmInfo.Map(StopAndRemoveVm).SequenceSerial()
-        select unit;
-
-    private static Aff<DriverCommandsRuntime, Unit> StopAndRemoveVm(
-        TypedPsObject<VirtualMachineInfo> vmInfo) =>
-        from psEngine in default(DriverCommandsRuntime).Powershell
-        let stopCommand = PsCommandBuilder.Create()
-            .AddCommand("Stop-VM")
-            .AddParameter("VM", vmInfo.PsObject)
-            .AddParameter("TurnOff")
-        // We try to remove the VM whether it was stopped successfully or not.
-        // Maybe, we are lucky and can remove the VM even after the stop command failed.
-        // TODO Add timeout for stop command
-        from _ in psEngine.RunAsync(stopCommand).ToAff().Bind(_ => RemoveVm(vmInfo))
-                  | @catch(stopError => RemoveVm(vmInfo)
-                      .MapFail(removeError => Error.Many(stopError, removeError)))
+        from _2 in vmInfo.Map(RemoveVm).Sequence()
         select unit;
 
     private static Aff<DriverCommandsRuntime, Unit> RemoveVm(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
-        from psEngine in default(DriverCommandsRuntime).Powershell
-        let command = PsCommandBuilder.Create()
-            .AddCommand("Remove-VM")
-            .AddParameter("VM", vmInfo.PsObject)
-            .AddParameter("Force")
-        from _2 in psEngine.RunAsync(command).ToAff()
-        select unit;
+        // We only remove the VM here. Any leftover files will be removed later
+        // when we remove the stores.
+        timeout(TimeSpan.FromSeconds(15), stopVm(vmInfo)).Bind(_ => removeVm(vmInfo))
+        // We try to remove the VM whether it was stopped successfully or not.
+        // Maybe, we are lucky and can remove the VM even after the stop command failed.
+        | @catch(stopError => RemoveVm(vmInfo).MapFail(removeError => Error.Many(stopError, removeError)));
 
     private static Aff<DriverCommandsRuntime, Unit> RemoveStores() =>
         from hostSettings in HostSettingsProvider<DriverCommandsRuntime>.getHostSettings()

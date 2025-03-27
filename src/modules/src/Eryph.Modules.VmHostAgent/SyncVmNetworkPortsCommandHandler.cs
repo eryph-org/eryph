@@ -9,7 +9,7 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
-using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using Rebus.Handlers;
 
@@ -27,7 +27,7 @@ internal class SyncVmNetworkPortsCommandHandler(
         SyncPorts(message.Command).FailOrComplete(messaging, message);
 
     private Aff<Unit> SyncPorts(SyncVmNetworkPortsCommand command) =>
-        from vmInfo in GetVm(command.VMId)
+        from vmInfo in VmQueries.GetOptionalVmInfo(powershellEngine, command.VMId).ToAff()
         from _ in vmInfo
             // This command is only used to sync the ports when the network adapters
             // of a running VM have been modified. A different event and handler
@@ -36,15 +36,4 @@ internal class SyncVmNetworkPortsCommandHandler(
             .Map(v => ovsPortManager.SyncPorts(v, VMPortChange.Add).ToAff(identity))
             .SequenceSerial()
         select unit;
-
-    private Aff<Option<TypedPsObject<VirtualMachineInfo>>> GetVm(
-        Guid vmId) =>
-        from _ in SuccessAff(unit)
-        let command = PsCommandBuilder.Create()
-            .AddCommand("Get-VM")
-            .AddParameter("Id", vmId)
-            .AddParameter("ErrorAction", "SilentlyContinue")
-        from vmInfos in powershellEngine.GetObjectsAsync<VirtualMachineInfo>(command)
-            .ToAff()
-        select vmInfos.HeadOrNone();
 }

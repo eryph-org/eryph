@@ -15,6 +15,8 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent;
 
+using static VirtualMachineUtils<AgentRuntime>;
+
 [UsedImplicitly]
 internal class VirtualMachineStopHandler(
     ITaskMessaging messaging,
@@ -31,7 +33,7 @@ internal class VirtualMachineStopHandler(
 
     private static Aff<AgentRuntime, CatletStateResponse> HandleCommand(StopVMCommand command) =>
         from powershell in default(AgentRuntime).Powershell
-        from vmInfo in VmQueries.GetVmInfo(powershell, command.VMId).ToAff()
+        from vmInfo in getVmInfo(command.VMId)
         from _ in timeout(
             EryphConstants.OperationTimeout,
             from ct in cancelToken<AgentRuntime>()
@@ -45,7 +47,7 @@ internal class VirtualMachineStopHandler(
                 e => e is PowershellError { Category: PowershellErrorCategory.PipelineStopped },
                 _ => unitAff)
         let timestamp = DateTimeOffset.UtcNow
-        from reloadedVmInfo in VmQueries.GetVmInfo(powershell, command.VMId).ToAff()
+        from reloadedVmInfo in getVmInfo(command.VMId)
         select new CatletStateResponse
         {
             Status = VmStateUtils.toVmStatus(reloadedVmInfo.Value.State),

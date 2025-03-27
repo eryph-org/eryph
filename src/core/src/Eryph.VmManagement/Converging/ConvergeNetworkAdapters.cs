@@ -114,9 +114,9 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddParameter("StaticMacAddress", adapterConfig.MacAddress)
             .AddParameter("SwitchName", adapterConfig.SwitchName)
             .AddParameter("Passthru")
-        from createdAdapters in Context.Engine.GetObjectValuesAsync<VMNetworkAdapter>(command)
-        from createdAdapter in createdAdapters.HeadOrNone()
-            .ToEitherAsync(Error.New("Failed to create network adapter"))
+        from optionalCreatedAdapter in Context.Engine.GetObjectValueAsync<VMNetworkAdapter>(command)
+        from createdAdapter in optionalCreatedAdapter.ToEitherAsync(
+            Error.New("Failed to create network adapter"))
         from __ in Context.PortManager.SetPortName(createdAdapter.Id, adapterConfig.PortName)
         select unit;
 

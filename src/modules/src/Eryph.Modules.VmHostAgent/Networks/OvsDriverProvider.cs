@@ -163,6 +163,7 @@ public class OvsDriverProvider<RT> where RT : struct,
             .AddCommand("Select-Object")
             .AddParameter("ExpandProperty", "Subject")
         from powershellResult in psEngine.GetObjectValuesAsync<string?>(command).ToAff()
+        // The result can be null. Hence, we cannot directly call HeadOrNone().
         from signer in powershellResult.Map(Optional).Somes().HeadOrNone()
             .ToEff(Error.New("Could not read signature from file"))
         select !signer.Contains("Microsoft Windows Hardware Compatibility Publisher", StringComparison.OrdinalIgnoreCase);
