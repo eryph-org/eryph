@@ -15,6 +15,7 @@ using Eryph.Security.Cryptography;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
+using LanguageExt.Common;
 using LanguageExt.Sys.IO;
 using static LanguageExt.Prelude;
 using static LanguageExt.Seq;
@@ -25,6 +26,7 @@ using static Directory<DriverCommandsRuntime>;
 using static File<DriverCommandsRuntime>;
 using static Logger<DriverCommandsRuntime>;
 using static OvsDriverProvider<DriverCommandsRuntime>;
+using static VirtualMachineUtils<DriverCommandsRuntime>;
 
 internal class UninstallCommands
 {
@@ -120,7 +122,7 @@ internal class UninstallCommands
             .IfFail(Seq<string>())
         from vmIds in catletMetadataPaths.Map(GetOptionalVmId).SequenceSerial()
         let validVmIds = vmIds.Somes()
-        from _ in validVmIds.Map(TryRemoveVm).SequenceSerial()
+        from _ in validVmIds.Map(TryStopAndRemoveVm).SequenceSerial()
         select unit;
 
     private static Aff<DriverCommandsRuntime, Option<Guid>> GetOptionalVmId(string path) =>
@@ -135,26 +137,26 @@ internal class UninstallCommands
         from vmId in Eff(() => metadata.RootElement.GetProperty(nameof(CatletMetadata.VMId)).GetGuid())
         select vmId;
 
-    private static Aff<DriverCommandsRuntime, Unit> TryRemoveVm(Guid vmId) =>
-        RemoveVm(vmId) | @catch(e => logWarning<UninstallCommands>(
+    private static Aff<DriverCommandsRuntime, Unit> TryStopAndRemoveVm(Guid vmId) =>
+        StopAndRemoveVm(vmId) | @catch(e => logWarning<UninstallCommands>(
             e, "Could not remove Hyper-V VM {VmId}. If necessary, remove it manually.", vmId));
 
-    private static Aff<DriverCommandsRuntime, Unit> RemoveVm(Guid vmId) =>
-        from psEngine in default(DriverCommandsRuntime).Powershell
-        let getCommand = PsCommandBuilder.Create()
-            .AddCommand("Get-VM")
-            .AddParameter("Id", vmId)
-        from vmInfos in psEngine.GetObjectsAsync<VirtualMachineInfo>(getCommand)
-            .ToAff()
-        let vmInfo = vmInfos.HeadOrNone()
+    private static Aff<DriverCommandsRuntime, Unit> StopAndRemoveVm(Guid vmId) =>
+        from _1 in logInformation<UninstallCommands>("Removing Hyper-V VM {VmId}...", vmId)
+        from vmInfo in getOptionalVmInfo(vmId)
         // We only remove the VM here. Any leftover files will be removed later
         // when we remove the stores.
-        from _ in vmInfo.Match(
-            Some: v => from stoppedVm in v.StopIfRunning(psEngine).ToAff()
-                       from _ in stoppedVm.Remove(psEngine).ToAff()
-                       select unit,
-            None: () => SuccessAff(unit))
+        from _2 in vmInfo.Map(StopAndRemoveVm).Sequence()
         select unit;
+
+    private static Aff<DriverCommandsRuntime, Unit> StopAndRemoveVm(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        // We only remove the VM here. Any leftover files will be removed later
+        // when we remove the stores.
+        timeout(TimeSpan.FromSeconds(15), stopVm(vmInfo)).Bind(_ => removeVm(vmInfo))
+        // We try to remove the VM whether it was stopped successfully or not.
+        // Maybe, we are lucky and can remove the VM even after the stop command failed.
+        | @catch(stopError => removeVm(vmInfo).MapFail(removeError => Error.Many(stopError, removeError)));
 
     private static Aff<DriverCommandsRuntime, Unit> RemoveStores() =>
         from hostSettings in HostSettingsProvider<DriverCommandsRuntime>.getHostSettings()

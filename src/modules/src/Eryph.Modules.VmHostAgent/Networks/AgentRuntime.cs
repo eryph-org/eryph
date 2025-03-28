@@ -1,14 +1,15 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
+using Eryph.Core;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Effects.Traits;
-using Microsoft.Extensions.Logging;
-using System;
-using Eryph.Core;
 using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.Extensions.Logging;
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Networks;
 
@@ -19,10 +20,9 @@ public readonly struct AgentRuntime :
     HasAgentSyncClient<AgentRuntime>,
     HasHostNetworkCommands<AgentRuntime>,
     HasNetworkProviderManager<AgentRuntime>,
-    HasLogger<AgentRuntime>
-
+    HasLogger<AgentRuntime>,
+    HasWmi<AgentRuntime>
 {
-
     readonly AgentRuntimeEnv _env;
 
     /// <summary>
@@ -30,7 +30,6 @@ public readonly struct AgentRuntime :
     /// </summary>
     AgentRuntime(AgentRuntimeEnv env) =>
         this._env = env;
-
 
     /// <summary>
     /// Configuration environment accessor
@@ -74,9 +73,8 @@ public readonly struct AgentRuntime :
     public CancellationTokenSource CancellationTokenSource =>
         Env.Source;
 
-    private Eff<AgentRuntime, T> FromServiceProvider<T>()
-        => Prelude.Eff<AgentRuntime, T>(rt => 
-            rt.Env.ServiceProvider.GetRequiredService<T>());
+    private static Eff<AgentRuntime, T> FromServiceProvider<T>() =>
+        Eff<AgentRuntime, T>(rt => rt.Env.ServiceProvider.GetRequiredService<T>());
 
     public Eff<AgentRuntime, IPowershellEngine> Powershell => 
         FromServiceProvider<IPowershellEngine>();
@@ -86,7 +84,6 @@ public readonly struct AgentRuntime :
 
     public Eff<AgentRuntime, IHostNetworkCommands<AgentRuntime>> HostNetworkCommands =>
         FromServiceProvider<IHostNetworkCommands<AgentRuntime>>();
-
 
     public Eff<AgentRuntime, ISyncClient> AgentSync =>
         FromServiceProvider<ISyncClient>();
@@ -100,4 +97,5 @@ public readonly struct AgentRuntime :
     public Eff<AgentRuntime, ILogger<T>> Logger<T>() =>
         FromServiceProvider<ILoggerFactory>().Map(lf => lf.CreateLogger<T>());
 
+    public Eff<AgentRuntime, WmiIO> WmiEff => SuccessEff(LiveWmiIO.Default);
 }

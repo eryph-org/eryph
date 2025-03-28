@@ -16,11 +16,11 @@ public class ConvergeNestedVirtualization(
     ConvergeContext context)
     : ConvergeTaskBase(context)
 {
-    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         ConvergeNestedVirtualizationState(vmInfo).ToEither();
 
-    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeNestedVirtualizationState(
+    private EitherAsync<Error, Unit> ConvergeNestedVirtualizationState(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
         let expectedNestedVirtualization = CatletCapabilities.IsNestedVirtualizationEnabled(
@@ -30,8 +30,7 @@ public class ConvergeNestedVirtualization(
         from __ in expectedNestedVirtualization == actualNestedVirtualization
             ? RightAsync<Error, Unit>(unit)
             : ConfigureNestedVirtualization(vmInfo, expectedNestedVirtualization)
-        from updatedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
-        select updatedVmInfo;
+        select unit;
 
     private EitherAsync<Error, Unit> ConfigureNestedVirtualization(
         TypedPsObject<VirtualMachineInfo> vmInfo,
@@ -46,7 +45,7 @@ public class ConvergeNestedVirtualization(
             .AddCommand("Set-VMProcessor")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("ExposeVirtualizationExtensions", exposeVirtualizationExtensions)
-        from _3 in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from _3 in Context.Engine.RunAsync(command)
         select unit;
 
     private EitherAsync<Error, VMProcessorInfo> GetVmProcessorInfo(
@@ -55,9 +54,8 @@ public class ConvergeNestedVirtualization(
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMProcessor")
             .AddParameter("VM", vmInfo.PsObject)
-        from vmSecurityInfos in Context.Engine.GetObjectValuesAsync<VMProcessorInfo>(command)
-            .ToError()
-        from vmSecurityInfo in vmSecurityInfos.HeadOrNone()
-            .ToEitherAsync(Error.New($"Failed to fetch processor information for the VM {vmInfo.Value.Id}."))
+        from optionalVmSecurityInfo in Context.Engine.GetObjectValueAsync<VMProcessorInfo>(command)
+        from vmSecurityInfo in optionalVmSecurityInfo.ToEitherAsync(Error.New(
+            $"Failed to fetch processor information for the VM {vmInfo.Value.Id}."))
         select vmSecurityInfo;
 }

@@ -37,9 +37,8 @@ public static class VhdQuery
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VHD")
             .AddArgument(path)
-            .AddParameter("ErrorAction", "SilentlyContinue")
-        from vhdInfos in engine.GetObjectsAsync<VhdInfo>(command).ToAsync().ToError()
-        select vhdInfos.HeadOrNone();
+        from vhdInfo in engine.GetObjectAsync<VhdInfo>(command)
+        select vhdInfo;
 
     public static EitherAsync<Error, bool> TestVhd(
         IPowershellEngine engine,
@@ -51,9 +50,9 @@ public static class VhdQuery
             // Test-VHD returns an error when e.g. the chain of VHDs is broken.
             // When the error is ignored, Test-VHD returns false when the VHD is not usable.
             .AddParameter("ErrorAction", "SilentlyContinue")
-        from results in engine.GetObjectValuesAsync<bool>(command).ToError()
-        from isValid in results.HeadOrNone()
-            .ToEitherAsync(Error.New("Test-VHD did not return a result."))
+        from result in engine.GetObjectValueAsync<bool>(command)
+        from isValid in result.ToEitherAsync(
+            Error.New("Test-VHD did not return a result."))
         select isValid;
 
     public static EitherAsync<Error, SnapshotInfo> GetSnapshotAndActualVhd(

@@ -4,35 +4,39 @@ using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using LanguageExt.Common;
+using static LanguageExt.Prelude;
 
-namespace Eryph.VmManagement.Converging
+namespace Eryph.VmManagement.Converging;
+
+public class ConvergeCPU(
+    ConvergeContext context)
+    : ConvergeTaskBase(context)
 {
-    public class ConvergeCPU : ConvergeTaskBase
-    {
-        public ConvergeCPU(ConvergeContext context) : base(context)
-        {
-        }
+    public override Task<Either<Error, Unit>> Converge(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        ConvergeCpu(vmInfo).ToEither();
 
-        public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
-            TypedPsObject<VirtualMachineInfo> vmInfo)
-        {
-            var configCount = Context.Config.Cpu?.Count ?? EryphConstants.DefaultCatletCpuCount;
-            if (vmInfo.Value.ProcessorCount == configCount) return vmInfo;
+    private EitherAsync<Error, Unit> ConvergeCpu(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let expectedCpuCount = Context.Config.Cpu?.Count ?? EryphConstants.DefaultCatletCpuCount
+        let currentCpuCount = vmInfo.Value.ProcessorCount
+        from _2 in expectedCpuCount == currentCpuCount
+            ? RightAsync<Error, Unit>(unit)
+            : ConfigureCpu(vmInfo, expectedCpuCount)
+        select unit;
 
-            if (vmInfo.Value.State is not (VirtualMachineState.Off or VirtualMachineState.OffCritical))
-                return Error.New("Cannot change CPU count if the catlet is not stopped. Stop the catlet and retry.");
-
-            await Context.ReportProgress($"Configure Catlet CPU count: {configCount}").ConfigureAwait(false);
-
-            var result = await Context.Engine.RunAsync(PsCommandBuilder.Create()
-                .AddCommand("Set-VMProcessor")
-                .AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("Count", configCount)).ConfigureAwait(false);
-
-            if (result.IsLeft)
-                return result.Map(_ => vmInfo).ToError();
-
-            return await vmInfo.RecreateOrReload(Context.Engine).ToEither().ConfigureAwait(false);
-        }
-    }
+    private EitherAsync<Error, Unit> ConfigureCpu(
+        TypedPsObject<VirtualMachineInfo> vmInfo,
+        int cpuCount) =>
+        from _1 in guard(vmInfo.Value.State is VirtualMachineState.Off or VirtualMachineState.OffCritical,
+                Error.New("Cannot change CPU count if the catlet is not stopped. Stop the catlet and retry."))
+            .ToEitherAsync()
+        from _2 in Context.ReportProgressAsync($"Configure Catlet CPU count: {cpuCount}")
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Set-VMProcessor")
+            .AddParameter("VM", vmInfo.PsObject)
+            .AddParameter("Count", cpuCount)
+        from _3 in Context.Engine.RunAsync(command)
+        select unit;
 }

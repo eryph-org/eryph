@@ -48,7 +48,6 @@ internal class CreateVirtualDiskVMCommandHandler(
             .AddParameter("Dynamic")
             .AddParameter("SizeBytes", sizeBytes)
         from _ in engine.RunAsync(psCommand)
-            .ToError().ToAsync()
         from storageSettings in DiskStorageSettings.FromVhdPath(engine, vmHostAgentConfig, vhdPath)
         select new CreateVirtualDiskVMCommandResponse
         {
