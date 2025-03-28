@@ -120,19 +120,19 @@ public sealed class PowershellEngine(
         }
         catch (RuntimeException rex) when (rex is not PipelineStoppedException)
         {
-            logger.LogInformation(rex, "Powershell command '{Command}' failed: {Error}",
+            logger.LogDebug(rex, "Powershell command '{Command}' failed: {Error}",
                 rex.ErrorRecord.InvocationInfo?.MyCommand, rex.ErrorRecord.ToString());
             throw;
         }
         catch (Exception ex) when (ex is not PipelineStoppedException)
         {
-            logger.LogInformation(ex, "Powershell failed with exception.");
+            logger.LogDebug(ex, "Powershell failed with exception.");
             throw;
         }
 
         foreach (var error in errors)
         {
-            logger.LogInformation(error.Exception, "Powershell command '{Command}' failed: {Error}",
+            logger.LogDebug(error.Exception, "Powershell command '{Command}' failed: {Error}",
                 error.InvocationInfo?.MyCommand, error.ToString());
         }
 
