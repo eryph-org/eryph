@@ -9,8 +9,8 @@ using Eryph.VmManagement.Inventory;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Handlers;
+using SimpleInjector;
 
-using static Eryph.Core.Prelude;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent;
@@ -20,13 +20,13 @@ using static VirtualMachineUtils<AgentRuntime>;
 [UsedImplicitly]
 internal class VirtualMachineStopHandler(
     ITaskMessaging messaging,
-    IServiceProvider serviceProvider)
+    Scope serviceScope)
     : IHandleMessages<OperationTask<StopVMCommand>>
 {
     public async Task Handle(OperationTask<StopVMCommand> message)
     {
         var result = await HandleCommand(message.Command)
-            .Run(AgentRuntime.New(serviceProvider));
+            .Run(AgentRuntime.New(serviceScope));
 
         await result.FailOrComplete(messaging, message);
     }

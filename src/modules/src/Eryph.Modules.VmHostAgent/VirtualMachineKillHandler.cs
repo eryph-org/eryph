@@ -5,15 +5,14 @@ using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.VmManagement;
-using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Sys;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
+using SimpleInjector;
 
-using static Eryph.Core.Prelude;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent;
@@ -23,13 +22,13 @@ using static VirtualMachineUtils<AgentRuntime>;
 [UsedImplicitly]
 internal class VirtualMachineKillHandler(
     ITaskMessaging messaging,
-    IServiceProvider serviceProvider)
+    Scope serviceScope)
     : IHandleMessages<OperationTask<KillVMCommand>>
 {
     public async Task Handle(OperationTask<KillVMCommand> message)
     {
         var result = await HandleCommand(message.Command)
-            .Run(AgentRuntime.New(serviceProvider));
+            .Run(AgentRuntime.New(serviceScope));
 
         await result.FailOrComplete(messaging, message);
     }
