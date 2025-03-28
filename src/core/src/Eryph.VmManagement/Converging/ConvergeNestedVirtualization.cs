@@ -16,11 +16,11 @@ public class ConvergeNestedVirtualization(
     ConvergeContext context)
     : ConvergeTaskBase(context)
 {
-    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         ConvergeNestedVirtualizationState(vmInfo).ToEither();
 
-    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeNestedVirtualizationState(
+    private EitherAsync<Error, Unit> ConvergeNestedVirtualizationState(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
         let expectedNestedVirtualization = CatletCapabilities.IsNestedVirtualizationEnabled(
@@ -30,8 +30,7 @@ public class ConvergeNestedVirtualization(
         from __ in expectedNestedVirtualization == actualNestedVirtualization
             ? RightAsync<Error, Unit>(unit)
             : ConfigureNestedVirtualization(vmInfo, expectedNestedVirtualization)
-        from updatedVmInfo in vmInfo.Reload(Context.Engine)
-        select updatedVmInfo;
+        select unit;
 
     private EitherAsync<Error, Unit> ConfigureNestedVirtualization(
         TypedPsObject<VirtualMachineInfo> vmInfo,

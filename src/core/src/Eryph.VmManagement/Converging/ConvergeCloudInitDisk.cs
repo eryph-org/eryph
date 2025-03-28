@@ -13,6 +13,8 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.VmManagement.Converging
 {
     public class ConvergeCloudInitDisk : ConvergeTaskBase
@@ -22,12 +24,12 @@ namespace Eryph.VmManagement.Converging
         {
         }
 
-        public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+        public override Task<Either<Error,Unit>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             return (from vm in EjectConfigDriveDisk(vmInfo).ToAsync()
                 from result in UpdateConfigDriveDisk(vm).ToAsync()
-                select result).ToEither();
+                select unit).ToEither();
 
         }
 

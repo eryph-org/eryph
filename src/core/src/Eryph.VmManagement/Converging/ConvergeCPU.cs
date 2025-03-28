@@ -12,11 +12,11 @@ public class ConvergeCPU(
     ConvergeContext context)
     : ConvergeTaskBase(context)
 {
-    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         ConvergeCpu(vmInfo).ToEither();
 
-    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeCpu(
+    private EitherAsync<Error, Unit> ConvergeCpu(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _1 in RightAsync<Error, Unit>(unit)
         let expectedCpuCount = Context.Config.Cpu?.Count ?? EryphConstants.DefaultCatletCpuCount
@@ -24,8 +24,7 @@ public class ConvergeCPU(
         from _2 in expectedCpuCount == currentCpuCount
             ? RightAsync<Error, Unit>(unit)
             : ConfigureCpu(vmInfo, expectedCpuCount)
-        from updatedVmInfo in vmInfo.Reload(Context.Engine)
-        select updatedVmInfo;
+        select unit;
 
     private EitherAsync<Error, Unit> ConfigureCpu(
         TypedPsObject<VirtualMachineInfo> vmInfo,

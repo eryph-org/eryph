@@ -19,11 +19,11 @@ namespace Eryph.VmManagement.Converging
         {
         }
 
-        public override async Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+        public override async Task<Either<Error, Unit>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo)
         {
             if (Context.StorageSettings.Frozen)
-                return Prelude.Right<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo);
+                return Right<Error, Unit>(unit);
 
             var currentCheckpointType = vmInfo.Value.CheckpointType;
 
@@ -47,15 +47,12 @@ namespace Eryph.VmManagement.Converging
                     from ____ in DvdDrives(infoRecreated, plannedDriveStorageSettings)
                     select Unit.Default).ToEither().ConfigureAwait(false);
 
-                 if (res.IsLeft)
-                     return res.Map(_ => vmInfo);
+                 return res;
             }
             finally
             {
-                await SetVMCheckpointType(vmInfo, currentCheckpointType, Context.Engine).ToEither().ConfigureAwait(false);
+                await SetVMCheckpointType(vmInfo, currentCheckpointType, Context.Engine);
             }
-
-            return await vmInfo.Reload(Context.Engine).ToEither().ConfigureAwait(false);
         }
 
         private EitherAsync<Error, Unit> VirtualDisks(TypedPsObject<VirtualMachineInfo> vmInfo,

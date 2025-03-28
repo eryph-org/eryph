@@ -19,6 +19,7 @@ using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Data.Planned;
+using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
 using LanguageExt.Common;
@@ -98,7 +99,7 @@ public static class VirtualMachine
         return builder;
     }
 
-    public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Converge(
         VmHostAgentConfiguration vmHostAgentConfig,
         VMHostMachineData hostInfo,
         IPowershellEngine engine,
@@ -109,29 +110,29 @@ public static class VirtualMachine
         CatletMetadata metadata,
         MachineNetworkSettings[] networkSetting,
         VMStorageSettings storageSettings,
-        Seq<UniqueGeneIdentifier> resolvedGenes)
-    {
-        var convergeContext = new ConvergeContext(
+        Seq<UniqueGeneIdentifier> resolvedGenes) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let convergeContext = new ConvergeContext(
             vmHostAgentConfig, engine, portManager, reportProgress, machineConfig, 
-            metadata, storageSettings, networkSetting, hostInfo, resolvedGenes);
-
-        var convergeTasks = new ConvergeTaskBase[]
-        {
+            metadata, storageSettings, networkSetting, hostInfo, resolvedGenes)
+        let convergeTasks = Seq<ConvergeTaskBase>(
             new ConvergeSecureBoot(convergeContext),
             new ConvergeTpm(convergeContext),
             new ConvergeCPU(convergeContext),
             new ConvergeNestedVirtualization(convergeContext),
             new ConvergeMemory(convergeContext),
             new ConvergeDrives(convergeContext),
-            new ConvergeNetworkAdapters(convergeContext),
-        };
+            new ConvergeNetworkAdapters(convergeContext))
+        let vmId = vmInfo.Value.Id
+        from _2 in convergeTasks
+            .Map(task => from reloadedVmInfo in VmQueries.GetVmInfo(engine, vmId)
+                         from _ in task.Converge(reloadedVmInfo).ToAsync()
+                         select unit)
+            .SequenceSerial()
+        from reloadedVmInfo in VmQueries.GetVmInfo(engine, vmId)
+        select reloadedVmInfo;
 
-        return convergeTasks.Fold(
-            RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
-            (info, task) => info.BindAsync(task.Converge));
-    }
-
-    public static Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> ConvergeConfigDrive(
+    public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeConfigDrive(
         VmHostAgentConfiguration vmHostAgentConfig,
         VMHostMachineData hostInfo,
         IPowershellEngine engine,
@@ -140,21 +141,21 @@ public static class VirtualMachine
         TypedPsObject<VirtualMachineInfo> vmInfo,
         CatletConfig machineConfig,
         CatletMetadata metadata,
-        VMStorageSettings storageSettings)
-    {
+        VMStorageSettings storageSettings) =>
+        from _1 in RightAsync<Error, Unit>(unit)
         // Pass empty MachineNetworkSettings as converging the cloud init disk
         // does not require them.
-        var convergeContext = new ConvergeContext(
+        let convergeContext = new ConvergeContext(
             vmHostAgentConfig, engine, portManager, reportProgress, machineConfig,
-            metadata, storageSettings, [], hostInfo, Empty);
-
-        var convergeTasks = new ConvergeTaskBase[]
-        {
-            new ConvergeCloudInitDisk(convergeContext),
-        };
-
-        return convergeTasks.Fold(
-            RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo).ToEither(),
-            (info, task) => info.BindAsync(task.Converge));
-    }
+            metadata, storageSettings, [], hostInfo, Empty)
+        let convergeTasks = Seq1<ConvergeTaskBase>(
+            new ConvergeCloudInitDisk(convergeContext))
+        let vmId = vmInfo.Value.Id
+        from _2 in convergeTasks
+            .Map(task => from reloadedVmInfo in VmQueries.GetVmInfo(engine, vmId)
+                from _ in task.Converge(reloadedVmInfo).ToAsync()
+                select unit)
+            .SequenceSerial()
+        from reloadedVmInfo in VmQueries.GetVmInfo(engine, vmId)
+        select reloadedVmInfo;
 }

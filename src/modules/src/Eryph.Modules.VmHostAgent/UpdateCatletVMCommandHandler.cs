@@ -55,7 +55,7 @@ internal class UpdateCatletVMCommandHandler(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfoConsistent,
                 substitutedConfig, command.MachineMetadata, command.MachineNetworkSettings,
                 plannedStorageSettings, command.ResolvedGenes.ToSeq())
-            .WriteTrace().ToAsync()
+            .WriteTrace()
         let timestamp = DateTimeOffset.UtcNow
         from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, vmInfoConverged, hostInfoProvider).WriteTrace()
         select new ConvergeCatletResult
