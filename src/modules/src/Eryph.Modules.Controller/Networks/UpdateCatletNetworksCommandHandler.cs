@@ -11,6 +11,7 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages.Resources.Catlets.Commands;
+using Eryph.ModuleCore.Configuration;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -30,7 +31,8 @@ public class UpdateCatletNetworksCommandHandler(
     ICatletIpManager ipManager,
     IStateStore stateStore,
     INetworkProviderManager providerManager,
-    IProviderIpManager providerIpManager)
+    IProviderIpManager providerIpManager,
+    INetworkConfigDefaults networkConfigDefaults)
     : IHandleMessages<OperationTask<UpdateCatletNetworksCommand>>
 {
     public async Task Handle(OperationTask<UpdateCatletNetworksCommand> message)
@@ -91,11 +93,23 @@ public class UpdateCatletNetworksCommandHandler(
             .ToEither(Error.New($"Network provider {validNetwork.NetworkProvider} not found."))
             .ToAsync()
         let isFlatNetwork = networkProvider.Type == NetworkProviderType.Flat
-
-        let fixedMacAddress = command.Config.NetworkAdapters
+        let allowMacAddressSpoofing = Optional(networkProvider.AllowMacAddressSpoofing)
+            .IfNone(networkConfigDefaults.MacAddressSpoofing)
+        let networkAdapterConfig = command.Config.NetworkAdapters
             .ToSeq()
             .Find(x => x.Name == networkConfig.AdapterName)
-            .Bind(x => Optional(x.MacAddress))
+        let fixedMacAddress = networkAdapterConfig.Bind(x => Optional(x.MacAddress))
+        let enableMacAddressSpoofing = networkAdapterConfig
+            .Bind(x => Optional(x.EnableMacAddressSpoofing))
+            .IfNone(false)
+        // TODO These checks should also be applied earlier during validation
+        from _1 in guardnot(enableMacAddressSpoofing && !isFlatNetwork,
+            Error.New($"MAC address spoofing cannot be enabled for adapter '{networkConfig.AdapterName}': "
+                      +$"the network '{networkName}' in environment '{environmentName}' is not using the flat network provider."))
+        from _2 in guardnot(enableMacAddressSpoofing && !allowMacAddressSpoofing,
+            Error.New($"MAC address spoofing cannot be enabled for adapter '{networkConfig.AdapterName}': "
+                      + $"the network provider '{networkProvider.Name}' for the network '{networkName}' in the environment '{environmentName}' does not allow MAC address spoofing."))
+
         let hostname = Optional(command.Config.Hostname).Filter(notEmpty)
             | Optional(command.Config.Name).Filter(notEmpty)
 
@@ -148,6 +162,7 @@ public class UpdateCatletNetworksCommandHandler(
                 .Find(ip => ip.AddressFamily == AddressFamily.InterNetworkV6)
                 .Map(ip => ip.ToString())
                 .IfNoneUnsafe((string?)null),
+            EnableMacAddressSpoofing = enableMacAddressSpoofing,
         };
 
     private EitherAsync<Error, CatletNetworkPort> AddOrUpdateAdapterPort(

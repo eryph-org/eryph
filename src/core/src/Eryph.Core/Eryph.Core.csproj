@@ -4,12 +4,12 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="13.0.1" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.8.0" />
-    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.8.0" />
-    <PackageReference Include="Eryph.ConfigModel.Core" Version="0.8.0" />
-    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.8.0" />
-    <PackageReference Include="Eryph.ConfigModel.Networks" Version="0.8.0" />
-    <PackageReference Include="Eryph.ConfigModel.Yaml" Version="0.8.0" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.8.1-PullRequest0102.2" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.8.1-PullRequest0102.2" />
+    <PackageReference Include="Eryph.ConfigModel.Core" Version="0.8.1-PullRequest0102.2" />
+    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.8.1-PullRequest0102.2" />
+    <PackageReference Include="Eryph.ConfigModel.Networks" Version="0.8.1-PullRequest0102.2" />
+    <PackageReference Include="Eryph.ConfigModel.Yaml" Version="0.8.1-PullRequest0102.2" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
