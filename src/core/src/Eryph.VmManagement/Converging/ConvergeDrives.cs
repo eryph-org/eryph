@@ -42,7 +42,7 @@ namespace Eryph.VmManagement.Converging
                     from infoReloaded in vmInfo.Reload(Context.Engine)
                     //detach removed disks
                     from __ in DetachUndefinedDrives(infoReloaded, plannedDriveStorageSettings)
-                    from infoRecreated in vmInfo.RecreateOrReload(Context.Engine)
+                    from infoRecreated in vmInfo.Reload(Context.Engine)
                     from ___ in VirtualDisks(infoRecreated, plannedDriveStorageSettings)
                     from ____ in DvdDrives(infoRecreated, plannedDriveStorageSettings)
                     select Unit.Default).ToEither().ConfigureAwait(false);
@@ -204,7 +204,7 @@ namespace Eryph.VmManagement.Converging
                 .AddCommand("Set-VMDvdDrive")
                 .AddParameter("VMDvdDrive", dvdDrive.PsObject)
                 .AddParameter("Path", dvdSettings.Path))
-            from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
+            from vmInfoRecreated in vmInfo.Reload(Context.Engine)
             select vmInfoRecreated;
 
         private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeVirtualDisk(
@@ -240,7 +240,7 @@ namespace Eryph.VmManagement.Converging
                               from result in Context.Engine.GetObjectAsync<VirtualMachineDeviceInfo>(
                                   BuildAttachCommand(vmInfo, vhdPath, driveSettings))
                               select result)
-                    from reloadedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+                    from reloadedVmInfo in vmInfo.Reload(Context.Engine)
                     select reloadedVmInfo
             }
             select reloadedVmInfo;

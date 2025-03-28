@@ -170,7 +170,7 @@ namespace Eryph.VmManagement.Converging
                         .AddCommand("Set-VMDvdDrive")
                         .AddParameter("VMDvdDrive", drive.PsObject)
                         .AddParameter("Path", null)))
-                from reloadedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+                from reloadedVmInfo in vmInfo.Reload(Context.Engine)
                 select reloadedVmInfo;
 
             var res = await Eject();
@@ -217,7 +217,7 @@ namespace Eryph.VmManagement.Converging
                 .AddCommand("Set-VMDvdDrive")
                 .AddParameter("VMDvdDrive", dvdDrive.PsObject)
                 .AddParameter("Path", configDriveIsoPath))
-            from vmInfoRecreated in vmInfo.RecreateOrReload(Context.Engine)
+            from vmInfoRecreated in vmInfo.Reload(Context.Engine)
             select vmInfoRecreated;
     }
 }

@@ -24,7 +24,7 @@ public class ConvergeCPU(
         from _2 in expectedCpuCount == currentCpuCount
             ? RightAsync<Error, Unit>(unit)
             : ConfigureCpu(vmInfo, expectedCpuCount)
-        from updatedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+        from updatedVmInfo in vmInfo.Reload(Context.Engine)
         select updatedVmInfo;
 
     private EitherAsync<Error, Unit> ConfigureCpu(

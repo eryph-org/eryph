@@ -4,20 +4,10 @@ using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using LanguageExt.Common;
 
-using static LanguageExt.Prelude;
-
 namespace Eryph.VmManagement;
 
 public static class VirtualMachineInfoExtensions
 {
-    public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> RecreateOrReload(
-        this TypedPsObject<VirtualMachineInfo> vmInfo,
-        IPowershellEngine engine) =>
-        Try(vmInfo.Recreate).ToEither().Match(
-            Left: e => vmInfo.Reload(engine),
-            Right: RightAsync<Error, TypedPsObject<VirtualMachineInfo>>);
-            
-
     public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Reload(
         this TypedPsObject<VirtualMachineInfo> vmInfo,
         IPowershellEngine engine) =>

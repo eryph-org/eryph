@@ -46,7 +46,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         from __ in expectedTpmState == currentTpmState
             ? RightAsync<Error, Unit>(unit)
             : ConfigureTpm(vmInfo, expectedTpmState)
-        from updatedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+        from updatedVmInfo in vmInfo.Reload(Context.Engine)
         select updatedVmInfo;
     
     private EitherAsync<Error, VMSecurityInfo> GetVmSecurityInfo(

@@ -35,7 +35,7 @@ public class ConvergeSecureBoot(
                    && expectedSecureBootTemplate == currentSecureBootTemplate
             ? RightAsync<Error, Unit>(unit)
             : ConfigureSecureBoot(vmInfo, expectedSecureBootState, expectedSecureBootTemplate)
-        from updatedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
+        from updatedVmInfo in vmInfo.Reload(Context.Engine)
         select updatedVmInfo;
 
     private EitherAsync<Error, Unit> ConfigureSecureBoot(
