@@ -85,7 +85,7 @@ public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
               from __ in powershellEngine.RunAsync(command5)
               select unit
             : RightAsync<Error, Unit>(unit)
-        from reloadedVmInfo in vmInfo.RecreateOrReload(powershellEngine)
+        from reloadedVmInfo in vmInfo.Reload(powershellEngine)
         select reloadedVmInfo;
 
     private static Either<

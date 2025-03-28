@@ -42,11 +42,6 @@ namespace Eryph.VmManagement
             return typed.Value;
         }
 
-        public TypedPsObject<T> Recreate()
-        {
-            return new TypedPsObject<T>(PsObject, _registry, _mapping);
-        }
-
         public TypedPsObject<TNew> Cast<TNew>()
         {
             return new TypedPsObject<TNew>(PsObject, _registry, _mapping);

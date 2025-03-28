@@ -58,14 +58,15 @@ public static class VirtualMachine
     public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Rename(
         IPowershellEngine engine,
         TypedPsObject<VirtualMachineInfo> vmInfo,
-        string newName)
-    {
-        return engine.RunAsync(PsCommandBuilder.Create()
+        string newName) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
             .AddCommand("Rename-VM")
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("NewName", newName)
-        ).Bind(u => vmInfo.RecreateOrReload(engine));
-    }
+        from _2 in engine.RunAsync(command)
+        from reloadedVmInfo in vmInfo.Reload(engine)
+        select reloadedVmInfo;
 
     public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> SetDefaults(
         IPowershellEngine engine,
@@ -76,7 +77,7 @@ public static class VirtualMachine
             Error.New("The Powershell command Set-VM was not found."))
         let builder = BuildSetVMCommand(vmInfo, setVmCommand)
         from uSet in engine.RunAsync(builder)
-        from reloaded in vmInfo.RecreateOrReload(engine)
+        from reloaded in vmInfo.Reload(engine)
         select reloaded;
 
     private static PsCommandBuilder BuildSetVMCommand(TypedPsObject<VirtualMachineInfo> vmInfo, PowershellCommand commandInfo)
