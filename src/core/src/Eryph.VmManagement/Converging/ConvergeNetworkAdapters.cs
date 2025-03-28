@@ -16,18 +16,17 @@ namespace Eryph.VmManagement.Converging;
 public class ConvergeNetworkAdapters(ConvergeContext context)
     : ConvergeTaskBase(context)
 {
-    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         ConvergeAdapters(vmInfo).ToEither();
 
-    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeAdapters(
+    private EitherAsync<Error, Unit> ConvergeAdapters(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from adapters in GetVmAdapters(vmInfo)
         from adapterConfigs in PrepareAdapterConfigs().ToAsync()
         from _ in RemoveMissingAdapters(adapters, adapterConfigs)
         from __ in AddOrUpdateAdapters(adapterConfigs, adapters, vmInfo)
-        from updatedVmInfo in vmInfo.Reload(Context.Engine)
-        select updatedVmInfo;
+        select unit;
 
     private Either<Error, Seq<PhysicalAdapterConfig>> PrepareAdapterConfigs() =>
         from adapterConfigs in Context.Config.Networks.ToSeq()

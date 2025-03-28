@@ -14,7 +14,7 @@ namespace Eryph.VmManagement.Converging
             Context = context;
         }
 
-        public abstract Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+        public abstract Task<Either<Error, Unit>> Converge(
             TypedPsObject<VirtualMachineInfo> vmInfo);
     }
 }

@@ -16,11 +16,11 @@ public class ConvergeSecureBoot(
     ConvergeContext context)
     : ConvergeTaskBase(context)
 {
-    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         ConvergeSecureBootState(vmInfo).ToEither();
     
-    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeSecureBootState(
+    private EitherAsync<Error, Unit> ConvergeSecureBootState(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
         let expectedSecureBootState = CatletCapabilities.IsSecureBootEnabled(
@@ -35,8 +35,7 @@ public class ConvergeSecureBoot(
                    && expectedSecureBootTemplate == currentSecureBootTemplate
             ? RightAsync<Error, Unit>(unit)
             : ConfigureSecureBoot(vmInfo, expectedSecureBootState, expectedSecureBootTemplate)
-        from updatedVmInfo in vmInfo.Reload(Context.Engine)
-        select updatedVmInfo;
+        select unit;
 
     private EitherAsync<Error, Unit> ConfigureSecureBoot(
         TypedPsObject<VirtualMachineInfo> vmInfo,

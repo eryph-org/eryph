@@ -31,11 +31,11 @@ namespace Eryph.VmManagement.Converging;
 /// </remarks>
 public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
 {
-    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         ConvergeTpmState(vmInfo).ToEither();
     
-    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeTpmState(
+    private EitherAsync<Error, Unit> ConvergeTpmState(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
         let tpmCapability = Context.Config.Capabilities.ToSeq()
@@ -46,8 +46,7 @@ public class ConvergeTpm(ConvergeContext context) : ConvergeTaskBase(context)
         from __ in expectedTpmState == currentTpmState
             ? RightAsync<Error, Unit>(unit)
             : ConfigureTpm(vmInfo, expectedTpmState)
-        from updatedVmInfo in vmInfo.Reload(Context.Engine)
-        select updatedVmInfo;
+        select unit;
     
     private EitherAsync<Error, VMSecurityInfo> GetVmSecurityInfo(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>

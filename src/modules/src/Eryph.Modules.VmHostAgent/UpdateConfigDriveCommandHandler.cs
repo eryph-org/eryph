@@ -57,6 +57,6 @@ internal class UpdateConfigDriveCommandHandler(
         from vmInfoConverged in VirtualMachine.ConvergeConfigDrive(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfo,
                 substitutedConfig, command.MachineMetadata, currentStorageSettings)
-            .WriteTrace().ToAsync()
+            .WriteTrace()
         select Unit.Default;
 }
