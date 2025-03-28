@@ -4,6 +4,7 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Networks;
+using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Sys;
@@ -54,7 +55,11 @@ internal class VirtualMachineKillHandler(
             from _2 in retry(
                 Schedule.spaced(TimeSpan.FromSeconds(5)),
                 from vmInfo in getVmInfo(command.VMId)
-                from _ in stopVm(vmInfo)
+                from _1 in stopVm(vmInfo)
+                from reloadedVmInfo in getVmInfo(command.VMId)
+                from _2 in guard(
+                    VmStateUtils.toVmStatus(reloadedVmInfo.Value.State) == VmStatus.Stopped,
+                    Error.New($"The VM {command.VMId} is still in status '{reloadedVmInfo.Value.State}'."))
                 select unit)
             select unit)
         let timestamp = DateTimeOffset.UtcNow
