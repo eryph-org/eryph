@@ -9,6 +9,7 @@ using Eryph.VmManagement.Inventory;
 using JetBrains.Annotations;
 using LanguageExt;
 using Rebus.Handlers;
+using SimpleInjector;
 
 using static Eryph.Core.Prelude;
 using static LanguageExt.Prelude;
@@ -20,13 +21,13 @@ using static VirtualMachineUtils<AgentRuntime>;
 [UsedImplicitly]
 internal class VirtualMachineShutdownHandler(
     ITaskMessaging messaging,
-    IServiceProvider serviceProvider)
+    Scope serviceScope)
     : IHandleMessages<OperationTask<ShutdownVMCommand>>
 {
     public async Task Handle(OperationTask<ShutdownVMCommand> message)
     {
         var result = await HandleCommand(message.Command)
-            .Run(AgentRuntime.New(serviceProvider));
+            .Run(AgentRuntime.New(serviceScope));
 
         await result.FailOrComplete(messaging, message);
     }

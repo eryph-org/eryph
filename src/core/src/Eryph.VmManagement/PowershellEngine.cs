@@ -234,7 +234,7 @@ public sealed class PowershellEngine(
     public void Dispose()
     {
         _semaphore.Dispose();
-        _runspacePool.Dispose();
+        _runspacePool?.Dispose();
         foreach (var psObject in _createdObjects)
         {
             psObject.DisposeObject();

@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
@@ -14,6 +13,7 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
+using SimpleInjector;
 
 using static LanguageExt.Prelude;
 
@@ -24,18 +24,17 @@ using static VirtualMachineUtils<AgentRuntime>;
 [UsedImplicitly]
 internal class RemoveVirtualMachineHandler(
     ITaskMessaging messaging,
-    IPowershellEngine engine,
     IOVSPortManager ovsPortManager,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
-    IServiceProvider serviceProvider,
+    Scope serviceScope,
     IFileSystem fileSystem)
     : IHandleMessages<OperationTask<RemoveCatletVMCommand>>
 {
     public async Task Handle(OperationTask<RemoveCatletVMCommand> message)
     {
         var result = await HandleCommand(message.Command)
-            .Run(AgentRuntime.New(serviceProvider));
+            .Run(AgentRuntime.New(serviceScope));
 
         await result.FailOrComplete(messaging, message);
     }
