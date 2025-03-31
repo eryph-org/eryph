@@ -17,7 +17,7 @@ public class GetVersion : EndpointBaseAsync
     [SwaggerOperation(
         Summary = "Get the API version",
         Description = "Gets the API version which can be used by clients for compatibility checks. "
-        + "This endpoint has been added with eryph v0.3.",
+        + "This endpoint was added with eryph v0.3.",
         OperationId = "Version_Get",
         Tags = ["Version"])
     ]
