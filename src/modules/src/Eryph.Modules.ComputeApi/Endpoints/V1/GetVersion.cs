@@ -16,7 +16,8 @@ public class GetVersion : EndpointBaseAsync
     [HttpGet("version")]
     [SwaggerOperation(
         Summary = "Get the API version",
-        Description = "Gets the API version which can be used by clients for compatibility checks.",
+        Description = "Gets the API version which can be used by clients for compatibility checks. "
+        + "This endpoint has been added with eryph v0.3.",
         OperationId = "Version_Get",
         Tags = ["Version"])
     ]
@@ -30,10 +31,10 @@ public class GetVersion : EndpointBaseAsync
         CancellationToken cancellationToken = default) =>
         Task.FromResult(new ActionResult<ApiVersionResponse>(new ApiVersionResponse
         {
-            Version = new ApiVersion()
+            LatestVersion = new ApiVersion()
             {
-                Major = 1,
-                Minor = 1,
+                Major = ComputeApiVersion.Major,
+                Minor = ComputeApiVersion.Minor,
             }
         }));
 }
