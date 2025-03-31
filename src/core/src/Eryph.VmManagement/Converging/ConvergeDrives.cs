@@ -55,32 +55,33 @@ namespace Eryph.VmManagement.Converging
             }
         }
 
-        private EitherAsync<Error, Unit> VirtualDisks(TypedPsObject<VirtualMachineInfo> vmInfo,
-            Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
-        {
-            var plannedDiskSettings = plannedDriveStorageSettings
-                .Where(x => x.Type is CatletDriveType.VHD or CatletDriveType.SharedVHD or CatletDriveType.VHDSet)
-                .Cast<HardDiskDriveStorageSettings>().ToSeq();
+        private EitherAsync<Error, Unit> VirtualDisks(
+            TypedPsObject<VirtualMachineInfo> vmInfo,
+            Seq<VMDriveStorageSettings> plannedDriveStorageSettings) =>
+            from _1 in RightAsync<Error, Unit>(unit)
+            let plannedDiskSettings = plannedDriveStorageSettings
+                .Filter(x => x.Type is CatletDriveType.VHD or CatletDriveType.SharedVHD or CatletDriveType.VHDSet)
+                .Cast<HardDiskDriveStorageSettings>()
+                .ToSeq()
+            from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine,
+                Context.VmHostAgentConfig, vmInfo.GetList(x => x.HardDrives))
+            from _2 in plannedDiskSettings
+                .Map(s => ConvergeVirtualDisk(s, vmInfo, currentDiskSettings))
+                .SequenceSerial()
+            select unit;
 
-            return (from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine,
-                    Context.VmHostAgentConfig, vmInfo.GetList(x=>x.HardDrives))
-                from _ in plannedDiskSettings.MapToEitherAsync(s => ConvergeVirtualDisk(s, vmInfo, currentDiskSettings).ToEither()).ToAsync()
-                select Unit.Default);
-        }
-        
-        private EitherAsync<Error, Unit> DvdDrives(TypedPsObject<VirtualMachineInfo> vmInfo,
-            Seq<VMDriveStorageSettings> plannedDriveStorageSettings)
-        {
-            var plannedDvdSettings = plannedDriveStorageSettings
-                .Where(x => x.Type == CatletDriveType.DVD)
-                .Cast<VMDvDStorageSettings>().ToSeq();
-
-            return (
-                from _ in plannedDvdSettings.MapToEitherAsync(s => DvdDrive(s, vmInfo).ToEither())
-                    .ToAsync()
-                select Unit.Default);
-        }
-
+        private EitherAsync<Error, Unit> DvdDrives(
+            TypedPsObject<VirtualMachineInfo> vmInfo,
+            Seq<VMDriveStorageSettings> plannedDriveStorageSettings) =>
+            from _1 in RightAsync<Error, Unit>(unit)
+            let plannedDvdSettings = plannedDriveStorageSettings
+                .Filter(x => x.Type == CatletDriveType.DVD)
+                .Cast<VMDvDStorageSettings>()
+                .ToSeq()
+            from _2 in plannedDvdSettings
+                .Map(s => DvdDrive(s, vmInfo))
+                .SequenceSerial()
+            select unit;
 
         private static EitherAsync<Error, Unit> SetVMCheckpointType(
             TypedPsObject<VirtualMachineInfo> vmInfo, CheckpointType checkpointType, IPowershellEngine engine)
