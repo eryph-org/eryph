@@ -25,22 +25,21 @@ public class VirtualMachineInventory(
     public EitherAsync<Error, VirtualMachineData> InventorizeVM(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from hostInfo in hostInfoProvider.GetHostInfoAsync()
-        from vm in RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo)
-        from vmStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vm)
+        from vmStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo)
         from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(
-            engine, vmHostAgentConfig, vm.GetList(x => x.HardDrives))
+            engine, vmHostAgentConfig, vmInfo.GetList(x => x.HardDrives))
         from cpuData in GetCpuData(vmInfo)
         from memoryData in GetMemoryData(vmInfo)
         from firmwareData in GetFirmwareData(vmInfo)
         from securityData in GetSecurityData(vmInfo)
-        from networks in VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vm.GetList(x => x.NetworkAdapters))
+        from networks in VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vmInfo.GetList(x => x.NetworkAdapters))
         select new VirtualMachineData
         {
-            VMId = vm.Value.Id,
-            MetadataId = GetMetadataId(vm),
-            Status = VmStateUtils.toVmStatus(vm.Value.State),
-            Name = vm.Value.Name,
-            UpTime = vm.Value.Uptime,
+            VMId = vmInfo.Value.Id,
+            MetadataId = GetMetadataId(vmInfo),
+            Status = VmStateUtils.toVmStatus(vmInfo.Value.State),
+            Name = vmInfo.Value.Name,
+            UpTime = vmInfo.Value.Uptime,
             Cpu = cpuData,
             Memory = memoryData,
             Firmware = firmwareData,
@@ -53,7 +52,7 @@ public class VirtualMachineInventory(
             DataStore = vmStorageSettings.Bind(x => x.StorageNames.DataStoreName).IfNone(""),
             Environment = vmStorageSettings.Bind(x => x.StorageNames.EnvironmentName).IfNone(""),
             Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x => x.HardDrives)).ToArray(),
-            NetworkAdapters = vm.GetList(x => x.NetworkAdapters).Map(a =>
+            NetworkAdapters = vmInfo.GetList(x => x.NetworkAdapters).Map(a =>
             {
                 var connectedAdapter = a.Cast<VMNetworkAdapter>();
                 var res = new VirtualMachineNetworkAdapterData
