@@ -198,8 +198,10 @@ public sealed class PowershellEngine(
                     ["ModuleVersion"] = "2.0.0.0",
                 })
             ]);
-            
-            iss.ThrowOnRunspaceOpenError = true;
+
+            // We cannot enable ThrowOnRunspaceOpenError. It always reports an error
+            // on Server 2016 that the Hyper-V module cannot be found. The Hyper-V Cmdlets
+            // will work fine later.
 
             _runspacePool = RunspaceFactory.CreateRunspacePool(iss);
             await Task.Factory.FromAsync(_runspacePool.BeginOpen, _runspacePool.EndOpen, null);
