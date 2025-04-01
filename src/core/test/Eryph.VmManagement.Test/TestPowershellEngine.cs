@@ -30,6 +30,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
     public EitherAsync<Error, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task>? reportProgress = null,
+        bool withoutLock = false,
         CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
@@ -44,6 +45,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
     public EitherAsync<Error, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task>? reportProgress = null,
+        bool withoutLock = false,
         CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
@@ -59,6 +61,7 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
     public EitherAsync<Error, Unit> RunAsync(
         PsCommandBuilder builder,
         Func<int, Task>? reportProgress = null,
+        bool withoutLock = false,
         CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();

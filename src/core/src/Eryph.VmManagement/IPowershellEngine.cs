@@ -11,16 +11,19 @@ public interface IPowershellEngine
     EitherAsync<Error, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
         CancellationToken cancellationToken = default);
 
     EitherAsync<Error, Seq<T>> GetObjectValuesAsync<T>(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
         CancellationToken cancellationToken = default);
 
     EitherAsync<Error, Unit> RunAsync(
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
         CancellationToken cancellationToken = default);
     
     ITypedPsObjectMapping ObjectMapping { get; }

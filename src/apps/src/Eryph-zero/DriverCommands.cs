@@ -72,7 +72,10 @@ internal static class DriverCommands
         Aff<DriverCommandsRuntime, T> logic,
         ILoggerFactory loggerFactory)
     {
-        using var psEngine = new PowershellEngine(loggerFactory.CreateLogger<PowershellEngine>());
+        using var psEngineLock = new PowershellEngineLock();
+        using var psEngine = new PowershellEngine(
+            loggerFactory.CreateLogger<PowershellEngine>(),
+            psEngineLock);
         using var cts = new CancellationTokenSource();
         var runtime = new DriverCommandsRuntime(new(cts, loggerFactory, psEngine));
 

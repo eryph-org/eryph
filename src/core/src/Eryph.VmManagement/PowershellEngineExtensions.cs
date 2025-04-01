@@ -17,8 +17,9 @@ public static class PowershellEngineExtensions
         this IPowershellEngine engine,
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
         CancellationToken cancellationToken = default) =>
-        from results in engine.GetObjectsAsync<T>(builder, reportProgress, cancellationToken)
+        from results in engine.GetObjectsAsync<T>(builder, reportProgress, withoutLock, cancellationToken)
         from _ in guard(results.Count <= 1,
             Error.New($"Powershell returned multiple values when fetching {typeof(T).Name}."))
         select results.HeadOrNone();
@@ -27,8 +28,9 @@ public static class PowershellEngineExtensions
         this IPowershellEngine engine,
         PsCommandBuilder builder,
         Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
         CancellationToken cancellationToken = default) =>
-        from results in engine.GetObjectValuesAsync<T>(builder, reportProgress, cancellationToken)
+        from results in engine.GetObjectValuesAsync<T>(builder, reportProgress, withoutLock, cancellationToken)
         from _ in guard(results.Count <= 1,
             Error.New($"Powershell returned multiple values when fetching {typeof(T).Name}."))
         select results.HeadOrNone();

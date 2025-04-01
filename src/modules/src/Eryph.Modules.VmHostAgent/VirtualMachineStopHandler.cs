@@ -41,7 +41,7 @@ internal class VirtualMachineStopHandler(
                 .AddCommand("Stop-VM")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("TurnOff")
-            from _ in powershell.RunAsync(stopCommand, cancellationToken: ct).ToAff()
+            from _ in powershell.RunAsync(stopCommand, withoutLock: true, cancellationToken: ct).ToAff()
             select unit)
         let timestamp = DateTimeOffset.UtcNow
         from reloadedVmInfo in getVmInfo(command.VMId)

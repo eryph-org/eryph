@@ -42,7 +42,7 @@ internal class VirtualMachineStartHandler(
             let stopCommand = PsCommandBuilder.Create()
                 .AddCommand("Start-VM")
                 .AddParameter("VM", vmInfo.PsObject)
-            from _ in powershell.RunAsync(stopCommand, cancellationToken: ct).ToAff()
+            from _ in powershell.RunAsync(stopCommand, withoutLock: true, cancellationToken: ct).ToAff()
             select unit)
             // Starting a VM is best-effort. Hyper-V might wait for a response from
             // guest integration which can cause the command to block for a long time.

@@ -48,7 +48,7 @@ internal class VirtualMachineKillHandler(
                 .AddCommand("Stop-Process")
                 .AddParameter("Id", processId)
                 .AddParameter("Force")
-            from _1 in powershell.RunAsync(stopProcessCommand, cancellationToken: ct).ToAff()
+            from _1 in powershell.RunAsync(stopProcessCommand, withoutLock: true, cancellationToken: ct).ToAff()
             // Server 2016 restarts the VM after the worker process has been killed.
             // We retry the power off command until it is successful. This forces the
             // VM into a valid off state.

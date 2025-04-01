@@ -42,7 +42,7 @@ internal class VirtualMachineShutdownHandler(
                 .AddCommand("Stop-VM")
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("Force")
-            from _ in powershell.RunAsync(stopCommand, cancellationToken: ct).ToAff()
+            from _ in powershell.RunAsync(stopCommand, withoutLock: true, cancellationToken: ct).ToAff()
             select unit)
             // Shutting down a VM is best-effort. Hyper-V waits for a graceful shutdown
             // by the guest integration which can cause the command to block for a long time.
