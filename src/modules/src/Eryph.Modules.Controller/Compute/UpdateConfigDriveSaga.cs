@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
@@ -57,9 +58,10 @@ namespace Eryph.Modules.Controller.Compute
                 .Sequence();
             if (resolvedFodderGenes.IsFail)
             {
-                await Fail(ErrorUtils.PrintError(Error.New(
-                    $"The metadata for catlet {message.CatletId} contains invalid fodder information",
-                    Error.Many(resolvedFodderGenes.FailToSeq()))));
+                await Fail(Error.New(
+                        $"The metadata for catlet {message.CatletId} contains invalid fodder information",
+                        Error.Many(resolvedFodderGenes.FailToSeq()))
+                    .Print());
                 return;
             }
 
@@ -78,8 +80,10 @@ namespace Eryph.Modules.Controller.Compute
             var breedingResult = CatletBreeding.Breed(metadata.ParentConfig, config);
             if (breedingResult.IsLeft)
             {
-                await Fail(ErrorUtils.PrintError(Error.New($"Could not breed config for catlet '{catlet.Name}' ({catlet.Id}).",
-                    Error.Many(breedingResult.LeftToSeq()))));
+                await Fail(Error.New(
+                        $"Could not breed config for catlet '{catlet.Name}' ({catlet.Id}).",
+                        Error.Many(breedingResult.LeftToSeq()))
+                    .Print());
                 return;
             }
 

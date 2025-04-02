@@ -1,4 +1,5 @@
-﻿using Eryph.Core;
+﻿using Dbosoft.Functional;
+using Eryph.Core;
 using LanguageExt;
 using LanguageExt.Common;
 using Spectre.Console;
@@ -32,7 +33,7 @@ public static class AnsiConsole<RT> where RT : struct, HasAnsiConsole<RT>
             .Validate(v => validate(v).Match(
                 Succ: _ => ValidationResult.Success(),
                 Fail: errors => ValidationResult.Error(
-                    $"[red]{Markup.Escape(ErrorUtils.PrintError(Error.Many(errors)))}[/]")))
+                    $"[red]{Markup.Escape(Error.Many(errors).Print())}[/]")))
         let consolePromptWithDefault = validDefaultValue.Match(
             Some: consolePrompt.DefaultValue,
             None: () => consolePrompt)

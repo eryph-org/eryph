@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
@@ -48,7 +49,7 @@ internal class CreateVirtualDiskSaga(
         var result = CreateAgentCommand(message, project);
         if (result.IsLeft)
         {
-            await Fail(ErrorUtils.PrintError(Error.Many(result.LeftToSeq())));
+            await Fail(Error.Many(result.LeftToSeq()).Print());
             return;
         }
 
