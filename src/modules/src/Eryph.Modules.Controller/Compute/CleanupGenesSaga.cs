@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
@@ -48,7 +49,7 @@ public class CleanupGenesSaga(
             .Sequence();
         if (geneIds.IsLeft)
         {
-            await Fail(ErrorUtils.PrintError(Error.Many(geneIds.LeftToSeq())));
+            await Fail(Error.Many(geneIds.LeftToSeq()).Print());
             return;
         }
 

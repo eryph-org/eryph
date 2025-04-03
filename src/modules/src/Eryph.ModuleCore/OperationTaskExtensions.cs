@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Eryph.Core;
 using LanguageExt;
 using LanguageExt.Common;
@@ -63,7 +64,7 @@ public static class OperationTaskExtensions
         IOperationTaskMessage message,
         Error error)
     {
-        return messaging.FailTask(message, ErrorUtils.PrintError(error));
+        return messaging.FailTask(message, error.Print());
     }
 
     public static Task FailTask<T>(
