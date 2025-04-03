@@ -52,6 +52,16 @@ public static class VirtualMachine
             .AddParameter("VM", created.PsObject)
             .AddCommand("Remove-VMNetworkAdapter")
         from _2 in engine.RunAsync(removeNetworkAdaptersCommand)
+        from afterAdapterRemoval in VmQueries.GetVmInfo(engine, created.Value.Id)
+        let adapters = afterAdapterRemoval.Value.NetworkAdapters
+        let getAdaptersCommand = PsCommandBuilder.Create()
+            .AddCommand("Get-VMNetworkAdapter")
+            .AddParameter("VM", afterAdapterRemoval.PsObject)
+        from reloadedAdapters in engine.GetObjectsAsync<VMNetworkAdapter>(getAdaptersCommand)
+        from _3 in guard(reloadedAdapters.Count == 0, Error.New("Failed to reload adapters after VM creation."))
+            .ToEitherAsync()
+        from _4 in guard(adapters.Length == 0, Error.New("Failed to remove default network adapter after VM creation."))
+            .ToEitherAsync()
         from renamed in Rename(engine, created, vmName)
         from result in SetDefaults(engine, renamed)
         select result;
