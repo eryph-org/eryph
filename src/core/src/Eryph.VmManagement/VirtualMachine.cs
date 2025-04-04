@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Dbosoft.OVN.Windows;
 using Eryph.ConfigModel;
@@ -23,7 +24,7 @@ using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Storage;
 using LanguageExt;
 using LanguageExt.Common;
-
+using LanguageExt.UnsafeValueAccess;
 using static LanguageExt.Prelude;
 
 
@@ -37,7 +38,7 @@ public static class VirtualMachine
         string storageIdentifier,
         string vmPath,
         int? startupMemory) =>
-        from _ in RightAsync<Error, Unit>(unit)
+        from _1 in RightAsync<Error, Unit>(unit)
         let memoryStartupBytes = startupMemory.GetValueOrDefault(EryphConstants.DefaultCatletMemoryMb) * 1024L * 1024
         let createVmCommand = PsCommandBuilder.Create()
             .AddCommand("New-VM")
@@ -47,24 +48,45 @@ public static class VirtualMachine
             .AddParameter("Generation", 2)
         from optionalVmInfo in engine.GetObjectAsync<VirtualMachineInfo>(createVmCommand)
         from created in optionalVmInfo.ToEitherAsync(Error.New("Failed to create VM"))
+        from renamed in Rename(engine, created, vmName)
         let removeNetworkAdaptersCommand = PsCommandBuilder.Create()
             .AddCommand("Get-VMNetworkAdapter")
-            .AddParameter("VM", created.PsObject)
+            .AddParameter("VM", renamed.PsObject)
             .AddCommand("Remove-VMNetworkAdapter")
         from _2 in engine.RunAsync(removeNetworkAdaptersCommand)
-        from afterAdapterRemoval in VmQueries.GetVmInfo(engine, created.Value.Id)
-        let adapters = afterAdapterRemoval.Value.NetworkAdapters
-        let getAdaptersCommand = PsCommandBuilder.Create()
-            .AddCommand("Get-VMNetworkAdapter")
-            .AddParameter("VM", afterAdapterRemoval.PsObject)
-        from reloadedAdapters in engine.GetObjectsAsync<VMNetworkAdapter>(getAdaptersCommand)
-        from _3 in guard(reloadedAdapters.Count == 0, Error.New("Failed to reload adapters after VM creation."))
-            .ToEitherAsync()
-        from _4 in guard(adapters.Length == 0, Error.New("Failed to remove default network adapter after VM creation."))
-            .ToEitherAsync()
-        from renamed in Rename(engine, created, vmName)
-        from result in SetDefaults(engine, renamed)
+        from _3 in EnsureDefaultNetworkAdapterWasRemoved(engine, created.Value.Id)
+        from adapterRemoved in VmQueries.GetVmInfo(engine, created.Value.Id)
+        from result in SetDefaults(engine, adapterRemoved)
         select result;
+
+    /// <summary>
+    /// This method verifies that the VM with <paramref name="vmId"/> has no
+    /// network adapters.
+    /// </summary>
+    /// <remarks>
+    /// There is a rare situation where <c>Get-VM</c> reports a network adapter
+    /// for a VM even after all adapters have been removed with <c>Remove-VMNetworkAdapter</c>.
+    /// This method retries the check whether all network adapters have been removed until
+    /// it is successful.
+    /// </remarks>
+    private static EitherAsync<Error, Unit> EnsureDefaultNetworkAdapterWasRemoved(
+        IPowershellEngine engine,
+        Guid vmId) =>
+        TryAsync(async () =>
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            while (true)
+            {
+                cts.Token.ThrowIfCancellationRequested();
+                var result = await VmQueries.GetVmInfo(engine, vmId, cts.Token);
+                result.IfLeft(e => e.Throw());
+                var vmInfo = result.ValueUnsafe();
+                if (vmInfo.Value.NetworkAdapters.Length == 0)
+                    return unit;
+
+                await Task.Delay(TimeSpan.FromSeconds(5), cts.Token);
+            }
+        }).ToEither(e => Error.New($"Failed to remove default network adapter after creating VM '{vmId}'.", e));
 
     public static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Rename(
         IPowershellEngine engine,
