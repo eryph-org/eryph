@@ -6,6 +6,7 @@ using Eryph.Core.Genetics;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Storage;
 using Eryph.VmManagement.Tracing;
 using JetBrains.Annotations;
@@ -33,8 +34,7 @@ internal class UpdateCatletVMCommandHandler(
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         from hostInfo in hostInfoProvider.GetHostInfoAsync(true).WriteTrace()
         let vmId = command.VMId
-        from vmList in GetVmInfo(vmId, Engine)
-        from vmInfo in EnsureSingleEntry(vmList, vmId)
+        from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
         from plannedStorageSettings in VMStorageSettings.Plan(
                 vmHostAgentConfig, LongToString(command.NewStorageId),
@@ -55,7 +55,7 @@ internal class UpdateCatletVMCommandHandler(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfoConsistent,
                 substitutedConfig, command.MachineMetadata, command.MachineNetworkSettings,
                 plannedStorageSettings, command.ResolvedGenes.ToSeq())
-            .WriteTrace().ToAsync()
+            .WriteTrace()
         let timestamp = DateTimeOffset.UtcNow
         from inventory in CreateMachineInventory(Engine, vmHostAgentConfig, vmInfoConverged, hostInfoProvider).WriteTrace()
         select new ConvergeCatletResult

@@ -1,6 +1,7 @@
 ﻿using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.VmManagement;
+using Eryph.VmManagement.Inventory;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -16,8 +17,7 @@ namespace Eryph.Modules.VmHostAgent
 
         protected override EitherAsync<Error, Unit> HandleCommand(
             UpdateCatletMetadataCommand command) =>
-            from vmList in GetVmInfo(command.VMId, Engine)
-            from vmInfo in EnsureSingleEntry(vmList, command.VMId)
+            from vmInfo in VmQueries.GetVmInfo(Engine, command.VMId)
             from currentMetadata in EnsureMetadata(vmInfo, command.CurrentMetadataId)
             from _ in SetMetadataId(vmInfo, command.NewMetadataId)
             select Unit.Default;

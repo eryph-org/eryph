@@ -3,6 +3,9 @@
     <TargetFramework>net8.0-windows</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+     <InternalsVisibleTo Include="$(AssemblyName).Test" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive" Version="2.0.0" />
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.NoCloud" Version="2.0.0" />
     <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.WindowsImaging" Version="2.0.0" />
@@ -16,6 +19,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.6" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Eryph.VmConfig.Primitives\Eryph.Primitives.csproj" />

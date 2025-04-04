@@ -7,6 +7,7 @@ using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Storage;
 using FluentAssertions;
 using LanguageExt;
+using LanguageExt.Common;
 using Xunit;
 
 using static LanguageExt.Prelude;
@@ -73,9 +74,6 @@ public class ConvergeDriveTests
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
 
-            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda.vhdx]"))
-                return Seq1(_fixture.Engine.ToPsObject<object>(true));
-
             if (commandString.StartsWith(@"Get-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
@@ -83,15 +81,19 @@ public class ConvergeDriveTests
                     Size = currentSize * 1024L * 1024 * 1024
                 }));
 
-            return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            return Error.New($"Unexpected command: {command}.");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            if (command.ToString().StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
+            var commandString = command.ToString();
+            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda.vhdx]"))
                 return Seq1<object>(true);
 
-            return new PowershellFailure { Message = $"unknown command: {command}" };
+            if (commandString.StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
+                return Seq1<object>(true);
+
+            return Error.New($"Unexpected command: {command}.");
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);
@@ -161,9 +163,6 @@ public class ConvergeDriveTests
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
 
-            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda.vhdx]"))
-                return Seq1(_fixture.Engine.ToPsObject<object>(true));
-
             if (commandString.StartsWith(@"Get-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
@@ -179,15 +178,19 @@ public class ConvergeDriveTests
                     Size = 100 * 1024L * 1024 * 1024
                 }));
 
-            return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            return Error.New($"Unexpected command: {command}.");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            if (command.ToString().StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
+            var commandString = command.ToString();
+            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda.vhdx]"))
                 return Seq1<object>(true);
 
-            return new PowershellFailure { Message = $"unknown command: {command}" };
+            if (commandString.StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
+                return Seq1<object>(true);
+
+            return Error.New($"Unexpected command: {command}.");
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);
@@ -255,9 +258,6 @@ public class ConvergeDriveTests
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
 
-            if (commandString.StartsWith($@"Test-Path [x:\disks\abc\sdb{extension}]"))
-                return Seq1(_fixture.Engine.ToPsObject<object>(false));
-
             if (commandString.StartsWith("Get-VHD"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
@@ -278,15 +278,19 @@ public class ConvergeDriveTests
                 }));
             }
 
-            return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            return Error.New($"Unexpected command: {command}.");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            if (command.ToString().Contains(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
+            var commandString = command.ToString();
+            if (commandString.StartsWith($@"Test-Path [x:\disks\abc\sdb{extension}]"))
+                return Seq1<object>(false);
+
+            if (commandString.StartsWith(@"Test-VHD [x:\disks\abc\sda.vhdx]"))
                 return Seq1<object>(true);
 
-            return new PowershellFailure { Message = $"unknown command: {command}" };
+            return Error.New($"Unexpected command: {command}.");
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);
@@ -371,9 +375,6 @@ public class ConvergeDriveTests
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
 
-            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda_g1.vhdx]"))
-                return Seq1(_fixture.Engine.ToPsObject<object>(false));
-
             if (commandString.StartsWith("Get-VHD"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
                 {
@@ -394,15 +395,19 @@ public class ConvergeDriveTests
                 }));
             }
 
-            return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            return Error.New($"Unexpected command: {command}.");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            if (command.ToString().StartsWith($"Test-VHD [{expectedParentPath}]"))
+            var commandString = command.ToString();
+            if (commandString.StartsWith(@"Test-Path [x:\disks\abc\sda_g1.vhdx]"))
+                return Seq1<object>(false);
+
+            if (commandString.StartsWith($"Test-VHD [{expectedParentPath}]"))
                 return Seq1<object>(true);
             
-            return new PowershellFailure { Message = $"unknown command: {command}" };
+            return Error.New($"unknown command: {command}");
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);
@@ -513,9 +518,6 @@ public class ConvergeDriveTests
             var commandString = command.ToString();
             if (commandString.StartsWith("Get-VM"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(vmData.Value));
-
-            if (commandString.StartsWith(@$"Test-Path [x:\disks\abc\{diskName}]"))
-                return Seq1(_fixture.Engine.ToPsObject<object>(false));
             
             if (commandString.StartsWith("Get-VHD"))
                 return Seq1(_fixture.Engine.ToPsObject<object>(new VhdInfo
@@ -537,15 +539,19 @@ public class ConvergeDriveTests
                 }));
             }
 
-            return new PowershellFailure { Message = $"unknown command: {commandString}" };
+            return Error.New($"Unexpected command: {command}.");
         };
 
         _fixture.Engine.GetValuesCallback = (_, command) =>
         {
-            if (command.ToString().StartsWith($"Test-VHD [{expectedParentPath}]"))
+            var commandString = command.ToString();
+            if (commandString.StartsWith(@$"Test-Path [x:\disks\abc\{diskName}]"))
+                return Seq1<object>(false);
+
+            if (commandString.StartsWith($"Test-VHD [{expectedParentPath}]"))
                 return Seq1<object>(true);
 
-            return new PowershellFailure { Message = $"unknown command: {command}" };
+            return Error.New($"Unexpected command: {command}.");
         };
 
         var convergeTask = new ConvergeDrives(_fixture.Context);

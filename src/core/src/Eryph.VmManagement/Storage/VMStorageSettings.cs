@@ -97,14 +97,16 @@ namespace Eryph.VmManagement.Storage
             VmHostAgentConfiguration vmHostAgentConfig,
             string newStorageId,
             CatletConfig config,
-            Option<VMStorageSettings> currentStorageSettings)
-        {
-            return FromCatletConfig(config, vmHostAgentConfig).Bind(newSettings =>
-                currentStorageSettings.Match(
-                    None: () => EnsureStorageId(newStorageId, newSettings).ToError().ToAsync(),
-                    Some: currentSettings => EnsureStorageId(newStorageId, newSettings, currentSettings)
-                        .ToError().ToAsync()));
-        }
+            Option<VMStorageSettings> currentStorageSettings) =>
+            from newSettings in FromCatletConfig(config, vmHostAgentConfig)
+            let frozenSettings = currentStorageSettings
+                .Filter(s => s.Frozen)
+            let storageId = (newSettings.StorageIdentifier | currentStorageSettings.Bind(s => s.StorageIdentifier))
+                .IfNone(newStorageId)
+            let result = frozenSettings.Match(
+                Some: s => s,
+                None: () => newSettings with { StorageIdentifier = storageId })
+            select result;
 
         private static EitherAsync<Error, string> ComparePath(string firstPath, string secondPath,
             Option<string> storageIdentifier)
@@ -120,36 +122,6 @@ namespace Eryph.VmManagement.Storage
                                 "Path calculation failure"));
 
                     return RightAsync<Error, string>(firstPath);
-                });
-        }
-
-        private static Task<Either<PowershellFailure, VMStorageSettings>> EnsureStorageId(
-            string newStorageId, VMStorageSettings settings)
-        {
-            return EnsureStorageId(newStorageId, settings, new VMStorageSettings());
-        }
-
-        private static Task<Either<PowershellFailure, VMStorageSettings>> EnsureStorageId(
-            string newStorageId,
-            VMStorageSettings first, VMStorageSettings second)
-        {
-            if (second.Frozen)
-                return RightAsync<PowershellFailure, VMStorageSettings>(second).ToEither();
-
-
-            return first.StorageIdentifier.MatchAsync(
-                None:
-                () => second.StorageIdentifier.MatchAsync(
-                    None: () => newStorageId,
-                    Some: s => RightAsync<PowershellFailure, string>(s).ToEither()),
-                Some: s => Prelude.RightAsync<PowershellFailure, string>(s).ToEither()
-            ).MapAsync(storageIdentifier =>
-                new VMStorageSettings
-                {
-                    StorageNames = first.StorageNames,
-                    StorageIdentifier = storageIdentifier,
-                    VMPath = first.VMPath,
-                    DefaultVhdPath = first.DefaultVhdPath
                 });
         }
     }

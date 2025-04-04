@@ -1001,7 +1001,10 @@ internal static class Program
     private static async Task<int> GetDriverStatus()
     {
         using var loggerFactory = new NullLoggerFactory();
-        using var psEngine = new PowershellEngine(loggerFactory.CreateLogger<PowershellEngine>());
+        using var psEngineLock = new PowershellEngineLock();
+        using var psEngine = new PowershellEngine(
+            loggerFactory.CreateLogger<PowershellEngine>(),
+             psEngineLock);
 
         return await RunAsAdmin(
             DriverCommands.GetDriverStatus(),
@@ -1019,7 +1022,10 @@ internal static class Program
         bool noCurrentConfigCheck)
     {
         using var nullLoggerFactory = new NullLoggerFactory();
-        using var psEngine = new PowershellEngine(nullLoggerFactory.CreateLogger(""));
+        using var psEngineLock = new PowershellEngineLock();
+        using var psEngine = new PowershellEngine(
+            nullLoggerFactory.CreateLogger(""),
+            psEngineLock);
         var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
         var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 
@@ -1057,7 +1063,10 @@ internal static class Program
     private static async Task<int> SyncNetworkConfig(bool nonInteractive)
     {
         using var nullLoggerFactory = new NullLoggerFactory();
-        using var psEngine = new PowershellEngine(nullLoggerFactory.CreateLogger(""));
+        using var psEngineLock = new PowershellEngineLock();
+        using var psEngine = new PowershellEngine(
+            nullLoggerFactory.CreateLogger(""),
+            psEngineLock);
         var ovsRunDir = OVSPackage.UnpackAndProvide(nullLoggerFactory.CreateLogger<OVSPackage>());
         var sysEnv = new EryphOvsEnvironment(new EryphOvsPathProvider(ovsRunDir), nullLoggerFactory);
 

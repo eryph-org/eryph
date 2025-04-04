@@ -9,6 +9,7 @@ using Eryph.ConfigModel;
 using Eryph.VmManagement.Tracing;
 using JetBrains.Annotations;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement
 {
@@ -41,11 +42,6 @@ namespace Eryph.VmManagement
             return typed.Value;
         }
 
-        public TypedPsObject<T> Recreate()
-        {
-            return new TypedPsObject<T>(PsObject, _registry, _mapping);
-        }
-
         public TypedPsObject<TNew> Cast<TNew>()
         {
             return new TypedPsObject<TNew>(PsObject, _registry, _mapping);
@@ -61,14 +57,13 @@ namespace Eryph.VmManagement
             return mapperFunc(this);
         }
 
-        public Either<PowershellFailure, TypedPsObject<TNew>> CastSafe<TNew>()
+        public Either<Error, TypedPsObject<TNew>> CastSafe<TNew>()
         {
             return Prelude.Try(() => new TypedPsObject<TNew>(PsObject, _registry, _mapping))
-                .ToEither(l => new PowershellFailure { Message = l.Message });
-
+                .ToEither(ex => Error.New($"Failed to cast Powershell object to type {typeof(TNew).Name}.", Error.New(ex)));
         }
 
-        public Task<Either<PowershellFailure, TypedPsObject<TNew>>> CastSafeAsync<TNew>()
+        public Task<Either<Error, TypedPsObject<TNew>>> CastSafeAsync<TNew>()
         {
             return CastSafe<TNew>().ToAsync().ToEither();
         }

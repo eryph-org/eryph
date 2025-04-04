@@ -10,6 +10,7 @@ using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Storage;
 using Eryph.VmManagement.Tracing;
 using JetBrains.Annotations;
@@ -40,8 +41,7 @@ internal class UpdateConfigDriveCommandHandler(
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
         from hostInfo in hostInfoProvider.GetHostInfoAsync().WriteTrace()
         let vmId = command.VMId
-        from vmList in GetVmInfo(vmId, Engine)
-        from vmInfo in EnsureSingleEntry(vmList, vmId)
+        from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
         from metadata in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
             .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
@@ -57,6 +57,6 @@ internal class UpdateConfigDriveCommandHandler(
         from vmInfoConverged in VirtualMachine.ConvergeConfigDrive(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfo,
                 substitutedConfig, command.MachineMetadata, currentStorageSettings)
-            .WriteTrace().ToAsync()
+            .WriteTrace()
         select Unit.Default;
 }

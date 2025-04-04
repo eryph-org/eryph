@@ -124,9 +124,9 @@ namespace Eryph.Modules.VmHostAgent
                 container.RegisterDecorator(typeof(IHandleMessages<>), typeof(TraceDecorator<>));
             }
 
-            container.RegisterSingleton<IPowershellEngine, PowershellEngine>();
+            container.RegisterSingleton<IPowershellEngineLock, PowershellEngineLock>();
+            container.Register<IPowershellEngine, PowershellEngine>(Lifestyle.Scoped);
 
-            container.Register<IVirtualMachineInfoProvider, VirtualMachineInfoProvider>(Lifestyle.Scoped);
             container.RegisterInstance(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>());
             container.RegisterInstance(serviceProvider.GetRequiredService<IApplicationInfoProvider>());
             container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolApiKeyStore>());

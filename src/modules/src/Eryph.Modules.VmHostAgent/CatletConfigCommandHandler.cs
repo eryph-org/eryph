@@ -74,29 +74,6 @@ namespace Eryph.Modules.VmHostAgent
             return result.ToString();
         }
 
-        protected EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> EnsureSingleEntry(
-            Seq<TypedPsObject<VirtualMachineInfo>> list, Guid id)
-        {
-            return (list.Count > 1
-                ? Prelude.Left(Error.New($"VM id '{id}' is not unique."))
-                : list.HeadOrNone().ToEither(Error.New($"VM id '{id}' is not found."))).ToAsync();
-        }
-
-
-        protected static EitherAsync<Error, Seq<TypedPsObject<VirtualMachineInfo>>> GetVmInfo(Guid id,
-            IPowershellEngine engine)
-        {
-            return Prelude.Cond<Guid>(c => c != Guid.Empty)(id).MatchAsync(
-                None: () => Seq<TypedPsObject<VirtualMachineInfo>>.Empty,
-                Some: s => engine.GetObjectsAsync<VirtualMachineInfo>(PsCommandBuilder.Create()
-                    .AddCommand("get-vm").AddParameter("Id", id)
-                    //this a bit dangerous, because there may be other errors causing the 
-                    //command to fail. However there seems to be no other way except parsing error response
-                    .AddParameter("ErrorAction", "SilentlyContinue")
-                )).ToError().ToAsync();
-        }
-
-
         protected EitherAsync<Error, Unit> EnsureMetadata(
             TypedPsObject<VirtualMachineInfo> vmInfo,
             Guid metadataId)
@@ -121,9 +98,7 @@ namespace Eryph.Modules.VmHostAgent
                 var newNotes = $"eryph metadata id: {metadataId}";
 
                 return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                    .AddParameter("Notes", newNotes))
-                    .ToError()
-                    .ToAsync();
+                        .AddParameter("Notes", newNotes));
             }
 
             if (!Guid.TryParse(metadataIdString, out var exitingMetadataId))
@@ -161,7 +136,7 @@ namespace Eryph.Modules.VmHostAgent
 
 
             return Engine.RunAsync(new PsCommandBuilder().AddCommand("Set-VM").AddParameter("VM", vmInfo.PsObject)
-                .AddParameter("Notes", newNotes)).ToAsync().ToError();
+                .AddParameter("Notes", newNotes));
         }
 
 
