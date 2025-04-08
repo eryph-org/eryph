@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel;
@@ -117,7 +118,7 @@ internal class PrepareCatletConfigSaga(
                 response.ParentConfigs.ToHashMap());
             if (result.IsLeft)
             {
-                await Fail(ErrorUtils.PrintError(Error.Many(result.LeftToSeq())));
+                await Fail(Error.Many(result.LeftToSeq()).Print());
                 return;
             }
 
@@ -127,7 +128,7 @@ internal class PrepareCatletConfigSaga(
             var geneIds = CatletGeneCollecting.CollectGenes(Data.Data.BredConfig);
             if (geneIds.IsFail)
             {
-                await Fail(ErrorUtils.PrintError(Error.Many(geneIds.FailToSeq())));
+                await Fail(Error.Many(geneIds.FailToSeq()).Print());
                 return;
             }
 
@@ -165,9 +166,10 @@ internal class PrepareCatletConfigSaga(
                 .Sequence();
             if (resolvedFodderGenes.IsFail)
             {
-                await Fail(ErrorUtils.PrintError(Error.New(
-                    $"The metadata for catlet {Data.Data.CatletId} contains invalid fodder information",
-                    Error.Many(resolvedFodderGenes.FailToSeq()))));
+                await Fail(Error.New(
+                        $"The metadata for catlet {Data.Data.CatletId} contains invalid fodder information",
+                        Error.Many(resolvedFodderGenes.FailToSeq()))
+                    .Print());
                 return;
             }
 

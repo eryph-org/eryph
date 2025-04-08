@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Eryph.Core;
 using LanguageExt.Common;
 using LanguageExt.UnsafeValueAccess;
@@ -28,7 +29,7 @@ public class ErrorEnricher : ILogEventEnricher
         {
             logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty(
                 "InnerError",
-                ErrorUtils.PrintError(eex.Inner.ValueUnsafe().ToError())));
+                eex.Inner.ValueUnsafe().ToError().Print()));
         }
     }
 }

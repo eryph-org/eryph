@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.ConfigModel.Catlets;
@@ -102,7 +103,7 @@ internal class PrepareNewCatletConfigSaga(
                 response.ParentConfigs.ToHashMap());
             if (result.IsLeft)
             {
-                await Fail(ErrorUtils.PrintError(Error.Many(result.LeftToSeq())));
+                await Fail(Error.Many(result.LeftToSeq()).Print());
                 return;
             }
 
@@ -113,7 +114,7 @@ internal class PrepareNewCatletConfigSaga(
             var geneIds = CatletGeneCollecting.CollectGenes(Data.Data.BredConfig);
             if (geneIds.IsFail)
             {
-                await Fail(ErrorUtils.PrintError(Error.Many(geneIds.FailToSeq())));
+                await Fail(Error.Many(geneIds.FailToSeq()).Print());
                 return;
             }
 

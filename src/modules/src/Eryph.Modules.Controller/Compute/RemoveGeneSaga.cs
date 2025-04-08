@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using Dbosoft.Functional;
 using Dbosoft.Rebus.Operations.Events;
 using Dbosoft.Rebus.Operations.Workflow;
 using Eryph.Core;
@@ -48,7 +49,7 @@ internal class RemoveGeneSaga(
         var geneId = dbGene.ParseUniqueGeneId();
         if (geneId.IsLeft)
         {
-            await Fail(ErrorUtils.PrintError(Error.Many(geneId.LeftToSeq())));
+            await Fail(Error.Many(geneId.LeftToSeq()).Print());
             return;
         }
 

@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="Dbosoft.Functional" Version="3.2.0" />
     <PackageReference Include="Eryph.ConfigModel.Catlets" Version="0.8.0" />
     <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.8.0" />
     <PackageReference Include="Eryph.ConfigModel.Core" Version="0.8.0" />
