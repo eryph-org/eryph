@@ -18,6 +18,8 @@ public class NetworkProvider
 
     public int? Vlan { get; set; }
 
+    public bool? AllowMacAddressSpoofing { get; set; }
+
     [CanBeNull] public NetworkProviderBridgeOptions BridgeOptions { get; set; }
 
     [CanBeNull] public string[] Adapters { get; set; }

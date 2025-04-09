@@ -24,6 +24,8 @@ public class ValidateCatletConfigCommandHandler(
         return taskMessaging.CompleteTask(message, response);
     }
 
+    // TODO add early validation of networks
+
     private static CatletConfig NormalizeCatletConfig(CatletConfig config)
     {
         var machineConfig = config;
