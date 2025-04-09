@@ -207,6 +207,6 @@ internal class NetworkSyncService(
 
         }
 
-        return Prelude.TryAsync(ValidateChangesAsync).ToEither();
+        return TryAsync(ValidateChangesAsync).ToEither();
     }
 }

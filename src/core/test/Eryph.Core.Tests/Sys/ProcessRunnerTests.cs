@@ -1,6 +1,8 @@
 ﻿using Eryph.Core.Sys;
 using LanguageExt;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Core.Tests.Sys;
 
 /// <summary>
@@ -75,6 +77,6 @@ public class ProcessRunnerTests
 
         public CancellationTokenSource CancellationTokenSource => _cancellationTokenSource;
         
-        public Eff<TestRuntime, ProcessRunnerIO> ProcessRunnerEff => Prelude.SuccessEff(LiveProcessRunnerIO.Default);
+        public Eff<TestRuntime, ProcessRunnerIO> ProcessRunnerEff => SuccessEff(LiveProcessRunnerIO.Default);
     }
 }

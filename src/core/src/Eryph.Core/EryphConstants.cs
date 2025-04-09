@@ -31,6 +31,8 @@ namespace Eryph.Core
 
         public static readonly string HgsGuardianName = "eryph-hgs-guardian";
 
+        public static readonly TimeSpan OperationTimeout = TimeSpan.FromMinutes(5);
+
         public static class BuildInRoles
         {
             public static readonly Guid Owner = Guid.Parse("{918D2C23-8E9A-41AE-8F0E-ADACA3BECBC4}");

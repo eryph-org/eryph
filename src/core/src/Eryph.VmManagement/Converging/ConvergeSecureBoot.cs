@@ -16,11 +16,11 @@ public class ConvergeSecureBoot(
     ConvergeContext context)
     : ConvergeTaskBase(context)
 {
-    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         ConvergeSecureBootState(vmInfo).ToEither();
     
-    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeSecureBootState(
+    private EitherAsync<Error, Unit> ConvergeSecureBootState(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
         let expectedSecureBootState = CatletCapabilities.IsSecureBootEnabled(
@@ -35,8 +35,7 @@ public class ConvergeSecureBoot(
                    && expectedSecureBootTemplate == currentSecureBootTemplate
             ? RightAsync<Error, Unit>(unit)
             : ConfigureSecureBoot(vmInfo, expectedSecureBootState, expectedSecureBootTemplate)
-        from updatedVmInfo in vmInfo.RecreateOrReload(Context.Engine)
-        select updatedVmInfo;
+        select unit;
 
     private EitherAsync<Error, Unit> ConfigureSecureBoot(
         TypedPsObject<VirtualMachineInfo> vmInfo,
@@ -55,7 +54,7 @@ public class ConvergeSecureBoot(
             .AddParameter("VM", vmInfo.PsObject)
             .AddParameter("EnableSecureBoot", enableSecureBoot ? OnOffState.On : OnOffState.Off)
             .AddParameter("SecureBootTemplate", secureBootTemplate)
-        from _3 in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from _3 in Context.Engine.RunAsync(command)
         select unit;
 
     private EitherAsync<Error, VMFirmwareInfo> GetFirmwareInfo(
@@ -64,9 +63,8 @@ public class ConvergeSecureBoot(
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMFirmware")
             .AddParameter("VM", vmInfo.PsObject)
-        from vmSecurityInfos in Context.Engine.GetObjectValuesAsync<VMFirmwareInfo>(command)
-            .ToError()
-        from vMSecurityInfo in vmSecurityInfos.HeadOrNone()
-            .ToEitherAsync(Error.New($"Failed to fetch firmware information for the VM {vmInfo.Value.Id}."))
-        select vMSecurityInfo;
+        from optionalVmSecurityInfo in Context.Engine.GetObjectValueAsync<VMFirmwareInfo>(command)
+        from vmSecurityInfo in optionalVmSecurityInfo.ToEitherAsync(Error.New(
+            $"Failed to fetch firmware information for the VM {vmInfo.Value.Id}."))
+        select vmSecurityInfo;
 }

@@ -1,22 +1,30 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement;
 
 public interface IPowershellEngine
 {
-    Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder,
-        Action<int> reportProgress = null);
+    EitherAsync<Error, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
+        PsCommandBuilder builder,
+        Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
+        CancellationToken cancellationToken = default);
 
-    Either<PowershellFailure, Unit> Run(PsCommandBuilder builder, Action<int> reportProgress = null);
+    EitherAsync<Error, Seq<T>> GetObjectValuesAsync<T>(
+        PsCommandBuilder builder,
+        Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
+        CancellationToken cancellationToken = default);
 
-    Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null);
-
-    EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(PsCommandBuilder builder,
-        Func<int, Task> reportProgress = null);
-
-    Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder, Func<int, Task> reportProgress = null);
+    EitherAsync<Error, Unit> RunAsync(
+        PsCommandBuilder builder,
+        Func<int, Task> reportProgress = null,
+        bool withoutLock = false,
+        CancellationToken cancellationToken = default);
+    
     ITypedPsObjectMapping ObjectMapping { get; }
 }

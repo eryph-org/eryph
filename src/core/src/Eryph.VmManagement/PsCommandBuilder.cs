@@ -9,10 +9,8 @@ namespace Eryph.VmManagement;
 
 public class PsCommandBuilder
 {
-
-    private readonly List<object> _input = new();
-
-    private readonly List<BasePart> _dataChain = new();
+    private readonly List<object> _input = [];
+    private readonly List<BasePart> _dataChain = [];
 
     public static PsCommandBuilder Create()
     {
@@ -21,31 +19,31 @@ public class PsCommandBuilder
 
     public PsCommandBuilder AddCommand(string command)
     {
-        _dataChain.Add(new CommandPart{Command = command});
+        _dataChain.Add(new CommandPart{ Command = command });
         return this;
     }
 
     public PsCommandBuilder AddParameter(string parameter, object value)
     {
-        _dataChain.Add(new ParameterPart{Parameter = parameter, Value = value});
+        _dataChain.Add(new ParameterPart{ Parameter = parameter, Value = value });
         return this;
     }
 
     public PsCommandBuilder AddParameter(string parameter)
     {
-        _dataChain.Add(new SwitchParameterPart { Parameter = parameter});
+        _dataChain.Add(new SwitchParameterPart { Parameter = parameter });
         return this;
     }
 
     public PsCommandBuilder AddArgument(object statement)
     {
-        _dataChain.Add(new ArgumentPart{Value = statement});
+        _dataChain.Add(new ArgumentPart{ Value = statement });
         return this;
     }
 
     public PsCommandBuilder Script(string script)
     {
-        _dataChain.Add(new ScriptPart{Script = script});
+        _dataChain.Add(new ScriptPart{ Script = script });
         return this;
     }
 
@@ -64,16 +62,16 @@ public class PsCommandBuilder
         return _dataChain.ToArray();
     }
 
-    public IEnumerable Build(PowerShell ps)
+    public IReadOnlyList<object> Build(PowerShell ps)
     {
         TraceContext.Current.Write(PowershellCommandTraceData.FromObject(this));
-        
+
         foreach (var data in _dataChain)
         {
             switch (data)
             {
-
-                case CommandPart part: ps.AddCommand(part.Command);
+                case CommandPart part:
+                    ps.AddCommand(part.Command);
                     break;
                 case ParameterPart part:
                     ps.AddParameter(part.Parameter, part.Value);
@@ -88,11 +86,11 @@ public class PsCommandBuilder
                     ps.AddScript(part.Script);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new InvalidOperationException($"Parts of type {data.GetType().Name} are not supported.");
             }
         }
 
-        return _input;
+        return [.._input];
     }
 
     public PsCommandBuilder AddInput(object value)
@@ -101,7 +99,7 @@ public class PsCommandBuilder
         return this;
     }
 
-    public class BasePart
+    public abstract class BasePart
     {
 
     }
@@ -110,27 +108,22 @@ public class PsCommandBuilder
     {
         [PrivateIdentifier]
         public object Value { get; init; }
-
     }
-
 
     public class ScriptPart : BasePart
     {
         [PrivateIdentifier]
         public string Script { get; init; }
-
     }
 
     public class CommandPart : BasePart
     {
         public string Command { get; init; }
-
     }
 
     public class SwitchParameterPart : BasePart
     {
         public string Parameter { get; init; }
-
     }
 
     public class ParameterPart : BasePart
@@ -139,6 +132,5 @@ public class PsCommandBuilder
 
         [PrivateIdentifier]
         public object Value { get; init; }
-
     }
 }

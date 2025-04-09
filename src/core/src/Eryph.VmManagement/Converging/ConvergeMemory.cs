@@ -12,12 +12,12 @@ namespace Eryph.VmManagement.Converging;
 
 public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
 {
-    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         Converge(Context.Config, vmInfo, Context.Engine, Context.ReportProgress)
             .ToEither();
 
-    private static EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> Converge(
+    private static EitherAsync<Error, Unit> Converge(
         CatletConfig config,
         TypedPsObject<VirtualMachineInfo> vmInfo,
         IPowershellEngine powershellEngine,
@@ -82,11 +82,10 @@ public class ConvergeMemory(ConvergeContext context) : ConvergeTaskBase(context)
                        || changedMinMemory.IsSome
                        || changedMaxMemory.IsSome
             ? from _ in TryAsync(() => reportProgress(message).ToUnit()).ToEither()
-              from __ in powershellEngine.RunAsync(command5).ToError().ToAsync()
+              from __ in powershellEngine.RunAsync(command5)
               select unit
             : RightAsync<Error, Unit>(unit)
-        from reloadedVmInfo in vmInfo.RecreateOrReload(powershellEngine)
-        select reloadedVmInfo;
+        select unit;
 
     private static Either<
             Error,

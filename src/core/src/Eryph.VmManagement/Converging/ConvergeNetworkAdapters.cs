@@ -16,18 +16,17 @@ namespace Eryph.VmManagement.Converging;
 public class ConvergeNetworkAdapters(ConvergeContext context)
     : ConvergeTaskBase(context)
 {
-    public override Task<Either<Error, TypedPsObject<VirtualMachineInfo>>> Converge(
+    public override Task<Either<Error, Unit>> Converge(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         ConvergeAdapters(vmInfo).ToEither();
 
-    private EitherAsync<Error, TypedPsObject<VirtualMachineInfo>> ConvergeAdapters(
+    private EitherAsync<Error, Unit> ConvergeAdapters(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from adapters in GetVmAdapters(vmInfo)
         from adapterConfigs in PrepareAdapterConfigs().ToAsync()
         from _ in RemoveMissingAdapters(adapters, adapterConfigs)
         from __ in AddOrUpdateAdapters(adapterConfigs, adapters, vmInfo)
-        from updatedVmInfo in vmInfo.Reload(Context.Engine)
-        select updatedVmInfo;
+        select unit;
 
     private Either<Error, Seq<PhysicalAdapterConfig>> PrepareAdapterConfigs() =>
         from adapterConfigs in Context.Config.Networks.ToSeq()
@@ -57,7 +56,6 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddCommand("Get-VMNetworkAdapter")
             .AddParameter("VM", vmInfo.PsObject)
         from adapters in Context.Engine.GetObjectsAsync<VMNetworkAdapter>(command)
-            .ToError().ToAsync()
         select adapters;
 
     private EitherAsync<Error, Unit> RemoveMissingAdapters(
@@ -80,7 +78,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         let command = PsCommandBuilder.Create()
             .AddCommand("Remove-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from __ in Context.Engine.RunAsync(command)
         select unit;
 
     private EitherAsync<Error, Unit> AddOrUpdateAdapters(
@@ -115,10 +113,9 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddParameter("StaticMacAddress", adapterConfig.MacAddress)
             .AddParameter("SwitchName", adapterConfig.SwitchName)
             .AddParameter("Passthru")
-        from createdAdapters in Context.Engine.GetObjectValuesAsync<VMNetworkAdapter>(command)
-            .ToError()
-        from createdAdapter in createdAdapters.HeadOrNone()
-            .ToEitherAsync(Error.New("Failed to create network adapter"))
+        from optionalCreatedAdapter in Context.Engine.GetObjectValueAsync<VMNetworkAdapter>(command)
+        from createdAdapter in optionalCreatedAdapter.ToEitherAsync(
+            Error.New("Failed to create network adapter"))
         from __ in Context.PortManager.SetPortName(createdAdapter.Id, adapterConfig.PortName)
         select unit;
 
@@ -145,7 +142,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddCommand("Set-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
             .AddParameter("StaticMacAddress", macAddress)
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from __ in Context.Engine.RunAsync(command)
         select unit;
 
     private EitherAsync<Error, Unit> ConnectAdapter(
@@ -157,7 +154,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddCommand("Connect-VMNetworkAdapter")
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
             .AddParameter("SwitchName", adapterConfig.SwitchName)
-        from __ in Context.Engine.RunAsync(command).ToError().ToAsync()
+        from __ in Context.Engine.RunAsync(command)
         select unit;
 
     private sealed record PhysicalAdapterConfig(

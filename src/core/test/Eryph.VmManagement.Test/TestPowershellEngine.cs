@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Management.Automation;
 using LanguageExt;
+using LanguageExt.Common;
 
 namespace Eryph.VmManagement.Test;
 
@@ -11,9 +12,9 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         ObjectMapping =mapping;
     }
 
-    public Func<Type,AssertCommand, Either<PowershellFailure,Seq<TypedPsObject<object>>>>? GetObjectCallback;
-    public Func<AssertCommand, Either<PowershellFailure, Unit>>? RunCallback;
-    public Func<Type, AssertCommand, Either<PowershellFailure, Seq<object>>>? GetValuesCallback;
+    public Func<Type,AssertCommand, Either<Error,Seq<TypedPsObject<object>>>>? GetObjectCallback;
+    public Func<AssertCommand, Either<Error, Unit>>? RunCallback;
+    public Func<Type, AssertCommand, Either<Error, Seq<object>>>? GetValuesCallback;
 
     public TypedPsObject<T> ToPsObject<T>(T obj)
     {
@@ -26,60 +27,52 @@ public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
         return new TypedPsObject<object>(obj.PsObject, this, ObjectMapping);
     }
 
-    public Either<PowershellFailure, Seq<TypedPsObject<T>>> GetObjects<T>(PsCommandBuilder builder, Action<int>? reportProgress = null)
-    {
-        return GetObjectsAsync<T>(builder, (msg) =>
-        {
-            reportProgress?.Invoke(msg);
-            return Task.CompletedTask;
-        }).GetAwaiter().GetResult();
-    }
-
-    public Either<PowershellFailure, Unit> Run(PsCommandBuilder builder, Action<int>? reportProgress = null)
-    {
-        return RunAsync(builder, (msg) =>
-        {
-            reportProgress?.Invoke(msg);
-            return Task.CompletedTask;
-        }).GetAwaiter().GetResult();
-    }
-
-    public Task<Either<PowershellFailure, Seq<TypedPsObject<T>>>> GetObjectsAsync<T>(PsCommandBuilder builder, Func<int, Task>? reportProgress = null)
-    {
-        var commandInput = builder.ToDictionary();
-        var result = GetObjectCallback?.Invoke(typeof(T), AssertCommand.Parse(commandInput));
-        Debug.Assert(result != null, nameof(result) + " != null");
-        return Task.FromResult(result.Value.Map(seq => seq.Map( r => new TypedPsObject<T>(r.PsObject, this, ObjectMapping))));
-
-    }
-
-    public EitherAsync<PowershellFailure, Seq<T>> GetObjectValuesAsync<T>(
+    public EitherAsync<Error, Seq<TypedPsObject<T>>> GetObjectsAsync<T>(
         PsCommandBuilder builder,
-        Func<int, Task>? reportProgress = null)
+        Func<int, Task>? reportProgress = null,
+        bool withoutLock = false,
+        CancellationToken cancellationToken = default)
+    {
+        var commandInput = builder.ToDictionary();
+        if (GetObjectCallback is null)
+            throw new InvalidOperationException("GetObjectCallback is not set");
+
+        var result = GetObjectCallback(typeof(T), AssertCommand.Parse(commandInput));
+        return result.ToAsync()
+            .Map(seq => seq.Map(r => new TypedPsObject<T>(r.PsObject, this, ObjectMapping)));
+    }
+
+    public EitherAsync<Error, Seq<T>> GetObjectValuesAsync<T>(
+        PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null,
+        bool withoutLock = false,
+        CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
 
-        if(GetValuesCallback == null)
+        if (GetValuesCallback is null)
             throw new InvalidOperationException("GetValuesCallback is not set");
 
-        var result = GetValuesCallback.Invoke(typeof(T), 
-            AssertCommand.Parse(commandInput));
+        var result = GetValuesCallback(typeof(T), AssertCommand.Parse(commandInput));
 
-        return result.Map(s => s.Map(v =>(T) v)).ToAsync();
+        return result.Map(s => s.Map(v =>(T)v)).ToAsync();
     }
 
-    public Task<Either<PowershellFailure, Unit>> RunAsync(PsCommandBuilder builder, Func<int, Task>? reportProgress = null)
+    public EitherAsync<Error, Unit> RunAsync(
+        PsCommandBuilder builder,
+        Func<int, Task>? reportProgress = null,
+        bool withoutLock = false,
+        CancellationToken cancellationToken = default)
     {
         var commandInput = builder.ToDictionary();
-        var result = RunCallback?.Invoke(AssertCommand.Parse(commandInput));
-
-        Debug.Assert(result != null, nameof(result) + " != null");
-        return Task.FromResult(result.Value);
+        if (RunCallback is null)
+            throw new InvalidOperationException("RunCallback is not set");
+        
+        var result = RunCallback(AssertCommand.Parse(commandInput));
+        return result.ToAsync();
     }
 
     public ITypedPsObjectMapping ObjectMapping { get; }
-    public void AddPsObject(PSObject psObject)
-    {
-            
-    }
+    
+    public void AddPsObject(PSObject psObject) { }
 }

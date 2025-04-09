@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Eryph.Core.VmAgent;
 using Eryph.Resources.Machines;
+using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -24,22 +25,21 @@ public class VirtualMachineInventory(
     public EitherAsync<Error, VirtualMachineData> InventorizeVM(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from hostInfo in hostInfoProvider.GetHostInfoAsync()
-        from vm in RightAsync<Error, TypedPsObject<VirtualMachineInfo>>(vmInfo)
-        from vmStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vm)
+        from vmStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo)
         from diskStorageSettings in CurrentHardDiskDriveStorageSettings.Detect(
-            engine, vmHostAgentConfig, vm.GetList(x => x.HardDrives))
+            engine, vmHostAgentConfig, vmInfo.GetList(x => x.HardDrives))
         from cpuData in GetCpuData(vmInfo)
         from memoryData in GetMemoryData(vmInfo)
         from firmwareData in GetFirmwareData(vmInfo)
         from securityData in GetSecurityData(vmInfo)
-        from networks in VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vm.GetList(x => x.NetworkAdapters))
+        from networks in VirtualNetworkQuery.GetNetworksByAdapters(hostInfo, vmInfo.GetList(x => x.NetworkAdapters))
         select new VirtualMachineData
         {
-            VMId = vm.Value.Id,
-            MetadataId = GetMetadataId(vm),
-            Status = VmStateUtils.toVmStatus(vm.Value.State),
-            Name = vm.Value.Name,
-            UpTime = vm.Value.Uptime,
+            VMId = vmInfo.Value.Id,
+            MetadataId = GetMetadataId(vmInfo),
+            Status = VmStateUtils.toVmStatus(vmInfo.Value.State),
+            Name = vmInfo.Value.Name,
+            UpTime = vmInfo.Value.Uptime,
             Cpu = cpuData,
             Memory = memoryData,
             Firmware = firmwareData,
@@ -52,7 +52,7 @@ public class VirtualMachineInventory(
             DataStore = vmStorageSettings.Bind(x => x.StorageNames.DataStoreName).IfNone(""),
             Environment = vmStorageSettings.Bind(x => x.StorageNames.EnvironmentName).IfNone(""),
             Drives = CreateHardDriveInfo(diskStorageSettings, vmInfo.GetList(x => x.HardDrives)).ToArray(),
-            NetworkAdapters = vm.GetList(x => x.NetworkAdapters).Map(a =>
+            NetworkAdapters = vmInfo.GetList(x => x.NetworkAdapters).Map(a =>
             {
                 var connectedAdapter = a.Cast<VMNetworkAdapter>();
                 var res = new VirtualMachineNetworkAdapterData
@@ -69,42 +69,49 @@ public class VirtualMachineInventory(
             Security = securityData,
         };           
 
-    private EitherAsync<Error, VirtualMachineCpuData> GetCpuData(TypedPsObject<VirtualMachineInfo> vmInfo)
-    {
-        return engine.GetObjectsAsync<VirtualMachineCpuData>(
-                new PsCommandBuilder().AddInput(vmInfo.PsObject).AddCommand("Get-VMProcessor"))
-            .ToError().ToAsync().Bind(
-                r => r.HeadOrLeft(Error.New(Errors.SequenceEmpty)).ToAsync())
-            .Map(r => r.ToValue());
-    }
+    private EitherAsync<Error, VirtualMachineCpuData> GetCpuData(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddInput(vmInfo.PsObject)
+            .AddCommand("Get-VMProcessor")
+        from optionalCpuData in engine.GetObjectValueAsync<VirtualMachineCpuData>(command)
+        from cpuData in optionalCpuData.ToEitherAsync(
+            Error.New($"Could not fetch processor information of VM {vmInfo.Value.Id}."))
+        select cpuData;
 
-    private EitherAsync<Error, VirtualMachineMemoryData> GetMemoryData(TypedPsObject<VirtualMachineInfo> vmInfo)
-    {
-        return engine.GetObjectsAsync<VirtualMachineMemoryData>(
-                new PsCommandBuilder().AddInput(vmInfo.PsObject).AddCommand("Get-VMMemory"))
-            .ToError().ToAsync().Bind(
-                r => r.HeadOrLeft(Error.New(Errors.SequenceEmpty)).ToAsync())
-            .Map(r => r.ToValue());
-    }
+    private EitherAsync<Error, VirtualMachineMemoryData> GetMemoryData(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddInput(vmInfo.PsObject)
+            .AddCommand("Get-VMMemory")
+        from optionalMemoryData in engine.GetObjectValueAsync<VirtualMachineMemoryData>(command)
+        from memoryData in optionalMemoryData.ToEitherAsync(
+            Error.New($"Could not fetch memory information of VM {vmInfo.Value.Id}."))
+        select memoryData;
 
-    private EitherAsync<Error, VirtualMachineFirmwareData> GetFirmwareData(TypedPsObject<VirtualMachineInfo> vmInfo)
-    {
-        if (vmInfo.Value.Generation == 1)
-            return Prelude.RightAsync<Error, VirtualMachineFirmwareData>(new VirtualMachineFirmwareData());
+    private EitherAsync<Error, VirtualMachineFirmwareData> GetFirmwareData(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from firmwareData in vmInfo.Value.Generation == 1
+            ? RightAsync<Error, VirtualMachineFirmwareData>(new VirtualMachineFirmwareData())
+            : GetGen2FirmwareData(vmInfo)
+        select firmwareData;
 
-        return engine.GetObjectsAsync<VMFirmwareInfo>(
-                new PsCommandBuilder().AddInput(vmInfo.PsObject).AddCommand("Get-VMFirmware"))
-            .ToError().ToAsync().Map(
-                r => r.HeadOrNone())
-            .Map(r => r.Match(
-                None: () => new VirtualMachineFirmwareData(),
-                Some: info => new VirtualMachineFirmwareData
-                {
-                    SecureBoot = info.Value.SecureBoot == OnOffState.On,
-                    SecureBootTemplate = info.Value.SecureBootTemplate
-                }
-            ));
-    }
+    private EitherAsync<Error, VirtualMachineFirmwareData> GetGen2FirmwareData(
+        TypedPsObject<VirtualMachineInfo> vmInfo) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddInput(vmInfo.PsObject)
+            .AddCommand("Get-VMFirmware")
+        from optionalFirmwareInfo in engine.GetObjectValueAsync<VMFirmwareInfo>(command)
+        from firmwareInfo in optionalFirmwareInfo.ToEitherAsync(
+            Error.New($"Could not fetch firmware information of VM {vmInfo.Value.Id}."))
+        select new VirtualMachineFirmwareData
+        {
+            SecureBoot = firmwareInfo.SecureBoot == OnOffState.On,
+            SecureBootTemplate = firmwareInfo.SecureBootTemplate
+        };
 
     private EitherAsync<Error, VirtualMachineSecurityData> GetSecurityData(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
@@ -112,10 +119,9 @@ public class VirtualMachineInventory(
         let command = PsCommandBuilder.Create()
             .AddCommand("Get-VMSecurity")
             .AddParameter("VM", vmInfo.PsObject)
-        from vmSecurityInfos in engine.GetObjectValuesAsync<VMSecurityInfo>(command)
-            .ToError()
-        from vMSecurityInfo in vmSecurityInfos.HeadOrNone()
-            .ToEitherAsync(Error.New($"Failed to fetch security information for the VM {vmInfo.Value.Id}."))
+        from optionalVmSecurityInfo in engine.GetObjectValueAsync<VMSecurityInfo>(command)
+        from vMSecurityInfo in optionalVmSecurityInfo.ToEitherAsync(Error.New(
+            $"Failed to fetch security information for the VM {vmInfo.Value.Id}."))
         select new VirtualMachineSecurityData
         {
             BindToHostTpm = vMSecurityInfo.BindToHostTpm,

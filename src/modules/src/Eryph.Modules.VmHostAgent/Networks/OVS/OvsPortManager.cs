@@ -8,6 +8,7 @@ using Dbosoft.OVN.Windows;
 using Eryph.Core;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
+using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Networking;
 using LanguageExt;
 using LanguageExt.Common;
@@ -38,22 +39,18 @@ class OvsPortManager(
             : ForceSyncPorts(vmId, change);
 
     private EitherAsync<Error, Unit> ForceSyncPorts(Guid vmId, VMPortChange change) =>
-        from _ in RightAsync<Error, Unit>(unit)
-        let psCommand = PsCommandBuilder.Create()
-            .AddCommand("Get-VM")
-            .AddParameter("Id", vmId)
-        from vmInfos in engine.GetObjectsAsync<VirtualMachineInfo>(psCommand)
-            .ToError().ToAsync()
-        from vmInfo in vmInfos.HeadOrNone()
-            .ToEitherAsync(Error.New($"The VM with ID {vmId} was not found."))
+        from vmInfo in VmQueries.GetVmInfo(engine, vmId)
         from __ in ForceSyncPorts(vmInfo, change)
         select unit;
 
     private EitherAsync<Error, Unit> ForceSyncPorts(
         TypedPsObject<VirtualMachineInfo> vmInfo,
         VMPortChange change) =>
-        from allAdapters in NetworkAdapterQuery.GetNetworkAdapters(vmInfo, engine)
-            .ToAsync()
+        from _1 in RightAsync<Error, Unit>(unit)
+        let getAdaptersCommand = PsCommandBuilder.Create()
+            .AddCommand("Get-VMNetworkAdapter")
+            .AddParameter("VM", vmInfo.PsObject)
+        from allAdapters in engine.GetObjectsAsync<VMNetworkAdapter>(getAdaptersCommand)
         let adapters = allAdapters
             .Map(a => a.Value)
             .Filter(a => a.SwitchName == EryphConstants.OverlaySwitchName)

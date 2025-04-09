@@ -19,6 +19,8 @@ using LanguageExt;
 using LanguageExt.Common;
 using Xunit.Abstractions;
 
+using static LanguageExt.Prelude;
+
 namespace Eryph.Modules.Controller.Tests.Networks;
 
 public class UpdateCatletNetworksCommandHandlerTests(
@@ -740,7 +742,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
 
         _networkProviderManagerMock
             .Setup(m => m.GetCurrentConfiguration())
-            .Returns(Prelude.RightAsync<Error, NetworkProvidersConfiguration>(
+            .Returns(RightAsync<Error, NetworkProvidersConfiguration>(
                 networkProvidersConfig));
 
         await WithScope(async (_, stateStore) =>
