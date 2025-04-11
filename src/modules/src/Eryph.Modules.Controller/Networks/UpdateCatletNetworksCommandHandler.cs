@@ -93,14 +93,14 @@ public class UpdateCatletNetworksCommandHandler(
             .ToEither(Error.New($"Network provider {validNetwork.NetworkProvider} not found."))
             .ToAsync()
         let isFlatNetwork = networkProvider.Type == NetworkProviderType.Flat
-        let allowMacAddressSpoofing = Optional(networkProvider.AllowMacAddressSpoofing)
+        let allowMacAddressSpoofing = Optional(networkProvider.MacAddressSpoofing)
             .IfNone(networkConfigDefaults.MacAddressSpoofing)
         let networkAdapterConfig = command.Config.NetworkAdapters
             .ToSeq()
             .Find(x => x.Name == networkConfig.AdapterName)
         let fixedMacAddress = networkAdapterConfig.Bind(x => Optional(x.MacAddress))
         let enableMacAddressSpoofing = networkAdapterConfig
-            .Bind(x => Optional(x.EnableMacAddressSpoofing))
+            .Bind(x => Optional(x.MacAddressSpoofing))
             .IfNone(false)
         // TODO These checks should also be applied earlier during validation
         from _1 in guardnot(enableMacAddressSpoofing && !isFlatNetwork,
