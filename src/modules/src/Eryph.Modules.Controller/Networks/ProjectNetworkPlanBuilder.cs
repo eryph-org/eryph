@@ -57,7 +57,7 @@ internal class ProjectNetworkPlanBuilder(
         let catletPorts = FindPortsOfType<CatletNetworkPort>(networks)
         from floatingPorts in GetFloatingPorts(catletPorts, providerSubnets)
         let dnsInfo = MapCatletPortsToDnsInfos(catletPorts)
-        let dnsNames = dnsInfo.Select(info => info.CatletMetadataId).ToArray()
+        let dnsNames = dnsInfo.Map(info => info.CatletMetadataId)
 
         from p1 in AddProjectRouterAndPorts(networkPlan, networks, providerRouterIpInfos)
         from p2 in AddExternalNetSwitches(p1, providerSubnets, overLayProviders)
@@ -271,7 +271,7 @@ internal class ProjectNetworkPlanBuilder(
     private static NetworkPlan AddNetworksAsSwitches(
         NetworkPlan networkPlan,
         Seq<VirtualNetwork> networks,
-        string[] dnsNames) =>
+        Seq<string> dnsNames) =>
         networks.Map(network => networkPlan.AddSwitch(network.Id.ToString(), dnsNames))
             .Apply(s => JoinPlans(s, networkPlan));
 
