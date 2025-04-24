@@ -86,6 +86,9 @@ internal class ProjectNetworkPlanBuilder(
                 p.Name,
                 IPNetwork2.ToIPAddress(baseIp + 2 * i, AddressFamily.InterNetwork),
                 IPNetwork2.ToIPAddress(baseIp + 2 * i + 1, AddressFamily.InterNetwork),
+                // These IP addresses are used for point-to-point links between two routers
+                // which use peer ports. Hence, we can use the /31 networks which contain only
+                // two IP addresses.
                 new IPNetwork2(IPNetwork2.ToIPAddress(baseIp + 2 * i, AddressFamily.InterNetwork), 31)))
             .Map(i => (providerName: i.ProviderName, i))
             .ToSeq()
