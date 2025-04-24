@@ -1,7 +1,11 @@
-﻿namespace Eryph.Core.Network;
+﻿using JetBrains.Annotations;
+
+namespace Eryph.Core.Network;
 
 public class NetworkProvidersConfiguration
 {
+    [CanBeNull] public string EastWestNetwork { get; set; }
+
     public NetworkProvider[] NetworkProviders { get; set; }
 
     public const string DefaultConfig =
