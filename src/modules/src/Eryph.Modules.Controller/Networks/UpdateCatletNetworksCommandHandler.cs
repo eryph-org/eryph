@@ -31,8 +31,7 @@ public class UpdateCatletNetworksCommandHandler(
     ICatletIpManager ipManager,
     IStateStore stateStore,
     INetworkProviderManager providerManager,
-    IProviderIpManager providerIpManager,
-    INetworkConfigDefaults networkConfigDefaults)
+    IProviderIpManager providerIpManager)
     : IHandleMessages<OperationTask<UpdateCatletNetworksCommand>>
 {
     public async Task Handle(OperationTask<UpdateCatletNetworksCommand> message)
@@ -94,7 +93,7 @@ public class UpdateCatletNetworksCommandHandler(
             .ToAsync()
         let isFlatNetwork = networkProvider.Type == NetworkProviderType.Flat
         let allowMacAddressSpoofing = Optional(networkProvider.MacAddressSpoofing)
-            .IfNone(networkConfigDefaults.MacAddressSpoofing)
+            .IfNone(providerManager.Defaults.MacAddressSpoofing)
         let networkAdapterConfig = command.Config.NetworkAdapters
             .ToSeq()
             .Find(x => x.Name == networkConfig.AdapterName)

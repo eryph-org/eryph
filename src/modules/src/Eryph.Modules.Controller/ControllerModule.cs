@@ -135,8 +135,6 @@ namespace Eryph.Modules.Controller
             //use network services from host
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
 
-            container.RegisterInstance(serviceProvider.GetRequiredService<INetworkConfigDefaults>());
-
             container.ConfigureRebus(configurer => configurer
                 .Serialization(s => s.UseEryphSettings())
                 .Transport(t =>

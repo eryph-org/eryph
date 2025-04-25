@@ -51,7 +51,6 @@ namespace Eryph.Runtime.Zero
             container.RegisterSingleton<IGenePoolApiKeyStore, ZeroGenePoolApiKeyStore>();
             container.Register<IHostSettingsProvider, HostSettingsProvider>();
             container.RegisterSingleton<IApplicationInfoProvider, ZeroApplicationInfoProvider>();
-            container.RegisterSingleton<INetworkConfigDefaults, ZeroNetworkConfigDefaults>();
 
             container.RegisterInstance(new WorkflowOptions
             {
