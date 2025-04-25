@@ -11,7 +11,6 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.ModuleCore.Configuration;
 using Eryph.Resources.Machines;
 using Eryph.StateDb;
 using Eryph.StateDb.Model;
@@ -101,7 +100,6 @@ public class UpdateCatletNetworksCommandHandler(
         let enableMacAddressSpoofing = networkAdapterConfig
             .Bind(x => Optional(x.MacAddressSpoofing))
             .IfNone(false)
-        // TODO These checks should also be applied earlier during validation
         from _1 in guardnot(enableMacAddressSpoofing && !isFlatNetwork,
             Error.New($"MAC address spoofing cannot be enabled for adapter '{networkConfig.AdapterName}': "
                       +$"the network '{networkName}' in environment '{environmentName}' is not using the flat network provider."))

@@ -214,12 +214,12 @@ public static class ProviderNetworkUpdateInConsole<RT>
                         "Incompatible network settings detected. You have to remove these settings before applying the new configuration."))
                     select unit)
             select unit)
-        let spoofingDisabled = newConfig.NetworkProviders.ToSeq()
+        let providersWithDisabledSpoofing = newConfig.NetworkProviders.ToSeq()
             .Filter(np => !np.MacAddressSpoofing.GetValueOrDefault(defaults.MacAddressSpoofing)
                           && currentConfig.NetworkProviders.Any(
                               cp => cp.Name == np.Name && cp.MacAddressSpoofing.GetValueOrDefault(defaults.MacAddressSpoofing)))
             .Map(np => np.Name)
-        from _2 in spoofingDisabled
+        from _2 in providersWithDisabledSpoofing
             .Match(
                 Empty: () => unitEff,
                 Seq: names =>
