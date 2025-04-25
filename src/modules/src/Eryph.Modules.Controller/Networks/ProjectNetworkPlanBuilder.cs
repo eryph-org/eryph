@@ -135,7 +135,7 @@ internal class ProjectNetworkPlanBuilder(
         from _ in providerSubnets
             .Find(s => s.Subnet.ProviderName == floatingPort.ProviderName && s.Subnet.Name == floatingPort.SubnetName)
             .ToEitherAsync(Error.New(
-                $"Port '{floatingPort.Name}' configuration error: subnet {floatingPort.SubnetName} of network provider {floatingPort.ProviderName} not found."))
+                $"Port '{floatingPort.Name}' configuration error: subnet '{floatingPort.SubnetName}' of network provider '{floatingPort.ProviderName}' not found."))
         select new FloatingPortInfo(floatingPort);
 
     private EitherAsync<Error, Seq<ProviderSubnetInfo>> GetProviderSubnetInfos(
@@ -199,18 +199,17 @@ internal class ProjectNetworkPlanBuilder(
         let subnetName = portInfo.Subnet.Subnet.Name
         from externalIpAssignment in portInfo.Port.IpAssignments
             .ToSeq().HeadOrNone()
-            .ToEitherAsync(Error.New($"The port for provider '{providerName}' has no IP Address assigned."))
-        from parsedExternalIp in Try(() => IPAddress.Parse(externalIpAssignment.IpAddress))
-            .ToEither(_ => Error.New($"The port for provider '{providerName}' has an invalid IP Address assigned."))
-            .ToAsync()
-        from externalNetwork in Try(() => IPNetwork2.Parse(portInfo.Subnet.Subnet.IpNetwork))
-            .ToEither(_ => Error.New(
-                $"The subnet '{subnetName}' of the provider '{providerName}' has an invalid IP Network assigned."))
-            .ToAsync()
-        from gatewayIp in Try(() => IPAddress.Parse(portInfo.Subnet.Config.Gateway))
-            .ToEither(_ => Error.New(
-                $"The subnet '{subnetName}' of the provider '{providerName}' has an invalid gateway IP Address assigned."))
-            .ToAsync()
+            .ToEitherAsync(Error.New(
+                $"Network '{portInfo.Network.Name}' configuration error: the port for provider '{providerName}' has no IP address assigned."))
+        from parsedExternalIp in parseIPAddress(externalIpAssignment.IpAddress)
+            .ToEitherAsync(Error.New(
+                $"Network '{portInfo.Network.Name}' configuration error: the port for provider '{providerName}' has an invalid IP address assigned."))
+        from externalNetwork in parseIPNetwork2(portInfo.Subnet.Subnet.IpNetwork)
+            .ToEitherAsync(Error.New(
+                $"Network '{portInfo.Network.Name}' configuration error: the subnet '{subnetName}' of the provider '{providerName}' has an invalid IP network assigned."))
+        from gatewayIp in parseIPAddress(portInfo.Subnet.Config.Gateway)
+            .ToEitherAsync(Error.New(
+                $"Network '{portInfo.Network.Name}' configuration error: the subnet '{subnetName}' of the provider '{providerName}' has an invalid gateway IP address assigned."))
         let updatedPlan = networkPlan
             .AddRouterPort(
                 $"externalNet-{networkPlan.Id}-{portInfo.Network.NetworkProvider}",
