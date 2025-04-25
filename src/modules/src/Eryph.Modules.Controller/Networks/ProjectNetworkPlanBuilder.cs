@@ -43,19 +43,18 @@ internal class ProjectNetworkPlanBuilder(
         NetworkProvidersConfiguration providerConfig) =>
         from _ in RightAsync<Error, Unit>(unit)
         let networkPlan = new NetworkPlan(projectId.ToString())
-        let overLayProviders =
-            providerConfig.NetworkProviders
-                .Where(x => x.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay)
-                .ToSeq()
-
+        let overLayProviders = providerConfig.NetworkProviders.ToSeq()
+            .Filter(x => x.Type is NetworkProviderType.NatOverlay or NetworkProviderType.Overlay)
+        
         from networks in GetAllOverlayNetworks(projectId, overLayProviders)
 
-        from providerSubnets in GetProviderSubnets(overLayProviders, networks)
-        from providerRouterPorts in GetProviderRouterPorts(networks, providerSubnets)
-        from providerRouterIpInfos in PrepareProviderRouterIpInfos(providerConfig).ToAsync()
+        from providerSubnets in GetProviderSubnetInfos(networks, overLayProviders)
+        from providerRouterPorts in GetProviderRouterPortInfos(networks, providerSubnets)
+        from providerRouterIpInfos in PrepareProviderRouterIpInfos(providerConfig)
 
-        let catletPorts = FindPortsOfType<CatletNetworkPort>(networks)
-        from floatingPorts in GetFloatingPorts(catletPorts, providerSubnets)
+        let catletPorts = networks.ToSeq()
+            .Bind(n => n.NetworkPorts.OfType<CatletNetworkPort>().ToSeq())
+        from floatingPorts in GetFloatingPortInfos(catletPorts, providerSubnets)
         let dnsInfo = MapCatletPortsToDnsInfos(catletPorts)
         let dnsNames = dnsInfo.Map(info => info.CatletMetadataId)
 
@@ -69,13 +68,20 @@ internal class ProjectNetworkPlanBuilder(
         let p8 = AddDnsNames(p7, dnsInfo)
         select p8;
 
-    private Either<Error, HashMap<string, ProviderRouterIpInfo>> PrepareProviderRouterIpInfos(
+    /// <summary>
+    /// Prepares IP addresses for the peer ports between the project router and the provider routers.
+    /// </summary>
+    /// <remarks>
+    /// These IP addresses are an implementation detail as they are used only to route traffic
+    /// internally. We just calculate them based on the list of the configured network providers.
+    /// </remarks>
+    private static EitherAsync<Error, HashMap<string, ProviderRouterIpInfo>> PrepareProviderRouterIpInfos(
         NetworkProvidersConfiguration providersConfig) =>
         from _1 in guard(providersConfig.NetworkProviders.Length <= EryphConstants.Limits.MaxNetworkProviders,
                 Error.New("Too many network providers are configured."))
-            .ToEither()
+            .ToEitherAsync()
         from optionalEastWestNetwork in Optional(providersConfig.EastWestNetwork)
-            .Map(n => parseIPNetwork2(n).ToEither(Error.New($"The east-west network '{n}' is invalid.")))
+            .Map(n => parseIPNetwork2(n).ToEitherAsync(Error.New($"The east-west network '{n}' is invalid.")))
             .Sequence()
         let eastWestNetwork = optionalEastWestNetwork.IfNone(IPNetwork2.Parse(EryphConstants.DefaultEastWestNetwork))
         from _2 in guard(eastWestNetwork.Cidr <= 24,
@@ -94,67 +100,74 @@ internal class ProjectNetworkPlanBuilder(
             .ToSeq()
         select infos.ToHashMap();
 
-    private EitherAsync<Error, Seq<ProviderRouterPortInfo>> GetProviderRouterPorts(
+    private EitherAsync<Error, Seq<ProviderRouterPortInfo>> GetProviderRouterPortInfos(
         Seq<VirtualNetwork> networks,
         Seq<ProviderSubnetInfo> providerSubnets) =>
         from _ in RightAsync<Error, Unit>(unit)
-        let portInfos = networks.SelectMany(
-            network => FindPortsOfType<ProviderRouterPort>(network.NetworkPorts),
-            (network, port) => (Network: network, Port: port))
-        // find and add provider subnet 
-        from portInfos2 in portInfos.Map(portInfo => providerSubnets
-                .Find(x => x.Subnet.ProviderName == portInfo.Network.NetworkProvider && x.Subnet.Name == portInfo.Port.SubnetName)
-                .ToEitherAsync(Error.New(
-                    $"Network '{portInfo.Network.Name}' configuration error: subnet {portInfo.Port.SubnetName} of network provider {portInfo.Network.NetworkProvider} not found."))
-                .Map(providerSubnet => new ProviderRouterPortInfo(portInfo.Port, portInfo.Network, providerSubnet)))
+        let providerPorts = networks.Bind(n => n.NetworkPorts.OfType<ProviderRouterPort>().ToSeq())
+        from portInfos in providerPorts
+            .Map(portInfo => GetProviderRouterPortInfo(portInfo, providerSubnets))
             .SequenceSerial()
-        select portInfos2;
+        select portInfos;
 
-    private static EitherAsync<Error, Seq<FloatingPortInfo>> GetFloatingPorts(
+    private EitherAsync<Error, ProviderRouterPortInfo> GetProviderRouterPortInfo(
+        ProviderRouterPort providerPort,
+        Seq<ProviderSubnetInfo> providerSubnets) =>
+        from providerSubnet in providerSubnets
+            .Find(s => s.Subnet.ProviderName == providerPort.Network.NetworkProvider &&
+                       s.Subnet.Name == providerPort.SubnetName)
+            .ToEitherAsync(Error.New(
+                $"Network '{providerPort.Network.Name}' configuration error: subnet {providerPort.SubnetName} of network provider {providerPort.Network.NetworkProvider} not found."))
+        select new ProviderRouterPortInfo(providerPort, providerPort.Network, providerSubnet);
+
+    private static EitherAsync<Error, Seq<FloatingPortInfo>> GetFloatingPortInfos(
         Seq<CatletNetworkPort> catletPorts,
         Seq<ProviderSubnetInfo> providerSubnets) =>
-        catletPorts
-            .Filter(x => x.FloatingPort != null && x.IpAssignments.Count > 0)
-            .Map(x => new FloatingPortInfo(x.FloatingPort!))
-            // find and add provider subnet 
-            .Map(info => providerSubnets
-                .Find(x => x.Subnet.ProviderName == info.Port.ProviderName &&
-                           x.Subnet.Name == info.Port.SubnetName)
-                .ToEitherAsync(Error.New(
-                    $"Port '{info.Port.Name}' configuration error: subnet {info.Port.SubnetName} of network provider {info.Port.ProviderName} not found."))
-                .Map(_ => info))
+        catletPorts.Filter(p => p.FloatingPort != null && p.IpAssignments.Count > 0)
+            .Map(p => GetFloatingPortInfo(p, providerSubnets))
             .SequenceSerial();
 
-    private EitherAsync<Error, Seq<ProviderSubnetInfo>> GetProviderSubnets(
-        Seq<NetworkProvider> overLayProviders,
-        Seq<VirtualNetwork> networks)
-    {
-        return networks.Map(network => network.NetworkPorts.Filter(x => x is ProviderRouterPort)
-                .Select(x => (network.NetworkProvider, ((ProviderRouterPort)x).SubnetName))
-                .Map(rs =>
-                    overLayProviders.Find(x => x.Name == rs.NetworkProvider)
-                        .ToEither(Error.New(
-                            $"Network '{network.Name}' configuration error: network provider {rs.NetworkProvider} not found."))
-                        .Bind(provider => provider.Subnets.Find(s => s.Name == rs.SubnetName)
-                            .ToEither(Error.New(
-                                $"Network '{network.Name}' configuration error: subnet {rs.SubnetName} not found in network provider {rs.NetworkProvider}.")))
-                        .Map(config => (rs.NetworkProvider, rs.SubnetName, Config: config))
-                ).ToSeq()
-            ).Flatten().Sequence().ToAsync()
-            .Bind(rs =>
-                //get all provider configurations and filter for configured providers
-                stateStore.For<ProviderSubnet>().IO
-                    .ListAsync(new NetplanBuilderSpecs.GetAllProviderSubnets())
-                    .Map(all => all.Where(a =>
-                        rs.Any(r => r.NetworkProvider == a.ProviderName && r.SubnetName == a.Name)))
-                    .Map(subnets =>
-                        //map subnets to ProviderSubnetInfo and add config
-                        subnets.Map(subnet => new ProviderSubnetInfo(
-                            subnet,
-                            rs.First(x =>
-                                x.NetworkProvider == subnet.ProviderName && x.SubnetName == subnet.Name).Config))));
+    private static EitherAsync<Error, FloatingPortInfo> GetFloatingPortInfo(
+        CatletNetworkPort catletPort,
+        Seq<ProviderSubnetInfo> providerSubnets) =>
+        from floatingPort in Optional(catletPort.FloatingPort)
+            .ToEitherAsync(Error.New($"BUG! The catlet port '{catletPort.Name}' has no floating port."))
+        from _ in providerSubnets
+            .Find(s => s.Subnet.ProviderName == floatingPort.ProviderName && s.Subnet.Name == floatingPort.SubnetName)
+            .ToEitherAsync(Error.New(
+                $"Port '{floatingPort.Name}' configuration error: subnet {floatingPort.SubnetName} of network provider {floatingPort.ProviderName} not found."))
+        select new FloatingPortInfo(floatingPort);
 
-    }
+    private EitherAsync<Error, Seq<ProviderSubnetInfo>> GetProviderSubnetInfos(
+        Seq<VirtualNetwork> networks,
+        Seq<NetworkProvider> overlayProviderConfigs) =>
+        from providerSubnets in stateStore.For<ProviderSubnet>().IO
+            .ListAsync(new NetplanBuilderSpecs.GetAllProviderSubnets())
+        let providerPorts = networks.Bind(n => n.NetworkPorts.OfType<ProviderRouterPort>().ToSeq())
+        from providerSubnetInfos in providerPorts
+            .Map(p => GetProviderSubnetInfo(p, overlayProviderConfigs, providerSubnets))
+            .SequenceSerial()
+        select providerSubnetInfos;
+
+    private EitherAsync<Error, ProviderSubnetInfo> GetProviderSubnetInfo(
+        ProviderRouterPort providerPort,
+        Seq<NetworkProvider> overlayProviderConfigs,
+        Seq<ProviderSubnet> providerSubnets) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let networkName = providerPort.Network.Name
+        let providerName = providerPort.Network.NetworkProvider
+        from providerConfig in overlayProviderConfigs.Find(pc => pc.Name == providerName)
+            .ToEitherAsync(Error.New(
+                $"Network '{networkName}' configuration error: network provider '{providerName}' not found."))
+        from providerSubnetConfig in providerConfig.Subnets.ToSeq()
+            .Find(s => s.Name == providerPort.SubnetName)
+            .ToEitherAsync(Error.New(
+                $"Network '{networkName}' configuration error: subnet '{providerPort.SubnetName}' not found in network provider '{providerName}'."))
+        from providerSubnet in providerSubnets
+            .Find(s => s.ProviderName == providerName && s.Name == providerPort.SubnetName)
+            .ToEitherAsync(Error.New(
+                $"BUG! Subnet '{providerPort.SubnetName}' of network provider '{providerName}' not found in state DB."))
+        select new ProviderSubnetInfo(providerSubnet, providerSubnetConfig);
 
     private EitherAsync<Error, Seq<VirtualNetwork>> GetAllOverlayNetworks(
         Guid projectId,
@@ -162,7 +175,6 @@ internal class ProjectNetworkPlanBuilder(
         stateStore.For<VirtualNetwork>().IO
             .ListAsync(new NetplanBuilderSpecs.GetAllNetworks(projectId))
             .Map(s => s.Filter(x => overLayProviders.Any(p => p.Name == x.NetworkProvider)));
-
 
     private static EitherAsync<Error, NetworkPlan> AddProviderRouterPorts(
         NetworkPlan networkPlan,
@@ -360,7 +372,6 @@ internal class ProjectNetworkPlanBuilder(
                 Map(("ovn-owned", "true"))))
             .Apply(s => JoinPlans(s, networkPlan));
 
-
     private static NetworkPlan AddFloatingPorts(
         NetworkPlan networkPlan,
         Seq<FloatingPortInfo> ports) =>
@@ -411,7 +422,9 @@ internal class ProjectNetworkPlanBuilder(
             .ToEitherAsync(Error.New($"BUG! Could not find the IP information for provider '{providerName}'."))
         let projectRouterName = $"project-{networkPlan.Id}"
         let projectProviderRouterName = $"project-{networkPlan.Id}-{providerName}"
-        let switchName = $"project-{networkPlan.Id}-{providerName}"
+        // All virtual networks of a project connect to a project router which enables
+        // east-west traffic. The project router connects to separate provider routers
+        // for each network provider using peer ports.
         let result = networkPlan
             .AddRouter(projectProviderRouterName)
             .AddRouterPeerPort(
@@ -434,17 +447,18 @@ internal class ProjectNetworkPlanBuilder(
         HashMap<string, ProviderRouterIpInfo> providerRouterIpInfos) =>
         from providerRouterIpInfo in providerRouterIpInfos
             .Find(network.NetworkProvider)
-            .ToEitherAsync(
-                Error.New($"BUG! Could not find the IP information for provider '{network.NetworkProvider}'."))
+            .ToEitherAsync(Error.New(
+                $"BUG! Could not find the IP information for provider '{network.NetworkProvider}'."))
         from ipNetwork in parseIPNetwork2(network.IpNetwork)
-            .ToEitherAsync(Error.New($"The network '{network.IpNetwork}' of network '{network.Name}' is invalid."))
+            .ToEitherAsync(Error.New(
+                $"Network '{network.Name}' configuration error: the IP network '{network.IpNetwork}' is invalid."))
         from _1 in guardnot(network.RouterPort is null,
             Error.New($"BUG! The network '{network.Name}' has no router port."))
         from _2 in guard(network.RouterPort.IpAssignments is { Count: > 0 },
-            Error.New($"The router port of network '{network.Name}' has no assigned"))
+            Error.New($"Network '{network.Name}' configuration error: the router port has no IP assigned."))
         from routerIp in parseIPAddress(network.RouterPort.IpAssignments![0].IpAddress)
             .ToEitherAsync(Error.New(
-                $"The router IP '{network.RouterPort.IpAssignments![0].IpAddress}' of network '{network.Name}' is invalid."))
+                $"Network '{network.Name}' configuration error: the router port IP '{network.RouterPort.IpAssignments![0].IpAddress}' is invalid."))
         let result = networkPlan
             .AddRouterPort(
                 network.Id.ToString(),
@@ -459,20 +473,6 @@ internal class ProjectNetworkPlanBuilder(
                 providerRouterIpInfo.ProviderRouterIp,
                 routeTable: network.Id.ToString())
         select result;
-
-    private static Seq<T> FindPortsOfType<T>(Seq<VirtualNetwork> networks) where T : VirtualNetworkPort
-    {
-        return networks.SelectMany(x => x.NetworkPorts)
-            .Apply(FindPortsOfType<T>);
-
-    }
-
-    private static Seq<T> FindPortsOfType<T>(IEnumerable<VirtualNetworkPort> ports) where T : VirtualNetworkPort
-    {
-        return ports.Where(p => p is T).Cast<T>()
-            .ToSeq();
-
-    }
 
     private static NetworkPlan JoinPlans(Seq<NetworkPlan> plans, NetworkPlan basePlan)
     {
