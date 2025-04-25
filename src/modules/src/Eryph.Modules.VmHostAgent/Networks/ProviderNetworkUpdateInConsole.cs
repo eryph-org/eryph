@@ -229,7 +229,7 @@ public static class ProviderNetworkUpdateInConsole<RT>
                     from _3 in Console<RT>.writeEmptyLine
                     from _4 in Console<RT>.writeLine(
                         "MAC address spoofing will not be automatically disabled for existing catlets.")
-                    from _5 in Console<RT>.writeLine(" Please update any affected catlets manually.")
+                    from _5 in Console<RT>.writeLine("Please update any affected catlets manually.")
                     from _6 in Console<RT>.writeEmptyLine
                     select unit)
         select unit;
