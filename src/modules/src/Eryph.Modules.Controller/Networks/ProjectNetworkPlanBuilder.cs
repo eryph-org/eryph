@@ -100,7 +100,7 @@ internal class ProjectNetworkPlanBuilder(
             .ToSeq()
         select infos.ToHashMap();
 
-    private EitherAsync<Error, Seq<ProviderRouterPortInfo>> GetProviderRouterPortInfos(
+    private static EitherAsync<Error, Seq<ProviderRouterPortInfo>> GetProviderRouterPortInfos(
         Seq<VirtualNetwork> networks,
         Seq<ProviderSubnetInfo> providerSubnets) =>
         from _ in RightAsync<Error, Unit>(unit)
@@ -110,7 +110,7 @@ internal class ProjectNetworkPlanBuilder(
             .SequenceSerial()
         select portInfos;
 
-    private EitherAsync<Error, ProviderRouterPortInfo> GetProviderRouterPortInfo(
+    private static EitherAsync<Error, ProviderRouterPortInfo> GetProviderRouterPortInfo(
         ProviderRouterPort providerPort,
         Seq<ProviderSubnetInfo> providerSubnets) =>
         from providerSubnet in providerSubnets
@@ -149,7 +149,7 @@ internal class ProjectNetworkPlanBuilder(
             .SequenceSerial()
         select providerSubnetInfos;
 
-    private EitherAsync<Error, ProviderSubnetInfo> GetProviderSubnetInfo(
+    private static EitherAsync<Error, ProviderSubnetInfo> GetProviderSubnetInfo(
         ProviderRouterPort providerPort,
         Seq<NetworkProvider> overlayProviderConfigs,
         Seq<ProviderSubnet> providerSubnets) =>
@@ -172,9 +172,11 @@ internal class ProjectNetworkPlanBuilder(
     private EitherAsync<Error, Seq<VirtualNetwork>> GetAllOverlayNetworks(
         Guid projectId,
         Seq<NetworkProvider> overLayProviders) =>
-        stateStore.For<VirtualNetwork>().IO
+        from allNetworks in stateStore.For<VirtualNetwork>().IO
             .ListAsync(new NetplanBuilderSpecs.GetAllNetworks(projectId))
-            .Map(s => s.Filter(x => overLayProviders.Any(p => p.Name == x.NetworkProvider)));
+        let allOverlayNetworks = allNetworks
+            .Filter(n => overLayProviders.Any(p => p.Name == n.NetworkProvider))
+        select allOverlayNetworks;
 
     private static EitherAsync<Error, NetworkPlan> AddProviderRouterPorts(
         NetworkPlan networkPlan,
