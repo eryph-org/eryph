@@ -102,7 +102,7 @@ public class UpdateCatletNetworksCommandHandler(
             .IfNone(false)
         from _1 in guardnot(enableMacAddressSpoofing && !isFlatNetwork,
             Error.New($"MAC address spoofing cannot be enabled for adapter '{networkConfig.AdapterName}': "
-                      +$"the network '{networkName}' in environment '{environmentName}' is not using the flat network provider."))
+                      +$"the network '{networkName}' in environment '{environmentName}' is not using a flat network provider."))
         from _2 in guardnot(enableMacAddressSpoofing && !allowMacAddressSpoofing,
             Error.New($"MAC address spoofing cannot be enabled for adapter '{networkConfig.AdapterName}': "
                       + $"the network provider '{networkProvider.Name}' for the network '{networkName}' in the environment '{environmentName}' does not allow MAC address spoofing."))
