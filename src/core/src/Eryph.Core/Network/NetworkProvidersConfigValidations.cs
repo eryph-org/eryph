@@ -28,13 +28,24 @@ public static class NetworkProvidersConfigValidations
     public static Validation<ValidationIssue, Unit> ValidateNetworkProvidersConfig(
         NetworkProvidersConfiguration toValidate,
         string path = "") =>
-        ValidateNetworkProviderConfigs(toValidate, path);
-        
+        ValidateProperty(toValidate, c => c.EastWestNetwork, ValidateEastWestNetwork, path)
+        | ValidateNetworkProviderConfigs(toValidate, path);
+
+    private static Validation<Error, Unit> ValidateEastWestNetwork(
+        string network) =>
+        from parsedNetwork in parseIPNetwork2(network).ToValidation(
+            Error.New($"The east-west IP network '{network}' is invalid."))
+        from _1 in guard(network.Contains('/'),
+            Error.New($"The east-west IP network '{network}' is invalid."))
+        from _ in guard(parsedNetwork.Cidr <= 24,
+            Error.New($"The east-west IP network '{network}' is too small. A /24 or larger network is required."))
+        select unit;
+
     private static Validation<ValidationIssue, Unit> ValidateNetworkProviderConfigs(
         NetworkProvidersConfiguration toValidate,
         string path) =>
         from _1 in ValidateList(toValidate, c => c.NetworkProviders,
-            ValidateNetworkProviderConfig, path, minCount: 1, maxCount: int.MaxValue)
+            ValidateNetworkProviderConfig, path, minCount: 1, maxCount: EryphConstants.Limits.MaxNetworkProviders)
         from _2 in ValidateProperty(toValidate, c => c.NetworkProviders,
             providers => Validations.ValidateDistinct(
                 providers,

@@ -551,7 +551,67 @@ public class NetworkProvidersConfigValidationsTests
                     "The network '10.249.0.0/22' of provider 'default' overlaps with the network '10.249.1.0/24' of provider 'second-nat-provider'.");
             });
     }
-    
+
+    [Theory]
+    [InlineData("invalid")]
+    [InlineData("300.400.500.600/24")]
+    [InlineData("10.0.0.0")]
+    public void ValidateNetworkProvidersConfig_EastWestNetworkIsInvalid_ReturnsError(
+        string network)
+    {
+        var config = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "default",
+                    Type = NetworkProviderType.NatOverlay,
+                    BridgeName = "br-nat",
+                    Subnets = [ArrangeDefaultSubnet()],
+                },
+            ],
+            EastWestNetwork = network,
+        };
+
+        var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("EastWestNetwork");
+                issue.Message.Should().Be($"The east-west IP network '{network}' is invalid.");
+            });
+    }
+
+    [Fact]
+    public void ValidateNetworkProvidersConfig_EastWestNetworkIsTooSmall_ReturnsError()
+    {
+        var config = new NetworkProvidersConfiguration
+        {
+            NetworkProviders =
+            [
+                new NetworkProvider
+                {
+                    Name = "default",
+                    Type = NetworkProviderType.NatOverlay,
+                    BridgeName = "br-nat",
+                    Subnets = [ArrangeDefaultSubnet()],
+                },
+            ],
+            EastWestNetwork = "10.0.0.0/28",
+        };
+
+        var result = NetworkProvidersConfigValidations.ValidateNetworkProvidersConfig(config);
+
+        result.Should().BeFail().Which.Should().SatisfyRespectively(
+            issue =>
+            {
+                issue.Member.Should().Be("EastWestNetwork");
+                issue.Message.Should().Be("The east-west IP network '10.0.0.0/28' is too small. A /24 or larger network is required.");
+            });
+    }
+
     private static NetworkProviderSubnet ArrangeDefaultSubnet() =>
     new()
     {

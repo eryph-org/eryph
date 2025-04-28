@@ -14,7 +14,7 @@
     <ProjectReference Include="..\..\..\data\src\Eryph.StateDb\Eryph.StateDb.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.11" />
+    <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.14" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.8.0" />
     <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.8.0" />
     <PackageReference Include="Eryph.ConfigModel.Networks.Json" Version="0.8.0" />
