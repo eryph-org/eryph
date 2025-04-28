@@ -128,6 +128,9 @@ public class ConvergeNetworkAdaptersTests
         var newAdapter = _fixture.Engine.ToPsObject<object>(new VMNetworkAdapter
         {
             Id = "eth1Id",
+            MacAddressSpoofing = OnOffState.Off,
+            RouterGuard = OnOffState.Off,
+            DhcpGuard = OnOffState.Off,
         });
 
         _fixture.Engine.GetObjectCallback = (_, command) =>
