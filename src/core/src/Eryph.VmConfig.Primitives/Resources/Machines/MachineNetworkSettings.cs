@@ -23,5 +23,5 @@ public sealed class MachineNetworkSettings
 
     public string FloatingAddressV6 { get; set; }
 
-    public bool EnableMacAddressSpoofing { get; set; }
+    public bool MacAddressSpoofing { get; set; }
 }

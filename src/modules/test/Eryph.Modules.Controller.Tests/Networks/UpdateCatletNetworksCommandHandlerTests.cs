@@ -182,7 +182,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     settings.FloatingAddressV4.Should().BeNull();
                     settings.AddressesV6.Should().BeEmpty();
                     settings.FloatingAddressV6.Should().BeNull();
-                    settings.EnableMacAddressSpoofing.Should().BeFalse();
+                    settings.MacAddressSpoofing.Should().BeFalse();
                 });
 
             await stateStore.SaveChangesAsync();
@@ -655,7 +655,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     settings.FloatingAddressV4.Should().BeNull();
                     settings.AddressesV6.Should().BeEmpty();
                     settings.FloatingAddressV6.Should().BeNull();
-                    settings.EnableMacAddressSpoofing.Should().BeTrue();
+                    settings.MacAddressSpoofing.Should().BeTrue();
                 });
 
             await stateStore.SaveChangesAsync();

@@ -159,7 +159,7 @@ public class UpdateCatletNetworksCommandHandler(
                 .Find(ip => ip.AddressFamily == AddressFamily.InterNetworkV6)
                 .Map(ip => ip.ToString())
                 .IfNoneUnsafe((string?)null),
-            EnableMacAddressSpoofing = enableMacAddressSpoofing,
+            MacAddressSpoofing = enableMacAddressSpoofing,
         };
 
     private EitherAsync<Error, CatletNetworkPort> AddOrUpdateAdapterPort(

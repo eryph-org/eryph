@@ -49,7 +49,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             settings.MacAddress,
             settings.PortName,
             settings.NetworkName,
-            settings.EnableMacAddressSpoofing);
+            settings.MacAddressSpoofing);
 
     private EitherAsync<Error, Seq<TypedPsObject<VMNetworkAdapter>>> GetVmAdapters(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>

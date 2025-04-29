@@ -118,7 +118,7 @@ public class ConvergeNetworkAdaptersTests
                 MacAddress = "00:12:14:16:18:20",
                 PortName = "port1",
                 NetworkProviderName = "flat",
-                EnableMacAddressSpoofing = true,
+                MacAddressSpoofing = true,
             },
         ];
 
@@ -213,7 +213,7 @@ public class ConvergeNetworkAdaptersTests
                 MacAddress = "00:12:14:16:18:20",
                 PortName = "port1",
                 NetworkProviderName = "flat",
-                EnableMacAddressSpoofing = true,
+                MacAddressSpoofing = true,
             },
         ];
 
