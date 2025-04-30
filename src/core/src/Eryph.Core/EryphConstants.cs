@@ -29,6 +29,8 @@ namespace Eryph.Core
         public static readonly int DefaultCatletCpuCount = 1;
         public static readonly int DefaultCatletMemoryMb = 1024;
 
+        public static readonly string DefaultEastWestNetwork = "172.31.255.0/24";
+
         public static readonly string HgsGuardianName = "eryph-hgs-guardian";
 
         public static class BuildInRoles
@@ -62,6 +64,7 @@ namespace Eryph.Core
         public static class Limits
         {
             public static readonly int MaxCatletAncestors = 5;
+            public static readonly int MaxNetworkProviders = 100;
         }
 
         public static class Authorization
