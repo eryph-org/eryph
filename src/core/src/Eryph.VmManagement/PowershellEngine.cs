@@ -123,7 +123,7 @@ namespace Eryph.VmManagement
 
                     iss.ExecutionPolicy = ExecutionPolicy.RemoteSigned;
 
-                    if (IsWindows2016.Value)
+                    if (IsWindows2016)
                     {
                         var psDefaultParameterValues = new Hashtable { { "Import-Module:SkipEditionCheck", true } };
                         iss.Variables.Add(new SessionStateVariableEntry("PSDefaultParameterValues", psDefaultParameterValues, ""));
@@ -191,20 +191,10 @@ namespace Eryph.VmManagement
             _createdObjects = _createdObjects.Add(new WeakReference<PSObject>(psObject));
         }
 
-
-        private static readonly Lazy<bool> IsWindows2016 = new(
-            () =>
-            {
-                // Weirdly, ProductName reg key is easiest way to distinguish Server 2016 and Server 2019.
-                // It's not exposed via things like System.Environment.OSVersion
-                // Example values: "Windows 10 Enterprise"  "Windows Server 2016 Datacenter"
-                string productName = (string)Registry.GetValue(
-                    @"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion",
-                    valueName: "ProductName",
-                    defaultValue: null);
-                return productName?.Contains("Server 2016", StringComparison.OrdinalIgnoreCase) ?? false;
-            });
-
+        private static bool IsWindows2016 =>
+            // The build number of Windows Server 2016 (and the corresponding Windows 10 release) is 14393.
+            // This check also detects Windows 10 LTSB 2015 and Windows 10 LTSB 2016.
+            Environment.OSVersion.Version.Build <= 14393;
     }
 
 
