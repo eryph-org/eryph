@@ -182,7 +182,7 @@ public sealed class PowershellEngine(
             var iss = InitialSessionState.CreateDefault();
             iss.ExecutionPolicy = ExecutionPolicy.RemoteSigned;
 
-            if (IsWindows2016)
+            if (SkipEditionCheck)
             {
                 iss.Variables.Add(new SessionStateVariableEntry(
                     "PSDefaultParameterValues",
@@ -214,9 +214,15 @@ public sealed class PowershellEngine(
         }
     }
 
-    private static bool IsWindows2016 =>
-        // The build number of Windows Server 2016 (and the corresponding Windows 10 release) is 14393
-        Environment.OSVersion.Version.Build <= 14393;
+    /// <summary>
+    /// Indicates whether to skip the Powershell edition check when loading modules.
+    /// </summary>
+    /// <remarks>
+    /// The Hyper-V Powershell module is only fully compatible with Powershell 7 in Windows 1809
+    /// (Build 17763) and later. The module works for our use cases, but we need to disable the
+    /// Powershell edition check to be able to load it.
+    /// </remarks>
+    private static bool SkipEditionCheck => Environment.OSVersion.Version.Build <= 17763;
 
     private IDisposable InitializeProgressReporting(
         PowerShell ps,
