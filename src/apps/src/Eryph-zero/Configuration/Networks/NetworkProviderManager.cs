@@ -54,6 +54,8 @@ public class NetworkProviderManager : INetworkProviderManager
 
     public NetworkProviderDefaults Defaults => new NetworkProviderDefaults
     {
+        DisableDhcpGuard = true,
+        DisableRouterGuard = true,
         MacAddressSpoofing = true,
     };
 }
