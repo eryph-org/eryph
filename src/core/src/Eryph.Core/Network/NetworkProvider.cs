@@ -20,6 +20,10 @@ public class NetworkProvider
 
     public bool? MacAddressSpoofing { get; set; }
 
+    public bool? DisableDhcpGuard { get; set; }
+
+    public bool? DisableRouterGuard { get; set; }
+
     [CanBeNull] public NetworkProviderBridgeOptions BridgeOptions { get; set; }
 
     [CanBeNull] public string[] Adapters { get; set; }

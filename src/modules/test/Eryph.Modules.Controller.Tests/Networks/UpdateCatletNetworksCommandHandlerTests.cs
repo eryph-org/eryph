@@ -134,6 +134,9 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     settings.FloatingAddressV4.Should().Be(expectedFloatingIp);
                     settings.AddressesV6.Should().BeEmpty();
                     settings.FloatingAddressV6.Should().BeNull();
+                    settings.MacAddressSpoofing.Should().BeFalse();
+                    settings.DhcpGuard.Should().BeFalse();
+                    settings.RouterGuard.Should().BeFalse();
                 });
 
             await stateStore.SaveChangesAsync();
@@ -183,6 +186,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     settings.AddressesV6.Should().BeEmpty();
                     settings.FloatingAddressV6.Should().BeNull();
                     settings.MacAddressSpoofing.Should().BeFalse();
+                    settings.DhcpGuard.Should().BeTrue();
+                    settings.RouterGuard.Should().BeTrue();
                 });
 
             await stateStore.SaveChangesAsync();
