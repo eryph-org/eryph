@@ -123,7 +123,7 @@ namespace Eryph.VmManagement
 
                     iss.ExecutionPolicy = ExecutionPolicy.RemoteSigned;
 
-                    if (IsWindows2016.Value)
+                    if (SkipEditionCheck)
                     {
                         var psDefaultParameterValues = new Hashtable { { "Import-Module:SkipEditionCheck", true } };
                         iss.Variables.Add(new SessionStateVariableEntry("PSDefaultParameterValues", psDefaultParameterValues, ""));
@@ -191,20 +191,15 @@ namespace Eryph.VmManagement
             _createdObjects = _createdObjects.Add(new WeakReference<PSObject>(psObject));
         }
 
-
-        private static readonly Lazy<bool> IsWindows2016 = new(
-            () =>
-            {
-                // Weirdly, ProductName reg key is easiest way to distinguish Server 2016 and Server 2019.
-                // It's not exposed via things like System.Environment.OSVersion
-                // Example values: "Windows 10 Enterprise"  "Windows Server 2016 Datacenter"
-                string productName = (string)Registry.GetValue(
-                    @"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion",
-                    valueName: "ProductName",
-                    defaultValue: null);
-                return productName?.Contains("Server 2016", StringComparison.OrdinalIgnoreCase) ?? false;
-            });
-
+        /// <summary>
+        /// Indicates whether to skip the Powershell edition check when loading modules.
+        /// </summary>
+        /// <remarks>
+        /// The Hyper-V Powershell module is only fully compatible with Powershell 7 in Windows 1809
+        /// (Build 17763) and later. The module works for our use cases, but we need to disable the
+        /// Powershell edition check to be able to load it.
+        /// </remarks>
+        private static bool SkipEditionCheck => Environment.OSVersion.Version.Build <= 17763;
     }
 
 
