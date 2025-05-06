@@ -222,7 +222,7 @@ public sealed class PowershellEngine(
     /// (Build 17763) and later. The module works for our use cases, but we need to disable the
     /// Powershell edition check to be able to load it.
     /// </remarks>
-    private static bool SkipEditionCheck => Environment.OSVersion.Version.Build <= 17763;
+    private static bool SkipEditionCheck => Environment.OSVersion.Version.Build < 17763;
 
     private IDisposable InitializeProgressReporting(
         PowerShell ps,
