@@ -353,6 +353,9 @@ public class NetworkProvidersConfigValidationsTests
                         BridgeVlan = 42,
                     },
                     Subnets = [ArrangeDefaultSubnet()],
+                    MacAddressSpoofing = true,
+                    DisableDhcpGuard = true,
+                    DisableRouterGuard = true,
                 },
             ],
         };
@@ -384,6 +387,21 @@ public class NetworkProvidersConfigValidationsTests
             {
                 issue.Member.Should().Be("NetworkProviders[0].Vlan");
                 issue.Message.Should().Be("The NAT overlay network provider does not support the configuration of a VLAN.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].MacAddressSpoofing");
+                issue.Message.Should().Be("The NAT overlay network provider does not support the configuration of MAC address spoofing.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].DhcpGuard");
+                issue.Message.Should().Be("The NAT overlay network provider does not support the configuration of the DHCP guard.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].RouterGuard");
+                issue.Message.Should().Be("The NAT overlay network provider does not support the configuration of the router guard.");
             });
     }
 
@@ -407,6 +425,9 @@ public class NetworkProvidersConfigValidationsTests
                         BridgeVlan = 8042,
                     },
                     Subnets = [ArrangeDefaultSubnet()],
+                    MacAddressSpoofing = true,
+                    DisableDhcpGuard = true,
+                    DisableRouterGuard = true,
                 },
             ],
         };
@@ -423,6 +444,21 @@ public class NetworkProvidersConfigValidationsTests
             {
                 issue.Member.Should().Be("NetworkProviders[0].SwitchName");
                 issue.Message.Should().Be("The overlay network provider does not support custom switch names.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].MacAddressSpoofing");
+                issue.Message.Should().Be("The overlay network provider does not support the configuration of MAC address spoofing.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].DhcpGuard");
+                issue.Message.Should().Be("The overlay network provider does not support the configuration of the DHCP guard.");
+            },
+            issue =>
+            {
+                issue.Member.Should().Be("NetworkProviders[0].RouterGuard");
+                issue.Message.Should().Be("The overlay network provider does not support the configuration of the router guard.");
             },
             issue =>
             {
