@@ -63,8 +63,8 @@ public class ConvergeNetworkAdaptersTests
             MacAddress = "00:02:04:06:08:10",
             SwitchName = EryphConstants.OverlaySwitchName,
             Connected = true,
-            DhcpGuard = OnOffState.On,
-            RouterGuard = OnOffState.On,
+            DhcpGuard = OnOffState.Off,
+            RouterGuard = OnOffState.Off,
             MacAddressSpoofing = OnOffState.Off,
         });
         _fixture.Engine.GetObjectCallback = (_, command) =>
@@ -119,6 +119,8 @@ public class ConvergeNetworkAdaptersTests
                 PortName = "port1",
                 NetworkProviderName = "flat",
                 MacAddressSpoofing = true,
+                DhcpGuard = true,
+                RouterGuard = true,
             },
         ];
 
@@ -172,8 +174,8 @@ public class ConvergeNetworkAdaptersTests
                 command.ShouldBeCommand("Set-VMNetworkAdapter")
                     .ShouldBeParam("VMNetworkAdapter", newAdapter.PsObject)
                     .ShouldBeParam("MacAddressSpoofing", OnOffState.On)
-                    .ShouldBeParam("RouterGuard", OnOffState.On)
                     .ShouldBeParam("DhcpGuard", OnOffState.On)
+                    .ShouldBeParam("RouterGuard", OnOffState.On)
                     .ShouldBeComplete();
                 adapterSettingsUpdated = true;
                 return unit;
@@ -214,6 +216,8 @@ public class ConvergeNetworkAdaptersTests
                 PortName = "port1",
                 NetworkProviderName = "flat",
                 MacAddressSpoofing = true,
+                DhcpGuard = true,
+                RouterGuard = true,
             },
         ];
 
@@ -237,8 +241,8 @@ public class ConvergeNetworkAdaptersTests
                 command.ShouldBeCommand("Set-VMNetworkAdapter")
                     .ShouldBeParam("VMNetworkAdapter", _existingAdapter.PsObject)
                     .ShouldBeParam("MacAddressSpoofing", OnOffState.On)
-                    .ShouldBeParam("RouterGuard", OnOffState.On)
                     .ShouldBeParam("DhcpGuard", OnOffState.On)
+                    .ShouldBeParam("RouterGuard", OnOffState.On)
                     .ShouldBeComplete();
                 adapterSettingsUpdated = true;
                 return unit;

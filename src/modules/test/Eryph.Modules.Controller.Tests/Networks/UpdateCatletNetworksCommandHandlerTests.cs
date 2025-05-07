@@ -661,6 +661,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
                     settings.AddressesV6.Should().BeEmpty();
                     settings.FloatingAddressV6.Should().BeNull();
                     settings.MacAddressSpoofing.Should().BeTrue();
+                    settings.DhcpGuard.Should().BeTrue();
+                    settings.RouterGuard.Should().BeTrue();
                 });
 
             await stateStore.SaveChangesAsync();
@@ -749,6 +751,282 @@ public class UpdateCatletNetworksCommandHandlerTests(
 
             result.Should().BeLeft().Which.Message.Should().Be(
                 "MAC address spoofing cannot be enabled for adapter 'eth0': the network 'default' in environment 'default' is not using a flat network provider.");
+        });
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_DhcpGuardDisabledInFlatNetworkAndAllowed_ReturnsNetworkSettings()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                NetworkAdapters = [
+                    new CatletNetworkAdapterConfig
+                    {
+                        Name = "eth0",
+                        DhcpGuard = false,
+                    }
+                ],
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "flat-network",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                settings =>
+                {
+                    settings.NetworkProviderName.Should().Be("flat-provider");
+                    settings.AdapterName.Should().Be("eth0");
+                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                    settings.NetworkName.Should().Be("flat-network");
+                    settings.AddressesV4.Should().BeEmpty();
+                    settings.FloatingAddressV4.Should().BeNull();
+                    settings.AddressesV6.Should().BeEmpty();
+                    settings.FloatingAddressV6.Should().BeNull();
+                    settings.MacAddressSpoofing.Should().BeFalse();
+                    settings.DhcpGuard.Should().BeFalse();
+                    settings.RouterGuard.Should().BeTrue();
+                });
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await ShouldBeFlatNetworkInDatabase();
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_DhcpGuardDisabledAndNotAllowed_ReturnsError()
+    {
+        _networkProviderManagerMock
+            .SetupGet(m => m.Defaults)
+            .Returns(new NetworkProviderDefaults
+            {
+                DisableDhcpGuard = false,
+            });
+
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                NetworkAdapters = [
+                    new CatletNetworkAdapterConfig
+                    {
+                        Name = "eth0",
+                        DhcpGuard = false,
+                    }
+                ],
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "flat-network",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, _) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+
+            result.Should().BeLeft().Which.Message.Should().Be(
+                "DHCP guard cannot be disabled for adapter 'eth0': the network provider 'flat-provider' for the network 'flat-network' in the environment 'default' does not allow the deactivation of the DHCP guard.");
+        });
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_DhcpGuardEnabledInOverlayNetwork_ReturnsError()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                NetworkAdapters = [
+                    new CatletNetworkAdapterConfig
+                    {
+                        Name = "eth0",
+                        DhcpGuard = true,
+                    }
+                ],
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "default",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, _) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+
+            result.Should().BeLeft().Which.Message.Should().Be(
+                "DHCP guard cannot be enabled for adapter 'eth0': the network 'default' in environment 'default' is not using a flat network provider.");
+        });
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_RouterGuardDisabledInFlatNetworkAndAllowed_ReturnsNetworkSettings()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                NetworkAdapters = [
+                    new CatletNetworkAdapterConfig
+                    {
+                        Name = "eth0",
+                        RouterGuard = false,
+                    }
+                ],
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "flat-network",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, stateStore) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+
+            result.Should().BeRight().Which.Should().SatisfyRespectively(
+                settings =>
+                {
+                    settings.NetworkProviderName.Should().Be("flat-provider");
+                    settings.AdapterName.Should().Be("eth0");
+                    settings.PortName.Should().Be($"ovs_{CatletId}_eth0");
+                    settings.NetworkName.Should().Be("flat-network");
+                    settings.AddressesV4.Should().BeEmpty();
+                    settings.FloatingAddressV4.Should().BeNull();
+                    settings.AddressesV6.Should().BeEmpty();
+                    settings.FloatingAddressV6.Should().BeNull();
+                    settings.MacAddressSpoofing.Should().BeFalse();
+                    settings.DhcpGuard.Should().BeTrue();
+                    settings.RouterGuard.Should().BeFalse();
+                });
+
+            await stateStore.SaveChangesAsync();
+        });
+
+        await ShouldBeFlatNetworkInDatabase();
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_RouterGuardDisabledAndNotAllowed_ReturnsError()
+    {
+        _networkProviderManagerMock
+            .SetupGet(m => m.Defaults)
+            .Returns(new NetworkProviderDefaults
+            {
+                DisableRouterGuard = false,
+            });
+
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                NetworkAdapters = [
+                    new CatletNetworkAdapterConfig
+                    {
+                        Name = "eth0",
+                        RouterGuard = false,
+                    }
+                ],
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "flat-network",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, _) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+
+            result.Should().BeLeft().Which.Message.Should().Be(
+                "Router guard cannot be disabled for adapter 'eth0': the network provider 'flat-provider' for the network 'flat-network' in the environment 'default' does not allow the deactivation of the router guard.");
+        });
+    }
+
+    [Fact]
+    public async Task UpdateNetworks_RouterGuardEnabledInOverlayNetwork_ReturnsError()
+    {
+        var command = new UpdateCatletNetworksCommand
+        {
+            CatletId = Guid.Parse(CatletId),
+            CatletMetadataId = Guid.Parse(CatletMetadataId),
+            ProjectId = Guid.Parse(DefaultProjectId),
+            Config = new CatletConfig
+            {
+                Environment = "default",
+                NetworkAdapters = [
+                    new CatletNetworkAdapterConfig
+                    {
+                        Name = "eth0",
+                        RouterGuard = true,
+                    }
+                ],
+                Networks =
+                [
+                    new CatletNetworkConfig
+                    {
+                        AdapterName = "eth0",
+                        Name = "default",
+                    }
+                ]
+            },
+        };
+
+        await WithScope(async (handler, _) =>
+        {
+            var result = await handler.UpdateNetworks(command);
+
+            result.Should().BeLeft().Which.Message.Should().Be(
+                "The router guard cannot be enabled for adapter 'eth0': the network 'default' in environment 'default' is not using a flat network provider.");
         });
     }
 
@@ -891,6 +1169,8 @@ public class UpdateCatletNetworksCommandHandlerTests(
             .Returns(() => new NetworkProviderDefaults()
             {
                 MacAddressSpoofing = true,
+                DisableDhcpGuard = true,
+                DisableRouterGuard = true,
             });
 
         await WithScope(async (_, stateStore) =>

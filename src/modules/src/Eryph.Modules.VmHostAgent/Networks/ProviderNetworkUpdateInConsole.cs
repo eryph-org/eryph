@@ -214,10 +214,21 @@ public static class ProviderNetworkUpdateInConsole<RT>
                         "Incompatible network settings detected. You have to remove these settings before applying the new configuration."))
                     select unit)
             select unit)
+        from _2 in validateMacAddressSpoofingImpact(newConfig, currentConfig, defaults)
+        from _3 in validateDhcpGuardImpact(newConfig, currentConfig, defaults)
+        from _4 in validateRouterGuardImpact(newConfig, currentConfig, defaults)
+        select unit;
+
+    private static Eff<RT, Unit> validateMacAddressSpoofingImpact(
+        NetworkProvidersConfiguration newConfig,
+        NetworkProvidersConfiguration currentConfig,
+        NetworkProviderDefaults defaults) =>
+        from _1 in unitEff
         let providersWithDisabledSpoofing = newConfig.NetworkProviders.ToSeq()
             .Filter(np => !np.MacAddressSpoofing.GetValueOrDefault(defaults.MacAddressSpoofing)
-                          && currentConfig.NetworkProviders.Any(
-                              cp => cp.Name == np.Name && cp.MacAddressSpoofing.GetValueOrDefault(defaults.MacAddressSpoofing)))
+                          && currentConfig.NetworkProviders.Any(cp =>
+                              cp.Name == np.Name &&
+                              cp.MacAddressSpoofing.GetValueOrDefault(defaults.MacAddressSpoofing)))
             .Map(np => np.Name)
         from _2 in providersWithDisabledSpoofing
             .Match(
@@ -229,6 +240,58 @@ public static class ProviderNetworkUpdateInConsole<RT>
                     from _3 in Console<RT>.writeEmptyLine
                     from _4 in Console<RT>.writeLine(
                         "MAC address spoofing will not be automatically disabled for existing catlets.")
+                    from _5 in Console<RT>.writeLine("Please update any affected catlets manually.")
+                    from _6 in Console<RT>.writeEmptyLine
+                    select unit)
+        select unit;
+
+    private static Eff<RT, Unit> validateDhcpGuardImpact(
+        NetworkProvidersConfiguration newConfig,
+        NetworkProvidersConfiguration currentConfig,
+        NetworkProviderDefaults defaults) =>
+        from _1 in unitEff
+        let providersWithRemovedDisableDhcpGuard = newConfig.NetworkProviders.ToSeq()
+            .Filter(np => !np.DisableDhcpGuard.GetValueOrDefault(defaults.DisableDhcpGuard)
+                          && currentConfig.NetworkProviders.Any(cp =>
+                              cp.Name == np.Name &&
+                              cp.DisableDhcpGuard.GetValueOrDefault(defaults.DisableDhcpGuard)))
+            .Map(np => np.Name)
+        from _2 in providersWithRemovedDisableDhcpGuard
+            .Match(
+                Empty: () => unitEff,
+                Seq: names =>
+                    from _1 in Console<RT>.writeLine(
+                        "The DHCP guard can no longer be disabled for the following providers:")
+                    from _2 in names.Map(n => Console<RT>.writeLine($" - {n}")).Sequence()
+                    from _3 in Console<RT>.writeEmptyLine
+                    from _4 in Console<RT>.writeLine(
+                        "The DHCP guard will not be automatically re-enabled for existing catlets.")
+                    from _5 in Console<RT>.writeLine("Please update any affected catlets manually.")
+                    from _6 in Console<RT>.writeEmptyLine
+                    select unit)
+        select unit;
+    
+    private static Eff<RT, Unit> validateRouterGuardImpact(
+        NetworkProvidersConfiguration newConfig,
+        NetworkProvidersConfiguration currentConfig,
+        NetworkProviderDefaults defaults) =>
+        from _1 in unitEff
+        let providersWithRemovedDisableRouterGuard = newConfig.NetworkProviders.ToSeq()
+            .Filter(np => !np.DisableRouterGuard.GetValueOrDefault(defaults.DisableRouterGuard)
+                          && currentConfig.NetworkProviders.Any(cp =>
+                              cp.Name == np.Name &&
+                              cp.DisableRouterGuard.GetValueOrDefault(defaults.DisableRouterGuard)))
+            .Map(np => np.Name)
+        from _2 in providersWithRemovedDisableRouterGuard
+            .Match(
+                Empty: () => unitEff,
+                Seq: names =>
+                    from _1 in Console<RT>.writeLine(
+                        "The router guard can no longer be disabled for the following providers:")
+                    from _2 in names.Map(n => Console<RT>.writeLine($" - {n}")).Sequence()
+                    from _3 in Console<RT>.writeEmptyLine
+                    from _4 in Console<RT>.writeLine(
+                        "The router guard will not be automatically re-enabled for existing catlets.")
                     from _5 in Console<RT>.writeLine("Please update any affected catlets manually.")
                     from _6 in Console<RT>.writeEmptyLine
                     select unit)
