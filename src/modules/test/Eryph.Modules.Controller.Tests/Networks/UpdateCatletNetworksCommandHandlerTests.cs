@@ -810,7 +810,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
     }
 
     [Fact]
-    public async Task UpdateNetworks_DhcpGuardDisabledAndNotAllowed_ReturnsError()
+    public async Task UpdateNetworks_DhcpGuardDisabledInFlatNetworkAndNotAllowed_ReturnsError()
     {
         _networkProviderManagerMock
             .SetupGet(m => m.Defaults)
@@ -948,7 +948,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
     }
 
     [Fact]
-    public async Task UpdateNetworks_RouterGuardDisabledAndNotAllowed_ReturnsError()
+    public async Task UpdateNetworks_RouterGuardDisabledInFlatNetworkAndNotAllowed_ReturnsError()
     {
         _networkProviderManagerMock
             .SetupGet(m => m.Defaults)
@@ -1026,7 +1026,7 @@ public class UpdateCatletNetworksCommandHandlerTests(
             var result = await handler.UpdateNetworks(command);
 
             result.Should().BeLeft().Which.Message.Should().Be(
-                "The router guard cannot be enabled for adapter 'eth0': the network 'default' in environment 'default' is not using a flat network provider.");
+                "Router guard cannot be enabled for adapter 'eth0': the network 'default' in environment 'default' is not using a flat network provider.");
         });
     }
 
