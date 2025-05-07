@@ -395,12 +395,12 @@ public class NetworkProvidersConfigValidationsTests
             },
             issue =>
             {
-                issue.Member.Should().Be("NetworkProviders[0].DhcpGuard");
+                issue.Member.Should().Be("NetworkProviders[0].DisableDhcpGuard");
                 issue.Message.Should().Be("The NAT overlay network provider does not support the configuration of the DHCP guard.");
             },
             issue =>
             {
-                issue.Member.Should().Be("NetworkProviders[0].RouterGuard");
+                issue.Member.Should().Be("NetworkProviders[0].DisableRouterGuard");
                 issue.Message.Should().Be("The NAT overlay network provider does not support the configuration of the router guard.");
             });
     }
@@ -452,12 +452,12 @@ public class NetworkProvidersConfigValidationsTests
             },
             issue =>
             {
-                issue.Member.Should().Be("NetworkProviders[0].DhcpGuard");
+                issue.Member.Should().Be("NetworkProviders[0].DisableDhcpGuard");
                 issue.Message.Should().Be("The overlay network provider does not support the configuration of the DHCP guard.");
             },
             issue =>
             {
-                issue.Member.Should().Be("NetworkProviders[0].RouterGuard");
+                issue.Member.Should().Be("NetworkProviders[0].DisableRouterGuard");
                 issue.Message.Should().Be("The overlay network provider does not support the configuration of the router guard.");
             },
             issue =>
