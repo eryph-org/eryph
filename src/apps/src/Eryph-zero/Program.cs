@@ -1035,6 +1035,7 @@ internal static class Program
             from _2 in isAgentRunning()
             from newConfig in importConfig(configString)
             from currentConfig in getCurrentConfiguration()
+            from defaults in getDefaults()
             from hostState in getHostStateWithProgress()
             from syncResult in noCurrentConfigCheck switch
             {
@@ -1048,7 +1049,7 @@ internal static class Program
                     select (r.IsValid, HostState: s)
             }
             from newConfigChanges in generateChanges(syncResult.HostState, newConfig, false)
-            from _3 in validateNetworkImpact(newConfig)
+            from _3 in validateNetworkImpact(newConfig, currentConfig, defaults)
             from _4 in applyChangesInConsole(currentConfig, newConfigChanges,
                 getHostStateWithProgress, nonInteractive, syncResult.IsValid)
             from _5 in saveConfigurationYaml(configString)

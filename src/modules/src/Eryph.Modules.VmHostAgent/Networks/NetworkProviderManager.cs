@@ -20,4 +20,7 @@ public class NetworkProviderManager<RT> where RT : struct,
     public static Aff<RT, Unit> saveConfigurationYaml(string config) =>
         default(RT).NetworkProviderManager
             .Bind(pm => pm.SaveConfigurationYaml(config).ToAff(l => l));
+
+    public static Eff<RT, NetworkProviderDefaults> getDefaults() =>
+        default(RT).NetworkProviderManager.Map(pm => pm.Defaults);
 }

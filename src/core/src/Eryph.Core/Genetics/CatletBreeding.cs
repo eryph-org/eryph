@@ -107,8 +107,10 @@ public static class CatletBreeding
             {
                 Name = child.Name,
                 Mutation = child.Mutation,
-
                 MacAddress = child.MacAddress ?? parent.MacAddress,
+                MacAddressSpoofing = child.MacAddressSpoofing ?? parent.MacAddressSpoofing,
+                DhcpGuard = child.DhcpGuard ?? parent.DhcpGuard,
+                RouterGuard = child.RouterGuard ?? parent.RouterGuard,
             });
 
     private static Either<Error, Seq<CatletNetworkConfig>> BreedNetworks(

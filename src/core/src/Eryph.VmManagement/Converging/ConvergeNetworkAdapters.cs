@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
 using LanguageExt;
@@ -47,7 +48,10 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             switchName,
             settings.MacAddress,
             settings.PortName,
-            settings.NetworkName);
+            settings.NetworkName,
+            settings.MacAddressSpoofing,
+            settings.DhcpGuard,
+            settings.RouterGuard);
 
     private EitherAsync<Error, Seq<TypedPsObject<VMNetworkAdapter>>> GetVmAdapters(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
@@ -105,7 +109,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
     private EitherAsync<Error, Unit> AddAdapter(
         PhysicalAdapterConfig adapterConfig,
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
-        from _ in Context.ReportProgressAsync($"Add Network Adapter: {adapterConfig.AdapterName}")
+        from _1 in Context.ReportProgressAsync($"Add Network Adapter: {adapterConfig.AdapterName}")
         let command = PsCommandBuilder.Create()
             .AddCommand("Add-VMNetworkAdapter")
             .AddParameter("VM", vmInfo.PsObject)
@@ -113,10 +117,11 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddParameter("StaticMacAddress", adapterConfig.MacAddress)
             .AddParameter("SwitchName", adapterConfig.SwitchName)
             .AddParameter("Passthru")
-        from optionalCreatedAdapter in Context.Engine.GetObjectValueAsync<VMNetworkAdapter>(command)
+        from optionalCreatedAdapter in Context.Engine.GetObjectAsync<VMNetworkAdapter>(command)
         from createdAdapter in optionalCreatedAdapter.ToEitherAsync(
             Error.New("Failed to create network adapter"))
-        from __ in Context.PortManager.SetPortName(createdAdapter.Id, adapterConfig.PortName)
+        from _2 in Context.PortManager.SetPortName(createdAdapter.Value.Id, adapterConfig.PortName)
+        from _3 in ConvergeSecuritySettings(createdAdapter, adapterConfig)
         select unit;
 
     private EitherAsync<Error, Unit> UpdateAdapter(
@@ -129,7 +134,8 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         from _2 in adapter.Value.MacAddress == adapterConfig.MacAddress
             ? RightAsync<Error, Unit>(unit)
             : UpdateMacAddress(adapter, adapterConfig.MacAddress)
-        from _3 in adapter.Value.Connected && adapter.Value.SwitchName == adapterConfig.SwitchName
+        from _3 in ConvergeSecuritySettings(adapter, adapterConfig)
+        from _4 in adapter.Value.Connected && adapter.Value.SwitchName == adapterConfig.SwitchName
             ? RightAsync<Error, Unit>(unit)
             : ConnectAdapter(adapter, adapterConfig)
         select unit;
@@ -143,6 +149,52 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
             .AddParameter("StaticMacAddress", macAddress)
         from __ in Context.Engine.RunAsync(command)
+        select unit;
+
+    private EitherAsync<Error, Unit> ConvergeSecuritySettings(
+        TypedPsObject<VMNetworkAdapter> adapter,
+        PhysicalAdapterConfig adapterConfig) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let currentMacAddressSpoofing = adapter.Value.MacAddressSpoofing == OnOffState.On
+        let currentRouterGuard = adapter.Value.RouterGuard == OnOffState.On
+        let currentDhcpGuard = adapter.Value.DhcpGuard == OnOffState.On
+        let changedMacAddressSpoofing = Optional(adapterConfig.MacAddressSpoofing)
+            .Filter(v => v != currentMacAddressSpoofing)
+        let changedDhcpGuard = Optional(adapterConfig.DhcpGuard)
+            .Filter(v => v != currentDhcpGuard)
+        let changedRouterGuard = Optional(adapterConfig.RouterGuard)
+            .Filter(v => v != currentRouterGuard)
+        from __ in changedMacAddressSpoofing.IsSome || changedDhcpGuard.IsSome || changedRouterGuard.IsSome
+            ? UpdateSecuritySettings(
+                adapter,
+                changedMacAddressSpoofing,
+                changedDhcpGuard,
+                changedRouterGuard)
+            : RightAsync<Error, Unit>(unit)
+        select unit;
+
+    private EitherAsync<Error, Unit> UpdateSecuritySettings(
+        TypedPsObject<VMNetworkAdapter> adapter,
+        Option<bool> macAddressSpoofing,
+        Option<bool> dhcpGuard,
+        Option<bool> routerGuard) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let command = PsCommandBuilder.Create()
+            .AddCommand("Set-VMNetworkAdapter")
+            .AddParameter("VMNetworkAdapter", adapter.PsObject)
+        let command2 = macAddressSpoofing
+            .Map(v => v ? OnOffState.On : OnOffState.Off)
+            .Map(s => command.AddParameter("MacAddressSpoofing", s))
+            .IfNone(command)
+        let command3 = dhcpGuard
+            .Map(v => v ? OnOffState.On : OnOffState.Off)
+            .Map(s => command2.AddParameter("DhcpGuard", s))
+            .IfNone(command2)
+        let command4 = routerGuard
+            .Map(v => v ? OnOffState.On : OnOffState.Off)
+            .Map(s => command3.AddParameter("RouterGuard", s))
+            .IfNone(command3)
+        from __ in Context.Engine.RunAsync(command4)
         select unit;
 
     private EitherAsync<Error, Unit> ConnectAdapter(
@@ -162,5 +214,8 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         string SwitchName,
         string MacAddress,
         string PortName,
-        string NetworkName);
+        string NetworkName,
+        bool MacAddressSpoofing,
+        bool DhcpGuard,
+        bool RouterGuard);
 }

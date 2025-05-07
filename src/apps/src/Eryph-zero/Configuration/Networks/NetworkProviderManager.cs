@@ -51,4 +51,11 @@ public class NetworkProviderManager : INetworkProviderManager
             .ToEitherAsync()
         from _ in SaveConfigurationYaml(yaml)
         select unit;
+
+    public NetworkProviderDefaults Defaults => new NetworkProviderDefaults
+    {
+        DisableDhcpGuard = true,
+        DisableRouterGuard = true,
+        MacAddressSpoofing = true,
+    };
 }

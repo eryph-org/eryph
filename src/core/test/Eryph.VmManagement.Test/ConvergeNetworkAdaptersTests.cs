@@ -9,6 +9,7 @@ using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement.Converging;
+using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
 using FluentAssertions;
 using FluentAssertions.LanguageExt;
@@ -62,6 +63,9 @@ public class ConvergeNetworkAdaptersTests
             MacAddress = "00:02:04:06:08:10",
             SwitchName = EryphConstants.OverlaySwitchName,
             Connected = true,
+            DhcpGuard = OnOffState.Off,
+            RouterGuard = OnOffState.Off,
+            MacAddressSpoofing = OnOffState.Off,
         });
         _fixture.Engine.GetObjectCallback = (_, command) =>
         {
@@ -114,24 +118,70 @@ public class ConvergeNetworkAdaptersTests
                 MacAddress = "00:12:14:16:18:20",
                 PortName = "port1",
                 NetworkProviderName = "flat",
+                MacAddressSpoofing = true,
+                DhcpGuard = true,
+                RouterGuard = true,
             },
         ];
 
         var adapterAdded = false;
-        _fixture.Engine.GetValuesCallback = (_, command) =>
+        var adapterSettingsUpdated = false;
+
+        var newAdapter = _fixture.Engine.ToPsObject<object>(new VMNetworkAdapter
         {
-            command.ShouldBeCommand("Add-VMNetworkAdapter")
-                .ShouldBeParam("VM", _vmInfo.PsObject)
-                .ShouldBeParam("Name", "eth1")
-                .ShouldBeParam("StaticMacAddress", "00:12:14:16:18:20")
-                .ShouldBeParam("SwitchName", "test-switch")
-                .ShouldBeFlag("Passthru")
-                .ShouldBeComplete();
-            adapterAdded = true;
-            return Seq1<object>(new VMNetworkAdapter
+            Id = "eth1Id",
+            MacAddressSpoofing = OnOffState.Off,
+            RouterGuard = OnOffState.Off,
+            DhcpGuard = OnOffState.Off,
+        });
+
+        _fixture.Engine.GetObjectCallback = (_, command) =>
+        {
+            if (command.ToString().StartsWith("Get-VMNetworkAdapter"))
             {
-                Id = "eth1Id",
-            });
+                command.ShouldBeCommand("Get-VMNetworkAdapter")
+                    .ShouldBeParam("VM", _vmInfo.PsObject)
+                    .ShouldBeComplete();
+
+                return Seq1(_fixture.Engine.ConvertPsObject(_existingAdapter));
+            }
+
+            if (command.ToString().StartsWith("Get-VM"))
+            {
+                return Seq1(_fixture.Engine.ConvertPsObject(_vmInfo));
+            }
+
+            if (command.ToString().StartsWith("Add-VMNetworkAdapter"))
+            {
+                command.ShouldBeCommand("Add-VMNetworkAdapter")
+                    .ShouldBeParam("VM", _vmInfo.PsObject)
+                    .ShouldBeParam("Name", "eth1")
+                    .ShouldBeParam("StaticMacAddress", "00:12:14:16:18:20")
+                    .ShouldBeParam("SwitchName", "test-switch")
+                    .ShouldBeFlag("Passthru")
+                    .ShouldBeComplete();
+                adapterAdded = true;
+                return Seq1(newAdapter);
+            }
+
+            return Error.New($"Unexpected command: {command}.");
+        };
+
+        _fixture.Engine.RunCallback = command =>
+        {
+            if (command.ToString().StartsWith("Set-VMNetworkAdapter"))
+            {
+                command.ShouldBeCommand("Set-VMNetworkAdapter")
+                    .ShouldBeParam("VMNetworkAdapter", newAdapter.PsObject)
+                    .ShouldBeParam("MacAddressSpoofing", OnOffState.On)
+                    .ShouldBeParam("DhcpGuard", OnOffState.On)
+                    .ShouldBeParam("RouterGuard", OnOffState.On)
+                    .ShouldBeComplete();
+                adapterSettingsUpdated = true;
+                return unit;
+            }
+
+            return Error.New($"Unexpected command {command}");
         };
 
         _portManagerMock.Setup(m => m.SetPortName("eth1Id", "port1"))
@@ -143,6 +193,7 @@ public class ConvergeNetworkAdaptersTests
         
         result.Should().BeRight();
         adapterAdded.Should().BeTrue();
+        adapterSettingsUpdated.Should().BeTrue();
         _portManagerMock.Verify();
     }
 
@@ -164,20 +215,36 @@ public class ConvergeNetworkAdaptersTests
                 MacAddress = "00:12:14:16:18:20",
                 PortName = "port1",
                 NetworkProviderName = "flat",
+                MacAddressSpoofing = true,
+                DhcpGuard = true,
+                RouterGuard = true,
             },
         ];
 
-        var adapterUpdated = false;
+        var adapterMacAddressUpdated = false;
+        var adapterSettingsUpdated = false;
         var adapterConnected = false;
         _fixture.Engine.RunCallback = command =>
         {
-            if (command.ToString().StartsWith("Set-VMNetworkAdapter"))
+            if (command.ToString().Contains("StaticMacAddress"))
             {
                 command.ShouldBeCommand("Set-VMNetworkAdapter")
                     .ShouldBeParam("VMNetworkAdapter", _existingAdapter.PsObject)
                     .ShouldBeParam("StaticMacAddress", "00:12:14:16:18:20")
                     .ShouldBeComplete();
-                adapterUpdated = true;
+                adapterMacAddressUpdated = true;
+                return unit;
+            }
+
+            if (command.ToString().Contains("MacAddressSpoofing"))
+            {
+                command.ShouldBeCommand("Set-VMNetworkAdapter")
+                    .ShouldBeParam("VMNetworkAdapter", _existingAdapter.PsObject)
+                    .ShouldBeParam("MacAddressSpoofing", OnOffState.On)
+                    .ShouldBeParam("DhcpGuard", OnOffState.On)
+                    .ShouldBeParam("RouterGuard", OnOffState.On)
+                    .ShouldBeComplete();
+                adapterSettingsUpdated = true;
                 return unit;
             }
 
@@ -202,7 +269,8 @@ public class ConvergeNetworkAdaptersTests
         var result = await convergeTask.Converge(_vmInfo);
 
         result.Should().BeRight();
-        adapterUpdated.Should().BeTrue();
+        adapterMacAddressUpdated.Should().BeTrue();
+        adapterSettingsUpdated.Should().BeTrue();
         adapterConnected.Should().BeTrue();
         _portManagerMock.Verify();
     }

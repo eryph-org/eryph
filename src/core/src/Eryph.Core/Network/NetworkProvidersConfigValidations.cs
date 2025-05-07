@@ -118,6 +118,15 @@ public static class NetworkProvidersConfigValidations
         | ValidateProperty(toValidate, c => c.Vlan,
             NotAllowed<int>("The NAT overlay network provider does not support the configuration of a VLAN."),
             path)
+        | ValidateProperty(toValidate, c => c.MacAddressSpoofing,
+            NotAllowed<bool>("The NAT overlay network provider does not support the configuration of MAC address spoofing."),
+            path)
+        | ValidateProperty(toValidate, c => c.DisableDhcpGuard,
+            NotAllowed<bool>("The NAT overlay network provider does not support the configuration of the DHCP guard."),
+            path)
+        | ValidateProperty(toValidate, c => c.DisableRouterGuard,
+            NotAllowed<bool>("The NAT overlay network provider does not support the configuration of the router guard."),
+            path)
         | ValidateList(toValidate, c => c.Subnets, ValidateSubnet, path, minCount: 1)
         | ValidateProperty(toValidate, c => c.Subnets, ValidateNatProviderSubnets, path);
 
@@ -127,6 +136,15 @@ public static class NetworkProvidersConfigValidations
         ValidateProperty(toValidate, c => c.BridgeName, ValidateBridgeName, path, required: true)
         | ValidateProperty(toValidate, c => c.SwitchName,
             NotAllowed<string>("The overlay network provider does not support custom switch names."),
+            path)
+        | ValidateProperty(toValidate, c => c.MacAddressSpoofing,
+            NotAllowed<bool>("The overlay network provider does not support the configuration of MAC address spoofing."),
+            path)
+        | ValidateProperty(toValidate, c => c.DisableDhcpGuard,
+            NotAllowed<bool>("The overlay network provider does not support the configuration of the DHCP guard."),
+            path)
+        | ValidateProperty(toValidate, c => c.DisableRouterGuard,
+            NotAllowed<bool>("The overlay network provider does not support the configuration of the router guard."),
             path)
         | ValidateProperty(toValidate, c => c.BridgeOptions, ValidateNetworkProviderBridgeOptions, path)
         | ValidateProperty(toValidate, c => c.Vlan, ValidateVlanTag, path)

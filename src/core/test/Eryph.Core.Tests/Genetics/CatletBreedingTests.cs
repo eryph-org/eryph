@@ -381,8 +381,11 @@ public class CatletBreedingTests
             [
                 new CatletNetworkAdapterConfig()
                 {
-                    Name = "sda",
-                    MacAddress = "addr1"
+                    Name = "eth0",
+                    MacAddress = "addr1",
+                    MacAddressSpoofing = false,
+                    DhcpGuard = true,
+                    RouterGuard = true,
                 }
             ]
         };
@@ -395,8 +398,11 @@ public class CatletBreedingTests
             [
                 new CatletNetworkAdapterConfig()
                 {
-                    Name = "sda",
-                    MacAddress = "addr2"
+                    Name = "eth0",
+                    MacAddress = "addr2",
+                    MacAddressSpoofing = true,
+                    DhcpGuard = false,
+                    RouterGuard = false,
                 }
             ]
         };
@@ -405,7 +411,14 @@ public class CatletBreedingTests
             .Should().BeRight().Subject;
 
         breedChild.NetworkAdapters.Should().SatisfyRespectively(
-            adapter => adapter.MacAddress.Should().Be("addr2"));
+            adapter =>
+            {
+                adapter.Name.Should().Be("eth0");
+                adapter.MacAddress.Should().Be("addr2");
+                adapter.MacAddressSpoofing.Should().BeTrue();
+                adapter.DhcpGuard.Should().BeFalse();
+                adapter.RouterGuard.Should().BeFalse();
+            });
     }
 
     [Fact]
