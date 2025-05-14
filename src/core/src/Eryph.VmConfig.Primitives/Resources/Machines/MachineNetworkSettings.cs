@@ -22,4 +22,10 @@ public sealed class MachineNetworkSettings
     public string FloatingAddressV4 { get; set; }
 
     public string FloatingAddressV6 { get; set; }
+
+    public bool MacAddressSpoofing { get; set; }
+
+    public bool DhcpGuard { get; set; }
+
+    public bool RouterGuard { get; set; }
 }

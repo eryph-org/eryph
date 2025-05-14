@@ -91,11 +91,47 @@ public class UpdateCatletNetworksCommandHandler(
             .ToEither(Error.New($"Network provider {validNetwork.NetworkProvider} not found."))
             .ToAsync()
         let isFlatNetwork = networkProvider.Type == NetworkProviderType.Flat
-
-        let fixedMacAddress = command.Config.NetworkAdapters
+        let networkAdapterConfig = command.Config.NetworkAdapters
             .ToSeq()
             .Find(x => x.Name == networkConfig.AdapterName)
-            .Bind(x => Optional(x.MacAddress))
+
+        let allowMacAddressSpoofing = Optional(networkProvider.MacAddressSpoofing)
+            .IfNone(providerManager.Defaults.MacAddressSpoofing)
+        let enableMacAddressSpoofing = networkAdapterConfig
+            .Bind(x => Optional(x.MacAddressSpoofing))
+            .IfNone(false)
+        from _1 in guardnot(enableMacAddressSpoofing && !isFlatNetwork,
+            Error.New($"MAC address spoofing cannot be enabled for adapter '{networkConfig.AdapterName}': "
+                      + $"the network '{networkName}' in environment '{environmentName}' is not using a flat network provider."))
+        from _2 in guardnot(enableMacAddressSpoofing && !allowMacAddressSpoofing,
+            Error.New($"MAC address spoofing cannot be enabled for adapter '{networkConfig.AdapterName}': "
+                      + $"the network provider '{networkProvider.Name}' for the network '{networkName}' in the environment '{environmentName}' does not allow MAC address spoofing."))
+
+        let allowDisableDhcpGuard = Optional(networkProvider.DisableDhcpGuard)
+            .IfNone(providerManager.Defaults.DisableDhcpGuard)
+        let enableDhcpGuard = networkAdapterConfig
+            .Bind(x => Optional(x.DhcpGuard))
+            .IfNone(isFlatNetwork)
+        from _3 in guardnot(enableDhcpGuard && !isFlatNetwork,
+            Error.New($"DHCP guard cannot be enabled for adapter '{networkConfig.AdapterName}': "
+                      + $"the network '{networkName}' in environment '{environmentName}' is not using a flat network provider."))
+        from _4 in guardnot(isFlatNetwork && !enableDhcpGuard && !allowDisableDhcpGuard,
+            Error.New($"DHCP guard cannot be disabled for adapter '{networkConfig.AdapterName}': "
+                      + $"the network provider '{networkProvider.Name}' for the network '{networkName}' in the environment '{environmentName}' does not allow the deactivation of the DHCP guard."))
+
+        let allowDisableRouterGuard = Optional(networkProvider.DisableRouterGuard)
+            .IfNone(providerManager.Defaults.DisableRouterGuard)
+        let enableRouterGuard = networkAdapterConfig
+            .Bind(x => Optional(x.RouterGuard))
+            .IfNone(isFlatNetwork)
+        from _5 in guardnot(enableRouterGuard && !isFlatNetwork,
+            Error.New($"Router guard cannot be enabled for adapter '{networkConfig.AdapterName}': "
+                      + $"the network '{networkName}' in environment '{environmentName}' is not using a flat network provider."))
+        from _6 in guardnot(isFlatNetwork && !enableRouterGuard && !allowDisableRouterGuard,
+            Error.New($"Router guard cannot be disabled for adapter '{networkConfig.AdapterName}': "
+                      + $"the network provider '{networkProvider.Name}' for the network '{networkName}' in the environment '{environmentName}' does not allow the deactivation of the router guard."))
+
+        let fixedMacAddress = networkAdapterConfig.Bind(x => Optional(x.MacAddress))
         let hostname = Optional(command.Config.Hostname).Filter(notEmpty)
             | Optional(command.Config.Name).Filter(notEmpty)
 
@@ -148,6 +184,9 @@ public class UpdateCatletNetworksCommandHandler(
                 .Find(ip => ip.AddressFamily == AddressFamily.InterNetworkV6)
                 .Map(ip => ip.ToString())
                 .IfNoneUnsafe((string?)null),
+            MacAddressSpoofing = enableMacAddressSpoofing,
+            DhcpGuard = enableDhcpGuard,
+            RouterGuard = enableRouterGuard,
         };
 
     private EitherAsync<Error, CatletNetworkPort> AddOrUpdateAdapterPort(

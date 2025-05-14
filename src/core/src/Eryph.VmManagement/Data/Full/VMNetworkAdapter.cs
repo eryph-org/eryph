@@ -95,13 +95,13 @@ public class VMNetworkAdapter : VirtualMachineDeviceInfo
     //public VMNetworkAdapterIsolationMode CurrentIsolationMode { get; private set; }
 
 
-    //public OnOffState MacAddressSpoofing { get; private set; }
+    public OnOffState MacAddressSpoofing { get; init; }
 
 
-    //public OnOffState DhcpGuard { get; private set; }
+    public OnOffState DhcpGuard { get; init; }
 
 
-    //public OnOffState RouterGuard { get; private set; }
+    public OnOffState RouterGuard { get; init; }
 
 
     //public VMNetworkAdapterPortMirroringMode PortMirroringMode { get; private set; }
