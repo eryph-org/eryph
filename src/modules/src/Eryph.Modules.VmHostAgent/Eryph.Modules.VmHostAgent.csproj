@@ -11,7 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dbosoft.OVN.Hosting" Version="1.0.0-rc.14" />
-    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.8.1-PullRequest0102.4" />
+    <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.9.0" />
     <PackageReference Include="Eryph.GenePool.Client" Version="0.4.0" />
     <PackageReference Include="Eryph.GenePool.Client.Authentication" Version="0.4.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
