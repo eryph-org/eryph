@@ -1,4 +1,5 @@
 name: Sync issue to Azure DevOps
+permissions: {}
 on:
   issues:
   issue_comment:
