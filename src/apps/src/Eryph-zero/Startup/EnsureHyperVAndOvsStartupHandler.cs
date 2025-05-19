@@ -27,7 +27,7 @@ internal class EnsureHyperVAndOvsStartupHandler(
     {
         var isWarmupMode = configuration.GetValue<bool>("warmupMode");
         var isWindowsService = WindowsServiceHelpers.IsWindowsService();
-        var ovsPackageDirectory = configuration.GetValue<string?>("ovsPackagePath");
+        var ovsPackageDirectory = configuration.GetValue<string>("Ovn:PackagePath");
 
         var result = await DriverCommands.Run(
             EnsureHyperVAndOvs(isWindowsService, isWarmupMode, ovsPackageDirectory),

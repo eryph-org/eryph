@@ -13,17 +13,12 @@ namespace Eryph.Runtime.Zero;
 
 internal class OVSPackage
 {
-    public static string UnpackAndProvide(ILogger<OVSPackage> logger, string? relativePackagePath = null)
+    public static string UnpackAndProvide(ILogger<OVSPackage> logger, string packagePath)
     {
-        var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-        var parentDir = baseDir.Parent?.FullName ?? throw new IOException("Invalid OpenVSwitch package path");
+        var ovsPackageFile = Path.IsPathFullyQualified(packagePath)
+            ? packagePath
+            : Path.Combine(AppContext.BaseDirectory, packagePath);
 
-        if (relativePackagePath is not null)
-        {
-            parentDir = Path.Combine(parentDir, relativePackagePath);
-        }
-
-        var ovsPackageFile = Path.Combine(parentDir, "ovspackage.zip");
         if (!File.Exists(ovsPackageFile))
             throw new IOException($"The OpenVSwitch package is missing: '{ovsPackageFile}'");
 

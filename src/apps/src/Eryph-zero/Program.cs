@@ -398,7 +398,11 @@ internal static class Program
         hostBuilder.ConfigureAppConfiguration((hostingContext, config) =>
         {
             var env = hostingContext.HostingEnvironment;
-            config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+            config.AddInMemoryCollection(new Dictionary<string, string?>()
+                {
+                    ["Ovn:PackagePath"] = Path.Combine(AppContext.BaseDirectory, "..", "ovspackage.zip"),
+                })
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: false)
                 .AddJsonFile(Path.Combine(ZeroConfig.GetConfigPath(), "appsettings.json"), optional: true, reloadOnChange: false);
 
@@ -539,7 +543,8 @@ internal static class Program
                             dataBackupCreated = true;
                             return Unit.Default;
                         }).ToEither()
-                        from ovsRootPath in Try(() => OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>()))
+                        // The install command always grabs the OVS package from its own directory.
+                        from ovsRootPath in Try(() => OVSPackage.UnpackAndProvide(loggerFactory.CreateLogger<OVSPackage>(), @"..\ovspackage.zip"))
                             .ToEitherAsync()
                         from _ in DriverCommands.EnsureDriver(ovsRootPath, true, true, loggerFactory).Map(r => r.ToEither()).ToAsync()
                         from uCopy in CopyService() 
@@ -775,6 +780,7 @@ internal static class Program
 
                     _ = await unInstallService.IfLeft(l => l.Throw());
 
+                    // TODO Replace with proper ensure package
                     var ovsPath = OVSPackage.GetCurrentOVSPath();
 
                     if (ovsPath != null)
@@ -1018,9 +1024,13 @@ internal static class Program
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static async Task<int> ImportNetworkConfig(FileSystemInfo? inFile, bool nonInteractive,
-        bool noCurrentConfigCheck)
+    private static async Task<int> ImportNetworkConfig(
+        FileSystemInfo? inFile,
+        bool nonInteractive,
+        bool noCurrentConfigCheck,
+        string[] args)
     {
+        var configuration = ReadConfiguration()
         using var nullLoggerFactory = new NullLoggerFactory();
         using var psEngineLock = new PowershellEngineLock();
         using var psEngine = new PowershellEngine(

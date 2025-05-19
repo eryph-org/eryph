@@ -96,6 +96,9 @@ public readonly struct AgentRuntime :
 
     public Eff<AgentRuntime, ILogger<T>> Logger<T>() =>
         FromServiceProvider<ILoggerFactory>().Map(lf => lf.CreateLogger<T>());
+    
+    public Eff<AgentRuntime, ILogger> Logger(Type type) =>
+        FromServiceProvider<ILoggerFactory>().Map(lf => lf.CreateLogger(type));
 
     public Eff<AgentRuntime, WmiIO> WmiEff => SuccessEff(LiveWmiIO.Default);
 }

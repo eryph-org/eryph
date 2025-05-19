@@ -21,6 +21,7 @@
     <PackageReference Include="LanguageExt.Sys" Version="4.4.9" />
     <PackageReference Include="LanguageExt.Transformers" Version="4.4.8" />
     <PackageReference Include="SimpleInjector" Version="5.5.0" />
+    <PackageReference Include="System.IO.Hashing" Version="8.0.0" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 </Project>

@@ -19,7 +19,8 @@ using static OvsDriverProvider<DriverCommandsRuntime>;
 
 internal static class DriverCommands
 {
-    public static Aff<DriverCommandsRuntime, Unit> GetDriverStatus() =>
+    public static Aff<DriverCommandsRuntime, Unit> GetDriverStatus(
+        string packagePath) =>
         from hostNetworkCommands in default(DriverCommandsRuntime).HostNetworkCommands
         from extensionInfo in hostNetworkCommands.GetInstalledSwitchExtension()
         let extensionMessage = extensionInfo.Match(
@@ -40,7 +41,7 @@ internal static class DriverCommands
             (acc, info) =>
                 $"{acc}{Environment.NewLine}\t{info.Driver} - {info.Version} {info.OriginalFileName}"))
         from ovsPackageLogger in default(DriverCommandsRuntime).Logger<OVSPackage>()
-        from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide(ovsPackageLogger))
+        from ovsRunDir in Eff(() => OVSPackage.UnpackAndProvide(ovsPackageLogger, packagePath))
         let packageInfFile = Path.Combine(ovsRunDir, "driver", "dbo_ovse.inf")
         from packageDriverVersion in getDriverVersionFromInfFile(
             packageInfFile)
