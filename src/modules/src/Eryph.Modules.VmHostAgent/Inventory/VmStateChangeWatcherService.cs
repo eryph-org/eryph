@@ -36,6 +36,8 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
             TimeSpan.FromSeconds(3),
             "TargetInstance ISA 'Msvm_ComputerSystem' and TargetInstance.EnabledState <> PreviousInstance.EnabledState"))
 {
+    private readonly ILogger _log = log;
+
     protected override Aff<Option<object>> OnEventArrived(ManagementBaseObject wmiEvent) =>
         from convertedEvent in convertEvent(
             wmiEvent,
@@ -43,7 +45,7 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
         from message in OnEventArrived(convertedEvent)
         select message.Map(m => (object)m);
 
-    internal static Aff<Option<VirtualMachineStateChangedEvent>> OnEventArrived(
+    private Aff<Option<VirtualMachineStateChangedEvent>> OnEventArrived(
         WmiEvent wmiEvent) =>
         from _ in SuccessAff(unit)
         let targetInstance = wmiEvent.TargetInstance
@@ -53,7 +55,7 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
             .Sequence()
         select message;
 
-    private static Aff<VirtualMachineStateChangedEvent> CreateMessage(
+    private Aff<VirtualMachineStateChangedEvent> CreateMessage(
         Guid vmId,
         WmiEvent wmiEvent) =>
         from vmState in getVmState(wmiEvent.TargetInstance)
@@ -65,5 +67,11 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
             UpTime = upTime,
             Timestamp = wmiEvent.Created,
         }
+        from _ in Eff(() =>
+        {
+            _log.LogInformation("State of VM {VmId} changed to {VmState} at {Timestamp:O}",
+                vmId, vmState.ToNullable(), wmiEvent.Created);
+            return unit;
+        })
         select message;
 }
