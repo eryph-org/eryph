@@ -19,7 +19,7 @@ internal class SyncPortOVSPortsEventHandler(
         var change = message.State switch
         {
             VirtualMachineState.Other => VMPortChange.Nothing,
-            VirtualMachineState.Running => VMPortChange.Nothing,
+            VirtualMachineState.Running => VMPortChange.Add,
             VirtualMachineState.Off => VMPortChange.Remove,
             VirtualMachineState.Stopping => VMPortChange.Nothing,
             VirtualMachineState.Saved => VMPortChange.Nothing,
