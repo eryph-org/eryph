@@ -2,6 +2,7 @@
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.TestBase;
 using Eryph.VmManagement.Wmi;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using static LanguageExt.Prelude;
 
@@ -24,7 +25,7 @@ public class VmStateChangeWatcherServiceTests
         var timestamp = DateTimeOffset.UtcNow;
         var wmiEvent = new WmiEvent(timestamp, wmiObject);
 
-        var result = await VmStateChangeWatcherService.OnEventArrived(wmiEvent).Run();
+        var result = await VmStateChangeWatcherService.OnEventArrived(wmiEvent, NullLogger.Instance).Run();
 
         var message = result.Should().BeSuccess().Which.Should().BeSome().Subject;
         message.VmId.Should().Be(Guid.Parse("2FE70974-C81A-4F3A-BF4E-7BE405B88C97"));
