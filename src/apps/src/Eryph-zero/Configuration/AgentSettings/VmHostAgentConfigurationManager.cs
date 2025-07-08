@@ -22,7 +22,5 @@ internal class VmHostAgentConfigurationManager : IVmHostAgentConfigurationManage
                 Path.Combine(ZeroConfig.GetVmHostAgentConfigPath(), "agentsettings.yml"),
                 hostSettings)
             .Run(RT.New())
-            .AsTask()
-            .Map(t => t.ToEither())
-            .ToAsync(); 
+            .ToEitherAsync();
 }
