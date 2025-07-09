@@ -70,7 +70,7 @@ internal class OvsPortCommands<RT> where RT : struct,
         from optionalInterface in ovsControl.GetInterface(portName, ct).ToAff()
         from @interface in optionalInterface.Match(
             Some: i =>
-                from _1 in logDebug("Interface on port '{PortName}' found. No need to add port.", portName)
+                from _1 in logDebug("Interface for port '{PortName}' found. No need to add the port.", portName)
                 select i,
             None: () =>
                 from _1 in logDebug("Interface for port '{PortName}' not found. Adding port...", portName)
