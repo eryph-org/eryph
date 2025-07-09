@@ -19,6 +19,8 @@ internal class OvsPortCommands<RT> where RT : struct,
     HasLogger<RT>,
     HasPowershell<RT>
 {
+    private OvsPortCommands() { }
+
     public static Aff<RT, Unit> syncOvsPorts(
         TypedPsObject<VirtualMachineInfo> vmInfo,
         VMPortChange change) =>
@@ -51,11 +53,11 @@ internal class OvsPortCommands<RT> where RT : struct,
             .Map(a => portManager.GetPortName(a.Id).ToAff())
             .SequenceSerial()
         from _ in change is VMPortChange.Add
-            ? addPorts(vmInfo.Value.Id, portNames)
+            ? addPorts(portNames)
             : removePorts(portNames)
         select unit;
 
-    private static Aff<RT, Unit> addPorts(Guid vmId, Seq<string> portNames) =>
+    private static Aff<RT, Unit> addPorts(Seq<string> portNames) =>
         from _ in retry(
             Schedule.NoDelayOnFirst
             & Schedule.spaced(TimeSpan.FromSeconds(1))

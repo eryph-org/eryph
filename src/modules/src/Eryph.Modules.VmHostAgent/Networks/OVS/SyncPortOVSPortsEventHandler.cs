@@ -30,7 +30,7 @@ internal class SyncPortOVSPortsEventHandler(
         result.IfFail(e => logger.LogError(e, "Failed to sync OVS network ports"));
     }
 
-    private Aff<AgentRuntime, Unit> HandleEvent(VirtualMachineStateChangedEvent @event) =>
+    private static Aff<AgentRuntime, Unit> HandleEvent(VirtualMachineStateChangedEvent @event) =>
         from portChange in @event.State switch
         {
             VirtualMachineState.Other => SuccessEff(VMPortChange.Nothing),

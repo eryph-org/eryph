@@ -29,7 +29,7 @@ internal class SyncVmNetworkPortsCommandHandler(
         await result.FailOrComplete(messaging, message);
     }
 
-    private Aff<AgentRuntime, Unit> HandleCommand(
+    private static Aff<AgentRuntime, Unit> HandleCommand(
         SyncVmNetworkPortsCommand command) =>
         from psEngine in default(AgentRuntime).Powershell
         from vmInfo in VmQueries.GetOptionalVmInfo(psEngine, command.VMId).ToAff()
