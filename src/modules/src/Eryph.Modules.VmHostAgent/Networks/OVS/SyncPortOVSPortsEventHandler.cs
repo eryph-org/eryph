@@ -1,59 +1,68 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Eryph.Modules.VmHostAgent.Inventory;
+using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
+using Eryph.VmManagement.Data.Full;
 using JetBrains.Annotations;
+using LanguageExt;
+using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
+using SimpleInjector;
+
+using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent.Networks.OVS;
 
+using static OvsPortCommands<AgentRuntime>;
+using static Logger<AgentRuntime>;
+
 [UsedImplicitly]
 internal class SyncPortOVSPortsEventHandler(
-    IOVSPortManager ovsPortManager,
-    ILogger log)
+    ILogger logger,
+    Scope serviceScope)
     : IHandleMessages<VirtualMachineStateChangedEvent>
 {
     public async Task Handle(VirtualMachineStateChangedEvent message)
     {
-        var change = message.State switch
-        {
-            VirtualMachineState.Other => VMPortChange.Nothing,
-            VirtualMachineState.Running => VMPortChange.Add,
-            VirtualMachineState.Off => VMPortChange.Remove,
-            VirtualMachineState.Stopping => VMPortChange.Nothing,
-            VirtualMachineState.Saved => VMPortChange.Nothing,
-            VirtualMachineState.Paused => VMPortChange.Nothing,
-            VirtualMachineState.Starting => VMPortChange.Add,
-            VirtualMachineState.Reset => VMPortChange.Nothing,
-            VirtualMachineState.Saving => VMPortChange.Remove,
-            VirtualMachineState.Pausing => VMPortChange.Nothing,
-            VirtualMachineState.Resuming => VMPortChange.Add,
-            VirtualMachineState.FastSaved => VMPortChange.Nothing,
-            VirtualMachineState.FastSaving => VMPortChange.Remove,
-            VirtualMachineState.ForceShutdown => VMPortChange.Nothing,
-            VirtualMachineState.ForceReboot => VMPortChange.Nothing,
-            VirtualMachineState.RunningCritical => VMPortChange.Nothing,
-            VirtualMachineState.OffCritical => VMPortChange.Remove,
-            VirtualMachineState.StoppingCritical => VMPortChange.Nothing,
-            VirtualMachineState.SavedCritical => VMPortChange.Nothing,
-            VirtualMachineState.PausedCritical => VMPortChange.Nothing,
-            VirtualMachineState.StartingCritical => VMPortChange.Add,
-            VirtualMachineState.ResetCritical => VMPortChange.Nothing,
-            VirtualMachineState.SavingCritical => VMPortChange.Remove,
-            VirtualMachineState.PausingCritical => VMPortChange.Remove,
-            VirtualMachineState.ResumingCritical => VMPortChange.Add,
-            VirtualMachineState.FastSavedCritical => VMPortChange.Nothing,
-            VirtualMachineState.FastSavingCritical => VMPortChange.Remove,
-            _ => throw new ArgumentException(
-                $"The virtual machine state {message.State} is not supported",
-                nameof(message))
-        };
-
-        await ovsPortManager.SyncPorts(message.VmId, change)
-            .IfLeft(error => log.LogError(
-                error,
-                "Failed to sync the network ports of the VM {VmId} after it changed to state {VmState}",
-                message.VmId, message.State));
+        var result = await HandleEvent(message).Run(AgentRuntime.New(serviceScope));
+        result.IfFail(e => logger.LogError(e, "Failed to sync OVS network ports"));
     }
+
+    private Aff<AgentRuntime, Unit> HandleEvent(VirtualMachineStateChangedEvent @event) =>
+        from portChange in @event.State switch
+        {
+            VirtualMachineState.Other => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.Running => SuccessEff(VMPortChange.Add),
+            VirtualMachineState.Off => SuccessEff(VMPortChange.Remove),
+            VirtualMachineState.Stopping => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.Saved => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.Paused => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.Starting => SuccessEff(VMPortChange.Add),
+            VirtualMachineState.Reset => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.Saving => SuccessEff(VMPortChange.Remove),
+            VirtualMachineState.Pausing => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.Resuming => SuccessEff(VMPortChange.Add),
+            VirtualMachineState.FastSaved => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.FastSaving => SuccessEff(VMPortChange.Remove),
+            VirtualMachineState.ForceShutdown => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.ForceReboot => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.RunningCritical => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.OffCritical => SuccessEff(VMPortChange.Remove),
+            VirtualMachineState.StoppingCritical => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.SavedCritical => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.PausedCritical => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.StartingCritical => SuccessEff(VMPortChange.Add),
+            VirtualMachineState.ResetCritical => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.SavingCritical => SuccessEff(VMPortChange.Remove),
+            VirtualMachineState.PausingCritical => SuccessEff(VMPortChange.Remove),
+            VirtualMachineState.ResumingCritical => SuccessEff(VMPortChange.Add),
+            VirtualMachineState.FastSavedCritical => SuccessEff(VMPortChange.Nothing),
+            VirtualMachineState.FastSavingCritical => SuccessEff(VMPortChange.Remove),
+            _ => FailEff<VMPortChange>(Error.New($"The virtual machine state {@event.State} is not supported")),
+        }
+        from _ in syncOvsPorts(@event.VmId, portChange)
+            .MapFail(e => Error.New($"Failed to sync the network ports of the VM {@event.VmId} after it changed to state {@event.State}", e))
+        select unit;
 }

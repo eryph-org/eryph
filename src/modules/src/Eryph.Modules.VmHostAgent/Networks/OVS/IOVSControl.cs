@@ -42,7 +42,7 @@ public interface IOVSControl
 
     EitherAsync<Error, Seq<OvsBridgePort>> GetPorts(CancellationToken cancellationToken);
 
-    EitherAsync<Error, OvsInterface> GetInterface(
+    EitherAsync<Error, Option<OvsInterface>> GetInterface(
         string interfaceName,
         CancellationToken cancellationToken);
 
