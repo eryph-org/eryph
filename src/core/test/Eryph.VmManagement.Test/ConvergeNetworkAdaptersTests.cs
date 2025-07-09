@@ -184,6 +184,10 @@ public class ConvergeNetworkAdaptersTests
             return Error.New($"Unexpected command {command}");
         };
 
+        _portManagerMock.Setup(m => m.GetPortNameSafe("eth1Id"))
+            .Returns(RightAsync<Error, Option<string>>(Some("")))
+            .Verifiable();
+
         _portManagerMock.Setup(m => m.SetPortName("eth1Id", "port1"))
             .Returns(RightAsync<Error, Unit>(unit))
             .Verifiable();
