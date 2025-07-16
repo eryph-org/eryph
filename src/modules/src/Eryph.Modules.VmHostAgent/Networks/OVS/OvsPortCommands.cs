@@ -92,8 +92,14 @@ internal class OvsPortCommands<RT> where RT : struct,
         select unit;
 
     private static Aff<RT, Unit> removePorts(Seq<string> portNames) =>
-        from _ in timeout(
-            TimeSpan.FromSeconds(60),
+        // This logic uses the ovs-vsctl command. We have observed that
+        // it sometimes fails due to connection issues with the OVS database.
+        // Hence, we just retry the commands up to 3 times.
+        from _ in retry(
+            Schedule.NoDelayOnFirst
+            & Schedule.spaced(TimeSpan.FromSeconds(1))
+            & Schedule.upto(TimeSpan.FromSeconds(60))
+            & Schedule.recurs(3),
             from _ in portNames.Map(removePort).SequenceSerial()
             select unit)
         select unit;
