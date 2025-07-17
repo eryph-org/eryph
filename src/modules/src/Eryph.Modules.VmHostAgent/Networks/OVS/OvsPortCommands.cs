@@ -46,16 +46,22 @@ internal class OvsPortCommands<RT> where RT : struct,
         let adapters = allAdapters
             .Map(a => a.Value)
             .Filter(a => a.SwitchName == EryphConstants.OverlaySwitchName)
-        from portManager in default(RT).HyperVOvsPortManager
         from portNames in adapters
             // Do not use GetConfiguredPortName() as we need to be backwards
             // compatible with older port names.
-            .Map(a => portManager.GetPortName(a.Id).ToAff())
+            .Map(a  => getPortName(a.Id))
             .SequenceSerial()
         from _ in change is VMPortChange.Add
             ? addPorts(portNames)
             : removePorts(portNames)
         select unit;
+
+    private static Aff<RT, string> getPortName(string adapterId) =>
+        from portManager in default(RT).HyperVOvsPortManager
+        from optionalPortName in portManager.GetPortName(adapterId).ToAff()
+        from portName in optionalPortName.ToAff(
+            Error.New($"The Hyper-V network adapter '{adapterId}' does not exist."))
+        select portName;
 
     private static Aff<RT, Unit> addPorts(Seq<string> portNames) =>
         from _ in retry(

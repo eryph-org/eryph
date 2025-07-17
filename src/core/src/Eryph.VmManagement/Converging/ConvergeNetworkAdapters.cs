@@ -219,7 +219,7 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             Schedule.NoDelayOnFirst
             & Schedule.spaced(TimeSpan.FromSeconds(1))
             & Schedule.upto(TimeSpan.FromSeconds(10)),
-            from portName in Context.PortManager.GetPortNameSafe(adapterId).ToAff(e => e)
+            from portName in Context.PortManager.GetPortName(adapterId).ToAff(e => e)
             select portName.IsSome,
             r => r)
         from _ in guard(portNameExists,
