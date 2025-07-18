@@ -33,9 +33,13 @@ jobs:
       scriptLocation: 'inlineScript'
       inlineScript: 'az storage blob download --file=$(Build.SourcesDirectory)\ovspackage.zip --container-name=internal --name=ovs/3.3.90.1/ovspackage_signed.zip --account-name=dbosoftreleaseseuwest'
     
-  - task: UseGitVersion@5
+  - task: gitversion/setup@3.1.11
+    displayName: Install GitVersion
     inputs:
-      versionSpec: '5.x'
+      versionSpec: '5.11.x'
+      
+  - task: gitversion/execute@3.1.11
+    displayName: Execute GitVersion
 
   - task: DotNetCoreCLI@2
     displayName: dotnet restore
