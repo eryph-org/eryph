@@ -71,7 +71,7 @@ internal class VmStateChangeWatcherService(IBus bus, ILogger log)
         }
         from _ in Eff(() =>
         {
-            logger.LogInformation("State of VM {VmId} changed to {VmState} at {Timestamp:O}",
+            logger.LogDebug("State of VM {VmId} changed to {VmState} at {Timestamp:O}",
                 vmId, vmState.ToNullable(), wmiEvent.Created);
             return unit;
         })
