@@ -20,11 +20,11 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.VmHostAgent;
 
 using static VirtualMachineUtils<AgentRuntime>;
+using static OvsPortCommands<AgentRuntime>;
 
 [UsedImplicitly]
 internal class RemoveVirtualMachineHandler(
     ITaskMessaging messaging,
-    IOVSPortManager ovsPortManager,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
     Scope serviceScope,
@@ -51,7 +51,7 @@ internal class RemoveVirtualMachineHandler(
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings).ToAff()
         from storageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).ToAff()
         from _1 in timeout(EryphConstants.OperationTimeout, stopVm(vmInfo))
-        from _2 in ovsPortManager.SyncPorts(vmInfo, VMPortChange.Remove).ToAff()
+        from _2 in syncOvsPorts(vmInfo, VMPortChange.Remove)
         from _3 in removeVm(vmInfo)
         from _4 in RemoveVmFiles(storageSettings)
         select unit;

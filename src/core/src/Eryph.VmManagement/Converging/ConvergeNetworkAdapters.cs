@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.Core;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Networking;
@@ -120,8 +121,12 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
         from optionalCreatedAdapter in Context.Engine.GetObjectAsync<VMNetworkAdapter>(command)
         from createdAdapter in optionalCreatedAdapter.ToEitherAsync(
             Error.New("Failed to create network adapter"))
-        from _2 in Context.PortManager.SetPortName(createdAdapter.Value.Id, adapterConfig.PortName)
-        from _3 in ConvergeSecuritySettings(createdAdapter, adapterConfig)
+        // Sometimes, it takes a moment until we can actually read the OVS port name
+        // from a newly created adapter. In the end, we need to access the
+        // Msvm_EthernetPortAllocationSettingData for that adapter via WMI.
+        from _2 in WaitForPortName(createdAdapter.Value.Id).Run().ToEitherAsync()
+        from _3 in Context.PortManager.SetPortName(createdAdapter.Value.Id, adapterConfig.PortName)
+        from _4 in ConvergeSecuritySettings(createdAdapter, adapterConfig)
         select unit;
 
     private EitherAsync<Error, Unit> UpdateAdapter(
@@ -207,6 +212,18 @@ public class ConvergeNetworkAdapters(ConvergeContext context)
             .AddParameter("VMNetworkAdapter", adapter.PsObject)
             .AddParameter("SwitchName", adapterConfig.SwitchName)
         from __ in Context.Engine.RunAsync(command)
+        select unit;
+
+    private Aff<Unit> WaitForPortName(string adapterId) =>
+        from portNameExists in repeatUntil(
+            Schedule.NoDelayOnFirst
+            & Schedule.spaced(TimeSpan.FromSeconds(1))
+            & Schedule.upto(TimeSpan.FromSeconds(10)),
+            from portName in Context.PortManager.GetPortName(adapterId).ToAff(e => e)
+            select portName.IsSome,
+            r => r)
+        from _ in guard(portNameExists,
+            Error.New($"The Hyper-V network adapter '{adapterId}' has not been successfully created."))
         select unit;
 
     private sealed record PhysicalAdapterConfig(

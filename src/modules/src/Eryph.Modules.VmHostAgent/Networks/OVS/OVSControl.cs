@@ -18,10 +18,10 @@ public class OVSControl(
     private static readonly OvsDbConnection LocalOVSConnection
         = new(new OvsFile("/var/run/openvswitch", "db.sock"));
 
-    public EitherAsync<Error, OVSTableRecord> GetOVSTable(CancellationToken cancellationToken)
-    {
-        return GetRecord<OVSTableRecord>("open", ".", cancellationToken: cancellationToken);
-    }
+    public EitherAsync<Error, OVSTableRecord> GetOVSTable(CancellationToken cancellationToken) =>
+        from optionalRecord in GetRecord<OVSTableRecord>("open", ".", cancellationToken: cancellationToken)
+        from ovsRecord in optionalRecord.ToEitherAsync(Error.New("The OVS configuration table does not exist."))
+        select ovsRecord;
 
     public EitherAsync<Error, Unit> UpdateBridgeMapping(
         string bridgeMappings,
@@ -125,7 +125,7 @@ public class OVSControl(
         CancellationToken cancellationToken) =>
         FindRecords<OvsBridge>("Bridge", Map<string, OVSQuery>(), cancellationToken: cancellationToken);
 
-    public EitherAsync<Error, OvsInterface> GetInterface(
+    public EitherAsync<Error, Option<OvsInterface>> GetInterface(
         string interfaceName,
         CancellationToken cancellationToken) =>
         GetRecord<OvsInterface>("Interface", interfaceName, cancellationToken: cancellationToken);

@@ -136,7 +136,6 @@ namespace Eryph.Modules.VmHostAgent
             container.RegisterSingleton<IHardwareIdProvider, HardwareIdProvider>();
             container.RegisterSingleton<IHostArchitectureProvider, HostArchitectureProvider>();
 
-            container.Register<IOVSPortManager, OvsPortManager>(Lifestyle.Scoped);
             container.Register<IHyperVOvsPortManager>(() => new HyperVOvsPortManager(), Lifestyle.Scoped);
 
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Dbosoft.OVN.Windows;
 using Eryph.Core;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Modules.VmHostAgent.Networks.Powershell;
@@ -19,6 +20,7 @@ public readonly struct AgentRuntime :
     HasOVSControl<AgentRuntime>,
     HasAgentSyncClient<AgentRuntime>,
     HasHostNetworkCommands<AgentRuntime>,
+    HasHyperVOvsPortManager<AgentRuntime>,
     HasNetworkProviderManager<AgentRuntime>,
     HasLogger<AgentRuntime>,
     HasWmi<AgentRuntime>
@@ -98,4 +100,7 @@ public readonly struct AgentRuntime :
         FromServiceProvider<ILoggerFactory>().Map(lf => lf.CreateLogger<T>());
 
     public Eff<AgentRuntime, WmiIO> WmiEff => SuccessEff(LiveWmiIO.Default);
+
+    public Eff<AgentRuntime, IHyperVOvsPortManager> HyperVOvsPortManager =>
+        FromServiceProvider<IHyperVOvsPortManager>();
 }
