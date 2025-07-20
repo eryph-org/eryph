@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Eryph.VmManagement\Eryph.VmManagement.csproj" />
+    <ProjectReference Include="..\..\src\Eryph.VmManagement.HyperV\Eryph.VmManagement.HyperV.csproj" />
   </ItemGroup>
 
 </Project>

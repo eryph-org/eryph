@@ -32,6 +32,6 @@
     <ProjectReference Include="..\Eryph.AnsiConsole\Eryph.AnsiConsole.csproj" />
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
-    <ProjectReference Include="..\..\..\core\src\Eryph.VmManagement\Eryph.VmManagement.csproj" />
+    <ProjectReference Include="..\..\..\core\src\Eryph.VmManagement.HyperV\Eryph.VmManagement.HyperV.csproj" />
   </ItemGroup>
 </Project>

@@ -13,9 +13,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "eryph-zero", "src\apps\src\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.Controller", "src\modules\src\Eryph.Modules.Controller\Eryph.Modules.Controller.csproj", "{D407363B-27CE-4180-BB8A-986A619941CD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement", "src\core\src\Eryph.VmManagement\Eryph.VmManagement.csproj", "{B55118C0-8D29-4079-A291-62383B857EEA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.HyperV", "src\core\src\Eryph.VmManagement.HyperV\Eryph.VmManagement.HyperV.csproj", "{B55118C0-8D29-4079-A291-62383B857EEA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.VmHostAgent", "src\modules\src\Eryph.Modules.VmHostAgent\Eryph.Modules.VmHostAgent.csproj", "{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.HostAgent.HyperV", "src\modules\src\Eryph.Modules.HostAgent.HyperV\Eryph.Modules.HostAgent.HyperV.csproj", "{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Agent", "src\apps\src\Eryph.Agent\Eryph.Agent.csproj", "{A976200C-AE38-49FA-8437-0A067EBB66DB}"
 EndProject
@@ -71,11 +71,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Security.Cryptography
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.NetworkModule", "src\modules\src\Eryph.Modules.NetworkModule\Eryph.Modules.NetworkModule.csproj", "{8BECD5A8-104E-47DC-8C94-DC50A6C5BAAA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.VmHostAgent.Test", "src\modules\test\Eryph.Modules.VmHostAgent.Test\Eryph.Modules.VmHostAgent.Test.csproj", "{4CF54668-F3F0-403E-BA26-EC9F15D325BD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.HostAgent.HyperV.Test", "src\modules\test\Eryph.Modules.HostAgent.HyperV.Test\Eryph.Modules.HostAgent.HyperV.Test.csproj", "{4CF54668-F3F0-403E-BA26-EC9F15D325BD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.ComputeApi.Tests", "src\modules\test\Eryph.Modules.ComputeApi.Tests\Eryph.Modules.ComputeApi.Tests.csproj", "{036EC2BD-8968-46D4-9FFD-901F3BB1FA70}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.Test", "src\core\test\Eryph.VmManagement.Test\Eryph.VmManagement.Test.csproj", "{7ED587D0-DB83-4427-9A47-FC51FD8EF596}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.HyperV.Test", "src\core\test\Eryph.VmManagement.HyperV.Test\Eryph.VmManagement.HyperV.Test.csproj", "{7ED587D0-DB83-4427-9A47-FC51FD8EF596}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "eryph-uninstaller", "src\apps\src\eryph-uninstaller\eryph-uninstaller.csproj", "{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6}"
 EndProject
@@ -97,7 +97,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.StateDb.Tests", "src\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.ModuleCore.Tests", "src\modules\test\Eryph.ModuleCore.Tests\Eryph.ModuleCore.Tests.csproj", "{C85F3B0A-FD64-4E07-A52E-D3BD7FE0D5D1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.TestBase", "src\core\test\Eryph.VmManagement.TestBase\Eryph.VmManagement.TestBase.csproj", "{07EA56EB-0B74-485B-8008-268C0B9A43AC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.HyperV.TestBase", "src\core\test\Eryph.VmManagement.HyperV.TestBase\Eryph.VmManagement.HyperV.TestBase.csproj", "{07EA56EB-0B74-485B-8008-268C0B9A43AC}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Rebus.Tests", "src\infrastructure\test\Eryph.Rebus.Tests\Eryph.Rebus.Tests.csproj", "{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}"
 EndProject
