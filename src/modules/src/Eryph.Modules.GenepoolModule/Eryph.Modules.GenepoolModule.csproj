@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>annotations</Nullable>
-    <RootNamespace>Eryph.Modules.VmHostAgent</RootNamespace>
+    <RootNamespace>Eryph.Modules.Genepool</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="$(AssemblyName).Test" />
@@ -33,6 +33,5 @@
     <ProjectReference Include="..\Eryph.AnsiConsole\Eryph.AnsiConsole.csproj" />
     <ProjectReference Include="..\Eryph.ModuleCore\Eryph.ModuleCore.csproj" />
     <ProjectReference Include="..\..\..\infrastructure\src\Eryph.Rebus\Eryph.Rebus.csproj" />
-    <ProjectReference Include="..\..\..\core\src\Eryph.VmManagement.HyperV\Eryph.VmManagement.HyperV.csproj" />
   </ItemGroup>
 </Project>
