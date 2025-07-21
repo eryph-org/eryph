@@ -220,7 +220,7 @@ public class OvsDriverProvider<RT> where RT : struct,
         from match in Eff(() => Regex.Match(
             processResult.Output,
             @$"SERVICE_NAME:\s*{Regex.Escape(EryphConstants.DriverModuleName)}",
-            RegexOptions.Multiline | RegexOptions.IgnoreCase))
+            RegexOptions.Multiline | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2)))
         select match.Success;
 
     private static Option<Version> parseVersion(string input) =>
