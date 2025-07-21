@@ -1,5 +1,4 @@
-﻿using Eryph.VmManagement.Inventory;
-using LanguageExt;
+﻿using LanguageExt;
 
 namespace Eryph.VmManagement.Sys;
 

@@ -184,7 +184,7 @@ public class OvsDriverProvider<RT> where RT : struct,
         from match in Eff(() => Regex.Match(
             infContent,
             @"DriverVer\s*=.*,(\d+\.\d+\.\d+\.\d+)",
-            RegexOptions.Multiline | RegexOptions.IgnoreCase))
+            RegexOptions.Multiline | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2)))
         from _ in guard(match.Success, Error.New("Could not extract driver version from INF"))
         from version in parseVersion(match.Groups[1].Value).ToEff(Error.New("Could not parse driver version"))
         select version;

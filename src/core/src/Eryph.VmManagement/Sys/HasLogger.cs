@@ -1,7 +1,7 @@
 ﻿using LanguageExt;
 using Microsoft.Extensions.Logging;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.VmManagement.Sys;
 
 public interface HasLogger<RT>
     where RT : struct, HasLogger<RT>

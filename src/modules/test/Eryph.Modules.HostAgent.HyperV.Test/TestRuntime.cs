@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Traits = LanguageExt.Sys.Traits;
 
 using static LanguageExt.Prelude;
+using Eryph.VmManagement.Sys;
 
 namespace Eryph.Modules.VmHostAgent.Test;
 

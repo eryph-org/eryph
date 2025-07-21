@@ -1,8 +1,5 @@
 ﻿using System.Text;
-using Eryph.Core;
-using Eryph.Modules.VmHostAgent;
-using Eryph.Modules.VmHostAgent.Networks;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Effects.Traits;
 using LanguageExt.Sys;
@@ -37,17 +34,9 @@ public readonly struct TestRuntime :
         env ?? throw new InvalidOperationException(
             "Runtime Env not set. Perhaps because of using default(Runtime) or new Runtime() rather than Runtime.New()");
 
-    public static TestRuntime New(
-        IOVSControl ovsControl,
-        ISyncClient syncClient,
-        IHostNetworkCommands<TestRuntime> hostNetworkCommands,
-        INetworkProviderManager networkProviderManager) =>
+    public static TestRuntime New() =>
         new TestRuntime(new RuntimeEnv<TestRuntime>(
-            new CancellationTokenSource(),
-            ovsControl,
-            syncClient,
-            hostNetworkCommands,
-            networkProviderManager));
+            new CancellationTokenSource()));
 
     /// <summary>
     /// Create a new Runtime with a fresh cancellation token
@@ -61,11 +50,7 @@ public readonly struct TestRuntime :
             Env.Console,
             Env.FileSystem,
             Env.TimeSpec,
-            Env.SysEnv,
-            Env.OVSControl,
-            Env.SyncClient,
-            Env.HostNetworkCommands,
-            Env.NetworkProviderManager));
+            Env.SysEnv));
 
     /// <summary>
     /// Direct access to cancellation token

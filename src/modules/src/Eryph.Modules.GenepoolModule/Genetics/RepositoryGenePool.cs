@@ -14,7 +14,7 @@ using Eryph.Core.Genetics;
 using Eryph.GenePool.Client;
 using Eryph.GenePool.Client.Credentials;
 using Eryph.GenePool.Model.Responses;
-using Eryph.VmManagement.Inventory;
+using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;

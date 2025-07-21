@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Eryph.VmManagement.Inventory;
+namespace Eryph.VmManagement;
 
 public interface IHardwareIdProvider
 {

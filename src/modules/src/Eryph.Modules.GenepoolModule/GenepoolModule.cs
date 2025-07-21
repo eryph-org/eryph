@@ -12,7 +12,7 @@ using Eryph.ModuleCore.Startup;
 using Eryph.Modules.Genepool.Genetics;
 using Eryph.Modules.Genepool.Inventory;
 using Eryph.Rebus;
-using Eryph.VmManagement.Inventory;
+using Eryph.VmManagement;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

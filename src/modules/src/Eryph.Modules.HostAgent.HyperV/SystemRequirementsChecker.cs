@@ -1,5 +1,4 @@
 ﻿using System;
-using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;

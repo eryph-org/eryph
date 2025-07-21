@@ -1,8 +1,4 @@
 ﻿using System.Text;
-using Eryph.Core;
-using Eryph.Modules.VmHostAgent;
-using Eryph.Modules.VmHostAgent.Networks;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
 using LanguageExt.Effects.Traits;
 using LanguageExt.Sys;
 using LanguageExt.Sys.Test;
@@ -17,30 +13,18 @@ public class RuntimeEnv<RT>(
     MemoryConsole console,
     MemoryFS fileSystem,
     TestTimeSpec? timeSpec,
-    MemorySystemEnvironment sysEnv,
-    IOVSControl ovsControl,
-    ISyncClient syncClient,
-    IHostNetworkCommands<RT> hostNetworkCommands,
-    INetworkProviderManager networkProviderManager)
+    MemorySystemEnvironment sysEnv)
     where RT : struct, HasCancel<RT>
 {
     public RuntimeEnv(
-        CancellationTokenSource source,
-        IOVSControl ovsControl,
-        ISyncClient syncClient,
-        IHostNetworkCommands<RT> hostNetworkCommands,
-        INetworkProviderManager networkProviderManager)
+        CancellationTokenSource source)
         : this(
             source,
             Encoding.Default,
             new MemoryConsole(),
             new MemoryFS(),
             TestTimeSpec.RunningFromNow(),
-            MemorySystemEnvironment.InitFromSystem(),
-            ovsControl,
-            syncClient,
-            hostNetworkCommands,
-            networkProviderManager)
+            MemorySystemEnvironment.InitFromSystem())
     {
 
     }
@@ -56,14 +40,6 @@ public class RuntimeEnv<RT>(
     public TestTimeSpec TimeSpec { get; } = timeSpec ?? TestTimeSpec.RunningFromNow();
     
     public MemorySystemEnvironment SysEnv { get; } = sysEnv;
-
-    public IOVSControl OVSControl { get; init; } = ovsControl;
-
-    public ISyncClient SyncClient { get; init; } = syncClient;
-
-    public IHostNetworkCommands<RT> HostNetworkCommands { get; init; } = hostNetworkCommands;
-
-    public INetworkProviderManager NetworkProviderManager { get; init; } = networkProviderManager;
 
     public ILoggerFactory LoggerFactory { get; init; } = new NullLoggerFactory();
 }

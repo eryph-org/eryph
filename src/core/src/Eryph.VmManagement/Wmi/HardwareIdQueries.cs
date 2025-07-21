@@ -1,19 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core.Sys;
 using Eryph.VmManagement.Sys;
-using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiUtils;
 
-namespace Eryph.VmManagement.Inventory;
+namespace Eryph.VmManagement.Wmi;
 
+[SupportedOSPlatform("windows")]
 public static class HardwareIdQueries<RT> where RT : struct, HasRegistry<RT>, HasWmi<RT>
 {
     public static Eff<RT, Guid> readSmBiosUuid() =>

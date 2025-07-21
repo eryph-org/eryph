@@ -10,7 +10,7 @@ using Eryph.Core.Sys;
 using Eryph.Modules.Genepool.Inventory;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Inventory;
-using Eryph.VmManagement.Inventory;
+using Eryph.VmManagement;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Sys.Traits;

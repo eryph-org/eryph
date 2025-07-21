@@ -4,7 +4,6 @@ using System.Linq;
 using System.Management;
 using System.Text;
 using System.Threading.Tasks;
-using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.VmManagement.Sys;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;

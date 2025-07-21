@@ -1,20 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core.Sys;
 using Eryph.Modules.Genepool;
-using Eryph.Modules.VmHostAgent.Networks;
-using Eryph.VmManagement.Inventory;
+using Eryph.VmManagement;
 using Eryph.VmManagement.Sys;
+using Eryph.VmManagement.Wmi;
 using LanguageExt;
 
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.Genepool.Inventory;
 
+[SupportedOSPlatform("windows")]
 public class WindowsHardwareIdProvider : IHardwareIdProvider
 {
     public WindowsHardwareIdProvider(
@@ -41,6 +43,7 @@ public class WindowsHardwareIdProvider : IHardwareIdProvider
     }
 }
 
+[SupportedOSPlatform("windows")]
 internal static class WindowsHardwareIdProvider<RT> where RT : struct,
     HasLogger<RT>,
     HasRegistry<RT>,
