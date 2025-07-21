@@ -141,7 +141,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                     ResourceType = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Environment = table.Column<string>(type: "TEXT", nullable: false),
-                    HardwareId = table.Column<string>(type: "TEXT", nullable: false),
                     LastInventory = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

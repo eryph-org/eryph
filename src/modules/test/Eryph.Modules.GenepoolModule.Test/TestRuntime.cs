@@ -20,10 +20,6 @@ public readonly struct TestRuntime :
     HasFile<TestRuntime>,
     HasTime<TestRuntime>,
     HasDirectory<TestRuntime>,
-    HasOVSControl<TestRuntime>,
-    HasAgentSyncClient<TestRuntime>,
-    HasHostNetworkCommands<TestRuntime>,
-    HasNetworkProviderManager<TestRuntime>,
     HasLogger<TestRuntime>
 {
     public readonly RuntimeEnv<TestRuntime> env;
@@ -134,19 +130,6 @@ public readonly struct TestRuntime :
     public Eff<TestRuntime, Traits.EnvironmentIO> EnvironmentEff =>
         Eff<TestRuntime, Traits.EnvironmentIO>(
             rt => new LanguageExt.Sys.Test.EnvironmentIO(rt.Env.SysEnv));
-
-    public Eff<TestRuntime, IOVSControl> OVS =>
-        Eff<TestRuntime, IOVSControl>(rt => rt.Env.OVSControl);
-
-    public Eff<TestRuntime, ISyncClient> AgentSync =>
-        Eff<TestRuntime, ISyncClient>(rt => rt.Env.SyncClient);
-
-    public Eff<TestRuntime, IHostNetworkCommands<TestRuntime>> HostNetworkCommands =>
-        Eff<TestRuntime, IHostNetworkCommands<TestRuntime>>(
-            rt => rt.Env.HostNetworkCommands);
-    public Eff<TestRuntime, INetworkProviderManager> NetworkProviderManager =>
-        Eff<TestRuntime, INetworkProviderManager>(
-            rt => rt.Env.NetworkProviderManager);
 
     public Eff<TestRuntime, ILogger> Logger(string category) =>
         Eff<TestRuntime, ILogger>(rt => rt.Env.LoggerFactory.CreateLogger(category));

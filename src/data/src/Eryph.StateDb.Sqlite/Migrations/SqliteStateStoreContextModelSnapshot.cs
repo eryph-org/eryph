@@ -715,10 +715,6 @@ namespace Eryph.StateDb.Sqlite.Migrations
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
 
-                    b.Property<string>("HardwareId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("LastInventory")
                         .HasColumnType("TEXT");
 

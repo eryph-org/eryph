@@ -720,10 +720,6 @@ namespace Eryph.StateDb.MySql.Migrations
                 {
                     b.HasBaseType("Eryph.StateDb.Model.Resource");
 
-                    b.Property<string>("HardwareId")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<DateTimeOffset>("LastInventory")
                         .HasColumnType("datetime(6)");
 
