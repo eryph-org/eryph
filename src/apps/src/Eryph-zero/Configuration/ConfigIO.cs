@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -67,14 +68,14 @@ namespace Eryph.Runtime.Zero.Configuration
                 "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
             };
 
-            var sanitizedNamePart = Regex.Replace(filename, invalidReStr, "_");
+            var sanitizedNamePart = Regex.Replace(filename, invalidReStr, "_", RegexOptions.None, TimeSpan.FromSeconds(2));
             for (var index = 0; index < reservedWords.Length; index++)
             {
                 var reservedWord = reservedWords[index];
                 var reservedWordPattern = $"^{reservedWord}(\\.|$)";
 
                 sanitizedNamePart = Regex.Replace(sanitizedNamePart, reservedWordPattern, $"_RW{index}_$1",
-                    RegexOptions.IgnoreCase);
+                    RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2));
             }
 
             return sanitizedNamePart;

@@ -12,7 +12,7 @@ namespace Eryph.Modules.Controller
             const string regex = "(.{2})(.{2})(.{2})(.{2})(.{2})(.{2})";
             const string replace = "$1:$2:$3:$4:$5:$6";
 
-            return Regex.Replace(input, regex, replace).ToLowerInvariant();
+            return Regex.Replace(input, regex, replace, RegexOptions.None, TimeSpan.FromSeconds(2)).ToLowerInvariant();
 
         }
 

@@ -73,7 +73,7 @@ namespace Eryph.VmManagement.Converging
                 
                 (await adapterDevice.CastSafeAsync<VMNetworkAdapter>()).IfRight(adapter =>
                 {
-                    var macFormatted = Regex.Replace(adapter.Value.MacAddress, regex, replace).ToLowerInvariant();
+                    var macFormatted = Regex.Replace(adapter.Value.MacAddress, regex, replace, RegexOptions.None, TimeSpan.FromSeconds(2)).ToLowerInvariant();
 
                     var physicalNetworkSettings = new
                     {
