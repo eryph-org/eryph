@@ -97,7 +97,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.StateDb.Tests", "src\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.ModuleCore.Tests", "src\modules\test\Eryph.ModuleCore.Tests\Eryph.ModuleCore.Tests.csproj", "{C85F3B0A-FD64-4E07-A52E-D3BD7FE0D5D1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.HyperV.TestBase", "src\core\test\Eryph.VmManagement.HyperV.TestBase\Eryph.VmManagement.HyperV.TestBase.csproj", "{07EA56EB-0B74-485B-8008-268C0B9A43AC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.TestBase", "src\core\test\Eryph.VmManagement.TestBase\Eryph.VmManagement.TestBase.csproj", "{07EA56EB-0B74-485B-8008-268C0B9A43AC}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Rebus.Tests", "src\infrastructure\test\Eryph.Rebus.Tests\Eryph.Rebus.Tests.csproj", "{03B7CC02-557A-4F29-BD61-E3C6899EF9FF}"
 EndProject
@@ -110,6 +110,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.AspNetCore.Tests", "src\modules\test\Eryph.Modules.AspNetCore.Tests\Eryph.Modules.AspNetCore.Tests.csproj", "{CC77737C-0054-4B61-9DC7-6C98359919C6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.GenepoolModule", "src\modules\src\Eryph.Modules.GenepoolModule\Eryph.Modules.GenepoolModule.csproj", "{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.VmManagement", "src\core\src\Eryph.VmManagement\Eryph.VmManagement.csproj", "{A2398EBA-32C2-F99F-4EA1-18068E896BD4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.GenepoolModule.Test", "src\modules\test\Eryph.Modules.GenepoolModule.Test\Eryph.Modules.GenepoolModule.Test.csproj", "{103457D3-885B-E85A-65C9-65AA3952EC17}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -297,6 +301,14 @@ Global
 		{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2398EBA-32C2-F99F-4EA1-18068E896BD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2398EBA-32C2-F99F-4EA1-18068E896BD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2398EBA-32C2-F99F-4EA1-18068E896BD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2398EBA-32C2-F99F-4EA1-18068E896BD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{103457D3-885B-E85A-65C9-65AA3952EC17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{103457D3-885B-E85A-65C9-65AA3952EC17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{103457D3-885B-E85A-65C9-65AA3952EC17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{103457D3-885B-E85A-65C9-65AA3952EC17}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -347,6 +359,8 @@ Global
 		{643D9BEC-6092-4351-B0BD-FD5776C62DEC} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{CC77737C-0054-4B61-9DC7-6C98359919C6} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE} = {E889B549-C333-46DC-B71F-9608CBA1FBAA}
+		{A2398EBA-32C2-F99F-4EA1-18068E896BD4} = {07B818A5-B186-4D09-A766-9E4963F3C07E}
+		{103457D3-885B-E85A-65C9-65AA3952EC17} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

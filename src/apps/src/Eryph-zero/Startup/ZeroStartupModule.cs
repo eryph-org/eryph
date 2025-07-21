@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.ModuleCore.Startup;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Runtime.Zero.Configuration.Clients;

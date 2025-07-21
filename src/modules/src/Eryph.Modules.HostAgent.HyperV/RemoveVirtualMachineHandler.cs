@@ -3,6 +3,7 @@ using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;

@@ -12,10 +12,8 @@ namespace Eryph.VmManagement.Inventory;
 
 internal class HostInventory(
     ILogger log,
-    INetworkProviderManager networkProviderManager,
-    IHardwareIdProvider hardwareIdProvider)
+    INetworkProviderManager networkProviderManager)
 {
-    private readonly ILogger _log = log;
 
     public Task<Either<Error, VMHostMachineData>> InventorizeHost()
     {
@@ -25,7 +23,6 @@ internal class HostInventory(
             select new VMHostMachineData
             {
                 Name = Environment.MachineName,
-                HardwareId = hardwareIdProvider.HardwareId.ToString(),
                 NetworkProviderConfiguration = providerConfig
             }).ToEither();
 

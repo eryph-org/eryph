@@ -33,11 +33,6 @@ namespace Eryph.Modules.Controller.DataServices
             return res;
         }
 
-        
-        public async Task<Option<CatletFarm>> GetVMHostByHardwareId(string hardwareId)
-        {
-            return await _repository.GetBySpecAsync(new VMHostMachineSpecs.GetByHardwareId(hardwareId));
-        }
 
         public async Task<Option<CatletFarm>> GetVMHostByAgentName(string agentName)
         {

@@ -23,6 +23,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Eryph.VmManagement.HyperV\Eryph.VmManagement.HyperV.csproj" />
-    <ProjectReference Include="..\Eryph.VmManagement.HyperV.TestBase\Eryph.VmManagement.HyperV.TestBase.csproj" />
+    <ProjectReference Include="..\Eryph.VmManagement.TestBase\Eryph.VmManagement.TestBase.csproj" />
   </ItemGroup>
 </Project>

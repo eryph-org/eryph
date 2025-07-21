@@ -10,8 +10,8 @@ using JetBrains.Annotations;
 
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
-[SendMessageTo(MessageRecipient.VMHostAgent)]
-public class ExpandFodderVMCommand : IHostAgentCommand
+[SendMessageTo(MessageRecipient.GenepoolAgent)]
+public class ExpandFodderVMCommand : IGenepoolAgentCommand
 {
     public string AgentName { get; set; }
 

@@ -9,8 +9,8 @@ using Eryph.Messages.Resources;
 
 namespace Eryph.Messages.Genes.Commands;
 
-[SendMessageTo(MessageRecipient.VMHostAgent)]
-public class RemoveGenesVmHostCommand : IHostAgentCommand
+[SendMessageTo(MessageRecipient.GenepoolAgent)]
+public class RemoveGenesVmHostCommand : IGenepoolAgentCommand
 {
     public IReadOnlyList<UniqueGeneIdentifier> Genes { get; set; }
 

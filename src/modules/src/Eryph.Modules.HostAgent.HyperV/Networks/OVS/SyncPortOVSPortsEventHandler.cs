@@ -16,7 +16,7 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.VmHostAgent.Networks.OVS;
 
 using static OvsPortCommands<AgentRuntime>;
-using static Logger<AgentRuntime>;
+using static VmManagement.Sys.Logger<AgentRuntime>;
 
 [UsedImplicitly]
 internal class SyncPortOVSPortsEventHandler(

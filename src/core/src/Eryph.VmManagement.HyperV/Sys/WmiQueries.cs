@@ -8,6 +8,7 @@ using LanguageExt.Common;
 using Microsoft.PowerShell.Commands;
 using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiUtils;
+using Eryph.VmManagement.Wmi;
 
 namespace Eryph.VmManagement.Sys;
 

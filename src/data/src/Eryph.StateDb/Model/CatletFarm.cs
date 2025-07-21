@@ -13,7 +13,6 @@ public class CatletFarm : Resource
 
     public ICollection<Catlet> Catlets { get; set; } = null!;
 
-    public required string HardwareId { get; set; }
 
     public DateTimeOffset LastInventory { get; set; }
 }

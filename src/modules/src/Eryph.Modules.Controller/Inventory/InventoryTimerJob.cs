@@ -30,7 +30,7 @@ internal class InventoryTimerJob(Container container) : IJob
             // In the future, the gene pool might be shared between multiple agents. Hence,
             // the controller will need to pick a responsible agent.
             var agentName = _agentLocator.FindAgentForGenePool();
-            await _bus.Advanced.Routing.Send($"{QueueNames.VMHostAgent}.{agentName}",
+            await _bus.Advanced.Routing.Send($"{QueueNames.Genepool}.{agentName}",
                 new InventorizeGenePoolCommand()
                 {
                     AgentName = agentName,

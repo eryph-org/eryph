@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Disks;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Inventory;

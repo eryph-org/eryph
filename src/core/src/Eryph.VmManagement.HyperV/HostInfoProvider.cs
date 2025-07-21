@@ -12,12 +12,11 @@ namespace Eryph.VmManagement;
 
 public class HostInfoProvider(
     ILogger log, 
-    INetworkProviderManager networkProviderManager,
-    IHardwareIdProvider hardwareIdProvider)
+    INetworkProviderManager networkProviderManager)
     : IHostInfoProvider
 {
     [CanBeNull] private VMHostMachineData _cachedData = null;
-    private readonly HostInventory _hostInventory = new(log, networkProviderManager, hardwareIdProvider);
+    private readonly HostInventory _hostInventory = new(log, networkProviderManager);
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     public EitherAsync<Error, VMHostMachineData> GetHostInfoAsync(bool refresh = false)

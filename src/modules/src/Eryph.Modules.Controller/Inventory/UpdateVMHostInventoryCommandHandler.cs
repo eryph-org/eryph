@@ -38,12 +38,11 @@ internal class UpdateVMHostInventoryCommandHandler(
 
     public async Task Handle(UpdateVMHostInventoryCommand message)
     {
-        var vmHost = await vmHostDataService.GetVMHostByHardwareId(message.HostInventory.HardwareId)
+        var vmHost = await vmHostDataService.GetVMHostByAgentName(message.HostInventory.Name)
             .IfNoneAsync(async () => await vmHostDataService.AddNewVMHost(new CatletFarm
             {
                 Id = Guid.NewGuid(),
                 Name = message.HostInventory.Name,
-                HardwareId = message.HostInventory.HardwareId,
                 Project = await FindRequiredProject(EryphConstants.DefaultProjectName, null),
                 Environment = EryphConstants.DefaultEnvironmentName,
             }));

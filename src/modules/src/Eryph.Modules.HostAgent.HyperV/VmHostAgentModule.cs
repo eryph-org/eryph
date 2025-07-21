@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO.Abstractions;
-using System.Net.Http;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Dbosoft.OVN.Windows;
@@ -8,10 +7,10 @@ using Dbosoft.Rebus;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Networks;
 using Eryph.ModuleCore.Startup;
-using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
@@ -25,9 +24,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Polly;
-using Polly.Contrib.WaitAndRetry;
-using Polly.Extensions.Http;
 using Quartz;
 using Rebus.Config;
 using Rebus.Handlers;
@@ -62,10 +58,6 @@ namespace Eryph.Modules.VmHostAgent
             services.Configure<HostOptions>(
                 opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 
-            services.AddHttpClient(GenePoolConstants.PartClientName)
-                .SetHandlerLifetime(TimeSpan.FromMinutes(5))  //Set lifetime to five minutes
-                .AddPolicyHandler(GetRetryPolicy());
-
             services.AddTransient<WmiVmUptimeCheckJob>();
             services.AddQuartz(q =>
             {
@@ -86,7 +78,6 @@ namespace Eryph.Modules.VmHostAgent
         {
             options.AddHostedService<SyncService>();
             options.AddHostedService<OVSChassisService>();
-            options.AddHostedService<GeneticsRequestWatcherService>();
             options.AddStartupHandler<StartBusModuleHandler>();
             // Remove this hosted service to avoid triggering the inventory
             // based on WMI events.
@@ -129,25 +120,12 @@ namespace Eryph.Modules.VmHostAgent
 
             container.RegisterInstance(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>());
             container.RegisterInstance(serviceProvider.GetRequiredService<IApplicationInfoProvider>());
-            container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolApiKeyStore>());
             container.RegisterInstance(serviceProvider.GetRequiredService<IHostSettingsProvider>());
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
             container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
-            container.RegisterSingleton<IHardwareIdProvider, HardwareIdProvider>();
             container.RegisterSingleton<IHostArchitectureProvider, HostArchitectureProvider>();
 
             container.Register<IHyperVOvsPortManager>(() => new HyperVOvsPortManager(), Lifestyle.Scoped);
-
-
-            var genePoolFactory = new GenePoolFactory(container);
-            
-            genePoolFactory.Register<RepositoryGenePool>(serviceProvider.GetRequiredService<GenepoolSettings>());
-            container.RegisterInstance<IGenePoolFactory>(genePoolFactory);
-            container.RegisterSingleton<IGeneProvider, LocalFirstGeneProvider>();
-            container.RegisterSingleton<IGeneRequestDispatcher, GeneRequestRegistry>();
-            container.RegisterSingleton<IGeneRequestBackgroundQueue, GeneBackgroundTaskQueue>();
-            container.RegisterSingleton<IGenePoolInventoryFactory, GenePoolInventoryFactory>();
-
 
             container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
             container.Collection.Register(typeof(IHandleMessages<>), typeof(VmHostAgentModule).Assembly);
@@ -171,16 +149,5 @@ namespace Eryph.Modules.VmHostAgent
                 .Start());
         }
 
-        private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
-        {
-            var delay = Backoff.DecorrelatedJitterBackoffV2(
-                TimeSpan.FromSeconds(1), 5);
-
-            return HttpPolicyExtensions
-                .HandleTransientHttpError()
-                .Or<HttpRequestException>(ex => true)
-                .WaitAndRetryAsync(6, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2,
-                    retryAttempt)));
-        }
     }
 }

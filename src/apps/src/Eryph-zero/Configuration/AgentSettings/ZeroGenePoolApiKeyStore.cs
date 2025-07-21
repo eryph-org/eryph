@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Eryph.Modules.VmHostAgent.Genetics;
+using Eryph.Modules.Genepool.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 

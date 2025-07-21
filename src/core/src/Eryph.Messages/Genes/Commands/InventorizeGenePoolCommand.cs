@@ -7,8 +7,8 @@ using Eryph.Messages.Resources;
 
 namespace Eryph.Messages.Genes.Commands;
 
-[SendMessageTo(MessageRecipient.VMHostAgent)]
-public class InventorizeGenePoolCommand : IHostAgentCommand
+[SendMessageTo(MessageRecipient.GenepoolAgent)]
+public class InventorizeGenePoolCommand : IGenepoolAgentCommand
 {
     public string AgentName { get; set; }
 }

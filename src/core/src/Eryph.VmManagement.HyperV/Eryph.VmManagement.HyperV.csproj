@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>Eryph.VmManagement</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
      <InternalsVisibleTo Include="$(AssemblyName).Test" />
@@ -23,5 +24,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Eryph.VmConfig.Primitives\Eryph.Primitives.csproj" />
+    <ProjectReference Include="..\Eryph.VmManagement\Eryph.VmManagement.csproj" />
   </ItemGroup>
 </Project>

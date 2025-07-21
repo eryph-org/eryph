@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Messages.Resources.Catlets.Events;
 using Eryph.Resources.Machines;

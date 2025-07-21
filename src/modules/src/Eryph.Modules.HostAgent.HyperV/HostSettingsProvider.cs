@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using Eryph.Core.VmAgent;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
@@ -8,11 +9,6 @@ using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.VmHostAgent;
-
-public interface IHostSettingsProvider
-{
-    EitherAsync<Error, HostSettings> GetHostSettings();
-}
 
 public class HostSettingsProvider(ILoggerFactory loggerFactory)
     : IHostSettingsProvider

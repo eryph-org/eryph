@@ -3,6 +3,7 @@ using Eryph.Resources.Machines;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Sys;
+using Eryph.VmManagement.Wmi;
 using LanguageExt;
 using LanguageExt.Common;
 

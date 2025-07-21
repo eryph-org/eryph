@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
-using Eryph.Modules.VmHostAgent.Genetics;
+using Eryph.Modules.Genepool.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 using Moq;

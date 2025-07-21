@@ -19,7 +19,6 @@ using Eryph.AnsiConsole.Sys;
 using Eryph.ModuleCore;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Configuration;
-using Eryph.Modules.VmHostAgent.Genetics;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
@@ -56,6 +55,7 @@ using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 
 using static LanguageExt.Prelude;
 using static Eryph.AnsiConsole.Prelude;
+using Eryph.Modules.Genepool.Genetics;
 
 namespace Eryph.Runtime.Zero;
 
@@ -319,6 +319,7 @@ internal static class Program
                     })
                     .HostModule<ZeroStartupModule>()
                     .AddVmHostAgentModule()
+                    .AddGenepoolModule()
                     .AddNetworkModule()
                     .AddControllerModule(container)
                     .AddComputeApiModule()

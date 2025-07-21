@@ -76,7 +76,22 @@ public class EryphRebusOperationMessaging : RebusOperationMessaging
                                 $"Don't know how to route operation task command of type {messageType}");
                     }
                 }
+            case MessageRecipient.GenepoolAgent:
+            {
+                switch (command)
+                {
 
+                    case IGenepoolAgentCommand agentCommand:
+                        await _bus.Advanced.Routing.Send($"{QueueNames.Genepool}.{agentCommand.AgentName}",
+                                outboundMessage)
+                            .ConfigureAwait(false);
+
+                        return;
+                    default:
+                        throw new InvalidDataException(
+                            $"Don't know how to route operation task command of type {messageType}");
+                }
+            }
             case MessageRecipient.Controllers:
                 await _bus.SendLocal(outboundMessage);
                 return;
