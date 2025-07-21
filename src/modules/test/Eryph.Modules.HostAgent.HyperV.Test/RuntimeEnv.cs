@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Eryph.Core;
+using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using LanguageExt.Effects.Traits;
@@ -8,7 +9,7 @@ using LanguageExt.Sys.Test;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Eryph.Modules.VmHostAgent.Test;
+namespace Eryph.Modules.HostAgent.HyperV.Test;
 
 public class RuntimeEnv<RT>(
     CancellationTokenSource source,

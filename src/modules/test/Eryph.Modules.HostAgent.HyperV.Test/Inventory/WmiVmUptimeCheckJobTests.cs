@@ -6,10 +6,9 @@ using Eryph.VmManagement.Wmi;
 using FluentAssertions.Extensions;
 using LanguageExt;
 using Moq;
-
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Test.Inventory;
+namespace Eryph.Modules.HostAgent.HyperV.Test.Inventory;
 
 public class WmiVmUptimeCheckJobTests
 {

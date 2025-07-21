@@ -2,7 +2,7 @@
 using FluentAssertions.LanguageExt;
 using Xunit;
 
-namespace Eryph.VmManagement.Test;
+namespace Eryph.VmManagement.HyperV.Test;
 
 public class PowershellErrorTests
 {

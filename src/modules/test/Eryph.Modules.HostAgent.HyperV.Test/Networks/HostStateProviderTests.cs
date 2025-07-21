@@ -1,22 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Dbosoft.OVN.Model;
+﻿using Dbosoft.OVN.Model;
 using Eryph.Core;
+using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt.Common;
 using Moq;
-
-using static Eryph.Modules.VmHostAgent.Networks.HostStateProvider<Eryph.Modules.VmHostAgent.Test.TestRuntime>;
+using static Eryph.Modules.VmHostAgent.Networks.HostStateProvider<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Test.Networks;
+namespace Eryph.Modules.HostAgent.HyperV.Test.Networks;
 
 public class HostStateProviderTests
 {

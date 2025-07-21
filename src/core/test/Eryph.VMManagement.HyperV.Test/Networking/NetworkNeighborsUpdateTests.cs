@@ -13,7 +13,7 @@ using Xunit;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.VmManagement.Test.Networking;
+namespace Eryph.VmManagement.HyperV.Test.Networking;
 
 public class NetworkNeighborsUpdateTests
 {

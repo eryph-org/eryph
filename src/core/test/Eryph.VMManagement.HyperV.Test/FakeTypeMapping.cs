@@ -1,6 +1,6 @@
 ﻿using System.Management.Automation;
 
-namespace Eryph.VmManagement.Test;
+namespace Eryph.VmManagement.HyperV.Test;
 
 public class FakeTypeMapping : ITypedPsObjectMapping
 {

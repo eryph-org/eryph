@@ -15,7 +15,7 @@ using Xunit;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.VmManagement.Test;
+namespace Eryph.VmManagement.HyperV.Test;
 
 public class ConvergeSecureBootTests
 {

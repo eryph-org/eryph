@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using FluentAssertions;
 
-namespace Eryph.VmManagement.Test;
+namespace Eryph.VmManagement.HyperV.Test;
 
 public class AssertCommand
 {

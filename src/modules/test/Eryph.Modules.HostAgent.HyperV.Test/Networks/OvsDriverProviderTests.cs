@@ -1,24 +1,20 @@
-﻿using Eryph.Core.Sys;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
+﻿using System.Text;
+using Eryph.Core;
+using Eryph.Core.Sys;
 using Eryph.Modules.VmHostAgent.Networks;
+using Eryph.Modules.VmHostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
-using FluentAssertions;
-using FluentAssertions.LanguageExt;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
+using LanguageExt.Common;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging;
-using System.Text;
-using Eryph.Core;
-using Eryph.VmManagement.Sys;
-using LanguageExt.Common;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using Xunit;
-
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Test.Networks;
+namespace Eryph.Modules.HostAgent.HyperV.Test.Networks;
 
 using RT = OvsDriverProviderTests.TestRuntime;
 using static OvsDriverProvider<OvsDriverProviderTests.TestRuntime>;

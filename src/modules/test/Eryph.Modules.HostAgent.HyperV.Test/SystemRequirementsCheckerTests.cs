@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Management;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Management;
+using Eryph.Modules.VmHostAgent;
 using Eryph.VmManagement.Sys;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;
@@ -11,10 +7,9 @@ using LanguageExt.Effects.Traits;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Test;
+namespace Eryph.Modules.HostAgent.HyperV.Test;
 
 using RT = SystemRequirementsCheckerTests.TestRuntime;
 using static SystemRequirementsChecker<SystemRequirementsCheckerTests.TestRuntime>;

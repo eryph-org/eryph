@@ -1,22 +1,18 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Dbosoft.OVN.Model;
+﻿using Dbosoft.OVN.Model;
 using Eryph.Core;
 using Eryph.Core.Network;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Networks;
+using Eryph.Modules.VmHostAgent.Networks.OVS;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt;
 using Moq;
-
-using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Modules.VmHostAgent.Test.TestRuntime>;
+using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Test.Networks;
+namespace Eryph.Modules.HostAgent.HyperV.Test.Networks;
 
 public class ProviderNetworkUpdateTests
 {

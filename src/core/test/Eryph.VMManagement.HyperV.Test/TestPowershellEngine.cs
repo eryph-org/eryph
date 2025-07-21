@@ -3,7 +3,7 @@ using System.Management.Automation;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.VmManagement.Test;
+namespace Eryph.VmManagement.HyperV.Test;
 
 public class TestPowershellEngine : IPowershellEngine, IPsObjectRegistry
 {

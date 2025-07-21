@@ -1,10 +1,9 @@
 ﻿using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.VmManagement.TestBase;
 using Eryph.VmManagement.Wmi;
-
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Test.Inventory;
+namespace Eryph.Modules.HostAgent.HyperV.Test.Inventory;
 
 public class VmChangeWatcherServiceTests
 {

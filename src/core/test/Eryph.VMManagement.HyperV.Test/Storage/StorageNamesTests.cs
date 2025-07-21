@@ -4,7 +4,7 @@ using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using Xunit;
 
-namespace Eryph.VmManagement.Test.Storage;
+namespace Eryph.VmManagement.HyperV.Test.Storage;
 
 public class StorageNamesTests
 {

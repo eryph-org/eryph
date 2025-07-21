@@ -16,7 +16,7 @@ using Xunit;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.VmManagement.Test.Storage;
+namespace Eryph.VmManagement.HyperV.Test.Storage;
 
 public class DiskStorageSettingsTests
 {

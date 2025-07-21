@@ -13,7 +13,7 @@ using Xunit;
 using static Eryph.VmManagement.Wmi.WmiMsvmUtils;
 using static LanguageExt.Prelude;
 
-namespace Eryph.VmManagement.Test.Wmi;
+namespace Eryph.VmManagement.HyperV.Test.Wmi;
 
 public class WmiMsvmUtilsTests
 {

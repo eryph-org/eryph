@@ -3,7 +3,7 @@ using FluentAssertions.LanguageExt;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
-namespace Eryph.VmManagement.Test;
+namespace Eryph.VmManagement.HyperV.Test;
 
 /// <summary>
 /// These tests verify the behavior of the <see cref="PowershellEngine"/>.

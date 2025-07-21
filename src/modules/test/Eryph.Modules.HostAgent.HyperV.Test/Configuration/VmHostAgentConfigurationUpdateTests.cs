@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 using Eryph.Modules.VmHostAgent.Configuration;
 using LanguageExt.Sys.Traits;
 using Moq;
 
-namespace Eryph.Modules.VmHostAgent.Test.Configuration;
+namespace Eryph.Modules.HostAgent.HyperV.Test.Configuration;
 
 using RT = VmHostAgentConfigurationTests.TestRuntime;
 using static VmHostAgentConfigurationUpdate<VmHostAgentConfigurationTests.TestRuntime>;

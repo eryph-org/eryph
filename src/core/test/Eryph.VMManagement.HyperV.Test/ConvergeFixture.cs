@@ -7,7 +7,7 @@ using Eryph.VmManagement.Converging;
 using Eryph.VmManagement.Storage;
 using Moq;
 
-namespace Eryph.VmManagement.Test;
+namespace Eryph.VmManagement.HyperV.Test;
 
 public class ConvergeFixture
 {

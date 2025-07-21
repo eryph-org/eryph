@@ -1,20 +1,19 @@
 ﻿using System.Text;
-using Eryph.ConfigModel;
 using Eryph.Core;
+using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Networks;
 using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Effects.Traits;
 using LanguageExt.Sys;
-using LanguageExt.Sys.Test;
 using LanguageExt.Sys.Traits;
 using Microsoft.Extensions.Logging;
 using Traits = LanguageExt.Sys.Traits;
 
 using static LanguageExt.Prelude;
-using Eryph.VmManagement.Sys;
 
-namespace Eryph.Modules.VmHostAgent.Test;
+namespace Eryph.Modules.HostAgent.HyperV.Test;
 
 public readonly struct TestRuntime :
     HasCancel<TestRuntime>,
