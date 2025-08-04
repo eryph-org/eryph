@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
-using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
@@ -20,8 +19,7 @@ namespace Eryph.Modules.GenePool;
 internal class ExpandFodderVMCommandHandler(
     IFileSystemService fileSystem,
     ITaskMessaging messaging,
-    IHostSettingsProvider hostSettingsProvider,
-    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
+    IGenePoolPathProvider genePoolPathProvider)
     : IHandleMessages<OperationTask<ExpandFodderVMCommand>>
 {
     public Task Handle(OperationTask<ExpandFodderVMCommand> message) =>
@@ -29,9 +27,8 @@ internal class ExpandFodderVMCommandHandler(
 
     private EitherAsync<Error, ExpandFodderVMCommandResponse> HandleCommand(
         ExpandFodderVMCommand command) =>
-        from hostSettings in hostSettingsProvider.GetHostSettings()
-        from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genepoolReader = new LocalGenePoolReader(fileSystem, vmHostAgentConfig)
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
+        let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
         let configWithSystemVariables = command.CatletMetadata is not null
             ? CatletFeeding.FeedSystemVariables(command.Config, command.CatletMetadata)
             : CatletFeeding.FeedSystemVariables(command.Config, "#catletId", "#vmId")

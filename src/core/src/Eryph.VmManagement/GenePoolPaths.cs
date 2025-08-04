@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
-using Eryph.Core.VmAgent;
 using LanguageExt;
 using LanguageExt.Common;
 
@@ -18,10 +17,6 @@ public static class GenePoolPaths
 {
     private const string GeneSetManifestFileName = "geneset-tag.json";
     private const string InvalidGenePathError = "The gene path is invalid.";
-
-    public static string GetGenePoolPath(
-        VmHostAgentConfiguration vmHostAgentConfig) =>
-        Path.Combine(vmHostAgentConfig.Defaults.Volumes, "genepool");
 
     public static bool IsPathInGenePool(string genePoolPath, string path) =>
         PathUtils.GetContainedPath(genePoolPath, path).IsSome;

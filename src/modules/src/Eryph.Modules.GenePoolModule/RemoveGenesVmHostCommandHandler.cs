@@ -25,8 +25,7 @@ namespace Eryph.Modules.GenePool;
 [UsedImplicitly]
 internal class RemoveGenesVmHostCommandHandler(
     ITaskMessaging messaging,
-    IHostSettingsProvider hostSettingsProvider,
-    IVmHostAgentConfigurationManager vmHostAgentConfigManager,
+    IGenePoolPathProvider genePoolPathProvider,
     IGenePoolFactory genePoolFactory)
     : IHandleMessages<OperationTask<RemoveGenesVmHostCommand>>
 {
@@ -34,9 +33,7 @@ internal class RemoveGenesVmHostCommandHandler(
         Handle(message.Command).FailOrComplete(messaging, message);
 
     public EitherAsync<Error, Unit> Handle(RemoveGenesVmHostCommand command) =>
-        from hostSettings in hostSettingsProvider.GetHostSettings()
-        from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
         let genePool = genePoolFactory.CreateLocal(genePoolPath)
         from _ in command.Genes.ToSeq()
             .Map(genePool.RemoveCachedGene)

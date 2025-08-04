@@ -16,23 +16,6 @@ namespace Eryph.Modules.GenePoolModule.Test;
 public class GenePoolPathsTests
 {
     [Fact]
-    public void GetGenePoolPath_ReturnsCorrectPath()
-    {
-        var vmHostAgentConfig = new VmHostAgentConfiguration
-        {
-            Defaults = new VmHostAgentDefaultsConfiguration
-            {
-                Vms = @"Z:\vms",
-                Volumes = @"Z:\volumes",
-            }
-        };
-
-        var result = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig);
-
-        result.Should().Be(@"Z:\volumes\genepool");
-    }
-
-    [Fact]
     public void GetGeneSetPath_ReturnsCorrectPath()
     {
         var result = GenePoolPaths.GetGeneSetPath(

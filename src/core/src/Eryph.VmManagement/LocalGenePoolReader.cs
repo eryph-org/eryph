@@ -16,13 +16,12 @@ namespace Eryph.VmManagement;
 
 public class LocalGenePoolReader(
     IFileSystemService fileSystem,
-    VmHostAgentConfiguration agentConfiguration)
+    string genePoolPath)
     : ILocalGenePoolReader
 {
     public EitherAsync<Error, Option<GeneSetIdentifier>> GetGenesetReference(
         GeneSetIdentifier geneSetId) =>
         from _ in RightAsync<Error, Unit>(unit)
-        let genePoolPath = GenePoolPaths.GetGenePoolPath(agentConfiguration)
         let geneSetManifestPath = GenePoolPaths.GetGeneSetManifestPath(genePoolPath, geneSetId)
         from genesetManifestValue in TryAsync(async () =>
         {
@@ -44,7 +43,6 @@ public class LocalGenePoolReader(
             .ToEitherAsync()
         from _2 in guard(uniqueGeneId.GeneType is GeneType.Catlet or GeneType.Fodder,
             Error.New($"The gene type '{uniqueGeneId.GeneType}' is not supported."))
-        let genePoolPath = GenePoolPaths.GetGenePoolPath(agentConfiguration)
         let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
         from fileExists in Try(() => fileSystem.FileExists(genePath))
             .ToEither(ex => Error.New($"Could not read gene '{uniqueGeneId}' from local genepool.", ex))

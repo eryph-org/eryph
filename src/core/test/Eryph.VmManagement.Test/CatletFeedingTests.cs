@@ -20,7 +20,7 @@ using Xunit;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.VmManagement.HyperV.Test;
+namespace Eryph.VmManagement.Test;
 
 public class CatletFeedingTests
 {

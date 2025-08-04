@@ -22,7 +22,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\core\test\Eryph.VmManagement.TestBase\Eryph.VmManagement.TestBase.csproj" />
+    <ProjectReference Include="..\..\..\core\test\Eryph.VmManagement.HyperV.TestBase\Eryph.VmManagement.HyperV.TestBase.csproj" />
     <ProjectReference Include="..\..\src\Eryph.Modules.HostAgent.HyperV\Eryph.Modules.HostAgent.HyperV.csproj" />
   </ItemGroup>
 </Project>

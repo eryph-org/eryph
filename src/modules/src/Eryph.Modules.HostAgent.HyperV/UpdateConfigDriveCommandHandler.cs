@@ -39,13 +39,14 @@ internal class UpdateConfigDriveCommandHandler(
         UpdateCatletConfigDriveCommand command) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+        let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from hostInfo in hostInfoProvider.GetHostInfoAsync().WriteTrace()
         let vmId = command.VMId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
         from metadata in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
             .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
-        let genepoolReader = new LocalGenePoolReader(fileSystem, vmHostAgentConfig)
+        let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
         from fedConfig in CatletFeeding.Feed(
             CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
             command.ResolvedGenes.ToSeq(),

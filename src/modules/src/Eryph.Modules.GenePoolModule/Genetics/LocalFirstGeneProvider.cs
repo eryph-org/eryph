@@ -13,7 +13,6 @@ using Eryph.Core.VmAgent;
 using Eryph.GenePool;
 using Eryph.GenePool.Client;
 using Eryph.Messages.Genes.Commands;
-using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
@@ -23,19 +22,16 @@ using static LanguageExt.Prelude;
 namespace Eryph.Modules.GenePool.Genetics;
 
 internal class LocalFirstGeneProvider(
+    IGenePoolPathProvider genePoolPathProvider,
     IGenePoolFactory genepoolFactory,
-    ILogger log,
-    IHostSettingsProvider hostSettingsProvider,
-    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
+    ILogger log)
     : IGeneProvider
 {
     public EitherAsync<Error, PrepareGeneResponse> ProvideGene(
         UniqueGeneIdentifier uniqueGeneId,
         Func<string, int, Task<Unit>> reportProgress,
         CancellationToken cancel) =>
-        from hostSettings in hostSettingsProvider.GetHostSettings()
-        from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from geneSetInfo in ProvideGeneSet(uniqueGeneId.Id.GeneSet, Empty, localGenePool, cancel)
         from _1 in guard(geneSetInfo.Id == uniqueGeneId.Id.GeneSet,
@@ -62,9 +58,7 @@ internal class LocalFirstGeneProvider(
     public EitherAsync<Error, GeneSetIdentifier> ResolveGeneSet(
         GeneSetIdentifier genesetIdentifier,
         CancellationToken cancellationToken) =>
-        from hostSettings in hostSettingsProvider.GetHostSettings()
-        from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
         from genesetInfo in ProvideGeneSet(genesetIdentifier, Empty, localGenePool, cancellationToken)
         select genesetInfo.Id;

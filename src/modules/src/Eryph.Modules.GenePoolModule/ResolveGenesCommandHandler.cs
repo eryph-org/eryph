@@ -25,9 +25,8 @@ internal class ResolveGenesCommandHandler(
     IMessageContext messageContext,
     ITaskMessaging messaging,
     IFileSystemService fileSystem,
-    IHostSettingsProvider hostSettingsProvider,
-    IGenePoolFactory genePoolFactory,
-    IVmHostAgentConfigurationManager vmHostAgentConfigManager)
+    IGenePoolPathProvider genePoolPathProvider,
+    IGenePoolFactory genePoolFactory)
     : IHandleMessages<OperationTask<ResolveGenesCommand>>
 {
     public Task Handle(OperationTask<ResolveGenesCommand> message) =>
@@ -37,11 +36,9 @@ internal class ResolveGenesCommandHandler(
     private EitherAsync<Error, ResolveGenesCommandResponse> Handle(
         ResolveGenesCommand command,
         CancellationToken cancellationToken) =>
-        from hostSettings in hostSettingsProvider.GetHostSettings()
-        from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
         let genePool = genePoolFactory.CreateLocal(genePoolPath)
-        let genePoolReader = new LocalGenePoolReader(fileSystem, vmHostAgentConfig)
+        let genePoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
         from result in Handle(command, genePool, genePoolPath, cancellationToken)
         select result;
 

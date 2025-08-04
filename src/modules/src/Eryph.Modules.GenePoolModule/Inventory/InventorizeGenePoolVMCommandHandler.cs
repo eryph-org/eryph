@@ -6,10 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
-using Eryph.Core.VmAgent;
 using Eryph.Messages.Genes.Commands;
 using Eryph.Modules.GenePool.Genetics;
-using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
@@ -23,10 +21,9 @@ namespace Eryph.Modules.GenePool.Inventory;
 internal class InventorizeGenePoolCommandHandler(
     IBus bus,
     ILogger logger,
+    IGenePoolPathProvider genePoolPathProvider,
     IGenePoolFactory genepoolFactory,
     IGenePoolInventoryFactory genePoolInventoryFactory,
-    IHostSettingsProvider hostSettingsProvider,
-    IVmHostAgentConfigurationManager vmHostAgentConfigurationManager,
     WorkflowOptions workflowOptions)
     : IHandleMessages<InventorizeGenePoolCommand>
 {
@@ -40,10 +37,8 @@ internal class InventorizeGenePoolCommandHandler(
             });
 
     private EitherAsync<Error, UpdateGenePoolInventoryCommand> InventorizeGenePool() =>
-        from hostSettings in hostSettingsProvider.GetHostSettings()
-        from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
         let timestamp = DateTimeOffset.UtcNow
-        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         let genePool = genepoolFactory.CreateLocal(genePoolPath)
         let genePoolInventory = genePoolInventoryFactory.Create(genePoolPath, genePool)
         from inventoryData in genePoolInventory.InventorizeGenePool()

@@ -9,7 +9,7 @@ using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using Xunit;
 
-namespace Eryph.VmManagement.HyperV.Test;
+namespace Eryph.VmManagement.Test;
 
 public class CatletConfigVariableSubstitutionsTests
 {

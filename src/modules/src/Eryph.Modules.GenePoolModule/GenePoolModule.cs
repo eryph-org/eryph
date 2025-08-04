@@ -63,11 +63,9 @@ namespace Eryph.Modules.GenePool
             container.RegisterSingleton<IFileSystem, FileSystem>();
             container.RegisterSingleton<IFileSystemService, FileSystemService>();
 
-
-            container.RegisterInstance(serviceProvider.GetRequiredService<IVmHostAgentConfigurationManager>());
             container.RegisterInstance(serviceProvider.GetRequiredService<IApplicationInfoProvider>());
             container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolApiKeyStore>());
-            container.RegisterInstance(serviceProvider.GetRequiredService<IHostSettingsProvider>());
+            container.RegisterInstance(serviceProvider.GetRequiredService<IGenePoolPathProvider>());
             container.RegisterInstance(serviceProvider.GetRequiredService<INetworkProviderManager>());
            // container.RegisterSingleton<IHostInfoProvider, HostInfoProvider>();
            // container.RegisterSingleton<IHardwareIdProvider, HardwareIdProvider>();

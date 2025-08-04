@@ -54,8 +54,7 @@ internal class ResolveCatletConfigCommandHandler(
     IMessageContext messageContext,
     ITaskMessaging messaging,
     IFileSystemService fileSystem,
-    IHostSettingsProvider hostSettingsProvider,
-    IVmHostAgentConfigurationManager vmHostAgentConfigManager,
+    IGenePoolPathProvider genePoolPathProvider,
     IGeneProvider geneProvider,
     IGenePoolFactory genePoolFactory,
     IGenePoolInventoryFactory genePoolInventoryFactory)
@@ -68,10 +67,8 @@ internal class ResolveCatletConfigCommandHandler(
     private EitherAsync<Error, ResolveCatletConfigCommandResponse> Handle(
         ResolveCatletConfigCommand command,
         CancellationToken cancellationToken) =>
-        from hostSettings in hostSettingsProvider.GetHostSettings()
-        from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
-        let genepoolReader = new LocalGenePoolReader(fileSystem, vmHostAgentConfig)
-        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+        from genePoolPath in genePoolPathProvider.GetGenePoolPath()
+        let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
         let localGenePool = genePoolFactory.CreateLocal(genePoolPath)
         let genePoolInventory = genePoolInventoryFactory.Create(genePoolPath, localGenePool)
         from result in Handle(command, geneProvider, genepoolReader, genePoolInventory, cancellationToken)

@@ -2,10 +2,8 @@
 using Dbosoft.OVN.Windows;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
-using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Storage;
@@ -33,6 +31,7 @@ internal class UpdateCatletVMCommandHandler(
         UpdateCatletVMCommand command) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
+        let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from hostInfo in hostInfoProvider.GetHostInfoAsync(true).WriteTrace()
         let vmId = command.VMId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
@@ -42,7 +41,7 @@ internal class UpdateCatletVMCommandHandler(
                 command.Config, currentStorageSettings)
             .WriteTrace()
         from _ in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
-        let genepoolReader = new LocalGenePoolReader(fileSystem, vmHostAgentConfig)
+        let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
         from fedConfig in CatletFeeding.Feed(
             CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
             command.ResolvedGenes.ToSeq(),

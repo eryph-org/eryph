@@ -69,7 +69,7 @@ public class DiskStorageSettings
         }
 
         return from geneId in GeneIdentifier.NewOption(templateString)
-               let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+               let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
                from uniqueId in resolvedGenes.Find(g => g.GeneType == GeneType.Volume && g.Id == geneId)
                let geneDiskPath = GenePoolPaths.GetGenePath(genePoolPath, uniqueId)
                select new DiskStorageSettings
@@ -104,7 +104,7 @@ public class DiskStorageSettings
         VmHostAgentConfiguration vmHostAgentConfig,
         TypedPsObject<VhdInfo> vhdInfo) =>
         from isUsable in VhdQuery.TestVhd(engine, vhdInfo.Value.Path)
-        let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
+        let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         let vhdPath = vhdInfo.Value.Path
         from result in GenePoolPaths.IsPathInGenePool(genePoolPath, vhdPath)
             ? FromGeneVhdInfo(genePoolPath, vhdInfo.Value, isUsable)
