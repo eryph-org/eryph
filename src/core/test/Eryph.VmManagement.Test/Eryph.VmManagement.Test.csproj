@@ -30,8 +30,4 @@
     <ProjectReference Include="..\Eryph.VmManagement.TestBase\Eryph.VmManagement.TestBase.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Using Include="Xunit" />
-  </ItemGroup>
-
 </Project>
