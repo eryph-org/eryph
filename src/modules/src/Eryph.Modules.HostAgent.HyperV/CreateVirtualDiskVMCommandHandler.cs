@@ -16,7 +16,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 [UsedImplicitly]
 internal class CreateVirtualDiskVMCommandHandler(

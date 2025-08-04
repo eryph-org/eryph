@@ -8,7 +8,7 @@ using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 public class HostSettingsProvider(ILoggerFactory loggerFactory)
     : IHostSettingsProvider

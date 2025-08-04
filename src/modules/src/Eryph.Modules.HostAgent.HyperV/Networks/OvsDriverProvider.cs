@@ -1,4 +1,4 @@
-﻿using Eryph.Modules.VmHostAgent.Networks.Powershell;
+﻿using Eryph.Modules.HostAgent.Networks.Powershell;
 using LanguageExt.Effects.Traits;
 using System;
 using System.Collections.Generic;
@@ -24,7 +24,7 @@ using Microsoft.PowerShell;
 using System.Management.Automation.Runspaces;
 using Eryph.VmManagement.Sys;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public class OvsDriverProvider<RT> where RT : struct,
     HasCancel<RT>,

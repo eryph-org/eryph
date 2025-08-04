@@ -13,7 +13,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 [UsedImplicitly]
 internal class UpdateCatletVMCommandHandler(

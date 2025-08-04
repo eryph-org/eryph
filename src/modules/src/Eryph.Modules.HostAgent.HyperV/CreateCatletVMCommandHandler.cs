@@ -5,7 +5,7 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Modules.VmHostAgent.Inventory;
+using Eryph.Modules.HostAgent.Inventory;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
@@ -20,7 +20,7 @@ using static LanguageExt.Prelude;
 
 // ReSharper disable ArgumentsStyleAnonymousFunction
 
-namespace Eryph.Modules.VmHostAgent
+namespace Eryph.Modules.HostAgent
 {
     [UsedImplicitly]
     internal class CreateCatletVMCommandHandler : 

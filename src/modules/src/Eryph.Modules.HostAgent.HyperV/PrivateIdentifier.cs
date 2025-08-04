@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 public class PrivateIdentifier
 {

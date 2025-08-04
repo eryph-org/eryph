@@ -1,6 +1,6 @@
 ﻿using System;
 using Eryph.Core;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
+using Eryph.Modules.HostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
@@ -9,7 +9,7 @@ using LanguageExt.Effects.Traits;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 public static class VirtualMachineUtils<RT>
     where RT : struct, HasCancel<RT>, HasPowershell<RT>

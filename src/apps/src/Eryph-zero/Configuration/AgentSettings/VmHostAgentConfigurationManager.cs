@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
-using Eryph.Modules.VmHostAgent.Configuration;
+using Eryph.Modules.HostAgent.Configuration;
 using LanguageExt;
 using LanguageExt.Common;
 

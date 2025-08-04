@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core.Genetics;
 
-namespace Eryph.Modules.VmHostAgent.Inventory;
+namespace Eryph.Modules.HostAgent.Inventory;
 
 public class HostArchitectureProvider : IHostArchitectureProvider
 {

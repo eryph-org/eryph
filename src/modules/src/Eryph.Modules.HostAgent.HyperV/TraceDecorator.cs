@@ -5,7 +5,7 @@ using Eryph.VmManagement.Tracing;
 using Rebus.Handlers;
 using Rebus.Pipeline;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 public class TraceDecorator<T> : IHandleMessages<T>
 {

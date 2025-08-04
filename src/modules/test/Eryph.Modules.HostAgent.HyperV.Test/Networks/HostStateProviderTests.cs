@@ -1,13 +1,13 @@
 ﻿using Dbosoft.OVN.Model;
 using Eryph.Core;
-using Eryph.Modules.VmHostAgent;
-using Eryph.Modules.VmHostAgent.Networks;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.Modules.HostAgent;
+using Eryph.Modules.HostAgent.Networks;
+using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
 using LanguageExt.Common;
 using Moq;
-using static Eryph.Modules.VmHostAgent.Networks.HostStateProvider<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
+using static Eryph.Modules.HostAgent.Networks.HostStateProvider<Eryph.Modules.HostAgent.HyperV.Test.TestRuntime>;
 using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent.HyperV.Test.Networks;

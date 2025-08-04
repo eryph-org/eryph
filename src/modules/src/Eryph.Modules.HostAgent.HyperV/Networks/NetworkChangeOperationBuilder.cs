@@ -4,7 +4,7 @@ using System.Net;
 using System.Threading;
 using Eryph.Core;
 using Eryph.Core.Network;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Sys;
@@ -15,7 +15,7 @@ using LanguageExt.Effects.Traits;
 using static Eryph.Core.NetworkPrelude;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public class NetworkChangeOperationBuilder<RT> where RT : struct,
     HasCancel<RT>,

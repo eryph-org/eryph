@@ -4,7 +4,7 @@ using Dbosoft.OVN.Model;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.Modules.VmHostAgent.Networks.OVS;
+namespace Eryph.Modules.HostAgent.Networks.OVS;
 
 public interface IOVSControl
 {

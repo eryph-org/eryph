@@ -2,7 +2,7 @@
 using LanguageExt;
 using LanguageExt.Effects.Traits;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public class NetworkProviderManager<RT> where RT : struct,
     HasNetworkProviderManager<RT>,

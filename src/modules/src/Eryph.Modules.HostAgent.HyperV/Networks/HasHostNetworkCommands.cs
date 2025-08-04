@@ -1,7 +1,7 @@
 ﻿using LanguageExt;
 using LanguageExt.Effects.Traits;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public interface HasHostNetworkCommands<RT>
     where RT : struct, HasHostNetworkCommands<RT>, HasCancel<RT>

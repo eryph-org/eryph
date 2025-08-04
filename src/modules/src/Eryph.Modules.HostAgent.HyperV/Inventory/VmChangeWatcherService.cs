@@ -11,7 +11,7 @@ using static Eryph.VmManagement.Wmi.WmiMsvmUtils;
 using static Eryph.VmManagement.Wmi.WmiEventUtils;
 using Eryph.VmManagement.Inventory;
 
-namespace Eryph.Modules.VmHostAgent.Inventory;
+namespace Eryph.Modules.HostAgent.Inventory;
 
 /// <summary>
 /// This service observes WMI events which are raised when Hyper-V VM is modified.

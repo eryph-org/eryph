@@ -11,7 +11,7 @@ using LanguageExt.Common;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 public class SyncClient : ISyncClient
 {

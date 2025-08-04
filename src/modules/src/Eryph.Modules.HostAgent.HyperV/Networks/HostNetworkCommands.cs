@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 using Eryph.Core;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
+using Eryph.Modules.HostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -12,7 +12,7 @@ using LanguageExt.Effects.Traits;
 using static Eryph.Core.Prelude;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public class HostNetworkCommands<RT> : IHostNetworkCommands<RT>
     where RT : struct, HasPowershell<RT>, HasCancel<RT>

@@ -11,10 +11,10 @@ using Eryph.Core.VmAgent;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Networks;
 using Eryph.ModuleCore.Startup;
-using Eryph.Modules.VmHostAgent.Inventory;
-using Eryph.Modules.VmHostAgent.Networks;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
-using Eryph.Modules.VmHostAgent.Tracing;
+using Eryph.Modules.HostAgent.Inventory;
+using Eryph.Modules.HostAgent.Networks;
+using Eryph.Modules.HostAgent.Networks.OVS;
+using Eryph.Modules.HostAgent.Tracing;
 using Eryph.Rebus;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Inventory;
@@ -33,7 +33,7 @@ using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 using IFileSystem = System.IO.Abstractions.IFileSystem;
 
-namespace Eryph.Modules.VmHostAgent
+namespace Eryph.Modules.HostAgent
 {
     [UsedImplicitly]
     public class VmHostAgentModule

@@ -17,9 +17,9 @@ using Dbosoft.OVN.Windows;
 using Eryph.App;
 using Eryph.AnsiConsole.Sys;
 using Eryph.ModuleCore;
-using Eryph.Modules.VmHostAgent;
-using Eryph.Modules.VmHostAgent.Configuration;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.Modules.HostAgent;
+using Eryph.Modules.HostAgent.Configuration;
+using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
 using Eryph.Runtime.Zero.Configuration.Networks;
@@ -47,10 +47,10 @@ using SimpleInjector;
 using SimpleInjector.Lifestyles;
 using Spectre.Console;
 
-using static Eryph.Modules.VmHostAgent.Networks.NetworkProviderManager<Eryph.Runtime.Zero.ConsoleRuntime>;
-using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Runtime.Zero.ConsoleRuntime>;
-using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Runtime.Zero.ConsoleRuntime>;
-using static Eryph.Modules.VmHostAgent.Networks.OvsDriverProvider<Eryph.Runtime.Zero.ConsoleRuntime>;
+using static Eryph.Modules.HostAgent.Networks.NetworkProviderManager<Eryph.Runtime.Zero.ConsoleRuntime>;
+using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdate<Eryph.Runtime.Zero.ConsoleRuntime>;
+using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdateInConsole<Eryph.Runtime.Zero.ConsoleRuntime>;
+using static Eryph.Modules.HostAgent.Networks.OvsDriverProvider<Eryph.Runtime.Zero.ConsoleRuntime>;
 using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 
 using static LanguageExt.Prelude;

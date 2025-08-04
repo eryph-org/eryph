@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using Eryph.Core;
-using Eryph.Modules.VmHostAgent;
-using Eryph.Modules.VmHostAgent.Networks;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.Modules.HostAgent;
+using Eryph.Modules.HostAgent.Networks;
+using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Effects.Traits;

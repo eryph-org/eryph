@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public class AgentRuntimeEnv
 {

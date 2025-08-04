@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Modules.VmHostAgent.Networks;
+using Eryph.Modules.HostAgent.Networks;
 using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Sys;

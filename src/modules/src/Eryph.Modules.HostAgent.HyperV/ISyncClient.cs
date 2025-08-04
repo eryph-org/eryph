@@ -2,7 +2,7 @@
 using Eryph.Core.Network;
 using LanguageExt;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 public interface ISyncClient
 {

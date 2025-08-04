@@ -2,7 +2,7 @@
 using Eryph.Core.Network;
 using LanguageExt;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public readonly record struct NewBridge(
     string BridgeName,

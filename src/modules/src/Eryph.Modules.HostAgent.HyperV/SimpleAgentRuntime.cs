@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 internal readonly struct SimpleAgentRuntime :
     HasLogger<SimpleAgentRuntime>,

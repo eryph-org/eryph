@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 using System.Threading;
 using Eryph.Core;
 using Eryph.Core.Network;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -17,7 +17,7 @@ using LanguageExt.Effects.Traits;
 using static Eryph.Core.NetworkPrelude;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public static class ProviderNetworkUpdate<RT>
     where RT : struct,

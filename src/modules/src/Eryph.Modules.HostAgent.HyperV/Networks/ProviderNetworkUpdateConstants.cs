@@ -1,4 +1,4 @@
-﻿namespace Eryph.Modules.VmHostAgent.Networks;
+﻿namespace Eryph.Modules.HostAgent.Networks;
 
 internal static class ProviderNetworkUpdateConstants
 {

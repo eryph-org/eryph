@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public class NetworkChangeOperationNames
 {

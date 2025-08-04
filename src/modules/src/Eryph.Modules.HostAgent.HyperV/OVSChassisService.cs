@@ -4,18 +4,18 @@ using System.Threading.Tasks;
 using Dbosoft.OVN;
 using Dbosoft.OVN.Nodes;
 using Eryph.ModuleCore.Networks;
-using Eryph.Modules.VmHostAgent.Networks;
+using Eryph.Modules.HostAgent.Networks;
 using LanguageExt;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SimpleInjector;
 using SimpleInjector.Lifestyles;
-using static Eryph.Modules.VmHostAgent.Networks.NetworkProviderManager<Eryph.Modules.VmHostAgent.Networks.AgentRuntime>;
-using static Eryph.Modules.VmHostAgent.Networks.ProviderNetworkUpdate<Eryph.Modules.VmHostAgent.Networks.AgentRuntime>;
+using static Eryph.Modules.HostAgent.Networks.NetworkProviderManager<Eryph.Modules.HostAgent.Networks.AgentRuntime>;
+using static Eryph.Modules.HostAgent.Networks.ProviderNetworkUpdate<Eryph.Modules.HostAgent.Networks.AgentRuntime>;
 using static LanguageExt.Prelude;
 
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 public class OVSChassisService : IHostedService
 {

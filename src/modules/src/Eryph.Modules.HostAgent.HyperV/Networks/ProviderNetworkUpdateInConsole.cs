@@ -3,7 +3,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 using Eryph.Core.Network;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Common;
@@ -13,7 +13,7 @@ using LanguageExt.Sys.Traits;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public static class ProviderNetworkUpdateInConsole<RT>
     where RT : struct,

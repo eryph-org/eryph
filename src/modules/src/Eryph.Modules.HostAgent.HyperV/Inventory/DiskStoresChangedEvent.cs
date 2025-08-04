@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Eryph.Modules.VmHostAgent.Inventory;
+namespace Eryph.Modules.HostAgent.Inventory;
 
 /// <summary>
 /// This event is raised by <see cref="DiskStoresChangeWatcherService"/>

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 internal class SyncServiceResponse
 {

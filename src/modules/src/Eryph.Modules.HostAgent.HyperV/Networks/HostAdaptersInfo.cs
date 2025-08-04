@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using LanguageExt;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public record HostAdaptersInfo(
     HashMap<string, HostAdapterInfo> Adapters);

@@ -14,7 +14,7 @@ using YamlDotNet.Serialization.NamingConventions;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Configuration;
+namespace Eryph.Modules.HostAgent.Configuration;
 
 public static class VmHostAgentConfiguration<RT> where RT : struct,
     HasFile<RT>,

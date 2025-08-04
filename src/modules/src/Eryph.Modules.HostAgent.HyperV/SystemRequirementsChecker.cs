@@ -5,7 +5,7 @@ using LanguageExt.Common;
 using LanguageExt.Effects.Traits;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 public static class SystemRequirementsChecker<RT> where RT : struct,
     HasCancel<RT>,

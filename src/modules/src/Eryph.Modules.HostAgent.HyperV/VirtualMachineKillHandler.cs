@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Modules.VmHostAgent.Networks;
+using Eryph.Modules.HostAgent.Networks;
 using Eryph.Resources.Machines;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Inventory;
@@ -16,7 +16,7 @@ using SimpleInjector;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 using static VirtualMachineUtils<AgentRuntime>;
 

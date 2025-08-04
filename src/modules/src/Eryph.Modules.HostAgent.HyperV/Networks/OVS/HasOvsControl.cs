@@ -2,7 +2,7 @@
 
 // ReSharper disable InconsistentNaming
 
-namespace Eryph.Modules.VmHostAgent.Networks.OVS;
+namespace Eryph.Modules.HostAgent.Networks.OVS;
 
 
 public interface HasOVSControl<RT>

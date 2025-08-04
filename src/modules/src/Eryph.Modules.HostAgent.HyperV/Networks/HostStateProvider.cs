@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
@@ -13,7 +13,7 @@ using LanguageExt.Effects.Traits;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public static class HostStateProvider<RT>
     where RT : struct,

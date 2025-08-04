@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Eryph.Modules.VmHostAgent.Tracing;
+namespace Eryph.Modules.HostAgent.Tracing;
 
 internal class TracingConfig
 {

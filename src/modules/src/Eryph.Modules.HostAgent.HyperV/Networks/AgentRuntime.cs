@@ -2,8 +2,8 @@
 using System.Threading;
 using Dbosoft.OVN.Windows;
 using Eryph.Core;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
+using Eryph.Modules.HostAgent.Networks.OVS;
+using Eryph.Modules.HostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public readonly struct AgentRuntime :
     HasCancel<AgentRuntime>,

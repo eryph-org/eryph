@@ -1,5 +1,5 @@
 ﻿using System.Management;
-using Eryph.Modules.VmHostAgent;
+using Eryph.Modules.HostAgent;
 using Eryph.VmManagement.Sys;
 using Eryph.VmManagement.Wmi;
 using LanguageExt;

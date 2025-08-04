@@ -1,7 +1,7 @@
 ﻿using LanguageExt;
 // ReSharper disable InconsistentNaming
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public interface HasAgentSyncClient<RT>
     where RT : struct, HasAgentSyncClient<RT>

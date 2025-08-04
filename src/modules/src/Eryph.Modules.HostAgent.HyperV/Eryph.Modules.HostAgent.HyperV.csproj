@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>annotations</Nullable>
-    <RootNamespace>Eryph.Modules.VmHostAgent</RootNamespace>
+    <RootNamespace>Eryph.Modules.HostAgent</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="$(AssemblyName).Test" />

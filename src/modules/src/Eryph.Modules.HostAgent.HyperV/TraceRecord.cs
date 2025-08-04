@@ -1,7 +1,7 @@
 ﻿using System;
 using Eryph.VmManagement.Tracing;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 public class TraceRecord
 {

@@ -4,7 +4,7 @@ using Eryph.ModuleCore.Startup;
 using Eryph.Rebus;
 using Rebus.Bus;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 public class StartBusModuleHandler(IBus bus) : IStartupHandler
 {

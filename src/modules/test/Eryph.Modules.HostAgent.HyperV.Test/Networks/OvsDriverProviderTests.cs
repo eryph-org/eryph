@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using Eryph.Core;
 using Eryph.Core.Sys;
-using Eryph.Modules.VmHostAgent.Networks;
-using Eryph.Modules.VmHostAgent.Networks.Powershell;
+using Eryph.Modules.HostAgent.Networks;
+using Eryph.Modules.HostAgent.Networks.Powershell;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Sys;

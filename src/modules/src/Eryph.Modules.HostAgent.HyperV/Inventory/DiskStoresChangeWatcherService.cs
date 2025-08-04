@@ -16,7 +16,7 @@ using Rebus.Bus;
 using static LanguageExt.Prelude;
 using static LanguageExt.Seq;
 
-namespace Eryph.Modules.VmHostAgent.Inventory;
+namespace Eryph.Modules.HostAgent.Inventory;
 
 public sealed class DiskStoresChangeWatcherService(
     IBus bus,

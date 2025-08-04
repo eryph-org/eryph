@@ -5,7 +5,7 @@ using LanguageExt.Sys.Traits;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Configuration;
+namespace Eryph.Modules.HostAgent.Configuration;
 
 public static class VmHostAgentConfigurationUpdate<RT> where RT : struct,
     HasFile<RT>,

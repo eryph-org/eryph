@@ -3,7 +3,7 @@ using System.Collections;
 using Eryph.Core.Network;
 using LanguageExt;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public record OvsBridgesInfo(
     HashMap<string, OvsBridgeInfo> Bridges)

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Dbosoft.OVN.Model;
 
-namespace Eryph.Modules.VmHostAgent.Networks.OVS;
+namespace Eryph.Modules.HostAgent.Networks.OVS;
 
 public record OvsInterface : OVSTableRecord, IOVSEntityWithName
 {

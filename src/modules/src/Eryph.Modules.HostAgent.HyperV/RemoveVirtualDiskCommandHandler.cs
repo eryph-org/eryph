@@ -17,7 +17,7 @@ using Rebus.Handlers;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 [UsedImplicitly]
 public class RemoveVirtualDiskCommandHandler(

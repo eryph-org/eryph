@@ -1,4 +1,4 @@
-﻿namespace Eryph.Modules.VmHostAgent.Networks.OVS;
+﻿namespace Eryph.Modules.HostAgent.Networks.OVS;
 
 internal enum VMPortChange
 {

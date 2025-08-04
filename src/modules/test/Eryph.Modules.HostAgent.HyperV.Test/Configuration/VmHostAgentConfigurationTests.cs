@@ -1,6 +1,6 @@
 ﻿using System.Text;
 using Eryph.Core.VmAgent;
-using Eryph.Modules.VmHostAgent.Configuration;
+using Eryph.Modules.HostAgent.Configuration;
 using LanguageExt;
 using LanguageExt.Sys.Traits;
 using Moq;

@@ -17,7 +17,7 @@ using static LanguageExt.Prelude;
 using static Eryph.VmManagement.Wmi.WmiMsvmUtils;
 using static Eryph.VmManagement.Wmi.WmiEventUtils;
 
-namespace Eryph.Modules.VmHostAgent.Inventory;
+namespace Eryph.Modules.HostAgent.Inventory;
 
 /// <summary>
 /// This service observes WMI events which are raised when the state of a

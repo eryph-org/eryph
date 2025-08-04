@@ -9,14 +9,14 @@ using Eryph.Core;
 using Eryph.Core.Network;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Networks;
-using Eryph.Modules.VmHostAgent.Inventory;
+using Eryph.Modules.HostAgent.Inventory;
 using LanguageExt;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 internal class SyncService : BackgroundService
 {

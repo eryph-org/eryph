@@ -1,7 +1,7 @@
 ﻿using Eryph.VmManagement;
 using LanguageExt;
 
-namespace Eryph.Modules.VmHostAgent.Networks.Powershell;
+namespace Eryph.Modules.HostAgent.Networks.Powershell;
 
 // ReSharper disable once InconsistentNaming
 public interface HasPowershell<RT>

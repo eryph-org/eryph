@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Eryph.Modules.VmHostAgent;
+using Eryph.Modules.HostAgent;
 using SimpleInjector;
 
 namespace Eryph.Agent

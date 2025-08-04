@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using Eryph.VmManagement.Tracing;
 using Microsoft.Extensions.Logging;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 internal class Tracer : ITracer
 {

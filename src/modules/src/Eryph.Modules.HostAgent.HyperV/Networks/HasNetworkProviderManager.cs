@@ -1,7 +1,7 @@
 ﻿using Eryph.Core;
 using LanguageExt;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 public interface HasNetworkProviderManager<RT>
     where RT : struct, HasNetworkProviderManager<RT>

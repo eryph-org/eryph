@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Dbosoft.OVN.Model;
 using LanguageExt;
 
-namespace Eryph.Modules.VmHostAgent.Networks.OVS;
+namespace Eryph.Modules.HostAgent.Networks.OVS;
 
 public record OvsBridgePort : OVSTableRecord, IOVSEntityWithName
 {

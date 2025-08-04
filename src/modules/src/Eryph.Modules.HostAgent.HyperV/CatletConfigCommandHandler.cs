@@ -14,7 +14,7 @@ using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 
-namespace Eryph.Modules.VmHostAgent
+namespace Eryph.Modules.HostAgent
 {
     internal abstract class CatletConfigCommandHandler<TMessage, TResult>: IHandleMessages<OperationTask<TMessage>> 
         where TMessage : class, new()

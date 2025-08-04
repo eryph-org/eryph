@@ -1,7 +1,7 @@
 ﻿using System;
 using Eryph.VmManagement.Data;
 
-namespace Eryph.Modules.VmHostAgent.Inventory;
+namespace Eryph.Modules.HostAgent.Inventory;
 
 internal class VirtualMachineStateChangedEvent
 {

@@ -1,4 +1,4 @@
-﻿using Eryph.Modules.VmHostAgent.Inventory;
+﻿using Eryph.Modules.HostAgent.Inventory;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.TestBase;
 using Eryph.VmManagement.Wmi;

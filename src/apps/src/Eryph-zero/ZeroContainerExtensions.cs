@@ -7,7 +7,7 @@ using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.ModuleCore.Networks;
 using Eryph.Modules.GenePool.Genetics;
-using Eryph.Modules.VmHostAgent;
+using Eryph.Modules.HostAgent;
 using Eryph.Rebus;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;

@@ -6,7 +6,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 
-namespace Eryph.Modules.VmHostAgent
+namespace Eryph.Modules.HostAgent
 {
     internal class UpdateCatletMetadataCommandHandler : 
         CatletConfigCommandHandler<UpdateCatletMetadataCommand, Unit>

@@ -9,7 +9,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Networks.OVS;
+namespace Eryph.Modules.HostAgent.Networks.OVS;
 
 public class OVSControl(
     ISystemEnvironment systemEnvironment)

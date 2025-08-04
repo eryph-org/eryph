@@ -8,7 +8,7 @@ using Rebus.Handlers;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Inventory;
+namespace Eryph.Modules.HostAgent.Inventory;
 
 [UsedImplicitly]
 internal class VirtualMachineStateChangedEventHandler(

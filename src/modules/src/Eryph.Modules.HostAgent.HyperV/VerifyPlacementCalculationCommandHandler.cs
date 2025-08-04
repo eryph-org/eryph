@@ -3,12 +3,12 @@ using System.Threading.Tasks;
 using Dbosoft.Rebus.Operations;
 using Eryph.Messages.Resources.Commands;
 using Eryph.Messages.Resources.Events;
-using Eryph.Modules.VmHostAgent.Inventory;
+using Eryph.Modules.HostAgent.Inventory;
 using JetBrains.Annotations;
 using Rebus.Bus;
 using Rebus.Handlers;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 [UsedImplicitly]
 public class VerifyPlacementCalculationCommandHandler(

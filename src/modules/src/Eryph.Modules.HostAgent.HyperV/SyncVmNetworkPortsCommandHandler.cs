@@ -2,8 +2,8 @@
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Modules.VmHostAgent.Networks;
-using Eryph.Modules.VmHostAgent.Networks.OVS;
+using Eryph.Modules.HostAgent.Networks;
+using Eryph.Modules.HostAgent.Networks.OVS;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Inventory;
 using LanguageExt;
@@ -12,7 +12,7 @@ using SimpleInjector;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 using static OvsPortCommands<AgentRuntime>;
 

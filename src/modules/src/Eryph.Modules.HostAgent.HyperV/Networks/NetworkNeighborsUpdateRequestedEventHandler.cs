@@ -14,7 +14,7 @@ using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
 using Rebus.Handlers;
 
-namespace Eryph.Modules.VmHostAgent.Networks;
+namespace Eryph.Modules.HostAgent.Networks;
 
 [UsedImplicitly]
 public class NetworkNeighborsUpdateRequestedEventHandler(ILogger log, IPowershellEngine powershellEngine)

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Eryph.Modules.VmHostAgent;
+namespace Eryph.Modules.HostAgent;
 
 internal interface ITraceWriter
 {

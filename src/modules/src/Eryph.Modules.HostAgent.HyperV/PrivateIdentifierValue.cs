@@ -1,4 +1,4 @@
-﻿namespace Eryph.Modules.VmHostAgent;
+﻿namespace Eryph.Modules.HostAgent;
 
 public class PrivateIdentifierValue
 {

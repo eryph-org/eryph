@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Eryph.Modules.VmHostAgent.Inventory;
+using Eryph.Modules.HostAgent.Inventory;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Data;
 using Eryph.VmManagement.Data.Full;
@@ -13,7 +13,7 @@ using SimpleInjector;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.VmHostAgent.Networks.OVS;
+namespace Eryph.Modules.HostAgent.Networks.OVS;
 
 using static OvsPortCommands<AgentRuntime>;
 using static VmManagement.Sys.Logger<AgentRuntime>;
