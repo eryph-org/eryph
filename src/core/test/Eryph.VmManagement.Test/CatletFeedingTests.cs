@@ -24,7 +24,7 @@ namespace Eryph.VmManagement.Test;
 
 public class CatletFeedingTests
 {
-    private readonly Mock<ILocalGenepoolReader> _genepoolReaderMock = new();
+    private readonly Mock<ILocalGenePoolReader> _genepoolReaderMock = new();
 
     [Theory, CombinatorialData]
     public void Feed_AllFoodShouldBeEaten_EatsAllFood(
@@ -506,7 +506,7 @@ public class CatletFeedingTests
     }
 
     [Fact]
-    public void Feed_FodderWithInformationalSource_FodderSourceIsNotResolvedInGenepool()
+    public void Feed_FodderWithInformationalSource_FodderSourceIsNotResolvedInGenePool()
     {
         var config = new CatletConfig
         {
@@ -592,7 +592,7 @@ public class CatletFeedingTests
     }
 
     [Theory, CombinatorialData]
-    public void Feed_FodderNotInGenepool_ReturnsError(
+    public void Feed_FodderNotInGenePool_ReturnsError(
         [CombinatorialValues("any", "hyperv/any", "hyperv/amd64")]
         string architecture)
     {

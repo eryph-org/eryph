@@ -4,9 +4,10 @@ using Dbosoft.OVN;
 using Dbosoft.Rebus.Configuration;
 using Dbosoft.Rebus.Operations;
 using Eryph.Core;
+using Eryph.Core.VmAgent;
 using Eryph.ModuleCore.Networks;
-using Eryph.Modules.VmHostAgent;
-using Eryph.Modules.VmHostAgent.Genetics;
+using Eryph.Modules.GenePool.Genetics;
+using Eryph.Modules.HostAgent;
 using Eryph.Rebus;
 using Eryph.Runtime.Zero.Configuration;
 using Eryph.Runtime.Zero.Configuration.AgentSettings;
@@ -15,6 +16,7 @@ using Eryph.Runtime.Zero.Configuration.Networks;
 using Eryph.Security.Cryptography;
 using Eryph.StateDb;
 using Eryph.StateDb.Sqlite;
+using Eryph.VmManagement;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -49,6 +51,7 @@ namespace Eryph.Runtime.Zero
             container.Register<IVmHostAgentConfigurationManager, VmHostAgentConfigurationManager>();
             container.RegisterSingleton<IGenePoolApiKeyStore, ZeroGenePoolApiKeyStore>();
             container.Register<IHostSettingsProvider, HostSettingsProvider>();
+            container.Register<IGenePoolPathProvider, HyperVGenePoolPathProvider>();
             container.RegisterSingleton<IApplicationInfoProvider, ZeroApplicationInfoProvider>();
 
             container.RegisterInstance(new WorkflowOptions

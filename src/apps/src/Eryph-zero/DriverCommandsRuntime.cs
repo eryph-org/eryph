@@ -1,5 +1,5 @@
-﻿using Eryph.Modules.VmHostAgent.Networks.Powershell;
-using Eryph.Modules.VmHostAgent.Networks;
+﻿using Eryph.Modules.HostAgent.Networks.Powershell;
+using Eryph.Modules.HostAgent.Networks;
 using Eryph.VmManagement;
 using LanguageExt.Sys.Traits;
 using LanguageExt;

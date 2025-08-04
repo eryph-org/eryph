@@ -11,6 +11,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
-    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.VmHostAgent\Eryph.Modules.VmHostAgent.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.HostAgent.HyperV\Eryph.Modules.HostAgent.HyperV.csproj" />
   </ItemGroup>
 </Project>

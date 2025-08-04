@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
 using LanguageExt;
@@ -11,6 +12,7 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.Wmi;
 
+[SupportedOSPlatform("windows")]
 public static class WmiUtils
 {
     /// <summary>

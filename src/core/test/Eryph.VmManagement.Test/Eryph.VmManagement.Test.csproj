@@ -1,17 +1,20 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>12</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="FluentAssertions" Version="7.0.0" />
-    <PackageReference Include="FluentAssertions.LanguageExt" Version="0.5.0" />
-    <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
+    <PackageReference Include="coverlet.collector" Version="6.0.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="7.0.0" />
+    <PackageReference Include="FluentAssertions.LanguageExt" Version="0.5.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -21,8 +24,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Eryph.VmManagement\Eryph.VmManagement.csproj" />
     <ProjectReference Include="..\Eryph.VmManagement.TestBase\Eryph.VmManagement.TestBase.csproj" />
   </ItemGroup>
+
 </Project>

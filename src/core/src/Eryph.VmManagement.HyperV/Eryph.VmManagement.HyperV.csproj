@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>Eryph.VmManagement</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+     <InternalsVisibleTo Include="$(AssemblyName).Test" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Dbosoft.CloudInit.ConfigDrive" Version="2.0.0" />
+    <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.NoCloud" Version="2.0.0" />
+    <PackageReference Include="Dbosoft.CloudInit.ConfigDrive.WindowsImaging" Version="2.0.0" />
+    <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.15" />
+    <PackageReference Include="Dbosoft.OVN.Windows" Version="1.0.0-rc.15" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Validation" Version="0.9.0" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.9.0" />
+    <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.6" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Eryph.VmConfig.Primitives\Eryph.Primitives.csproj" />
+    <ProjectReference Include="..\Eryph.VmManagement\Eryph.VmManagement.csproj" />
+  </ItemGroup>
+</Project>

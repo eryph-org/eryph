@@ -58,12 +58,13 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\Eryph.Configuration\Eryph.Configuration.csproj" />
     <ProjectReference Include="..\..\..\data\src\Eryph.StateDb.Sqlite\Eryph.StateDb.Sqlite.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.GenePoolModule\Eryph.Modules.GenePoolModule.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.NetworkModule\Eryph.Modules.NetworkModule.csproj" />
     <ProjectReference Include="..\Eryph.AppCore\Eryph.AppCore.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.ComputeApi\Eryph.Modules.ComputeApi.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.Controller\Eryph.Modules.Controller.csproj" />
     <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.Identity\Eryph.Modules.Identity.csproj" />
-    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.VmHostAgent\Eryph.Modules.VmHostAgent.csproj" />
+    <ProjectReference Include="..\..\..\modules\src\Eryph.Modules.HostAgent.HyperV\Eryph.Modules.HostAgent.HyperV.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\PublishProfiles\" />

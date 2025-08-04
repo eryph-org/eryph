@@ -13,9 +13,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "eryph-zero", "src\apps\src\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.Controller", "src\modules\src\Eryph.Modules.Controller\Eryph.Modules.Controller.csproj", "{D407363B-27CE-4180-BB8A-986A619941CD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement", "src\core\src\Eryph.VmManagement\Eryph.VmManagement.csproj", "{B55118C0-8D29-4079-A291-62383B857EEA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.HyperV", "src\core\src\Eryph.VmManagement.HyperV\Eryph.VmManagement.HyperV.csproj", "{B55118C0-8D29-4079-A291-62383B857EEA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.VmHostAgent", "src\modules\src\Eryph.Modules.VmHostAgent\Eryph.Modules.VmHostAgent.csproj", "{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.HostAgent.HyperV", "src\modules\src\Eryph.Modules.HostAgent.HyperV\Eryph.Modules.HostAgent.HyperV.csproj", "{BF85BEDF-DC3C-46E9-A388-8C0314E9E186}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Agent", "src\apps\src\Eryph.Agent\Eryph.Agent.csproj", "{A976200C-AE38-49FA-8437-0A067EBB66DB}"
 EndProject
@@ -71,11 +71,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Security.Cryptography
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.NetworkModule", "src\modules\src\Eryph.Modules.NetworkModule\Eryph.Modules.NetworkModule.csproj", "{8BECD5A8-104E-47DC-8C94-DC50A6C5BAAA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.VmHostAgent.Test", "src\modules\test\Eryph.Modules.VmHostAgent.Test\Eryph.Modules.VmHostAgent.Test.csproj", "{4CF54668-F3F0-403E-BA26-EC9F15D325BD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.HostAgent.HyperV.Test", "src\modules\test\Eryph.Modules.HostAgent.HyperV.Test\Eryph.Modules.HostAgent.HyperV.Test.csproj", "{4CF54668-F3F0-403E-BA26-EC9F15D325BD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.Modules.ComputeApi.Tests", "src\modules\test\Eryph.Modules.ComputeApi.Tests\Eryph.Modules.ComputeApi.Tests.csproj", "{036EC2BD-8968-46D4-9FFD-901F3BB1FA70}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.Test", "src\core\test\Eryph.VmManagement.Test\Eryph.VmManagement.Test.csproj", "{7ED587D0-DB83-4427-9A47-FC51FD8EF596}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Eryph.VmManagement.HyperV.Test", "src\core\test\Eryph.VmManagement.HyperV.Test\Eryph.VmManagement.HyperV.Test.csproj", "{7ED587D0-DB83-4427-9A47-FC51FD8EF596}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "eryph-uninstaller", "src\apps\src\eryph-uninstaller\eryph-uninstaller.csproj", "{FEE56106-DD2D-4E79-9D5E-9D78F3618AA6}"
 EndProject
@@ -108,6 +108,16 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.DistributedLock.Tests", "src\infrastructure\test\Eryph.DistributedLock.Tests\Eryph.DistributedLock.Tests.csproj", "{643D9BEC-6092-4351-B0BD-FD5776C62DEC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.AspNetCore.Tests", "src\modules\test\Eryph.Modules.AspNetCore.Tests\Eryph.Modules.AspNetCore.Tests.csproj", "{CC77737C-0054-4B61-9DC7-6C98359919C6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.GenePoolModule", "src\modules\src\Eryph.Modules.GenepoolModule\Eryph.Modules.GenePoolModule.csproj", "{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.VmManagement", "src\core\src\Eryph.VmManagement\Eryph.VmManagement.csproj", "{A2398EBA-32C2-F99F-4EA1-18068E896BD4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.GenePoolModule.Test", "src\modules\test\Eryph.Modules.GenePoolModule.Test\Eryph.Modules.GenePoolModule.Test.csproj", "{40C860B5-CC55-BD57-8965-0F08ABB38B25}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.VmManagement.Test", "src\core\test\Eryph.VmManagement.Test\Eryph.VmManagement.Test.csproj", "{19CCD4F0-20A4-42DC-B133-D72CBD95B9E0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.VmManagement.HyperV.TestBase", "src\core\test\Eryph.VmManagement.HyperV.TestBase\Eryph.VmManagement.HyperV.TestBase.csproj", "{88711EDC-1C6E-46FF-976E-EB8D18055EF0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -291,6 +301,26 @@ Global
 		{CC77737C-0054-4B61-9DC7-6C98359919C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CC77737C-0054-4B61-9DC7-6C98359919C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CC77737C-0054-4B61-9DC7-6C98359919C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2398EBA-32C2-F99F-4EA1-18068E896BD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2398EBA-32C2-F99F-4EA1-18068E896BD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2398EBA-32C2-F99F-4EA1-18068E896BD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2398EBA-32C2-F99F-4EA1-18068E896BD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40C860B5-CC55-BD57-8965-0F08ABB38B25}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40C860B5-CC55-BD57-8965-0F08ABB38B25}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40C860B5-CC55-BD57-8965-0F08ABB38B25}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40C860B5-CC55-BD57-8965-0F08ABB38B25}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19CCD4F0-20A4-42DC-B133-D72CBD95B9E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19CCD4F0-20A4-42DC-B133-D72CBD95B9E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19CCD4F0-20A4-42DC-B133-D72CBD95B9E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19CCD4F0-20A4-42DC-B133-D72CBD95B9E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{88711EDC-1C6E-46FF-976E-EB8D18055EF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88711EDC-1C6E-46FF-976E-EB8D18055EF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88711EDC-1C6E-46FF-976E-EB8D18055EF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88711EDC-1C6E-46FF-976E-EB8D18055EF0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -340,6 +370,11 @@ Global
 		{888BDBC5-EC90-435C-BB2E-FF7FEBC15827} = {B4BB9FCD-93C2-4C97-B6BA-42C40108097E}
 		{643D9BEC-6092-4351-B0BD-FD5776C62DEC} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 		{CC77737C-0054-4B61-9DC7-6C98359919C6} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE} = {E889B549-C333-46DC-B71F-9608CBA1FBAA}
+		{A2398EBA-32C2-F99F-4EA1-18068E896BD4} = {07B818A5-B186-4D09-A766-9E4963F3C07E}
+		{40C860B5-CC55-BD57-8965-0F08ABB38B25} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{19CCD4F0-20A4-42DC-B133-D72CBD95B9E0} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
+		{88711EDC-1C6E-46FF-976E-EB8D18055EF0} = {0ED3EA31-8EFC-4694-8E5A-FEA20FE9D2C2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D7530B6E-8072-405A-97B5-322190C6109E}

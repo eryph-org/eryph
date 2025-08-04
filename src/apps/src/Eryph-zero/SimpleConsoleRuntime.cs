@@ -7,9 +7,10 @@ using System.Threading.Tasks;
 using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
 using Eryph.Core.Sys;
-using Eryph.Modules.VmHostAgent;
-using Eryph.Modules.VmHostAgent.Inventory;
-using Eryph.VmManagement.Inventory;
+using Eryph.Modules.GenePool.Inventory;
+using Eryph.Modules.HostAgent;
+using Eryph.Modules.HostAgent.Inventory;
+using Eryph.VmManagement;
 using Eryph.VmManagement.Sys;
 using LanguageExt;
 using LanguageExt.Sys.Traits;
@@ -38,7 +39,7 @@ public readonly struct SimpleConsoleRuntime :
     public static SimpleConsoleRuntime New() =>
         new(new SimpleConsoleRuntimeEnv(
             new ZeroApplicationInfoProvider(),
-            new HardwareIdProvider(new NullLoggerFactory()),
+            new WindowsHardwareIdProvider(new NullLoggerFactory()),
             new SyncClient(),
             new CancellationTokenSource()));
 

@@ -90,17 +90,17 @@ public static class CatletPedigree
         GeneSetIdentifier id,
         CatletConfig config) =>
         from disks in config.Drives.ToSeq()
-            .Map(d => NormalizeGenepoolSources(id, d))
+            .Map(d => NormalizeGenePoolSources(id, d))
             .Sequence()
         let fodder = config.Fodder.ToSeq()
-            .Map(f => NormalizeGenepoolSources(id, f))
+            .Map(f => NormalizeGenePoolSources(id, f))
         select config.CloneWith(c =>
         {
             c.Drives = disks.ToArray();
             c.Fodder = fodder.ToArray();
         });
     
-    private static FodderConfig NormalizeGenepoolSources(
+    private static FodderConfig NormalizeGenePoolSources(
         GeneSetIdentifier id,
         FodderConfig config) =>
         config.CloneWith(c =>
@@ -109,7 +109,7 @@ public static class CatletPedigree
                 .IfNone(() => new GeneIdentifier(id, GeneName.New("catlet")).Value);
         });
 
-    private static Either<Error, CatletDriveConfig> NormalizeGenepoolSources(
+    private static Either<Error, CatletDriveConfig> NormalizeGenePoolSources(
         GeneSetIdentifier id,
         CatletDriveConfig config) =>
         (config.Type ?? CatletDriveType.VHD) == CatletDriveType.VHD && !notEmpty(config.Source)

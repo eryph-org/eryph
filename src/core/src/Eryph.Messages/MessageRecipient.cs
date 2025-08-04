@@ -3,6 +3,7 @@
     public enum MessageRecipient
     {
         VMHostAgent,
+        GenePoolAgent,
         Controllers
     }
 }

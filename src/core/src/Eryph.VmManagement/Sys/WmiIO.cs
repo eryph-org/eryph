@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Management;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.VmManagement.Wmi;
@@ -20,6 +21,7 @@ public interface WmiIO
         Option<string> whereClause);
 }
 
+[SupportedOSPlatform("windows")]
 public readonly struct LiveWmiIO : WmiIO
 {
     public static readonly WmiIO Default = new LiveWmiIO();
