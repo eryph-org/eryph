@@ -40,7 +40,7 @@ public class DiskStorageSettingsTests
     [InlineData("any", @"x:\disks\genepool\acme\acme-os\1.0\volumes")]
     [InlineData("hyperv/any", @"x:\disks\genepool\acme\acme-os\1.0\volumes\hyperv")]
     [InlineData("hyperv/amd64", @"x:\disks\genepool\acme\acme-os\1.0\volumes\hyperv\amd64")]
-    public void FromSourceString_ValidGenepoolSource_ReturnsSettings(
+    public void FromSourceString_ValidGenePoolSource_ReturnsSettings(
         string architecture,
         string expectedPath)
     {
@@ -159,7 +159,7 @@ public class DiskStorageSettingsTests
     }
 
     [Fact]
-    public async Task FromVhdPath_ValidGenepoolDisk_ReturnsSettings()
+    public async Task FromVhdPath_ValidGenePoolDisk_ReturnsSettings()
     {
         var path = @"x:\disks\genepool\acme\acme-os\1.0\volumes\sda.vhdx";
         var mapping = new FakeTypeMapping();

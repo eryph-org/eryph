@@ -11,10 +11,10 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement.TestBase;
 
-public static class LocalGenepoolReaderMockExtensions
+public static class LocalGenePoolReaderMockExtensions
 {
     public static void SetupGenesetReferences(
-        this Mock<ILocalGenepoolReader> mock,
+        this Mock<ILocalGenePoolReader> mock,
         params (string Source, string Target)[] references)
     {
         var map = references.ToSeq()
@@ -27,7 +27,7 @@ public static class LocalGenepoolReaderMockExtensions
     }
 
     public static void SetupCatletGene(
-        this Mock<ILocalGenepoolReader> mock,
+        this Mock<ILocalGenePoolReader> mock,
         string geneSetIdentifier,
         CatletConfig catletConfig)
     {
@@ -41,7 +41,7 @@ public static class LocalGenepoolReaderMockExtensions
     }
 
     public static void SetupFodderGene(
-        this Mock<ILocalGenepoolReader> mock,
+        this Mock<ILocalGenePoolReader> mock,
         string geneIdentifier,
         string architecture,
         FodderGeneConfig fodderGene)

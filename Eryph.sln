@@ -109,7 +109,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.DistributedLock.Tests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.AspNetCore.Tests", "src\modules\test\Eryph.Modules.AspNetCore.Tests\Eryph.Modules.AspNetCore.Tests.csproj", "{CC77737C-0054-4B61-9DC7-6C98359919C6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.GenepoolModule", "src\modules\src\Eryph.Modules.GenepoolModule\Eryph.Modules.GenepoolModule.csproj", "{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.Modules.GenePoolModule", "src\modules\src\Eryph.Modules.GenepoolModule\Eryph.Modules.GenePoolModule.csproj", "{7B21C04E-FEB0-DF7E-2511-97975D4ABFBE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eryph.VmManagement", "src\core\src\Eryph.VmManagement\Eryph.VmManagement.csproj", "{A2398EBA-32C2-F99F-4EA1-18068E896BD4}"
 EndProject

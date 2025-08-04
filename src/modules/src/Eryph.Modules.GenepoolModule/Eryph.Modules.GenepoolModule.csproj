@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>annotations</Nullable>
-    <RootNamespace>Eryph.Modules.Genepool</RootNamespace>
+    <RootNamespace>Eryph.Modules.GenePool</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="$(AssemblyName).Test" />

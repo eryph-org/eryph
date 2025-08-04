@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 internal class RepositoryGenePool(
     IHttpClientFactory httpClientFactory,
@@ -30,7 +30,7 @@ internal class RepositoryGenePool(
     IGenePoolApiKeyStore keyStore,
     IApplicationInfoProvider applicationInfo,
     IHardwareIdProvider hardwareIdProvider,
-    GenepoolSettings genepoolSettings)
+    GenePoolSettings genepoolSettings)
     : GenePoolBase, IGenePool
 {
     private const int BufferSize = 65536;

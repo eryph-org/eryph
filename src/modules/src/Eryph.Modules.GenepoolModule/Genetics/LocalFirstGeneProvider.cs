@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 internal class LocalFirstGeneProvider(
     IGenePoolFactory genepoolFactory,
@@ -165,13 +165,13 @@ internal class LocalFirstGeneProvider(
                 var shouldContinue = result.Match(
                     Right: _ =>
                     {
-                        log.LogDebug("Found geneset {Geneset} on gene pool {Genepool}",
+                        log.LogDebug("Found geneset {Geneset} on gene pool {GenePool}",
                             genesetId, sourceName);
                         return false;
                     },
                     Left: e =>
                     {
-                        log.LogInformation(e, "Failed to lookup geneset {Geneset} on gene pool {Genepool}.",
+                        log.LogInformation(e, "Failed to lookup geneset {Geneset} on gene pool {GenePool}.",
                             genesetId, sourceName);
                         return !IsUnexpectedHttpClientError(e);
                     });

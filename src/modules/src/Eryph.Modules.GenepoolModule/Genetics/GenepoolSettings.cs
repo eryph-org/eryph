@@ -1,5 +1,5 @@
 ﻿using System;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
-public record GenepoolSettings(string Name, Uri ApiEndpoint, Uri AuthEndpoint, string AuthClientId, bool IsStaging);
+public record GenePoolSettings(string Name, Uri ApiEndpoint, Uri AuthEndpoint, string AuthClientId, bool IsStaging);

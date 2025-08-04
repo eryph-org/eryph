@@ -21,7 +21,7 @@ using Spectre.Console.Rendering;
 using static LanguageExt.Prelude;
 using Prelude = Eryph.AnsiConsole.Prelude;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 public static class GenePoolCli<RT> where RT : struct,
     HasAnsiConsole<RT>,
@@ -31,7 +31,7 @@ public static class GenePoolCli<RT> where RT : struct,
     HasFile<RT>,
     HasHardwareId<RT>
 {
-    public static Aff<RT, Unit> login(IGenePoolApiKeyStore apiKeyStore, GenepoolSettings genepoolSettings) =>
+    public static Aff<RT, Unit> login(IGenePoolApiKeyStore apiKeyStore, GenePoolSettings genepoolSettings) =>
         from _1 in AnsiConsole<RT>.write(new Rows(
             new Text("We will create a dedicated API key for this machine which grants read-only access to the genepool."),
             new Text("You will need to authenticate with your personal credentials."),
@@ -49,7 +49,7 @@ public static class GenePoolCli<RT> where RT : struct,
         from _2 in shouldContinue ? createApiKey(apiKeyStore, genepoolSettings) : unitEff
         select unit;
 
-    public static Aff<RT, Unit> getApiKeyStatus(IGenePoolApiKeyStore genePoolApiStore, GenepoolSettings genepoolSettings) =>
+    public static Aff<RT, Unit> getApiKeyStatus(IGenePoolApiKeyStore genePoolApiStore, GenePoolSettings genepoolSettings) =>
         from apiKeys in genePoolApiStore.GetApiKeys().ToAff(identity)
         let apiKey = apiKeys.Find(genepoolSettings.Name)
         from _ in apiKey.Match(
@@ -61,7 +61,7 @@ public static class GenePoolCli<RT> where RT : struct,
             None: () => AnsiConsole<RT>.writeLine("No gene pool API key is configured."))
         select unit;
 
-    public static Aff<RT, Unit> logout(IGenePoolApiKeyStore keyStore, GenepoolSettings genepoolSettings) =>
+    public static Aff<RT, Unit> logout(IGenePoolApiKeyStore keyStore, GenePoolSettings genepoolSettings) =>
         from apiKeys in keyStore.GetApiKeys().ToAff(identity)
         let apiKey = apiKeys.Find(genepoolSettings.Name)
         from _ in apiKey.Match(
@@ -77,7 +77,7 @@ public static class GenePoolCli<RT> where RT : struct,
         select unit;
 
     private static Aff<RT, Unit> createApiKey(
-        IGenePoolApiKeyStore apiKeyStore, GenepoolSettings genepoolSettings) =>
+        IGenePoolApiKeyStore apiKeyStore, GenePoolSettings genepoolSettings) =>
         from orgName in AnsiConsole<RT>.prompt(
             "Enter your organization:",
             OrganizationName.NewValidation)
@@ -108,7 +108,7 @@ public static class GenePoolCli<RT> where RT : struct,
         from _3 in AnsiConsole<RT>.writeLine("The gene pool API key was successfully created.")
         select unit;
 
-    private static Aff<RT, Unit> validateApiKey(GenePoolApiKey apiKey, GenepoolSettings genepoolSettings) =>
+    private static Aff<RT, Unit> validateApiKey(GenePoolApiKey apiKey, GenePoolSettings genepoolSettings) =>
         from userResponse in getApiKeyUser(apiKey, genepoolSettings).Map(Optional)
                             | @catch(ex => ex is GenepoolClientException { StatusCode: HttpStatusCode.Unauthorized },
                                 Option<GetMeResponse>.None)
@@ -130,7 +130,7 @@ public static class GenePoolCli<RT> where RT : struct,
                 select unit)
         select unit;
 
-    private static Aff<RT, GetMeResponse> getApiKeyUser(GenePoolApiKey apiKey, GenepoolSettings genepoolSettings) =>
+    private static Aff<RT, GetMeResponse> getApiKeyUser(GenePoolApiKey apiKey, GenePoolSettings genepoolSettings) =>
         from cancelToken in cancelToken<RT>()
         from applicationId in ApplicationInfo<RT>.applicationId()
         from hardwareId in HardwareId<RT>.hashedHardwareId()
@@ -158,7 +158,7 @@ public static class GenePoolCli<RT> where RT : struct,
 
     private static Aff<RT, Unit> removeApiKey(
         IGenePoolApiKeyStore apiKeyStore,
-        GenepoolSettings genepoolSettings,
+        GenePoolSettings genepoolSettings,
         GenePoolApiKey apiKey) =>
         from _1 in AnsiConsole<RT>.writeLine(
             "Do you want to delete the API key from the remote gene pool? "
@@ -179,7 +179,7 @@ public static class GenePoolCli<RT> where RT : struct,
         from _5 in AnsiConsole<RT>.writeLine("The gene pool API key was successfully removed.")
         select unit;
 
-    private static Aff<RT, Unit> deleteApiKeyFromPool(GenePoolApiKey apiKey, GenepoolSettings genepoolSettings) =>
+    private static Aff<RT, Unit> deleteApiKeyFromPool(GenePoolApiKey apiKey, GenePoolSettings genepoolSettings) =>
         from client in createInteractiveGenePoolClient(genepoolSettings)
         from cancelToken in cancelToken<RT>()
         from stopSpinner in AnsiConsole<RT>.startSpinner("Deleting API key...")
@@ -192,7 +192,7 @@ public static class GenePoolCli<RT> where RT : struct,
         from _2 in stopSpinner
         select unit;
 
-    private static Aff<RT, GenePoolClient> createInteractiveGenePoolClient(GenepoolSettings genepoolSettings) =>
+    private static Aff<RT, GenePoolClient> createInteractiveGenePoolClient(GenePoolSettings genepoolSettings) =>
         from cancelToken in cancelToken<RT>()
         from applicationId in ApplicationInfo<RT>.applicationId()
         from hardwareId in HardwareId<RT>.hashedHardwareId()

@@ -12,8 +12,8 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Modules.Genepool.Genetics;
-using Eryph.Modules.Genepool.Inventory;
+using Eryph.Modules.GenePool.Genetics;
+using Eryph.Modules.GenePool.Inventory;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -23,7 +23,7 @@ using Rebus.Handlers;
 using Rebus.Pipeline;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Genepool;
+namespace Eryph.Modules.GenePool;
 
 using GeneSetMap = HashMap<GeneSetIdentifier, GeneSetIdentifier>;
 using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
@@ -70,7 +70,7 @@ internal class ResolveCatletConfigCommandHandler(
         CancellationToken cancellationToken) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
-        let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
+        let genepoolReader = new LocalGenePoolReader(fileSystem, vmHostAgentConfig)
         let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         let localGenePool = genePoolFactory.CreateLocal(genePoolPath)
         let genePoolInventory = genePoolInventoryFactory.Create(genePoolPath, localGenePool)
@@ -80,7 +80,7 @@ internal class ResolveCatletConfigCommandHandler(
     public static EitherAsync<Error, ResolveCatletConfigCommandResponse> Handle(
         ResolveCatletConfigCommand command,
         IGeneProvider geneProvider,
-        ILocalGenepoolReader genepoolReader,
+        ILocalGenePoolReader genepoolReader,
         IGenePoolInventory genePoolInventory,
         CancellationToken cancellationToken) =>
         from genesetsFromConfig in ResolveGeneSets(command.Config, GeneSetMap.Empty,
@@ -107,7 +107,7 @@ internal class ResolveCatletConfigCommandHandler(
         CatletMap resolvedCatlets,
         Seq<AncestorInfo> visitedAncestors,
         IGeneProvider geneProvider,
-        ILocalGenepoolReader genepoolReader,
+        ILocalGenePoolReader genepoolReader,
         CancellationToken cancellationToken) =>
         from validParentId in parentId.Filter(notEmpty)
             .Map(GeneSetIdentifier.NewEither)
@@ -127,7 +127,7 @@ internal class ResolveCatletConfigCommandHandler(
         CatletMap resolvedCatlets,
         Seq<AncestorInfo> visitedAncestors,
         IGeneProvider geneProvider,
-        ILocalGenepoolReader genepoolReader,
+        ILocalGenePoolReader genepoolReader,
         CancellationToken cancellationToken) =>
         from resolvedId in resolvedGeneSets.Find(id)
             .ToEitherAsync(Error.New($"Could not resolve parent ID '{id}'."))
@@ -189,7 +189,7 @@ internal class ResolveCatletConfigCommandHandler(
 
     public static EitherAsync<Error, CatletConfig> ReadCatletConfig(
         GeneSetIdentifier geneSetId,
-        ILocalGenepoolReader genepoolReader) =>
+        ILocalGenePoolReader genepoolReader) =>
         from _ in RightAsync<Error, Unit>(unit)
         let uniqueId = new UniqueGeneIdentifier(
             GeneType.Catlet,

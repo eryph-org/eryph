@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 [UsedImplicitly]
 internal class LocalGenePoolSource(

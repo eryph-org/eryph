@@ -3,7 +3,7 @@ using Eryph.Core.Genetics;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 /// <summary>
 /// Contains information about a gene.

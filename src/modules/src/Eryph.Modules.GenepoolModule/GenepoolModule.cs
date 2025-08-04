@@ -9,8 +9,8 @@ using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.ModuleCore;
 using Eryph.ModuleCore.Startup;
-using Eryph.Modules.Genepool.Genetics;
-using Eryph.Modules.Genepool.Inventory;
+using Eryph.Modules.GenePool.Genetics;
+using Eryph.Modules.GenePool.Inventory;
 using Eryph.Rebus;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
@@ -29,13 +29,13 @@ using SimpleInjector;
 using SimpleInjector.Integration.ServiceCollection;
 using IFileSystem = System.IO.Abstractions.IFileSystem;
 
-namespace Eryph.Modules.Genepool
+namespace Eryph.Modules.GenePool
 {
     [UsedImplicitly]
-    public class GenepoolModule
+    public class GenePoolModule
     {
 
-        public string Name => "Eryph.GenepoolModule";
+        public string Name => "Eryph.GenePoolModule";
 
         [UsedImplicitly]
         public void ConfigureServices(IServiceProvider serviceProvider, IServiceCollection services)
@@ -80,7 +80,7 @@ namespace Eryph.Modules.Genepool
 
             var genePoolFactory = new GenePoolFactory(container);
             
-            genePoolFactory.Register<RepositoryGenePool>(serviceProvider.GetRequiredService<GenepoolSettings>());
+            genePoolFactory.Register<RepositoryGenePool>(serviceProvider.GetRequiredService<GenePoolSettings>());
             container.RegisterInstance<IGenePoolFactory>(genePoolFactory);
             container.RegisterSingleton<IGeneProvider, LocalFirstGeneProvider>();
             container.RegisterSingleton<IGeneRequestDispatcher, GeneRequestRegistry>();
@@ -89,11 +89,11 @@ namespace Eryph.Modules.Genepool
 
 
             container.RegisterInstance(serviceProvider.GetRequiredService<WorkflowOptions>());
-            container.Collection.Register(typeof(IHandleMessages<>), typeof(GenepoolModule).Assembly);
+            container.Collection.Register(typeof(IHandleMessages<>), typeof(GenePoolModule).Assembly);
             container.Collection.Append(typeof(IHandleMessages<>), typeof(FailedOperationTaskHandler<>), Lifestyle.Scoped);
             container.AddRebusOperationsHandlers();
 
-            var localName = $"{QueueNames.Genepool}.{Environment.MachineName}";
+            var localName = $"{QueueNames.GenePool}.{Environment.MachineName}";
             container.ConfigureRebus(configurer => configurer
                 .Serialization(s => s.UseEryphSettings())
                 .Transport(t =>

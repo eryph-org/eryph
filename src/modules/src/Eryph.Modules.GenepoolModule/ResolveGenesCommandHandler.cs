@@ -9,7 +9,7 @@ using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Modules.Genepool.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
@@ -17,7 +17,7 @@ using Rebus.Extensions;
 using Rebus.Handlers;
 using Rebus.Pipeline;
 
-namespace Eryph.Modules.Genepool;
+namespace Eryph.Modules.GenePool;
 
 using ArchitectureMap = HashMap<GeneIdentifierWithType, Architecture>;
 
@@ -41,7 +41,7 @@ internal class ResolveGenesCommandHandler(
         from vmHostAgentConfig in vmHostAgentConfigManager.GetCurrentConfiguration(hostSettings)
         let genePoolPath = GenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         let genePool = genePoolFactory.CreateLocal(genePoolPath)
-        let genePoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
+        let genePoolReader = new LocalGenePoolReader(fileSystem, vmHostAgentConfig)
         from result in Handle(command, genePool, genePoolPath, cancellationToken)
         select result;
 

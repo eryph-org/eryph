@@ -42,7 +42,7 @@ internal class UpdateCatletVMCommandHandler(
                 command.Config, currentStorageSettings)
             .WriteTrace()
         from _ in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
-        let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
+        let genepoolReader = new LocalGenePoolReader(fileSystem, vmHostAgentConfig)
         from fedConfig in CatletFeeding.Feed(
             CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
             command.ResolvedGenes.ToSeq(),

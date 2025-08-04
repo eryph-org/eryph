@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 public interface IGenePoolApiKeyStore
 {

@@ -8,8 +8,8 @@ using Eryph.Core.Genetics;
 
 namespace Eryph.Messages.Resources.Catlets.Commands;
 
-[SendMessageTo(MessageRecipient.GenepoolAgent)]
-public class ResolveCatletConfigCommand : IGenepoolAgentCommand
+[SendMessageTo(MessageRecipient.GenePoolAgent)]
+public class ResolveCatletConfigCommand : IGenePoolAgentCommand
 {
     public string AgentName { get; set; }
 

@@ -8,7 +8,7 @@ using Eryph.GenePool;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.Modules.Genepool.Inventory;
+namespace Eryph.Modules.GenePool.Inventory;
 
 public interface IGenePoolInventory
 {

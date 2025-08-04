@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Eryph.Core.Sys;
-using Eryph.Modules.Genepool;
+using Eryph.Modules.GenePool;
 using Eryph.VmManagement;
 using Eryph.VmManagement.Sys;
 using Eryph.VmManagement.Wmi;
@@ -14,7 +14,7 @@ using LanguageExt;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Genepool.Inventory;
+namespace Eryph.Modules.GenePool.Inventory;
 
 [SupportedOSPlatform("windows")]
 public class WindowsHardwareIdProvider : IHardwareIdProvider
@@ -22,9 +22,9 @@ public class WindowsHardwareIdProvider : IHardwareIdProvider
     public WindowsHardwareIdProvider(
         Microsoft.Extensions.Logging.ILoggerFactory loggerFactory)
     {
-        var result = WindowsHardwareIdProvider<WindowsGenepoolRuntime>
+        var result = WindowsHardwareIdProvider<WindowsGenePoolRuntime>
             .EnsureHardwareId()
-            .Run(WindowsGenepoolRuntime.New(loggerFactory));
+            .Run(WindowsGenePoolRuntime.New(loggerFactory));
         
         // We cache the hardware ID as it should obviously not change
         // and the lookup requires WMI and registry queries.

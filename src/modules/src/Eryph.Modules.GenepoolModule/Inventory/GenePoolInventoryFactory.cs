@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Eryph.Modules.Genepool.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 
-namespace Eryph.Modules.Genepool.Inventory;
+namespace Eryph.Modules.GenePool.Inventory;
 
 internal interface IGenePoolInventoryFactory
 {

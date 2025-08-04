@@ -3,9 +3,9 @@ using Eryph.ConfigModel.Catlets;
 using Eryph.Core.Genetics;
 using Eryph.GenePool;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Modules.Genepool;
-using Eryph.Modules.Genepool.Genetics;
-using Eryph.Modules.Genepool.Inventory;
+using Eryph.Modules.GenePool;
+using Eryph.Modules.GenePool.Genetics;
+using Eryph.Modules.GenePool.Inventory;
 using Eryph.VmManagement;
 using Eryph.VmManagement.TestBase;
 using LanguageExt;
@@ -13,12 +13,12 @@ using LanguageExt.Common;
 using Moq;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.GenepoolModule.Test;
+namespace Eryph.Modules.GenePoolModule.Test;
 
 public class ResolveCatletConfigCommandHandlerTests
 {
     private readonly Mock<IGenePoolInventory> _genePoolInventoryMock = new();
-    private readonly Mock<ILocalGenepoolReader> _genepoolReaderMock = new();
+    private readonly Mock<ILocalGenePoolReader> _genepoolReaderMock = new();
     private readonly Mock<IGeneProvider> _geneProviderMock = new();
     private readonly CancellationToken _cancelToken = new();
 

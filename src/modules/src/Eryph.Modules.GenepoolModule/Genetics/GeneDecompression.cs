@@ -11,7 +11,7 @@ using Joveler.Compression.XZ;
 using LanguageExt;
 using Microsoft.Extensions.Logging;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 internal class GeneDecompression(
     GeneInfo geneInfo,

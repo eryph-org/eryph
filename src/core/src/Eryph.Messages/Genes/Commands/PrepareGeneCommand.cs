@@ -4,8 +4,8 @@ using Eryph.Messages.Resources;
 
 namespace Eryph.Messages.Genes.Commands;
 
-[SendMessageTo(MessageRecipient.GenepoolAgent)]
-public class PrepareGeneCommand : IGenepoolAgentCommand, ICommandWithName
+[SendMessageTo(MessageRecipient.GenePoolAgent)]
+public class PrepareGeneCommand : IGenePoolAgentCommand, ICommandWithName
 {
     public UniqueGeneIdentifier Gene { get; set; }
 

@@ -7,7 +7,7 @@ using Eryph.Core.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 internal interface IGenePool
 {

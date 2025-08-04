@@ -11,7 +11,7 @@ using SimpleInjector.Lifestyles;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 internal class GeneRequestRegistry(
     IGeneRequestBackgroundQueue queue,

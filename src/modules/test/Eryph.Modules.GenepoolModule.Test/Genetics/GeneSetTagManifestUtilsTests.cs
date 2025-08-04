@@ -1,10 +1,10 @@
 ﻿using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.GenePool.Model;
-using Eryph.Modules.Genepool.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using GeneType = Eryph.Core.Genetics.GeneType;
 
-namespace Eryph.Modules.GenepoolModule.Test.Genetics;
+namespace Eryph.Modules.GenePoolModule.Test.Genetics;
 
 public class GeneSetTagManifestUtilsTests
 {

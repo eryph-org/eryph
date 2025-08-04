@@ -45,7 +45,7 @@ internal class UpdateConfigDriveCommandHandler(
         from metadata in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
         from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
             .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
-        let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
+        let genepoolReader = new LocalGenePoolReader(fileSystem, vmHostAgentConfig)
         from fedConfig in CatletFeeding.Feed(
             CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
             command.ResolvedGenes.ToSeq(),

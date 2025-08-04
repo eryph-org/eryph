@@ -76,13 +76,13 @@ public class EryphRebusOperationMessaging : RebusOperationMessaging
                                 $"Don't know how to route operation task command of type {messageType}");
                     }
                 }
-            case MessageRecipient.GenepoolAgent:
+            case MessageRecipient.GenePoolAgent:
             {
                 switch (command)
                 {
 
-                    case IGenepoolAgentCommand agentCommand:
-                        await _bus.Advanced.Routing.Send($"{QueueNames.Genepool}.{agentCommand.AgentName}",
+                    case IGenePoolAgentCommand agentCommand:
+                        await _bus.Advanced.Routing.Send($"{QueueNames.GenePool}.{agentCommand.AgentName}",
                                 outboundMessage)
                             .ConfigureAwait(false);
 

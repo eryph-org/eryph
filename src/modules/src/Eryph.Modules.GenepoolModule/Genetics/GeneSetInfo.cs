@@ -4,7 +4,7 @@ using Eryph.ConfigModel;
 using Eryph.GenePool.Model;
 using Eryph.GenePool.Model.Responses;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 public record GeneSetInfo(
     GeneSetIdentifier Id,

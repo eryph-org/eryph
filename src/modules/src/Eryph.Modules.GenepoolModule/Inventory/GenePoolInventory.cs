@@ -8,7 +8,7 @@ using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.GenePool;
-using Eryph.Modules.Genepool.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.VmManagement;
 using LanguageExt;
 using LanguageExt.Common;
@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Genepool.Inventory;
+namespace Eryph.Modules.GenePool.Inventory;
 
 internal class GenePoolInventory(
     ILogger logger,

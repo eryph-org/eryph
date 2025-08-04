@@ -55,13 +55,13 @@ using static LanguageExt.Sys.Console<Eryph.Runtime.Zero.ConsoleRuntime>;
 
 using static LanguageExt.Prelude;
 using static Eryph.AnsiConsole.Prelude;
-using Eryph.Modules.Genepool.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 
 namespace Eryph.Runtime.Zero;
 
 internal static class Program
 {
-    private static GenepoolSettings _genepoolSettings = GenePoolConstants.ProductionGenepool;
+    private static GenePoolSettings _genepoolSettings = GenePoolConstants.ProductionGenePool;
 
     private static async Task<int> Main(string[] args)
     {
@@ -72,10 +72,10 @@ internal static class Program
 
         if (stagingAuthority)
         {
-            _genepoolSettings = GenePoolConstants.StagingGenepool;
-            var overwriteGenepoolApi = Environment.GetEnvironmentVariable("ERYPH_GENEPOOL_API");
-            if(!string.IsNullOrWhiteSpace(overwriteGenepoolApi))
-                _genepoolSettings = _genepoolSettings with { ApiEndpoint = new Uri(overwriteGenepoolApi) };
+            _genepoolSettings = GenePoolConstants.StagingGenePool;
+            var overwriteGenePoolApi = Environment.GetEnvironmentVariable("ERYPH_GENEPOOL_API");
+            if(!string.IsNullOrWhiteSpace(overwriteGenePoolApi))
+                _genepoolSettings = _genepoolSettings with { ApiEndpoint = new Uri(overwriteGenePoolApi) };
 
         }
 
@@ -319,7 +319,7 @@ internal static class Program
                     })
                     .HostModule<ZeroStartupModule>()
                     .AddVmHostAgentModule()
-                    .AddGenepoolModule()
+                    .AddGenePoolModule()
                     .AddNetworkModule()
                     .AddControllerModule(container)
                     .AddComputeApiModule()
@@ -975,7 +975,7 @@ internal static class Program
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static Task<int> Login(GenepoolSettings genepoolSettings) =>
+    private static Task<int> Login(GenePoolSettings genepoolSettings) =>
         RunAsAdmin(
             from _ in unitEff
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
@@ -983,7 +983,7 @@ internal static class Program
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static Task<int> GetGenePoolInfo(GenepoolSettings genepoolSettings) =>
+    private static Task<int> GetGenePoolInfo(GenePoolSettings genepoolSettings) =>
         RunAsAdmin(
             from _ in unitEff
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()
@@ -991,7 +991,7 @@ internal static class Program
             select unit,
             SimpleConsoleRuntime.New());
 
-    private static Task<int> Logout(GenepoolSettings genepoolSettings) =>
+    private static Task<int> Logout(GenePoolSettings genepoolSettings) =>
         RunAsAdmin(
             from _ in unitEff
             let genePoolApiStore = new ZeroGenePoolApiKeyStore()

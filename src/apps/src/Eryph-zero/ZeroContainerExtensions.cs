@@ -6,7 +6,7 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.ModuleCore.Networks;
-using Eryph.Modules.Genepool.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Rebus;
 using Eryph.Runtime.Zero.Configuration;

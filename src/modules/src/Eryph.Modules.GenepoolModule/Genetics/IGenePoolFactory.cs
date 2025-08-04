@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 internal interface IGenePoolFactory
 {

@@ -11,7 +11,7 @@ using FluentAssertions;
 using FluentAssertions.LanguageExt;
 using Xunit;
 
-namespace Eryph.Modules.GenepoolModule.Test;
+namespace Eryph.Modules.GenePoolModule.Test;
 
 public class GenePoolPathsTests
 {

@@ -4,12 +4,12 @@ using Eryph.ModuleCore.Startup;
 using Eryph.Rebus;
 using Rebus.Bus;
 
-namespace Eryph.Modules.Genepool;
+namespace Eryph.Modules.GenePool;
 
 public class StartBusModuleHandler(IBus bus) : IStartupHandler
 {
     public async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        await bus.Advanced.Topics.Subscribe($"broadcast_{QueueNames.Genepool}");
+        await bus.Advanced.Topics.Subscribe($"broadcast_{QueueNames.GenePool}");
     }
 }

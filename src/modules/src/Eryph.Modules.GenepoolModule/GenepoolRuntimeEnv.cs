@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Eryph.Modules.Genepool;
+namespace Eryph.Modules.GenePool;
 
-internal class GenepoolRuntimeEnv(ILoggerFactory loggerFactory)
+internal class GenePoolRuntimeEnv(ILoggerFactory loggerFactory)
 {
     public ILoggerFactory LoggerFactory { get; } = loggerFactory;
 }

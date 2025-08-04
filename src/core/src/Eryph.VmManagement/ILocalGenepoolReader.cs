@@ -5,7 +5,7 @@ using LanguageExt.Common;
 
 namespace Eryph.VmManagement;
 
-public interface ILocalGenepoolReader
+public interface ILocalGenePoolReader
 {
     public EitherAsync<Error, Option<GeneSetIdentifier>> GetGenesetReference(
         GeneSetIdentifier geneSetId);

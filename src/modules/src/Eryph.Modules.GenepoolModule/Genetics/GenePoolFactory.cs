@@ -4,7 +4,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 internal class GenePoolFactory(Container container) : IGenePoolFactory
 {
@@ -24,7 +24,7 @@ internal class GenePoolFactory(Container container) : IGenePoolFactory
         ActivatorUtilities.CreateInstance<LocalGenePoolSource>(
             container, GenePoolConstants.Local.Name, genePoolPath);
 
-    public void Register<TImplementation>(GenepoolSettings settings)
+    public void Register<TImplementation>(GenePoolSettings settings)
         where TImplementation : class, IGenePool
     {
         var producer = Lifestyle.Transient

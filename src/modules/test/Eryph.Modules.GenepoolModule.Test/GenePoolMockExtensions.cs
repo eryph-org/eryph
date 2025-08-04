@@ -1,14 +1,14 @@
 ﻿using Eryph.ConfigModel;
 using Eryph.Core.Genetics;
 using Eryph.Messages.Genes.Commands;
-using Eryph.Modules.Genepool.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using LanguageExt;
 using LanguageExt.Common;
 using Moq;
 using static LanguageExt.Prelude;
 using Array = System.Array;
 
-namespace Eryph.Modules.GenepoolModule.Test;
+namespace Eryph.Modules.GenePoolModule.Test;
 
 public static class GenePoolMockExtensions
 {

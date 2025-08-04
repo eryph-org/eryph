@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Eryph.AnsiConsole.Sys;
 using Eryph.Core;
 using Eryph.Core.Sys;
-using Eryph.Modules.Genepool.Inventory;
+using Eryph.Modules.GenePool.Inventory;
 using Eryph.Modules.VmHostAgent;
 using Eryph.Modules.VmHostAgent.Inventory;
 using Eryph.VmManagement;

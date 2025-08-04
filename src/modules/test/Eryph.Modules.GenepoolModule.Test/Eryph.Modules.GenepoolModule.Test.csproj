@@ -23,6 +23,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\test\Eryph.VmManagement.TestBase\Eryph.VmManagement.TestBase.csproj" />
-    <ProjectReference Include="..\..\src\Eryph.Modules.GenepoolModule\Eryph.Modules.GenepoolModule.csproj" />
+    <ProjectReference Include="..\..\src\Eryph.Modules.GenePoolModule\Eryph.Modules.GenePoolModule.csproj" />
   </ItemGroup>
 </Project>

@@ -57,7 +57,7 @@ public static class CatletFeeding
     public static EitherAsync<Error, CatletConfig> Feed(
         CatletConfig catletConfig,
         Seq<UniqueGeneIdentifier> resolvedGenes,
-        ILocalGenepoolReader genepoolReader) =>
+        ILocalGenePoolReader genepoolReader) =>
         from allRemovedFodderKeys in catletConfig.Fodder.ToSeq()
             .Filter(f => f.Remove.GetValueOrDefault())
             .Map(f => FodderKey.Create(f.Name, f.Source))
@@ -100,7 +100,7 @@ public static class CatletFeeding
     public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfig(
         FodderConfig fodderConfig,
         Seq<UniqueGeneIdentifier> resolvedGenes,
-        ILocalGenepoolReader genepoolReader) =>
+        ILocalGenePoolReader genepoolReader) =>
         from geneId in Optional(fodderConfig.Source)
             .Filter(notEmpty)
             .Filter(s => s.StartsWith("gene:"))
@@ -117,7 +117,7 @@ public static class CatletFeeding
     public static EitherAsync<Error, Seq<FodderConfig>> ExpandFodderConfigFromSource(
         FodderConfig fodderConfig,
         Seq<UniqueGeneIdentifier> resolvedGenes,
-        ILocalGenepoolReader genepoolReader) =>
+        ILocalGenePoolReader genepoolReader) =>
         from geneId in GeneIdentifier.NewEither(fodderConfig.Source).ToAsync()
         from _ in ValidateIsResolved(geneId, genepoolReader)
         from name in Optional(fodderConfig.Name)
@@ -191,7 +191,7 @@ public static class CatletFeeding
 
     private static EitherAsync<Error, Unit> ValidateIsResolved(
         GeneIdentifier geneId,
-        ILocalGenepoolReader genepoolReader) =>
+        ILocalGenePoolReader genepoolReader) =>
         from resolvedId in genepoolReader.GetGenesetReference(geneId.GeneSet)
             .MapLeft(e => Error.New($"Could not access gene '{geneId}' in the local genepool.", e))
         from __ in guard(resolvedId.IsNone,

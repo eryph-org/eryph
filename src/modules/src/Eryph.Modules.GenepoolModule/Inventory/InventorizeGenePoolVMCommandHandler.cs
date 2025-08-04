@@ -8,7 +8,7 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Genes.Commands;
-using Eryph.Modules.Genepool.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 using Rebus.Bus;
 using Rebus.Handlers;
 
-namespace Eryph.Modules.Genepool.Inventory;
+namespace Eryph.Modules.GenePool.Inventory;
 
 [UsedImplicitly]
 internal class InventorizeGenePoolCommandHandler(

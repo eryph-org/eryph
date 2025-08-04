@@ -5,7 +5,7 @@ using LanguageExt.Sys.Test;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Eryph.Modules.GenepoolModule.Test;
+namespace Eryph.Modules.GenePoolModule.Test;
 
 public class RuntimeEnv<RT>(
     CancellationTokenSource source,

@@ -7,7 +7,7 @@ using Dbosoft.Rebus.Operations;
 using Eryph.Core;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Genes.Commands;
-using Eryph.Modules.Genepool.Genetics;
+using Eryph.Modules.GenePool.Genetics;
 using Eryph.VmManagement;
 using JetBrains.Annotations;
 using LanguageExt;
@@ -16,7 +16,7 @@ using Rebus.Handlers;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Genepool;
+namespace Eryph.Modules.GenePool;
 
 /// <summary>
 /// This handler removes the genes specified in the <see cref="RemoveGenesVmHostCommand"/>

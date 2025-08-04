@@ -14,10 +14,10 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
 
-public class LocalGenepoolReader(
+public class LocalGenePoolReader(
     IFileSystemService fileSystem,
     VmHostAgentConfiguration agentConfiguration)
-    : ILocalGenepoolReader
+    : ILocalGenePoolReader
 {
     public EitherAsync<Error, Option<GeneSetIdentifier>> GetGenesetReference(
         GeneSetIdentifier geneSetId) =>

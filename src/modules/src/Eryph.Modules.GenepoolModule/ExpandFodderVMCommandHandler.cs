@@ -14,7 +14,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using Rebus.Handlers;
 
-namespace Eryph.Modules.Genepool;
+namespace Eryph.Modules.GenePool;
 
 [UsedImplicitly]
 internal class ExpandFodderVMCommandHandler(
@@ -31,7 +31,7 @@ internal class ExpandFodderVMCommandHandler(
         ExpandFodderVMCommand command) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genepoolReader = new LocalGenepoolReader(fileSystem, vmHostAgentConfig)
+        let genepoolReader = new LocalGenePoolReader(fileSystem, vmHostAgentConfig)
         let configWithSystemVariables = command.CatletMetadata is not null
             ? CatletFeeding.FeedSystemVariables(command.Config, command.CatletMetadata)
             : CatletFeeding.FeedSystemVariables(command.Config, "#catletId", "#vmId")

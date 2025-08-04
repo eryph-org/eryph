@@ -5,29 +5,29 @@ using LanguageExt;
 using Microsoft.Extensions.Logging;
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.Genepool;
+namespace Eryph.Modules.GenePool;
 
 [SupportedOSPlatform("windows")]
-internal readonly struct WindowsGenepoolRuntime :
-    HasLogger<WindowsGenepoolRuntime>,
-    HasRegistry<WindowsGenepoolRuntime>,
-    HasWmi<WindowsGenepoolRuntime>
+internal readonly struct WindowsGenePoolRuntime :
+    HasLogger<WindowsGenePoolRuntime>,
+    HasRegistry<WindowsGenePoolRuntime>,
+    HasWmi<WindowsGenePoolRuntime>
 {
-    private readonly GenepoolRuntimeEnv _env;
+    private readonly GenePoolRuntimeEnv _env;
 
-    private WindowsGenepoolRuntime(GenepoolRuntimeEnv env)
+    private WindowsGenePoolRuntime(GenePoolRuntimeEnv env)
     {
         _env = env;
     }
 
-    public static WindowsGenepoolRuntime New(ILoggerFactory loggerFactory) =>
-        new(new GenepoolRuntimeEnv(loggerFactory));
+    public static WindowsGenePoolRuntime New(ILoggerFactory loggerFactory) =>
+        new(new GenePoolRuntimeEnv(loggerFactory));
 
-    public Eff<WindowsGenepoolRuntime, ILogger> Logger(string category) => Eff<WindowsGenepoolRuntime, ILogger>(rt => rt._env.LoggerFactory.CreateLogger(category));
+    public Eff<WindowsGenePoolRuntime, ILogger> Logger(string category) => Eff<WindowsGenePoolRuntime, ILogger>(rt => rt._env.LoggerFactory.CreateLogger(category));
 
-    public Eff<WindowsGenepoolRuntime, ILogger<T>> Logger<T>() => Eff<WindowsGenepoolRuntime, ILogger<T>>(rt => LoggerFactoryExtensions.CreateLogger<T>(rt._env.LoggerFactory));
+    public Eff<WindowsGenePoolRuntime, ILogger<T>> Logger<T>() => Eff<WindowsGenePoolRuntime, ILogger<T>>(rt => LoggerFactoryExtensions.CreateLogger<T>(rt._env.LoggerFactory));
 
-    public Eff<WindowsGenepoolRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
+    public Eff<WindowsGenePoolRuntime, RegistryIO> RegistryEff => SuccessEff(LiveRegistryIO.Default);
 
-    public Eff<WindowsGenepoolRuntime, WmiIO> WmiEff => SuccessEff(LiveWmiIO.Default);
+    public Eff<WindowsGenePoolRuntime, WmiIO> WmiEff => SuccessEff(LiveWmiIO.Default);
 }

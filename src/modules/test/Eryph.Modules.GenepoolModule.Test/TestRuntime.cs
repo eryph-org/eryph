@@ -9,7 +9,7 @@ using Traits = LanguageExt.Sys.Traits;
 
 using static LanguageExt.Prelude;
 
-namespace Eryph.Modules.GenepoolModule.Test;
+namespace Eryph.Modules.GenePoolModule.Test;
 
 public readonly struct TestRuntime :
     HasCancel<TestRuntime>,

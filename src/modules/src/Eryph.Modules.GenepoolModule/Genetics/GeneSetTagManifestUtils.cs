@@ -8,7 +8,7 @@ using LanguageExt.Common;
 using static LanguageExt.Prelude;
 using GeneType = Eryph.Core.Genetics.GeneType;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 internal static class GeneSetTagManifestUtils
 {

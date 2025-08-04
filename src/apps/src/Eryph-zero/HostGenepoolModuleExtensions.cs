@@ -1,29 +1,29 @@
 ﻿using System;
 using Dbosoft.Hosuto.Modules.Hosting;
-using Eryph.Modules.Genepool;
+using Eryph.Modules.GenePool;
 using Microsoft.Extensions.DependencyInjection;
 using SimpleInjector;
 
 namespace Eryph.Runtime.Zero;
 
-public static class HostGenepoolModuleExtensions
+public static class HostGenePoolModuleExtensions
 {
-    public static IModulesHostBuilder AddGenepoolModule(this IModulesHostBuilder builder)
+    public static IModulesHostBuilder AddGenePoolModule(this IModulesHostBuilder builder)
     {
-        builder.HostModule<GenepoolModule>();
+        builder.HostModule<GenePoolModule>();
         builder.ConfigureFrameworkServices((_, services) =>
         {
-            services.AddTransient<IConfigureContainerFilter<GenepoolModule>, GenepoolModuleFilters>();
+            services.AddTransient<IConfigureContainerFilter<GenePoolModule>, GenePoolModuleFilters>();
         });
 
         return builder;
     }
 
-    private sealed class GenepoolModuleFilters
-        : IConfigureContainerFilter<GenepoolModule>
+    private sealed class GenePoolModuleFilters
+        : IConfigureContainerFilter<GenePoolModule>
     {
-        public Action<IModuleContext<GenepoolModule>, Container> Invoke(
-            Action<IModuleContext<GenepoolModule>, Container> next)
+        public Action<IModuleContext<GenePoolModule>, Container> Invoke(
+            Action<IModuleContext<GenePoolModule>, Container> next)
         {
             return (context, container) =>
             {

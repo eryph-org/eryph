@@ -2,7 +2,7 @@
 using Dbosoft.Rebus.Operations;
 using Eryph.Core.Genetics;
 
-namespace Eryph.Modules.Genepool.Genetics;
+namespace Eryph.Modules.GenePool.Genetics;
 
 public interface IGeneRequestDispatcher
 {
