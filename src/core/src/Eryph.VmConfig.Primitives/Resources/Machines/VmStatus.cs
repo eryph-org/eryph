@@ -7,4 +7,5 @@ public enum VmStatus
     Running = 2,
     Pending = 3,
     Error = 4,
+    Missing = 5,
 }

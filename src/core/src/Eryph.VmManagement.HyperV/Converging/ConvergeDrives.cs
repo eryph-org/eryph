@@ -60,7 +60,7 @@ namespace Eryph.VmManagement.Converging
             Seq<VMDriveStorageSettings> plannedDriveStorageSettings) =>
             from _1 in RightAsync<Error, Unit>(unit)
             let plannedDiskSettings = plannedDriveStorageSettings
-                .Filter(x => x.Type is CatletDriveType.VHD or CatletDriveType.SharedVHD or CatletDriveType.VHDSet)
+                .Filter(x => x.Type is CatletDriveType.Vhd or CatletDriveType.SharedVhd or CatletDriveType.VhdSet)
                 .Cast<HardDiskDriveStorageSettings>()
                 .ToSeq()
             from currentDiskSettings in CurrentHardDiskDriveStorageSettings.Detect(Context.Engine,
@@ -75,7 +75,7 @@ namespace Eryph.VmManagement.Converging
             Seq<VMDriveStorageSettings> plannedDriveStorageSettings) =>
             from _1 in RightAsync<Error, Unit>(unit)
             let plannedDvdSettings = plannedDriveStorageSettings
-                .Filter(x => x.Type == CatletDriveType.DVD)
+                .Filter(x => x.Type == CatletDriveType.Dvd)
                 .Cast<VMDvDStorageSettings>()
                 .ToSeq()
             from _2 in plannedDvdSettings
@@ -110,7 +110,7 @@ namespace Eryph.VmManagement.Converging
             Seq<CurrentHardDiskDriveStorageSettings> currentDiskStorageSettings) =>
             from _1 in RightAsync<Error, Unit>(unit)
             let plannedDiskSettings = plannedStorageSettings.Where(x =>
-                    x.Type is CatletDriveType.VHD or CatletDriveType.SharedVHD or CatletDriveType.VHDSet)
+                    x.Type is CatletDriveType.Vhd or CatletDriveType.SharedVhd or CatletDriveType.VhdSet)
                 .Cast<HardDiskDriveStorageSettings>().ToSeq()
             let frozenDiskIds = currentDiskStorageSettings.Where(x => x.Frozen).Map(x => x.AttachedVMId)
             from _2 in ConvergeHelpers.FindAndApply(vmInfo,
@@ -161,7 +161,7 @@ namespace Eryph.VmManagement.Converging
             Seq<VMDriveStorageSettings> plannedStorageSettings) =>
             from _1 in RightAsync<Error, Unit>(unit)
             let plannedDvdDrives = plannedStorageSettings
-                .Filter(c => c.Type is CatletDriveType.DVD)
+                .Filter(c => c.Type is CatletDriveType.Dvd)
                 .Map(c => (Number: c.ControllerNumber, Location: c.ControllerLocation))
             from _2 in ConvergeHelpers.FindAndApply(
                 vmInfo,
@@ -251,7 +251,7 @@ namespace Eryph.VmManagement.Converging
             from p1 in Context.ReportProgressAsync($"Creating HD Drive: {driveSettings.DiskSettings.Name}")
             from uCreate in driveSettings.Type switch
             {
-                CatletDriveType.SharedVHD or CatletDriveType.VHDSet =>
+                CatletDriveType.SharedVhd or CatletDriveType.VhdSet =>
                     driveSettings.DiskSettings.ParentSettings.Match(
                         Some: parentSettings =>
                             from _ in RightAsync<Error, Unit>(unit)
@@ -266,7 +266,7 @@ namespace Eryph.VmManagement.Converging
                                 .AddArgument(copyToPath)
                                 .AddParameter("Force"))
                             from ___ in ResetDiskIdentifier(copyToPath)
-                            from ____ in driveSettings.Type == CatletDriveType.SharedVHD
+                            from ____ in driveSettings.Type == CatletDriveType.SharedVhd
                                 ? RightAsync<Error, Unit>(unit)
                                 : Context.Engine.RunAsync(PsCommandBuilder.Create()
                                     .AddCommand("Convert-VHD")
@@ -343,7 +343,7 @@ namespace Eryph.VmManagement.Converging
                 .AddParameter("VM", vmInfo.PsObject)
                 .AddParameter("Path", vhdPath);
 
-            if (driveSettings.Type == CatletDriveType.SharedVHD)
+            if (driveSettings.Type == CatletDriveType.SharedVhd)
                 command.AddParameter("SupportPersistentReservations");
 
             command.AddParameter("ControllerNumber", driveSettings.ControllerNumber)

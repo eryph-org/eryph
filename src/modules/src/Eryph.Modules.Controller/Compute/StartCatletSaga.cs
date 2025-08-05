@@ -13,7 +13,7 @@ namespace Eryph.Modules.Controller.Compute;
 
 [UsedImplicitly]
 internal class StartCatletSaga(IWorkflow workflow,
-    IVirtualMachineDataService vmDataService) :
+    ICatletDataService vmDataService) :
     OperationTaskWorkflowSaga<StartCatletCommand, EryphSagaData<StartCatletSagaData>>(workflow),
     IHandleMessages<OperationTaskStatusEvent<StartCatletVMCommand>>,
     IHandleMessages<OperationTaskStatusEvent<UpdateCatletStateCommand>>
@@ -21,18 +21,19 @@ internal class StartCatletSaga(IWorkflow workflow,
     protected override async Task Initiated(StartCatletCommand message)
     {
         Data.Data.CatletId = message.CatletId;
-        var catlet = await vmDataService.GetVM(message.CatletId);
-        if (catlet.IsNone)
+        var catlet = await vmDataService.Get(message.CatletId);
+        if (catlet is null)
         {
             await Fail($"The catlet {message.CatletId} does not exist.");
             return;
         }
-        Data.Data.VmId = catlet.ValueUnsafe().VMId;
+
+        Data.Data.VmId = catlet.VmId;
         
         await StartNewTask(new StartCatletVMCommand
         {
             CatletId = message.CatletId,
-            VMId = Data.Data.VmId,
+            VmId = Data.Data.VmId,
         });
     }
 

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.ConfigModel.Json;
+using Eryph.ConfigModel.Yaml;
 using Eryph.Core;
 using Eryph.Messages.Resources.Catlets.Commands;
 using Eryph.Modules.AspNetCore;
@@ -32,12 +33,13 @@ public class Create(
     protected override object CreateOperationMessage(NewCatletRequest request)
     {
         var config = CatletConfigJsonSerializer.Deserialize(request.Configuration);
-
+        
         return new CreateCatletCommand
         { 
             CorrelationId = request.CorrelationId.GetOrGenerate(),
             TenantId = userRightsProvider.GetUserTenantId(),
-            Config = config,
+            Name = string.IsNullOrWhiteSpace(config.Name) ? EryphConstants.DefaultCatletName : config.Name,
+            ConfigYaml = CatletConfigYamlSerializer.Serialize(config),
         };
     }
 

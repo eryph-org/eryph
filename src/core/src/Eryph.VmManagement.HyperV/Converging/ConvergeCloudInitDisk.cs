@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Dbosoft.CloudInit.ConfigDrive;
+using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
 using Eryph.VmManagement.Data.Core;
 using Eryph.VmManagement.Data.Full;
@@ -46,9 +44,9 @@ namespace Eryph.VmManagement.Converging
                     await Context.ReportProgress("Updating cloud-init config drive.").ConfigureAwait(false);
 
                     return await (from d in CreateConfigDriveDirectory(Context.StorageSettings.VMPath).ToAsync()
-                        from networkData in GenerateNetworkData(vmInfo).ToAsync()
+                        from networkData in GenerateNetworkData(vmInfo)
                         from _ in GenerateConfigDriveDisk(configDriveIsoPath,
-                            Context.Metadata.SecureDataHidden,
+                            Context.SecretDataHidden,
                             string.IsNullOrWhiteSpace(Context.Config.Hostname) ? Context.Config.Name : Context.Config.Hostname,
                             networkData,
                             Context.Config.Fodder)
@@ -62,39 +60,31 @@ namespace Eryph.VmManagement.Converging
             );
         }
 
-        private async Task<Either<Error, NetworkData>> GenerateNetworkData(TypedPsObject<VirtualMachineInfo> vmInfo)
-        {
-            var config = new List<object>();
-            const string regex = "(.{2})(.{2})(.{2})(.{2})(.{2})(.{2})";
-            const string replace = "$1:$2:$3:$4:$5:$6";
+        private EitherAsync<Error, NetworkData> GenerateNetworkData(
+            TypedPsObject<VirtualMachineInfo> vmInfo) =>
+            from vmNetworkAdapters in vmInfo.GetList(x => x.NetworkAdapters)
+                .Map(a => a.CastSafe<VMNetworkAdapter>())
+                .Sequence()
+                .ToAsync()
+            from configs in vmNetworkAdapters
+                .Map(GenerateNetworkData)
+                .SequenceSerial()
+            select new NetworkData(configs.ToArray());
 
-            foreach (var adapterDevice in vmInfo.GetList(x=>x.NetworkAdapters))
+        private EitherAsync<Error, object> GenerateNetworkData(
+            TypedPsObject<VMNetworkAdapter> adapter) =>
+            from macAddress in EryphMacAddress.NewEither(adapter.Value.MacAddress).ToAsync()
+            // We must cast to object as LanguageExt does handle the anonymous type correctly
+            select (object)new
             {
-                
-                (await adapterDevice.CastSafeAsync<VMNetworkAdapter>()).IfRight(adapter =>
-                {
-                    var macFormatted = Regex.Replace(adapter.Value.MacAddress, regex, replace, RegexOptions.None, TimeSpan.FromSeconds(2)).ToLowerInvariant();
-
-                    var physicalNetworkSettings = new
-                    {
-                        type = "physical",
-                        name = adapter.Value.Name,
-                        mac_address = macFormatted,
-                        subnets = (Context.Config.Networks?.Filter(x=>x.AdapterName == adapter.Value.Name) 
-                                   ?? new []{new CatletNetworkConfig()}.AsEnumerable())
-                            .Map(nw => new
-                            {
-                                type = "dhcp"
-                            })
-                        
-                    };
-                    config.Add(physicalNetworkSettings);
-                });
-
-            }
-
-            return new NetworkData(config);
-        }
+                type = "physical",
+                name = adapter.Value.Name,
+                mac_address = macAddress.Value,
+                subnets = Context.Config.Networks.ToSeq()
+                    .Filter(x=>x.AdapterName == adapter.Value.Name)
+                    .Map(_ => new { type = "dhcp" })
+                    .ToArray()
+            };
 
         private EitherAsync<Error, Unit> GenerateConfigDriveDisk(
             string configDriveIsoPath,
@@ -105,7 +95,7 @@ namespace Eryph.VmManagement.Converging
             Prelude.TryAsync(async () =>
             {
                 var configDrive = new ConfigDriveBuilder()
-                    .NoCloud(new NoCloudConfigDriveMetaData(hostname, Context.Metadata.MachineId.ToString()))
+                    .NoCloud(new NoCloudConfigDriveMetaData(hostname, Context.CatletId.ToString()))
                     .Build();
 
                 if (config != null)

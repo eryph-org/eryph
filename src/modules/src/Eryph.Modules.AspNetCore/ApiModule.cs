@@ -94,6 +94,8 @@ public abstract class ApiModule<TModule> : WebModule where TModule : WebModule
     [UsedImplicitly]
     public virtual void ConfigureContainer(IServiceProvider serviceProvider, Container container)
     {
+        container.Register<IApiResultFactory, ApiResultFactory>(Lifestyle.Scoped);
+
         container.Register(
             serviceProvider.GetRequiredService<IStateStoreContextConfigurer>,
             Lifestyle.Scoped);

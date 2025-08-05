@@ -29,7 +29,6 @@ public class ConvergeFixture
                 Volumes = "x:\\disks",
             },
         };
-        Metadata = new CatletMetadata();
         ResolvedGenes = [];
     }
 
@@ -43,7 +42,11 @@ public class ConvergeFixture
     
     public CatletConfig Config { get; set; }
     
-    public CatletMetadata Metadata { get; set; }
+    public Guid CatletId { get; set; }
+
+    public Guid VmId { get; set; }
+
+    public bool SecretDataHidden { get; set; }
 
     public VMHostMachineData HostInfo { get; set; }
 
@@ -53,7 +56,7 @@ public class ConvergeFixture
 
     public ConvergeContext Context =>
         new(VmHostAgentConfiguration, Engine, PortManager, ReportProgressCallBack,
-            Config, Metadata, StorageSettings, NetworkSettings, HostInfo,
+            Config, CatletId, VmId, SecretDataHidden, StorageSettings, NetworkSettings, HostInfo,
             ResolvedGenes.ToSeq(), NullLoggerFactory.Instance);
 
     private static Task ReportProgressCallBack(string _) => Task.CompletedTask;

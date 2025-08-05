@@ -6,8 +6,6 @@ using Eryph.ModuleCore;
 using Eryph.Modules.Controller.DataServices;
 using Eryph.Resources.Machines;
 using JetBrains.Annotations;
-using LanguageExt;
-using LanguageExt.UnsafeValueAccess;
 using Rebus.Handlers;
 using Rebus.Sagas;
 
@@ -16,7 +14,7 @@ namespace Eryph.Modules.Controller.Compute;
 [UsedImplicitly]
 internal class StopCatletSaga(
     IWorkflow workflow,
-    IVirtualMachineDataService vmDataService)
+    ICatletDataService vmDataService)
     : OperationTaskWorkflowSaga<StopCatletCommand, EryphSagaData<StopCatletSagaData>>(workflow),
         IHandleMessages<OperationTaskStatusEvent<ShutdownVMCommand>>,
         IHandleMessages<OperationTaskStatusEvent<StopVMCommand>>,
@@ -26,13 +24,13 @@ internal class StopCatletSaga(
     protected override async Task Initiated(StopCatletCommand message)
     {
         Data.Data.CatletId = message.CatletId;
-        var catlet = await vmDataService.GetVM(message.CatletId);
-        if (catlet.IsNone)
+        var catlet = await vmDataService.Get(message.CatletId);
+        if (catlet is null)
         {
             await Fail($"The catlet {message.CatletId} does not exist.");
             return;
         }
-        Data.Data.VmId = catlet.ValueUnsafe().VMId;
+        Data.Data.VmId = catlet.VmId;
 
         switch (message.Mode)
         {
@@ -40,21 +38,21 @@ internal class StopCatletSaga(
                 await StartNewTask(new ShutdownVMCommand
                 {
                     CatletId = message.CatletId,
-                    VMId = Data.Data.VmId,
+                    VmId = Data.Data.VmId,
                 });
                 return;
             case CatletStopMode.Hard:
                 await StartNewTask(new StopVMCommand
                 {
                     CatletId = message.CatletId,
-                    VMId = Data.Data.VmId,
+                    VmId = Data.Data.VmId,
                 });
                 return;
             case CatletStopMode.Kill:
                 await StartNewTask(new KillVMCommand
                 {
                     CatletId = message.CatletId,
-                    VMId = Data.Data.VmId,
+                    VmId = Data.Data.VmId,
                 });
                 return;
             default:

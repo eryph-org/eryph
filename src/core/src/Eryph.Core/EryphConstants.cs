@@ -6,6 +6,7 @@ namespace Eryph.Core
     public static class EryphConstants
     {
         public static readonly string AnyArchitecture = "any";
+        public static readonly string DefaultArchitecture = "hyperv/amd64";
 
         public static readonly Guid DefaultTenantId = Guid.Parse("{C1813384-8ECB-4F17-B846-821EE515D19B}");
         public static readonly Guid DefaultProjectId = Guid.Parse("{4B4A3FCF-B5ED-4A9A-AB6E-03852752095E}");
@@ -66,7 +67,17 @@ namespace Eryph.Core
         public static class Limits
         {
             public static readonly int MaxCatletAncestors = 5;
+            public static readonly int MaxGeneSetReferenceDepth = 5;
             public static readonly int MaxNetworkProviders = 100;
+
+            /// <summary>
+            /// The maximum size of a gene that can be downloaded directly (into memory).
+            /// </summary>
+            /// <remarks>
+            /// The gene pool limits the size of YAML sources to 2 MiB. Hence, 5 MiB
+            /// should provide us with enough headroom to download any catlet or fodder gene.
+            /// </remarks>
+            public static readonly int MaxGeneSizeDirectDownload = 5 * 1024 * 1024;
         }
 
         public static class Authorization

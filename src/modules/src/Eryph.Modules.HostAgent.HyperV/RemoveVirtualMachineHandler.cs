@@ -20,8 +20,8 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;
 
-using static VirtualMachineUtils<AgentRuntime>;
 using static OvsPortCommands<AgentRuntime>;
+using static VirtualMachineUtils<AgentRuntime>;
 
 [UsedImplicitly]
 internal class RemoveVirtualMachineHandler(
@@ -42,7 +42,7 @@ internal class RemoveVirtualMachineHandler(
 
     private Aff<AgentRuntime, Unit> HandleCommand(
         RemoveCatletVMCommand command) =>
-        from optionalVmInfo in getOptionalVmInfo(command.VMId)
+        from optionalVmInfo in getOptionalVmInfo(command.VmId)
         from _ in optionalVmInfo.Map(RemoveVm).Sequence()
         select unit;
 
@@ -50,19 +50,13 @@ internal class RemoveVirtualMachineHandler(
         TypedPsObject<VirtualMachineInfo> vmInfo) =>
         from hostSettings in hostSettingsProvider.GetHostSettings().ToAff()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings).ToAff()
-        from storageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).ToAff()
+        from storageSettings in VMStorageSettings.FromVm(vmHostAgentConfig, vmInfo).ToAff()
         from _1 in timeout(EryphConstants.OperationTimeout, stopVm(vmInfo))
         from _2 in syncOvsPorts(vmInfo, VMPortChange.Remove)
         from _3 in removeVm(vmInfo)
-        from _4 in RemoveVmFiles(storageSettings)
-        select unit;
-
-    private Eff<Unit> RemoveVmFiles(
-        Option<VMStorageSettings> storageSettings) =>
-        from _ in storageSettings
-            .Filter(settings => !settings.Frozen)
-            .Map(settings => RemoveVmFiles(settings.VMPath))
-            .Sequence()
+        from _4 in storageSettings.Frozen
+            ? unitEff
+            : RemoveVmFiles(storageSettings.VMPath)
         select unit;
 
     private Eff<Unit> RemoveVmFiles(string vmPath) =>

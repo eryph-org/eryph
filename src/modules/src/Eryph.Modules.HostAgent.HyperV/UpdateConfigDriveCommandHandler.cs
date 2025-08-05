@@ -1,15 +1,10 @@
-﻿using System.IO.Abstractions;
-using Dbosoft.OVN.Windows;
+﻿using Dbosoft.OVN.Windows;
 using Dbosoft.Rebus.Operations;
-using Eryph.ConfigModel;
-using Eryph.ConfigModel.Catlets;
 using Eryph.Core;
 using Eryph.Core.Genetics;
 using Eryph.Core.VmAgent;
 using Eryph.Messages.Resources.Catlets.Commands;
-using Eryph.Resources.Machines;
 using Eryph.VmManagement;
-using Eryph.VmManagement.Data.Full;
 using Eryph.VmManagement.Inventory;
 using Eryph.VmManagement.Storage;
 using Eryph.VmManagement.Tracing;
@@ -17,9 +12,6 @@ using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
 using Microsoft.Extensions.Logging;
-using Rebus.Bus;
-
-using static LanguageExt.Prelude;
 
 namespace Eryph.Modules.HostAgent;
 
@@ -30,7 +22,6 @@ internal class UpdateConfigDriveCommandHandler(
     ITaskMessaging messaging,
     ILogger log,
     ILoggerFactory loggerFactory,
-    IFileSystemService fileSystem,
     IHostInfoProvider hostInfoProvider,
     IHostSettingsProvider hostSettingsProvider,
     IVmHostAgentConfigurationManager vmHostAgentConfigurationManager)
@@ -40,25 +31,25 @@ internal class UpdateConfigDriveCommandHandler(
         UpdateCatletConfigDriveCommand command) =>
         from hostSettings in hostSettingsProvider.GetHostSettings()
         from vmHostAgentConfig in vmHostAgentConfigurationManager.GetCurrentConfiguration(hostSettings)
-        let genePoolPath = HyperVGenePoolPaths.GetGenePoolPath(vmHostAgentConfig)
         from hostInfo in hostInfoProvider.GetHostInfoAsync().WriteTrace()
-        let vmId = command.VMId
+        let vmId = command.VmId
         from vmInfo in VmQueries.GetVmInfo(Engine, vmId)
-        from metadata in EnsureMetadata(vmInfo, command.MachineMetadata.Id).WriteTrace()
-        from currentStorageSettings in VMStorageSettings.FromVM(vmHostAgentConfig, vmInfo).WriteTrace()
-            .Bind(o => o.ToEither(Error.New("Could not find storage settings for VM.")).ToAsync())
-        let genepoolReader = new LocalGenePoolReader(fileSystem, genePoolPath)
-        from fedConfig in CatletFeeding.Feed(
-            CatletFeeding.FeedSystemVariables(command.Config, command.MachineMetadata),
-            command.ResolvedGenes.ToSeq(),
-            genepoolReader)
+        from _ in EnsureMetadata(vmInfo, command.MetadataId).WriteTrace()
+        from currentStorageSettings in VMStorageSettings.FromVm(vmHostAgentConfig, vmInfo).WriteTrace()
+        let fedConfig = command.Config
         from substitutedConfig in CatletConfigVariableSubstitutions.SubstituteVariables(fedConfig)
             .ToEither()
             .MapLeft(issues => Error.New("The substitution of variables failed.", Error.Many(issues.Map(i => i.ToError()))))
             .ToAsync()
+        // We must redact the config after substituting the variables as the placeholder,
+        // which is used to replace secret values, is not a valid variable value for some
+        // variable types (e.g. boolean, number).
+        let redactedConfig = command.SecretDataHidden
+            ? CatletConfigRedactor.RedactSecrets(substitutedConfig)
+            : substitutedConfig
         from vmInfoConverged in VirtualMachine.ConvergeConfigDrive(
                 vmHostAgentConfig, hostInfo, Engine, portManager, ProgressMessage, vmInfo,
-                substitutedConfig, command.MachineMetadata, currentStorageSettings, loggerFactory)
+                redactedConfig, command.CatletId, command.SecretDataHidden, currentStorageSettings, loggerFactory)
             .WriteTrace()
         select Unit.Default;
 }

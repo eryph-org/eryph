@@ -42,7 +42,7 @@ internal abstract class UpdateGenePoolInventoryCommandHandlerBase(
                 Name = geneData.Id.Id.GeneName.Value,
                 Architecture = geneData.Id.Architecture.Value,
                 Size = geneData.Size,
-                Hash = geneData.Hash,
+                Hash = geneData.Hash.Value,
                 LastSeen = timestamp,
                 LastSeenAgent = agentName,
             };

@@ -43,7 +43,7 @@ public class VirtualNetworkQueryTests
         var networkData = result.Should().BeSuccess().Subject;
         networkData.AdapterName.Should().Be("eth0");
         networkData.PortName.Should().Be("test-port");
-        networkData.MacAddress.Should().Be("001122334455");
+        networkData.MacAddress.Should().Be("00:11:22:33:44:55");
         networkData.DefaultGateways.Should().Equal("10.0.0.1");
         networkData.DnsServers.Should().Equal("10.0.0.2");
         networkData.DhcpEnabled.Should().BeTrue();

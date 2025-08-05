@@ -13,13 +13,11 @@ namespace Eryph.Messages.Resources.Catlets.Commands
     {
         public CatletConfig Config { get; set; }
 
-        public Guid VMId { get; set; }
+        public Guid VmId { get; set; }
 
         public Guid CatletId { get; set; }
 
-        public long NewStorageId { get; set; }
-
-        public CatletMetadata MachineMetadata { get; set; }
+        public Guid MetadataId { get; set; }
 
         public MachineNetworkSettings[] MachineNetworkSettings { get; set; }
 

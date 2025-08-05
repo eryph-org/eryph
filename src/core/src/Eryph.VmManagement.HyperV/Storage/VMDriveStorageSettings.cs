@@ -47,16 +47,16 @@ public class VMDriveStorageSettings
         //set location relative to the free slots for each controller   
         var controllerLocation = index;
 
-        return Optional(driveConfig.Type).IfNone(CatletDriveType.VHD) switch
+        return Optional(driveConfig.Type).IfNone(CatletDriveType.Vhd) switch
         {
-            CatletDriveType.DVD => new VMDvDStorageSettings
+            CatletDriveType.Dvd => new VMDvDStorageSettings
             {
                 ControllerNumber = controllerNumber,
                 ControllerLocation = controllerLocation,
-                Type = CatletDriveType.DVD,
+                Type = CatletDriveType.Dvd,
                 Path = driveConfig.Source,
             },
-            CatletDriveType.VHD or CatletDriveType.SharedVHD or CatletDriveType.VHDSet =>
+            CatletDriveType.Vhd or CatletDriveType.SharedVhd or CatletDriveType.VhdSet =>
                 FromVhdDriveConfig(vmHostAgentConfig, storageSettings, driveConfig,
                     getVhdInfo, testVhd, resolvedGenes, controllerNumber, controllerLocation),
             _ => LeftAsync<Error, VMDriveStorageSettings>(Error.New(
@@ -96,11 +96,11 @@ public class VMDriveStorageSettings
             Error.New($"Unexpected missing storage identifier for disk '{driveConfig.Name}'."))
         let fileName = driveConfig.Type switch
         {
-            CatletDriveType.SharedVHD => $"{driveConfig.Name}.vhdx",
-            CatletDriveType.VHDSet => $"{driveConfig.Name}.vhds",
+            CatletDriveType.SharedVhd => $"{driveConfig.Name}.vhdx",
+            CatletDriveType.VhdSet => $"{driveConfig.Name}.vhds",
             _ => $"{driveConfig.Name}.vhdx",
         }
-        from attachPath in driveConfig.Type is CatletDriveType.SharedVHD or CatletDriveType.VHDSet
+        from attachPath in driveConfig.Type is CatletDriveType.SharedVhd or CatletDriveType.VhdSet
             ? Path.Combine(resolvedPath, identifier, fileName)
             : DiskGenerationNames.AddGenerationSuffix(
                     Path.Combine(resolvedPath, identifier, fileName), generation)
