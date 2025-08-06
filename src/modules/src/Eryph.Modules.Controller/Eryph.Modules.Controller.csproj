@@ -17,6 +17,7 @@
     <PackageReference Include="Dbosoft.OVN.Core" Version="1.0.0-rc.15" />
     <PackageReference Include="Eryph.ConfigModel.Core.Validation" Version="0.9.0" />
     <PackageReference Include="Eryph.ConfigModel.Catlets.Json" Version="0.9.0" />
+    <PackageReference Include="Eryph.ConfigModel.Catlets.Yaml" Version="0.9.0" />
     <PackageReference Include="Eryph.ConfigModel.Networks.Json" Version="0.9.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="5.11.1">
       <PrivateAssets>all</PrivateAssets>

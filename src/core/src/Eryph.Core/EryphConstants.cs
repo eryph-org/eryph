@@ -66,6 +66,7 @@ namespace Eryph.Core
         public static class Limits
         {
             public static readonly int MaxCatletAncestors = 5;
+            public static readonly int MaxGeneSetReferenceDepth = 5;
             public static readonly int MaxNetworkProviders = 100;
         }
 

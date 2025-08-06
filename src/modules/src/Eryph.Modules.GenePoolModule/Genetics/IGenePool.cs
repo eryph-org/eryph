@@ -16,7 +16,6 @@ internal interface IGenePool
         CancellationToken cancel);
 
     EitherAsync<Error, GeneInfo> RetrieveGene(
-        GeneSetInfo geneSetInfo,
         UniqueGeneIdentifier uniqueGeneId,
         string geneHash, 
         CancellationToken cancel);

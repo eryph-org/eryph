@@ -33,7 +33,6 @@ internal class LocalGenePoolSource(
     private const string GenesFileName = "genes.json";
 
     public EitherAsync<Error, GeneInfo> RetrieveGene(
-        GeneSetInfo geneSetInfo,
         UniqueGeneIdentifier uniqueGeneId,
         string geneHash,
         CancellationToken cancel) =>
@@ -138,11 +137,7 @@ internal class LocalGenePoolSource(
               
                   return unit;
               }).ToEither()
-              from _2 in TryAsync(async () =>
-              {
-                  await AddMergedGene(geneSetPath, geneInfo.Hash);
-                  return unit;
-              }).ToEither()
+              from _2 in AddMergedGene(geneSetPath, geneInfo.Hash)
               from geneTempPath in GetGeneTempPath(genePoolPath, geneInfo.Id.Id.GeneSet, geneInfo.Hash)
               from _3 in Try(() =>
               {
@@ -283,13 +278,14 @@ internal class LocalGenePoolSource(
         }).ToEither()
         select unit;
 
-    private async Task<string> AddMergedGene(string geneSetPath, string geneHash)
-    {
-        var genesInfo = await ReadGenesInfo(geneSetPath);
-        genesInfo.MergedGenes = [..genesInfo.MergedGenes ?? [], geneHash];
-        await WriteGenesInfo(geneSetPath, genesInfo);
-        return geneHash;
-    }
+    public EitherAsync<Error, string> AddMergedGene(string geneSetPath, string geneHash) =>
+        TryAsync(async () =>
+        {
+            var genesInfo = await ReadGenesInfo(geneSetPath);
+            genesInfo.MergedGenes = [.. genesInfo.MergedGenes ?? [], geneHash];
+            await WriteGenesInfo(geneSetPath, genesInfo);
+            return geneHash;
+        }).ToEither();
 
     private async Task<GenesInfo> RemoveMergedGene(string geneSetPath, string geneHash)
     {
