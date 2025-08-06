@@ -21,6 +21,9 @@ namespace Eryph.Modules.GenePool;
 
 using ArchitectureMap = HashMap<GeneIdentifierWithType, Architecture>;
 
+/// <summary>
+/// Resolves the actual gene to use which requires selecting the best architecture.
+/// </summary>
 internal class ResolveGenesCommandHandler(
     IMessageContext messageContext,
     ITaskMessaging messaging,

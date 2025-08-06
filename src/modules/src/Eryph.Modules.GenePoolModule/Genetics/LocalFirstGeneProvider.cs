@@ -187,7 +187,7 @@ internal class LocalFirstGeneProvider(
         CancellationToken cancel) =>
         from _  in RightAsync<Error, Unit>(unit)
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        from geneInfo in localGenePool.RetrieveGene(genesetInfo, geneId, geneHash, cancel)
+        from geneInfo in localGenePool.RetrieveGene( geneId, geneHash, cancel)
             .MapLeft(error =>
             {
                 log.LogDebug(error, "Failed to find gene {GeneId} on local gene pool", geneId);
@@ -308,7 +308,7 @@ internal class LocalFirstGeneProvider(
             foreach (var poolName in genepoolFactory.RemotePools)
             {
                 var genePool = genepoolFactory.CreateNew(poolName);
-                var result = await genePool.RetrieveGene(genesetInfo, uniqueGeneId, geneHash, cancel);
+                var result = await genePool.RetrieveGene(uniqueGeneId, geneHash, cancel);
 
                 var shouldContinue = result.Match(
                     Right: _ => false,

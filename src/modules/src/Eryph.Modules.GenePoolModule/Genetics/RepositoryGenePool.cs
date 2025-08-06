@@ -82,7 +82,7 @@ internal class RepositoryGenePool(
         select geneSetInfo;
 
     public EitherAsync<Error, GeneInfo> RetrieveGene(
-        GeneSetInfo geneSetInfo,
+        //GeneSetInfo geneSetInfo,
         UniqueGeneIdentifier uniqueGeneId,
         string geneHash,
         CancellationToken cancel) =>
@@ -90,10 +90,10 @@ internal class RepositoryGenePool(
         from genePoolClient in CreateClient()
         from geneInfo in TryAsync(async () =>
         {
-            var downloadEntry = geneSetInfo.GeneDownloadInfo.FirstOrDefault(x => x.Gene == parsedGeneId.Hash);
+            //var downloadEntry = geneSetInfo.GeneDownloadInfo.FirstOrDefault(x => x.Gene == parsedGeneId.Hash);
 
-            if (downloadEntry == null)
-            {
+            //if (downloadEntry == null)
+            //{
                 var geneClient = genePoolClient.GetGeneClient(uniqueGeneId.Id.GeneSet.Value, parsedGeneId.Hash);
 
                 var response = await geneClient.GetAsync(cancellationToken: cancel);
@@ -103,13 +103,13 @@ internal class RepositoryGenePool(
                 if (response.Manifest is null)
                     throw Error.New("The gene manifest is missing in the response of the gene pool API.");
 
-                downloadEntry = new GetGeneDownloadResponse(
+                var downloadEntry = new GetGeneDownloadResponse(
                     parsedGeneId.Hash,
                     response.Manifest,
                     response.Content?.Content,
                     response.DownloadUris,
                     response.DownloadExpires.GetValueOrDefault());
-            }
+            //}
 
             return new GeneInfo(uniqueGeneId, geneHash, downloadEntry.Manifest,
                 downloadEntry.DownloadUris, downloadEntry.DownloadExpires, false);

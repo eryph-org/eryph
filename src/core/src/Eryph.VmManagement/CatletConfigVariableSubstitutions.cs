@@ -14,8 +14,6 @@ using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
 
-#nullable enable
-
 public static partial class CatletConfigVariableSubstitutions
 {
     public static Validation<ValidationIssue, CatletConfig> SubstituteVariables(
