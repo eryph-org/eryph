@@ -189,7 +189,7 @@ internal class LocalGenePoolSource(
             return geneSetInfo;
 
         }).ToEither()
-        let catletReference = GeneHash.NewOption(geneSetInfo.MetaData.CatletGene)
+        let catletReference = GeneHash.NewValidation(geneSetInfo.MetaData.CatletGene).ToOption()
             .Map(geneHash => new GeneWithHash(
                     new UniqueGeneIdentifier(
                 GeneType.Catlet,
@@ -237,10 +237,11 @@ internal class LocalGenePoolSource(
         from _2 in TryAsync(async () =>
         {
             if (fileSystem.FileExists(genePath))
-                return;
+                return unit;
 
             fileSystem.EnsureDirectoryExists(Path.GetDirectoryName(genePath));
             await fileSystem.WriteAllTextAsync(genePath, content, cancellationToken);
+            return unit;
         }).ToEither()
         from _3 in AddMergedGene(geneSetPath, geneWithHash.Hash.Value)
         select unit;
