@@ -21,8 +21,17 @@ public static class CatletSpecificationBuilder
         Architecture architecture,
         IGenePoolReader genePoolReader,
         CancellationToken cancellation) =>
-        from parentId in GeneSetIdentifier.NewEither(catletConfig.Parent).ToAsync()
-        select catletConfig;
+        from resolveResult in ResolveConfig(catletConfig, genePoolReader, cancellation)
+        let resolvedGeneSets = resolveResult.ResolvedGeneSets
+        let parentConfigs = resolveResult.ResolvedCatlets
+        from resolvedConfig in CatletGeneResolving.ResolveGeneSetIdentifiers(catletConfig, resolvedGeneSets)
+            .MapLeft(e => Error.New("Could not resolve genes in the catlet config.", e))
+            .ToAsync()
+        from breedingResult in CatletPedigree.Breed(catletConfig, resolvedGeneSets, parentConfigs)
+            .MapLeft(e => Error.New("Could not breed the catlet.", e))
+            .ToAsync()
+        let bredConfigWithDefaults = CatletConfigDefaults.ApplyDefaults(breedingResult.Config)
+        select bredConfigWithDefaults;
 
     public static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveConfig(
         CatletConfig catletConfig,

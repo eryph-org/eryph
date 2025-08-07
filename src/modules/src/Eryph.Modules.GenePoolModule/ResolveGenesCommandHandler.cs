@@ -77,7 +77,9 @@ internal class ResolveGenesCommandHandler(
         Architecture catletArchitecture,
         ILocalGenePool genePool,
         CancellationToken cancellationToken) =>
-        from manifest in genePool.GetCachedGeneSet(geneIdWithType.GeneIdentifier.GeneSet, cancellationToken)
+        from optionalManifest in genePool.GetCachedGeneSet(geneIdWithType.GeneIdentifier.GeneSet, cancellationToken)
+        from manifest in optionalManifest.ToEitherAsync(
+            Error.New($"The gene set '{geneIdWithType.GeneIdentifier.GeneSet}' is not available in the gene pool."))
         from architecture in GeneSetTagManifestUtils.FindBestArchitecture(
             manifest.MetaData, catletArchitecture, geneIdWithType.GeneType, geneIdWithType.GeneIdentifier.GeneName).ToAsync()
         from validArchitecture in architecture.ToEitherAsync(
