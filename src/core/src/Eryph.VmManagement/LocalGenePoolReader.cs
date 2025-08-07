@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using Eryph.ConfigModel;
 using Eryph.Core;
 using Eryph.Core.Genetics;
@@ -24,7 +25,7 @@ public class LocalGenePoolReader(
         let geneSetManifestPath = GenePoolPaths.GetGeneSetManifestPath(genePoolPath, geneSetId)
         from genesetManifestValue in TryAsync(async () =>
         {
-            var manifestJson = await fileSystem.ReadAllTextAsync(geneSetManifestPath);
+            var manifestJson = await fileSystem.ReadAllTextAsync(geneSetManifestPath, CancellationToken.None);
             var manifest = JsonSerializer.Deserialize<JsonNode>(manifestJson);
             return Optional(manifest["ref"]?.GetValue<string>());
         }).ToEither(ex => Error.New($"Could not read manifest of geneset '{geneSetId}' from local genepool.", ex))
@@ -48,7 +49,7 @@ public class LocalGenePoolReader(
             .ToAsync()
         from _ in guard(fileExists,
             Error.New($"Gene '{uniqueGeneId}' does not exist in local genepool."))
-        from content in TryAsync(() => fileSystem.ReadAllTextAsync(genePath))
+        from content in TryAsync(() => fileSystem.ReadAllTextAsync(genePath, CancellationToken.None))
             .ToEither(ex => Error.New($"Could not read gene '{uniqueGeneId}' from local genepool.", ex))
         select content;
 }

@@ -8,23 +8,27 @@ using LanguageExt.Common;
 
 namespace Eryph.Modules.GenePool.Genetics;
 
-internal interface ILocalGenePool: IGenePool
+internal interface ILocalGenePool : IGenePool
 {
     EitherAsync<Error, Unit> MergeGeneParts(
         GeneInfo geneInfo,
         Func<string, int, Task<Unit>> reportProgress,
-        CancellationToken cancel);
+        CancellationToken cancellationToken);
 
     EitherAsync<Error, GeneSetInfo> CacheGeneSet(
         GeneSetInfo geneSetInfo,
-        CancellationToken cancel);
+        CancellationToken cancellationToken);
 
     EitherAsync<Error, GeneInfo> CacheGene(
         GeneInfo geneInfo,
-        CancellationToken cancel);
+        CancellationToken cancellationToken);
 
-    EitherAsync<Error, GeneSetInfo> GetCachedGeneSet(
+    EitherAsync<Error, Option<GeneSetInfo>> GetCachedGeneSet(
         GeneSetIdentifier geneSetId,
+        CancellationToken cancellationToken);
+
+    EitherAsync<Error, Option<string>> GetCachedGeneContent(
+        UniqueGeneIdentifier uniqueGeneId,
         CancellationToken cancellationToken);
 
     EitherAsync<Error, Option<long>> GetCachedGeneSize(

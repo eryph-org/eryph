@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Eryph.ConfigModel;
 using Eryph.Core;
@@ -46,7 +47,9 @@ internal class GenePoolInventory(
 
     public EitherAsync<Error, Seq<GeneData>> InventorizeGeneSet(
         GeneSetIdentifier geneSetId) =>
-        from geneSetInfo in genePool.GetCachedGeneSet(geneSetId, default)
+        from optionalGeneSetInfo in genePool.GetCachedGeneSet(geneSetId, CancellationToken.None)
+        from geneSetInfo in optionalGeneSetInfo
+            .ToEitherAsync(Error.New($"Could not find the manifest for gene set {geneSetId}."))
         from geneSetData in notEmpty(geneSetInfo.MetaData.Reference)
             ? RightAsync<Error, Seq<GeneData>>(Seq<GeneData>())
             : InventorizeGeneSet(geneSetInfo)
