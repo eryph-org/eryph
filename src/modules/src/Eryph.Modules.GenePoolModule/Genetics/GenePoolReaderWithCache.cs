@@ -30,10 +30,31 @@ internal class GenePoolReaderWithCache(
         from genePoolPath in genePoolPathProvider.GetGenePoolPath()
         let localGenePool = genePoolFactory.CreateLocal(genePoolPath)
         from cachedGeneContent in localGenePool.GetCachedGeneContent(uniqueGeneId, cancellationToken)
-        from result in cachedGeneContent.ToEitherAsync(
-            Error.New($"The gene {uniqueGeneId} is not available in local gene pool."))
-        // TODO Implement download
+        from pulledGene in cachedGeneContent.Match(
+            Some: c => RightAsync<Error, Option<string>>(c),
+            None: () => PullAndCacheGene(uniqueGeneId, localGenePool, cancellationToken))
+        from result in pulledGene.ToEitherAsync(
+            Error.New($"The gene {uniqueGeneId} is not available in local or remote gene pools."))
         select result;
+
+    private EitherAsync<Error, Option<string>> PullAndCacheGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        ILocalGenePool localGenePool,
+        CancellationToken cancellationToken) =>
+        // We need the gene set manifest to get the gene hash which
+        // is required by the gene pool API. In almost all cases
+        // the gene set manifest should already be present in the local cache.
+        from geneSetManifest in GetGeneSetTagManifest(uniqueGeneId.Id.GeneSet, cancellationToken)
+        from geneHash in GeneSetTagManifestUtils.FindGeneHash(geneSetManifest, uniqueGeneId.GeneType, uniqueGeneId.Id.GeneName, uniqueGeneId.Architecture)
+            .ToEitherAsync(Error.New($"The gene {uniqueGeneId} is not part of the gene set."))
+        from validGeneHash in GeneHash.NewEither(geneHash)
+            .MapLeft(e => Error.New($"The hash of the gene {uniqueGeneId} in gene set manifest is invalid.", e))
+            .ToAsync()
+        from pulledGene in repositoryGenePoolReader.ProvideGeneContent(uniqueGeneId, validGeneHash, cancellationToken)
+        from content in pulledGene
+            .Map(g => localGenePool.CacheGeneContent(g, cancellationToken))
+            .Sequence()
+        select content;
 
     public EitherAsync<Error, GenesetTagManifestData> GetGeneSetTagManifest(
         GeneSetIdentifier geneSetId,
@@ -42,13 +63,14 @@ internal class GenePoolReaderWithCache(
         let localGenePool = genePoolFactory.CreateLocal(genePoolPath)
         from cachedGeneSet in localGenePool.GetCachedGeneSet(geneSetId, cancellationToken)
         from pulledGeneSet in cachedGeneSet
-            .Filter(gsi => string.IsNullOrWhiteSpace(gsi.MetaData.Reference))
+            // gene set references should always be checked online
+            .Filter(gsi => string.IsNullOrWhiteSpace(gsi.Manifest.Reference))
             .Match(
                 Some: g => RightAsync<Error, Option<GeneSetInfo>>(Some(g)),
                 None: () => PullAndCacheGeneSet(geneSetId, localGenePool, cancellationToken))
         from result in (pulledGeneSet | cachedGeneSet).ToEitherAsync(
             Error.New($"The gene set {geneSetId} is not available in local or remote gene pools."))
-        select result.MetaData;
+        select result.Manifest;
 
     private EitherAsync<Error, Option<GeneSetInfo>> PullAndCacheGeneSet(
         GeneSetIdentifier geneSetId,

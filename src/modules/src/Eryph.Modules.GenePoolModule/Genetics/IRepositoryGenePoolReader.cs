@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Eryph.Core.Genetics;
+using Eryph.GenePool.Model;
 using LanguageExt.Common;
 
 namespace Eryph.Modules.GenePool.Genetics;
@@ -19,6 +20,7 @@ public interface IRepositoryGenePoolReader
 
     EitherAsync<Error, Option<GeneInfo>> ProvideGene(
         UniqueGeneIdentifier uniqueGeneId,
-        string geneHash,
+        GeneHash geneHash,
         CancellationToken cancellationToken);
+    EitherAsync<Error, Option<GeneContentInfo>> ProvideGeneContent(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash, CancellationToken cancellationToken);
 }

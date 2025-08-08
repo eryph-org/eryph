@@ -36,9 +36,10 @@ internal interface ILocalGenePool : IGenePool
 
     EitherAsync<Error, string> GetGenePartPath(
         UniqueGeneIdentifier uniqueGeneId,
-        string geneHash,
-        string genePartHash);
+        GeneHash geneHash,
+        GenePartHash genePartHash);
 
     EitherAsync<Error, Unit> RemoveCachedGene(
         UniqueGeneIdentifier uniqueGeneId);
+    EitherAsync<Error, string> CacheGeneContent(GeneContentInfo geneContentInfo, CancellationToken cancellationToken);
 }

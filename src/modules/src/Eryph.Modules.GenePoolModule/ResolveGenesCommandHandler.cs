@@ -81,7 +81,7 @@ internal class ResolveGenesCommandHandler(
         from manifest in optionalManifest.ToEitherAsync(
             Error.New($"The gene set '{geneIdWithType.GeneIdentifier.GeneSet}' is not available in the gene pool."))
         from architecture in GeneSetTagManifestUtils.FindBestArchitecture(
-            manifest.MetaData, catletArchitecture, geneIdWithType.GeneType, geneIdWithType.GeneIdentifier.GeneName).ToAsync()
+            manifest.Manifest, catletArchitecture, geneIdWithType.GeneType, geneIdWithType.GeneIdentifier.GeneName).ToAsync()
         from validArchitecture in architecture.ToEitherAsync(
             Error.New($"The gene '{geneIdWithType}' is not compatible with the hypervisor and/or processor architecture."))
         select validArchitecture;

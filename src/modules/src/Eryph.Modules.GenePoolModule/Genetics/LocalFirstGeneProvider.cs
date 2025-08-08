@@ -38,7 +38,7 @@ internal class LocalFirstGeneProvider(
             Error.New($"The gene '{uniqueGeneId}' resolved to the gene set '{geneSetInfo.Id}'. "
                 + "This code must only be called with resolved IDs."))
         from geneHash in GetGeneHash(geneSetInfo, uniqueGeneId)
-        from _2 in EnsureGene(genePoolPath, geneSetInfo, uniqueGeneId, geneHash, reportProgress, cancel)
+        from _2 in EnsureGene(genePoolPath, uniqueGeneId, geneHash, reportProgress, cancel)
         let timestamp = DateTimeOffset.UtcNow
         from geneSize in localGenePool.GetCachedGeneSize(uniqueGeneId)
         from validGeneSize in geneSize.ToEitherAsync(
@@ -49,7 +49,7 @@ internal class LocalFirstGeneProvider(
             Inventory = new GeneData()
             {
                 Id = uniqueGeneId,
-                Hash = geneHash,
+                Hash = geneHash.Value,
                 Size = validGeneSize,
             },
             Timestamp = timestamp,
@@ -63,17 +63,20 @@ internal class LocalFirstGeneProvider(
         from genesetInfo in ProvideGeneSet(genesetIdentifier, Empty, localGenePool, cancellationToken)
         select genesetInfo.Id;
 
-    private static EitherAsync<Error, string> GetGeneHash(
+    private static EitherAsync<Error, GeneHash> GetGeneHash(
         GeneSetInfo genesetInfo,
         UniqueGeneIdentifier uniqueGeneId) =>
         from validHash in GeneSetTagManifestUtils.FindGeneHash(
-                genesetInfo.MetaData,
+                genesetInfo.Manifest,
                 uniqueGeneId.GeneType,
                 uniqueGeneId.Id.GeneName,
                 uniqueGeneId.Architecture)
             .ToEitherAsync(
             Error.New($"Could not find gene {uniqueGeneId} in geneset {genesetInfo.Id}."))
-        select validHash;
+        from parsedHash in GeneHash.NewEither(validHash)
+            .MapLeft(e => Error.New($"The hash of the gene {uniqueGeneId} in the gene set manifest is invalid.", e))
+            .ToAsync()
+        select parsedHash;
 
 
     private EitherAsync<Error, GeneSetInfo> ProvideGeneSet(
@@ -89,7 +92,7 @@ internal class LocalFirstGeneProvider(
             .BiBind(
                 Right: i =>
                 {
-                    if (string.IsNullOrWhiteSpace(i.MetaData.Reference))
+                    if (string.IsNullOrWhiteSpace(i.Manifest.Reference))
                         return i;
 
                     // We always attempt resolve gene set references remotely as they
@@ -131,7 +134,7 @@ internal class LocalFirstGeneProvider(
             })
         // Cache anything received in local store
         from cachedGeneSetInfo in localGenePool.CacheGeneSet(geneSetInfo, cancel)
-        from resolvedGeneSetInfo in Optional(cachedGeneSetInfo.MetaData.Reference)
+        from resolvedGeneSetInfo in Optional(cachedGeneSetInfo.Manifest.Reference)
             .Filter(notEmpty)
             .Match(
                 Some: refId =>
@@ -180,9 +183,8 @@ internal class LocalFirstGeneProvider(
 
     private EitherAsync<Error, Unit> EnsureGene(
         string genePoolPath,
-        GeneSetInfo genesetInfo,
         UniqueGeneIdentifier geneId,
-        string geneHash,
+        GeneHash geneHash,
         Func<string, int, Task<Unit>> reportProgress,
         CancellationToken cancel) =>
         from _  in RightAsync<Error, Unit>(unit)
@@ -193,7 +195,7 @@ internal class LocalFirstGeneProvider(
                 log.LogDebug(error, "Failed to find gene {GeneId} on local gene pool", geneId);
                 return error;
             })
-            .BindLeft(_ => ProvideGeneFromRemote(genesetInfo, geneId, geneHash, cancel))
+            .BindLeft(_ => ProvideGeneFromRemote(geneId, geneHash, cancel))
             .MapLeft(error =>
             {
                 log.LogDebug(error, "Failed to find gene {GeneId} on remote gene pools", geneId);
@@ -229,12 +231,13 @@ internal class LocalFirstGeneProvider(
         CancellationToken cancel) =>
         from _ in RightAsync<Error, Unit>(unit)
         let localGenePool = genepoolFactory.CreateLocal(genePoolPath)
-        let totalBytes = geneInfo.MetaData?.Size ?? 0
+        let totalBytes = geneInfo.Manifest?.Size ?? 0
         // When the gene has already been fetched and extracted, geneInfo.Metadata
         // will just be null. In this case, the following code is mostly skipped
         // as there are no gene parts to ensure.
-        from genePartsWithPaths in (geneInfo.MetaData?.Parts).ToSeq()
-            .Map(part => from path in localGenePool.GetGenePartPath(geneInfo.Id, geneInfo.Hash, part)
+        from genePartsWithPaths in (geneInfo.Manifest?.Parts).ToSeq()
+            .Map(part => from partHash in GenePartHash.NewEither(part).ToAsync()
+                         from path in localGenePool.GetGenePartPath(geneInfo.Id, geneInfo.Hash, partHash)
                          select (Part: part, Path: path))
             .SequenceSerial()
         let stopwatch = Stopwatch.StartNew()
@@ -295,9 +298,8 @@ internal class LocalFirstGeneProvider(
         select geneInfo;
 
     private EitherAsync<Error, GeneInfo> ProvideGeneFromRemote(
-        GeneSetInfo genesetInfo,
         UniqueGeneIdentifier uniqueGeneId,
-        string geneHash,
+        GeneHash geneHash,
         CancellationToken cancel)
     {
         return ProvideGeneFromRemoteAsync().ToAsync();

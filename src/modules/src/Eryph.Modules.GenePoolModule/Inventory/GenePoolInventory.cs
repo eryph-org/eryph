@@ -50,7 +50,7 @@ internal class GenePoolInventory(
         from optionalGeneSetInfo in genePool.GetCachedGeneSet(geneSetId, CancellationToken.None)
         from geneSetInfo in optionalGeneSetInfo
             .ToEitherAsync(Error.New($"Could not find the manifest for gene set {geneSetId}."))
-        from geneSetData in notEmpty(geneSetInfo.MetaData.Reference)
+        from geneSetData in notEmpty(geneSetInfo.Manifest.Reference)
             ? RightAsync<Error, Seq<GeneData>>(Seq<GeneData>())
             : InventorizeGeneSet(geneSetInfo)
         select geneSetData;
@@ -65,13 +65,13 @@ internal class GenePoolInventory(
     private EitherAsync<Error, Seq<GeneData>> InventorizeGeneSet(
         GeneSetInfo geneSetInfo) =>
         from _ in RightAsync<Error, Unit>(unit)
-        let catletGenes = Optional(geneSetInfo.MetaData.CatletGene)
+        let catletGenes = Optional(geneSetInfo.Manifest.CatletGene)
             .Filter(notEmpty)
             .Map(hash => (GeneType: GeneType.Catlet, Name: "catlet", Architecture: "any", Hash: hash))
             .ToSeq()
-        let fodderGenes = geneSetInfo.MetaData.FodderGenes.ToSeq()
+        let fodderGenes = geneSetInfo.Manifest.FodderGenes.ToSeq()
             .Map(grd => (GeneType: GeneType.Fodder, grd.Name, grd.Architecture, grd.Hash))
-        let volumeGenes = geneSetInfo.MetaData.VolumeGenes.ToSeq()
+        let volumeGenes = geneSetInfo.Manifest.VolumeGenes.ToSeq()
             .Map(grd => (GeneType: GeneType.Volume, grd.Name, grd.Architecture, grd.Hash))
         let allGenes = catletGenes.Append(fodderGenes).Append(volumeGenes)
         from geneData in allGenes
