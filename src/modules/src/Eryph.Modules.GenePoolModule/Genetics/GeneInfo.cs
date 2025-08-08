@@ -15,11 +15,12 @@ namespace Eryph.Modules.GenePool.Genetics;
 /// </param>
 public record GeneInfo(
     UniqueGeneIdentifier Id,
-    string Hash,
-    GeneManifestData? MetaData,
+    GeneHash Hash,
+    GeneManifestData? Manifest,
     GenePartDownloadUri[]? DownloadUris,
     DateTimeOffset DownloadExpires,
-    bool MergedWithImage)
+    bool MergedWithImage,
+    string? Content)
 {
     public override string ToString() => Id.ToString();
 }

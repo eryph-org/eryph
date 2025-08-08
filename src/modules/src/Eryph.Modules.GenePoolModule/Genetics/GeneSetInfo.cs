@@ -8,5 +8,5 @@ namespace Eryph.Modules.GenePool.Genetics;
 
 public record GeneSetInfo(
     GeneSetIdentifier Id,
-    GenesetTagManifestData MetaData,
+    GenesetTagManifestData Manifest,
     GetGeneDownloadResponse[] GeneDownloadInfo);

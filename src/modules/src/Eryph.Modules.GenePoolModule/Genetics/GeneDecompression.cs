@@ -30,10 +30,10 @@ internal class GeneDecompression(
 
         var geneFolder = Path.GetDirectoryName(genePath);
         fileSystemService.EnsureDirectoryExists(geneFolder);
-        var totalSize = geneInfo.MetaData!.OriginalSize.GetValueOrDefault();
+        var totalSize = geneInfo.Manifest!.OriginalSize.GetValueOrDefault();
         await using var targetStream = fileSystemService.OpenWrite(genePath);
 
-        switch (geneInfo.MetaData!.Format)
+        switch (geneInfo.Manifest!.Format)
         {
             case "plain":
                 await CopyPlain(stream, targetStream, totalSize, cancel);
@@ -44,7 +44,7 @@ internal class GeneDecompression(
             case "xz":
                 await DecompressXz(stream, targetStream, totalSize, cancel);
                 break;
-            default: throw new NotSupportedException($"Unsupported gene format {geneInfo.MetaData!.Format}");
+            default: throw new NotSupportedException($"Unsupported gene format {geneInfo.Manifest!.Format}");
         }
     }
 

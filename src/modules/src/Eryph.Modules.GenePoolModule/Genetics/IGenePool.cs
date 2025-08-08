@@ -17,7 +17,7 @@ internal interface IGenePool
 
     EitherAsync<Error, GeneInfo> RetrieveGene(
         UniqueGeneIdentifier uniqueGeneId,
-        string geneHash, 
+        GeneHash geneHash, 
         CancellationToken cancel);
 
     EitherAsync<Error, long> RetrieveGenePart(
@@ -29,6 +29,7 @@ internal interface IGenePool
         Func<string, int, Task<Unit>> reportProgress,
         Stopwatch stopwatch,
         CancellationToken cancel);
+    EitherAsync<Error, GeneContentInfo> RetrieveGeneContent(UniqueGeneIdentifier uniqueGeneId, GeneHash geneHash, CancellationToken cancellationToken);
 
     public string PoolName { get; }
 }
