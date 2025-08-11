@@ -315,36 +315,51 @@ internal class LocalGenePoolSource(
 
     public EitherAsync<Error, Unit> RemoveCachedGene(
         UniqueGeneIdentifier uniqueGeneId) =>
-        from _ in TryAsync(async () =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let geneSetManifestPath = GenePoolPaths.GetGeneSetManifestPath(genePoolPath, uniqueGeneId.Id.GeneSet)
+        from geneSetManifest in TryAsync<Option<GenesetTagManifestData>>(async () =>
         {
-            var geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet);
-            var manifestPath = GenePoolPaths.GetGeneSetManifestPath(genePoolPath, uniqueGeneId.Id.GeneSet);
-            if (!fileSystem.FileExists(manifestPath))
-                return unit;
+            if (!fileSystem.FileExists(geneSetManifestPath))
+                return None;
 
-            var manifestJson = await fileSystem.ReadAllTextAsync(manifestPath, CancellationToken.None);
+            var manifestJson = await fileSystem.ReadAllTextAsync(geneSetManifestPath, CancellationToken.None);
             var manifest = JsonSerializer.Deserialize<GenesetTagManifestData>(manifestJson);
+            return manifest;
+        }).ToEither()
+        from genes in geneSetManifest
+            .Map(GeneSetTagManifestUtils.GetGenes)
+            .Sequence()
+            .ToAsync()
+        let geneHash = genes.Bind(g => g.Find(uniqueGeneId))
+        from _2 in geneHash
+            .Map(h => RemoveCachedGene(uniqueGeneId, h))
+            .SequenceSerial()
+        select unit;
 
-            var geneHash = GeneSetTagManifestUtils.FindGeneHash(
-                manifest, uniqueGeneId.GeneType, uniqueGeneId.Id.GeneName, uniqueGeneId.Architecture);
-            if (geneHash.IsNone)
-                return unit;
-
-            var genes = await RemoveMergedGene(geneSetPath, geneHash.ValueUnsafe());
-            
+    private EitherAsync<Error, Unit> RemoveCachedGene(
+        UniqueGeneIdentifier uniqueGeneId,
+        GeneHash geneHash) =>
+        from _1 in RightAsync<Error, Unit>(unit)
+        let geneSetPath = GenePoolPaths.GetGeneSetPath(genePoolPath, uniqueGeneId.Id.GeneSet)
+        from _2 in TryAsync(async () =>
+        {
+            var genes = await RemoveMergedGene(geneSetPath, geneHash.Value);
+            if (genes.MergedGenes is not { Length: > 0 })
+            {
+                fileSystem.DeleteDirectory(geneSetPath);
+            }
+        }).ToEither()
+        let genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId)
+        from _3 in Try<Unit>(() =>
+        {
             var genePath = GenePoolPaths.GetGenePath(genePoolPath, uniqueGeneId);
             if (fileSystem.FileExists(genePath))
             {
                 fileSystem.DeleteFile(genePath);
             }
 
-            if (genes.MergedGenes is null || genes.MergedGenes.Length == 0)
-            {
-                fileSystem.DeleteDirectory(geneSetPath);
-            }
-
             return unit;
-        }).ToEither()
+        }).ToEitherAsync()
         select unit;
 
     public EitherAsync<Error, GeneHash> AddMergedGene(string geneSetPath, GeneHash geneHash) =>
