@@ -15,10 +15,11 @@ namespace Eryph.VmManagement;
 using ArchitectureMap = HashMap<GeneIdentifierWithType, Architecture>;
 using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 using GeneSetMap = HashMap<GeneSetIdentifier, GeneSetIdentifier>;
+using ResolvedGenes = Seq<UniqueGeneIdentifier>;
 
 public static class CatletSpecificationBuilder
 {
-    public static EitherAsync<Error, CatletConfig> Build(
+    public static EitherAsync<Error, (CatletConfig ExpandedConfig, ResolvedGenes ResolvedGenes)> Build(
         CatletConfig catletConfig,
         Architecture architecture,
         IGenePoolReader genePoolReader,
@@ -43,7 +44,7 @@ public static class CatletSpecificationBuilder
             resolvedGenes,
             localGenePoolReader)
             .MapLeft(e => Error.New("Could not feed the catlet.", e))
-        select expandedConfig;
+        select (expandedConfig, resolvedGenes);
 
     public static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveConfig(
         CatletConfig catletConfig,

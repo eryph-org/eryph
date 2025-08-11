@@ -45,12 +45,12 @@ internal class GenePoolReaderWithCache(
         // is required by the gene pool API. In almost all cases
         // the gene set manifest should already be present in the local cache.
         from geneSetManifest in GetGeneSetTagManifest(uniqueGeneId.Id.GeneSet, cancellationToken)
-        from geneHash in GeneSetTagManifestUtils.FindGeneHash(geneSetManifest, uniqueGeneId.GeneType, uniqueGeneId.Id.GeneName, uniqueGeneId.Architecture)
-            .ToEitherAsync(Error.New($"The gene {uniqueGeneId} is not part of the gene set."))
-        from validGeneHash in GeneHash.NewEither(geneHash)
-            .MapLeft(e => Error.New($"The hash of the gene {uniqueGeneId} in gene set manifest is invalid.", e))
+        from genes in GeneSetTagManifestUtils.GetGenes(geneSetManifest)
+            .MapLeft(e => Error.New($"The manifest of the gene set '{uniqueGeneId.Id.GeneSet}' is invalid.", e))
             .ToAsync()
-        from pulledGene in repositoryGenePoolReader.ProvideGeneContent(uniqueGeneId, validGeneHash, cancellationToken)
+        from geneHash in genes.Find(uniqueGeneId)
+            .ToEitherAsync(Error.New($"The gene {uniqueGeneId} is not part of the gene set."))
+        from pulledGene in repositoryGenePoolReader.ProvideGeneContent(uniqueGeneId, geneHash, cancellationToken)
         from content in pulledGene
             .Map(g => localGenePool.CacheGeneContent(g, cancellationToken))
             .Sequence()

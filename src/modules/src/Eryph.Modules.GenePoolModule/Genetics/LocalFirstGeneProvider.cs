@@ -66,17 +66,12 @@ internal class LocalFirstGeneProvider(
     private static EitherAsync<Error, GeneHash> GetGeneHash(
         GeneSetInfo genesetInfo,
         UniqueGeneIdentifier uniqueGeneId) =>
-        from validHash in GeneSetTagManifestUtils.FindGeneHash(
-                genesetInfo.Manifest,
-                uniqueGeneId.GeneType,
-                uniqueGeneId.Id.GeneName,
-                uniqueGeneId.Architecture)
-            .ToEitherAsync(
-            Error.New($"Could not find gene {uniqueGeneId} in geneset {genesetInfo.Id}."))
-        from parsedHash in GeneHash.NewEither(validHash)
-            .MapLeft(e => Error.New($"The hash of the gene {uniqueGeneId} in the gene set manifest is invalid.", e))
+        from genes in GeneSetTagManifestUtils.GetGenes(genesetInfo.Manifest)
             .ToAsync()
-        select parsedHash;
+            .MapLeft(e => Error.New($"Could not parse the manifest of the gene set {genesetInfo.Id}.", e))
+        from validHash in genes.Find(uniqueGeneId)
+            .ToEitherAsync(Error.New($"Could not find gene {uniqueGeneId} in geneset {genesetInfo.Id}."))
+        select validHash;
 
 
     private EitherAsync<Error, GeneSetInfo> ProvideGeneSet(
