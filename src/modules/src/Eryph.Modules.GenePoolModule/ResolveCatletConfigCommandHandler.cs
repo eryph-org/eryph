@@ -74,6 +74,7 @@ internal class ResolveCatletConfigCommandHandler(
         from result in Handle(command, geneProvider, genepoolReader, genePoolInventory, cancellationToken)
         select result;
 
+    // TODO this was moved to the CatletSpecificationBuilder
     public static EitherAsync<Error, ResolveCatletConfigCommandResponse> Handle(
         ResolveCatletConfigCommand command,
         IGeneProvider geneProvider,

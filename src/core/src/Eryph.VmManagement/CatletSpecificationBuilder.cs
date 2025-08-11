@@ -1,16 +1,18 @@
 ﻿using Eryph.ConfigModel;
 using Eryph.ConfigModel.Catlets;
+using Eryph.ConfigModel.Json;
 using Eryph.Core;
 using Eryph.Core.Genetics;
+using JetBrains.Annotations;
 using LanguageExt;
 using LanguageExt.Common;
+using System.Linq;
 using System.Threading;
-using Eryph.ConfigModel.Json;
-
 using static LanguageExt.Prelude;
 
 namespace Eryph.VmManagement;
 
+using ArchitectureMap = HashMap<GeneIdentifierWithType, Architecture>;
 using CatletMap = HashMap<GeneSetIdentifier, CatletConfig>;
 using GeneSetMap = HashMap<GeneSetIdentifier, GeneSetIdentifier>;
 
@@ -20,6 +22,7 @@ public static class CatletSpecificationBuilder
         CatletConfig catletConfig,
         Architecture architecture,
         IGenePoolReader genePoolReader,
+        ILocalGenePoolReader localGenePoolReader,
         CancellationToken cancellation) =>
         from resolveResult in ResolveConfig(catletConfig, genePoolReader, cancellation)
         let resolvedGeneSets = resolveResult.ResolvedGeneSets
@@ -31,7 +34,16 @@ public static class CatletSpecificationBuilder
             .MapLeft(e => Error.New("Could not breed the catlet.", e))
             .ToAsync()
         let bredConfigWithDefaults = CatletConfigDefaults.ApplyDefaults(breedingResult.Config)
-        select bredConfigWithDefaults;
+        from genes in CatletGeneCollecting.CollectGenes(bredConfigWithDefaults)
+            .ToEither().ToAsync()
+            .MapLeft(errors => Error.New("The catlet config contains invalid genes.", Error.Many(errors)))
+        from resolvedGenes in ResolveGenes(genes, architecture, genePoolReader, cancellation)
+        from expandedConfig in CatletFeeding.Feed(
+            bredConfigWithDefaults,
+            resolvedGenes,
+            localGenePoolReader)
+            .MapLeft(e => Error.New("Could not feed the catlet.", e))
+        select expandedConfig;
 
     public static EitherAsync<Error, (GeneSetMap ResolvedGeneSets, CatletMap ResolvedCatlets)> ResolveConfig(
         CatletConfig catletConfig,
@@ -163,4 +175,78 @@ public static class CatletSpecificationBuilder
                         + string.Join(" -> ", "catlet".Cons(ancestors.Map(a => a.ToString())))
                         + "."),
             innerError);
+
+
+    public static EitherAsync<Error, Seq<UniqueGeneIdentifier>> ResolveGenes(
+        Seq<GeneIdentifierWithType> genes,
+        Architecture catletArchitecture,
+        IGenePoolReader genePoolReader,
+        CancellationToken cancellationToken) =>
+        from _ in RightAsync<Error, Unit>(unit)
+        let geneSetIds = genes.Map(iwt => iwt.GeneIdentifier.GeneSet).Distinct()
+        from cachedGenes in geneSetIds
+            .Map(geneSetId => genePoolReader.GetGenes(geneSetId, cancellationToken))
+            .SequenceSerial()
+            .Map(r => r.Map(kv => kv.Keys.ToSeq()).Flatten())
+        //from result in genes.ToSeq().Fold<Validation<Error, ArchitectureMap>>(
+        //    new ArchitectureMap(),
+        //    (state, geneId) => state.Bind(m =>
+        //        ResolveArchitecture(geneId, catletArchitecture, m, genePoolReader, cancellationToken)))
+        from result in genes
+            .Map(g => from architecture in ResolveArchitecture(g, catletArchitecture, cachedGenes)
+                select new UniqueGeneIdentifier(g.GeneType, g.GeneIdentifier, architecture))
+            .Sequence()
+            .ToEither().ToAsync()
+            .MapLeft(errors => Error.New("PENGH", Error.Many(errors)))
+        select result;
+
+    private static Validation<Error, ArchitectureMap> ResolveArchitecture(
+        GeneIdentifierWithType geneIdWithType,
+        Architecture catletArchitecture,
+        ArchitectureMap resolvedArchitectures,
+        Seq<UniqueGeneIdentifier> cachedGenes) =>
+        resolvedArchitectures.Find(geneIdWithType).Match(
+            Some: _ => resolvedArchitectures,
+            None: () =>
+                from resolvedArchitecture in ResolveArchitecture(geneIdWithType, catletArchitecture, cachedGenes)
+                select resolvedArchitectures.Add(geneIdWithType, resolvedArchitecture));
+
+    private static Validation<Error, Architecture> ResolveArchitecture(
+        GeneIdentifierWithType geneIdWithType,
+        Architecture catletArchitecture,
+        Seq<UniqueGeneIdentifier> cachedGenes) =>
+        from architecture in FindBestArchitecture(
+            geneIdWithType.GeneIdentifier.GeneSet,
+            geneIdWithType.GeneType,
+            geneIdWithType.GeneIdentifier.GeneName,
+            catletArchitecture,
+            cachedGenes)
+        //from manifest in genePoolReader.GetGeneSetTagManifest(geneIdWithType.GeneIdentifier.GeneSet, cancellationToken)
+        //from manifest in optionalManifest.ToEitherAsync(
+        //    Error.New($"The gene set '{geneIdWithType.GeneIdentifier.GeneSet}' is not available in the gene pool."))
+        //from architecture in GeneSetTagManifestUtils.FindBestArchitecture(
+        //    manifest.Manifest, catletArchitecture, geneIdWithType.GeneType, geneIdWithType.GeneIdentifier.GeneName).ToAsync()
+        from validArchitecture in architecture.ToValidation(
+            Error.New($"The gene '{geneIdWithType}' is not compatible with the hypervisor and/or processor architecture."))
+        select validArchitecture;
+
+    private static Validation<Error, Option<Architecture>> FindBestArchitecture(
+        GeneSetIdentifier geneSetId,
+        GeneType geneType,
+        GeneName geneName,
+        Architecture catletArchitecture,
+        Seq<UniqueGeneIdentifier> uniqueGeneIds) =>
+        from _ in Success<Error, Unit>(unit)
+        let filteredByGeneSet = uniqueGeneIds.Filter(i => i.Id.GeneSet == geneSetId)
+        let filteredByTypeAndName = filteredByGeneSet
+            .Filter(i => i.GeneType == geneType && i.Id.GeneName == geneName)
+        let architectures = filteredByTypeAndName
+            .Map(i => i.Architecture)
+        let bestArchitecture = architectures.Find(ga => ga == catletArchitecture)
+                               | architectures.Find(ga =>
+                                   ga.Hypervisor == catletArchitecture.Hypervisor
+                                   && ga.ProcessorArchitecture == ProcessorArchitecture.New("any"))
+                               | architectures.Find(ga => ga.IsAny)
+
+        select bestArchitecture;
 }

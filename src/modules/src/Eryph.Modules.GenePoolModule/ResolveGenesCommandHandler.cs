@@ -45,6 +45,8 @@ internal class ResolveGenesCommandHandler(
         from result in Handle(command, genePool, genePoolPath, cancellationToken)
         select result;
 
+    // TODO this was moved to the CatletSpecificationBuilder
+
     public static EitherAsync<Error, ResolveGenesCommandResponse> Handle(
         ResolveGenesCommand command,
         ILocalGenePool genePool,

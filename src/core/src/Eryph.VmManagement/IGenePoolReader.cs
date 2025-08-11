@@ -33,6 +33,13 @@ public interface IGenePoolReader
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Returns the genes of the gene set with the given <paramref name="geneSetId"/>.
+    /// </summary>
+    public EitherAsync<Error, HashMap<UniqueGeneIdentifier, string>> GetGenes(
+        GeneSetIdentifier geneSetId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Returns the content of the gene with the given <paramref name="uniqueGeneId"/>.
     /// This method will fail for volume genes.
     /// </summary>

@@ -418,7 +418,8 @@ internal class LocalGenePoolSource(
             if (fileSystem.FileExists(genePath))
                 return await fileSystem.ReadAllTextAsync(genePath, cancellationToken);
 
-
+            var geneFolder = Path.GetDirectoryName(genePath);
+            fileSystem.EnsureDirectoryExists(geneFolder);
             await using var sourceStream = new MemoryStream(geneContentInfo.Content);
             await using var decompressionStream = CompressionStreamFactory.CreateDecompressionStream(
                 sourceStream, geneContentInfo.Format);
